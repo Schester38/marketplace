@@ -26,6 +26,7 @@ export default function Navbar({ onLogout }) {
       {user && user.role === 'creator' && <Link to="/creator" onClick={close}>Mon espace créateur</Link>}
       {user && (
         <>
+          <Link to="/compte" onClick={close}>Mon compte</Link>
           <span className="user-chip">
             {user.name} ({user.role === 'shop' ? 'boutique' : user.role === 'seller' ? 'vendeur' : user.role === 'client' ? 'client' : 'créateur'})
           </span>

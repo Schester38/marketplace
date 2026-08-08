@@ -14,6 +14,9 @@ export const api = {
   register: (payload) => request('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
   login: (payload) => request('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request('/auth/me'),
+  updateProfile: (payload) => request('/auth/me', { method: 'PUT', body: JSON.stringify(payload) }),
+  changePassword: (payload) => request('/auth/password', { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteAccount: (payload) => request('/auth/me', { method: 'DELETE', body: JSON.stringify(payload) }),
   listProducts: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return request('/products' + (qs ? `?${qs}` : ''));

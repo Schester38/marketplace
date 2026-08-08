@@ -18,6 +18,7 @@ const AuthGoogle = React.lazy(() => import('./pages/AuthGoogle.jsx'));
 const About = React.lazy(() => import('./pages/About.jsx'));
 const Contact = React.lazy(() => import('./pages/Contact.jsx'));
 const Privacy = React.lazy(() => import('./pages/Privacy.jsx'));
+const MyAccount = React.lazy(() => import('./pages/MyAccount.jsx'));
 
 const AuthContext = createContext(null);
 
@@ -86,6 +87,14 @@ export default function App() {
           <Route path="/a-propos" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/donnees" element={<Privacy />} />
+          <Route
+            path="/compte"
+            element={
+              <Protected>
+                <MyAccount />
+              </Protected>
+            }
+          />
           <Route path="/vitrine-offre" element={<VitrineOffre />} />
           <Route path="/offre/:id" element={<OfferDetail />} />
           <Route path="/verone" element={<Verone />} />

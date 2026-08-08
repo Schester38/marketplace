@@ -9,7 +9,7 @@ const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 function publicUser(u) {
-  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at };
+  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password };
 }
 
 router.post('/register', ah(async (req, res) => {
@@ -86,6 +86,55 @@ router.get('/me', authRequired, ah(async (req, res) => {
   const user = (await q('SELECT * FROM users WHERE id = $1', [req.user.id]))[0];
   if (!user) return res.status(404).json({ error: 'Compte introuvable' });
   res.json({ user: publicUser(user) });
+}));
+
+router.put('/me', authRequired, ah(async (req, res) => {
+  const { name, email } = req.body || {};
+  if (!name || !String(name).trim()) {
+    return res.status(400).json({ error: 'Le nom ne peut pas être vide' });
+  }
+  if (!email || !String(email).trim()) {
+    return res.status(400).json({ error: 'L\'email ne peut pas être vide' });
+  }
+  const emailNorm = String(email).trim().toLowerCase();
+  const dup = await q('SELECT id FROM users WHERE email = $1 AND id <> $2', [emailNorm, req.user.id]);
+  if (dup.length) {
+    return res.status(409).json({ error: 'Un compte existe déjà avec cet email' });
+  }
+  const updated = await q(
+    'UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING *',
+    [String(name).trim(), emailNorm, req.user.id]
+  );
+  if (!updated.length) return res.status(404).json({ error: 'Compte introuvable' });
+  res.json({ user: publicUser(updated[0]) });
+}));
+
+router.put('/password', authRequired, ah(async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!newPassword || String(newPassword).length < 6) {
+    return res.status(400).json({ error: 'Le nouveau mot de passe doit contenir au moins 6 caractères' });
+  }
+  const user = (await q('SELECT * FROM users WHERE id = $1', [req.user.id]))[0];
+  if (!user) return res.status(404).json({ error: 'Compte introuvable' });
+  if (user.password) {
+    if (!currentPassword || !bcrypt.compareSync(String(currentPassword), user.password)) {
+      return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
+    }
+  }
+  const hash = bcrypt.hashSync(String(newPassword), 10);
+  await q('UPDATE users SET password = $1 WHERE id = $2', [hash, user.id]);
+  res.json({ ok: true });
+}));
+
+router.delete('/me', authRequired, ah(async (req, res) => {
+  const { password } = req.body || {};
+  const user = (await q('SELECT * FROM users WHERE id = $1', [req.user.id]))[0];
+  if (!user) return res.status(404).json({ error: 'Compte introuvable' });
+  if (user.password && (!password || !bcrypt.compareSync(String(password), user.password))) {
+    return res.status(401).json({ error: 'Mot de passe incorrect' });
+  }
+  await q('DELETE FROM users WHERE id = $1', [user.id]);
+  res.json({ ok: true });
 }));
 
 export default router;

@@ -1028,3 +1028,20 @@ a.step { text-decoration: none; color: inherit; }
 .privacy-list .card p { color: var(--text); line-height: 1.65; font-size: 0.95rem; }
 .privacy-list .card strong { color: var(--primary); }
 .privacy-link { color: var(--primary); font-weight: 600; }
+
+.account-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .account-grid { grid-template-columns: 1fr; }
+}
+.account-grid .card h2 { font-size: 1.15rem; margin-bottom: 10px; }
+.account-grid .danger-card {
+  grid-column: 1 / -1;
+  border-color: #fecaca;
+  background: #fffafa;
+}
+.danger-card .btn-danger { width: 100%; }
