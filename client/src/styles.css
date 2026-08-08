@@ -219,6 +219,32 @@ textarea.input { resize: vertical; }
 .verone-placeholder { font-size: 4rem; margin-top: 24px; }
 .empty { color: var(--muted); text-align: center; padding: 32px 0; }
 
+.my-offers { display: flex; flex-direction: column; gap: 10px; }
+.my-offer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.my-offer-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  font-size: 1.4rem;
+}
+.my-offer-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.my-offer-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.my-offer-info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .toolbar { margin-bottom: 20px; }
 .search { max-width: 380px; }
 

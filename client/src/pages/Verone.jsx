@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ShareVitrine from '../components/ShareVitrine.jsx';
 
@@ -43,10 +42,48 @@ function compressImage(file, maxDim = 640, quality = 0.65) {
 export default function Verone() {
   const [showForm, setShowForm] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showMyOffers, setShowMyOffers] = useState(false);
+  const [myOffers, setMyOffers] = useState([]);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminError, setAdminError] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const toggleMyOffers = async () => {
+    const next = !showMyOffers;
+    setShowMyOffers(next);
+    if (next) {
+      setError('');
+      setSuccess('');
+      try {
+        const d = await api.listOffers();
+        setMyOffers(d.offers);
+      } catch (e) {
+        setError(e.message);
+      }
+    }
+  };
+
+  const confirmDelete = async (e) => {
+    e.preventDefault();
+    setAdminError('');
+    setDeleting(true);
+    try {
+      await api.deleteOffer(deleteTarget.id, adminPassword);
+      setMyOffers(myOffers.filter((o) => o.id !== deleteTarget.id));
+      setDeleteTarget(null);
+      setAdminPassword('');
+      setSuccess('Offre retirée de la vitrine.');
+    } catch (err) {
+      setAdminError(err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const addPhotos = async (files) => {
     const remaining = MAX_PHOTOS - form.photos.length;
@@ -109,12 +146,79 @@ export default function Verone() {
           {showForm ? 'Fermer le formulaire' : '+ Ajouter une Offre'}
         </button>
         <div className="row2" style={{ marginTop: 12 }}>
-          <Link to="/vitrine-offre" className="btn btn-outline">Voir mes Offres</Link>
+          <button className="btn btn-outline" onClick={toggleMyOffers}>
+            {showMyOffers ? 'Masquer mes Offres' : 'Voir mes Offres'}
+          </button>
           <button className="btn btn-outline" onClick={() => setShowShare(true)}>Partager ma Vitrine</button>
         </div>
       </section>
 
       {showShare && <ShareVitrine onClose={() => setShowShare(false)} />}
+
+      {showMyOffers && (
+        <section className="card">
+          <h2 className="section-title" style={{ marginTop: 0 }}>Mes offres</h2>
+          {myOffers.length === 0 ? (
+            <p className="empty">Aucune offre ajoutée pour le moment.</p>
+          ) : (
+            <div className="my-offers">
+              {myOffers.map((o) => (
+                <div key={o.id} className="my-offer-row">
+                  <div className="my-offer-thumb">
+                    {o.photos && o.photos.length > 0 ? (
+                      <img src={o.photos[0]} alt={o.name} loading="lazy" />
+                    ) : (
+                      <span>🛍️</span>
+                    )}
+                  </div>
+                  <div className="my-offer-info">
+                    <strong>{o.name}</strong>
+                    <span>
+                      <span className="old-price">{o.original_price.toLocaleString('fr-FR')} F</span>{' '}
+                      <span className="promo-price">{o.promo_price.toLocaleString('fr-FR')} F</span>
+                    </span>
+                  </div>
+                  <button className="btn btn-danger" onClick={() => setDeleteTarget(o)}>Rétirer</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {deleteTarget && (
+        <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Retirer l'offre</h3>
+              <button className="drawer-close" onClick={() => setDeleteTarget(null)}>✕</button>
+            </div>
+            <p className="hint">
+              Confirmez le retrait de « <strong>{deleteTarget.name}</strong> » de la vitrine.
+              Cette action nécessite le mot de passe de gestion.
+            </p>
+            <form onSubmit={confirmDelete}>
+              <label>Mot de passe de gestion</label>
+              <input
+                className="input"
+                type="password"
+                required
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+              />
+              {adminError && <p className="error">{adminError}</p>}
+              <div className="row2" style={{ marginTop: 14 }}>
+                <button className="btn btn-danger" disabled={deleting}>
+                  {deleting ? 'Retrait…' : 'Rétirer'}
+                </button>
+                <button type="button" className="btn btn-outline" onClick={() => setDeleteTarget(null)}>
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="card form-card">

@@ -29,4 +29,6 @@ export const api = {
   listOffers: () => request('/offers'),
   getOffer: (id) => request(`/offers/${id}`),
   createOffer: (payload) => request('/offers', { method: 'POST', body: JSON.stringify(payload) }),
+  deleteOffer: (id, password) =>
+    request(`/offers/${id}`, { method: 'DELETE', body: JSON.stringify({ password }) }),
 };

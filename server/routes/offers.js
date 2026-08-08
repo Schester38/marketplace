@@ -4,6 +4,7 @@ import { q } from '../db.js';
 const router = Router();
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 1500000;
+const ADMIN_PASSWORD = process.env.OFFER_ADMIN_PASSWORD || 'mboppi-verone-admin';
 
 function offerRow(o) {
   let photos = [];
@@ -83,6 +84,17 @@ router.post('/', async (req, res) => {
 
   const offer = offerRow((await q('SELECT * FROM offers WHERE id = $1', [created[0].id]))[0]);
   res.status(201).json({ offer });
+});
+
+router.delete('/:id', async (req, res) => {
+  const { password } = req.body || {};
+  if (String(password || '') !== ADMIN_PASSWORD) {
+    return res.status(403).json({ error: 'Mot de passe de gestion incorrect' });
+  }
+  const offer = (await q('SELECT * FROM offers WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!offer) return res.status(404).json({ error: 'Offre introuvable' });
+  await q('DELETE FROM offers WHERE id = $1', [offer.id]);
+  res.json({ ok: true });
 });
 
 export default router;
