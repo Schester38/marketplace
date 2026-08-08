@@ -16,8 +16,6 @@ export default function Navbar({ onLogout }) {
     <>
       <Link to="/" onClick={close}>Produits</Link>
       <Link to="/vitrine-offre" onClick={close}>Vitrine d'offre</Link>
-      <Link to="/a-propos" onClick={close}>À propos</Link>
-      <Link to="/contact" onClick={close}>Contact</Link>
       {!user && <Link to="/login" onClick={close}>Connexion</Link>}
       {!user && <Link to="/register" className="btn btn-primary" onClick={close}>Créer un compte</Link>}
       {user && user.role === 'shop' && <Link to="/shop" onClick={close}>Ma boutique</Link>}
