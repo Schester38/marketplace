@@ -62,6 +62,17 @@ export default function Register() {
               <span>🛍️ Client</span>
               <small>Je consulte les offres et les produits, je commande facilement</small>
             </label>
+            <label className={`role-option ${form.role === 'creator' ? 'selected' : ''}`}>
+              <input
+                type="radio"
+                name="role"
+                value="creator"
+                checked={form.role === 'creator'}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+              />
+              <span>🎨 Créateur</span>
+              <small>Je présente et vends mes créations au marché Mboppi</small>
+            </label>
           </div>
 
           <label>Nom complet / Nom de la boutique</label>

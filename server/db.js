@@ -23,7 +23,7 @@ export async function initDb() {
       email TEXT NOT NULL UNIQUE,
       password TEXT,
       provider TEXT NOT NULL DEFAULT 'email',
-      role TEXT NOT NULL CHECK (role IN ('shop', 'seller', 'client')),
+      role TEXT NOT NULL CHECK (role IN ('shop', 'seller', 'client', 'creator')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
@@ -74,6 +74,6 @@ export async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'email';
     ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
-    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('shop', 'seller', 'client'));
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('shop', 'seller', 'client', 'creator'));
   `);
 }
