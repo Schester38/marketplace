@@ -43,6 +43,86 @@ body {
 
 .navbar .brand { font-weight: 800; font-size: 1.2rem; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 8px; }
 .brand-logo { width: 30px; height: 30px; border-radius: 8px; }
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 42px;
+  height: 42px;
+  padding: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.hamburger-line {
+  display: block;
+  height: 3px;
+  width: 100%;
+  background: var(--primary);
+  border-radius: 2px;
+}
+
+.drawer { display: none; }
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 90;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(280px, 80vw);
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  z-index: 100;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+.drawer.open { transform: translateX(0); }
+.drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 800;
+  color: var(--primary);
+}
+.drawer-close {
+  margin-left: auto;
+  border: none;
+  background: var(--bg);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.drawer-nav { display: flex; flex-direction: column; padding: 12px; gap: 6px; }
+.drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin: 0;
+}
+.drawer-nav .btn { margin-top: 4px; }
+.drawer-nav .user-chip { box-sizing: border-box; }
+
+@media (max-width: 768px) {
+  .hamburger { display: flex; }
+  .desktop-nav { display: none; }
+}
 .navbar nav { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .navbar nav a { color: var(--text); text-decoration: none; font-weight: 500; }
 .navbar nav a:hover { color: var(--primary); }
