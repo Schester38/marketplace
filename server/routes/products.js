@@ -7,8 +7,16 @@ const router = Router();
 const MAX_PRODUCTS_PER_SHOP = 5;
 
 function productRow(p) {
+  let photos = [];
+  try {
+    photos = JSON.parse(p.photos || '[]');
+  } catch {
+    photos = [];
+  }
   return {
     ...p,
+    photos,
+    image: photos[0] || p.image || null,
     price: Number(p.price),
     commission_percent: Number(p.commission_percent),
     commission: Math.round(Number(p.price) * (Number(p.commission_percent) / 100) * 100) / 100,
@@ -48,7 +56,7 @@ router.get('/mine', authRequired, roleRequired('shop'), async (req, res) => {
 });
 
 router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
-  const { name, description, price, commission_percent, image } = req.body || {};
+  const { name, description, price, commission_percent, photos } = req.body || {};
   if (!name || price === undefined) {
     return res.status(400).json({ error: 'Le nom et le prix sont requis' });
   }
@@ -60,6 +68,7 @@ router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
   if (!Number.isFinite(percentNum) || percentNum < 0 || percentNum > 100) {
     return res.status(400).json({ error: 'La commission doit être entre 0 et 100 %' });
   }
+  const photoList = Array.isArray(photos) ? photos.filter((p) => typeof p === 'string' && p.startsWith('data:image/')).slice(0, 3) : [];
   const count = (await q('SELECT COUNT(*) AS n FROM products WHERE shop_id = $1', [req.user.id]))[0];
   if (Number(count.n) >= MAX_PRODUCTS_PER_SHOP) {
     return res.status(400).json({
@@ -67,15 +76,16 @@ router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
     });
   }
   const created = await q(
-    `INSERT INTO products (shop_id, name, description, price, commission_percent, image)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    `INSERT INTO products (shop_id, name, description, price, commission_percent, image, photos)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
     [
       req.user.id,
       String(name).trim(),
       description ? String(description).trim() : null,
       priceNum,
       percentNum,
-      image ? String(image).trim() : null,
+      photoList[0] || null,
+      JSON.stringify(photoList),
     ]
   );
   const product = productRow(

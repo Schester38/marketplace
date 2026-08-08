@@ -4,8 +4,10 @@ import ProductCard from '../components/ProductCard.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
+import { compressImage } from '../utils.js';
 
-const EMPTY_FORM = { name: '', description: '', price: '', commission_percent: '', image: '' };
+const EMPTY_FORM = { name: '', description: '', price: '', commission_percent: '', photos: [] };
+const MAX_PHOTOS = 3;
 
 export default function ShopDashboard() {
   const { user } = useAuth();
@@ -16,6 +18,25 @@ export default function ShopDashboard() {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [picking, setPicking] = useState(false);
+
+  const addPhotos = async (files) => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+    setPicking(true);
+    try {
+      const remaining = MAX_PHOTOS - form.photos.length;
+      const batch = list.slice(0, remaining);
+      const compressed = await Promise.all(batch.map((f) => compressImage(f)));
+      setForm((f) => ({ ...f, photos: [...f.photos, ...compressed].slice(0, MAX_PHOTOS) }));
+    } finally {
+      setPicking(false);
+    }
+  };
+
+  const removePhoto = (i) => {
+    setForm((f) => ({ ...f, photos: f.photos.filter((_, idx) => idx !== i) }));
+  };
 
   const load = async () => {
     try {
@@ -97,6 +118,28 @@ export default function ShopDashboard() {
         <div className="card form-card">
           <h2>Nouveau produit</h2>
           <form onSubmit={submitProduct}>
+            <label>Photos (maximum {MAX_PHOTOS})</label>
+            <div className="photo-input">
+              <label className="photo-picker">
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  hidden
+                  disabled={picking || form.photos.length >= MAX_PHOTOS}
+                  onChange={(e) => addPhotos(e.target.files)}
+                />
+                {picking ? 'Compression…' : form.photos.length >= MAX_PHOTOS ? 'Photos complètes' : '📷 Ajouter des photos'}
+              </label>
+              <div className="photo-previews">
+                {form.photos.map((photo, i) => (
+                  <div key={i} className="photo-thumb">
+                    <img src={photo} alt={`Photo ${i + 1}`} />
+                    <button type="button" className="photo-remove" onClick={() => removePhoto(i)}>✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
             <label>Nom du produit *</label>
             <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <label>Description</label>
@@ -111,8 +154,6 @@ export default function ShopDashboard() {
                 <input className="input" type="number" min="0" max="100" step="0.1" required value={form.commission_percent} onChange={(e) => setForm({ ...form, commission_percent: e.target.value })} />
               </div>
             </div>
-            <label>URL de l'image (optionnel)</label>
-            <input className="input" value={form.image} onChange={(e) => setForm({ ...form, image: e.target.value })} />
             {form.price && form.commission_percent ? (
               <p className="hint">
                 Le vendeur affichera : <strong>{formatMoney(form.price)} F</strong> et gagnera{' '}

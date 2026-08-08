@@ -6,11 +6,12 @@ export function formatMoney(n) {
 
 export default function ProductCard({ product, action, onAction }) {
   const commission = Number(product.commission || 0);
+  const photo = (product.photos && product.photos[0]) || product.image;
   return (
     <div className="card product-card">
       <div className="product-thumb">
-        {product.image ? (
-          <img src={product.image} alt={product.name} loading="lazy" decoding="async" />
+        {photo ? (
+          <img src={photo} alt={product.name} loading="lazy" decoding="async" />
         ) : (
           <span>📦</span>
         )}
