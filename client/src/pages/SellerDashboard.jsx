@@ -97,6 +97,7 @@ export default function SellerDashboard() {
             <ProductCard
               key={p.id}
               product={p}
+              showCommission
               action="Vendre ce produit"
               onAction={() => setSaleForm({ product: p, buyer_name: '', buyer_phone: '', quantity: 1 })}
             />

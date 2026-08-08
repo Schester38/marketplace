@@ -5,7 +5,7 @@ export function formatMoney(n) {
   return new Intl.NumberFormat('fr-FR').format(Number(n || 0));
 }
 
-export default function ProductCard({ product, action, onAction }) {
+export default function ProductCard({ product, action, onAction, showCommission }) {
   const commission = Number(product.commission || 0);
   const photo = (product.photos && product.photos[0]) || product.image;
   const deliveryFee = Number(product.delivery_fee || 0);
@@ -36,10 +36,12 @@ export default function ProductCard({ product, action, onAction }) {
             <span className="label">Prix de vente</span>
             <span className="price">{formatMoney(product.price)} F</span>
           </div>
-          <div>
-            <span className="label">Commission ({product.commission_percent}%)</span>
-            <span className="commission">+{formatMoney(commission)} F</span>
-          </div>
+          {showCommission && (
+            <div>
+              <span className="label">Commission ({product.commission_percent}%)</span>
+              <span className="commission">+{formatMoney(commission)} F</span>
+            </div>
+          )}
         </div>
         <p className={`stock-line ${qty > 0 ? '' : 'out'}`}>
           {qty > 0 ? `En stock : ${qty}` : 'Rupture de stock'}
