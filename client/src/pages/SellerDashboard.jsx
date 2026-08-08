@@ -3,8 +3,12 @@ import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
 import { countrySymbol } from '../config.js';
 import Seo from '../components/Seo.jsx';
+import { useAuth } from '../App.jsx';
+import { useLang } from '../i18n.jsx';
 
 export default function SellerDashboard() {
+  const { user } = useAuth();
+  const { t } = useLang();
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
   const [stats, setStats] = useState(null);
@@ -37,7 +41,7 @@ export default function SellerDashboard() {
         quantity: Number(saleForm.quantity),
       });
       setSaleForm(null);
-      setSuccess('Vente enregistrée. Commission créditée sur votre compte.');
+      setSuccess(t('Vente enregistrée. Commission créditée sur votre compte.'));
       load();
     } catch (err) {
       setError(err.message);
@@ -46,42 +50,45 @@ export default function SellerDashboard() {
 
   return (
     <main className="container">
-      <Seo title="Mon espace vendeur — Mboppi" description="Suivez vos ventes et vos commissions sur Mboppi." />
+      <Seo title={t('Mon espace vendeur') + ' — Mboppi'} description={t('Vendez les produits des boutiques et gagnez des commissions.')} />
       <section className="dash-header">
         <div>
-          <h1>Mon espace vendeur</h1>
-          <p>Sélectionnez un produit des boutiques et enregistrez une vente.</p>
+          <h1>{t('Mon espace vendeur')}</h1>
+          <p>{t('Sélectionnez un produit des boutiques et enregistrez une vente.')}</p>
         </div>
       </section>
 
       {stats && (
         <section className="card stats">
           <div className="stats-row">
-            <div><span className="label">Ventes réalisées</span><strong>{stats.total_sales}</strong></div>
-            <div><span className="label">Commission totale générée</span><strong>{formatMoney(stats.total_commission)} {countrySymbol(user?.country)}</strong></div>
-            <div><span className="label">Commission confirmée</span><strong>{formatMoney(stats.earned_commission)} {countrySymbol(user?.country)}</strong></div>
+            <div><span className="label">{t('Ventes réalisées')}</span><strong>{stats.total_sales}</strong></div>
+            <div><span className="label">{t('Commission totale générée')}</span><strong>{formatMoney(stats.total_commission)} {countrySymbol(user?.country)}</strong></div>
+            <div><span className="label">{t('Commission confirmée')}</span><strong>{formatMoney(stats.earned_commission)} {countrySymbol(user?.country)}</strong></div>
           </div>
         </section>
       )}
 
       {saleForm && (
         <div className="card form-card">
-          <h2>Vendre : {saleForm.product.name}</h2>
+          <h2>{t('Vendre : {name}', { name: saleForm.product.name })}</h2>
           <p className="hint">
-            Prix : {formatMoney(saleForm.product.price)} {countrySymbol(saleForm.product.shop_country)} — Votre commission :{' '}
-            {formatMoney(saleForm.product.commission)} {countrySymbol(saleForm.product.shop_country)} par unité
+            {t('Prix : {price} {symbol} — Votre commission : {commission} {symbol} par unité', {
+              price: formatMoney(saleForm.product.price),
+              symbol: countrySymbol(saleForm.product.shop_country),
+              commission: formatMoney(saleForm.product.commission),
+            })}
           </p>
           <form onSubmit={submitSale}>
-            <label>Nom de l'acheteur *</label>
+            <label>{t('Nom de l\'acheteur *')}</label>
             <input className="input" required value={saleForm.buyer_name || ''} onChange={(e) => setSaleForm({ ...saleForm, buyer_name: e.target.value })} />
-            <label>Téléphone (optionnel)</label>
+            <label>{t('Téléphone (optionnel)')}</label>
             <input className="input" value={saleForm.buyer_phone || ''} onChange={(e) => setSaleForm({ ...saleForm, buyer_phone: e.target.value })} />
-            <label>Quantité</label>
+            <label>{t('Quantité')}</label>
             <input className="input" type="number" min="1" value={saleForm.quantity || 1} onChange={(e) => setSaleForm({ ...saleForm, quantity: e.target.value })} />
             {error && <p className="error">{error}</p>}
             <div className="row2">
-              <button className="btn btn-primary">Enregistrer la vente</button>
-              <button type="button" className="btn btn-outline" onClick={() => setSaleForm(null)}>Annuler</button>
+              <button className="btn btn-primary">{t('Enregistrer la vente')}</button>
+              <button type="button" className="btn btn-outline" onClick={() => setSaleForm(null)}>{t('Annuler')}</button>
             </div>
           </form>
         </div>
@@ -91,7 +98,7 @@ export default function SellerDashboard() {
       {error && <p className="error">{error}</p>}
 
       {products.length === 0 ? (
-        <p className="empty">Aucun produit disponible à vendre pour le moment.</p>
+        <p className="empty">{t('Aucun produit disponible à vendre pour le moment.')}</p>
       ) : (
         <div className="grid">
           {products.map((p) => (
@@ -107,20 +114,20 @@ export default function SellerDashboard() {
       )}
 
       <section className="card stats">
-        <h2>Mes ventes et commissions</h2>
+        <h2>{t('Mes ventes et commissions')}</h2>
         {sales.length === 0 ? (
-          <p className="empty">Vous n'avez pas encore enregistré de vente.</p>
+          <p className="empty">{t('Vous n\'avez pas encore enregistré de vente.')}</p>
         ) : (
           <table className="table">
             <thead>
               <tr>
-                <th>Produit</th>
-                <th>Boutique</th>
-                <th>Acheteur</th>
-                <th>Qté</th>
-                <th>Total</th>
-                <th>Commission</th>
-                <th>Statut</th>
+                <th>{t('Produit')}</th>
+                <th>{t('Boutique')}</th>
+                <th>{t('Acheteur')}</th>
+                <th>{t('Qté')}</th>
+                <th>{t('Total')}</th>
+                <th>{t('Commission')}</th>
+                <th>{t('Statut')}</th>
               </tr>
             </thead>
             <tbody>

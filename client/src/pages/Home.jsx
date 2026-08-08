@@ -4,9 +4,11 @@ import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import { useAuth } from '../App.jsx';
 import Seo from '../components/Seo.jsx';
+import { useLang } from '../i18n.jsx';
 
 export default function Home() {
   const { user } = useAuth();
+  const { t } = useLang();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -44,29 +46,28 @@ export default function Home() {
           <span>💰</span>
           <span>🎊</span>
         </div>
-        <span className="hero-badge">🛍️ Bienvenue chez Mboppi</span>
-        <h1>Le marché du quartier, en un clic</h1>
+        <span className="hero-badge">{t('🛍️ Bienvenue chez Mboppi')}</span>
+        <h1>{t('Le marché du quartier, en un clic')}</h1>
         <p>
-          Découvrez les offres du moment, commandez les produits des boutiques partenaires,
-          ou devenez vendeur et gagnez une commission sur chaque vente.
+          {t('Découvrez les offres du moment, commandez les produits des boutiques partenaires, ou devenez vendeur et gagnez une commission sur chaque vente.')}
         </p>
         <div className="hero-stats">
           <div className="stat">
             <strong>{products.length}</strong>
-            <span>Produits en boutique</span>
+            <span>{t('Produits en boutique')}</span>
           </div>
           <div className="stat">
             <strong>{shopsCount}</strong>
-            <span>Boutiques partenaires</span>
+            <span>{t('Boutiques partenaires')}</span>
           </div>
         </div>
         <div className="hero-actions" style={{ marginTop: 24 }}>
           {user ? (
             <Link to={user.role === 'shop' ? '/shop' : '/seller'} className="btn btn-primary">
-              Accéder à mon espace
+              {t('Accéder à mon espace')}
             </Link>
           ) : (
-            <Link to="/register" className="btn btn-primary">Créer un compte gratuit</Link>
+            <Link to="/register" className="btn btn-primary">{t('Créer un compte gratuit')}</Link>
           )}
         </div>
       </section>
@@ -75,20 +76,20 @@ export default function Home() {
         <div className="step">
           <span className="step-num">1</span>
           <span className="step-icon">🏪</span>
-          <h3>Les boutiques publient</h3>
-          <p>Elles mettent en ligne leurs produits et fixent la commission de vente.</p>
+          <h3>{t('Les boutiques publient')}</h3>
+          <p>{t('Elles mettent en ligne leurs produits et fixent la commission de vente.')}</p>
         </div>
         <div className="step">
           <span className="step-num">2</span>
           <span className="step-icon">🛒</span>
-          <h3>Les vendeurs vendent</h3>
-          <p>Ils enregistrent les ventes et trouvent les clients, au quartier ou en ligne.</p>
+          <h3>{t('Les vendeurs vendent')}</h3>
+          <p>{t('Ils enregistrent les ventes et trouvent les clients, au quartier ou en ligne.')}</p>
         </div>
         <div className="step">
           <span className="step-num">3</span>
           <span className="step-icon">💰</span>
-          <h3>Chacun y gagne</h3>
-          <p>La boutique écoule ses produits, le vendeur encaisse sa commission à chaque vente.</p>
+          <h3>{t('Chacun y gagne')}</h3>
+          <p>{t('La boutique écoule ses produits, le vendeur encaisse sa commission à chaque vente.')}</p>
         </div>
       </section>
 
@@ -96,12 +97,12 @@ export default function Home() {
 
       <section>
         <div className="section-head">
-          <h2 className="section-title">🏪 Produits des boutiques</h2>
+          <h2 className="section-title">{t('🏪 Produits des boutiques')}</h2>
         </div>
         <div className="toolbar">
           <input
             className="input search"
-            placeholder="🔍 Rechercher un produit…"
+            placeholder={t('🔍 Rechercher un produit…')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -111,7 +112,7 @@ export default function Home() {
             {[1, 2, 3].map((i) => <div key={i} className="card offer-card skeleton"><div className="skeleton-block skeleton-photo"></div></div>)}
           </div>
         ) : products.length === 0 ? (
-          <p className="empty">Aucun produit disponible pour le moment.</p>
+          <p className="empty">{t('Aucun produit disponible pour le moment.')}</p>
         ) : (
           <div className="grid">
             {products.map((p) => (

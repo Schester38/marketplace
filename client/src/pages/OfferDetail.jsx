@@ -4,9 +4,11 @@ import { api } from '../api.js';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { offerUrl, whatsappLink, offerDiscount, offerSavings, categoryEmoji } from '../config.js';
 import Seo from '../components/Seo.jsx';
+import { useLang } from '../i18n.jsx';
 
 export default function OfferDetail() {
   const { id } = useParams();
+  const { t } = useLang();
   const [offer, setOffer] = useState(null);
   const [error, setError] = useState('');
   const [lightbox, setLightbox] = useState(false);
@@ -35,7 +37,7 @@ export default function OfferDetail() {
     return (
       <main className="container narrow">
         <p className="error">{error}</p>
-        <Link to="/vitrine-offre" className="btn btn-outline">← Retour à la vitrine</Link>
+        <Link to="/vitrine-offre" className="btn btn-outline">{t('← Retour à la vitrine')}</Link>
       </main>
     );
   }
@@ -50,18 +52,22 @@ export default function OfferDetail() {
     );
   }
 
-  const waMessage = `Bonjour, je suis intéressé(e) par votre offre « ${offer.name} » : ${offerUrl(offer.id)}`;
+  const symbol = 'F';
+  const waMessage = t('Bonjour, je suis intéressé(e) par votre offre « {name} » : {url}', {
+    name: offer.name,
+    url: offerUrl(offer.id),
+  });
   const discount = offerDiscount(offer);
   const savings = offerSavings(offer);
 
   return (
     <main className="container narrow">
       <Seo
-        title={offer ? `${offer.name} — Mboppi` : 'Offre du moment — Mboppi'}
-        description={offer ? `Découvrez « ${offer.name} » à ${formatMoney(offer.price)} sur Mboppi.` : undefined}
+        title={offer ? `${offer.name} — Mboppi` : `${t('Offre')} — Mboppi`}
+        description={offer ? `${t('Découvrez « {name} » à {price} {symbol} sur Mboppi.', { name: offer.name, price: formatMoney(offer.price), symbol })}` : undefined}
       />
       <Link to="/vitrine-offre" className="btn btn-outline" style={{ marginBottom: 16 }}>
-        ← Retour à la vitrine
+        {t('← Retour à la vitrine')}
       </Link>
 
       <div className="card offer-detail">
@@ -77,44 +83,44 @@ export default function OfferDetail() {
           )}
           {discount > 0 && <span className="discount-badge">−{discount}%</span>}
           {photos.length > 1 && (
-            <span className="offer-photo-count">{photos.length} photos — cliquez pour agrandir</span>
+            <span className="offer-photo-count">{t('{n} photos — cliquez pour agrandir', { n: photos.length })}</span>
           )}
         </div>
 
         <div className="offer-body">
           <div className="offer-tags">
-            <span className="badge badge-offer">Offre</span>
+            <span className="badge badge-offer">{t('Offre')}</span>
             {offer.category && <span className="badge badge-cat">{categoryEmoji(offer.category)} {offer.category}</span>}
           </div>
           <h2>{offer.name}</h2>
           {offer.description && <p>{offer.description}</p>}
-          {offer.warranty && <p className="offer-warranty">🛡️ Garantie : {offer.warranty}</p>}
+          {offer.warranty && <p className="offer-warranty">🛡️ {t('Garantie : {warranty}', { warranty: offer.warranty })}</p>}
           <div className="offer-prices">
-            <span className="old-price">{formatMoney(offer.original_price)} F</span>
-            <span className="promo-price">{formatMoney(offer.promo_price)} F</span>
+            <span className="old-price">{formatMoney(offer.original_price)} {symbol}</span>
+            <span className="promo-price">{formatMoney(offer.promo_price)} {symbol}</span>
           </div>
-          {savings > 0 && <p className="offer-savings">💰 Économisez {formatMoney(savings)} F par rapport au prix d'origine</p>}
-          <p className="offer-qty">Disponibilité : {offer.quantity} unité(s)</p>
+          {savings > 0 && <p className="offer-savings">💰 {t('Économisez {n} {symbol} par rapport au prix d\'origine', { n: formatMoney(savings), symbol })}</p>}
+          <p className="offer-qty">{t('Disponibilité : {n} unité(s)', { n: offer.quantity })}</p>
 
           {offer.phone && (
             <a className="btn btn-primary btn-block" href={`tel:${offer.phone}`}>
-              📞 Appeler
+              📞 {t('Appeler')}
             </a>
           )}
           <a className="btn btn-whatsapp btn-block" href={whatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">
-            <WhatsAppIcon /> Commander sur WhatsApp
+            <WhatsAppIcon /> {t('Commander sur WhatsApp')}
           </a>
         </div>
       </div>
 
       {lightbox && (
         <div className="lightbox" onClick={() => setLightbox(false)}>
-          <button className="lightbox-close" onClick={() => setLightbox(false)} aria-label="Fermer">✕</button>
+          <button className="lightbox-close" onClick={() => setLightbox(false)} aria-label={t('Fermer')}>✕</button>
           {photos.length > 1 && (
             <button
               className="lightbox-nav prev"
               onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i - 1 + photos.length) % photos.length); }}
-              aria-label="Photo précédente"
+              aria-label={t('Photo précédente')}
             >‹</button>
           )}
           <img
@@ -127,7 +133,7 @@ export default function OfferDetail() {
             <button
               className="lightbox-nav next"
               onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i + 1) % photos.length); }}
-              aria-label="Photo suivante"
+              aria-label={t('Photo suivante')}
             >›</button>
           )}
         </div>

@@ -4,6 +4,7 @@ import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
 import Home from './pages/Home.jsx';
+import { LangProvider } from './i18n.jsx';
 
 const Login = React.lazy(() => import('./pages/Login.jsx'));
 const Register = React.lazy(() => import('./pages/Register.jsx'));
@@ -80,10 +81,11 @@ export default function App() {
   const { logout } = useAuth();
 
   return (
-    <div className="app">
-      <Navbar onLogout={() => { logout(); navigate('/'); }} />
-      <Suspense fallback={<LoadingScreen />}>
-        <Routes>
+    <LangProvider>
+      <div className="app">
+        <Navbar onLogout={() => { logout(); navigate('/'); }} />
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/a-propos" element={<About />} />
           <Route path="/contact" element={<Contact />} />
@@ -139,6 +141,7 @@ export default function App() {
         </Routes>
       </Suspense>
       <Footer />
-    </div>
+      </div>
+    </LangProvider>
   );
 }

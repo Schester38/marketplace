@@ -5,6 +5,7 @@ import OfferCard from '../components/OfferCard.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { offerDiscount, categoryEmoji } from '../config.js';
 import Seo from '../components/Seo.jsx';
+import { useLang } from '../i18n.jsx';
 
 function SkeletonCard() {
   return (
@@ -21,6 +22,7 @@ function SkeletonCard() {
 }
 
 export default function VitrineOffre() {
+  const { t } = useLang();
   const [products, setProducts] = useState([]);
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,8 +106,8 @@ export default function VitrineOffre() {
   return (
     <main className="container">
       <Seo
-        title="Vitrine d'offre — Promotions du moment sur Mboppi"
-        description="Toutes les offres du moment : réductions, économies et bonnes affaires chez les boutiques partenaires."
+        title={t("Vitrine d'offre") + ' — Mboppi'}
+        description={t('Découvrez les meilleures offres du moment.')}
       />
       <section className="hero vitrine-hero">
         <div className="hero-floats" aria-hidden="true">
@@ -116,28 +118,27 @@ export default function VitrineOffre() {
           <span>🛒</span>
           <span>🎉</span>
         </div>
-        <span className="hero-badge">⚡ Promotions en cours</span>
-        <h1>🔥 Les offres du moment</h1>
+        <span className="hero-badge">{t('⚡ Promotions en cours')}</span>
+        <h1>{t('🔥 Les offres du moment')}</h1>
         <p>
-          Les meilleures promotions de Verone et des boutiques partenaires :
-          prix cassés, économies garanties, commande directe par téléphone ou WhatsApp.
+          {t('Les meilleures promotions de Verone et des boutiques partenaires : prix cassés, économies garanties, commande directe par téléphone ou WhatsApp.')}
         </p>
         <div className="hero-stats">
           <div className="stat">
             <strong>{offers.length}</strong>
-            <span>Offres actives</span>
+            <span>{t('Offres actives')}</span>
           </div>
           <div className="stat">
             <strong>{formatMoney(totalSavings)} F</strong>
-            <span>Économies cumulées</span>
+            <span>{t('Économies cumulées')}</span>
           </div>
           <div className="stat">
             <strong>{categories.length}</strong>
-            <span>Catégories</span>
+            <span>{t('Catégories')}</span>
           </div>
         </div>
         <div className="hero-countdown">
-          ⏰ Les offres se renouvellent dans <strong>{toMidnight}</strong>
+          {t('⏰ Les offres se renouvellent dans {time}', { time: toMidnight })}
         </div>
       </section>
 
@@ -157,12 +158,12 @@ export default function VitrineOffre() {
       {error && <p className="error">{error}</p>}
 
       <section>
-        <h2 className="section-title">Offres promotionnelles</h2>
+        <h2 className="section-title">{t('Offres promotionnelles')}</h2>
 
         <div className="toolbar">
           <input
             className="input search"
-            placeholder="🔍 Rechercher une offre…"
+            placeholder={t('🔍 Rechercher une offre…')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -171,7 +172,7 @@ export default function VitrineOffre() {
               className={`chip ${category === 'all' ? 'active' : ''}`}
               onClick={() => setCategory('all')}
             >
-              ✨ Toutes ({offers.length})
+              {t('✨ Toutes ({n})', { n: offers.length })}
             </button>
             {categories.map((c) => (
               <button
@@ -188,19 +189,19 @@ export default function VitrineOffre() {
               className={`sort-btn ${sort === 'discount' ? 'active' : ''}`}
               onClick={() => setSort('discount')}
             >
-              🔥 Meilleures réductions
+              {t('🔥 Meilleures réductions')}
             </button>
             <button
               className={`sort-btn ${sort === 'price' ? 'active' : ''}`}
               onClick={() => setSort('price')}
             >
-              💰 Moins cher
+              {t('💰 Moins cher')}
             </button>
             <button
               className={`sort-btn ${sort === 'latest' ? 'active' : ''}`}
               onClick={() => setSort('latest')}
             >
-              ✨ Dernières arrivées
+              {t('✨ Dernières arrivées')}
             </button>
           </div>
         </div>
@@ -214,12 +215,12 @@ export default function VitrineOffre() {
             <div className="verone-placeholder">🔍</div>
             <p className="empty" style={{ padding: '8px 0 16px' }}>
               {offers.length === 0
-                ? 'Aucune offre pour le moment. Revenez très vite, ça va chauffer ! 🔥'
-                : 'Aucune offre ne correspond à votre recherche.'}
+                ? t('Aucune offre pour le moment. Revenez très vite, ça va chauffer ! 🔥')
+                : t('Aucune offre ne correspond à votre recherche.')}
             </p>
             {offers.length > 0 && (
               <button className="btn btn-outline" onClick={resetFilters}>
-                Réinitialiser les filtres
+                {t('Réinitialiser les filtres')}
               </button>
             )}
           </div>
@@ -233,13 +234,13 @@ export default function VitrineOffre() {
       </section>
 
       <section>
-        <h2 className="section-title">Produits des boutiques</h2>
+        <h2 className="section-title">{t('🏪 Produits des boutiques')}</h2>
         {loading ? (
           <div className="grid">
             {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
           </div>
         ) : products.length === 0 ? (
-          <p className="empty">Aucun produit disponible pour le moment.</p>
+          <p className="empty">{t('Aucun produit disponible pour le moment.')}</p>
         ) : (
           <div className="grid">
             {products.map((p) => (

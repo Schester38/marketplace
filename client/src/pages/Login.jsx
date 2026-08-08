@@ -4,9 +4,11 @@ import { api } from '../api.js';
 import { useAuth, dashboardPath } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
 import Seo from '../components/Seo.jsx';
+import { useLang } from '../i18n.jsx';
 
 export default function Login() {
   const { login } = useAuth();
+  const { t } = useLang();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -25,12 +27,12 @@ export default function Login() {
 
   return (
     <main className="container narrow">
-      <Seo title="Connexion — Mboppi" description="Connectez-vous à votre espace Mboppi." />
+      <Seo title={t('Connexion') + ' — Mboppi'} description={t('Connexion à Mboppi')} />
       <div className="card form-card">
         <div className="auth-brand">🛍️</div>
-        <h2>Connexion</h2>
+        <h2>{t('Connexion')}</h2>
         <form onSubmit={submit}>
-          <label>Email</label>
+          <label>{t('Email')}</label>
           <input
             className="input"
             type="email"
@@ -38,7 +40,7 @@ export default function Login() {
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
-          <label>Mot de passe</label>
+          <label>{t('Mot de passe')}</label>
           <input
             className="input"
             type="password"
@@ -47,9 +49,9 @@ export default function Login() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
           {error && <p className="error">{error}</p>}
-          <button className="btn btn-primary btn-block">Se connecter</button>
+          <button className="btn btn-primary btn-block">{t('Se connecter')}</button>
 
-          <div className="divider"><span>ou</span></div>
+          <div className="divider"><span>{t('ou')}</span></div>
           <button
             type="button"
             className="btn btn-google btn-block"
@@ -58,11 +60,11 @@ export default function Login() {
             }}
           >
             <GoogleIcon />
-            Se connecter avec Google
+            {t('Se connecter avec Google')}
           </button>
         </form>
         <p className="hint">
-          Pas encore de compte ? <Link to="/register">Créer un compte</Link>
+          {t('Pas encore de compte ?')} <Link to="/register">{t('Créer un compte')}</Link>
         </p>
       </div>
     </main>

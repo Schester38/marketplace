@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import ShareVitrine from '../components/ShareVitrine.jsx';
 import Seo from '../components/Seo.jsx';
 import { compressImage } from '../utils.js';
+import { useLang } from '../i18n.jsx';
 
 const EMPTY_FORM = {
   name: '',
@@ -19,6 +20,7 @@ const EMPTY_FORM = {
 const MAX_PHOTOS = 3;
 
 export default function Verone() {
+  const { t } = useLang();
   const [showForm, setShowForm] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showMyOffers, setShowMyOffers] = useState(false);
@@ -52,7 +54,7 @@ export default function Verone() {
       await api.deleteOffer(deleteTarget.id);
       setMyOffers(myOffers.filter((o) => o.id !== deleteTarget.id));
       setDeleteTarget(null);
-      setSuccess('Offre retirée de la vitrine.');
+      setSuccess(t('Offre retirée de la vitrine.'));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -64,7 +66,7 @@ export default function Verone() {
     const remaining = MAX_PHOTOS - form.photos.length;
     const toAdd = Array.from(files).slice(0, remaining);
     if (toAdd.length < Array.from(files).length) {
-      setError(`Maximum ${MAX_PHOTOS} photos par offre`);
+      setError(t('Maximum {n} photos par offre', { n: MAX_PHOTOS }));
     } else {
       setError('');
     }
@@ -73,7 +75,7 @@ export default function Verone() {
       try {
         compressed.push(await compressImage(file));
       } catch {
-        setError('Impossible de lire une des photos');
+        setError(t('Impossible de lire une des photos'));
       }
     }
     setForm({ ...form, photos: [...form.photos, ...compressed] });
@@ -88,7 +90,7 @@ export default function Verone() {
     setError('');
     setSuccess('');
     if (!form.original_price || !form.promo_price) {
-      setError('Les deux prix sont requis');
+      setError(t('Les deux prix sont requis'));
       return;
     }
     setSubmitting(true);
@@ -101,7 +103,7 @@ export default function Verone() {
       });
       setForm(EMPTY_FORM);
       setShowForm(false);
-      setSuccess('Offre ajoutée avec succès — elle s\'affiche maintenant sur la page Vitrine d\'offre.');
+      setSuccess(t('Offre ajoutée avec succès — elle s\'affiche maintenant sur la page Vitrine d\'offre.'));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -111,23 +113,23 @@ export default function Verone() {
 
   return (
     <main className="container narrow">
-      <Seo title="Verone — Mboppi" description="Gestion des offres de la vitrine Mboppi." />
+      <Seo title="Verone — Mboppi" description={t('Gestion des offres')} />
       <section className="dash-header">
         <div>
-          <div className="hero-badge" style={{ marginBottom: 10 }}>🛍️ Espace Verone</div>
+          <div className="hero-badge" style={{ marginBottom: 10 }}>{t('🛍️ Espace Verone')}</div>
           <h1>Verone</h1>
           <p>
-            Ajoutez vos offres promotionnelles : elles s'affichent dans la Vitrine d'offre du site.
+            {t('Ajoutez vos offres promotionnelles : elles s\'affichent dans la Vitrine d\'offre du site.')}
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Fermer le formulaire' : '+ Ajouter une Offre'}
+          {showForm ? t('Fermer le formulaire') : t('+ Ajouter une Offre')}
         </button>
         <div className="row2" style={{ width: '100%' }}>
           <button className="btn btn-outline" onClick={toggleMyOffers}>
-            {showMyOffers ? 'Masquer mes Offres' : 'Voir mes Offres'}
+            {showMyOffers ? t('Masquer mes Offres') : t('Voir mes Offres')}
           </button>
-          <button className="btn btn-outline" onClick={() => setShowShare(true)}>Partager ma Vitrine</button>
+          <button className="btn btn-outline" onClick={() => setShowShare(true)}>{t('Partager ma Vitrine')}</button>
         </div>
       </section>
 
@@ -135,9 +137,9 @@ export default function Verone() {
 
       {showMyOffers && (
         <section className="card">
-          <h2 className="section-title" style={{ marginTop: 0 }}>Mes offres</h2>
+          <h2 className="section-title" style={{ marginTop: 0 }}>{t('Mes offres')}</h2>
           {myOffers.length === 0 ? (
-            <p className="empty">Aucune offre ajoutée pour le moment.</p>
+            <p className="empty">{t('Aucune offre ajoutée pour le moment.')}</p>
           ) : (
             <div className="my-offers">
               {myOffers.map((o) => (
@@ -156,7 +158,7 @@ export default function Verone() {
                       <span className="promo-price">{o.promo_price.toLocaleString('fr-FR')} F</span>
                     </span>
                   </div>
-                  <button className="btn btn-danger" onClick={() => setDeleteTarget(o)}>Rétirer</button>
+                  <button className="btn btn-danger" onClick={() => setDeleteTarget(o)}>{t('Rétirer')}</button>
                 </div>
               ))}
             </div>
@@ -168,19 +170,19 @@ export default function Verone() {
         <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Retirer l'offre</h3>
+              <h3>{t('Retirer l\'offre')}</h3>
               <button className="drawer-close" onClick={() => setDeleteTarget(null)}>✕</button>
             </div>
             <p className="hint">
-              Confirmez le retrait de « <strong>{deleteTarget.name}</strong> » de la vitrine.
+              {t('Confirmez le retrait de « {name} » de la vitrine.', { name: deleteTarget.name })}
             </p>
             <form onSubmit={confirmDelete}>
               <div className="row2" style={{ marginTop: 14 }}>
                 <button className="btn btn-danger" disabled={deleting}>
-                  {deleting ? 'Retrait…' : 'Rétirer'}
+                  {deleting ? t('Retrait…') : t('Rétirer')}
                 </button>
                 <button type="button" className="btn btn-outline" onClick={() => setDeleteTarget(null)}>
-                  Annuler
+                  {t('Annuler')}
                 </button>
               </div>
             </form>
@@ -190,9 +192,9 @@ export default function Verone() {
 
       {showForm && (
         <div className="card form-card">
-          <h2>Nouvelle offre</h2>
+          <h2>{t('Nouvelle offre')}</h2>
           <form onSubmit={submit}>
-            <label>Photos (maximum {MAX_PHOTOS})</label>
+            <label>{t('Photos (maximum {n})', { n: MAX_PHOTOS })}</label>
             <div className="photo-input">
               <label className="photo-picker">
                 <input
@@ -203,50 +205,50 @@ export default function Verone() {
                   disabled={form.photos.length >= MAX_PHOTOS}
                   onChange={(e) => addPhotos(e.target.files)}
                 />
-                {form.photos.length >= MAX_PHOTOS ? 'Photos complètes' : '📷 Ajouter des photos'}
+                {form.photos.length >= MAX_PHOTOS ? t('Photos complètes') : t('📷 Ajouter des photos')}
               </label>
               <div className="photo-previews">
                 {form.photos.map((photo, i) => (
                   <div key={i} className="photo-thumb">
-                    <img src={photo} alt={`Photo ${i + 1}`} />
+                    <img src={photo} alt={`${t('Photo')} ${i + 1}`} />
                     <button type="button" className="photo-remove" onClick={() => removePhoto(i)}>✕</button>
                   </div>
                 ))}
               </div>
             </div>
 
-            <label>Nom de l'Offre *</label>
+            <label>{t('Nom de l\'Offre *')}</label>
             <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
 
-            <label>Catégorie</label>
-            <input className="input" placeholder="ex : Électronique, Mode, Alimentation…" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+            <label>{t('Catégorie')}</label>
+            <input className="input" placeholder={t('ex : Électronique, Mode, Alimentation…')} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
 
-            <label>Description</label>
+            <label>{t('Description')}</label>
             <textarea className="input" rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
-            <label>Garantie (en lettres ou chiffres)</label>
-            <input className="input" placeholder="ex : 6 mois, 1 an, 2 ans" value={form.warranty} onChange={(e) => setForm({ ...form, warranty: e.target.value })} />
+            <label>{t('Garantie (en lettres ou chiffres)')}</label>
+            <input className="input" placeholder={t('ex : 6 mois, 1 an, 2 ans')} value={form.warranty} onChange={(e) => setForm({ ...form, warranty: e.target.value })} />
 
             <div className="row2">
               <div>
-                <label>Prix de vente (F) *</label>
+                <label>{t('Prix de vente ({symbol}) *', { symbol: 'F' })}</label>
                 <input className="input price-old" type="number" min="0" required value={form.original_price} onChange={(e) => setForm({ ...form, original_price: e.target.value })} />
               </div>
               <div>
-                <label>Prix promotionnel (F) *</label>
+                <label>{t('Prix promotionnel ({symbol}) *', { symbol: 'F' })}</label>
                 <input className="input price-new" type="number" min="0" required value={form.promo_price} onChange={(e) => setForm({ ...form, promo_price: e.target.value })} />
               </div>
             </div>
 
-            <label>Numéro de téléphone</label>
+            <label>{t('Numéro de téléphone')}</label>
             <input className="input" type="tel" placeholder="ex : 07 00 00 00 00" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
 
-            <label>Quantité (en chiffres) *</label>
+            <label>{t('Quantité (en chiffres) *')}</label>
             <input className="input" type="number" min="0" required value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
 
             {error && <p className="error">{error}</p>}
             <button className="btn btn-primary btn-block" disabled={submitting}>
-              {submitting ? 'Ajout en cours…' : "Ajouter l'Offre"}
+              {submitting ? t('Ajout en cours…') : t("Ajouter l'Offre")}
             </button>
           </form>
         </div>

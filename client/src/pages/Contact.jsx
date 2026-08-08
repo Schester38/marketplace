@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import Seo from '../components/Seo.jsx';
 import { WHATSAPP_NUMBER, whatsappLink } from '../config.js';
+import { useLang } from '../i18n.jsx';
 
 const PHONE = '237679475343';
 
 export default function Contact() {
+  const { t } = useLang();
   const [name, setName] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -13,7 +15,7 @@ export default function Contact() {
     e.preventDefault();
     const text = [
       subject ? `*${subject}*` : '',
-      `Bonjour Mboppi, je suis ${name || 'un visiteur'}.`,
+      t('Bonjour Mboppi, je suis {name}.', { name: name || t('un visiteur') }),
       message,
     ]
       .filter(Boolean)
@@ -24,33 +26,33 @@ export default function Contact() {
   return (
     <main className="container">
       <Seo
-        title="Contact — Mboppi"
-        description="Contactez l'équipe Mboppi : WhatsApp, téléphone ou formulaire. Nous vous répondons rapidement."
+        title={t('Contact') + ' — Mboppi'}
+        description={t('Une question, un problème ou une suggestion ? Écrivez-nous, nous répondons rapidement.')}
       />
       <section className="hero vitrine-hero">
-        <span className="hero-badge">💬 Contact</span>
-        <h1>Comment pouvons-nous vous aider ?</h1>
-        <p>Une question, une suggestion, un souci ? Écrivez-nous, nous répondons vite.</p>
+        <span className="hero-badge">💬 {t('Contact')}</span>
+        <h1>{t('Comment pouvons-nous vous aider ?')}</h1>
+        <p>{t('Une question, une suggestion, un souci ? Écrivez-nous, nous répondons vite.')}</p>
       </section>
 
       <div className="contact-grid">
         <div className="card">
-          <h2>Nos coordonnées</h2>
+          <h2>{t('Nos coordonnées')}</h2>
           <div className="contact-item">
             <span className="contact-emoji">💬</span>
             <div>
               <h3>WhatsApp</h3>
-              <p>Le moyen le plus rapide de nous joindre.</p>
+              <p>{t('Le moyen le plus rapide de nous joindre.')}</p>
               <a className="btn btn-whatsapp" href={whatsappLink('Bonjour Mboppi !')} target="_blank" rel="noopener noreferrer">
-                Écrire sur WhatsApp
+                {t('Écrire sur WhatsApp')}
               </a>
             </div>
           </div>
           <div className="contact-item">
             <span className="contact-emoji">📞</span>
             <div>
-              <h3>Téléphone</h3>
-              <p>Appelez-nous aux heures de travail.</p>
+              <h3>{t('Téléphone')}</h3>
+              <p>{t('Appelez-nous aux heures de travail.')}</p>
               <a className="btn btn-outline" href={`tel:+${PHONE}`}>+237 679 47 53 43</a>
             </div>
           </div>
@@ -58,20 +60,20 @@ export default function Contact() {
             <span className="contact-emoji">📧</span>
             <div>
               <h3>E-mail</h3>
-              <p>Pour les demandes écrites détaillées.</p>
+              <p>{t('Pour les demandes écrites détaillées.')}</p>
               <a className="btn btn-outline" href="mailto:contact@mboppi.com">contact@mboppi.com</a>
             </div>
           </div>
         </div>
 
         <div className="card">
-          <h2>Envoyer un message</h2>
+          <h2>{t('Envoyer un message')}</h2>
           <p className="contact-hint">
-            Votre message est transmis directement sur notre WhatsApp.
+            {t('Votre message est transmis directement sur notre WhatsApp.')}
           </p>
           <form className="contact-form" onSubmit={handleSubmit}>
             <label className="field">
-              <span>Votre nom</span>
+              <span>{t('Votre nom')}</span>
               <input
                 type="text"
                 value={name}
@@ -80,26 +82,26 @@ export default function Contact() {
               />
             </label>
             <label className="field">
-              <span>Sujet</span>
+              <span>{t('Sujet')}</span>
               <select value={subject} onChange={(e) => setSubject(e.target.value)}>
-                <option value="">Choisir un sujet…</option>
-                <option>Question sur une offre</option>
-                <option>Je veux vendre sur Mboppi</option>
-                <option>Problème de compte</option>
-                <option>Autre</option>
+                <option value="">{t('Choisir un sujet…')}</option>
+                <option>{t('Question sur une offre')}</option>
+                <option>{t('Je veux vendre sur Mboppi')}</option>
+                <option>{t('Problème de compte')}</option>
+                <option>{t('Autre')}</option>
               </select>
             </label>
             <label className="field">
-              <span>Message</span>
+              <span>{t('Message')}</span>
               <textarea
                 rows="4"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Écrivez votre message ici…"
+                placeholder={t('Écrivez votre message ici…')}
                 required
               />
             </label>
-            <button type="submit" className="btn btn-primary">Envoyer via WhatsApp</button>
+            <button type="submit" className="btn btn-primary">{t('Envoyer via WhatsApp')}</button>
           </form>
         </div>
       </div>

@@ -6,11 +6,13 @@ import { formatMoney } from '../components/ProductCard.jsx';
 import { countrySymbol } from '../config.js';
 import { whatsappLink, categoryEmoji } from '../config.js';
 import { useAuth } from '../App.jsx';
+import { useLang } from '../i18n.jsx';
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLang();
   const [product, setProduct] = useState(null);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -40,7 +42,7 @@ export default function ProductDetail() {
     return (
       <main className="container narrow">
         <p className="error">{error}</p>
-        <Link to="/" className="btn btn-outline">← Retour aux produits</Link>
+        <Link to="/" className="btn btn-outline">← {t('Retour aux produits')}</Link>
       </main>
     );
   }
@@ -61,7 +63,7 @@ export default function ProductDetail() {
   const qty = Number(product.quantity || 0);
 
   const removeProduct = async () => {
-    if (!window.confirm(`Retirer « ${product.name} » définitivement ?`)) return;
+    if (!window.confirm(t('Retirer « {name} » définitivement ?', { name: product.name }))) return;
     setDeleting(true);
     try {
       await api.deleteProduct(product.id);
@@ -76,10 +78,15 @@ export default function ProductDetail() {
     <main className="container narrow">
       <Seo
         title={`${product.name} — Mboppi`}
-        description={`Découvrez « ${product.name} » à ${formatMoney(product.price)} ${symbol} chez ${product.shop_name} sur Mboppi.`}
+        description={t('Découvrez « {name} » à {price} {symbol} chez {shop} sur Mboppi.', {
+          name: product.name,
+          price: formatMoney(product.price),
+          symbol,
+          shop: product.shop_name,
+        })}
       />
       <Link to="/" className="btn btn-outline" style={{ marginBottom: 16 }}>
-        ← Retour aux produits
+        ← {t('Retour aux produits')}
       </Link>
 
       <div className="card offer-detail">
@@ -94,7 +101,7 @@ export default function ProductDetail() {
             <span>📦</span>
           )}
           {photos.length > 1 && (
-            <span className="offer-photo-count">{photos.length} photos — cliquez pour agrandir</span>
+            <span className="offer-photo-count">{t('{n} photos — cliquez pour agrandir', { n: photos.length })}</span>
           )}
         </div>
 
@@ -107,7 +114,7 @@ export default function ProductDetail() {
                 className={`thumb-btn ${i === lightboxIndex ? 'active' : ''}`}
                 onClick={() => setLightboxIndex(i)}
               >
-                <img src={photo} alt={`Photo ${i + 1}`} />
+                <img src={photo} alt={`${t('Photo')} ${i + 1}`} />
               </button>
             ))}
           </div>
@@ -119,25 +126,25 @@ export default function ProductDetail() {
           </div>
           <h2>{product.name}</h2>
           <p className="product-shop">
-            Boutique : {product.shop_name}
+            {t('Boutique : {shop}', { shop: product.shop_name })}
             {product.shop_location ? <span className="shop-loc"> · 📍 {product.shop_location}</span> : null}
           </p>
           {product.description && <p>{product.description}</p>}
           <div className="product-meta">
-            {product.warranty > 0 && <span className="meta-chip">🛡️ Garantie {product.warranty} mois</span>}
-            <span className="meta-chip">🚚 {deliveryFee > 0 ? `Livraison ${formatMoney(deliveryFee)} ${symbol}` : 'Livraison gratuite'}</span>
+            {product.warranty > 0 && <span className="meta-chip">🛡️ {t('Garantie {n} mois', { n: product.warranty })}</span>}
+            <span className="meta-chip">🚚 {deliveryFee > 0 ? t('Livraison {price} {symbol}', { price: formatMoney(deliveryFee), symbol }) : t('Livraison gratuite')}</span>
             {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
           </div>
           <div className="offer-prices">
             <span className="promo-price">{formatMoney(product.price)} {symbol}</span>
           </div>
           <p className={`offer-qty ${qty > 0 ? '' : 'out'}`}>
-            {qty > 0 ? `Disponibilité : ${qty} en stock` : 'Rupture de stock'}
+            {qty > 0 ? t('Disponibilité : {n} en stock', { n: qty }) : t('Rupture de stock')}
           </p>
 
           {isOwner && (
             <button className="btn btn-danger btn-block" onClick={removeProduct} disabled={deleting}>
-              {deleting ? 'Retrait…' : '🗑️ Rétirer ce produit'}
+              {deleting ? t('Retrait…') : t('🗑️ Rétirer ce produit')}
             </button>
           )}
         </div>
@@ -145,12 +152,12 @@ export default function ProductDetail() {
 
       {lightbox && (
         <div className="lightbox" onClick={() => setLightbox(false)}>
-          <button className="lightbox-close" onClick={() => setLightbox(false)} aria-label="Fermer">✕</button>
+          <button className="lightbox-close" onClick={() => setLightbox(false)} aria-label={t('Fermer')}>✕</button>
           {photos.length > 1 && (
             <button
               className="lightbox-nav prev"
               onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i - 1 + photos.length) % photos.length); }}
-              aria-label="Photo précédente"
+              aria-label={t('Photo précédente')}
             >‹</button>
           )}
           <img
@@ -163,7 +170,7 @@ export default function ProductDetail() {
             <button
               className="lightbox-nav next"
               onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i + 1) % photos.length); }}
-              aria-label="Photo suivante"
+              aria-label={t('Photo suivante')}
             >›</button>
           )}
         </div>

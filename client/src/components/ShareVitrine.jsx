@@ -1,25 +1,24 @@
 import React, { useState } from 'react';
+import { useLang } from '../i18n.jsx';
 
 const VITRINE_URL = 'https://mboppi-mboppi.vercel.app/vitrine-offre';
 
-export const SHARE_MESSAGE =
-  '✨ **Une offre pour presque chaque besoin !**\n' +
-  '🔥 Découvrez ma vitrine et explorez une sélection d’offres et de solutions dans plusieurs domaines.\n\n' +
-  'Que tu recherches une opportunité, un service, un produit ou simplement quelque chose d’intéressant à découvrir, **tu pourrais bien trouver ton bonheur.** 👀\n\n' +
-  '👉 **Découvre la vitrine ici :**\n' +
-  '🔗 ' + VITRINE_URL + '\n\n' +
-  '🚀 *Un clic, plusieurs possibilités !*';
+function shareMessage(t) {
+  return t('✨ **Une offre pour presque chaque besoin !**\n🔥 Découvrez ma vitrine et explorez une sélection d\'offres et de solutions dans plusieurs domaines.\n\nQue tu recherches une opportunité, un service, un produit ou simplement quelque chose d\'intéressant à découvrir, **tu pourrais bien trouver ton bonheur.** 👀\n\n👉 **Découvre la vitrine ici :**\n🔗 {url}\n\n🚀 *Un clic, plusieurs possibilités !*', { url: VITRINE_URL });
+}
 
 function openUrl(url) {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
 export default function ShareVitrine({ onClose }) {
+  const { t } = useLang();
   const [copied, setCopied] = useState(false);
+  const msg = shareMessage(t);
 
   const shareNative = async () => {
     try {
-      await navigator.share({ title: 'Ma vitrine Mboppi', text: SHARE_MESSAGE, url: VITRINE_URL });
+      await navigator.share({ title: t('Ma vitrine Mboppi'), text: msg, url: VITRINE_URL });
       onClose();
     } catch {
       /* annulé par l'utilisateur */
@@ -28,7 +27,7 @@ export default function ShareVitrine({ onClose }) {
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(SHARE_MESSAGE);
+      await navigator.clipboard.writeText(msg);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -36,7 +35,7 @@ export default function ShareVitrine({ onClose }) {
     }
   };
 
-  const encoded = encodeURIComponent(SHARE_MESSAGE);
+  const encoded = encodeURIComponent(msg);
   const encodedUrl = encodeURIComponent(VITRINE_URL);
 
   const networks = [
@@ -68,10 +67,10 @@ export default function ShareVitrine({ onClose }) {
       name: 'E-mail',
       color: '#EA4335',
       icon: '📧',
-      onClick: () => openUrl(`mailto:?subject=${encodeURIComponent('Découvre ma vitrine Mboppi')}&body=${encoded}`),
+      onClick: () => openUrl(`mailto:?subject=${encodeURIComponent(t('Découvre ma vitrine Mboppi'))}&body=${encoded}`),
     },
     {
-      name: 'Copier le lien',
+      name: t('Copier le lien'),
       color: '#6b7280',
       icon: copied ? '✅' : '🔗',
       onClick: copyLink,
@@ -82,13 +81,13 @@ export default function ShareVitrine({ onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Partager ma vitrine</h3>
+          <h3>{t('Partager ma vitrine')}</h3>
           <button className="drawer-close" onClick={onClose}>✕</button>
         </div>
 
         {navigator.share && (
           <button className="btn btn-primary btn-block" onClick={shareNative}>
-            📲 Partager via l'appareil
+            {t('📲 Partager via l\'appareil')}
           </button>
         )}
 
@@ -107,7 +106,7 @@ export default function ShareVitrine({ onClose }) {
         </div>
 
         <div className="share-preview">
-          <pre>{SHARE_MESSAGE}</pre>
+          <pre>{msg}</pre>
         </div>
       </div>
     </div>

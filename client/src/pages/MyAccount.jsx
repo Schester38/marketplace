@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
 import { useAuth } from '../App.jsx';
+import SearchSelect from '../components/SearchSelect.jsx';
 import { COUNTRIES } from '../config.js';
+import { useLang } from '../i18n.jsx';
 
 export default function MyAccount() {
   const { user, login, logout } = useAuth();
+  const { t } = useLang();
   const navigate = useNavigate();
 
   const [name, setName] = useState(user?.name || '');
@@ -25,7 +28,8 @@ export default function MyAccount() {
   const [delError, setDelError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const roleLabel = user?.role === 'shop' ? 'boutique' : user?.role === 'seller' ? 'vendeur' : user?.role === 'client' ? 'client' : 'créateur';
+  const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
+  const roleLabel = user?.role === 'shop' ? t('boutique') : user?.role === 'seller' ? t('vendeur') : user?.role === 'client' ? t('client') : t('créateur');
 
   const saveProfile = async (e) => {
     e.preventDefault();
@@ -35,7 +39,7 @@ export default function MyAccount() {
     try {
       const { user: updated } = await api.updateProfile({ name, email, location, country });
       login(updated, localStorage.getItem('token'));
-      setProfileMsg('Profil mis à jour avec succès.');
+      setProfileMsg(t('Profil mis à jour avec succès.'));
     } catch (err) {
       setProfileError(err.message);
     } finally {
@@ -52,7 +56,7 @@ export default function MyAccount() {
       await api.changePassword({ currentPassword, newPassword });
       setCurrentPassword('');
       setNewPassword('');
-      setPwMsg('Mot de passe modifié avec succès.');
+      setPwMsg(t('Mot de passe modifié avec succès.'));
     } catch (err) {
       setPwError(err.message);
     } finally {
@@ -62,7 +66,7 @@ export default function MyAccount() {
 
   const onDelete = async (e) => {
     e.preventDefault();
-    if (!window.confirm('Supprimer définitivement votre compte ? Vos produits, ventes et tout votre contenu seront supprimés. Cette action est irréversible.')) return;
+    if (!window.confirm(t('Supprimer définitivement votre compte ? Vos produits, ventes et tout votre contenu seront supprimés. Cette action est irréversible.'))) return;
     setBusy(true);
     setDelError('');
     try {
@@ -78,44 +82,44 @@ export default function MyAccount() {
   return (
     <main className="container">
       <Seo
-        title="Mon compte — Mboppi"
-        description="Gérez votre profil, votre mot de passe et la suppression de votre compte."
+        title={t('Mon compte') + ' — Mboppi'}
+        description={t('Profil') + ', ' + t('Mot de passe') + ', ' + t('Supprimer mon compte') + '.'}
       />
       <div className="dash-header">
         <div>
-          <h1>👤 Mon compte</h1>
+          <h1>👤 {t('Mon compte')}</h1>
           <p>
-            Connecté en tant que <strong>{user?.name}</strong> ({roleLabel}) — gérez
-            vos informations et votre sécurité.
+            {t('Connecté en tant que {name} ({role}) — gérez vos informations et votre sécurité.', { name: user?.name, role: roleLabel })}
           </p>
         </div>
       </div>
 
       <div className="account-grid">
         <div className="card">
-          <h2>Profil</h2>
-          <p className="contact-hint">Votre nom, votre adresse e-mail et votre pays.</p>
+          <h2>{t('Profil')}</h2>
+          <p className="contact-hint">{t('Votre nom, votre adresse e-mail et votre pays.')}</p>
           <form className="contact-form" onSubmit={saveProfile}>
             <label className="field">
-              <span>Nom</span>
+              <span>{t('Nom')}</span>
               <input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
             </label>
             <label className="field">
-              <span>E-mail</span>
+              <span>{t('E-mail')}</span>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </label>
             <label className="field">
-              <span>Pays</span>
-              <select value={country} onChange={(e) => setCountry(e.target.value)}>
-                <option value="">Choisir votre pays…</option>
-                {COUNTRIES.map((c) => (
-                  <option key={c.name} value={c.name}>{c.flag} {c.name}</option>
-                ))}
-              </select>
+              <span>{t('Pays')}</span>
+              <SearchSelect
+                options={countryOptions}
+                value={country}
+                onChange={setCountry}
+                placeholder={t('Choisir votre pays…')}
+                emptyLabel={t('Aucun résultat')}
+              />
             </label>
             {user?.role === 'shop' && (
               <label className="field">
-                <span>📍 Localisation de la boutique</span>
+                <span>{t('📍 Localisation de la boutique')}</span>
                 <input
                   type="text"
                   value={location}
@@ -126,21 +130,21 @@ export default function MyAccount() {
             )}
             {profileError && <p className="error">{profileError}</p>}
             {profileMsg && <p className="success">{profileMsg}</p>}
-            <button className="btn btn-primary" disabled={busy}>Enregistrer</button>
+            <button className="btn btn-primary" disabled={busy}>{t('Enregistrer')}</button>
           </form>
         </div>
 
         <div className="card">
-          <h2>Mot de passe</h2>
+          <h2>{t('Sécurité')}</h2>
           <p className="contact-hint">
             {user?.has_password
-              ? 'Modifiez votre mot de passe de connexion.'
-              : 'Vous vous êtes inscrit(e) avec Google : définissez un mot de passe pour pouvoir vous connecter sans Google.'}
+              ? t('Modifiez votre mot de passe de connexion.')
+              : t('Vous vous êtes inscrit(e) avec Google : définissez un mot de passe pour pouvoir vous connecter sans Google.')}
           </p>
           <form className="contact-form" onSubmit={changePassword}>
             {user?.has_password && (
               <label className="field">
-                <span>Mot de passe actuel</span>
+                <span>{t('Mot de passe actuel')}</span>
                 <input
                   type="password"
                   value={currentPassword}
@@ -151,7 +155,7 @@ export default function MyAccount() {
               </label>
             )}
             <label className="field">
-              <span>Nouveau mot de passe</span>
+              <span>{t('Nouveau mot de passe')}</span>
               <input
                 type="password"
                 minLength={6}
@@ -163,20 +167,19 @@ export default function MyAccount() {
             </label>
             {pwError && <p className="error">{pwError}</p>}
             {pwMsg && <p className="success">{pwMsg}</p>}
-            <button className="btn btn-primary" disabled={busy}>Changer le mot de passe</button>
+            <button className="btn btn-primary" disabled={busy}>{t('Changer le mot de passe')}</button>
           </form>
         </div>
 
         <div className="card danger-card">
-          <h2>Zone dangereuse</h2>
+          <h2>{t('Zone dangereuse')}</h2>
           <p className="contact-hint">
-            La suppression est définitive : votre compte, vos produits, vos ventes et
-            tout votre contenu seront supprimés de nos serveurs.
+            {t('La suppression est définitive : votre compte, vos produits, vos ventes et tout votre contenu seront supprimés de nos serveurs.')}
           </p>
           <form className="contact-form" onSubmit={onDelete}>
             {user?.has_password && (
               <label className="field">
-                <span>Votre mot de passe</span>
+                <span>{t('Votre mot de passe')}</span>
                 <input
                   type="password"
                   value={delPassword}
@@ -187,7 +190,7 @@ export default function MyAccount() {
               </label>
             )}
             {delError && <p className="error">{delError}</p>}
-            <button className="btn btn-danger" disabled={busy}>Supprimer mon compte</button>
+            <button className="btn btn-danger" disabled={busy}>{t('Supprimer mon compte')}</button>
           </form>
         </div>
       </div>

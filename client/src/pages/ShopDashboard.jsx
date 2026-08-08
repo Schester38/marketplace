@@ -6,6 +6,7 @@ import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { compressImage } from '../utils.js';
 import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from '../config.js';
+import { useLang } from '../i18n.jsx';
 
 const EMPTY_FORM = {
   name: '',
@@ -23,6 +24,7 @@ const MAX_PHOTOS = 3;
 
 export default function ShopDashboard() {
   const { user } = useAuth();
+  const { t } = useLang();
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
   const [stats, setStats] = useState(null);
@@ -84,7 +86,7 @@ export default function ShopDashboard() {
       });
       setForm(EMPTY_FORM);
       setShowForm(false);
-      setSuccess('Produit publié avec succès.');
+      setSuccess(t('Produit publié avec succès.'));
       load();
     } catch (err) {
       setError(err.message);
@@ -92,7 +94,7 @@ export default function ShopDashboard() {
   };
 
   const removeProduct = async (id) => {
-    if (!window.confirm('Supprimer ce produit ?')) return;
+    if (!window.confirm(t('Supprimer ce produit ?'))) return;
     try {
       await api.deleteProduct(id);
       load();
@@ -114,13 +116,13 @@ export default function ShopDashboard() {
 
   return (
     <main className="container">
-      <Seo title="Ma boutique — Mboppi" description="Gérez vos produits et suivez vos ventes sur Mboppi." />
+      <Seo title={t('Ma boutique') + ' — Mboppi'} description={t('Gérez vos produits et suivez vos ventes.')} />
       <section className="dash-header">
         <div>
-          <h1>Ma boutique</h1>
+          <h1>{t('Ma boutique')}</h1>
           <p>
-            Produits publiés : <strong>{products.length} / 5</strong>
-            {products.length >= 5 && <span className="badge badge-warn">Limite atteinte</span>}
+            {t('Produits publiés : {n} / 5', { n: products.length })}
+            {products.length >= 5 && <span className="badge badge-warn">{t('Limite atteinte')}</span>}
           </p>
         </div>
         <button
@@ -128,15 +130,15 @@ export default function ShopDashboard() {
           disabled={!remaining}
           onClick={() => setShowForm(!showForm)}
         >
-          {showForm ? 'Annuler' : '+ Ajouter un produit'}
+          {showForm ? t('Annuler') : t('+ Ajouter un produit')}
         </button>
       </section>
 
       {showForm && (
         <div className="card form-card">
-          <h2>Nouveau produit</h2>
+          <h2>{t('Nouveau produit')}</h2>
           <form onSubmit={submitProduct}>
-            <label>Photos (maximum {MAX_PHOTOS})</label>
+            <label>{t('Photos (maximum {n})', { n: MAX_PHOTOS })}</label>
             <div className="photo-input">
               <label className="photo-picker">
                 <input
@@ -147,54 +149,54 @@ export default function ShopDashboard() {
                   disabled={picking || form.photos.length >= MAX_PHOTOS}
                   onChange={(e) => addPhotos(e.target.files)}
                 />
-                {picking ? 'Compression…' : form.photos.length >= MAX_PHOTOS ? 'Photos complètes' : '📷 Ajouter des photos'}
+                {picking ? t('Compression…') : form.photos.length >= MAX_PHOTOS ? t('Photos complètes') : t('📷 Ajouter des photos')}
               </label>
               <div className="photo-previews">
                 {form.photos.map((photo, i) => (
                   <div key={i} className="photo-thumb">
-                    <img src={photo} alt={`Photo ${i + 1}`} />
+                    <img src={photo} alt={`${t('Photo')} ${i + 1}`} />
                     <button type="button" className="photo-remove" onClick={() => removePhoto(i)}>✕</button>
                   </div>
                 ))}
               </div>
             </div>
-            <label>Nom du produit *</label>
+            <label>{t('Nom du produit *')}</label>
             <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
 
-            <label>Catégorie *</label>
+            <label>{t('Catégorie *')}</label>
             <select
               className="input"
               required
               value={form.category}
               onChange={(e) => setForm({ ...form, category: e.target.value })}
             >
-              <option value="" disabled>Choisir une catégorie…</option>
+              <option value="" disabled>{t('Choisir une catégorie…')}</option>
               {PRODUCT_CATEGORIES.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
 
-            <label>Description</label>
+            <label>{t('Description')}</label>
             <textarea className="input" rows="2" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
             <div className="row2">
               <div>
-                <label>Garantie (en mois)</label>
+                <label>{t('Garantie (en mois)')}</label>
                 <input className="input" type="number" min="0" placeholder="ex : 6" value={form.warranty} onChange={(e) => setForm({ ...form, warranty: e.target.value })} />
               </div>
               <div>
-                <label>Quantité en stock *</label>
+                <label>{t('Quantité en stock *')}</label>
                 <input className="input" type="number" min="1" required value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
               </div>
             </div>
 
             <div className="row2">
               <div>
-                <label>Frais de livraison ({symbol})</label>
+                <label>{t('Frais de livraison ({symbol})', { symbol })}</label>
                 <input className="input" type="number" min="0" step="0.01" placeholder="ex : 1000" value={form.delivery_fee} onChange={(e) => setForm({ ...form, delivery_fee: e.target.value })} />
               </div>
               <div>
-                <label>Contact de la boutique</label>
+                <label>{t('Contact de la boutique')}</label>
                 <div className="phone-input">
                   <span className="phone-prefix">{prefix}</span>
                   <input
@@ -210,22 +212,25 @@ export default function ShopDashboard() {
 
             <div className="row2">
               <div>
-                <label>Prix de vente ({symbol}) *</label>
+                <label>{t('Prix de vente ({symbol}) *', { symbol })}</label>
                 <input className="input" type="number" min="0" step="0.01" required value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
               </div>
               <div>
-                <label>Commission vendeur (%) *</label>
+                <label>{t('Commission vendeur (%) *')}</label>
                 <input className="input" type="number" min="0" max="100" step="0.1" required value={form.commission_percent} onChange={(e) => setForm({ ...form, commission_percent: e.target.value })} />
               </div>
             </div>
             {form.price && form.commission_percent ? (
               <p className="hint">
-                Le vendeur affichera : <strong>{formatMoney(form.price)} {symbol}</strong> et gagnera{' '}
-                <strong>{formatMoney(form.price * (Number(form.commission_percent) / 100))} {symbol}</strong> de commission.
+                {t('Le vendeur affichera : {price} {symbol} et gagnera {commission} {symbol} de commission.', {
+                  price: formatMoney(form.price),
+                  symbol,
+                  commission: formatMoney(form.price * (Number(form.commission_percent) / 100)),
+                })}
               </p>
             ) : null}
             {error && <p className="error">{error}</p>}
-            <button className="btn btn-primary btn-block">Publier le produit</button>
+            <button className="btn btn-primary btn-block">{t('Publier le produit')}</button>
           </form>
         </div>
       )}
@@ -234,7 +239,7 @@ export default function ShopDashboard() {
       {error && <p className="error">{error}</p>}
 
       {products.length === 0 ? (
-        <p className="empty">Aucun produit pour le moment. Ajoutez votre premier produit (max 5).</p>
+        <p className="empty">{t('Aucun produit pour le moment. Ajoutez votre premier produit (max 5).')}</p>
       ) : (
         <div className="grid">
           {products.map((p) => (
@@ -249,28 +254,28 @@ export default function ShopDashboard() {
       )}
 
       <section className="card stats">
-        <h2>Statistiques des ventes</h2>
+        <h2>{t('Statistiques des ventes')}</h2>
         {stats ? (
           <div className="stats-row">
-            <div><span className="label">Ventes enregistrées</span><strong>{stats.total_sales}</strong></div>
-            <div><span className="label">Chiffre d'affaires</span><strong>{formatMoney(stats.revenue)} {symbol}</strong></div>
-            <div><span className="label">Commissions versées aux vendeurs</span><strong>{formatMoney(stats.total_commission)} {symbol}</strong></div>
+            <div><span className="label">{t('Ventes enregistrées')}</span><strong>{stats.total_sales}</strong></div>
+            <div><span className="label">{t('Chiffre d\'affaires')}</span><strong>{formatMoney(stats.revenue)} {symbol}</strong></div>
+            <div><span className="label">{t('Commissions versées aux vendeurs')}</span><strong>{formatMoney(stats.total_commission)} {symbol}</strong></div>
           </div>
         ) : null}
 
         {sales.length === 0 ? (
-          <p className="empty">Aucune vente enregistrée par les vendeurs.</p>
+          <p className="empty">{t('Aucune vente enregistrée par les vendeurs.')}</p>
         ) : (
           <table className="table">
             <thead>
               <tr>
-                <th>Produit</th>
-                <th>Vendeur</th>
-                <th>Acheteur</th>
-                <th>Qté</th>
-                <th>Total</th>
-                <th>Commission</th>
-                <th>Statut</th>
+                <th>{t('Produit')}</th>
+                <th>{t('Vendeur')}</th>
+                <th>{t('Acheteur')}</th>
+                <th>{t('Qté')}</th>
+                <th>{t('Total')}</th>
+                <th>{t('Commission')}</th>
+                <th>{t('Statut')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -289,8 +294,8 @@ export default function ShopDashboard() {
                   <td>
                     {s.status === 'pending' && (
                       <>
-                        <button className="btn btn-small" onClick={() => changeStatus(s.id, 'confirmed')}>Confirmer</button>{' '}
-                        <button className="btn btn-small btn-danger" onClick={() => changeStatus(s.id, 'cancelled')}>Annuler</button>
+                        <button className="btn btn-small" onClick={() => changeStatus(s.id, 'confirmed')}>{t('Confirmer')}</button>{' '}
+                        <button className="btn btn-small btn-danger" onClick={() => changeStatus(s.id, 'cancelled')}>{t('Annuler')}</button>
                       </>
                     )}
                   </td>
