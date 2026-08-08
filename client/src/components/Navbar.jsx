@@ -6,7 +6,7 @@ export default function Navbar({ onLogout }) {
   const { user } = useAuth();
   return (
     <header className="navbar">
-      <Link to="/" className="brand">🛍️ Marketplace</Link>
+      <Link to="/" className="brand">🛍️ Mboppi</Link>
       <nav>
         <Link to="/">Produits</Link>
         {!user && <Link to="/login">Connexion</Link>}

@@ -12,7 +12,7 @@ async function main() {
     process.exit(1);
   }
   app.listen(PORT, () => {
-    console.log(`API Marketplace démarrée sur http://localhost:${PORT}`);
+    console.log(`API Mboppi démarrée sur http://localhost:${PORT}`);
   });
 }
 

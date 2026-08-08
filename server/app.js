@@ -14,7 +14,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.get('/', (req, res) => res.json({ name: 'Marketplace API', version: '1.0.0' }));
+app.get('/', (req, res) => res.json({ name: 'Mboppi API', version: '1.0.0' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
