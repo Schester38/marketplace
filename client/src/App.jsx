@@ -9,6 +9,7 @@ import SellerDashboard from './pages/SellerDashboard.jsx';
 import VitrineOffre from './pages/VitrineOffre.jsx';
 import Verone from './pages/Verone.jsx';
 import OfferDetail from './pages/OfferDetail.jsx';
+import AuthGoogle from './pages/AuthGoogle.jsx';
 
 const AuthContext = createContext(null);
 
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="/verone" element={<Verone />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/auth-google" element={<AuthGoogle />} />
         <Route
           path="/shop"
           element={

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { q } from '../db.js';
 import { signToken } from '../auth.js';
+import { googleConfigured, googleAuthUrl, getGoogleProfile } from '../google.js';
 
 const router = Router();
 
@@ -42,10 +43,41 @@ router.post('/login', async (req, res) => {
   const user = (
     await q('SELECT * FROM users WHERE email = $1', [String(email).trim().toLowerCase()])
   )[0];
-  if (!user || !bcrypt.compareSync(String(password), user.password)) {
+  if (!user || !user.password || !bcrypt.compareSync(String(password), user.password)) {
     return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
   }
   res.json({ token: signToken(user), user: publicUser(user) });
+});
+
+router.get('/google', (req, res) => {
+  if (!googleConfigured()) {
+    const msg = encodeURIComponent('La connexion Google n\'est pas encore configurée');
+    return res.redirect(`/auth-google?error=${msg}`);
+  }
+  const role = ['shop', 'seller'].includes(req.query.role) ? req.query.role : 'seller';
+  res.redirect(googleAuthUrl(role, req));
+});
+
+router.get('/google/callback', async (req, res) => {
+  const { code, state } = req.query;
+  if (!code) {
+    return res.redirect(`/auth-google?error=${encodeURIComponent('Connexion Google annulée')}`);
+  }
+  try {
+    const profile = await getGoogleProfile(code, req);
+    let user = (await q('SELECT * FROM users WHERE email = $1', [profile.email]))[0];
+    if (!user) {
+      const role = ['shop', 'seller'].includes(state) ? state : 'seller';
+      const created = await q(
+        'INSERT INTO users (name, email, password, provider, role) VALUES ($1, $2, NULL, \'google\', $3) RETURNING id',
+        [profile.name, profile.email, role]
+      );
+      user = (await q('SELECT * FROM users WHERE id = $1', [created[0].id]))[0];
+    }
+    res.redirect(`/auth-google?token=${signToken(user)}`);
+  } catch (err) {
+    res.redirect(`/auth-google?error=${encodeURIComponent(err.message)}`);
+  }
 });
 
 router.get('/me', async (req, res) => {

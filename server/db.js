@@ -21,7 +21,8 @@ export async function initDb() {
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
-      password TEXT NOT NULL,
+      password TEXT,
+      provider TEXT NOT NULL DEFAULT 'email',
       role TEXT NOT NULL CHECK (role IN ('shop', 'seller')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
@@ -67,5 +68,10 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
     CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id);
     CREATE INDEX IF NOT EXISTS idx_sales_seller ON sales(seller_id);
+  `);
+
+  await pool.query(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'email';
+    ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
   `);
 }

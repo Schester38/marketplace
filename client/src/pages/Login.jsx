@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../App.jsx';
+import { GoogleIcon } from '../components/icons.jsx';
 
 export default function Login() {
   const { login } = useAuth();
@@ -44,6 +45,18 @@ export default function Login() {
           />
           {error && <p className="error">{error}</p>}
           <button className="btn btn-primary btn-block">Se connecter</button>
+
+          <div className="divider"><span>ou</span></div>
+          <button
+            type="button"
+            className="btn btn-google btn-block"
+            onClick={() => {
+              window.location.href = '/api/auth/google';
+            }}
+          >
+            <GoogleIcon />
+            Se connecter avec Google
+          </button>
         </form>
         <p className="hint">
           Pas encore de compte ? <Link to="/register">Créer un compte</Link>
