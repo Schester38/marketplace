@@ -6,14 +6,6 @@ import { formatMoney } from '../components/ProductCard.jsx';
 import { whatsappLink, categoryEmoji } from '../config.js';
 import { useAuth } from '../App.jsx';
 
-function WhatsAppIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12.04 2a9.9 9.9 0 0 0-8.52 14.9L2 22l5.24-1.47A9.9 9.9 0 1 0 12.04 2zm5.8 14.06c-.24.68-1.4 1.3-1.93 1.35-.5.05-1.12.23-3.78-.78-3.2-1.23-5.24-4.42-5.4-4.63-.16-.2-1.29-1.72-1.29-3.28 0-1.56.82-2.33 1.11-2.65.29-.32.63-.4.84-.4.21 0 .42 0 .6.01.19.01.45-.07.7.54.26.62.88 2.15.96 2.31.08.16.13.35.03.56-.1.21-.15.34-.3.53-.15.19-.32.42-.45.56-.15.16-.31.33-.13.64.18.32.79 1.3 1.7 2.11 1.17 1.04 2.15 1.36 2.46 1.51.3.16.48.13.66-.08.18-.2.76-.88.96-1.19.2-.3.4-.25.68-.15.28.1 1.76.83 2.06.98.3.15.5.23.58.35.07.13.07.73-.17 1.4z" />
-    </svg>
-  );
-}
-
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -65,7 +57,6 @@ export default function ProductDetail() {
   const isOwner = user && Number(user.id) === Number(product.shop_id);
   const deliveryFee = Number(product.delivery_fee || 0);
   const qty = Number(product.quantity || 0);
-  const waMessage = `Bonjour, je suis intéressé(e) par le produit « ${product.name} » à ${formatMoney(product.price)} F (${product.shop_name}).`;
 
   const removeProduct = async () => {
     if (!window.confirm(`Retirer « ${product.name} » définitivement ?`)) return;
@@ -138,10 +129,6 @@ export default function ProductDetail() {
           <p className={`offer-qty ${qty > 0 ? '' : 'out'}`}>
             {qty > 0 ? `Disponibilité : ${qty} en stock` : 'Rupture de stock'}
           </p>
-
-          <a className="btn btn-whatsapp btn-block" href={whatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">
-            <WhatsAppIcon /> Commander sur WhatsApp
-          </a>
 
           {isOwner && (
             <button className="btn btn-danger btn-block" onClick={removeProduct} disabled={deleting}>
