@@ -1,11 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { formatMoney } from './ProductCard.jsx';
-import { offerUrl, whatsappLink } from '../config.js';
+import { offerUrl, whatsappLink, offerDiscount, offerSavings, categoryEmoji } from '../config.js';
 
 export default function OfferCard({ offer }) {
   const photos = offer.photos || [];
   const hasPhotos = photos.length > 0;
+  const discount = offerDiscount(offer);
+  const savings = offerSavings(offer);
 
   const waMessage = `Bonjour, je suis intéressé(e) par votre offre « ${offer.name} » : ${offerUrl(offer.id)}`;
 
@@ -17,6 +19,7 @@ export default function OfferCard({ offer }) {
         ) : (
           <span>🛍️</span>
         )}
+        {discount > 0 && <span className="discount-badge">−{discount}%</span>}
         {photos.length > 1 && (
           <span className="offer-photo-count">{photos.length} photos</span>
         )}
@@ -24,7 +27,7 @@ export default function OfferCard({ offer }) {
       <div className="offer-body">
         <div className="offer-tags">
           <span className="badge badge-offer">Offre</span>
-          {offer.category && <span className="badge badge-cat">{offer.category}</span>}
+          {offer.category && <span className="badge badge-cat">{categoryEmoji(offer.category)} {offer.category}</span>}
         </div>
         <h3><Link to={`/offre/${offer.id}`}>{offer.name}</Link></h3>
         {offer.description && <p className="product-desc">{offer.description}</p>}
@@ -33,6 +36,7 @@ export default function OfferCard({ offer }) {
           <span className="old-price">{formatMoney(offer.original_price)} F</span>
           <span className="promo-price">{formatMoney(offer.promo_price)} F</span>
         </div>
+        {savings > 0 && <p className="offer-savings">💰 Économisez {formatMoney(savings)} F</p>}
         {offer.phone && (
           <a className="btn btn-primary btn-block" href={`tel:${offer.phone}`}>
             📞 Appeler

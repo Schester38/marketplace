@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { formatMoney } from '../components/ProductCard.jsx';
-import { offerUrl, whatsappLink } from '../config.js';
+import { offerUrl, whatsappLink, offerDiscount, offerSavings, categoryEmoji } from '../config.js';
 
 export default function OfferDetail() {
   const { id } = useParams();
   const [offer, setOffer] = useState(null);
   const [error, setError] = useState('');
-  const [photoIndex, setPhotoIndex] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   useEffect(() => {
     api
@@ -16,6 +17,18 @@ export default function OfferDetail() {
       .then((d) => setOffer(d.offer))
       .catch((e) => setError(e.message));
   }, [id]);
+
+  const photos = offer ? offer.photos || [] : [];
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setLightbox(false);
+      if (e.key === 'ArrowRight') setLightboxIndex((i) => (i + 1) % photos.length);
+      if (e.key === 'ArrowLeft') setLightboxIndex((i) => (i - 1 + photos.length) % photos.length);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightbox, photos.length]);
 
   if (error) {
     return (
@@ -36,8 +49,9 @@ export default function OfferDetail() {
     );
   }
 
-  const photos = offer.photos || [];
   const waMessage = `Bonjour, je suis intéressé(e) par votre offre « ${offer.name} » : ${offerUrl(offer.id)}`;
+  const discount = offerDiscount(offer);
+  const savings = offerSavings(offer);
 
   return (
     <main className="container narrow">
@@ -48,23 +62,24 @@ export default function OfferDetail() {
       <div className="card offer-detail">
         <div
           className="offer-photo"
-          style={{ height: 260 }}
-          onClick={() => photos.length > 1 && setPhotoIndex((i) => (i + 1) % photos.length)}
+          style={{ height: 260, cursor: photos.length > 0 ? 'zoom-in' : undefined }}
+          onClick={() => photos.length > 0 && setLightbox(true)}
         >
           {photos.length > 0 ? (
-            <img src={photos[photoIndex]} alt={offer.name} />
+            <img src={photos[lightboxIndex]} alt={offer.name} />
           ) : (
             <span>🛍️</span>
           )}
+          {discount > 0 && <span className="discount-badge">−{discount}%</span>}
           {photos.length > 1 && (
-            <span className="offer-photo-count">{photoIndex + 1}/{photos.length}</span>
+            <span className="offer-photo-count">{photos.length} photos — cliquez pour agrandir</span>
           )}
         </div>
 
         <div className="offer-body">
           <div className="offer-tags">
             <span className="badge badge-offer">Offre</span>
-            {offer.category && <span className="badge badge-cat">{offer.category}</span>}
+            {offer.category && <span className="badge badge-cat">{categoryEmoji(offer.category)} {offer.category}</span>}
           </div>
           <h2>{offer.name}</h2>
           {offer.description && <p>{offer.description}</p>}
@@ -73,6 +88,7 @@ export default function OfferDetail() {
             <span className="old-price">{formatMoney(offer.original_price)} F</span>
             <span className="promo-price">{formatMoney(offer.promo_price)} F</span>
           </div>
+          {savings > 0 && <p className="offer-savings">💰 Économisez {formatMoney(savings)} F par rapport au prix d'origine</p>}
           <p className="offer-qty">Disponibilité : {offer.quantity} unité(s)</p>
 
           {offer.phone && (
@@ -85,6 +101,32 @@ export default function OfferDetail() {
           </a>
         </div>
       </div>
+
+      {lightbox && (
+        <div className="lightbox" onClick={() => setLightbox(false)}>
+          <button className="lightbox-close" onClick={() => setLightbox(false)} aria-label="Fermer">✕</button>
+          {photos.length > 1 && (
+            <button
+              className="lightbox-nav prev"
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i - 1 + photos.length) % photos.length); }}
+              aria-label="Photo précédente"
+            >‹</button>
+          )}
+          <img
+            className="lightbox-img"
+            src={photos[lightboxIndex]}
+            alt={offer.name}
+            onClick={(e) => e.stopPropagation()}
+          />
+          {photos.length > 1 && (
+            <button
+              className="lightbox-nav next"
+              onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i + 1) % photos.length); }}
+              aria-label="Photo suivante"
+            >›</button>
+          )}
+        </div>
+      )}
     </main>
   );
 }

@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import OfferCard from '../components/OfferCard.jsx';
+import { formatMoney } from '../components/ProductCard.jsx';
+import { offerDiscount, categoryEmoji } from '../config.js';
 
 function SkeletonCard() {
   return (
@@ -22,6 +24,10 @@ export default function VitrineOffre() {
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [category, setCategory] = useState('all');
+  const [sort, setSort] = useState('discount');
+  const [query, setQuery] = useState('');
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     let mounted = true;
@@ -38,29 +44,183 @@ export default function VitrineOffre() {
     };
   }, []);
 
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const categories = useMemo(
+    () => [...new Set(offers.map((o) => o.category).filter(Boolean))],
+    [offers]
+  );
+
+  const totalSavings = useMemo(
+    () =>
+      offers.reduce(
+        (sum, o) => sum + Math.max(0, Math.round(o.original_price - o.promo_price)),
+        0
+      ),
+    [offers]
+  );
+
+  const topOffers = useMemo(
+    () => [...offers].sort((a, b) => offerDiscount(b) - offerDiscount(a)).slice(0, 5),
+    [offers]
+  );
+
+  const filtered = useMemo(() => {
+    let list = offers;
+    if (category !== 'all') list = list.filter((o) => o.category === category);
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      list = list.filter((o) =>
+        `${o.name} ${o.description || ''} ${o.category || ''}`.toLowerCase().includes(q)
+      );
+    }
+    const sorted = [...list];
+    if (sort === 'discount') sorted.sort((a, b) => offerDiscount(b) - offerDiscount(a));
+    else if (sort === 'price') sorted.sort((a, b) => a.promo_price - b.promo_price);
+    else sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return sorted;
+  }, [offers, category, query, sort]);
+
+  const toMidnight = useMemo(() => {
+    const end = new Date();
+    end.setHours(24, 0, 0, 0);
+    const ms = Math.max(0, end - now);
+    const h = String(Math.floor(ms / 3600000)).padStart(2, '0');
+    const m = String(Math.floor((ms % 3600000) / 60000)).padStart(2, '0');
+    const s = String(Math.floor((ms % 60000) / 1000)).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }, [now]);
+
+  const resetFilters = () => {
+    setCategory('all');
+    setSort('discount');
+    setQuery('');
+  };
+
   return (
     <main className="container">
-      <section className="hero">
-        <h1>Vitrine d'offre</h1>
+      <section className="hero vitrine-hero">
+        <div className="hero-floats" aria-hidden="true">
+          <span>🛍️</span>
+          <span>⚡</span>
+          <span>💥</span>
+          <span>✨</span>
+          <span>🛒</span>
+          <span>🎉</span>
+        </div>
+        <span className="hero-badge">⚡ Promotions en cours</span>
+        <h1>🔥 Les offres du moment</h1>
         <p>
-          Toutes les offres promotionnelles de Verone et les produits des boutiques
-          partenaires : prix, promotions et coordonnées pour commander.
+          Les meilleures promotions de Verone et des boutiques partenaires :
+          prix cassés, économies garanties, commande directe par téléphone ou WhatsApp.
         </p>
+        <div className="hero-stats">
+          <div className="stat">
+            <strong>{offers.length}</strong>
+            <span>Offres actives</span>
+          </div>
+          <div className="stat">
+            <strong>{formatMoney(totalSavings)} F</strong>
+            <span>Économies cumulées</span>
+          </div>
+          <div className="stat">
+            <strong>{categories.length}</strong>
+            <span>Catégories</span>
+          </div>
+        </div>
+        <div className="hero-countdown">
+          ⏰ Les offres se renouvellent dans <strong>{toMidnight}</strong>
+        </div>
       </section>
+
+      {topOffers.length > 0 && (
+        <div className="ticker" aria-hidden="true">
+          <div className="ticker-track">
+            {[...topOffers, ...topOffers].map((o, i) => (
+              <span key={i} className="ticker-item">
+                🔥 {o.name} {offerDiscount(o) > 0 ? `− ${offerDiscount(o)}%` : ''} —{' '}
+                <b>{formatMoney(o.promo_price)} F</b>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {error && <p className="error">{error}</p>}
 
       <section>
         <h2 className="section-title">Offres promotionnelles</h2>
+
+        <div className="toolbar">
+          <input
+            className="input search"
+            placeholder="🔍 Rechercher une offre…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <div className="chips">
+            <button
+              className={`chip ${category === 'all' ? 'active' : ''}`}
+              onClick={() => setCategory('all')}
+            >
+              ✨ Toutes ({offers.length})
+            </button>
+            {categories.map((c) => (
+              <button
+                key={c}
+                className={`chip ${category === c ? 'active' : ''}`}
+                onClick={() => setCategory(c)}
+              >
+                {categoryEmoji(c)} {c}
+              </button>
+            ))}
+          </div>
+          <div className="sort-row">
+            <button
+              className={`sort-btn ${sort === 'discount' ? 'active' : ''}`}
+              onClick={() => setSort('discount')}
+            >
+              🔥 Meilleures réductions
+            </button>
+            <button
+              className={`sort-btn ${sort === 'price' ? 'active' : ''}`}
+              onClick={() => setSort('price')}
+            >
+              💰 Moins cher
+            </button>
+            <button
+              className={`sort-btn ${sort === 'latest' ? 'active' : ''}`}
+              onClick={() => setSort('latest')}
+            >
+              ✨ Dernières arrivées
+            </button>
+          </div>
+        </div>
+
         {loading ? (
           <div className="grid">
             {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
           </div>
-        ) : offers.length === 0 ? (
-          <p className="empty">Aucune offre pour le moment.</p>
+        ) : filtered.length === 0 ? (
+          <div className="card page-center">
+            <div className="verone-placeholder">🔍</div>
+            <p className="empty" style={{ padding: '8px 0 16px' }}>
+              {offers.length === 0
+                ? 'Aucune offre pour le moment. Revenez très vite, ça va chauffer ! 🔥'
+                : 'Aucune offre ne correspond à votre recherche.'}
+            </p>
+            {offers.length > 0 && (
+              <button className="btn btn-outline" onClick={resetFilters}>
+                Réinitialiser les filtres
+              </button>
+            )}
+          </div>
         ) : (
           <div className="grid">
-            {offers.map((o) => (
+            {filtered.map((o) => (
               <OfferCard key={o.id} offer={o} />
             ))}
           </div>
