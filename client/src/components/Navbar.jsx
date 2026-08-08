@@ -1,10 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 
 export default function Navbar({ onLogout }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState(() =>
+    document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+  );
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   const close = () => setOpen(false);
   const logout = () => {
@@ -14,6 +22,14 @@ export default function Navbar({ onLogout }) {
 
   const links = (
     <>
+      <button
+        className="theme-toggle"
+        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+        aria-label="Basculer le mode sombre ou clair"
+        title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+      >
+        {theme === 'dark' ? '☀️' : '🌙'}
+      </button>
       <Link to="/" onClick={close}>Produits</Link>
       <Link to="/vitrine-offre" onClick={close}>Vitrine d'offre</Link>
       {!user && <Link to="/login" onClick={close}>Connexion</Link>}

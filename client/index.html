@@ -36,11 +36,23 @@
     <meta name="apple-mobile-web-app-title" content="Mboppi" />
     <meta name="mobile-web-app-capable" content="yes" />
 
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {}
+      })();
+    </script>
+
     <style>
       .splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:linear-gradient(160deg,#f8fafc,#eef2ff);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
       .splash-logo{font-size:3.6rem;animation:splashBounce 1s ease-in-out infinite}
       .splash-spinner{width:36px;height:36px;border:3px solid #ddd6fe;border-top-color:#4f46e5;border-radius:50%;animation:splashSpin .8s linear infinite}
       .splash p{color:#6b7280;font-weight:700;letter-spacing:.5px}
+      [data-theme='dark'] .splash{background:linear-gradient(160deg,#0f172a,#1e1b4b)}
+      [data-theme='dark'] .splash p{color:#cbd5e1}
       @keyframes splashSpin{to{transform:rotate(360deg)}}
       @keyframes splashBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
     </style>
