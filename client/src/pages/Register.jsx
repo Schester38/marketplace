@@ -4,11 +4,12 @@ import { api } from '../api.js';
 import { useAuth, dashboardPath } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
 import Seo from '../components/Seo.jsx';
+import { COUNTRIES } from '../config.js';
 
 export default function Register() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'seller' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'seller', country: '' });
   const [error, setError] = useState('');
 
   const submit = async (e) => {
@@ -33,6 +34,19 @@ export default function Register() {
         <div className="auth-brand">🛍️</div>
         <h2>Créer un compte</h2>
         <form onSubmit={submit}>
+          <label>Pays *</label>
+          <select
+            className="input"
+            required
+            value={form.country}
+            onChange={(e) => setForm({ ...form, country: e.target.value })}
+          >
+            <option value="" disabled>Choisir votre pays…</option>
+            {COUNTRIES.map((c) => (
+              <option key={c.name} value={c.name}>{c.flag} {c.name} ({c.phone})</option>
+            ))}
+          </select>
+
           <label>Je veux m'inscrire en tant que :</label>
           <div className="role-picker">
             <label className={`role-option ${form.role === 'shop' ? 'selected' : ''}`}>
@@ -113,7 +127,7 @@ export default function Register() {
             type="button"
             className="btn btn-google btn-block"
             onClick={() => {
-              window.location.href = `/api/auth/google?role=${form.role}`;
+              window.location.href = `/api/auth/google?role=${form.role}&country=${encodeURIComponent(form.country || '')}`;
             }}
           >
             <GoogleIcon />

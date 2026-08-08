@@ -5,7 +5,7 @@ import { formatMoney } from '../components/ProductCard.jsx';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { compressImage } from '../utils.js';
-import { PRODUCT_CATEGORIES } from '../config.js';
+import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from '../config.js';
 
 const EMPTY_FORM = {
   name: '',
@@ -31,6 +31,8 @@ export default function ShopDashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [picking, setPicking] = useState(false);
+  const symbol = countrySymbol(user?.country);
+  const prefix = countryPhone(user?.country);
 
   const addPhotos = async (files) => {
     const list = Array.from(files || []);
@@ -78,6 +80,7 @@ export default function ShopDashboard() {
         delivery_fee: Number(form.delivery_fee || 0),
         quantity: Number(form.quantity || 1),
         warranty: form.warranty === '' ? null : Number(form.warranty),
+        contact: form.contact ? `${prefix}${form.contact.trim()}` : '',
       });
       setForm(EMPTY_FORM);
       setShowForm(false);
@@ -187,18 +190,27 @@ export default function ShopDashboard() {
 
             <div className="row2">
               <div>
-                <label>Frais de livraison (F)</label>
+                <label>Frais de livraison ({symbol})</label>
                 <input className="input" type="number" min="0" step="0.01" placeholder="ex : 1000" value={form.delivery_fee} onChange={(e) => setForm({ ...form, delivery_fee: e.target.value })} />
               </div>
               <div>
                 <label>Contact de la boutique</label>
-                <input className="input" type="tel" placeholder="ex : 07 00 00 00 00" value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} />
+                <div className="phone-input">
+                  <span className="phone-prefix">{prefix}</span>
+                  <input
+                    className="input"
+                    type="tel"
+                    placeholder="ex : 6 90 00 00 00"
+                    value={form.contact}
+                    onChange={(e) => setForm({ ...form, contact: e.target.value.replace(/\D/g, '') })}
+                  />
+                </div>
               </div>
             </div>
 
             <div className="row2">
               <div>
-                <label>Prix de vente (F) *</label>
+                <label>Prix de vente ({symbol}) *</label>
                 <input className="input" type="number" min="0" step="0.01" required value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
               </div>
               <div>
@@ -208,8 +220,8 @@ export default function ShopDashboard() {
             </div>
             {form.price && form.commission_percent ? (
               <p className="hint">
-                Le vendeur affichera : <strong>{formatMoney(form.price)} F</strong> et gagnera{' '}
-                <strong>{formatMoney(form.price * (Number(form.commission_percent) / 100))} F</strong> de commission.
+                Le vendeur affichera : <strong>{formatMoney(form.price)} {symbol}</strong> et gagnera{' '}
+                <strong>{formatMoney(form.price * (Number(form.commission_percent) / 100))} {symbol}</strong> de commission.
               </p>
             ) : null}
             {error && <p className="error">{error}</p>}
@@ -241,8 +253,8 @@ export default function ShopDashboard() {
         {stats ? (
           <div className="stats-row">
             <div><span className="label">Ventes enregistrées</span><strong>{stats.total_sales}</strong></div>
-            <div><span className="label">Chiffre d'affaires</span><strong>{formatMoney(stats.revenue)} F</strong></div>
-            <div><span className="label">Commissions versées aux vendeurs</span><strong>{formatMoney(stats.total_commission)} F</strong></div>
+            <div><span className="label">Chiffre d'affaires</span><strong>{formatMoney(stats.revenue)} {symbol}</strong></div>
+            <div><span className="label">Commissions versées aux vendeurs</span><strong>{formatMoney(stats.total_commission)} {symbol}</strong></div>
           </div>
         ) : null}
 
@@ -269,8 +281,8 @@ export default function ShopDashboard() {
                   <td>{s.seller_name}</td>
                   <td>{s.buyer_name}</td>
                   <td>{s.quantity}</td>
-                  <td>{formatMoney(s.total_price)} F</td>
-                  <td>{formatMoney(s.commission)} F</td>
+                  <td>{formatMoney(s.total_price)} {countrySymbol(s.shop_country)}</td>
+                  <td>{formatMoney(s.commission)} {countrySymbol(s.shop_country)}</td>
                   <td>
                     <span className={`badge badge-${s.status}`}>{s.status}</span>
                   </td>

@@ -9,11 +9,11 @@ const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 function publicUser(u) {
-  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null };
+  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, country: u.country || null };
 }
 
 router.post('/register', ah(async (req, res) => {
-  const { name, email, password, role } = req.body || {};
+  const { name, email, password, role, country } = req.body || {};
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Nom, email et mot de passe sont requis' });
   }
@@ -30,8 +30,8 @@ router.post('/register', ah(async (req, res) => {
   }
   const hash = bcrypt.hashSync(String(password), 10);
   const created = await q(
-    'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id',
-    [String(name).trim(), emailNorm, hash, role]
+    'INSERT INTO users (name, email, password, role, country) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+    [String(name).trim(), emailNorm, hash, role, country ? String(country).trim() : null]
   );
   const user = (await q('SELECT * FROM users WHERE id = $1', [created[0].id]))[0];
   res.status(201).json({ token: signToken(user), user: publicUser(user) });
@@ -57,7 +57,7 @@ router.get('/google', (req, res) => {
     return res.redirect(`/auth-google?error=${msg}`);
   }
   const role = ['shop', 'seller', 'client', 'creator'].includes(req.query.role) ? req.query.role : 'seller';
-  res.redirect(googleAuthUrl(role, req));
+  res.redirect(googleAuthUrl(role, req.query.country, req));
 });
 
 router.get('/google/callback', ah(async (req, res) => {
@@ -69,10 +69,12 @@ router.get('/google/callback', ah(async (req, res) => {
     const profile = await getGoogleProfile(code, req);
     let user = (await q('SELECT * FROM users WHERE email = $1', [profile.email]))[0];
     if (!user) {
-      const role = ['shop', 'seller', 'client', 'creator'].includes(state) ? state : 'seller';
+      const [role, country] = String(state || '').split('|');
+      const cleanRole = ['shop', 'seller', 'client', 'creator'].includes(role) ? role : 'seller';
+      const cleanCountry = country && country.length <= 60 ? country : null;
       const created = await q(
-        'INSERT INTO users (name, email, password, provider, role) VALUES ($1, $2, NULL, \'google\', $3) RETURNING id',
-        [profile.name, profile.email, role]
+        'INSERT INTO users (name, email, password, provider, role, country) VALUES ($1, $2, NULL, \'google\', $3, $4) RETURNING id',
+        [profile.name, profile.email, cleanRole, cleanCountry]
       );
       user = (await q('SELECT * FROM users WHERE id = $1', [created[0].id]))[0];
     }
@@ -89,7 +91,7 @@ router.get('/me', authRequired, ah(async (req, res) => {
 }));
 
 router.put('/me', authRequired, ah(async (req, res) => {
-  const { name, email, location } = req.body || {};
+  const { name, email, location, country } = req.body || {};
   if (!name || !String(name).trim()) {
     return res.status(400).json({ error: 'Le nom ne peut pas être vide' });
   }
@@ -102,8 +104,8 @@ router.put('/me', authRequired, ah(async (req, res) => {
     return res.status(409).json({ error: 'Un compte existe déjà avec cet email' });
   }
   const updated = await q(
-    'UPDATE users SET name = $1, email = $2, location = $3 WHERE id = $4 RETURNING *',
-    [String(name).trim(), emailNorm, location ? String(location).trim() : null, req.user.id]
+    'UPDATE users SET name = $1, email = $2, location = $3, country = $4 WHERE id = $5 RETURNING *',
+    [String(name).trim(), emailNorm, location ? String(location).trim() : null, country ? String(country).trim() : null, req.user.id]
   );
   if (!updated.length) return res.status(404).json({ error: 'Compte introuvable' });
   res.json({ user: publicUser(updated[0]) });

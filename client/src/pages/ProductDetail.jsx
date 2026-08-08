@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
 import { formatMoney } from '../components/ProductCard.jsx';
+import { countrySymbol } from '../config.js';
 import { whatsappLink, categoryEmoji } from '../config.js';
 import { useAuth } from '../App.jsx';
 
@@ -56,6 +57,7 @@ export default function ProductDetail() {
 
   const isOwner = user && Number(user.id) === Number(product.shop_id);
   const deliveryFee = Number(product.delivery_fee || 0);
+  const symbol = countrySymbol(product?.shop_country);
   const qty = Number(product.quantity || 0);
 
   const removeProduct = async () => {
@@ -74,7 +76,7 @@ export default function ProductDetail() {
     <main className="container narrow">
       <Seo
         title={`${product.name} — Mboppi`}
-        description={`Découvrez « ${product.name} » à ${formatMoney(product.price)} F chez ${product.shop_name} sur Mboppi.`}
+        description={`Découvrez « ${product.name} » à ${formatMoney(product.price)} ${symbol} chez ${product.shop_name} sur Mboppi.`}
       />
       <Link to="/" className="btn btn-outline" style={{ marginBottom: 16 }}>
         ← Retour aux produits
@@ -123,11 +125,11 @@ export default function ProductDetail() {
           {product.description && <p>{product.description}</p>}
           <div className="product-meta">
             {product.warranty > 0 && <span className="meta-chip">🛡️ Garantie {product.warranty} mois</span>}
-            <span className="meta-chip">🚚 {deliveryFee > 0 ? `Livraison ${formatMoney(deliveryFee)} F` : 'Livraison gratuite'}</span>
+            <span className="meta-chip">🚚 {deliveryFee > 0 ? `Livraison ${formatMoney(deliveryFee)} ${symbol}` : 'Livraison gratuite'}</span>
             {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
           </div>
           <div className="offer-prices">
-            <span className="promo-price">{formatMoney(product.price)} F</span>
+            <span className="promo-price">{formatMoney(product.price)} {symbol}</span>
           </div>
           <p className={`offer-qty ${qty > 0 ? '' : 'out'}`}>
             {qty > 0 ? `Disponibilité : ${qty} en stock` : 'Rupture de stock'}

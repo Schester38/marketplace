@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
+import { countrySymbol } from '../config.js';
 import Seo from '../components/Seo.jsx';
 
 export default function SellerDashboard() {
@@ -57,8 +58,8 @@ export default function SellerDashboard() {
         <section className="card stats">
           <div className="stats-row">
             <div><span className="label">Ventes réalisées</span><strong>{stats.total_sales}</strong></div>
-            <div><span className="label">Commission totale générée</span><strong>{formatMoney(stats.total_commission)} F</strong></div>
-            <div><span className="label">Commission confirmée</span><strong>{formatMoney(stats.earned_commission)} F</strong></div>
+            <div><span className="label">Commission totale générée</span><strong>{formatMoney(stats.total_commission)} {countrySymbol(user?.country)}</strong></div>
+            <div><span className="label">Commission confirmée</span><strong>{formatMoney(stats.earned_commission)} {countrySymbol(user?.country)}</strong></div>
           </div>
         </section>
       )}
@@ -67,8 +68,8 @@ export default function SellerDashboard() {
         <div className="card form-card">
           <h2>Vendre : {saleForm.product.name}</h2>
           <p className="hint">
-            Prix : {formatMoney(saleForm.product.price)} F — Votre commission :{' '}
-            {formatMoney(saleForm.product.commission)} F par unité
+            Prix : {formatMoney(saleForm.product.price)} {countrySymbol(saleForm.product.shop_country)} — Votre commission :{' '}
+            {formatMoney(saleForm.product.commission)} {countrySymbol(saleForm.product.shop_country)} par unité
           </p>
           <form onSubmit={submitSale}>
             <label>Nom de l'acheteur *</label>
@@ -129,8 +130,8 @@ export default function SellerDashboard() {
                   <td>{s.shop_name}</td>
                   <td>{s.buyer_name}</td>
                   <td>{s.quantity}</td>
-                  <td>{formatMoney(s.total_price)} F</td>
-                  <td>{formatMoney(s.commission)} F</td>
+                  <td>{formatMoney(s.total_price)} {countrySymbol(s.shop_country)}</td>
+                  <td>{formatMoney(s.commission)} {countrySymbol(s.shop_country)}</td>
                   <td><span className={`badge badge-${s.status}`}>{s.status}</span></td>
                 </tr>
               ))}

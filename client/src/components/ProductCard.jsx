@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { categoryEmoji } from '../config.js';
+import { categoryEmoji, countrySymbol } from '../config.js';
 
 export function formatMoney(n) {
   return new Intl.NumberFormat('fr-FR').format(Number(n || 0));
@@ -11,6 +11,7 @@ export default function ProductCard({ product, action, onAction, showCommission 
   const photo = (product.photos && product.photos[0]) || product.image;
   const deliveryFee = Number(product.delivery_fee || 0);
   const qty = Number(product.quantity || 0);
+  const symbol = countrySymbol(product?.shop_country);
   return (
     <div className="card product-card">
       <Link to={`/produit/${product.id}`} className="product-link">
@@ -34,18 +35,18 @@ export default function ProductCard({ product, action, onAction, showCommission 
         </p>
         <div className="product-meta">
           {product.warranty > 0 && <span className="meta-chip">🛡️ Garantie {product.warranty} mois</span>}
-          <span className="meta-chip">🚚 {deliveryFee > 0 ? `Livraison ${formatMoney(deliveryFee)} F` : 'Livraison gratuite'}</span>
+          <span className="meta-chip">🚚 {deliveryFee > 0 ? `Livraison ${formatMoney(deliveryFee)} ${symbol}` : 'Livraison gratuite'}</span>
           {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
         </div>
         <div className="price-box">
           <div>
             <span className="label">Prix de vente</span>
-            <span className="price">{formatMoney(product.price)} F</span>
+            <span className="price">{formatMoney(product.price)} {symbol}</span>
           </div>
           {showCommission && (
             <div>
               <span className="label">Commission ({product.commission_percent}%)</span>
-              <span className="commission">+{formatMoney(commission)} F</span>
+              <span className="commission">+{formatMoney(commission)} {symbol}</span>
             </div>
           )}
         </div>

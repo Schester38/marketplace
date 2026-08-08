@@ -1,6 +1,59 @@
 export const WHATSAPP_NUMBER = '237679475343';
 export const BASE_URL = 'https://mboppi-mboppi.vercel.app';
 
+export const COUNTRIES = [
+  { name: 'Cameroun', flag: '🇨🇲', phone: '+237', symbol: 'F' },
+  { name: 'Côte d\'Ivoire', flag: '🇨🇮', phone: '+225', symbol: 'F' },
+  { name: 'Sénégal', flag: '🇸🇳', phone: '+221', symbol: 'F' },
+  { name: 'Mali', flag: '🇲🇱', phone: '+223', symbol: 'F' },
+  { name: 'Burkina Faso', flag: '🇧🇫', phone: '+226', symbol: 'F' },
+  { name: 'Niger', flag: '🇳🇪', phone: '+227', symbol: 'F' },
+  { name: 'Togo', flag: '🇹🇬', phone: '+228', symbol: 'F' },
+  { name: 'Bénin', flag: '🇧🇯', phone: '+229', symbol: 'F' },
+  { name: 'Guinée', flag: '🇬🇳', phone: '+224', symbol: 'GF' },
+  { name: 'Gabon', flag: '🇬🇦', phone: '+241', symbol: 'F' },
+  { name: 'Tchad', flag: '🇹🇩', phone: '+235', symbol: 'F' },
+  { name: 'République du Congo', flag: '🇨🇬', phone: '+242', symbol: 'F' },
+  { name: 'République démocratique du Congo', flag: '🇨🇩', phone: '+243', symbol: 'FC' },
+  { name: 'Guinée équatoriale', flag: '🇬🇶', phone: '+240', symbol: 'F' },
+  { name: 'République centrafricaine', flag: '🇨🇫', phone: '+236', symbol: 'F' },
+  { name: 'Rwanda', flag: '🇷🇼', phone: '+250', symbol: 'FRw' },
+  { name: 'Burundi', flag: '🇧🇮', phone: '+257', symbol: 'FBu' },
+  { name: 'Kenya', flag: '🇰🇪', phone: '+254', symbol: 'KSh' },
+  { name: 'Nigeria', flag: '🇳🇬', phone: '+234', symbol: '₦' },
+  { name: 'Ghana', flag: '🇬🇭', phone: '+233', symbol: 'GH₵' },
+  { name: 'Afrique du Sud', flag: '🇿🇦', phone: '+27', symbol: 'R' },
+  { name: 'Algérie', flag: '🇩🇿', phone: '+213', symbol: 'DA' },
+  { name: 'Maroc', flag: '🇲🇦', phone: '+212', symbol: 'DH' },
+  { name: 'Tunisie', flag: '🇹🇳', phone: '+216', symbol: 'DT' },
+  { name: 'Égypte', flag: '🇪🇬', phone: '+20', symbol: 'LE' },
+  { name: 'France', flag: '🇫🇷', phone: '+33', symbol: '€' },
+  { name: 'Belgique', flag: '🇧🇪', phone: '+32', symbol: '€' },
+  { name: 'Suisse', flag: '🇨🇭', phone: '+41', symbol: 'CHF' },
+  { name: 'Canada', flag: '🇨🇦', phone: '+1', symbol: '$' },
+  { name: 'États-Unis', flag: '🇺🇸', phone: '+1', symbol: '$' },
+  { name: 'Royaume-Uni', flag: '🇬🇧', phone: '+44', symbol: '£' },
+  { name: 'Allemagne', flag: '🇩🇪', phone: '+49', symbol: '€' },
+  { name: 'Espagne', flag: '🇪🇸', phone: '+34', symbol: '€' },
+  { name: 'Italie', flag: '🇮🇹', phone: '+39', symbol: '€' },
+  { name: 'Portugal', flag: '🇵🇹', phone: '+351', symbol: '€' },
+  { name: 'Pays-Bas', flag: '🇳🇱', phone: '+31', symbol: '€' },
+];
+
+export function getCountry(countryName) {
+  return COUNTRIES.find((c) => c.name === countryName);
+}
+
+export function countrySymbol(countryName) {
+  const c = getCountry(countryName);
+  return c ? c.symbol : 'F';
+}
+
+export function countryPhone(countryName) {
+  const c = getCountry(countryName);
+  return c ? c.phone : '+237';
+}
+
 export function offerUrl(id) {
   return `${BASE_URL}/offre/${id}`;
 }

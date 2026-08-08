@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
 import { useAuth } from '../App.jsx';
+import { COUNTRIES } from '../config.js';
 
 export default function MyAccount() {
   const { user, login, logout } = useAuth();
@@ -11,6 +12,7 @@ export default function MyAccount() {
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [location, setLocation] = useState(user?.location || '');
+  const [country, setCountry] = useState(user?.country || '');
   const [profileMsg, setProfileMsg] = useState('');
   const [profileError, setProfileError] = useState('');
 
@@ -31,7 +33,7 @@ export default function MyAccount() {
     setProfileMsg('');
     setProfileError('');
     try {
-      const { user: updated } = await api.updateProfile({ name, email, location });
+      const { user: updated } = await api.updateProfile({ name, email, location, country });
       login(updated, localStorage.getItem('token'));
       setProfileMsg('Profil mis à jour avec succès.');
     } catch (err) {
@@ -92,7 +94,7 @@ export default function MyAccount() {
       <div className="account-grid">
         <div className="card">
           <h2>Profil</h2>
-          <p className="contact-hint">Votre nom et votre adresse e-mail.</p>
+          <p className="contact-hint">Votre nom, votre adresse e-mail et votre pays.</p>
           <form className="contact-form" onSubmit={saveProfile}>
             <label className="field">
               <span>Nom</span>
@@ -101,6 +103,15 @@ export default function MyAccount() {
             <label className="field">
               <span>E-mail</span>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </label>
+            <label className="field">
+              <span>Pays</span>
+              <select value={country} onChange={(e) => setCountry(e.target.value)}>
+                <option value="">Choisir votre pays…</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.name} value={c.name}>{c.flag} {c.name}</option>
+                ))}
+              </select>
             </label>
             {user?.role === 'shop' && (
               <label className="field">
