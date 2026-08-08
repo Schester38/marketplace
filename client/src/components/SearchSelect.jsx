@@ -17,7 +17,7 @@ export default function SearchSelect({ options, value, onChange, placeholder = '
   }, [open]);
 
   const filtered = query
-    ? options.filter((o) => o.name.toLowerCase().includes(query.toLowerCase()))
+    ? options.filter((o) => ((o.label || o.name) || '').toLowerCase().includes(query.toLowerCase()))
     : options;
 
   const selected = options.find((o) => o.value === value);
@@ -29,7 +29,7 @@ export default function SearchSelect({ options, value, onChange, placeholder = '
   };
 
   const onKey = (e) => {
-    if (!open && e.key && e.key.length === 1) {
+    if (!open && typeof e.key === 'string' && e.key.length === 1) {
       e.preventDefault();
       setQuery((q) => q + e.key);
       setOpen(true);
@@ -42,10 +42,13 @@ export default function SearchSelect({ options, value, onChange, placeholder = '
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActive((a) => Math.max(a - 1, 0));
-    } else if (e.key === 'Enter' && open && filtered[active]) {
-      e.preventDefault();
-      select(filtered[active]);
+    } else if (e.key === 'Enter') {
+      if (open) {
+        e.preventDefault();
+        if (filtered[active]) select(filtered[active]);
+      }
     } else if (e.key === 'Escape') {
+      e.preventDefault();
       setOpen(false);
       setQuery('');
     }
