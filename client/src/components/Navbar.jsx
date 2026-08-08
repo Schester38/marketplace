@@ -13,7 +13,6 @@ export default function Navbar({ onLogout }) {
       <nav>
         <Link to="/">Produits</Link>
         <Link to="/vitrine-offre">Vitrine d'offre</Link>
-        <Link to="/verone">Verone</Link>
         {!user && <Link to="/login">Connexion</Link>}
         {!user && <Link to="/register" className="btn btn-primary">Créer un compte</Link>}
         {user && user.role === 'shop' && <Link to="/shop">Ma boutique</Link>}
