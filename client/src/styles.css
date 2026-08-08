@@ -533,7 +533,9 @@ textarea.input { resize: vertical; }
   padding: 2px 8px;
   border-radius: 999px;
 }
-.offer-body { padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.offer-body { padding: 16px; display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.offer-detail { overflow: hidden; }
+.offer-detail .offer-body p { overflow-wrap: break-word; word-break: break-word; }
 .offer-body h3 { font-size: 1.05rem; }
 .offer-tags { display: flex; gap: 6px; }
 .badge-offer { background: #ede9fe; color: #6d28d9; }
