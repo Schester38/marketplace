@@ -13,7 +13,7 @@ export default function Footer() {
           <Link to="/contact">Contact</Link>
         </nav>
         <p className="footer-copy">
-          © {new Date().getFullYear()} Mboppi — Le marché de votre quartier en ligne
+          © {new Date().getFullYear()} Mboppi. Tous droits réservés.
         </p>
       </div>
     </footer>
