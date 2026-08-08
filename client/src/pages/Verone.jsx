@@ -45,8 +45,6 @@ export default function Verone() {
   const [showMyOffers, setShowMyOffers] = useState(false);
   const [myOffers, setMyOffers] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminError, setAdminError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
@@ -70,16 +68,14 @@ export default function Verone() {
 
   const confirmDelete = async (e) => {
     e.preventDefault();
-    setAdminError('');
     setDeleting(true);
     try {
-      await api.deleteOffer(deleteTarget.id, adminPassword);
+      await api.deleteOffer(deleteTarget.id);
       setMyOffers(myOffers.filter((o) => o.id !== deleteTarget.id));
       setDeleteTarget(null);
-      setAdminPassword('');
       setSuccess('Offre retirée de la vitrine.');
     } catch (err) {
-      setAdminError(err.message);
+      setError(err.message);
     } finally {
       setDeleting(false);
     }
@@ -195,18 +191,8 @@ export default function Verone() {
             </div>
             <p className="hint">
               Confirmez le retrait de « <strong>{deleteTarget.name}</strong> » de la vitrine.
-              Cette action nécessite le mot de passe de gestion.
             </p>
             <form onSubmit={confirmDelete}>
-              <label>Mot de passe de gestion</label>
-              <input
-                className="input"
-                type="password"
-                required
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-              />
-              {adminError && <p className="error">{adminError}</p>}
               <div className="row2" style={{ marginTop: 14 }}>
                 <button className="btn btn-danger" disabled={deleting}>
                   {deleting ? 'Retrait…' : 'Rétirer'}
