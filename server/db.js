@@ -50,6 +50,20 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
+    CREATE TABLE IF NOT EXISTS offers (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT,
+      description TEXT,
+      warranty TEXT,
+      original_price REAL NOT NULL CHECK (original_price >= 0),
+      promo_price REAL NOT NULL CHECK (promo_price >= 0),
+      phone TEXT,
+      quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 0),
+      photos TEXT NOT NULL DEFAULT '[]',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
     CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
     CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id);
     CREATE INDEX IF NOT EXISTS idx_sales_seller ON sales(seller_id);
