@@ -3,10 +3,12 @@ import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 import Seo from '../components/Seo.jsx';
+import { useAuth } from '../App.jsx';
 
 const EMPTY_FORM = { name: '', description: '', price: '', commission_percent: '', image: '' };
 
 export default function ShopDashboard() {
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
   const [stats, setStats] = useState(null);
@@ -17,7 +19,10 @@ export default function ShopDashboard() {
 
   const load = async () => {
     try {
-      const [prodData, saleData] = await Promise.all([api.myProducts(), api.shopSales()]);
+      const [prodData, saleData] = await Promise.all([
+        api.myProducts(),
+        api.shopSales(user.id),
+      ]);
       setProducts(prodData.products);
       setSales(saleData.sales);
       setStats(saleData.stats);
