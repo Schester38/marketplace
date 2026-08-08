@@ -24,8 +24,10 @@ export default function AuthGoogle() {
     }
     done.current = true;
     localStorage.setItem('token', token);
-    api
-      .me()
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Le serveur met trop de temps à répondre. Réessayez.')), 15000)
+    );
+    Promise.race([api.me(), timeout])
       .then((data) => {
         login(data.user, token);
         navigate(data.user.role === 'shop' ? '/shop' : '/seller', { replace: true });

@@ -1,16 +1,18 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { q } from '../db.js';
-import { signToken } from '../auth.js';
+import { signToken, authRequired } from '../auth.js';
 import { googleConfigured, googleAuthUrl, getGoogleProfile } from '../google.js';
 
 const router = Router();
+
+const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 function publicUser(u) {
   return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at };
 }
 
-router.post('/register', async (req, res) => {
+router.post('/register', ah(async (req, res) => {
   const { name, email, password, role } = req.body || {};
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Nom, email et mot de passe sont requis' });
@@ -33,9 +35,9 @@ router.post('/register', async (req, res) => {
   );
   const user = (await q('SELECT * FROM users WHERE id = $1', [created[0].id]))[0];
   res.status(201).json({ token: signToken(user), user: publicUser(user) });
-});
+}));
 
-router.post('/login', async (req, res) => {
+router.post('/login', ah(async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: 'Email et mot de passe sont requis' });
@@ -47,7 +49,7 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
   }
   res.json({ token: signToken(user), user: publicUser(user) });
-});
+}));
 
 router.get('/google', (req, res) => {
   if (!googleConfigured()) {
@@ -58,7 +60,7 @@ router.get('/google', (req, res) => {
   res.redirect(googleAuthUrl(role, req));
 });
 
-router.get('/google/callback', async (req, res) => {
+router.get('/google/callback', ah(async (req, res) => {
   const { code, state } = req.query;
   if (!code) {
     return res.redirect(`/auth-google?error=${encodeURIComponent('Connexion Google annulée')}`);
@@ -78,12 +80,12 @@ router.get('/google/callback', async (req, res) => {
   } catch (err) {
     res.redirect(`/auth-google?error=${encodeURIComponent(err.message)}`);
   }
-});
+}));
 
-router.get('/me', async (req, res) => {
+router.get('/me', authRequired, ah(async (req, res) => {
   const user = (await q('SELECT * FROM users WHERE id = $1', [req.user.id]))[0];
   if (!user) return res.status(404).json({ error: 'Compte introuvable' });
   res.json({ user: publicUser(user) });
-});
+}));
 
 export default router;
