@@ -15,7 +15,7 @@ export default function OfferCard({ offer }) {
     <div className="card offer-card">
       <Link to={`/offre/${offer.id}`} className="offer-photo">
         {hasPhotos ? (
-          <img src={photos[0]} alt={offer.name} loading="lazy" />
+          <img src={photos[0]} alt={offer.name} loading="lazy" decoding="async" />
         ) : (
           <span>🛍️</span>
         )}

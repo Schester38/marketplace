@@ -2,12 +2,14 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { whatsappLink } from '../config.js';
+import Seo from '../components/Seo.jsx';
 
 export default function ClientDashboard() {
   const { user } = useAuth();
 
   return (
     <main className="container">
+      <Seo title="Mon espace client — Mboppi" description="Retrouvez vos raccourcis produits, offres et commandes sur Mboppi." />
       <section className="dash-header">
         <div>
           <h1>Mon espace client</h1>

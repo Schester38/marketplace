@@ -10,7 +10,7 @@ export default function ProductCard({ product, action, onAction }) {
     <div className="card product-card">
       <div className="product-thumb">
         {product.image ? (
-          <img src={product.image} alt={product.name} />
+          <img src={product.image} alt={product.name} loading="lazy" decoding="async" />
         ) : (
           <span>📦</span>
         )}

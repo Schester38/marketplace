@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
+import Seo from '../components/Seo.jsx';
 
 const EMPTY_FORM = { name: '', description: '', price: '', commission_percent: '', image: '' };
 
@@ -69,6 +70,7 @@ export default function ShopDashboard() {
 
   return (
     <main className="container">
+      <Seo title="Ma boutique — Mboppi" description="Gérez vos produits et suivez vos ventes sur Mboppi." />
       <section className="dash-header">
         <div>
           <h1>Ma boutique</h1>

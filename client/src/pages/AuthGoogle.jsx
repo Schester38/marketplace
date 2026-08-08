@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth, dashboardPath } from '../App.jsx';
+import Seo from '../components/Seo.jsx';
 
 export default function AuthGoogle() {
   const { login } = useAuth();
@@ -40,6 +41,7 @@ export default function AuthGoogle() {
 
   return (
     <main className="container narrow">
+      <Seo title="Connexion en cours… — Mboppi" description="Connexion à votre espace Mboppi en cours." />
       <div className="card form-card page-center">
         <div className="auth-brand">🛍️</div>
         {error ? (

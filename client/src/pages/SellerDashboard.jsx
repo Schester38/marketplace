@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
+import Seo from '../components/Seo.jsx';
 
 export default function SellerDashboard() {
   const [products, setProducts] = useState([]);
@@ -44,6 +45,7 @@ export default function SellerDashboard() {
 
   return (
     <main className="container">
+      <Seo title="Mon espace vendeur — Mboppi" description="Suivez vos ventes et vos commissions sur Mboppi." />
       <section className="dash-header">
         <div>
           <h1>Mon espace vendeur</h1>

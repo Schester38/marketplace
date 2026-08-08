@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth, dashboardPath } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
+import Seo from '../components/Seo.jsx';
 
 export default function Register() {
   const { login } = useAuth();
@@ -24,6 +25,10 @@ export default function Register() {
 
   return (
     <main className="container narrow">
+      <Seo
+        title="Créer un compte — Mboppi"
+        description="Inscrivez-vous gratuitement : boutique, vendeur, client ou créateur."
+      />
       <div className="card form-card">
         <div className="auth-brand">🛍️</div>
         <h2>Créer un compte</h2>

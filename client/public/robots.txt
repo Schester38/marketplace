@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mboppi-mboppi.vercel.app/sitemap.xml

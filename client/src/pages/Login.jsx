@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth, dashboardPath } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
+import Seo from '../components/Seo.jsx';
 
 export default function Login() {
   const { login } = useAuth();
@@ -24,6 +25,7 @@ export default function Login() {
 
   return (
     <main className="container narrow">
+      <Seo title="Connexion — Mboppi" description="Connectez-vous à votre espace Mboppi." />
       <div className="card form-card">
         <div className="auth-brand">🛍️</div>
         <h2>Connexion</h2>

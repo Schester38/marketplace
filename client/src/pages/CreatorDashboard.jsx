@@ -2,12 +2,14 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { whatsappLink } from '../config.js';
+import Seo from '../components/Seo.jsx';
 
 export default function CreatorDashboard() {
   const { user } = useAuth();
 
   return (
     <main className="container">
+      <Seo title="Mon espace créateur — Mboppi" description="Présentez vos créations et développez votre audience sur Mboppi." />
       <section className="dash-header">
         <div>
           <h1>Mon espace créateur</h1>

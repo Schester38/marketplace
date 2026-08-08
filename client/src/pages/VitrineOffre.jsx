@@ -4,6 +4,7 @@ import ProductCard from '../components/ProductCard.jsx';
 import OfferCard from '../components/OfferCard.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { offerDiscount, categoryEmoji } from '../config.js';
+import Seo from '../components/Seo.jsx';
 
 function SkeletonCard() {
   return (
@@ -102,6 +103,10 @@ export default function VitrineOffre() {
 
   return (
     <main className="container">
+      <Seo
+        title="Vitrine d'offre — Promotions du moment sur Mboppi"
+        description="Toutes les offres du moment : réductions, économies et bonnes affaires chez les boutiques partenaires."
+      />
       <section className="hero vitrine-hero">
         <div className="hero-floats" aria-hidden="true">
           <span>🛍️</span>

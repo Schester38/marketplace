@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import ShareVitrine from '../components/ShareVitrine.jsx';
+import Seo from '../components/Seo.jsx';
 
 const EMPTY_FORM = {
   name: '',
@@ -132,6 +133,7 @@ export default function Verone() {
 
   return (
     <main className="container narrow">
+      <Seo title="Verone — Mboppi" description="Gestion des offres de la vitrine Mboppi." />
       <section className="dash-header">
         <div>
           <div className="hero-badge" style={{ marginBottom: 10 }}>🛍️ Espace Verone</div>

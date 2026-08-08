@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { offerUrl, whatsappLink, offerDiscount, offerSavings, categoryEmoji } from '../config.js';
+import Seo from '../components/Seo.jsx';
 
 export default function OfferDetail() {
   const { id } = useParams();
@@ -55,6 +56,10 @@ export default function OfferDetail() {
 
   return (
     <main className="container narrow">
+      <Seo
+        title={offer ? `${offer.name} — Mboppi` : 'Offre du moment — Mboppi'}
+        description={offer ? `Découvrez « ${offer.name} » à ${formatMoney(offer.price)} sur Mboppi.` : undefined}
+      />
       <Link to="/vitrine-offre" className="btn btn-outline" style={{ marginBottom: 16 }}>
         ← Retour à la vitrine
       </Link>

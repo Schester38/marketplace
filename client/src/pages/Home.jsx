@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import { useAuth } from '../App.jsx';
+import Seo from '../components/Seo.jsx';
 
 export default function Home() {
   const { user } = useAuth();
@@ -30,6 +31,10 @@ export default function Home() {
 
   return (
     <main className="container">
+      <Seo
+        title="Mboppi — Boutiques, vendeurs et offres du moment"
+        description="Le marché de votre quartier en ligne : produits des boutiques partenaires, vente avec commissions, commande par WhatsApp."
+      />
       <section className="hero vitrine-hero">
         <div className="hero-floats" aria-hidden="true">
           <span>🛍️</span>
