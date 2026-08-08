@@ -41,23 +41,22 @@ npm run dev
 
 Ouvrir **http://localhost:5173**.
 
-## Déploiement sur Render (gratuit)
+## Déploiement sur Vercel (gratuit)
 
-1. Pousser le code sur GitHub (dépôt déjà créé : `github.com/Schester38/marketplace`).
-2. Créer un compte sur **https://render.com** (connexion avec GitHub).
-3. **New + → Web Service** → connecter le dépôt `marketplace`.
-4. Configurer :
-   - **Build Command** : `npm run build`
-   - **Start Command** : `npm start`
-   - Plan : **Free**
-5. Ajouter les variables d'environnement :
+1. Pousser le code sur GitHub (dépôt : `github.com/Schester38/marketplace`).
+2. Créer un compte sur **https://vercel.com** (connexion avec GitHub, sans carte bancaire).
+3. **Add New → Project** → importer le dépôt `marketplace`.
+4. Vercel détecte automatiquement `vercel.json` (build du frontend + API serverless).
+5. Dans **Settings → Environment Variables**, ajouter :
    - `DATABASE_URL` → la clé de connexion de la base Neon
    - `JWT_SECRET` → une longue chaîne aléatoire
    - `NODE_ENV` → `production`
-6. **Deploy** — le site est disponible sur `https://marketplace.onrender.com`
+6. **Deploy** — le site est disponible sur `https://marketplace-<votre-compte>.vercel.app`
 
-Le frontend buildé est servi automatiquement par l'API (dossier `client/dist`).
-Les données sont conservées dans la base Neon, même si le serveur Render est mis en veille.
+Le frontend buildé est servi par Vercel, l'API Express fonctionne en fonction serverless (`api/index.js`).
+Les données sont conservées dans la base **Neon**, et chaque `git push` redéploie le site automatiquement.
+
+> Note : la plateforme Render est bloquée sur certains réseaux (FAI/firewall), c'est pourquoi Vercel est utilisé.
 
 ## Structure
 

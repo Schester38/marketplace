@@ -2,9 +2,16 @@
   "name": "marketplace",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "postinstall": "npm --prefix server install && npm --prefix client install",
-    "build": "npm --prefix client run build",
+    "build": "npm --prefix client install && npm --prefix client run build",
     "start": "npm --prefix server start"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
   }
 }
