@@ -41,6 +41,7 @@ export default function AuthGoogle() {
   return (
     <main className="container narrow">
       <div className="card form-card page-center">
+        <div className="auth-brand">🛍️</div>
         {error ? (
           <>
             <p className="error" style={{ textAlign: 'center' }}>{error}</p>

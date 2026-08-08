@@ -25,6 +25,7 @@ export default function Login() {
   return (
     <main className="container narrow">
       <div className="card form-card">
+        <div className="auth-brand">🛍️</div>
         <h2>Connexion</h2>
         <form onSubmit={submit}>
           <label>Email</label>

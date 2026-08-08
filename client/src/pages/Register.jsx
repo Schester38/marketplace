@@ -25,6 +25,7 @@ export default function Register() {
   return (
     <main className="container narrow">
       <div className="card form-card">
+        <div className="auth-brand">🛍️</div>
         <h2>Créer un compte</h2>
         <form onSubmit={submit}>
           <label>Je veux m'inscrire en tant que :</label>

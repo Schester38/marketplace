@@ -132,16 +132,18 @@ export default function Verone() {
 
   return (
     <main className="container narrow">
-      <section className="card page-center">
-        <div className="verone-placeholder">🛍️</div>
-        <h1>Verone</h1>
-        <p className="hint">
-          Ajoutez vos offres promotionnelles : elles s'affichent dans la Vitrine d'offre du site.
-        </p>
-        <button className="btn btn-primary btn-block" onClick={() => setShowForm(!showForm)}>
+      <section className="dash-header">
+        <div>
+          <div className="hero-badge" style={{ marginBottom: 10 }}>🛍️ Espace Verone</div>
+          <h1>Verone</h1>
+          <p>
+            Ajoutez vos offres promotionnelles : elles s'affichent dans la Vitrine d'offre du site.
+          </p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Fermer le formulaire' : '+ Ajouter une Offre'}
         </button>
-        <div className="row2" style={{ marginTop: 12 }}>
+        <div className="row2" style={{ width: '100%' }}>
           <button className="btn btn-outline" onClick={toggleMyOffers}>
             {showMyOffers ? 'Masquer mes Offres' : 'Voir mes Offres'}
           </button>
