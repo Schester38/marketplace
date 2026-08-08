@@ -77,7 +77,7 @@ export default function OfferDetail() {
 
           {offer.phone && (
             <a className="btn btn-primary btn-block" href={`tel:${offer.phone}`}>
-              📞 Appeler : {offer.phone}
+              📞 Appeler
             </a>
           )}
           <a className="btn btn-whatsapp btn-block" href={whatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">

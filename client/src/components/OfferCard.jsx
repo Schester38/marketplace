@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { formatMoney } from './ProductCard.jsx';
 import { offerUrl, whatsappLink } from '../config.js';
 
 export default function OfferCard({ offer }) {
-  const [photoIndex, setPhotoIndex] = useState(0);
   const photos = offer.photos || [];
   const hasPhotos = photos.length > 0;
 
@@ -11,22 +11,22 @@ export default function OfferCard({ offer }) {
 
   return (
     <div className="card offer-card">
-      <div className="offer-photo" onClick={() => photos.length > 1 && setPhotoIndex((i) => (i + 1) % photos.length)}>
+      <Link to={`/offre/${offer.id}`} className="offer-photo">
         {hasPhotos ? (
-          <img src={photos[photoIndex]} alt={offer.name} loading="lazy" />
+          <img src={photos[0]} alt={offer.name} loading="lazy" />
         ) : (
           <span>🛍️</span>
         )}
         {photos.length > 1 && (
-          <span className="offer-photo-count">{photoIndex + 1}/{photos.length}</span>
+          <span className="offer-photo-count">{photos.length} photos</span>
         )}
-      </div>
+      </Link>
       <div className="offer-body">
         <div className="offer-tags">
           <span className="badge badge-offer">Offre</span>
           {offer.category && <span className="badge badge-cat">{offer.category}</span>}
         </div>
-        <h3>{offer.name}</h3>
+        <h3><Link to={`/offre/${offer.id}`}>{offer.name}</Link></h3>
         {offer.description && <p className="product-desc">{offer.description}</p>}
         {offer.warranty && <p className="offer-warranty">🛡️ Garantie : {offer.warranty}</p>}
         <div className="offer-prices">
