@@ -50,7 +50,7 @@ Ouvrir **http://localhost:5173**.
 5. Dans **Settings → Environment Variables**, ajouter :
    - `DATABASE_URL` → la clé de connexion de la base Neon
    - `JWT_SECRET` → une longue chaîne aléatoire
-   - `NODE_ENV` → `production`
+   - ⚠️ **Ne pas définir `NODE_ENV`** : Vercel le gère lui-même, et `NODE_ENV=production` empêche l'installation de Vite (devDependency) → build en échec
 6. **Deploy** — le site est disponible sur `https://marketplace-<votre-compte>.vercel.app`
 
 Le frontend buildé est servi par Vercel, l'API Express fonctionne en fonction serverless (`api/index.js`).
