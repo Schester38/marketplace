@@ -4,6 +4,16 @@ import { BrowserRouter } from 'react-router-dom';
 import App, { AuthProvider } from './App.jsx';
 import './styles.css';
 
+const pathname = window.location.pathname;
+
+if (pathname.startsWith('/verone')) {
+  const link = document.querySelector('link[rel="manifest"]');
+  if (link) link.href = '/manifest-verone.webmanifest';
+  document.title = 'Verone';
+  const theme = document.querySelector('meta[name="theme-color"]');
+  if (theme) theme.content = '#4f46e5';
+}
+
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch((err) => console.error('SW error:', err));

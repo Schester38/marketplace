@@ -1,5 +1,5 @@
-const CACHE_NAME = 'mboppi-v2';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png'];
+const CACHE_NAME = 'mboppi-v3';
+const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
