@@ -28,7 +28,7 @@ export default function ProductCard({ product, action, onAction, showCommission 
       <div className="product-body">
         <h3><Link to={`/produit/${product.id}`}>{product.name}</Link></h3>
         {product.category && (
-          <p className="product-cat">{categoryEmoji(product.category)} {product.category}</p>
+          <p className="product-cat">{categoryEmoji(product.category)} {t(product.category)}</p>
         )}
         {product.description && <p className="product-desc">{product.description}</p>}
         <p className="product-shop">

@@ -122,7 +122,7 @@ export default function ProductDetail() {
 
         <div className="offer-body">
           <div className="offer-tags">
-            {product.category && <span className="badge badge-cat">{categoryEmoji(product.category)} {product.category}</span>}
+            {product.category && <span className="badge badge-cat">{categoryEmoji(product.category)} {t(product.category)}</span>}
           </div>
           <h2>{product.name}</h2>
           <p className="product-shop">

@@ -90,7 +90,7 @@ export default function OfferDetail() {
         <div className="offer-body">
           <div className="offer-tags">
             <span className="badge badge-offer">{t('Offre')}</span>
-            {offer.category && <span className="badge badge-cat">{categoryEmoji(offer.category)} {offer.category}</span>}
+            {offer.category && <span className="badge badge-cat">{categoryEmoji(offer.category)} {t(offer.category)}</span>}
           </div>
           <h2>{offer.name}</h2>
           {offer.description && <p>{offer.description}</p>}

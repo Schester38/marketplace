@@ -180,7 +180,7 @@ export default function VitrineOffre() {
                 className={`chip ${category === c ? 'active' : ''}`}
                 onClick={() => setCategory(c)}
               >
-                {categoryEmoji(c)} {c}
+                {categoryEmoji(c)} {t(c)}
               </button>
             ))}
           </div>

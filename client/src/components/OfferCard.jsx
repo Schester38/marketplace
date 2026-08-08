@@ -33,7 +33,7 @@ export default function OfferCard({ offer }) {
       <div className="offer-body">
         <div className="offer-tags">
           <span className="badge badge-offer">{t('Offre')}</span>
-          {offer.category && <span className="badge badge-cat">{categoryEmoji(offer.category)} {offer.category}</span>}
+          {offer.category && <span className="badge badge-cat">{categoryEmoji(offer.category)} {t(offer.category)}</span>}
         </div>
         <h3><Link to={`/offre/${offer.id}`}>{offer.name}</Link></h3>
         {offer.description && <p className="product-desc">{offer.description}</p>}
