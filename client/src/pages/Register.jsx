@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import { useAuth } from '../App.jsx';
+import { useAuth, dashboardPath } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
 
 export default function Register() {
@@ -16,7 +16,7 @@ export default function Register() {
     try {
       const data = await api.register(form);
       login(data.user, data.token);
-      navigate(data.user.role === 'shop' ? '/shop' : '/seller');
+      navigate(dashboardPath(data.user.role));
     } catch (err) {
       setError(err.message);
     }
@@ -50,6 +50,17 @@ export default function Register() {
               />
               <span>🛒 Vendeur</span>
               <small>Je vends les produits des boutiques et je gagne des commissions</small>
+            </label>
+            <label className={`role-option ${form.role === 'client' ? 'selected' : ''}`}>
+              <input
+                type="radio"
+                name="role"
+                value="client"
+                checked={form.role === 'client'}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+              />
+              <span>🛍️ Client</span>
+              <small>Je consulte les offres et les produits, je commande facilement</small>
             </label>
           </div>
 

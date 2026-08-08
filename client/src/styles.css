@@ -652,6 +652,17 @@ textarea.input { resize: vertical; }
   transform: translateY(-5px);
   box-shadow: 0 14px 28px rgba(79, 70, 229, 0.12);
 }
+a.step { text-decoration: none; color: inherit; }
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.info-row:last-child { border-bottom: none; }
 .step-num {
   position: absolute;
   top: 10px;

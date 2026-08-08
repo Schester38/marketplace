@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import { useAuth } from '../App.jsx';
+import { useAuth, dashboardPath } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
 
 export default function Login() {
@@ -16,7 +16,7 @@ export default function Login() {
     try {
       const data = await api.login(form);
       login(data.user, data.token);
-      navigate(data.user.role === 'shop' ? '/shop' : '/seller');
+      navigate(dashboardPath(data.user.role));
     } catch (err) {
       setError(err.message);
     }

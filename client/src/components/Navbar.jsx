@@ -20,9 +20,12 @@ export default function Navbar({ onLogout }) {
       {!user && <Link to="/register" className="btn btn-primary" onClick={close}>Créer un compte</Link>}
       {user && user.role === 'shop' && <Link to="/shop" onClick={close}>Ma boutique</Link>}
       {user && user.role === 'seller' && <Link to="/seller" onClick={close}>Mon espace vendeur</Link>}
+      {user && user.role === 'client' && <Link to="/client" onClick={close}>Mon espace client</Link>}
       {user && (
         <>
-          <span className="user-chip">{user.name} ({user.role === 'shop' ? 'boutique' : 'vendeur'})</span>
+          <span className="user-chip">
+            {user.name} ({user.role === 'shop' ? 'boutique' : user.role === 'seller' ? 'vendeur' : 'client'})
+          </span>
           <button className="btn btn-outline" onClick={logout}>Déconnexion</button>
         </>
       )}

@@ -17,8 +17,8 @@ router.post('/register', ah(async (req, res) => {
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Nom, email et mot de passe sont requis' });
   }
-  if (!['shop', 'seller'].includes(role)) {
-    return res.status(400).json({ error: 'Le rôle doit être "shop" (boutique) ou "seller" (vendeur)' });
+  if (!['shop', 'seller', 'client'].includes(role)) {
+    return res.status(400).json({ error: 'Le rôle doit être "shop" (boutique), "seller" (vendeur) ou "client"' });
   }
   if (password.length < 6) {
     return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
@@ -56,7 +56,7 @@ router.get('/google', (req, res) => {
     const msg = encodeURIComponent('La connexion Google n\'est pas encore configurée');
     return res.redirect(`/auth-google?error=${msg}`);
   }
-  const role = ['shop', 'seller'].includes(req.query.role) ? req.query.role : 'seller';
+  const role = ['shop', 'seller', 'client'].includes(req.query.role) ? req.query.role : 'seller';
   res.redirect(googleAuthUrl(role, req));
 });
 
@@ -69,7 +69,7 @@ router.get('/google/callback', ah(async (req, res) => {
     const profile = await getGoogleProfile(code, req);
     let user = (await q('SELECT * FROM users WHERE email = $1', [profile.email]))[0];
     if (!user) {
-      const role = ['shop', 'seller'].includes(state) ? state : 'seller';
+      const role = ['shop', 'seller', 'client'].includes(state) ? state : 'seller';
       const created = await q(
         'INSERT INTO users (name, email, password, provider, role) VALUES ($1, $2, NULL, \'google\', $3) RETURNING id',
         [profile.name, profile.email, role]

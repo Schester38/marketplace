@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { useAuth } from '../App.jsx';
+import { useAuth, dashboardPath } from '../App.jsx';
 
 export default function AuthGoogle() {
   const { login } = useAuth();
@@ -30,7 +30,7 @@ export default function AuthGoogle() {
     Promise.race([api.me(), timeout])
       .then((data) => {
         login(data.user, token);
-        navigate(data.user.role === 'shop' ? '/shop' : '/seller', { replace: true });
+        navigate(dashboardPath(data.user.role), { replace: true });
       })
       .catch((e) => {
         localStorage.removeItem('token');

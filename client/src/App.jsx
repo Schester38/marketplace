@@ -6,12 +6,19 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import ShopDashboard from './pages/ShopDashboard.jsx';
 import SellerDashboard from './pages/SellerDashboard.jsx';
+import ClientDashboard from './pages/ClientDashboard.jsx';
 import VitrineOffre from './pages/VitrineOffre.jsx';
 import Verone from './pages/Verone.jsx';
 import OfferDetail from './pages/OfferDetail.jsx';
 import AuthGoogle from './pages/AuthGoogle.jsx';
 
 const AuthContext = createContext(null);
+
+export function dashboardPath(role) {
+  if (role === 'shop') return '/shop';
+  if (role === 'seller') return '/seller';
+  return '/client';
+}
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -86,6 +93,14 @@ export default function App() {
           element={
             <RoleOnly role="seller">
               <SellerDashboard />
+            </RoleOnly>
+          }
+        />
+        <Route
+          path="/client"
+          element={
+            <RoleOnly role="client">
+              <ClientDashboard />
             </RoleOnly>
           }
         />
