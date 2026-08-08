@@ -321,7 +321,15 @@ textarea.input { resize: vertical; }
 .price { font-weight: 800; font-size: 1.05rem; }
 .commission { color: var(--success); font-weight: 700; font-size: 0.95rem; }
 
-.role-picker { display: grid; gap: 10px; margin-top: 8px; }
+.role-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+@media (max-width: 480px) {
+  .role-picker { grid-template-columns: 1fr; }
+}
 .role-option {
   display: flex;
   align-items: center;
