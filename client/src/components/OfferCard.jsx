@@ -35,7 +35,7 @@ export default function OfferCard({ offer }) {
         </div>
         {offer.phone && (
           <a className="btn btn-primary btn-block" href={`tel:${offer.phone}`}>
-            📞 {offer.phone}
+            📞 Appeler
           </a>
         )}
         <a className="btn btn-whatsapp btn-block" href={whatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">
