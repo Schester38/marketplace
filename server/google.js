@@ -6,7 +6,10 @@ export function googleConfigured() {
 }
 
 function callbackUrl(req) {
-  return `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
+  return (
+    process.env.GOOGLE_REDIRECT_URI ||
+    `${req.protocol}://${req.get('host')}/api/auth/google/callback`
+  );
 }
 
 export function googleAuthUrl(role, req) {
