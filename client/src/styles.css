@@ -351,6 +351,9 @@ textarea.input { resize: vertical; }
 }
 
 .product-card { display: flex; flex-direction: column; overflow: hidden; padding: 0; transition: transform 0.22s ease, box-shadow 0.22s ease; }
+.product-link { display: block; }
+.product-body h3 a { color: inherit; text-decoration: none; }
+.product-body h3 a:hover { color: var(--primary); }
 .product-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 14px 28px rgba(79, 70, 229, 0.13);
@@ -540,6 +543,24 @@ textarea.input { resize: vertical; }
 .old-price { color: var(--danger); text-decoration: line-through; font-size: 0.95rem; }
 .promo-price { color: var(--success); font-weight: 800; font-size: 1.3rem; }
 .offer-qty { font-size: 0.82rem; color: var(--muted); margin-top: auto; }
+.offer-qty.out { color: var(--danger); font-weight: 700; }
+
+.thumb-row { display: flex; gap: 10px; padding: 12px 12px 0; flex-wrap: wrap; }
+.thumb-btn {
+  width: 64px;
+  height: 64px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  background: var(--soft);
+  opacity: 0.75;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.thumb-btn img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-btn:hover { opacity: 1; }
+.thumb-btn.active { border-color: var(--primary); opacity: 1; }
 
 .photo-input { display: flex; flex-direction: column; gap: 10px; }
 .photo-picker {

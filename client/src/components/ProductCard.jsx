@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { categoryEmoji } from '../config.js';
 
 export function formatMoney(n) {
@@ -12,15 +13,17 @@ export default function ProductCard({ product, action, onAction, showCommission 
   const qty = Number(product.quantity || 0);
   return (
     <div className="card product-card">
-      <div className="product-thumb">
-        {photo ? (
-          <img src={photo} alt={product.name} loading="lazy" decoding="async" />
-        ) : (
-          <span>📦</span>
-        )}
-      </div>
+      <Link to={`/produit/${product.id}`} className="product-link">
+        <div className="product-thumb">
+          {photo ? (
+            <img src={photo} alt={product.name} loading="lazy" decoding="async" />
+          ) : (
+            <span>📦</span>
+          )}
+        </div>
+      </Link>
       <div className="product-body">
-        <h3>{product.name}</h3>
+        <h3><Link to={`/produit/${product.id}`}>{product.name}</Link></h3>
         {product.category && (
           <p className="product-cat">{categoryEmoji(product.category)} {product.category}</p>
         )}

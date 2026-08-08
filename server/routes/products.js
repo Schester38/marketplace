@@ -57,6 +57,14 @@ router.get('/mine', authRequired, roleRequired('shop'), async (req, res) => {
   res.json({ products, limit: MAX_PRODUCTS_PER_SHOP });
 });
 
+router.get('/:id', async (req, res) => {
+  const product = productRow(
+    (await q(SELECT_PRODUCT + ' WHERE p.id = $1', [Number(req.params.id)]))[0]
+  );
+  if (!product) return res.status(404).json({ error: 'Produit introuvable' });
+  res.json({ product });
+});
+
 router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
   const { name, description, price, commission_percent, photos, category, warranty, delivery_fee, contact, quantity } = req.body || {};
   if (!name || price === undefined) {

@@ -14,6 +14,7 @@ const CreatorDashboard = React.lazy(() => import('./pages/CreatorDashboard.jsx')
 const VitrineOffre = React.lazy(() => import('./pages/VitrineOffre.jsx'));
 const Verone = React.lazy(() => import('./pages/Verone.jsx'));
 const OfferDetail = React.lazy(() => import('./pages/OfferDetail.jsx'));
+const ProductDetail = React.lazy(() => import('./pages/ProductDetail.jsx'));
 const AuthGoogle = React.lazy(() => import('./pages/AuthGoogle.jsx'));
 const About = React.lazy(() => import('./pages/About.jsx'));
 const Contact = React.lazy(() => import('./pages/Contact.jsx'));
@@ -97,6 +98,7 @@ export default function App() {
           />
           <Route path="/vitrine-offre" element={<VitrineOffre />} />
           <Route path="/offre/:id" element={<OfferDetail />} />
+          <Route path="/produit/:id" element={<ProductDetail />} />
           <Route path="/verone" element={<Verone />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

@@ -229,7 +229,7 @@ export default function ShopDashboard() {
             <ProductCard
               key={p.id}
               product={p}
-              action="Supprimer"
+              action="Rétirer"
               onAction={() => removeProduct(p.id)}
             />
           ))}
