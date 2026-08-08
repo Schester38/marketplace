@@ -27,5 +27,6 @@ export const api = {
   updateSaleStatus: (id, status) =>
     request(`/sales/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   listOffers: () => request('/offers'),
+  getOffer: (id) => request(`/offers/${id}`),
   createOffer: (payload) => request('/offers', { method: 'POST', body: JSON.stringify(payload) }),
 };

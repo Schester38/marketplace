@@ -8,6 +8,7 @@ import ShopDashboard from './pages/ShopDashboard.jsx';
 import SellerDashboard from './pages/SellerDashboard.jsx';
 import VitrineOffre from './pages/VitrineOffre.jsx';
 import Verone from './pages/Verone.jsx';
+import OfferDetail from './pages/OfferDetail.jsx';
 
 const AuthContext = createContext(null);
 
@@ -66,6 +67,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/vitrine-offre" element={<VitrineOffre />} />
+        <Route path="/offre/:id" element={<OfferDetail />} />
         <Route path="/verone" element={<Verone />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />

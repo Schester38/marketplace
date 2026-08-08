@@ -28,6 +28,12 @@ router.get('/', async (req, res) => {
   res.json({ offers });
 });
 
+router.get('/:id', async (req, res) => {
+  const offer = (await q('SELECT * FROM offers WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!offer) return res.status(404).json({ error: 'Offre introuvable' });
+  res.json({ offer: offerRow(offer) });
+});
+
 router.post('/', async (req, res) => {
   const { name, category, description, warranty, original_price, promo_price, phone, quantity, photos } =
     req.body || {};
