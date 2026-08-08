@@ -11,6 +11,7 @@ export default function Footer() {
         <nav className="footer-nav">
           <Link to="/a-propos">À propos</Link>
           <Link to="/contact">Contact</Link>
+          <Link to="/donnees">Données & confidentialité</Link>
         </nav>
         <p className="footer-copy">
           © {new Date().getFullYear()} Mboppi. Tous droits réservés.

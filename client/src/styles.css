@@ -1022,3 +1022,9 @@ a.step { text-decoration: none; color: inherit; }
 .footer-nav a { color: var(--text); text-decoration: none; font-weight: 500; }
 .footer-nav a:hover { color: var(--primary); }
 .footer-copy { color: var(--muted); font-size: 0.82rem; }
+
+.privacy-list { display: flex; flex-direction: column; gap: 16px; }
+.privacy-list .card h2 { font-size: 1.15rem; margin-bottom: 8px; }
+.privacy-list .card p { color: var(--text); line-height: 1.65; font-size: 0.95rem; }
+.privacy-list .card strong { color: var(--primary); }
+.privacy-link { color: var(--primary); font-weight: 600; }
