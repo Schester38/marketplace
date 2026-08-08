@@ -1,0 +1,88 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { api } from '../api.js';
+import { useAuth } from '../App.jsx';
+
+export default function Register() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'seller' });
+  const [error, setError] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const data = await api.register(form);
+      login(data.user, data.token);
+      navigate(data.user.role === 'shop' ? '/shop' : '/seller');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  return (
+    <main className="container narrow">
+      <div className="card form-card">
+        <h2>Créer un compte</h2>
+        <form onSubmit={submit}>
+          <label>Je veux m'inscrire en tant que :</label>
+          <div className="role-picker">
+            <label className={`role-option ${form.role === 'shop' ? 'selected' : ''}`}>
+              <input
+                type="radio"
+                name="role"
+                value="shop"
+                checked={form.role === 'shop'}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+              />
+              <span>🏪 Boutique</span>
+              <small>Je publie mes produits (max 5) et je fixe les commissions</small>
+            </label>
+            <label className={`role-option ${form.role === 'seller' ? 'selected' : ''}`}>
+              <input
+                type="radio"
+                name="role"
+                value="seller"
+                checked={form.role === 'seller'}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+              />
+              <span>🛒 Vendeur</span>
+              <small>Je vends les produits des boutiques et je gagne des commissions</small>
+            </label>
+          </div>
+
+          <label>Nom complet / Nom de la boutique</label>
+          <input
+            className="input"
+            required
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+          <label>Email</label>
+          <input
+            className="input"
+            type="email"
+            required
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
+          <label>Mot de passe (6 caractères minimum)</label>
+          <input
+            className="input"
+            type="password"
+            required
+            minLength={6}
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+          />
+          {error && <p className="error">{error}</p>}
+          <button className="btn btn-primary btn-block">S'inscrire</button>
+        </form>
+        <p className="hint">
+          Déjà inscrit ? <Link to="/login">Se connecter</Link>
+        </p>
+      </div>
+    </main>
+  );
+}
