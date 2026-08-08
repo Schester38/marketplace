@@ -5,8 +5,20 @@ import { formatMoney } from '../components/ProductCard.jsx';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { compressImage } from '../utils.js';
+import { PRODUCT_CATEGORIES } from '../config.js';
 
-const EMPTY_FORM = { name: '', description: '', price: '', commission_percent: '', photos: [] };
+const EMPTY_FORM = {
+  name: '',
+  description: '',
+  category: '',
+  warranty: '',
+  delivery_fee: '',
+  contact: '',
+  quantity: '',
+  price: '',
+  commission_percent: '',
+  photos: [],
+};
 const MAX_PHOTOS = 3;
 
 export default function ShopDashboard() {
@@ -63,6 +75,9 @@ export default function ShopDashboard() {
         ...form,
         price: Number(form.price),
         commission_percent: Number(form.commission_percent || 0),
+        delivery_fee: Number(form.delivery_fee || 0),
+        quantity: Number(form.quantity || 1),
+        warranty: form.warranty === '' ? null : Number(form.warranty),
       });
       setForm(EMPTY_FORM);
       setShowForm(false);
@@ -142,8 +157,45 @@ export default function ShopDashboard() {
             </div>
             <label>Nom du produit *</label>
             <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+
+            <label>Catégorie *</label>
+            <select
+              className="input"
+              required
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            >
+              <option value="" disabled>Choisir une catégorie…</option>
+              {PRODUCT_CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+
             <label>Description</label>
             <textarea className="input" rows="2" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+
+            <div className="row2">
+              <div>
+                <label>Garantie (en mois)</label>
+                <input className="input" type="number" min="0" placeholder="ex : 6" value={form.warranty} onChange={(e) => setForm({ ...form, warranty: e.target.value })} />
+              </div>
+              <div>
+                <label>Quantité en stock *</label>
+                <input className="input" type="number" min="1" required value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="row2">
+              <div>
+                <label>Frais de livraison (F)</label>
+                <input className="input" type="number" min="0" step="0.01" placeholder="ex : 1000" value={form.delivery_fee} onChange={(e) => setForm({ ...form, delivery_fee: e.target.value })} />
+              </div>
+              <div>
+                <label>Contact de la boutique</label>
+                <input className="input" type="tel" placeholder="ex : 07 00 00 00 00" value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} />
+              </div>
+            </div>
+
             <div className="row2">
               <div>
                 <label>Prix de vente (F) *</label>

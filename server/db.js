@@ -77,5 +77,10 @@ export async function initDb() {
     ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('shop', 'seller', 'client', 'creator'));
     ALTER TABLE products ADD COLUMN IF NOT EXISTS photos TEXT NOT NULL DEFAULT '[]';
     UPDATE products SET photos = json_build_array(image)::text WHERE image IS NOT NULL AND photos = '[]';
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS warranty INTEGER;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS delivery_fee REAL NOT NULL DEFAULT 0;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS contact TEXT;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS quantity INTEGER NOT NULL DEFAULT 1;
   `);
 }

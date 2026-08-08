@@ -20,6 +20,8 @@ function productRow(p) {
     price: Number(p.price),
     commission_percent: Number(p.commission_percent),
     commission: Math.round(Number(p.price) * (Number(p.commission_percent) / 100) * 100) / 100,
+    delivery_fee: Number(p.delivery_fee || 0),
+    quantity: Number(p.quantity || 1),
   };
 }
 
@@ -56,7 +58,7 @@ router.get('/mine', authRequired, roleRequired('shop'), async (req, res) => {
 });
 
 router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
-  const { name, description, price, commission_percent, photos } = req.body || {};
+  const { name, description, price, commission_percent, photos, category, warranty, delivery_fee, contact, quantity } = req.body || {};
   if (!name || price === undefined) {
     return res.status(400).json({ error: 'Le nom et le prix sont requis' });
   }
@@ -68,6 +70,18 @@ router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
   if (!Number.isFinite(percentNum) || percentNum < 0 || percentNum > 100) {
     return res.status(400).json({ error: 'La commission doit être entre 0 et 100 %' });
   }
+  const feeNum = Number(delivery_fee ?? 0);
+  if (!Number.isFinite(feeNum) || feeNum < 0) {
+    return res.status(400).json({ error: 'Les frais de livraison sont invalides' });
+  }
+  const qtyNum = Number(quantity ?? 1);
+  if (!Number.isInteger(qtyNum) || qtyNum < 1) {
+    return res.status(400).json({ error: 'La quantité doit être un nombre entier positif' });
+  }
+  const warrantyNum = warranty === '' || warranty === null || warranty === undefined ? null : Number(warranty);
+  if (warrantyNum !== null && (!Number.isInteger(warrantyNum) || warrantyNum < 0)) {
+    return res.status(400).json({ error: 'La garantie doit être un nombre entier (en mois)' });
+  }
   const photoList = Array.isArray(photos) ? photos.filter((p) => typeof p === 'string' && p.startsWith('data:image/')).slice(0, 3) : [];
   const count = (await q('SELECT COUNT(*) AS n FROM products WHERE shop_id = $1', [req.user.id]))[0];
   if (Number(count.n) >= MAX_PRODUCTS_PER_SHOP) {
@@ -76,8 +90,8 @@ router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
     });
   }
   const created = await q(
-    `INSERT INTO products (shop_id, name, description, price, commission_percent, image, photos)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+    `INSERT INTO products (shop_id, name, description, price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
     [
       req.user.id,
       String(name).trim(),
@@ -86,6 +100,11 @@ router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
       percentNum,
       photoList[0] || null,
       JSON.stringify(photoList),
+      category ? String(category).trim() : null,
+      warrantyNum,
+      feeNum,
+      contact ? String(contact).trim() : null,
+      qtyNum,
     ]
   );
   const product = productRow(
