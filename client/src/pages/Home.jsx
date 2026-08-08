@@ -56,13 +56,12 @@ export default function Home() {
           </div>
         </div>
         <div className="hero-actions" style={{ marginTop: 24 }}>
-          <Link to="/vitrine-offre" className="btn btn-primary">🔥 Voir les offres du moment</Link>
           {user ? (
-            <Link to={user.role === 'shop' ? '/shop' : '/seller'} className="btn btn-outline">
+            <Link to={user.role === 'shop' ? '/shop' : '/seller'} className="btn btn-primary">
               Accéder à mon espace
             </Link>
           ) : (
-            <Link to="/register" className="btn btn-outline">Devenir vendeur</Link>
+            <Link to="/register" className="btn btn-primary">Créer un compte gratuit</Link>
           )}
         </div>
       </section>
