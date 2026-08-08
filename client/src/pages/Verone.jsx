@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
+import ShareVitrine from '../components/ShareVitrine.jsx';
 
 const EMPTY_FORM = {
   name: '',
@@ -40,6 +42,7 @@ function compressImage(file, maxDim = 800, quality = 0.72) {
 
 export default function Verone() {
   const [showForm, setShowForm] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -105,7 +108,13 @@ export default function Verone() {
         <button className="btn btn-primary btn-block" onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Fermer le formulaire' : '+ Ajouter une Offre'}
         </button>
+        <div className="row2" style={{ marginTop: 12 }}>
+          <Link to="/vitrine-offre" className="btn btn-outline">Voir mes Offres</Link>
+          <button className="btn btn-outline" onClick={() => setShowShare(true)}>Partager ma Vitrine</button>
+        </div>
       </section>
+
+      {showShare && <ShareVitrine onClose={() => setShowShare(false)} />}
 
       {showForm && (
         <div className="card form-card">
