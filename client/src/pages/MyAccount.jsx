@@ -10,6 +10,7 @@ export default function MyAccount() {
 
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [location, setLocation] = useState(user?.location || '');
   const [profileMsg, setProfileMsg] = useState('');
   const [profileError, setProfileError] = useState('');
 
@@ -30,7 +31,7 @@ export default function MyAccount() {
     setProfileMsg('');
     setProfileError('');
     try {
-      const { user: updated } = await api.updateProfile({ name, email });
+      const { user: updated } = await api.updateProfile({ name, email, location });
       login(updated, localStorage.getItem('token'));
       setProfileMsg('Profil mis à jour avec succès.');
     } catch (err) {
@@ -101,6 +102,17 @@ export default function MyAccount() {
               <span>E-mail</span>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </label>
+            {user?.role === 'shop' && (
+              <label className="field">
+                <span>📍 Localisation de la boutique</span>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Ex : Yaoundé, Mvog-Mbi, rue 1.123"
+                />
+              </label>
+            )}
             {profileError && <p className="error">{profileError}</p>}
             {profileMsg && <p className="success">{profileMsg}</p>}
             <button className="btn btn-primary" disabled={busy}>Enregistrer</button>

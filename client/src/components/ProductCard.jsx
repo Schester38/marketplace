@@ -28,7 +28,10 @@ export default function ProductCard({ product, action, onAction, showCommission 
           <p className="product-cat">{categoryEmoji(product.category)} {product.category}</p>
         )}
         {product.description && <p className="product-desc">{product.description}</p>}
-        <p className="product-shop">Boutique : {product.shop_name}</p>
+        <p className="product-shop">
+          Boutique : {product.shop_name}
+          {product.shop_location ? <span className="shop-loc"> · 📍 {product.shop_location}</span> : null}
+        </p>
         <div className="product-meta">
           {product.warranty > 0 && <span className="meta-chip">🛡️ Garantie {product.warranty} mois</span>}
           <span className="meta-chip">🚚 {deliveryFee > 0 ? `Livraison ${formatMoney(deliveryFee)} F` : 'Livraison gratuite'}</span>

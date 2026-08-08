@@ -26,7 +26,7 @@ function productRow(p) {
 }
 
 const SELECT_PRODUCT = `
-  SELECT p.*, u.name AS shop_name
+  SELECT p.*, u.name AS shop_name, u.location AS shop_location
   FROM products p
   JOIN users u ON u.id = p.shop_id
 `;

@@ -9,7 +9,7 @@ const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 function publicUser(u) {
-  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password };
+  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null };
 }
 
 router.post('/register', ah(async (req, res) => {
@@ -89,7 +89,7 @@ router.get('/me', authRequired, ah(async (req, res) => {
 }));
 
 router.put('/me', authRequired, ah(async (req, res) => {
-  const { name, email } = req.body || {};
+  const { name, email, location } = req.body || {};
   if (!name || !String(name).trim()) {
     return res.status(400).json({ error: 'Le nom ne peut pas être vide' });
   }
@@ -102,8 +102,8 @@ router.put('/me', authRequired, ah(async (req, res) => {
     return res.status(409).json({ error: 'Un compte existe déjà avec cet email' });
   }
   const updated = await q(
-    'UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING *',
-    [String(name).trim(), emailNorm, req.user.id]
+    'UPDATE users SET name = $1, email = $2, location = $3 WHERE id = $4 RETURNING *',
+    [String(name).trim(), emailNorm, location ? String(location).trim() : null, req.user.id]
   );
   if (!updated.length) return res.status(404).json({ error: 'Compte introuvable' });
   res.json({ user: publicUser(updated[0]) });

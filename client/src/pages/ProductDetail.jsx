@@ -116,7 +116,10 @@ export default function ProductDetail() {
             {product.category && <span className="badge badge-cat">{categoryEmoji(product.category)} {product.category}</span>}
           </div>
           <h2>{product.name}</h2>
-          <p className="product-shop">Boutique : {product.shop_name}</p>
+          <p className="product-shop">
+            Boutique : {product.shop_name}
+            {product.shop_location ? <span className="shop-loc"> · 📍 {product.shop_location}</span> : null}
+          </p>
           {product.description && <p>{product.description}</p>}
           <div className="product-meta">
             {product.warranty > 0 && <span className="meta-chip">🛡️ Garantie {product.warranty} mois</span>}
