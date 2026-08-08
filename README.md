@@ -14,20 +14,26 @@ Site de vente en ligne avec deux types de comptes :
 
 ## Technologies
 
-- **Backend** : Node.js + Express, base SQLite intégrée (`node:sqlite`, aucun module natif à compiler), JWT + bcrypt
+- **Backend** : Node.js + Express, base **PostgreSQL** (Neon, cloud), JWT + bcrypt
 - **Frontend** : React 18 + Vite + React Router
+- **Déploiement** : Render (web service), base de données Neon, redéploiement automatique à chaque `git push`
 
-## Démarrage
+## Démarrage en local
 
 Prérequis : Node.js 22.5+ (testé avec Node 24)
 
 ```bash
-# Terminal 1 — API (http://localhost:4000)
+# 1. Configurer la base (fichier server/.env, NON commité)
+#    Copier le fichier .env.example vers .env et coller votre clé Neon :
+#    DATABASE_URL=postgresql://user:password@host/neondb?sslmode=require
+#    JWT_SECRET=une-longue-chaine-secrete
+
+# 2. Terminal 1 — API (http://localhost:4000)
 cd server
 npm install
 npm run dev
 
-# Terminal 2 — Frontend (http://localhost:5173)
+# 3. Terminal 2 — Frontend (http://localhost:5173)
 cd client
 npm install
 npm run dev
@@ -35,12 +41,30 @@ npm run dev
 
 Ouvrir **http://localhost:5173**.
 
+## Déploiement sur Render (gratuit)
+
+1. Pousser le code sur GitHub (dépôt déjà créé : `github.com/Schester38/marketplace`).
+2. Créer un compte sur **https://render.com** (connexion avec GitHub).
+3. **New + → Web Service** → connecter le dépôt `marketplace`.
+4. Configurer :
+   - **Build Command** : `npm run build`
+   - **Start Command** : `npm start`
+   - Plan : **Free**
+5. Ajouter les variables d'environnement :
+   - `DATABASE_URL` → la clé de connexion de la base Neon
+   - `JWT_SECRET` → une longue chaîne aléatoire
+   - `NODE_ENV` → `production`
+6. **Deploy** — le site est disponible sur `https://marketplace.onrender.com`
+
+Le frontend buildé est servi automatiquement par l'API (dossier `client/dist`).
+Les données sont conservées dans la base Neon, même si le serveur Render est mis en veille.
+
 ## Structure
 
 ```
 server/
-  index.js          # API Express
-  db.js             # Base SQLite (schéma)
+  index.js          # API Express + service statique du frontend
+  db.js             # Connexion PostgreSQL (Neon) + schéma
   auth.js           # JWT + middlewares
   routes/
     auth.js         # inscription / connexion
