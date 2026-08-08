@@ -4,6 +4,8 @@ import { authRequired, roleRequired } from '../auth.js';
 
 const router = Router();
 
+const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
 function saleRow(s) {
   return {
     ...s,
@@ -13,7 +15,7 @@ function saleRow(s) {
   };
 }
 
-router.post('/', authRequired, roleRequired('seller'), async (req, res) => {
+router.post('/', authRequired, roleRequired('seller'), ah(async (req, res) => {
   const { product_id, buyer_name, buyer_phone, quantity } = req.body || {};
   if (!product_id || !buyer_name) {
     return res.status(400).json({ error: 'Produit et nom de l\'acheteur sont requis' });
@@ -57,9 +59,9 @@ router.post('/', authRequired, roleRequired('seller'), async (req, res) => {
     )[0]
   );
   res.status(201).json({ sale });
-});
+}));
 
-router.get('/my', authRequired, roleRequired('seller'), async (req, res) => {
+router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
   const sales = (
     await q(
       `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, u.name AS shop_name
@@ -89,9 +91,9 @@ router.get('/my', authRequired, roleRequired('seller'), async (req, res) => {
       earned_commission: Number(stats.earned_commission),
     },
   });
-});
+}));
 
-router.get('/shop/:shopId', authRequired, roleRequired('shop'), async (req, res) => {
+router.get('/shop/:shopId', authRequired, roleRequired('shop'), ah(async (req, res) => {
   if (Number(req.params.shopId) !== req.user.id) {
     return res.status(403).json({ error: 'Accès refusé' });
   }
@@ -126,9 +128,9 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop'), async (req, res)
       total_commission: Number(stats.total_commission),
     },
   });
-});
+}));
 
-router.patch('/:id/status', authRequired, roleRequired('shop'), async (req, res) => {
+router.patch('/:id/status', authRequired, roleRequired('shop'), ah(async (req, res) => {
   const { status } = req.body || {};
   if (!['confirmed', 'cancelled', 'pending'].includes(status)) {
     return res.status(400).json({ error: 'Statut invalide' });
@@ -143,6 +145,7 @@ router.patch('/:id/status', authRequired, roleRequired('shop'), async (req, res)
   }
   await q('UPDATE sales SET status = $1 WHERE id = $2', [status, sale.id]);
   res.json({ ok: true });
-});
+}));
 
 export default router;
+
