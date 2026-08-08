@@ -2,26 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
-import OfferCard from '../components/OfferCard.jsx';
-import { formatMoney } from '../components/ProductCard.jsx';
-import { offerDiscount } from '../config.js';
 import { useAuth } from '../App.jsx';
 
 export default function Home() {
   const { user } = useAuth();
   const [products, setProducts] = useState([]);
-  const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([api.listProducts({ search }), api.listOffers()])
-      .then(([p, o]) => {
+    api
+      .listProducts({ search })
+      .then((d) => {
         if (!mounted) return;
-        setProducts(p.products);
-        setOffers(o.offers);
+        setProducts(d.products);
       })
       .catch((e) => mounted && setError(e.message))
       .finally(() => mounted && setLoading(false));
@@ -30,11 +26,7 @@ export default function Home() {
     };
   }, [search]);
 
-  const topOffers = [...offers].sort((a, b) => offerDiscount(b) - offerDiscount(a)).slice(0, 6);
-  const totalSavings = offers.reduce(
-    (sum, o) => sum + Math.max(0, Math.round(o.original_price - o.promo_price)),
-    0
-  );
+  const shopsCount = new Set(products.map((p) => p.shop_id)).size;
 
   return (
     <main className="container">
@@ -55,16 +47,12 @@ export default function Home() {
         </p>
         <div className="hero-stats">
           <div className="stat">
-            <strong>{offers.length}</strong>
-            <span>Offres actives</span>
-          </div>
-          <div className="stat">
             <strong>{products.length}</strong>
             <span>Produits en boutique</span>
           </div>
           <div className="stat">
-            <strong>{formatMoney(totalSavings)} F</strong>
-            <span>Économies à saisir</span>
+            <strong>{shopsCount}</strong>
+            <span>Boutiques partenaires</span>
           </div>
         </div>
         <div className="hero-actions" style={{ marginTop: 24 }}>
@@ -101,26 +89,6 @@ export default function Home() {
       </section>
 
       {error && <p className="error">{error}</p>}
-
-      <section>
-        <div className="section-head">
-          <h2 className="section-title">⚡ Offres du moment</h2>
-          <Link to="/vitrine-offre" className="section-link">Tout voir →</Link>
-        </div>
-        {loading ? (
-          <div className="grid">
-            {[1, 2, 3].map((i) => <div key={i} className="card offer-card skeleton"><div className="skeleton-block skeleton-photo"></div></div>)}
-          </div>
-        ) : topOffers.length === 0 ? (
-          <p className="empty">Aucune offre pour le moment. Revenez très vite ! 🔥</p>
-        ) : (
-          <div className="grid">
-            {topOffers.map((o) => (
-              <OfferCard key={o.id} offer={o} />
-            ))}
-          </div>
-        )}
-      </section>
 
       <section>
         <div className="section-head">
