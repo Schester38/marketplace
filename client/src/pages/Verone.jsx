@@ -17,7 +17,7 @@ const EMPTY_FORM = {
 
 const MAX_PHOTOS = 3;
 
-function compressImage(file, maxDim = 800, quality = 0.72) {
+function compressImage(file, maxDim = 640, quality = 0.65) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {

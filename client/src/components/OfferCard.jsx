@@ -10,7 +10,7 @@ export default function OfferCard({ offer }) {
     <div className="card offer-card">
       <div className="offer-photo" onClick={() => photos.length > 1 && setPhotoIndex((i) => (i + 1) % photos.length)}>
         {hasPhotos ? (
-          <img src={photos[photoIndex]} alt={offer.name} />
+          <img src={photos[photoIndex]} alt={offer.name} loading="lazy" />
         ) : (
           <span>🛍️</span>
         )}
