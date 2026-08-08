@@ -132,6 +132,9 @@ textarea.input { resize: vertical; }
 }
 .hint { color: var(--muted); font-size: 0.88rem; margin-top: 10px; }
 .hint a { color: var(--primary); }
+.page-center { text-align: center; padding: 48px 24px; }
+.page-center h1 { font-size: 2rem; color: var(--primary); }
+.verone-placeholder { font-size: 4rem; margin-top: 24px; }
 .empty { color: var(--muted); text-align: center; padding: 32px 0; }
 
 .toolbar { margin-bottom: 20px; }

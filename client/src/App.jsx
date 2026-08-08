@@ -6,6 +6,8 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import ShopDashboard from './pages/ShopDashboard.jsx';
 import SellerDashboard from './pages/SellerDashboard.jsx';
+import VitrineOffre from './pages/VitrineOffre.jsx';
+import Verone from './pages/Verone.jsx';
 
 const AuthContext = createContext(null);
 
@@ -63,6 +65,8 @@ export default function App() {
       <Navbar onLogout={() => { logout(); navigate('/'); }} />
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/vitrine-offre" element={<VitrineOffre />} />
+        <Route path="/verone" element={<Verone />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route
