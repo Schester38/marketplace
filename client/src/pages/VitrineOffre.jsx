@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import OfferCard from '../components/OfferCard.jsx';
@@ -6,6 +6,7 @@ import { formatMoney } from '../components/ProductCard.jsx';
 import { offerDiscount, categoryEmoji } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 function SkeletonCard() {
   return (
@@ -31,21 +32,28 @@ export default function VitrineOffre() {
   const [sort, setSort] = useState('discount');
   const [query, setQuery] = useState('');
   const [now, setNow] = useState(Date.now());
+  const mounted = useRef(true);
 
-  useEffect(() => {
-    let mounted = true;
+  const load = useCallback((silent) => {
+    if (!silent) setLoading(true);
     Promise.all([api.listProducts(), api.listOffers()])
       .then(([p, o]) => {
-        if (!mounted) return;
+        if (!mounted.current) return;
         setProducts(p.products);
         setOffers(o.offers);
       })
-      .catch((e) => mounted && setError(e.message))
-      .finally(() => mounted && setLoading(false));
-    return () => {
-      mounted = false;
-    };
+      .catch((e) => mounted.current && setError(e.message))
+      .finally(() => mounted.current && setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+    return () => {
+      mounted.current = false;
+    };
+  }, [load]);
+
+  useRefreshOnFocus(() => load(true));
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);

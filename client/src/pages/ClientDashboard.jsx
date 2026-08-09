@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { whatsappLink, countrySymbol } from '../config.js';
@@ -6,6 +6,7 @@ import Seo from '../components/Seo.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 const ORDER_STATUS = {
   new: { key: 'En attente', cls: 'badge-pending' },
@@ -19,17 +20,23 @@ export default function ClientDashboard() {
   const { t, locale } = useLang();
   const [orders, setOrders] = useState(null);
   const [error, setError] = useState('');
+  const mounted = useRef(true);
 
-  useEffect(() => {
-    let mounted = true;
+  const load = useCallback(() => {
     api
       .myOrders()
-      .then((d) => mounted && setOrders(d.orders))
-      .catch((e) => mounted && setError(e.message));
-    return () => {
-      mounted = false;
-    };
+      .then((d) => mounted.current && setOrders(d.orders))
+      .catch((e) => mounted.current && setError(e.message));
   }, []);
+
+  useEffect(() => {
+    load();
+    return () => {
+      mounted.current = false;
+    };
+  }, [load]);
+
+  useRefreshOnFocus(load);
 
   return (
     <main className="container">

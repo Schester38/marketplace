@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { offerUrl, whatsappLink, offerDiscount, offerSavings, categoryEmoji } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 export default function OfferDetail() {
   const { id } = useParams();
@@ -20,6 +21,15 @@ export default function OfferDetail() {
       .then((d) => setOffer(d.offer))
       .catch((e) => setError(e.message));
   }, [id]);
+
+  const refetchOffer = useCallback(() => {
+    api
+      .getOffer(id)
+      .then((d) => setOffer(d.offer))
+      .catch(() => {});
+  }, [id]);
+
+  useRefreshOnFocus(refetchOffer);
 
   const photos = offer ? offer.photos || [] : [];
   useEffect(() => {

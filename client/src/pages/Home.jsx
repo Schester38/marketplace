@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
 import { PRODUCT_CATEGORIES } from '../config.js';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 export default function Home() {
   const { t } = useLang();
@@ -14,22 +15,28 @@ export default function Home() {
   const [category, setCategory] = useState('');
   const [sort, setSort] = useState('recent');
   const produitsRef = useRef(null);
+  const mounted = useRef(true);
+
+  const loadProducts = useCallback(
+    (silent) => {
+      if (!silent) setLoading(true);
+      api
+        .listProducts({ search, category, sort })
+        .then((d) => mounted.current && setProducts(d.products))
+        .catch((e) => mounted.current && setError(e.message))
+        .finally(() => mounted.current && setLoading(false));
+    },
+    [search, category, sort]
+  );
 
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    api
-      .listProducts({ search, category, sort })
-      .then((d) => {
-        if (!mounted) return;
-        setProducts(d.products);
-      })
-      .catch((e) => mounted && setError(e.message))
-      .finally(() => mounted && setLoading(false));
+    loadProducts();
     return () => {
-      mounted = false;
+      mounted.current = false;
     };
-  }, [search, category, sort]);
+  }, [loadProducts]);
+
+  useRefreshOnFocus(() => loadProducts(true));
 
   const shopsCount = new Set(products.map((p) => p.shop_id)).size;
 

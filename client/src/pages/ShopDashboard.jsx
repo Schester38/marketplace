@@ -7,6 +7,7 @@ import { useAuth } from '../App.jsx';
 import { compressImage } from '../utils.js';
 import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 const EMPTY_FORM = {
   name: '',
@@ -71,6 +72,8 @@ export default function ShopDashboard() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useRefreshOnFocus(load);
 
   const submitProduct = async (e) => {
     e.preventDefault();

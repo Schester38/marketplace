@@ -5,6 +5,7 @@ import { countrySymbol } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 export default function SellerDashboard() {
   const { user } = useAuth();
@@ -28,6 +29,8 @@ export default function SellerDashboard() {
   };
 
   useEffect(() => { load(); }, []);
+
+  useRefreshOnFocus(load);
 
   const submitSale = async (e) => {
     e.preventDefault();

@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import ShareVitrine from '../components/ShareVitrine.jsx';
 import Seo from '../components/Seo.jsx';
 import { compressImage } from '../utils.js';
 import { useLang } from '../i18n.jsx';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 const EMPTY_FORM = {
   name: '',
@@ -32,20 +33,28 @@ export default function Verone() {
   const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const loadOffers = useCallback(async () => {
+    try {
+      const d = await api.listOffers();
+      setMyOffers(d.offers);
+    } catch (e) {
+      setError(e.message);
+    }
+  }, []);
+
   const toggleMyOffers = async () => {
     const next = !showMyOffers;
     setShowMyOffers(next);
     if (next) {
       setError('');
       setSuccess('');
-      try {
-        const d = await api.listOffers();
-        setMyOffers(d.offers);
-      } catch (e) {
-        setError(e.message);
-      }
+      loadOffers();
     }
   };
+
+  useRefreshOnFocus(() => {
+    if (showMyOffers) loadOffers();
+  });
 
   const confirmDelete = async (e) => {
     e.preventDefault();
@@ -104,6 +113,7 @@ export default function Verone() {
       setForm(EMPTY_FORM);
       setShowForm(false);
       setSuccess(t('Offre ajoutée avec succès — elle s\'affiche maintenant sur la page Vitrine d\'offre.'));
+      loadOffers();
     } catch (err) {
       setError(err.message);
     } finally {

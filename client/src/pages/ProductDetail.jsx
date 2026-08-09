@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
@@ -8,6 +8,7 @@ import { whatsappLink, categoryEmoji } from '../config.js';
 import { useAuth } from '../App.jsx';
 import { useCart, useFavs } from '../store.jsx';
 import { useLang } from '../i18n.jsx';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -35,6 +36,15 @@ export default function ProductDetail() {
       })
       .catch((e) => setError(e.message));
   }, [id]);
+
+  const refetchProduct = useCallback(() => {
+    api
+      .getProduct(id)
+      .then((d) => setProduct(d.product))
+      .catch(() => {});
+  }, [id]);
+
+  useRefreshOnFocus(refetchProduct);
 
   useEffect(() => {
     if (!product || !product.category) return;
