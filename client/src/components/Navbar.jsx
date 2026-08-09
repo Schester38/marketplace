@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { LANGS, useLang } from '../i18n.jsx';
+import { useCart, useFavs } from '../store.jsx';
 
 function LangSwitcher() {
   const { lang, setLang, t } = useLang();
@@ -51,6 +52,8 @@ function LangSwitcher() {
 export default function Navbar({ onLogout }) {
   const { user } = useAuth();
   const { t } = useLang();
+  const { cartCount } = useCart();
+  const { favs } = useFavs();
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState(() =>
     document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
@@ -83,6 +86,12 @@ export default function Navbar({ onLogout }) {
       </button>
       <Link to="/" onClick={close}>{t('Produits')}</Link>
       <Link to="/vitrine-offre" onClick={close}>{t("Vitrine d'offre")}</Link>
+      <Link to="/favoris" className="nav-icon-link" onClick={close} aria-label={t('Mes favoris')} title={t('Mes favoris')}>
+        ❤️{favs.length > 0 && <span className="nav-badge">{favs.length}</span>}
+      </Link>
+      <Link to="/panier" className="nav-icon-link" onClick={close} aria-label={t('Mon panier')} title={t('Mon panier')}>
+        🛒{cartCount > 0 && <span className="nav-badge">{cartCount}</span>}
+      </Link>
       {!user && <Link to="/login" onClick={close}>{t('Connexion')}</Link>}
       {!user && <Link to="/register" className="btn btn-primary" onClick={close}>{t('Créer un compte')}</Link>}
       {user && user.role === 'shop' && <Link to="/shop" onClick={close}>{t('Ma boutique')}</Link>}

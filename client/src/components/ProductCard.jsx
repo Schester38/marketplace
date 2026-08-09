@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { categoryEmoji, countrySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
+import { useCart, useFavs } from '../store.jsx';
 
 export function formatMoney(n) {
   return new Intl.NumberFormat('fr-FR').format(Number(n || 0));
@@ -9,11 +10,24 @@ export function formatMoney(n) {
 
 export default function ProductCard({ product, action, onAction, showCommission }) {
   const { t } = useLang();
+  const { addToCart } = useCart();
+  const { isFav, toggleFav } = useFavs();
+  const [added, setAdded] = useState(false);
   const commission = Number(product.commission || 0);
   const photo = (product.photos && product.photos[0]) || product.image;
   const deliveryFee = Number(product.delivery_fee || 0);
   const qty = Number(product.quantity || 0);
   const symbol = countrySymbol(product?.shop_country);
+  const fav = isFav(product.id);
+  const sold = Number(product.sold || 0);
+
+  const add = (e) => {
+    e.preventDefault();
+    addToCart(product, 1);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1200);
+  };
+
   return (
     <div className="card product-card">
       <Link to={`/produit/${product.id}`} className="product-link">
@@ -25,6 +39,16 @@ export default function ProductCard({ product, action, onAction, showCommission 
           )}
         </div>
       </Link>
+      <button
+        type="button"
+        className={`fav-btn ${fav ? 'active' : ''}`}
+        aria-label={fav ? t('Retirer des favoris') : t('Ajouter aux favoris')}
+        title={fav ? t('Retirer des favoris') : t('Ajouter aux favoris')}
+        onClick={() => toggleFav(product.id)}
+      >
+        {fav ? '❤️' : '🤍'}
+      </button>
+      {sold > 0 && <span className="badge badge-sold">🔥 {sold} {t('vendus')}</span>}
       <div className="product-body">
         <h3><Link to={`/produit/${product.id}`}>{product.name}</Link></h3>
         {product.category && (
@@ -56,6 +80,15 @@ export default function ProductCard({ product, action, onAction, showCommission 
           {qty > 0 ? t('En stock : {n}', { n: qty }) : t('Rupture de stock')}
         </p>
         {action && <button className="btn btn-primary btn-block" onClick={() => onAction(product)}>{t(action)}</button>}
+        {!action && (
+          <button
+            className={`btn btn-block ${qty > 0 ? 'btn-primary' : ''}`}
+            disabled={qty <= 0}
+            onClick={add}
+          >
+            {added ? t('Ajouté au panier ✓') : qty > 0 ? `🛒 ${t('Ajouter au panier')}` : t('Rupture de stock')}
+          </button>
+        )}
       </div>
     </div>
   );

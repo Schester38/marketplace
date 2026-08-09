@@ -65,9 +65,22 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      buyer_name TEXT NOT NULL,
+      buyer_phone TEXT,
+      buyer_address TEXT,
+      items JSONB NOT NULL DEFAULT '[]',
+      total REAL NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'confirmed', 'shipped', 'cancelled')),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
     CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
     CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id);
     CREATE INDEX IF NOT EXISTS idx_sales_seller ON sales(seller_id);
+    CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
   `);
 
   await pool.query(`

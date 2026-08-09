@@ -13,8 +13,9 @@ function productRow(p) {
   } catch {
     photos = [];
   }
+  const { n, ...rest } = p;
   return {
-    ...p,
+    ...rest,
     photos,
     image: photos[0] || p.image || null,
     price: Number(p.price),
@@ -22,17 +23,27 @@ function productRow(p) {
     commission: Math.round(Number(p.price) * (Number(p.commission_percent) / 100) * 100) / 100,
     delivery_fee: Number(p.delivery_fee || 0),
     quantity: Number(p.quantity || 1),
+    sold: Number(n || 0),
   };
 }
 
 const SELECT_PRODUCT = `
-  SELECT p.*, u.name AS shop_name, u.location AS shop_location, u.country AS shop_country
+  SELECT p.*, u.name AS shop_name, u.location AS shop_location, u.country AS shop_country,
+         s.n
   FROM products p
   JOIN users u ON u.id = p.shop_id
+  LEFT JOIN (SELECT product_id, SUM(quantity) AS n FROM sales GROUP BY product_id) s ON s.product_id = p.id
 `;
 
+const SORTS = {
+  recent: 'p.created_at DESC',
+  popular: 'COALESCE(s.n, 0) DESC, p.created_at DESC',
+  price_asc: 'p.price ASC, p.created_at DESC',
+  price_desc: 'p.price DESC, p.created_at DESC',
+};
+
 router.get('/', async (req, res) => {
-  const { search, shop } = req.query;
+  const { search, shop, category, sort } = req.query;
   let sql = SELECT_PRODUCT;
   const params = [];
   const where = [];
@@ -44,8 +55,12 @@ router.get('/', async (req, res) => {
     where.push('p.shop_id = $' + (params.length + 1));
     params.push(Number(shop));
   }
+  if (category) {
+    where.push('p.category = $' + (params.length + 1));
+    params.push(String(category).trim());
+  }
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
-  sql += ' ORDER BY p.created_at DESC';
+  sql += ' ORDER BY ' + (SORTS[sort] || SORTS.recent);
   const products = (await q(sql, params)).map(productRow);
   res.json({ products });
 });

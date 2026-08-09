@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
-import { formatMoney } from '../components/ProductCard.jsx';
-import { countrySymbol } from '../config.js';
+import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
+import { countrySymbol, BASE_URL } from '../config.js';
 import { whatsappLink, categoryEmoji } from '../config.js';
 import { useAuth } from '../App.jsx';
+import { useCart, useFavs } from '../store.jsx';
 import { useLang } from '../i18n.jsx';
 
 export default function ProductDetail() {
@@ -13,18 +14,42 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLang();
+  const { addToCart } = useCart();
+  const { isFav, toggleFav } = useFavs();
   const [product, setProduct] = useState(null);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [lightbox, setLightbox] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [qty, setQty] = useState(1);
+  const [added, setAdded] = useState(false);
+  const [shared, setShared] = useState(false);
+  const [related, setRelated] = useState([]);
 
   useEffect(() => {
     api
       .getProduct(id)
-      .then((d) => setProduct(d.product))
+      .then((d) => {
+        setProduct(d.product);
+        setQty(1);
+      })
       .catch((e) => setError(e.message));
   }, [id]);
+
+  useEffect(() => {
+    if (!product || !product.category) return;
+    let mounted = true;
+    api
+      .listProducts({ category: product.category })
+      .then((d) => {
+        if (!mounted) return;
+        setRelated(d.products.filter((p) => Number(p.id) !== Number(product.id)).slice(0, 4));
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [product && product.id, product && product.category]);
 
   const photos = product ? product.photos || [] : [];
   useEffect(() => {
@@ -60,7 +85,7 @@ export default function ProductDetail() {
   const isOwner = user && Number(user.id) === Number(product.shop_id);
   const deliveryFee = Number(product.delivery_fee || 0);
   const symbol = countrySymbol(product?.shop_country);
-  const qty = Number(product.quantity || 0);
+  const inStock = Number(product.quantity || 0);
 
   const removeProduct = async () => {
     if (!window.confirm(t('Retirer « {name} » définitivement ?', { name: product.name }))) return;
@@ -138,9 +163,64 @@ export default function ProductDetail() {
           <div className="offer-prices">
             <span className="promo-price">{formatMoney(product.price)} {symbol}</span>
           </div>
-          <p className={`offer-qty ${qty > 0 ? '' : 'out'}`}>
-            {qty > 0 ? t('Disponibilité : {n} en stock', { n: qty }) : t('Rupture de stock')}
+          <p className={`offer-qty ${inStock > 0 ? '' : 'out'}`}>
+            {inStock > 0 ? t('Disponibilité : {n} en stock', { n: inStock }) : t('Rupture de stock')}
           </p>
+
+          {inStock > 0 && !isOwner && (
+            <div className="buy-row">
+              <div className="qty-stepper">
+                <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="-">−</button>
+                <span>{qty}</span>
+                <button type="button" onClick={() => setQty((q) => Math.min(Number(product.quantity) || 99, q + 1))} aria-label="+">+</button>
+              </div>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  addToCart(product, qty);
+                  setAdded(true);
+                  setTimeout(() => setAdded(false), 1500);
+                }}
+              >
+                {added ? t('Ajouté au panier ✓') : `🛒 ${t('Ajouter au panier')}`}
+              </button>
+            </div>
+          )}
+
+          <div className="detail-actions">
+            <button
+              type="button"
+              className={`btn btn-outline ${isFav(product.id) ? 'fav-on' : ''}`}
+              onClick={() => toggleFav(product.id)}
+            >
+              {isFav(product.id) ? '❤️ ' + t('Retirer des favoris') : '🤍 ' + t('Ajouter aux favoris')}
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={async () => {
+                const url = `${BASE_URL}/produit/${product.id}`;
+                const text = t('Découvrez « {name} » à {price} {symbol} sur Mboppi.', {
+                  name: product.name,
+                  price: formatMoney(product.price),
+                  symbol,
+                });
+                try {
+                  if (navigator.share) {
+                    await navigator.share({ title: product.name, text, url });
+                  } else {
+                    await navigator.clipboard.writeText(url);
+                    setShared(true);
+                    setTimeout(() => setShared(false), 2000);
+                  }
+                } catch {
+                  /* annulé par l'utilisateur */
+                }
+              }}
+            >
+              {shared ? t('Lien copié !') : '🔗 ' + t('Partager')}
+            </button>
+          </div>
 
           {isOwner && (
             <button className="btn btn-danger btn-block" onClick={removeProduct} disabled={deleting}>
@@ -149,6 +229,17 @@ export default function ProductDetail() {
           )}
         </div>
       </div>
+
+      {related.length > 0 && (
+        <section>
+          <h2 className="section-title">{t('✨ Produits similaires')}</h2>
+          <div className="grid">
+            {related.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {lightbox && (
         <div className="lightbox" onClick={() => setLightbox(false)}>

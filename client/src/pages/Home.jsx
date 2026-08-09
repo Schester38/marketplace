@@ -5,6 +5,7 @@ import ProductCard from '../components/ProductCard.jsx';
 import { useAuth } from '../App.jsx';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
+import { PRODUCT_CATEGORIES } from '../config.js';
 
 export default function Home() {
   const { user } = useAuth();
@@ -13,11 +14,14 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [sort, setSort] = useState('recent');
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
     api
-      .listProducts({ search })
+      .listProducts({ search, category, sort })
       .then((d) => {
         if (!mounted) return;
         setProducts(d.products);
@@ -27,7 +31,7 @@ export default function Home() {
     return () => {
       mounted = false;
     };
-  }, [search]);
+  }, [search, category, sort]);
 
   const shopsCount = new Set(products.map((p) => p.shop_id)).size;
 
@@ -106,6 +110,18 @@ export default function Home() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <select className="input filter-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">{t('Toutes les catégories')}</option>
+            {PRODUCT_CATEGORIES.map((c) => (
+              <option key={c} value={c}>{t(c)}</option>
+            ))}
+          </select>
+          <select className="input filter-select" value={sort} onChange={(e) => setSort(e.target.value)}>
+            <option value="recent">{t('Plus récents')}</option>
+            <option value="popular">{t('🔥 Plus populaires')}</option>
+            <option value="price_asc">{t('Prix croissant')}</option>
+            <option value="price_desc">{t('Prix décroissant')}</option>
+          </select>
         </div>
         {loading ? (
           <div className="grid">

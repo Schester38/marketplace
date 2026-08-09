@@ -5,9 +5,12 @@ import Footer from './components/Footer.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
 import Home from './pages/Home.jsx';
 import { LangProvider } from './i18n.jsx';
+import { StoreProvider } from './store.jsx';
 
 const Login = React.lazy(() => import('./pages/Login.jsx'));
 const Register = React.lazy(() => import('./pages/Register.jsx'));
+const Cart = React.lazy(() => import('./pages/Cart.jsx'));
+const Favorites = React.lazy(() => import('./pages/Favorites.jsx'));
 const ShopDashboard = React.lazy(() => import('./pages/ShopDashboard.jsx'));
 const SellerDashboard = React.lazy(() => import('./pages/SellerDashboard.jsx'));
 const ClientDashboard = React.lazy(() => import('./pages/ClientDashboard.jsx'));
@@ -81,13 +84,16 @@ export default function App() {
   const { logout } = useAuth();
 
   return (
-    <LangProvider>
-      <div className="app">
-        <Navbar onLogout={() => { logout(); navigate('/'); }} />
-        <Suspense fallback={<LoadingScreen />}>
-          <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/a-propos" element={<About />} />
+    <StoreProvider>
+      <LangProvider>
+        <div className="app">
+          <Navbar onLogout={() => { logout(); navigate('/'); }} />
+          <Suspense fallback={<LoadingScreen />}>
+            <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/panier" element={<Cart />} />
+            <Route path="/favoris" element={<Favorites />} />
+            <Route path="/a-propos" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/donnees" element={<Privacy />} />
           <Route
@@ -142,6 +148,7 @@ export default function App() {
       </Suspense>
       <Footer />
       </div>
-    </LangProvider>
+      </LangProvider>
+    </StoreProvider>
   );
 }

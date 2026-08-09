@@ -34,4 +34,6 @@ export const api = {
   getOffer: (id) => request(`/offers/${id}`),
   createOffer: (payload) => request('/offers', { method: 'POST', body: JSON.stringify(payload) }),
   deleteOffer: (id) => request(`/offers/${id}`, { method: 'DELETE' }),
+  createOrder: (payload) => request('/orders', { method: 'POST', body: JSON.stringify(payload) }),
+  myOrders: () => request('/orders/me'),
 };
