@@ -1,15 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
-import OfferCard from '../components/OfferCard.jsx';
-import { useAuth } from '../App.jsx';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
-import { PRODUCT_CATEGORIES, categoryEmoji } from '../config.js';
+import { PRODUCT_CATEGORIES } from '../config.js';
 
 export default function Home() {
-  const { user } = useAuth();
   const { t } = useLang();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +13,6 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [sort, setSort] = useState('recent');
-  const [offers, setOffers] = useState([]);
   const produitsRef = useRef(null);
 
   useEffect(() => {
@@ -36,27 +31,10 @@ export default function Home() {
     };
   }, [search, category, sort]);
 
-  useEffect(() => {
-    let mounted = true;
-    api
-      .listOffers()
-      .then((d) => mounted && setOffers(d.offers))
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   const shopsCount = new Set(products.map((p) => p.shop_id)).size;
-  const POPULAR_CATEGORIES = PRODUCT_CATEGORIES.slice(0, 10);
 
   const goToProducts = () => {
     produitsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  const pickCategory = (c) => {
-    setCategory(c === category ? '' : c);
-    goToProducts();
   };
 
   const submitSearch = (e) => {
@@ -105,44 +83,8 @@ export default function Home() {
             <strong>{shopsCount}</strong>
             <span>{t('boutiques partenaires')}</span>
           </div>
-          <div className="stat">
-            <strong>{offers.length}</strong>
-            <span>{t('offres du moment')}</span>
-          </div>
         </div>
       </section>
-
-      <div className="chips-wrap">
-        <nav className="cat-chips" aria-label={t('Catégories populaires')}>
-          {POPULAR_CATEGORIES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={`cat-chip${category === c ? ' active' : ''}`}
-              onClick={() => pickCategory(c)}
-            >
-              <span aria-hidden="true">{categoryEmoji(c)}</span>
-              {t(c)}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {offers.length > 0 && (
-        <section aria-label={t('Offres du moment')}>
-          <div className="section-head">
-            <h2 className="section-title">⚡ {t('Offres du moment')}</h2>
-            <Link to="/vitrine-offre" className="section-link">
-              {t('Voir toutes les offres')} →
-            </Link>
-          </div>
-          <div className="grid">
-            {offers.slice(0, 3).map((o) => (
-              <OfferCard key={o.id} offer={o} />
-            ))}
-          </div>
-        </section>
-      )}
 
       <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
         <div className="section-head">
