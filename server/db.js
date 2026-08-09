@@ -77,6 +77,20 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
+    CREATE TABLE IF NOT EXISTS otp_codes (
+      id SERIAL PRIMARY KEY,
+      phone TEXT NOT NULL,
+      purpose TEXT NOT NULL DEFAULT 'login',
+      code_hash TEXT NOT NULL,
+      name TEXT,
+      role TEXT,
+      country TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      expires_at TIMESTAMPTZ NOT NULL,
+      used BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
     CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
     CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id);
     CREATE INDEX IF NOT EXISTS idx_sales_seller ON sales(seller_id);
@@ -88,6 +102,7 @@ export async function initDb() {
     ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS location TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
     ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('shop', 'seller', 'client', 'creator'));
     ALTER TABLE products ADD COLUMN IF NOT EXISTS photos TEXT NOT NULL DEFAULT '[]';
