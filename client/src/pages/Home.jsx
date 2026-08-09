@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
+import OfferCard from '../components/OfferCard.jsx';
 import { useAuth } from '../App.jsx';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
-import { PRODUCT_CATEGORIES } from '../config.js';
+import { PRODUCT_CATEGORIES, categoryEmoji } from '../config.js';
 
 export default function Home() {
   const { user } = useAuth();
@@ -16,6 +17,8 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [sort, setSort] = useState('recent');
+  const [offers, setOffers] = useState([]);
+  const produitsRef = useRef(null);
 
   useEffect(() => {
     let mounted = true;
@@ -33,7 +36,33 @@ export default function Home() {
     };
   }, [search, category, sort]);
 
+  useEffect(() => {
+    let mounted = true;
+    api
+      .listOffers()
+      .then((d) => mounted && setOffers(d.offers))
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const shopsCount = new Set(products.map((p) => p.shop_id)).size;
+  const POPULAR_CATEGORIES = PRODUCT_CATEGORIES.slice(0, 10);
+
+  const goToProducts = () => {
+    produitsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const pickCategory = (c) => {
+    setCategory(c === category ? '' : c);
+    goToProducts();
+  };
+
+  const submitSearch = (e) => {
+    e.preventDefault();
+    goToProducts();
+  };
 
   return (
     <main className="container">
@@ -41,6 +70,7 @@ export default function Home() {
         title="Mboppi — Boutiques, vendeurs et offres du moment"
         description="Le marché de votre quartier en ligne : produits des boutiques partenaires, vente avec commissions, commande par WhatsApp."
       />
+
       <section className="hero vitrine-hero">
         <div className="hero-floats" aria-hidden="true">
           <span>🛍️</span>
@@ -50,85 +80,122 @@ export default function Home() {
           <span>💰</span>
           <span>🎊</span>
         </div>
-        <span className="hero-badge">{t('🛍️ Bienvenue chez Mboppi')}</span>
+        <span className="hero-badge">🛍️ {t('Bienvenue chez Mboppi')}</span>
         <h1>{t('Le marché du quartier, en un clic')}</h1>
-        <p>
-          {t('Découvrez les offres du moment, commandez les produits des boutiques partenaires, ou devenez vendeur et gagnez une commission sur chaque vente.')}
-        </p>
-        <div className="hero-stats">
-          <div className="stat">
-            <strong>{products.length}</strong>
-            <span>{t('Produits en boutique')}</span>
-          </div>
-          <div className="stat">
-            <strong>{shopsCount}</strong>
-            <span>{t('Boutiques partenaires')}</span>
-          </div>
-        </div>
-        <div className="hero-actions" style={{ marginTop: 24 }}>
-          {user ? (
-            <Link to={user.role === 'shop' ? '/shop' : '/seller'} className="btn btn-primary">
-              {t('Accéder à mon espace')}
-            </Link>
-          ) : (
-            <Link to="/register" className="btn btn-primary">{t('Créer un compte gratuit')}</Link>
-          )}
-        </div>
-      </section>
+        <p>{t('Découvrez les boutiques du quartier, les meilleures offres et commandez facilement sur WhatsApp.')}</p>
 
-      <section className="steps">
-        <div className="step">
-          <span className="step-num">1</span>
-          <span className="step-icon">🏪</span>
-          <h3>{t('Les boutiques publient')}</h3>
-          <p>{t('Elles mettent en ligne leurs produits et fixent la commission de vente.')}</p>
-        </div>
-        <div className="step">
-          <span className="step-num">2</span>
-          <span className="step-icon">🛒</span>
-          <h3>{t('Les vendeurs vendent')}</h3>
-          <p>{t('Ils enregistrent les ventes et trouvent les clients, au quartier ou en ligne.')}</p>
-        </div>
-        <div className="step">
-          <span className="step-num">3</span>
-          <span className="step-icon">💰</span>
-          <h3>{t('Chacun y gagne')}</h3>
-          <p>{t('La boutique écoule ses produits, le vendeur encaisse sa commission à chaque vente.')}</p>
-        </div>
-      </section>
-
-      {error && <p className="error">{error}</p>}
-
-      <section>
-        <div className="section-head">
-          <h2 className="section-title">{t('🏪 Produits des boutiques')}</h2>
-        </div>
-        <div className="toolbar">
+        <form className="hero-search" onSubmit={submitSearch} role="search">
+          <span className="emoji" aria-hidden="true">🔍</span>
           <input
-            className="input search"
-            placeholder={t('🔍 Rechercher un produit…')}
+            type="search"
+            placeholder={t('Rechercher un produit, une boutique…')}
+            aria-label={t('Rechercher un produit, une boutique…')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <select className="input filter-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <button type="submit" className="btn btn-primary">{t('Rechercher')}</button>
+        </form>
+
+        <div className="hero-stats">
+          <div className="stat">
+            <strong>{products.length}</strong>
+            <span>{t('produits en ligne')}</span>
+          </div>
+          <div className="stat">
+            <strong>{shopsCount}</strong>
+            <span>{t('boutiques partenaires')}</span>
+          </div>
+          <div className="stat">
+            <strong>{offers.length}</strong>
+            <span>{t('offres du moment')}</span>
+          </div>
+        </div>
+      </section>
+
+      <div className="chips-wrap">
+        <nav className="cat-chips" aria-label={t('Catégories populaires')}>
+          {POPULAR_CATEGORIES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className={`cat-chip${category === c ? ' active' : ''}`}
+              onClick={() => pickCategory(c)}
+            >
+              <span aria-hidden="true">{categoryEmoji(c)}</span>
+              {t(c)}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {offers.length > 0 && (
+        <section aria-label={t('Offres du moment')}>
+          <div className="section-head">
+            <h2 className="section-title">⚡ {t('Offres du moment')}</h2>
+            <Link to="/vitrine-offre" className="section-link">
+              {t('Voir toutes les offres')} →
+            </Link>
+          </div>
+          <div className="grid">
+            {offers.slice(0, 3).map((o) => (
+              <OfferCard key={o.id} offer={o} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
+        <div className="section-head">
+          <h2 className="section-title">🛍️ {t('Produits')}</h2>
+          {category && (
+            <button type="button" className="section-link" onClick={() => setCategory('')}>
+              ✕ {t('Réinitialiser les filtres')}
+            </button>
+          )}
+        </div>
+        <div className="toolbar">
+          <select
+            className="input filter-select"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            aria-label={t('Filtrer par catégorie')}
+          >
             <option value="">{t('Toutes les catégories')}</option>
             {PRODUCT_CATEGORIES.map((c) => (
               <option key={c} value={c}>{t(c)}</option>
             ))}
           </select>
-          <select className="input filter-select" value={sort} onChange={(e) => setSort(e.target.value)}>
+          <select
+            className="input filter-select"
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            aria-label={t('Trier')}
+          >
             <option value="recent">{t('Plus récents')}</option>
             <option value="popular">{t('🔥 Plus populaires')}</option>
             <option value="price_asc">{t('Prix croissant')}</option>
             <option value="price_desc">{t('Prix décroissant')}</option>
           </select>
         </div>
+        {error && <p className="error" role="alert">{error}</p>}
         {loading ? (
           <div className="grid">
-            {[1, 2, 3].map((i) => <div key={i} className="card offer-card skeleton"><div className="skeleton-block skeleton-photo"></div></div>)}
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="card product-card skeleton" aria-hidden="true">
+                <div className="skeleton-block skeleton-photo"></div>
+              </div>
+            ))}
           </div>
         ) : products.length === 0 ? (
-          <p className="empty">{t('Aucun produit disponible pour le moment.')}</p>
+          <div className="card page-center">
+            <p className="empty">
+              {category
+                ? t('Aucun produit dans cette catégorie.')
+                : search
+                  ? t('Aucun résultat pour votre recherche.')
+                  : t('Aucun produit disponible.')}
+            </p>
+          </div>
         ) : (
           <div className="grid">
             {products.map((p) => (
