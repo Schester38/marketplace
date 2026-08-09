@@ -31,6 +31,8 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+html, body { overflow-x: hidden; }
+
 body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   background: var(--body-bg);
@@ -293,13 +295,15 @@ label { display: block; font-weight: 600; margin: 12px 0 6px; font-size: 0.9rem;
   padding: 11px 14px;
   border: 1px solid var(--border);
   border-radius: 10px;
-  font-size: 0.95rem;
+  font-size: 16px;
   background: var(--input-bg);
   color: var(--text);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
 textarea.input { resize: vertical; }
+
+input, select, textarea { font-size: 16px; }
 
 .phone-input { display: flex; align-items: stretch; }
 .phone-prefix {
@@ -1140,7 +1144,7 @@ a.step { text-decoration: none; color: inherit; }
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 0.95rem;
+  font-size: 16px;
   background: var(--input-bg);
   color: var(--text);
   font-family: inherit;
