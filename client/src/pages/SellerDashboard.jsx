@@ -16,6 +16,23 @@ export default function SellerDashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saleForm, setSaleForm] = useState(null);
+  const [sortKey, setSortKey] = useState('commission');
+  const [sortDir, setSortDir] = useState('desc');
+
+  const toggleSort = (key) => {
+    if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
+  const sortedProducts = [...products].sort((a, b) => {
+    const va = sortKey === 'name' ? (a.name || '') : Number(a[sortKey] || 0);
+    const vb = sortKey === 'name' ? (b.name || '') : Number(b[sortKey] || 0);
+    const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
 
   const load = async () => {
     try {
@@ -70,6 +87,49 @@ export default function SellerDashboard() {
           </div>
         </section>
       )}
+
+      <section className="card stats">
+        <h2>{t('Commissions sur les produits')}</h2>
+        <p className="hint">{t('Commissions fixées par les boutiques sur chaque produit. Cliquez sur une colonne pour trier.')}</p>
+        {products.length === 0 ? (
+          <p className="empty">{t('Aucun produit disponible à vendre pour le moment.')}</p>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th className="sortable" onClick={() => toggleSort('name')}>
+                  {t('Produit')}
+                  <span className="sort-arrow">{sortKey === 'name' ? (sortDir === 'asc' ? '▴' : '▾') : ''}</span>
+                </th>
+                <th>{t('Boutique')}</th>
+                <th className="sortable" onClick={() => toggleSort('price')}>
+                  {t('Prix de vente')}
+                  <span className="sort-arrow">{sortKey === 'price' ? (sortDir === 'asc' ? '▴' : '▾') : ''}</span>
+                </th>
+                <th className="sortable" onClick={() => toggleSort('commission_percent')}>
+                  {t('Commission %')}
+                  <span className="sort-arrow">{sortKey === 'commission_percent' ? (sortDir === 'asc' ? '▴' : '▾') : ''}</span>
+                </th>
+                <th className="sortable" onClick={() => toggleSort('commission')}>
+                  {t('Montant')}
+                  <span className="sort-arrow">{sortKey === 'commission' ? (sortDir === 'asc' ? '▴' : '▾') : ''}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedProducts.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.name}</td>
+                  <td>{p.shop_name}</td>
+                  <td>{formatMoney(p.price)} {countrySymbol(p.shop_country)}</td>
+                  <td>{Number(p.commission_percent || 0)} %</td>
+                  <td><span className="commission">+{formatMoney(p.commission)} {countrySymbol(p.shop_country)}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
 
       {saleForm && (
         <div className="card form-card">

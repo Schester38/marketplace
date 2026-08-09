@@ -615,6 +615,9 @@ input, select, textarea { font-size: 16px; }
 }
 .table th:first-child { border-radius: 10px 0 0 10px; }
 .table th:last-child { border-radius: 0 10px 10px 0; }
+.table .sortable { cursor: pointer; user-select: none; }
+.table .sortable:hover { color: var(--primary); }
+.sort-arrow { font-size: 0.72rem; margin-left: 2px; }
 .table tbody tr { transition: background 0.12s ease; }
 .table tbody tr:hover { background: var(--soft); }
 .table tbody tr:last-child td { border-bottom: none; }
