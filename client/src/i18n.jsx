@@ -204,6 +204,8 @@ const EN = {
   'Commission': 'Commission',
   'Le vendeur affichera : {price} {symbol} et gagnera {commission} {symbol} de commission.': 'The seller will display: {price} {symbol} and earn {commission} {symbol} commission.',
   'Modifier': 'Edit',
+  'Rétirer': 'Remove',
+  'Retrait…': 'Removing…',
 
   // SellerDashboard
   'Mon espace vendeur': 'My seller space',
@@ -384,6 +386,7 @@ const EN = {
   'Produits publiés : {n} / 5': 'Published products: {n} / 5',
   'Limite atteinte': 'Limit reached',
   'Nouveau produit': 'New product',
+  'Modifier le produit': 'Edit product',
   'Photos (maximum {n})': 'Photos (max {n})',
   'Compression…': 'Compressing…',
   'Photos complètes': 'Photos complete',
@@ -835,6 +838,8 @@ const AR = {
   'Commission': 'العمولة',
   'Le vendeur affichera : {price} {symbol} et gagnera {commission} {symbol} de commission.': 'سيعرض البائع: {price} {symbol} وسيربح {commission} {symbol} كعمولة.',
   'Modifier': 'تعديل',
+  'Rétirer': 'إزالة',
+  'Retrait…': 'جارٍ الإزالة…',
 
   // SellerDashboard
   'Mon espace vendeur': 'فضاء البائع',
@@ -998,6 +1003,7 @@ const AR = {
   'Produits publiés : {n} / 5': 'المنتجات المنشورة: {n} / 5',
   'Limite atteinte': 'تم بلوغ الحد',
   'Nouveau produit': 'منتج جديد',
+  'Modifier le produit': 'تعديل المنتج',
   'Photos (maximum {n})': 'الصور (بحد أقصى {n})',
   'Compression…': 'جارٍ الضغط…',
   'Photos complètes': 'اكتملت الصور',

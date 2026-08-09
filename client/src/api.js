@@ -24,6 +24,7 @@ export const api = {
   getProduct: (id) => request(`/products/${id}`),
   myProducts: () => request('/products/mine'),
   createProduct: (payload) => request('/products', { method: 'POST', body: JSON.stringify(payload) }),
+  updateProduct: (id, payload) => request(`/products/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteProduct: (id) => request(`/products/${id}`, { method: 'DELETE' }),
   createSale: (payload) => request('/sales', { method: 'POST', body: JSON.stringify(payload) }),
   mySales: () => request('/sales/my'),

@@ -142,14 +142,76 @@ router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
   res.status(201).json({ product });
 });
 
-router.delete('/:id', authRequired, roleRequired('shop'), async (req, res) => {
-  const product = (await q('SELECT * FROM products WHERE id = $1', [Number(req.params.id)]))[0];
+router.delete('/:id', authRequired, roleRequired('shop'), async (req, res) => {  const product = (await q('SELECT * FROM products WHERE id = $1', [Number(req.params.id)]))[0];
   if (!product) return res.status(404).json({ error: 'Produit introuvable' });
   if (product.shop_id !== req.user.id) {
     return res.status(403).json({ error: 'Ce produit ne vous appartient pas' });
   }
   await q('DELETE FROM products WHERE id = $1', [product.id]);
   res.json({ ok: true });
+});
+
+router.put('/:id', authRequired, roleRequired('shop'), async (req, res) => {
+  const product = (await q('SELECT * FROM products WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!product) return res.status(404).json({ error: 'Produit introuvable' });
+  if (product.shop_id !== req.user.id) {
+    return res.status(403).json({ error: 'Ce produit ne vous appartient pas' });
+  }
+  const { name, description, price, old_price, commission_percent, photos, category, warranty, delivery_fee, contact, quantity } = req.body || {};
+  if (!name || price === undefined) {
+    return res.status(400).json({ error: 'Le nom et le prix sont requis' });
+  }
+  const priceNum = Number(price);
+  const percentNum = Number(commission_percent ?? 0);
+  if (!Number.isFinite(priceNum) || priceNum < 0) {
+    return res.status(400).json({ error: 'Prix invalide' });
+  }
+  let oldPriceNum = old_price === '' || old_price === null || old_price === undefined ? null : Number(old_price);
+  if (oldPriceNum !== null && (!Number.isFinite(oldPriceNum) || oldPriceNum < 0)) {
+    return res.status(400).json({ error: 'Le prix normal est invalide' });
+  }
+  if (oldPriceNum !== null && oldPriceNum <= priceNum) {
+    oldPriceNum = null;
+  }
+  if (!Number.isFinite(percentNum) || percentNum < 0 || percentNum > 100) {
+    return res.status(400).json({ error: 'La commission doit être entre 0 et 100 %' });
+  }
+  const feeNum = Number(delivery_fee ?? 0);
+  if (!Number.isFinite(feeNum) || feeNum < 0) {
+    return res.status(400).json({ error: 'Les frais de livraison sont invalides' });
+  }
+  const qtyNum = Number(quantity ?? 1);
+  if (!Number.isInteger(qtyNum) || qtyNum < 1) {
+    return res.status(400).json({ error: 'La quantité doit être un nombre entier positif' });
+  }
+  const warrantyText = warranty === '' || warranty === null || warranty === undefined ? null : String(warranty).trim().slice(0, 60);
+  const photoList = Array.isArray(photos) ? photos.filter((p) => typeof p === 'string' && p.startsWith('data:image/')).slice(0, 3) : [];
+  const updated = await q(
+    `UPDATE products SET
+       name = $1, description = $2, price = $3, old_price = $4, commission_percent = $5,
+       image = $6, photos = $7, category = $8, warranty = $9, delivery_fee = $10,
+       contact = $11, quantity = $12
+     WHERE id = $13 RETURNING id`,
+    [
+      String(name).trim(),
+      description ? String(description).trim() : null,
+      priceNum,
+      oldPriceNum,
+      percentNum,
+      photoList[0] || null,
+      JSON.stringify(photoList),
+      category ? String(category).trim() : null,
+      warrantyText,
+      feeNum,
+      contact ? String(contact).trim() : null,
+      qtyNum,
+      product.id,
+    ]
+  );
+  const updatedProduct = productRow(
+    (await q(SELECT_PRODUCT + ' WHERE p.id = $1', [updated[0].id]))[0]
+  );
+  res.json({ product: updatedProduct });
 });
 
 export default router;

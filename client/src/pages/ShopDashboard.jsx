@@ -31,6 +31,7 @@ export default function ShopDashboard() {
   const [stats, setStats] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [picking, setPicking] = useState(false);
@@ -85,24 +86,55 @@ export default function ShopDashboard() {
       setError(t('Prix invalide'));
       return;
     }
+    const payload = {
+      ...form,
+      price: priceNum !== null ? priceNum : oldNum,
+      old_price: priceNum !== null ? oldNum : null,
+      commission_percent: Number(form.commission_percent || 0),
+      delivery_fee: Number(form.delivery_fee || 0),
+      quantity: Number(form.quantity || 1),
+      warranty: form.warranty.trim() || null,
+      contact: form.contact ? `${prefix}${form.contact.trim()}` : '',
+    };
     try {
-      await api.createProduct({
-        ...form,
-        price: priceNum !== null ? priceNum : oldNum,
-        old_price: priceNum !== null ? oldNum : null,
-        commission_percent: Number(form.commission_percent || 0),
-        delivery_fee: Number(form.delivery_fee || 0),
-        quantity: Number(form.quantity || 1),
-        warranty: form.warranty.trim() || null,
-        contact: form.contact ? `${prefix}${form.contact.trim()}` : '',
-      });
+      if (editingId) {
+        await api.updateProduct(editingId, payload);
+        setSuccess(t('Produit mis à jour !'));
+      } else {
+        await api.createProduct(payload);
+        setSuccess(t('Produit publié avec succès.'));
+      }
       setForm(EMPTY_FORM);
+      setEditingId(null);
       setShowForm(false);
-      setSuccess(t('Produit publié avec succès.'));
       load();
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const editProduct = (p) => {
+    const currentPrefix = countryPhone(user?.country);
+    const contact = p.contact && p.contact.startsWith(currentPrefix)
+      ? p.contact.slice(currentPrefix.length)
+      : (p.contact || '');
+    setForm({
+      name: p.name || '',
+      description: p.description || '',
+      category: p.category || '',
+      warranty: p.warranty || '',
+      delivery_fee: p.delivery_fee != null ? String(p.delivery_fee) : '',
+      contact,
+      quantity: p.quantity != null ? String(p.quantity) : '',
+      price: p.price != null ? String(p.price) : '',
+      old_price: p.old_price != null ? String(p.old_price) : '',
+      commission_percent: p.commission_percent != null ? String(p.commission_percent) : '',
+      photos: Array.isArray(p.photos) && p.photos.length ? p.photos : p.image ? [p.image] : [],
+    });
+    setEditingId(p.id);
+    setShowForm(true);
+    setError('');
+    setSuccess('');
   };
 
   const removeProduct = async (id) => {
@@ -139,8 +171,11 @@ export default function ShopDashboard() {
         </div>
         <button
           className="btn btn-primary"
-          disabled={!remaining}
-          onClick={() => setShowForm(!showForm)}
+          disabled={!remaining && !showForm}
+          onClick={() => {
+            if (showForm) { setForm(EMPTY_FORM); setEditingId(null); }
+            setShowForm(!showForm);
+          }}
         >
           {showForm ? t('Annuler') : t('+ Ajouter un produit')}
         </button>
@@ -148,7 +183,7 @@ export default function ShopDashboard() {
 
       {showForm && (
         <div className="card form-card">
-          <h2>{t('Nouveau produit')}</h2>
+          <h2>{editingId ? t('Modifier le produit') : t('Nouveau produit')}</h2>
           <form onSubmit={submitProduct}>
             <label>{t('Photos (maximum {n})', { n: MAX_PHOTOS })}</label>
             <div className="photo-input">
@@ -264,8 +299,10 @@ export default function ShopDashboard() {
             <ProductCard
               key={p.id}
               product={p}
-              action="Rétirer"
-              onAction={() => removeProduct(p.id)}
+              action="Modifier"
+              onAction={() => editProduct(p)}
+              secondaryAction="Rétirer"
+              onSecondaryAction={() => removeProduct(p.id)}
             />
           ))}
         </div>

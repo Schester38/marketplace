@@ -309,6 +309,9 @@ textarea.input { resize: vertical; }
 .btn-whatsapp { background: #25D366; color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .btn-whatsapp:hover { background: #1ebe5b; }
 .btn-block { width: 100%; margin-top: 16px; }
+
+.card-actions { display: grid; gap: 8px; }
+.card-actions .btn-block { margin-top: 0; }
 .btn-small { padding: 4px 10px; font-size: 0.8rem; }
 .btn-google {
   display: flex;

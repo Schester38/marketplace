@@ -8,7 +8,7 @@ export function formatMoney(n) {
   return new Intl.NumberFormat('fr-FR').format(Number(n || 0));
 }
 
-export default function ProductCard({ product, action, onAction, showCommission }) {
+export default function ProductCard({ product, action, onAction, secondaryAction, onSecondaryAction, showCommission }) {
   const { t } = useLang();
   const { addToCart } = useCart();
   const { isFav, toggleFav } = useFavs();
@@ -84,7 +84,14 @@ export default function ProductCard({ product, action, onAction, showCommission 
         <p className={`stock-line ${qty > 0 ? '' : 'out'}`}>
           {qty > 0 ? t('En stock : {n}', { n: qty }) : t('Rupture de stock')}
         </p>
-        {action && <button className="btn btn-primary btn-block" onClick={() => onAction(product)}>{t(action)}</button>}
+        {action && (
+          <div className="card-actions">
+            <button className="btn btn-primary btn-block" onClick={() => onAction(product)}>{t(action)}</button>
+            {secondaryAction && (
+              <button className="btn btn-danger btn-block" onClick={() => onSecondaryAction(product)}>{t(secondaryAction)}</button>
+            )}
+          </div>
+        )}
         {!action && (
           <button
             className={`btn btn-block ${qty > 0 ? 'btn-primary' : ''}`}
