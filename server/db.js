@@ -97,5 +97,7 @@ export async function initDb() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS delivery_fee REAL NOT NULL DEFAULT 0;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS contact TEXT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS quantity INTEGER NOT NULL DEFAULT 1;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS old_price REAL;
+    ALTER TABLE products ALTER COLUMN warranty TYPE TEXT USING warranty::text;
   `);
 }

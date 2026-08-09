@@ -20,6 +20,8 @@ export default function ProductCard({ product, action, onAction, showCommission 
   const symbol = countrySymbol(product?.shop_country);
   const fav = isFav(product.id);
   const sold = Number(product.sold || 0);
+  const oldPrice = product.old_price === null || product.old_price === undefined ? null : Number(product.old_price);
+  const hasPromo = oldPrice !== null && oldPrice > Number(product.price);
 
   const add = (e) => {
     e.preventDefault();
@@ -60,14 +62,17 @@ export default function ProductCard({ product, action, onAction, showCommission 
           {product.shop_location ? <span className="shop-loc"> · 📍 {product.shop_location}</span> : null}
         </p>
         <div className="product-meta">
-          {product.warranty > 0 && <span className="meta-chip">🛡️ {t('Garantie {n} mois', { n: product.warranty })}</span>}
+          {product.warranty && <span className="meta-chip">🛡️ {t('Garantie : {warranty}', { warranty: product.warranty })}</span>}
           <span className="meta-chip">🚚 {deliveryFee > 0 ? t('Livraison {price} {symbol}', { price: formatMoney(deliveryFee), symbol }) : t('Livraison gratuite')}</span>
           {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
         </div>
         <div className="price-box">
           <div>
             <span className="label">{t('Prix de vente')}</span>
-            <span className="price">{formatMoney(product.price)} {symbol}</span>
+            <span className="price-line">
+              {hasPromo && <span className="old-price">{formatMoney(oldPrice)} {symbol}</span>}
+              <span className="price">{formatMoney(product.price)} {symbol}</span>
+            </span>
           </div>
           {showCommission && (
             <div>

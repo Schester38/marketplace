@@ -17,6 +17,7 @@ const EMPTY_FORM = {
   contact: '',
   quantity: '',
   price: '',
+  old_price: '',
   commission_percent: '',
   photos: [],
 };
@@ -74,14 +75,25 @@ export default function ShopDashboard() {
     e.preventDefault();
     setError('');
     setSuccess('');
+    const priceNum = form.price === '' ? null : Number(form.price);
+    const oldNum = form.old_price === '' ? null : Number(form.old_price);
+    if (priceNum === null && oldNum === null) {
+      setError(t('Renseignez au moins un prix (normal ou de vente).'));
+      return;
+    }
+    if (priceNum !== null && !Number.isFinite(priceNum) || priceNum !== null && priceNum < 0 || oldNum !== null && !Number.isFinite(oldNum) || oldNum !== null && oldNum < 0) {
+      setError(t('Prix invalide'));
+      return;
+    }
     try {
       await api.createProduct({
         ...form,
-        price: Number(form.price),
+        price: priceNum !== null ? priceNum : oldNum,
+        old_price: priceNum !== null ? oldNum : null,
         commission_percent: Number(form.commission_percent || 0),
         delivery_fee: Number(form.delivery_fee || 0),
         quantity: Number(form.quantity || 1),
-        warranty: form.warranty === '' ? null : Number(form.warranty),
+        warranty: form.warranty.trim() || null,
         contact: form.contact ? `${prefix}${form.contact.trim()}` : '',
       });
       setForm(EMPTY_FORM);
@@ -181,8 +193,8 @@ export default function ShopDashboard() {
 
             <div className="row2">
               <div>
-                <label>{t('Garantie (en mois)')}</label>
-                <input className="input" type="number" min="0" placeholder="ex : 6" value={form.warranty} onChange={(e) => setForm({ ...form, warranty: e.target.value })} />
+                <label>{t('Garantie (chiffres ou lettres)')}</label>
+                <input className="input" placeholder={t('ex : 6 mois, 1 an, 2 ans')} value={form.warranty} onChange={(e) => setForm({ ...form, warranty: e.target.value })} />
               </div>
               <div>
                 <label>{t('Quantité en stock *')}</label>
@@ -212,9 +224,15 @@ export default function ShopDashboard() {
 
             <div className="row2">
               <div>
-                <label>{t('Prix de vente ({symbol}) *', { symbol })}</label>
-                <input className="input" type="number" min="0" step="0.01" required value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+                <label>{t('Prix normal ({symbol})', { symbol })}</label>
+                <input className="input" type="number" min="0" step="0.01" placeholder={t('ex : 5000 (s\'affiche barré)')} value={form.old_price} onChange={(e) => setForm({ ...form, old_price: e.target.value })} />
               </div>
+              <div>
+                <label>{t('Prix de vente ({symbol}) *', { symbol })}</label>
+                <input className="input" type="number" min="0" step="0.01" placeholder={t('ex : 3500 (s\'affiche en vert)')} value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+              </div>
+            </div>
+            <div className="row2">
               <div>
                 <label>{t('Commission vendeur (%) *')}</label>
                 <input className="input" type="number" min="0" max="100" step="0.1" required value={form.commission_percent} onChange={(e) => setForm({ ...form, commission_percent: e.target.value })} />

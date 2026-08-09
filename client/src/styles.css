@@ -478,7 +478,8 @@ textarea.input { resize: vertical; }
   margin-top: auto;
 }
 .price-box .label { display: block; font-size: 0.72rem; color: var(--muted); margin: 0; font-weight: 500; }
-.price { font-weight: 800; font-size: 1.05rem; }
+.price-line { display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.price { font-weight: 800; font-size: 1.05rem; color: var(--success); }
 .commission { color: var(--success); font-weight: 700; font-size: 0.95rem; }
 
 .role-picker {

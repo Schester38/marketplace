@@ -86,6 +86,8 @@ export default function ProductDetail() {
   const deliveryFee = Number(product.delivery_fee || 0);
   const symbol = countrySymbol(product?.shop_country);
   const inStock = Number(product.quantity || 0);
+  const oldPrice = product.old_price === null || product.old_price === undefined ? null : Number(product.old_price);
+  const hasPromo = oldPrice !== null && oldPrice > Number(product.price);
 
   const removeProduct = async () => {
     if (!window.confirm(t('Retirer « {name} » définitivement ?', { name: product.name }))) return;
@@ -156,11 +158,12 @@ export default function ProductDetail() {
           </p>
           {product.description && <p>{product.description}</p>}
           <div className="product-meta">
-            {product.warranty > 0 && <span className="meta-chip">🛡️ {t('Garantie {n} mois', { n: product.warranty })}</span>}
+            {product.warranty && <span className="meta-chip">🛡️ {t('Garantie : {warranty}', { warranty: product.warranty })}</span>}
             <span className="meta-chip">🚚 {deliveryFee > 0 ? t('Livraison {price} {symbol}', { price: formatMoney(deliveryFee), symbol }) : t('Livraison gratuite')}</span>
             {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
           </div>
           <div className="offer-prices">
+            {hasPromo && <span className="old-price">{formatMoney(oldPrice)} {symbol}</span>}
             <span className="promo-price">{formatMoney(product.price)} {symbol}</span>
           </div>
           <p className={`offer-qty ${inStock > 0 ? '' : 'out'}`}>
