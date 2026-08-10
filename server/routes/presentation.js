@@ -97,7 +97,7 @@ router.get('/:id', async (req, res) => {
   const price = Number(p.price || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 });
   const old = Number(p.old_price || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 });
   const symbol = p.shop_country === 'Kenya' ? 'KSh' : p.shop_country === 'Nigeria' ? '₦' : 'F';
-  const origin = `${req.protocol}://${req.get('host')}`;
+  const origin = `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}`;
   const title = `${p.name} — Mboppi`;
   const desc = String(p.description || 'Découvrez cet article sur Mboppi.').slice(0, 200);
   const imgUrl = photo && photo.startsWith('http') ? photo : `${origin}/api/img/${p.id}`;
