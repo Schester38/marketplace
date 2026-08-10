@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired } from '../auth.js';
+import { sendPush } from '../push.js';
 
 const router = Router();
 
@@ -69,6 +70,18 @@ router.post('/', authRequired, ah(async (req, res) => {
     `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_order', $2), ($3, 'sale_order', $2)`,
     [seller.id, created[0].id, product.shop_id]
   );
+
+  const productName = String(product.name || 'article');
+  await sendPush(seller.id, {
+    title: 'Nouvelle commande 🛒',
+    body: `${productName} — ${name} attend la livraison.`,
+    url: '/seller',
+  });
+  await sendPush(product.shop_id, {
+    title: 'Nouvelle commande 🛒',
+    body: `${productName} — vendeur : ${seller.name} (${code}), client : ${name}.`,
+    url: '/shop',
+  });
 
   const full = (
     await q(

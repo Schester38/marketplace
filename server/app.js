@@ -11,6 +11,7 @@ import orderRoutes from './routes/orders.js';
 import purchaseRoutes from './routes/purchases.js';
 import notificationRoutes from './routes/notifications.js';
 import sellerRoutes from './routes/seller.js';
+import pushRoutes from './routes/push.js';
 import presentationRoutes, { pageRouter, imageRouter } from './routes/presentation.js';
 import { authRequired } from './auth.js';
 
@@ -30,6 +31,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/seller', sellerRoutes);
+app.use('/api/push', pushRoutes);
 app.use('/api/img', imageRouter);
 app.use('/p', pageRouter);
 app.get('/api/me', authRequired, (req, res) => res.json({ user: req.user }));

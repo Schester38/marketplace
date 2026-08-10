@@ -5,6 +5,7 @@ import { LANGS, useLang } from '../i18n.jsx';
 import { useCart, useFavs } from '../store.jsx';
 import { api } from '../api.js';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
+import { urlBase64ToUint8Array } from '../utils.js';
 
 function LangSwitcher() {
   const { lang, setLang, t } = useLang();
@@ -98,7 +99,28 @@ function NotifBell() {
 
   const ensurePermission = () => {
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
+      Notification.requestPermission().then(() => setupPush()).catch(() => {});
+    } else if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      setupPush();
+    }
+  };
+
+  const setupPush = async () => {
+    if (!user || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) return;
+    try {
+      const { public_key } = await api.pushKey();
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(public_key),
+        });
+      }
+      await api.pushSubscribe(sub.toJSON());
+    } catch {
+      /* silencieux */
     }
   };
 

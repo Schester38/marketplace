@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired, roleRequired } from '../auth.js';
+import { sendPush } from '../push.js';
 
 const router = Router();
 
@@ -244,6 +245,22 @@ router.post('/:id/deliver', ah(async (req, res) => {
     [sale.seller_id, sale.id, product.shop_id]
   );
 
+  const deliveredProduct = (
+    await q('SELECT name FROM products WHERE id = $1', [sale.product_id])
+  )[0];
+  const deliveredName = deliveredProduct ? String(deliveredProduct.name) : 'article';
+  const buyerName = String(sale.buyer_name || 'client');
+  await sendPush(sale.seller_id, {
+    title: 'Vente livrée ✅',
+    body: `${deliveredName} livré à ${buyerName}.`,
+    url: '/seller',
+  });
+  await sendPush(product.shop_id, {
+    title: 'Vente livrée ✅',
+    body: `${deliveredName} livré — client : ${buyerName}.`,
+    url: '/shop',
+  });
+
   const full = (
     await q(
       `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, u.seller_code,
@@ -300,6 +317,13 @@ router.post('/:id/pay', authRequired, roleRequired('shop'), ah(async (req, res) 
     `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_paid', $2)`,
     [sale.seller_id, sale.id]
   );
+
+  const paidProduct = (await q('SELECT name FROM products WHERE id = $1', [sale.product_id]))[0];
+  await sendPush(sale.seller_id, {
+    title: 'Commission payée 💰',
+    body: `${paidProduct ? paidProduct.name : 'Votre vente'} — votre commission a été versée par la boutique.`,
+    url: '/seller',
+  });
   const full = (
     await q(
       `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, u.seller_code,
