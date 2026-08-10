@@ -44,6 +44,7 @@ export default function Home() {
   );
 
   useEffect(() => {
+    mounted.current = true;
     loadProducts();
     return () => {
       mounted.current = false;
