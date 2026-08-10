@@ -1,5 +1,5 @@
 import React, { Suspense, createContext, useContext, useEffect, useState } from 'react';
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
@@ -106,6 +106,7 @@ function WelcomeBanner() {
 
 export default function App() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
 
   return (
@@ -113,7 +114,7 @@ export default function App() {
       <LangProvider>
         <div className="app">
           <Navbar onLogout={() => { logout(); navigate('/'); }} />
-          <WelcomeBanner />
+          {location.pathname === '/' && <WelcomeBanner />}
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
             <Route path="/" element={<Home />} />
