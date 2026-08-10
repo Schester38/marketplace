@@ -1,10 +1,9 @@
-import { jsPDF } from 'jspdf';
-
 function money(v) {
   return `${Number(v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} F`;
 }
 
-export function downloadInvoice(sale, t, symbol = 'F') {
+export async function downloadInvoice(sale, t, symbol = 'F') {
+  const { jsPDF } = await import('jspdf');
   const doc = new jsPDF();
   const W = doc.internal.pageSize.getWidth();
   let y = 18;
