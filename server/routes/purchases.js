@@ -17,7 +17,7 @@ function saleRow(s) {
   };
 }
 
-router.post('/', authRequired, ah(async (req, res) => {
+router.post('/', ah(async (req, res) => {
   const { product_id, seller_code, purchase_price, quantity, buyer_name, buyer_phone, buyer_city, buyer_address } = req.body || {};
   if (!product_id || !seller_code) {
     return res.status(400).json({ error: 'Produit et code vendeur sont requis' });
@@ -42,8 +42,11 @@ router.post('/', authRequired, ah(async (req, res) => {
     return res.status(400).json({ error: 'Prix d\'achat invalide' });
   }
 
-  const buyer = req.user;
-  const name = buyer_name ? String(buyer_name).trim() : buyer.name;
+  const buyer = req.user || null;
+  const name = (buyer_name && String(buyer_name).trim()) || (buyer ? buyer.name : '');
+  if (!name) {
+    return res.status(400).json({ error: 'Le nom du client est requis' });
+  }
   const total = Math.round(price * qty * 100) / 100;
   const commission = Math.round(Number(product.price) * (Number(product.commission_percent) / 100) * qty * 100) / 100;
 
@@ -57,7 +60,7 @@ router.post('/', authRequired, ah(async (req, res) => {
       total,
       commission,
       price,
-      buyer.id,
+      buyer ? buyer.id : null,
       code,
       name,
       buyer_phone ? String(buyer_phone).trim() : null,

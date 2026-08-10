@@ -107,26 +107,20 @@ export default function PurchasePage() {
         </div>
       </div>
 
-      {!user ? (
-        <div className="card page-center">
-          <p className="empty">{t('Vous devez être connecté pour confirmer la commande.')}</p>
-          <Link className="btn btn-primary" to={`/login?next=/acheter/${id}${params.get('code') ? `?code=${params.get('code')}` : ''}`}>
-            {t('Se connecter')}
-          </Link>
-          <Link className="btn btn-outline" style={{ marginTop: 8 }} to="/register">{t('Créer un compte')}</Link>
-        </div>
-      ) : done ? (
+      {done ? (
         <div className="card page-center">
           <h2>✅ {t('Commande confirmée !')}</h2>
-          <p className="hint">{t('Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison. Retrouvez cette commande dans votre espace client.')}</p>
-          <Link className="btn btn-primary" to="/client">{t('Voir mes achats')}</Link>
+          <p className="hint">{t('Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison.')}</p>
+          {user && (
+            <Link className="btn btn-primary" to="/client">{t('Voir mes achats')}</Link>
+          )}
           <Link className="btn btn-outline" style={{ marginTop: 8 }} to="/">{t('Continuer mes achats')}</Link>
         </div>
       ) : (
         <div className="card form-card">
           <h2>{t('Commander')}</h2>
           <p className="hint">
-            {t('Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande.')}
+            {t('Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande. Aucun compte requis.')}
           </p>
           <form onSubmit={submit}>
             <label>{t('Nom et prénom *')}</label>
@@ -134,7 +128,6 @@ export default function PurchasePage() {
               className="input"
               required
               value={form.buyer_name}
-              placeholder={user.name}
               onChange={(e) => setForm({ ...form, buyer_name: e.target.value })}
             />
             <label>{t('Ville *')}</label>

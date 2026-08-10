@@ -137,36 +137,29 @@ export default function Cart() {
             </div>
             <p className="hint">{t('Les frais de livraison sont confirmés avec la boutique.')}</p>
 
-            {!user ? (
-              <p className="error" style={{ margin: 0 }}>
-                {t('Connectez-vous pour passer commande.')}{' '}
-                <Link to="/login">{t('Se connecter')}</Link>
-              </p>
-            ) : (
-              <form onSubmit={submit}>
-                <label>{t('Votre nom *')}</label>
-                <input className="input" required value={buyerName} onChange={(e) => setBuyerName(e.target.value)} />
-                <label>{t('Votre téléphone')}</label>
-                <input
-                  className="input"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+237 6XX XX XX XX"
-                />
-                <label>{t('Adresse de livraison')}</label>
-                <input
-                  className="input"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder={t('Quartier, ville…')}
-                />
-                {error && <p className="error">{error}</p>}
-                <button className="btn btn-primary btn-block" disabled={placing}>
-                  {placing ? t('Commande en cours…') : `✅ ${t('Passer la commande')}`}
-                </button>
-              </form>
-            )}
+            <form onSubmit={submit}>
+              <label>{t('Votre nom *')}</label>
+              <input className="input" required value={buyerName} onChange={(e) => setBuyerName(e.target.value)} />
+              <label>{t('Votre téléphone')}</label>
+              <input
+                className="input"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+237 6XX XX XX XX"
+              />
+              <label>{t('Adresse de livraison')}</label>
+              <input
+                className="input"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder={t('Quartier, ville…')}
+              />
+              {error && <p className="error">{error}</p>}
+              <button className="btn btn-primary btn-block" disabled={placing}>
+                {placing ? t('Commande en cours…') : `✅ ${t('Passer la commande')}`}
+              </button>
+            </form>
           </div>
         </>
       )}

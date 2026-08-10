@@ -45,6 +45,8 @@ export default function SellerDashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [copied, setCopied] = useState('');
+  const [proofSale, setProofSale] = useState(null);
+  const [proofLoading, setProofLoading] = useState(false);
 
   const load = async () => {
     try {
@@ -123,6 +125,23 @@ export default function SellerDashboard() {
       load();
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const openProof = async (s) => {
+    setError('');
+    setProofLoading(true);
+    try {
+      const d = await api.saleProof(s.id);
+      if (!d.proof) {
+        setError(t('Aucune preuve disponible pour cette vente.'));
+      } else {
+        setProofSale({ sale: s, proof: d.proof });
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setProofLoading(false);
     }
   };
 
@@ -252,9 +271,14 @@ export default function SellerDashboard() {
                     </td>
                     <td>
                       {s.status === 'delivered' && (
-                        <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
-                          🧾 {t('Facture')}
-                        </button>
+                        <div className="row2" style={{ justifyContent: 'flex-end', gap: 6 }}>
+                          <button className="btn btn-small" disabled={proofLoading} onClick={() => openProof(s)}>
+                            📷 {t('Preuve')}
+                          </button>
+                          <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
+                            🧾 {t('Facture')}
+                          </button>
+                        </div>
                       )}
                       {s.status !== 'delivered' && (
                         <button className="btn btn-small btn-danger" onClick={() => removeSale(s)}>
@@ -270,6 +294,29 @@ export default function SellerDashboard() {
           </div>
         )}
       </section>
+
+      {proofSale && (
+        <div className="modal-overlay" onClick={() => setProofSale(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📷 {t('Preuve de paiement')} — {proofSale.sale.product_name}</h3>
+              <button className="drawer-close" onClick={() => setProofSale(null)}>✕</button>
+            </div>
+            {String(proofSale.proof).startsWith('data:video') ? (
+              <video src={proofSale.proof} controls style={{ width: '100%', borderRadius: 10, maxHeight: 420 }} />
+            ) : (
+              <img
+                src={proofSale.proof}
+                alt={t('Preuve de paiement')}
+                style={{ width: '100%', borderRadius: 10, maxHeight: 420, objectFit: 'contain' }}
+              />
+            )}
+            <p className="hint" style={{ marginBottom: 0 }}>
+              {t('La boutique a confirmé le paiement de cette vente.')}
+            </p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

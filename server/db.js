@@ -102,6 +102,7 @@ export async function initDb() {
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
     ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('shop', 'seller', 'client', 'creator', 'livreur'));
     ALTER TABLE users ADD COLUMN IF NOT EXISTS seller_code TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS shop_code TEXT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS photos TEXT NOT NULL DEFAULT '[]';
     UPDATE products SET photos = json_build_array(image)::text WHERE image IS NOT NULL AND photos = '[]';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;
@@ -127,6 +128,8 @@ export async function initDb() {
     ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_status_check;
     ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('pending', 'confirmed', 'bought', 'delivered', 'cancelled'));
 
+    ALTER TABLE orders ALTER COLUMN user_id DROP NOT NULL;
+
     CREATE TABLE IF NOT EXISTS seller_payment_methods (
       id SERIAL PRIMARY KEY,
       seller_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
@@ -138,6 +141,7 @@ export async function initDb() {
 
   await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_seller_code ON users(seller_code) WHERE seller_code IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_shop_code ON users(shop_code) WHERE shop_code IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS notifications (
       id SERIAL PRIMARY KEY,

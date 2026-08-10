@@ -178,6 +178,14 @@ router.delete('/:id', authRequired, roleRequired('seller'), ah(async (req, res) 
 }));
 
 router.get('/livreur', ah(async (req, res) => {
+  const shopCode = req.query.shop_code ? String(req.query.shop_code).trim().toUpperCase() : '';
+  let shop = null;
+  if (shopCode) {
+    shop = (await q('SELECT id FROM users WHERE shop_code = $1', [shopCode]))[0];
+    if (!shop) return res.status(404).json({ error: 'Code boutique invalide' });
+  }
+  const shopFilter = shop ? ' AND p.shop_id = $1' : ' AND FALSE';
+  const shopParam = shop ? [shop.id] : [];
   const pending = (
     await q(
       `SELECT s.*, p.name AS product_name, p.commission_percent, p.photos, p.shop_id,
@@ -187,8 +195,9 @@ router.get('/livreur', ah(async (req, res) => {
        JOIN products p ON p.id = s.product_id
        JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
-       WHERE s.status = 'pending'
-       ORDER BY s.created_at DESC`
+       WHERE s.status = 'pending'${shopFilter}
+       ORDER BY s.created_at DESC`,
+      shopParam
     )
   ).map(saleRow);
   const delivered = req.user
@@ -201,26 +210,55 @@ router.get('/livreur', ah(async (req, res) => {
            JOIN products p ON p.id = s.product_id
            JOIN users u ON u.id = s.seller_id
            JOIN users shop ON shop.id = p.shop_id
-           WHERE s.status = 'delivered' AND s.delivered_by = $1
+           WHERE s.status = 'delivered' AND s.delivered_by = $1${shopFilter.replace('$1', '$2')}
            ORDER BY s.delivered_at DESC`,
-          [req.user.id]
+          [req.user.id, ...shopParam]
         )
       ).map(saleRow)
-    : (
-        await q(
-          `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
-                  u.name AS seller_name, u.seller_code,
-                  shop.name AS shop_name, shop.country AS shop_country
-           FROM sales s
-           JOIN products p ON p.id = s.product_id
-           JOIN users u ON u.id = s.seller_id
-           JOIN users shop ON shop.id = p.shop_id
-           WHERE s.status = 'delivered'
-           ORDER BY s.delivered_at DESC
-           LIMIT 50`
-        )
-      ).map(saleRow);
-  res.json({ pending, delivered });
+    : shop
+      ? (
+          await q(
+            `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
+                    u.name AS seller_name, u.seller_code,
+                    shop.name AS shop_name, shop.country AS shop_country
+             FROM sales s
+             JOIN products p ON p.id = s.product_id
+             JOIN users u ON u.id = s.seller_id
+             JOIN users shop ON shop.id = p.shop_id
+             WHERE s.status = 'delivered' AND p.shop_id = $1
+             ORDER BY s.delivered_at DESC
+             LIMIT 50`,
+            [shop.id]
+          )
+        ).map(saleRow)
+      : [];
+  res.json({ pending, delivered, shop_name: shop ? (await q('SELECT name FROM users WHERE id = $1', [shop.id]))[0].name : null });
+}));
+
+router.delete('/:id/delivered', ah(async (req, res) => {
+  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
+  if (sale.status !== 'delivered') {
+    return res.status(409).json({ error: 'Cette vente n\'est pas une livraison effectuée' });
+  }
+  if (req.user && sale.delivered_by && sale.delivered_by !== req.user.id) {
+    return res.status(403).json({ error: 'Vous ne pouvez supprimer que vos propres livraisons' });
+  }
+  await q('DELETE FROM sales WHERE id = $1', [sale.id]);
+  res.json({ ok: true });
+}));
+
+router.get('/:id/proof', authRequired, ah(async (req, res) => {
+  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
+  const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
+  if (sale.seller_id !== req.user.id && product.shop_id !== req.user.id) {
+    return res.status(403).json({ error: 'Accès refusé' });
+  }
+  if (sale.status !== 'delivered' || !sale.paid) {
+    return res.status(409).json({ error: 'Aucune preuve de paiement pour cette vente' });
+  }
+  res.json({ proof: sale.payment_proof || null });
 }));
 
 router.post('/:id/deliver', ah(async (req, res) => {

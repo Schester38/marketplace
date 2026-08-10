@@ -21,7 +21,7 @@ function orderRow(o) {
   };
 }
 
-router.post('/', authRequired, async (req, res) => {
+router.post('/', async (req, res) => {
   const { items, buyer_name, buyer_phone, buyer_address } = req.body || {};
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Le panier est vide' });
@@ -56,7 +56,7 @@ router.post('/', authRequired, async (req, res) => {
     `INSERT INTO orders (user_id, buyer_name, buyer_phone, buyer_address, items, total)
      VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
     [
-      req.user.id,
+      req.user ? req.user.id : null,
       String(buyer_name).trim(),
       buyer_phone ? String(buyer_phone).trim() : null,
       buyer_address ? String(buyer_address).trim() : null,

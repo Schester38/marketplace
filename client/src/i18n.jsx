@@ -685,6 +685,7 @@ const EN = {
   'Commande confirmée !': 'Order confirmed!',
   'Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison. Retrouvez cette commande dans votre espace client.': 'Your item is awaiting sale. The shop and the seller have been notified and will contact you for delivery. Find this order in your client space.',
   'Vous devez être connecté pour confirmer la commande.': 'You must be logged in to confirm the order.',
+  'Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande. Aucun compte requis.': 'This product is offered by a Mboppi seller. Fill in your details to confirm your order. No account required.',
   'Confirmez votre commande : la boutique et le vendeur seront notifiés.': 'Confirm your order: the shop and the seller will be notified.',
   'Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande.': 'This product is offered by a Mboppi seller. Fill in your details to confirm your order.',
   'Nouvelle commande pour « {product} » — {buyer}. Article en attente de vente.': 'New order for « {product} » — {buyer}. Item awaiting sale.',

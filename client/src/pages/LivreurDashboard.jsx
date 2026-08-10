@@ -8,30 +8,89 @@ import { countrySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
+const CODE_KEY = 'livreur_shop_code';
+
 export default function LivreurDashboard() {
   const { t } = useLang();
+  const [codeInput, setCodeInput] = useState('');
+  const [code, setCode] = useState(() => localStorage.getItem(CODE_KEY) || '');
+  const [shopName, setShopName] = useState(null);
   const [pending, setPending] = useState([]);
   const [delivered, setDelivered] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [codeError, setCodeError] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [deliverForm, setDeliverForm] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const load = async () => {
+  const load = async (silent) => {
+    if (!code) {
+      setPending([]);
+      setDelivered([]);
+      setShopName(null);
+      return;
+    }
+    if (!silent) setLoading(true);
+    setCodeError('');
     try {
-      const d = await api.livreurSales();
+      const d = await api.livreurSales(code);
       setPending(d.pending);
       setDelivered(d.delivered);
+      setShopName(d.shop_name);
+      setCodeError('');
     } catch (e) {
-      setError(e.message);
+      if (e.message && /code boutique invalide/i.test(e.message)) {
+        localStorage.removeItem(CODE_KEY);
+        setCode('');
+        setCodeInput('');
+        setCodeError(t('Code boutique invalide. Vérifiez le code auprès de la boutique.'));
+      } else {
+        setError(e.message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
-  useRefreshOnFocus(load);
+  useEffect(() => { load(true); }, [code]);
+
+  useRefreshOnFocus(() => load(true));
+
+  const enterCode = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    const clean = codeInput.trim().toUpperCase();
+    if (!clean) {
+      setCodeError(t('Entrez le code de la boutique.'));
+      return;
+    }
+    localStorage.setItem(CODE_KEY, clean);
+    setCode(clean);
+  };
+
+  const changeCode = () => {
+    localStorage.removeItem(CODE_KEY);
+    setCode('');
+    setCodeInput('');
+    setPending([]);
+    setDelivered([]);
+    setShopName(null);
+  };
+
+  const removeDelivered = async (s) => {
+    if (!window.confirm(t('Supprimer cette livraison « {name} » ?', { name: s.product_name }))) return;
+    setError('');
+    setSuccess('');
+    try {
+      await api.deleteDeliveredSale(s.id);
+      setDelivered((prev) => prev.filter((x) => x.id !== s.id));
+      setSuccess(t('Livraison supprimée.'));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   const submitDeliver = async (e) => {
     e.preventDefault();
@@ -63,81 +122,124 @@ export default function LivreurDashboard() {
       <section className="dash-header">
         <div>
           <h1>🛵 {t('Livraison')}</h1>
-          <p>{t('Livrez les articles en attente de vente et confirmez l\'achat auprès du client.')}</p>
+          <p>{t('Saisissez le code de votre boutique pour voir ses livraisons (en attente et effectuées).')}</p>
         </div>
         <PwaInstallButton />
       </section>
 
-      {success && <p className="success">{success}</p>}
-      {error && <p className="error">{error}</p>}
-
-      <section className="card stats">
-        <h2>📦 {t('Articles en attente de vente')}</h2>
-        {loading ? (
-          <div className="skeleton-block" style={{ height: 120 }}></div>
-        ) : pending.length === 0 ? (
-          <p className="empty">{t('Aucun article en attente pour le moment.')}</p>
-        ) : (
-          <div className="livreur-list">
-            {pending.map((s) => (
-              <div className="livreur-item" key={s.id}>
-                <div className="livreur-item-info">
-                  <div className="livreur-item-top">
-                    <strong>{s.product_name}</strong>
-                    <span className={`badge badge-pending`}>{t('En attente de vente')}</span>
-                  </div>
-                  <p className="hint">
-                    {formatMoney(s.total_price)} {symbol(s)}
-                    {s.shop_name ? ` · ${t('Boutique : {shop}', { shop: s.shop_name })}` : ''}
-                    {s.seller_name ? ` · ${t('Vendeur : {seller}', { seller: s.seller_name })}` : ''}
-                  </p>
-                  <p className="livreur-client">
-                    🧑 {s.buyer_name || '—'}
-                    {s.buyer_phone ? ` · 📞 ${s.buyer_phone}` : ''}
-                  </p>
-                  {s.buyer_city || s.buyer_address ? (
-                    <p className="hint">📍 {[s.buyer_city, s.buyer_address].filter(Boolean).join(', ')}</p>
-                  ) : null}
+      {!code ? (
+        <section className="card form-card" style={{ maxWidth: 480, margin: '24px auto' }}>
+          <h2>🔑 {t('Code de la boutique')}</h2>
+          <p className="hint">
+            {t('La boutique vous a remis un code. En le saisissant, vous ne verrez que ses livraisons, pas celles des autres boutiques.')}
+          </p>
+          <form onSubmit={enterCode}>
+            <label>{t('Code boutique')}</label>
+            <input
+              className="input"
+              value={codeInput}
+              onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+              placeholder="ex : A1B2C3D"
+              maxLength={10}
+              required
+            />
+            {codeError && <p className="error">{codeError}</p>}
+            <button className="btn btn-primary btn-block" style={{ marginTop: 12 }}>
+              👀 {t('Voir mes livraisons')}
+            </button>
+          </form>
+        </section>
+      ) : (
+        <>
+          {shopName && (
+            <section className="card stats">
+              <div className="row2" style={{ alignItems: 'center' }}>
+                <div>
+                  <span className="label">{t('Boutique associée')}</span>
+                  <strong>🏪 {shopName} — <code className="seller-code-inline">{code}</code></strong>
                 </div>
-                <button className="btn btn-primary" onClick={() => setDeliverForm({ sale: s, delivery_fee: '', payment_method: 'espece' })}>
-                  🛵 {t('Livrer')}
-                </button>
+                <button className="btn btn-outline btn-sm" onClick={changeCode}>{t('Changer de code')}</button>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
+            </section>
+          )}
 
-      <section className="card stats">
-        <h2>✅ {t('Mes livraisons effectuées')}</h2>
-        {delivered.length === 0 ? (
-          <p className="empty">{t('Aucune livraison effectuée pour le moment.')}</p>
-        ) : (
-          <div className="livreur-list">
-            {delivered.map((s) => (
-              <div className="livreur-item" key={s.id}>
-                <div className="livreur-item-info">
-                  <div className="livreur-item-top">
-                    <strong>{s.product_name}</strong>
-                    <span className={`badge badge-bought`}>{t('Acheté')}</span>
+          {success && <p className="success">{success}</p>}
+          {error && <p className="error">{error}</p>}
+          {codeError && <p className="error">{codeError}</p>}
+
+          <section className="card stats">
+            <h2>📦 {t('Articles en attente de vente')}</h2>
+            {loading ? (
+              <div className="skeleton-block" style={{ height: 120 }}></div>
+            ) : pending.length === 0 ? (
+              <p className="empty">{t('Aucun article en attente pour cette boutique.')}</p>
+            ) : (
+              <div className="livreur-list">
+                {pending.map((s) => (
+                  <div className="livreur-item" key={s.id}>
+                    <div className="livreur-item-info">
+                      <div className="livreur-item-top">
+                        <strong>{s.product_name}</strong>
+                        <span className={`badge badge-pending`}>{t('En attente de vente')}</span>
+                      </div>
+                      <p className="hint">
+                        {formatMoney(s.total_price)} {symbol(s)}
+                        {s.seller_name ? ` · ${t('Vendeur : {seller}', { seller: s.seller_name })}` : ''}
+                      </p>
+                      <p className="livreur-client">
+                        🧑 {s.buyer_name || '—'}
+                        {s.buyer_phone ? ` · 📞 ${s.buyer_phone}` : ''}
+                      </p>
+                      {s.buyer_city || s.buyer_address ? (
+                        <p className="hint">📍 {[s.buyer_city, s.buyer_address].filter(Boolean).join(', ')}</p>
+                      ) : null}
+                    </div>
+                    <button className="btn btn-primary" onClick={() => setDeliverForm({ sale: s, delivery_fee: '', payment_method: 'espece' })}>
+                      🛵 {t('Livrer')}
+                    </button>
                   </div>
-                  <p className="hint">
-                    {formatMoney(Number(s.total_price || 0) + Number(s.delivery_fee || 0))} {symbol(s)}
-                    {s.delivered_at ? ` · ${t('Livré le {date}', { date: new Date(s.delivered_at).toLocaleDateString() })}` : ''}
-                  </p>
-                  <p className="livreur-client">
-                    🧑 {s.buyer_name || '—'}
-                    {s.buyer_phone ? ` · 📞 ${s.buyer_phone}` : ''}
-                  </p>
-                </div>
-                <button className="btn btn-outline" onClick={() => downloadInvoice(s, t, symbol(s))}>
-                  🧾 {t('Voir la facture')}
-                </button>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </section>
+            )}
+          </section>
+
+          <section className="card stats">
+            <h2>✅ {t('Mes livraisons effectuées')}</h2>
+            {delivered.length === 0 ? (
+              <p className="empty">{t('Aucune livraison effectuée pour cette boutique.')}</p>
+            ) : (
+              <div className="livreur-list">
+                {delivered.map((s) => (
+                  <div className="livreur-item" key={s.id}>
+                    <div className="livreur-item-info">
+                      <div className="livreur-item-top">
+                        <strong>{s.product_name}</strong>
+                        <span className={`badge badge-bought`}>{t('Acheté')}</span>
+                      </div>
+                      <p className="hint">
+                        {formatMoney(Number(s.total_price || 0) + Number(s.delivery_fee || 0))} {symbol(s)}
+                        {s.delivered_at ? ` · ${t('Livré le {date}', { date: new Date(s.delivered_at).toLocaleDateString() })}` : ''}
+                      </p>
+                      <p className="livreur-client">
+                        🧑 {s.buyer_name || '—'}
+                        {s.buyer_phone ? ` · 📞 ${s.buyer_phone}` : ''}
+                      </p>
+                    </div>
+                    <div className="row2">
+                      <button className="btn btn-outline" onClick={() => downloadInvoice(s, t, symbol(s))}>
+                        🧾 {t('Facture')}
+                      </button>
+                      <button className="btn btn-danger" onClick={() => removeDelivered(s)}>
+                        🗑️ {t('Supprimer')}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
 
       {deliverForm && (
         <div className="modal-overlay" onClick={() => setDeliverForm(null)}>

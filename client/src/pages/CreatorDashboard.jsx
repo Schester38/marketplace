@@ -34,8 +34,27 @@ export default function CreatorDashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [picking, setPicking] = useState(false);
+  const [proofSale, setProofSale] = useState(null);
+  const [proofLoading, setProofLoading] = useState(false);
   const symbol = countrySymbol(user?.country);
   const prefix = countryPhone(user?.country);
+
+  const openProof = async (s) => {
+    setError('');
+    setProofLoading(true);
+    try {
+      const d = await api.saleProof(s.id);
+      if (!d.proof) {
+        setError(t('Aucune preuve disponible pour cette vente.'));
+      } else {
+        setProofSale({ sale: s, proof: d.proof });
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setProofLoading(false);
+    }
+  };
 
   const addPhotos = async (files) => {
     const list = Array.from(files || []);
@@ -285,6 +304,7 @@ export default function CreatorDashboard() {
                   <th>{t('Qté')}</th>
                   <th>{t('Total')}</th>
                   <th>{t('Statut')}</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -300,6 +320,13 @@ export default function CreatorDashboard() {
                       {s.status === 'delivered' && <span className="badge badge-bought">{t('Livré')}</span>}
                       {!['pending', 'delivered'].includes(s.status) && <span className={`badge badge-${s.status}`}>{t(s.status)}</span>}
                     </td>
+                    <td>
+                      {s.status === 'delivered' && (
+                        <button className="btn btn-small" disabled={proofLoading} onClick={() => openProof(s)}>
+                          📷 {t('Preuve')}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -307,6 +334,29 @@ export default function CreatorDashboard() {
           </div>
         )}
       </section>
+
+      {proofSale && (
+        <div className="modal-overlay" onClick={() => setProofSale(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📷 {t('Preuve de paiement')} — {proofSale.sale.product_name}</h3>
+              <button className="drawer-close" onClick={() => setProofSale(null)}>✕</button>
+            </div>
+            {String(proofSale.proof).startsWith('data:video') ? (
+              <video src={proofSale.proof} controls style={{ width: '100%', borderRadius: 10, maxHeight: 420 }} />
+            ) : (
+              <img
+                src={proofSale.proof}
+                alt={t('Preuve de paiement')}
+                style={{ width: '100%', borderRadius: 10, maxHeight: 420, objectFit: 'contain' }}
+              />
+            )}
+            <p className="hint" style={{ marginBottom: 0 }}>
+              {t('Preuve fournie par la boutique lors du paiement de la commission.')}
+            </p>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

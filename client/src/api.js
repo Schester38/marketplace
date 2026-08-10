@@ -36,8 +36,12 @@ export const api = {
   shopSales: (shopId) => request(`/sales/shop/${shopId}`),
   updateSaleStatus: (id, status) =>
     request(`/sales/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
-  livreurSales: () => request('/sales/livreur'),
+  livreurSales: (shopCode) => request('/sales/livreur' + (shopCode ? `?shop_code=${encodeURIComponent(shopCode)}` : '')),
   deliverSale: (id, payload) => request(`/sales/${id}/deliver`, { method: 'POST', body: JSON.stringify(payload) }),
+  deleteDeliveredSale: (id) => request(`/sales/${id}/delivered`, { method: 'DELETE' }),
+  saleProof: (id) => request(`/sales/${id}/proof`),
+  shopCode: () => request('/shop/code'),
+  createShopCode: () => request('/shop/code', { method: 'POST' }),
   salePaymentMethods: (id) => request(`/sales/${id}/payment-methods`),
   paySale: (id, payload) => request(`/sales/${id}/pay`, { method: 'POST', body: JSON.stringify(payload) }),
   getSellerCode: () => request('/auth/seller-code'),

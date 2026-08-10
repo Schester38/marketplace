@@ -48,8 +48,38 @@ export default function ShopDashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [picking, setPicking] = useState(false);
+  const [shopCode, setShopCode] = useState(null);
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
   const symbol = countrySymbol(user?.country);
   const prefix = countryPhone(user?.country);
+
+  useEffect(() => {
+    api.shopCode().then((d) => setShopCode(d.shop_code)).catch(() => {});
+  }, []);
+
+  const generateShopCode = async () => {
+    setCodeLoading(true);
+    try {
+      const d = await api.createShopCode();
+      setShopCode(d.shop_code);
+      setSuccess(t('Code livreur généré : {code}', { code: d.shop_code }));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCodeLoading(false);
+    }
+  };
+
+  const copyShopCode = async () => {
+    try {
+      await navigator.clipboard.writeText(shopCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* silencieux */
+    }
+  };
 
   const addPhotos = async (files) => {
     const list = Array.from(files || []);
@@ -257,6 +287,29 @@ export default function ShopDashboard() {
           >
             {showForm ? t('Annuler') : t('+ Ajouter un produit')}
           </button>
+        </div>
+      </section>
+
+      <section className="card seller-code-card">
+        <div>
+          <h2>🔑 {t('Code livreur')}</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            {t('Communiquez ce code à vos livreurs : en le saisissant sur la page Livraison, ils ne verront que les livraisons (en attente et effectuées) de votre boutique.')}
+          </p>
+        </div>
+        <div className="seller-code-actions">
+          {shopCode ? (
+            <>
+              <span className="seller-code">{shopCode}</span>
+              <button className="btn btn-outline btn-sm" onClick={copyShopCode}>
+                {copied ? t('Code copié !') : t('Copier')}
+              </button>
+            </>
+          ) : (
+            <button className="btn btn-primary" disabled={codeLoading} onClick={generateShopCode}>
+              {codeLoading ? '…' : t('Générer mon code livreur')}
+            </button>
+          )}
         </div>
       </section>
 
