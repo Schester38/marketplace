@@ -1880,3 +1880,17 @@ a.step { text-decoration: none; color: inherit; }
   html { font-size: 20px; }
   .container { max-width: 1600px; }
 }
+
+/* Mobile / Android : panneau de notifications centré à l'écran */
+@media (max-width: 640px) {
+  .notif-panel,
+  [dir='rtl'] .notif-panel {
+    position: fixed;
+    top: 58px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: min(360px, 94vw);
+    max-width: 94vw;
+  }
+}
