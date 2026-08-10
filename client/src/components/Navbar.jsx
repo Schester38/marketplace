@@ -112,6 +112,17 @@ function NotifBell() {
         code: n.seller_code || '—',
       });
     }
+    if (n.type === 'sale_delivered') {
+      if (user.id === n.seller_id) {
+        return t('Votre vente de « {product} » a été livrée à {buyer}.', { product: n.product_name, buyer });
+      }
+      return t('Vente de « {product} » livrée — vendeur : {seller} ({code}), acheteur : {buyer}.', {
+        product: n.product_name,
+        seller: n.seller_name,
+        code: n.seller_code || '—',
+        buyer,
+      });
+    }
     if (user.id === n.seller_id) {
       return t('Votre vente de « {product} » a été achetée par {buyer}.', { product: n.product_name, buyer });
     }
@@ -223,7 +234,7 @@ export default function Navbar({ onLogout }) {
     onLogout();
   };
   const roleLabel = user
-    ? user.role === 'shop' ? t('boutique') : user.role === 'seller' ? t('vendeur') : user.role === 'client' ? t('client') : t('créateur')
+    ? user.role === 'shop' ? t('boutique') : user.role === 'seller' ? t('vendeur') : user.role === 'client' ? t('client') : user.role === 'creator' ? t('créateur') : t('livreur')
     : '';
 
   const themeToggle = (
@@ -266,6 +277,7 @@ export default function Navbar({ onLogout }) {
       {user && user.role === 'seller' && <Link to="/seller/paiements" onClick={close}>{t('Mes moyens de paiement')}</Link>}
       {user && user.role === 'client' && <Link to="/client" onClick={close}>{t('Mon espace client')}</Link>}
       {user && user.role === 'creator' && <Link to="/creator" onClick={close}>{t('Mon espace créateur')}</Link>}
+      {user && user.role === 'livreur' && <Link to="/livreur" onClick={close}>{t('Mes livraisons')}</Link>}
       {user && (
         <>
           <Link to="/compte" onClick={close}>{t('Mon compte')}</Link>

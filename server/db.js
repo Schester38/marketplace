@@ -23,7 +23,7 @@ export async function initDb() {
       email TEXT NOT NULL UNIQUE,
       password TEXT,
       provider TEXT NOT NULL DEFAULT 'email',
-      role TEXT NOT NULL CHECK (role IN ('shop', 'seller', 'client', 'creator')),
+      role TEXT NOT NULL CHECK (role IN ('shop', 'seller', 'client', 'creator', 'livreur')),
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
@@ -104,7 +104,7 @@ export async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
-    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('shop', 'seller', 'client', 'creator'));
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('shop', 'seller', 'client', 'creator', 'livreur'));
     ALTER TABLE users ADD COLUMN IF NOT EXISTS seller_code TEXT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS photos TEXT NOT NULL DEFAULT '[]';
     UPDATE products SET photos = json_build_array(image)::text WHERE image IS NOT NULL AND photos = '[]';
@@ -121,8 +121,12 @@ export async function initDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_code TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_city TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_address TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivery_fee REAL NOT NULL DEFAULT 0;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivered_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
     ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_status_check;
-    ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('pending', 'confirmed', 'bought', 'cancelled'));
+    ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('pending', 'confirmed', 'bought', 'delivered', 'cancelled'));
 
     CREATE TABLE IF NOT EXISTS seller_payment_methods (
       id SERIAL PRIMARY KEY,

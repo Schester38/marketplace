@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
+import { downloadInvoice } from '../components/Invoice.jsx';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { compressImage } from '../utils.js';
@@ -25,9 +26,10 @@ const EMPTY_FORM = {
 const MAX_PHOTOS = 3;
 
 const SALE_STATUS = {
-  pending: { key: 'Vente en attente', cls: 'badge-pending' },
+  pending: { key: 'En attente de vente', cls: 'badge-pending' },
   bought: { key: 'Acheté', cls: 'badge-bought' },
   confirmed: { key: 'Confirmée', cls: 'badge-confirmed' },
+  delivered: { key: 'Livré', cls: 'badge-bought' },
   cancelled: { key: 'Annulée', cls: 'badge-cancelled' },
 };
 
@@ -40,6 +42,7 @@ export default function ShopDashboard() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [showDelivered, setShowDelivered] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [picking, setPicking] = useState(false);
@@ -166,6 +169,8 @@ export default function ShopDashboard() {
     }
   };
 
+  const deliveredSales = sales.filter((s) => s.status === 'delivered');
+
   const remaining = (products?.length ?? 0) < 5;
 
   return (
@@ -179,17 +184,65 @@ export default function ShopDashboard() {
             {products.length >= 5 && <span className="badge badge-warn">{t('Limite atteinte')}</span>}
           </p>
         </div>
-        <button
-          className="btn btn-primary"
-          disabled={!remaining && !showForm}
-          onClick={() => {
-            if (showForm) { setForm(EMPTY_FORM); setEditingId(null); }
-            setShowForm(!showForm);
-          }}
-        >
-          {showForm ? t('Annuler') : t('+ Ajouter un produit')}
-        </button>
+        <div className="row2 dash-actions">
+          <button
+            className={`btn ${showDelivered ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => setShowDelivered(!showDelivered)}
+          >
+            🛵 {t('Livreur')} {deliveredSales.length > 0 ? `(${deliveredSales.length})` : ''}
+          </button>
+          <button
+            className="btn btn-primary"
+            disabled={!remaining && !showForm}
+            onClick={() => {
+              if (showForm) { setForm(EMPTY_FORM); setEditingId(null); }
+              setShowForm(!showForm);
+            }}
+          >
+            {showForm ? t('Annuler') : t('+ Ajouter un produit')}
+          </button>
+        </div>
       </section>
+
+      {showDelivered && (
+        <section className="card stats" id="facture-livree">
+          <h2>🧾 {t('Facture livrée')}</h2>
+          {deliveredSales.length === 0 ? (
+            <p className="empty">{t('Aucune vente livrée pour le moment.')}</p>
+          ) : (
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('Produit')}</th>
+                    <th>{t('Vendeur')}</th>
+                    <th>{t('Acheteur')}</th>
+                    <th>{t('Total')}</th>
+                    <th>{t('Livré le')}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deliveredSales.map((s) => (
+                    <tr key={s.id}>
+                      <td>{s.product_name}</td>
+                      <td>{s.seller_name}</td>
+                      <td>{s.buyer_name || '—'}</td>
+                      <td>{formatMoney(Number(s.total_price || 0) + Number(s.delivery_fee || 0))} {countrySymbol(s.shop_country)}</td>
+                      <td>{s.delivered_at ? new Date(s.delivered_at).toLocaleDateString() : '—'}</td>
+                      <td>
+                        <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
+                          🧾 {t('Voir la facture')}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       {showForm && (
         <div className="card form-card">
@@ -366,6 +419,11 @@ export default function ShopDashboard() {
                     <td>
                       {s.status === 'pending' && (
                         <button className="btn btn-small btn-danger" onClick={() => changeStatus(s.id, 'cancelled')}>{t('Annuler')}</button>
+                      )}
+                      {s.status === 'delivered' && (
+                        <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
+                          🧾 {t('Facture')}
+                        </button>
                       )}
                     </td>
                   </tr>

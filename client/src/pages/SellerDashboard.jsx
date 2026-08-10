@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
+import { downloadInvoice } from '../components/Invoice.jsx';
 import { countrySymbol } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
@@ -12,6 +13,7 @@ const SALE_STATUS = {
   pending: { key: 'En attente de vente', cls: 'badge-pending' },
   bought: { key: 'Acheté', cls: 'badge-bought' },
   confirmed: { key: 'Confirmée', cls: 'badge-confirmed' },
+  delivered: { key: 'Livré', cls: 'badge-bought' },
   cancelled: { key: 'Annulée', cls: 'badge-cancelled' },
 };
 
@@ -257,6 +259,7 @@ export default function SellerDashboard() {
                 <th>{t('Total')}</th>
                 <th>{t('Commission')}</th>
                 <th>{t('Statut')}</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -272,6 +275,13 @@ export default function SellerDashboard() {
                     <td>{formatMoney(s.total_price)} {countrySymbol(s.shop_country)}</td>
                     <td>{formatMoney(s.commission)} {countrySymbol(s.shop_country)}</td>
                     <td><span className={`badge ${st.cls}`}>{t(st.key)}</span></td>
+                    <td>
+                      {s.status === 'delivered' && (
+                        <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
+                          🧾 {t('Facture')}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

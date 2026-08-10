@@ -11,6 +11,8 @@ function saleRow(s) {
     ...s,
     total_price: Number(s.total_price),
     commission: Number(s.commission),
+    delivery_fee: Number(s.delivery_fee || 0),
+    purchase_price: s.purchase_price != null ? Number(s.purchase_price) : null,
     product_price: Math.round((Number(s.total_price) / Number(s.quantity)) * 100) / 100,
   };
 }
@@ -148,6 +150,89 @@ router.patch('/:id/status', authRequired, roleRequired('shop'), ah(async (req, r
   }
   await q('UPDATE sales SET status = $1 WHERE id = $2', [status, sale.id]);
   res.json({ ok: true });
+}));
+
+router.get('/livreur', authRequired, roleRequired('livreur'), ah(async (req, res) => {
+  const pending = (
+    await q(
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.photos, p.shop_id,
+              u.name AS seller_name, u.seller_code,
+              shop.name AS shop_name, shop.country AS shop_country,
+              buyer.name AS buyer_name2
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       JOIN users u ON u.id = s.seller_id
+       JOIN users shop ON shop.id = p.shop_id
+       WHERE s.status = 'pending'
+       ORDER BY s.created_at DESC`
+    )
+  ).map(saleRow);
+  const delivered = (
+    await q(
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
+              u.name AS seller_name, u.seller_code,
+              shop.name AS shop_name, shop.country AS shop_country
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       JOIN users u ON u.id = s.seller_id
+       JOIN users shop ON shop.id = p.shop_id
+       WHERE s.status = 'delivered' AND s.delivered_by = $1
+       ORDER BY s.delivered_at DESC`,
+      [req.user.id]
+    )
+  ).map(saleRow);
+  res.json({ pending, delivered });
+}));
+
+router.post('/:id/deliver', authRequired, roleRequired('livreur'), ah(async (req, res) => {
+  const { delivery_fee, payment_method } = req.body || {};
+  const fee = Number(delivery_fee || 0);
+  if (!Number.isFinite(fee) || fee < 0) {
+    return res.status(400).json({ error: 'Frais de livraison invalides' });
+  }
+  if (!['espèce', 'mobile', 'espece', 'mobile_money'].includes(String(payment_method || '').toLowerCase())) {
+    return res.status(400).json({ error: 'Type de paiement invalide (espèce ou mobile)' });
+  }
+  const cleanMethod = String(payment_method).toLowerCase().startsWith('m') ? 'mobile' : 'espèce';
+
+  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
+  if (sale.status !== 'pending') {
+    return res.status(409).json({ error: 'Cette vente n\'est plus en attente' });
+  }
+
+  const updated = await q(
+    `UPDATE sales
+     SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3
+     WHERE id = $4 RETURNING id`,
+    [fee, cleanMethod, req.user.id, sale.id]
+  );
+
+  const product = (await q('SELECT shop_id, quantity FROM products WHERE id = $1', [sale.product_id]))[0];
+  if (product && Number(product.quantity) > 0) {
+    const remaining = Math.max(0, Number(product.quantity) - Number(sale.quantity));
+    await q('UPDATE products SET quantity = $1 WHERE id = $2', [remaining, sale.product_id]);
+  }
+
+  await q(
+    `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_delivered', $2), ($3, 'sale_delivered', $2)`,
+    [sale.seller_id, sale.id, product.shop_id]
+  );
+
+  const full = (
+    await q(
+      `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, u.seller_code,
+              shop.name AS shop_name, shop.country AS shop_country
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       JOIN users u ON u.id = s.seller_id
+       JOIN users shop ON shop.id = p.shop_id
+       WHERE s.id = $1`,
+      [updated[0].id]
+    )
+  )[0];
+
+  res.json({ sale: saleRow(full), ok: true });
 }));
 
 export default router;
