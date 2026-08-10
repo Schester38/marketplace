@@ -19,6 +19,7 @@ export default function Login() {
     try {
       const data = await api.login(form);
       login(data.user, data.token);
+      localStorage.setItem('mboppi_welcome', 'login');
       navigate(dashboardPath(data.user.role));
     } catch (err) {
       setError(err.message);

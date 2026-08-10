@@ -6,6 +6,178 @@ import { useAuth } from '../App.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
 import { COUNTRIES } from '../config.js';
 import { useLang } from '../i18n.jsx';
+import { formatMoney } from '../components/ProductCard.jsx';
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function monthAgoStr() {
+  const d = new Date();
+  d.setDate(d.getDate() - 29);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function downloadCsv(filename, header, rows) {
+  const esc = (v) => {
+    const s = String(v == null ? '' : v);
+    return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const content = [header, ...rows.map((r) => r.map(esc).join(';'))].join('\n');
+  const blob = new Blob(['\uFEFF' + content], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+const PERIODS = [
+  { value: 'daily', label: 'Journalier' },
+  { value: 'weekly', label: 'Hebdomadaire' },
+  { value: 'monthly', label: 'Mensuel' },
+];
+
+function ActivityJournal() {
+  const { t } = useLang();
+  const [from, setFrom] = useState(monthAgoStr());
+  const [to, setTo] = useState(todayStr());
+  const [period, setPeriod] = useState('daily');
+  const [rows, setRows] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+
+  const load = async (download) => {
+    if (!from || !to) {
+      setError(t('Choisissez une date de début et une date de fin.'));
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setMessage('');
+    try {
+      const d = await api.activity({ from, to, period });
+      setRows(d.rows);
+      if (download && d.rows.length) {
+        const label = d.rows[0].period;
+        const header = [
+          t('Période'),
+          t('Ventes enregistrées'),
+          t('Montant des ventes'),
+          t('Commissions'),
+          t('Commissions payées'),
+          t('Achats'),
+          t('Montant des achats'),
+          t('Commandes'),
+          t('Montant des commandes'),
+          t('Produits publiés'),
+        ];
+        downloadCsv(
+          `mboppi-activite-${from}-${to}-${period}.csv`,
+          header,
+          d.rows.map((r) => [
+            r.period,
+            r.sales_count,
+            r.sales_total,
+            r.commission,
+            r.commission_paid,
+            r.purchases_count,
+            r.purchases_total,
+            r.orders_count,
+            r.orders_total,
+            r.products_count,
+          ])
+        );
+        setMessage(t('Journal téléchargé !'));
+      } else if (download) {
+        setMessage(t('Aucune activité sur cette période.'));
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const allZero = rows && rows.every(
+    (r) => !r.sales_count && !r.purchases_count && !r.orders_count && !r.products_count
+  );
+
+  return (
+    <div className="card">
+      <h2>📋 {t('Journal d\'activité')}</h2>
+      <p className="contact-hint">
+        {t('Téléchargez un inventaire de votre activité entre deux dates, par jour, par semaine ou par mois.')}
+      </p>
+      <div className="activity-filters">
+        <label className="field">
+          <span>{t('Date de début')}</span>
+          <input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>{t('Date de fin')}</span>
+          <input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>{t('Période')}</span>
+          <select className="input" value={period} onChange={(e) => setPeriod(e.target.value)}>
+            {PERIODS.map((p) => (
+              <option key={p.value} value={p.value}>{t(p.label)}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="row2" style={{ marginTop: 12 }}>
+        <button className="btn btn-outline" disabled={loading} onClick={() => load(false)}>
+          {loading ? '…' : t('Afficher le journal')}
+        </button>
+        <button className="btn btn-primary" disabled={loading} onClick={() => load(true)}>
+          ⬇️ {t('Télécharger (CSV)')}
+        </button>
+      </div>
+      {error && <p className="error">{error}</p>}
+      {message && <p className="success">{message}</p>}
+      {rows && rows.length > 0 && (
+        <div className="table-wrap" style={{ marginTop: 16 }}>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t('Période')}</th>
+                <th>{t('Ventes')}</th>
+                <th>{t('Montant ventes')}</th>
+                <th>{t('Commissions')}</th>
+                <th>{t('Achats')}</th>
+                <th>{t('Commandes')}</th>
+                <th>{t('Produits publiés')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.period}>
+                  <td>{r.period}</td>
+                  <td>{r.sales_count}</td>
+                  <td>{formatMoney(r.sales_total)}</td>
+                  <td>{formatMoney(r.commission)}</td>
+                  <td>{r.purchases_count > 0 ? `${r.purchases_count} (${formatMoney(r.purchases_total)})` : '—'}</td>
+                  <td>{r.orders_count > 0 ? `${r.orders_count} (${formatMoney(r.orders_total)})` : '—'}</td>
+                  <td>{r.products_count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {rows && rows.length > 0 && allZero && (
+        <p className="empty">{t('Aucune activité sur cette période.')}</p>
+      )}
+    </div>
+  );
+}
 
 export default function MyAccount() {
   const { user, login, logout } = useAuth();
@@ -193,6 +365,10 @@ export default function MyAccount() {
             <button className="btn btn-danger" disabled={busy}>{t('Supprimer mon compte')}</button>
           </form>
         </div>
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <ActivityJournal />
       </div>
     </main>
   );

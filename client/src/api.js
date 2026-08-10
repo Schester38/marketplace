@@ -28,6 +28,11 @@ export const api = {
   deleteProduct: (id) => request(`/products/${id}`, { method: 'DELETE' }),
   createSale: (payload) => request('/sales', { method: 'POST', body: JSON.stringify(payload) }),
   mySales: () => request('/sales/my'),
+  deleteSale: (id) => request(`/sales/${id}`, { method: 'DELETE' }),
+  activity: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request('/activity' + (qs ? `?${qs}` : ''));
+  },
   shopSales: (shopId) => request(`/sales/shop/${shopId}`),
   updateSaleStatus: (id, status) =>
     request(`/sales/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),

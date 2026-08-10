@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import { useAuth, dashboardPath } from '../App.jsx';
+import { useAuth } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
 import Seo from '../components/Seo.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
@@ -27,7 +27,8 @@ export default function Register() {
     try {
       const data = await api.register(form);
       login(data.user, data.token);
-      navigate(dashboardPath(data.user.role));
+      localStorage.setItem('mboppi_welcome', 'register');
+      navigate('/');
     } catch (err) {
       setError(err.message);
     }

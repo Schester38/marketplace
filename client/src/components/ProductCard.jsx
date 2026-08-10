@@ -19,6 +19,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
   const symbol = countrySymbol(product?.shop_country);
   const fav = isFav(product.id);
   const sold = Number(product.sold || 0);
+  const pendingCount = Number(product.pending_count || 0);
   const oldPrice = product.old_price === null || product.old_price === undefined ? null : Number(product.old_price);
   const hasPromo = oldPrice !== null && oldPrice > Number(product.price);
 
@@ -50,6 +51,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
       >
         {fav ? '❤️' : '🤍'}
       </button>
+      {pendingCount > 0 && <span className="badge badge-pending">⏳ {pendingCount} {t('en attente')}</span>}
       {sold > 0 && <span className="badge badge-sold">🔥 {sold} {t('vendus')}</span>}
       {badge && <span className={`badge ${badge.cls}`}>{badge.text}</span>}
       <Link to={`/produit/${product.id}`} className="product-body">

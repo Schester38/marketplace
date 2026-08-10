@@ -45,8 +45,6 @@ export default function SellerDashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [copied, setCopied] = useState('');
-  const [sortKey, setSortKey] = useState('commission');
-  const [sortDir, setSortDir] = useState('desc');
 
   const load = async () => {
     try {
@@ -116,20 +114,17 @@ export default function SellerDashboard() {
     shareOrCopy('sale-' + p.id, saleLink(p), t('Commandez « {name} » sur Mboppi avec le code vendeur {code}', { name: p.name, code: sellerCode }));
   };
 
-  const toggleSort = (key) => {
-    if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
-    else {
-      setSortKey(key);
-      setSortDir('asc');
+  const removeSale = async (s) => {
+    if (!window.confirm(t('Supprimer cette vente « {name} » ?', { name: s.product_name }))) return;
+    try {
+      await api.deleteSale(s.id);
+      setSales((prev) => prev.filter((x) => x.id !== s.id));
+      setSuccess(t('Vente supprimée.'));
+      load();
+    } catch (err) {
+      setError(err.message);
     }
   };
-
-  const sortedProducts = [...products].sort((a, b) => {
-    const va = sortKey === 'name' ? (a.name || '') : Number(a[sortKey] || 0);
-    const vb = sortKey === 'name' ? (b.name || '') : Number(b[sortKey] || 0);
-    const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
-    return sortDir === 'asc' ? cmp : -cmp;
-  });
 
   return (
     <main className="container">
@@ -177,73 +172,42 @@ export default function SellerDashboard() {
         </section>
       )}
 
+      {success && <p className="success">{success}</p>}
+      {error && <p className="error">{error}</p>}
+
       <section className="card stats">
-        <h2>{t('Commissions sur les produits')}</h2>
-        <p className="hint">{t('Commissions fixées par les boutiques sur chaque produit. Cliquez sur une colonne pour trier.')}</p>
+        <h2>{t('Produits disponibles à vendre')}</h2>
+        <p className="hint">
+          {t('Le montant « + » affiché en vert sur chaque produit est la commission que vous gagnez à sa vente.')}
+        </p>
         {products.length === 0 ? (
           <p className="empty">{t('Aucun produit disponible à vendre pour le moment.')}</p>
         ) : (
-          <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th className="sortable" onClick={() => toggleSort('name')}>
-                  {t('Produit')}
-                  <span className="sort-arrow">{sortKey === 'name' ? (sortDir === 'asc' ? '▴' : '▾') : ''}</span>
-                </th>
-                <th>{t('Boutique')}</th>
-                <th className="sortable" onClick={() => toggleSort('price')}>
-                  {t('Prix de vente')}
-                  <span className="sort-arrow">{sortKey === 'price' ? (sortDir === 'asc' ? '▴' : '▾') : ''}</span>
-                </th>
-                <th className="sortable" onClick={() => toggleSort('commission_percent')}>
-                  {t('Commission %')}
-                  <span className="sort-arrow">{sortKey === 'commission_percent' ? (sortDir === 'asc' ? '▴' : '▾') : ''}</span>
-                </th>
-                <th className="sortable" onClick={() => toggleSort('commission')}>
-                  {t('Montant')}
-                  <span className="sort-arrow">{sortKey === 'commission' ? (sortDir === 'asc' ? '▴' : '▾') : ''}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedProducts.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.name}</td>
-                  <td>{p.shop_name}</td>
-                  <td>{formatMoney(p.price)} {countrySymbol(p.shop_country)}</td>
-                  <td>{Number(p.commission_percent || 0)} %</td>
-                  <td><span className="commission">+{formatMoney(p.commission)} {countrySymbol(p.shop_country)}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="grid">
+            {products.map((p) => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                showCommission
+                action={t('Vendre')}
+                onAction={() => shareSale(p)}
+                extraAction={{ label: '🔗 ' + (copied === 'product-' + p.id ? t('Lien copié !') : t('Partager')), onClick: () => shareProduct(p) }}
+              />
+            ))}
           </div>
         )}
       </section>
 
-      {success && <p className="success">{success}</p>}
-      {error && <p className="error">{error}</p>}
-
-      {products.length === 0 ? (
-        <p className="empty">{t('Aucun produit disponible à vendre pour le moment.')}</p>
-      ) : (
-        <div className="grid">
-          {sortedProducts.map((p) => (
-            <ProductCard
-              key={p.id}
-              product={p}
-              showCommission
-              action={t('Vendre')}
-              onAction={() => shareSale(p)}
-              extraAction={{ label: '🔗 ' + (copied === 'product-' + p.id ? t('Lien copié !') : t('Partager')), onClick: () => shareProduct(p) }}
-            />
-          ))}
-        </div>
-      )}
-
       <section className="card stats">
         <h2>{t('Mes ventes et commissions')}</h2>
+        <div className="row2" style={{ alignItems: 'center' }}>
+          <p className="hint" style={{ margin: 0 }}>
+            {t('Vous ne voyez que vos propres ventes en attente. Les livrées ne peuvent pas être supprimées.')}
+          </p>
+          <Link to="/seller/paiements" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
+            💳 {t('Modifier mon moyen de paiement')}
+          </Link>
+        </div>
         {sales.length === 0 ? (
           <p className="empty">{t('Vous n\'avez pas encore enregistré de vente.')}</p>
         ) : (
@@ -268,7 +232,10 @@ export default function SellerDashboard() {
                 return (
                   <tr key={s.id}>
                     <td>{s.product_name}</td>
-                    <td>{s.shop_name}</td>
+                    <td>
+                      {s.shop_name}
+                      {s.shop_contact ? <span className="muted"> · 📞 {s.shop_contact}</span> : null}
+                    </td>
                     <td>{s.buyer_name || '—'}{s.buyer_phone ? <span className="muted"> · {s.buyer_phone}</span> : null}</td>
                     <td>{[s.buyer_city, s.buyer_address].filter(Boolean).join(', ') || '—'}</td>
                     <td>{s.quantity}</td>
@@ -287,6 +254,11 @@ export default function SellerDashboard() {
                       {s.status === 'delivered' && (
                         <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
                           🧾 {t('Facture')}
+                        </button>
+                      )}
+                      {s.status !== 'delivered' && (
+                        <button className="btn btn-small btn-danger" onClick={() => removeSale(s)}>
+                          🗑️ {t('Supprimer')}
                         </button>
                       )}
                     </td>

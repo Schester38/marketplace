@@ -83,6 +83,27 @@ function RoleOnly({ role, children }) {
   return children;
 }
 
+function WelcomeBanner() {
+  const { user } = useAuth();
+  const { t } = useLang();
+  const [kind, setKind] = useState(() => localStorage.getItem('mboppi_welcome'));
+  if (!user || !kind) return null;
+  const isRegister = kind === 'register';
+  const text = isRegister
+    ? t('Merci {name} ! Mboppi est ravi de vous accueillir. Découvrez ci-dessous les produits et créations.', { name: user.name })
+    : t('{name}, Mboppi est heureux de vous revoir !', { name: user.name });
+  const dismiss = () => {
+    localStorage.removeItem('mboppi_welcome');
+    setKind(null);
+  };
+  return (
+    <div className={`welcome-banner ${isRegister ? 'welcome-register' : 'welcome-login'}`}>
+      <span className="welcome-text">👋 {text}</span>
+      <button type="button" className="welcome-close" aria-label={t('Fermer')} onClick={dismiss}>✕</button>
+    </div>
+  );
+}
+
 export default function App() {
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -92,6 +113,7 @@ export default function App() {
       <LangProvider>
         <div className="app">
           <Navbar onLogout={() => { logout(); navigate('/'); }} />
+          <WelcomeBanner />
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
             <Route path="/" element={<Home />} />
@@ -156,7 +178,14 @@ export default function App() {
               </RoleOnly>
             }
           />
-          <Route path="/livreur" element={<LivreurDashboard />} />
+          <Route
+            path="/livreur"
+            element={
+              <RoleOnly role="livreur">
+                <LivreurDashboard />
+              </RoleOnly>
+            }
+          />
           <Route path="*" element={<Home />} />
         </Routes>
       </Suspense>

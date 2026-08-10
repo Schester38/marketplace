@@ -14,7 +14,7 @@ function productRow(p) {
   } catch {
     photos = [];
   }
-  const { n, ...rest } = p;
+  const { n, pending_n, ...rest } = p;
   return {
     ...rest,
     photos,
@@ -26,15 +26,19 @@ function productRow(p) {
     delivery_fee: Number(p.delivery_fee || 0),
     quantity: Number(p.quantity || 1),
     sold: Number(n || 0),
+    pending_count: Number(pending_n || 0),
   };
 }
 
 const SELECT_PRODUCT = `
   SELECT p.*, u.name AS shop_name, u.location AS shop_location, u.country AS shop_country,
-         s.n
+         s.n, s.pending_n
   FROM products p
   JOIN users u ON u.id = p.shop_id
-  LEFT JOIN (SELECT product_id, SUM(quantity) AS n FROM sales GROUP BY product_id) s ON s.product_id = p.id
+  LEFT JOIN (SELECT product_id,
+                    SUM(quantity) FILTER (WHERE status = 'delivered') AS n,
+                    SUM(quantity) FILTER (WHERE status IN ('pending', 'bought', 'confirmed')) AS pending_n
+             FROM sales GROUP BY product_id) s ON s.product_id = p.id
 `;
 
 const SORTS = {

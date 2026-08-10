@@ -114,7 +114,6 @@ router.get('/:id', async (req, res) => {
       <div class="price">${price} ${symbol}</div>
       ${p.old_price ? `<div class="old">${old} ${symbol}</div>` : ''}
       <p class="desc">${esc(desc)}</p>
-      <a class="btn primary" href="${buyUrl}">Commander sur Mboppi</a>
       <a class="btn outline" href="${appUrl}">Voir la fiche complète</a>
     </div>
   </div>

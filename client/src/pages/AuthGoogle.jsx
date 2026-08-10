@@ -33,6 +33,7 @@ export default function AuthGoogle() {
     Promise.race([api.me(), timeout])
       .then((data) => {
         login(data.user, token);
+        localStorage.setItem('mboppi_welcome', 'login');
         navigate(dashboardPath(data.user.role), { replace: true });
       })
       .catch((e) => {

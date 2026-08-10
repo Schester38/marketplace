@@ -69,7 +69,7 @@ router.post('/', authRequired, roleRequired('seller'), ah(async (req, res) => {
 router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
   const sales = (
     await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
               u.name AS shop_name, u.country AS shop_country,
               u2.seller_code AS seller_code
        FROM sales s
@@ -164,7 +164,20 @@ router.patch('/:id/status', authRequired, roleRequired('shop'), ah(async (req, r
   res.json({ ok: true });
 }));
 
-router.get('/livreur', ah(async (req, res) => {
+router.delete('/:id', authRequired, roleRequired('seller'), ah(async (req, res) => {
+  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
+  if (sale.seller_id !== req.user.id) {
+    return res.status(403).json({ error: 'Cette vente ne vous appartient pas' });
+  }
+  if (sale.status === 'delivered') {
+    return res.status(409).json({ error: 'Une vente livrée ne peut pas être supprimée (document comptable)' });
+  }
+  await q('DELETE FROM sales WHERE id = $1', [sale.id]);
+  res.json({ ok: true });
+}));
+
+router.get('/livreur', authRequired, roleRequired('livreur'), ah(async (req, res) => {
   const pending = (
     await q(
       `SELECT s.*, p.name AS product_name, p.commission_percent, p.photos, p.shop_id,
@@ -178,39 +191,24 @@ router.get('/livreur', ah(async (req, res) => {
        ORDER BY s.created_at DESC`
     )
   ).map(saleRow);
-  const delivered = req.user
-    ? (
-        await q(
-          `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
-                  u.name AS seller_name, u.seller_code,
-                  shop.name AS shop_name, shop.country AS shop_country
-           FROM sales s
-           JOIN products p ON p.id = s.product_id
-           JOIN users u ON u.id = s.seller_id
-           JOIN users shop ON shop.id = p.shop_id
-           WHERE s.status = 'delivered' AND s.delivered_by = $1
-           ORDER BY s.delivered_at DESC`,
-          [req.user.id]
-        )
-      ).map(saleRow)
-    : (
-        await q(
-          `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
-                  u.name AS seller_name, u.seller_code,
-                  shop.name AS shop_name, shop.country AS shop_country
-           FROM sales s
-           JOIN products p ON p.id = s.product_id
-           JOIN users u ON u.id = s.seller_id
-           JOIN users shop ON shop.id = p.shop_id
-           WHERE s.status = 'delivered'
-           ORDER BY s.delivered_at DESC
-           LIMIT 50`
-        )
-      ).map(saleRow);
+  const delivered = (
+    await q(
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
+              u.name AS seller_name, u.seller_code,
+              shop.name AS shop_name, shop.country AS shop_country
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       JOIN users u ON u.id = s.seller_id
+       JOIN users shop ON shop.id = p.shop_id
+       WHERE s.status = 'delivered' AND s.delivered_by = $1
+       ORDER BY s.delivered_at DESC`,
+      [req.user.id]
+    )
+  ).map(saleRow);
   res.json({ pending, delivered });
 }));
 
-router.post('/:id/deliver', ah(async (req, res) => {
+router.post('/:id/deliver', authRequired, roleRequired('livreur'), ah(async (req, res) => {
   const { delivery_fee, payment_method } = req.body || {};
   const fee = Number(delivery_fee || 0);
   if (!Number.isFinite(fee) || fee < 0) {
