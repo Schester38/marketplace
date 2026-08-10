@@ -4,7 +4,7 @@ import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
 import Home from './pages/Home.jsx';
-import { LangProvider } from './i18n.jsx';
+import { LangProvider, useLang } from './i18n.jsx';
 import { StoreProvider } from './store.jsx';
 
 const Login = React.lazy(() => import('./pages/Login.jsx'));
