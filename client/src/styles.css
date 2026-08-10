@@ -80,7 +80,7 @@ main { animation: pageIn 0.35s ease; }
 .brand-logo { width: 30px; height: 30px; border-radius: 8px; }
 
 .hamburger {
-  display: none;
+  display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 5px;
@@ -91,6 +91,7 @@ main { animation: pageIn 0.35s ease; }
   border: 1px solid var(--border);
   border-radius: 10px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 .hamburger-line {
   display: block;
@@ -114,7 +115,7 @@ main { animation: pageIn 0.35s ease; }
   top: 0;
   left: 0;
   bottom: 0;
-  width: min(280px, 80vw);
+  width: min(262px, 82vw);
   background: var(--card);
   border-right: 1px solid var(--border);
   z-index: 100;
@@ -128,35 +129,61 @@ main { animation: pageIn 0.35s ease; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 16px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   font-weight: 800;
+  font-size: 1.02rem;
   color: var(--primary);
 }
+.drawer-header .brand-logo { width: 26px; height: 26px; }
 .drawer-close {
   margin-left: auto;
   border: none;
   background: var(--bg);
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   cursor: pointer;
 }
-.drawer-nav { display: flex; flex-direction: column; padding: 12px; gap: 6px; }
+.drawer-nav { display: flex; flex-direction: column; padding: 8px; gap: 3px; overflow-y: auto; flex: 1; }
 .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip {
   width: 100%;
   text-align: left;
-  padding: 12px 14px;
-  border-radius: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
   margin: 0;
+  font-size: 0.9rem;
 }
 .drawer-nav .btn { margin-top: 4px; }
-.drawer-nav .user-chip { box-sizing: border-box; }
+.drawer-nav .user-chip { box-sizing: border-box; font-size: 0.82rem; }
+.drawer-footer {
+  border-top: 1px solid var(--border);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.drawer-install { width: 100%; justify-content: center; }
+.install-ios-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--muted);
+  background: var(--soft);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
 
-@media (max-width: 768px) {
-  .hamburger { display: flex; }
-  .navbar .desktop-nav { display: none; }
+.navbar .desktop-nav { display: none; }
+
+@media (min-width: 1024px) {
+  .drawer { width: 300px; box-shadow: var(--shadow-lg); }
+  .drawer-header { padding: 14px 18px; font-size: 1.1rem; }
+  .drawer-nav { padding: 12px; gap: 5px; }
+  .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip { padding: 12px 16px; font-size: 0.95rem; border-radius: 10px; }
+  .drawer-footer { padding: 12px 14px; }
+  .install-ios-hint { font-size: 0.8rem; }
 }
 .navbar nav { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .navbar nav a { color: var(--text); text-decoration: none; font-weight: 500; }
@@ -1755,4 +1782,20 @@ a.step { text-decoration: none; color: inherit; }
 /* Mouvement reduit : etendre aux nouvelles animations */
 @media (prefers-reduced-motion: reduce) {
   .grid > *, .nav-badge, .fav-btn.active, .hero-search { animation: none !important; transition: none !important; }
+}
+
+/* Grands écrans / TV (Android TV, TV connectées, moniteurs) : lisibilité à distance */
+@media (min-width: 1600px) {
+  html { font-size: 17px; }
+  .container { max-width: 1400px; }
+  .navbar { padding: 14px 32px; }
+  .hamburger { width: 46px; height: 46px; }
+  .drawer { width: 340px; }
+  .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip { padding: 14px 18px; font-size: 1rem; }
+}
+
+/* Très grandes TV (4K) : zoom global du contenu */
+@media (min-width: 2200px) {
+  html { font-size: 20px; }
+  .container { max-width: 1600px; }
 }

@@ -168,11 +168,43 @@ export default function Navbar({ onLogout }) {
   const [theme, setTheme] = useState(() =>
     document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
   );
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [showIosHint, setShowIosHint] = useState(false);
+  const [standalone] = useState(() => {
+    try {
+      return (
+        window.matchMedia('(display-mode: standalone)').matches ||
+        window.navigator.standalone === true
+      );
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    const onBeforeInstall = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    const onInstalled = () => {
+      setDeferredPrompt(null);
+    };
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    window.addEventListener('appinstalled', onInstalled);
+    setIsIOS(/iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, []);
+
+  const canInstall = !standalone && (!!deferredPrompt || isIOS);
 
   const close = () => setOpen(false);
   const logout = () => {
@@ -250,6 +282,30 @@ export default function Navbar({ onLogout }) {
           <button className="drawer-close" aria-label={t('Fermer le menu')} onClick={close}>✕</button>
         </div>
         <nav className="drawer-nav">{links}</nav>
+        {canInstall && (
+          <div className="drawer-footer">
+            <button
+              className="btn btn-primary drawer-install"
+              onClick={() => {
+                if (deferredPrompt) {
+                  deferredPrompt.prompt();
+                  deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
+                } else if (isIOS) {
+                  setShowIosHint(!showIosHint);
+                }
+              }}
+            >
+              📲 {t("Installer l'application")}
+            </button>
+            {showIosHint && (
+              <p className="install-ios-hint">
+                {t(
+                  "Pour installer Mboppi : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil »."
+                )}
+              </p>
+            )}
+          </div>
+        )}
       </aside>
     </header>
   );
