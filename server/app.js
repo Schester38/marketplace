@@ -10,6 +10,7 @@ import offerRoutes from './routes/offers.js';
 import orderRoutes from './routes/orders.js';
 import purchaseRoutes from './routes/purchases.js';
 import notificationRoutes from './routes/notifications.js';
+import sellerRoutes from './routes/seller.js';
 import { authRequired } from './auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -27,6 +28,7 @@ app.use('/api/offers', offerRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/seller', sellerRoutes);
 app.get('/api/me', authRequired, (req, res) => res.json({ user: req.user }));
 
 const clientDist = path.join(__dirname, '..', 'client', 'dist');

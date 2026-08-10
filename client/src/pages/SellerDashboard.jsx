@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
 import { countrySymbol } from '../config.js';
@@ -8,7 +9,7 @@ import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 const SALE_STATUS = {
-  pending: { key: 'Vente en attente', cls: 'badge-pending' },
+  pending: { key: 'En attente de vente', cls: 'badge-pending' },
   bought: { key: 'Acheté', cls: 'badge-bought' },
   confirmed: { key: 'Confirmée', cls: 'badge-confirmed' },
   cancelled: { key: 'Annulée', cls: 'badge-cancelled' },
@@ -41,8 +42,6 @@ export default function SellerDashboard() {
   const [codeLoading, setCodeLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [saleForm, setSaleForm] = useState(null);
-  const [createdSale, setCreatedSale] = useState(null);
   const [copied, setCopied] = useState('');
   const [sortKey, setSortKey] = useState('commission');
   const [sortDir, setSortDir] = useState('desc');
@@ -67,8 +66,6 @@ export default function SellerDashboard() {
 
   useRefreshOnFocus(load);
 
-  const pendingIds = new Set(sales.filter((s) => s.status === 'pending').map((s) => s.product_id));
-
   const generateCode = async () => {
     setCodeLoading(true);
     setError('');
@@ -83,30 +80,6 @@ export default function SellerDashboard() {
     }
   };
 
-  const submitSale = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    try {
-      const d = await api.createSale({ product_id: saleForm.product.id, quantity: Number(saleForm.quantity) });
-      setSales((prev) => [d.sale, ...prev]);
-      setStats((prev) =>
-        prev
-          ? {
-              ...prev,
-              total_sales: (prev.total_sales || 0) + 1,
-              total_commission: (prev.total_commission || 0) + d.sale.commission,
-              pending_sales: (prev.pending_sales || 0) + 1,
-            }
-          : prev
-      );
-      setCreatedSale(d.sale);
-      setSaleForm(null);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
   const productLink = (p) => `${window.location.origin}/produit/${p.id}`;
   const saleLink = (p) => `${window.location.origin}/acheter/${p.id}?code=${sellerCode}`;
 
@@ -116,6 +89,29 @@ export default function SellerDashboard() {
       setCopied(kind);
       setTimeout(() => setCopied(''), 1800);
     }
+  };
+
+  const shareOrCopy = async (kind, url, text) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Mboppi', text, url });
+        return;
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+    copy(kind, url);
+  };
+
+  const shareProduct = (p) =>
+    shareOrCopy('product-' + p.id, productLink(p), t('Découvrez cet article sur Mboppi : {name}', { name: p.name }));
+
+  const shareSale = (p) => {
+    if (!sellerCode) {
+      setError(t('Générez votre code vendeur pour vendre.'));
+      return;
+    }
+    shareOrCopy('sale-' + p.id, saleLink(p), t('Commandez « {name} » sur Mboppi avec le code vendeur {code}', { name: p.name, code: sellerCode }));
   };
 
   const toggleSort = (key) => {
@@ -163,6 +159,9 @@ export default function SellerDashboard() {
               {codeLoading ? '…' : t('Générer mon code')}
             </button>
           )}
+          <Link to="/seller/paiements" className="btn btn-outline btn-sm">
+            💳 {t('Mes moyens de paiement')}
+          </Link>
         </div>
       </section>
 
@@ -221,78 +220,6 @@ export default function SellerDashboard() {
         )}
       </section>
 
-      {saleForm && (
-        <div className="modal-overlay" onClick={() => setSaleForm(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{t('Vendre : {name}', { name: saleForm.product.name })}</h3>
-              <button className="drawer-close" onClick={() => setSaleForm(null)}>✕</button>
-            </div>
-            <p className="hint">
-              {t('Prix unitaire : {price} {symbol} — Votre commission : {commission} {symbol} par unité', {
-                price: formatMoney(saleForm.product.price),
-                symbol: countrySymbol(saleForm.product.shop_country),
-                commission: formatMoney(saleForm.product.commission),
-              })}
-            </p>
-            <form onSubmit={submitSale}>
-              <label>{t('Quantité *')}</label>
-              <input
-                className="input"
-                type="number"
-                min="1"
-                required
-                value={saleForm.quantity}
-                onChange={(e) => setSaleForm({ ...saleForm, quantity: e.target.value })}
-              />
-              <div className="row2" style={{ marginTop: 14 }}>
-                <button className="btn btn-primary">{t('Vendre')}</button>
-                <button type="button" className="btn btn-outline" onClick={() => setSaleForm(null)}>{t('Annuler')}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {createdSale && (
-        <div className="modal-overlay" onClick={() => setCreatedSale(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>✅ {t('Vente en attente')}</h3>
-              <button className="drawer-close" onClick={() => setCreatedSale(null)}>✕</button>
-            </div>
-            <p className="hint">
-              {t('La boutique va livrer le produit. Partagez le lien de vente à votre client : il confirmera l\'achat avec votre code {code}.', { code: sellerCode })}
-            </p>
-            <div className="share-links">
-              <div className="share-link-row">
-                <div>
-                  <span className="label">{t('Lien du produit')}</span>
-                  <code>{productLink(createdSale)}</code>
-                </div>
-                <button className="btn btn-outline btn-sm" onClick={() => copy('product', productLink(createdSale))}>
-                  {copied === 'product' ? t('Copié !') : t('Copier')}
-                </button>
-              </div>
-              {sellerCode ? (
-                <div className="share-link-row">
-                  <div>
-                    <span className="label">{t('Lien de vente')}</span>
-                    <code>{saleLink(createdSale)}</code>
-                  </div>
-                  <button className="btn btn-primary btn-sm" onClick={() => copy('sale', saleLink(createdSale))}>
-                    {copied === 'sale' ? t('Copié !') : t('Copier')}
-                  </button>
-                </div>
-              ) : (
-                <p className="hint">{t('Générez votre code vendeur pour obtenir le lien de vente.')}</p>
-              )}
-            </div>
-            <button className="btn btn-outline" style={{ marginTop: 14 }} onClick={() => setCreatedSale(null)}>{t('Fermer')}</button>
-          </div>
-        </div>
-      )}
-
       {success && <p className="success">{success}</p>}
       {error && <p className="error">{error}</p>}
 
@@ -300,20 +227,16 @@ export default function SellerDashboard() {
         <p className="empty">{t('Aucun produit disponible à vendre pour le moment.')}</p>
       ) : (
         <div className="grid">
-          {products.map((p) => {
-            const pending = pendingIds.has(p.id);
-            return (
-              <ProductCard
-                key={p.id}
-                product={p}
-                showCommission
-                badge={pending ? { text: '⏳ ' + t('Vente en attente'), cls: 'badge-pending' } : null}
-                action={pending ? null : 'Vendre'}
-                onAction={() => setSaleForm({ product: p, quantity: 1 })}
-                extraAction={{ label: '🔗 ' + (copied === 'product-' + p.id ? t('Copié !') : t('Lien du produit')), onClick: () => copy('product-' + p.id, productLink(p)) }}
-              />
-            );
-          })}
+          {sortedProducts.map((p) => (
+            <ProductCard
+              key={p.id}
+              product={p}
+              showCommission
+              action={t('Vendre')}
+              onAction={() => shareSale(p)}
+              extraAction={{ label: '🔗 ' + (copied === 'product-' + p.id ? t('Lien copié !') : t('Partager')), onClick: () => shareProduct(p) }}
+            />
+          ))}
         </div>
       )}
 
@@ -329,9 +252,9 @@ export default function SellerDashboard() {
                 <th>{t('Produit')}</th>
                 <th>{t('Boutique')}</th>
                 <th>{t('Acheteur')}</th>
+                <th>{t('Localisation')}</th>
                 <th>{t('Qté')}</th>
                 <th>{t('Total')}</th>
-                <th>{t('Prix payé')}</th>
                 <th>{t('Commission')}</th>
                 <th>{t('Statut')}</th>
               </tr>
@@ -343,10 +266,10 @@ export default function SellerDashboard() {
                   <tr key={s.id}>
                     <td>{s.product_name}</td>
                     <td>{s.shop_name}</td>
-                    <td>{s.buyer_name || '—'}</td>
+                    <td>{s.buyer_name || '—'}{s.buyer_phone ? <span className="muted"> · {s.buyer_phone}</span> : null}</td>
+                    <td>{[s.buyer_city, s.buyer_address].filter(Boolean).join(', ') || '—'}</td>
                     <td>{s.quantity}</td>
                     <td>{formatMoney(s.total_price)} {countrySymbol(s.shop_country)}</td>
-                    <td>{s.purchase_price != null ? `${formatMoney(s.purchase_price)} ${countrySymbol(s.shop_country)}` : '—'}</td>
                     <td>{formatMoney(s.commission)} {countrySymbol(s.shop_country)}</td>
                     <td><span className={`badge ${st.cls}`}>{t(st.key)}</span></td>
                   </tr>

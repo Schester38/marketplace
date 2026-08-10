@@ -16,8 +16,9 @@ export default function PurchasePage() {
   const [notFound, setNotFound] = useState(false);
   const [form, setForm] = useState({
     seller_code: params.get('code') || '',
-    purchase_price: '',
     buyer_name: '',
+    buyer_city: '',
+    buyer_address: '',
     buyer_phone: '',
   });
   const [error, setError] = useState('');
@@ -39,8 +40,9 @@ export default function PurchasePage() {
       await api.purchaseCreate({
         product_id: id,
         seller_code: form.seller_code,
-        purchase_price: Number(form.purchase_price),
         buyer_name: form.buyer_name,
+        buyer_city: form.buyer_city,
+        buyer_address: form.buyer_address,
         buyer_phone: form.buyer_phone,
       });
       setDone(true);
@@ -77,11 +79,11 @@ export default function PurchasePage() {
 
   return (
     <main className="container narrow">
-      <Seo title={`${t('Acheter')} — ${product.name} — Mboppi`} description={t('Confirmez votre achat avec le code du vendeur.')} />
+      <Seo title={`${t('Acheter')} — ${product.name} — Mboppi`} description={t('Confirmez votre commande avec le code du vendeur.')} />
       <section className="dash-header">
         <div>
           <h1>🛍️ {t('Acheter')}</h1>
-          <p>{t('Confirmez votre achat : la boutique et le vendeur seront notifiés.')}</p>
+          <p>{t('Confirmez votre commande : la boutique et le vendeur seront notifiés.')}</p>
         </div>
       </section>
 
@@ -107,7 +109,7 @@ export default function PurchasePage() {
 
       {!user ? (
         <div className="card page-center">
-          <p className="empty">{t('Vous devez être connecté pour confirmer l\'achat.')}</p>
+          <p className="empty">{t('Vous devez être connecté pour confirmer la commande.')}</p>
           <Link className="btn btn-primary" to={`/login?next=/acheter/${id}${params.get('code') ? `?code=${params.get('code')}` : ''}`}>
             {t('Se connecter')}
           </Link>
@@ -115,18 +117,48 @@ export default function PurchasePage() {
         </div>
       ) : done ? (
         <div className="card page-center">
-          <h2>✅ {t('Achat confirmé !')}</h2>
-          <p className="hint">{t('La boutique et le vendeur ont été notifiés. Retrouvez cet achat dans votre espace client.')}</p>
+          <h2>✅ {t('Commande confirmée !')}</h2>
+          <p className="hint">{t('Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison. Retrouvez cette commande dans votre espace client.')}</p>
           <Link className="btn btn-primary" to="/client">{t('Voir mes achats')}</Link>
           <Link className="btn btn-outline" style={{ marginTop: 8 }} to="/">{t('Continuer mes achats')}</Link>
         </div>
       ) : (
         <div className="card form-card">
-          <h2>{t('Confirmer l\'achat')}</h2>
+          <h2>{t('Commander')}</h2>
           <p className="hint">
-            {t('Ce produit vous est proposé par un vendeur Mboppi. Entrez son code et le prix convenu pour confirmer l\'achat.')}
+            {t('Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande.')}
           </p>
           <form onSubmit={submit}>
+            <label>{t('Nom et prénom *')}</label>
+            <input
+              className="input"
+              required
+              value={form.buyer_name}
+              placeholder={user.name}
+              onChange={(e) => setForm({ ...form, buyer_name: e.target.value })}
+            />
+            <label>{t('Ville *')}</label>
+            <input
+              className="input"
+              required
+              value={form.buyer_city}
+              onChange={(e) => setForm({ ...form, buyer_city: e.target.value })}
+            />
+            <label>{t('Adresse / Quartier *')}</label>
+            <input
+              className="input"
+              required
+              value={form.buyer_address}
+              onChange={(e) => setForm({ ...form, buyer_address: e.target.value })}
+            />
+            <label>{t('Numéro de téléphone *')}</label>
+            <input
+              className="input"
+              type="tel"
+              required
+              value={form.buyer_phone}
+              onChange={(e) => setForm({ ...form, buyer_phone: e.target.value })}
+            />
             <label>{t('Code du vendeur *')}</label>
             <input
               className="input code-input"
@@ -136,33 +168,9 @@ export default function PurchasePage() {
               onChange={(e) => setForm({ ...form, seller_code: e.target.value.toUpperCase() })}
               placeholder="ABC123"
             />
-            <label>{t('Prix d\'achat ({symbol}) *', { symbol })}</label>
-            <input
-              className="input"
-              type="number"
-              min="0"
-              step="any"
-              required
-              value={form.purchase_price}
-              onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
-            />
-            <label>{t('Nom de l\'acheteur')}</label>
-            <input
-              className="input"
-              value={form.buyer_name}
-              placeholder={user.name}
-              onChange={(e) => setForm({ ...form, buyer_name: e.target.value })}
-            />
-            <label>{t('Téléphone (optionnel)')}</label>
-            <input
-              className="input"
-              type="tel"
-              value={form.buyer_phone}
-              onChange={(e) => setForm({ ...form, buyer_phone: e.target.value })}
-            />
             {error && <p className="error">{error}</p>}
             <button className="btn btn-primary btn-block" disabled={submitting}>
-              {submitting ? '…' : `✅ ${t('Acheté')}`}
+              {submitting ? '…' : `✅ ${t('Confirmer la Commande')}`}
             </button>
           </form>
         </div>

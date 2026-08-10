@@ -119,8 +119,18 @@ export async function initDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS purchase_price REAL;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_code TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_city TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_address TEXT;
     ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_status_check;
     ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('pending', 'confirmed', 'bought', 'cancelled'));
+
+    CREATE TABLE IF NOT EXISTS seller_payment_methods (
+      id SERIAL PRIMARY KEY,
+      seller_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      full_name TEXT,
+      wallets JSONB NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
   `);
 
   await pool.query(`

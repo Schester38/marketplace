@@ -17,13 +17,9 @@ function saleRow(s) {
 }
 
 router.post('/', authRequired, ah(async (req, res) => {
-  const { product_id, seller_code, purchase_price, buyer_name, buyer_phone } = req.body || {};
+  const { product_id, seller_code, purchase_price, quantity, buyer_name, buyer_phone, buyer_city, buyer_address } = req.body || {};
   if (!product_id || !seller_code) {
     return res.status(400).json({ error: 'Produit et code vendeur sont requis' });
-  }
-  const price = Number(purchase_price);
-  if (!Number.isFinite(price) || price < 0) {
-    return res.status(400).json({ error: 'Prix d\'achat invalide' });
   }
 
   const code = String(seller_code).trim().toUpperCase();
@@ -35,29 +31,43 @@ router.post('/', authRequired, ah(async (req, res) => {
   const product = (await q('SELECT * FROM products WHERE id = $1', [Number(product_id)]))[0];
   if (!product) return res.status(404).json({ error: 'Produit introuvable' });
 
-  const sale = (
-    await q(
-      `SELECT * FROM sales WHERE product_id = $1 AND seller_id = $2 AND status = 'pending' ORDER BY id DESC`,
-      [product.id, seller.id]
-    )
-  )[0];
-  if (!sale) {
-    return res.status(404).json({ error: 'Aucune vente en attente pour ce produit avec ce vendeur' });
+  const qty = Number(quantity ?? 1);
+  if (!Number.isInteger(qty) || qty < 1) {
+    return res.status(400).json({ error: 'Quantité invalide' });
+  }
+
+  const price = purchase_price != null ? Number(purchase_price) : Number(product.price);
+  if (!Number.isFinite(price) || price < 0) {
+    return res.status(400).json({ error: 'Prix d\'achat invalide' });
   }
 
   const buyer = req.user;
   const name = buyer_name ? String(buyer_name).trim() : buyer.name;
-  const updated = await q(
-    `UPDATE sales
-     SET status = 'bought', purchase_price = $1, buyer_id = $2, buyer_code = $3,
-         buyer_name = $4, buyer_phone = $5
-     WHERE id = $6 RETURNING id`,
-    [price, buyer.id, code, name, buyer_phone ? String(buyer_phone).trim() : null, sale.id]
+  const total = Math.round(price * qty * 100) / 100;
+  const commission = Math.round(Number(product.price) * (Number(product.commission_percent) / 100) * qty * 100) / 100;
+
+  const created = await q(
+    `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+    [
+      product.id,
+      seller.id,
+      qty,
+      total,
+      commission,
+      price,
+      buyer.id,
+      code,
+      name,
+      buyer_phone ? String(buyer_phone).trim() : null,
+      buyer_city ? String(buyer_city).trim() : null,
+      buyer_address ? String(buyer_address).trim() : null,
+    ]
   );
 
   await q(
-    `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_bought', $2), ($3, 'sale_bought', $2)`,
-    [seller.id, sale.id, product.shop_id]
+    `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_order', $2), ($3, 'sale_order', $2)`,
+    [seller.id, created[0].id, product.shop_id]
   );
 
   const full = (
@@ -68,11 +78,11 @@ router.post('/', authRequired, ah(async (req, res) => {
        JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
        WHERE s.id = $1`,
-      [updated[0].id]
+      [created[0].id]
     )
   )[0];
 
-  res.json({ sale: saleRow(full), ok: true });
+  res.status(201).json({ sale: saleRow(full), ok: true });
 }));
 
 router.get('/my', authRequired, ah(async (req, res) => {
