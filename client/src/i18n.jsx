@@ -36,7 +36,6 @@ const EN = {
   // Footer
   'À propos': 'About',
   'Contact': 'Contact',
-  'Données personnelles': 'Privacy',
   'Marché en ligne pour boutiques, vendeurs, clients et créateurs. Commandez facilement via WhatsApp.': 'Online marketplace for shops, sellers, clients and creators. Order easily via WhatsApp.',
   'Navigation': 'Navigation',
   'Accueil': 'Home',
@@ -128,7 +127,6 @@ const EN = {
   'Pas encore de compte ?': 'No account yet?',
   "S'inscrire ici": 'Register here',
   'Email ou mot de passe incorrect.': 'Incorrect email or password.',
-  'Téléphone': 'Phone',
   'Numéro de téléphone': 'Phone number',
   'Recevoir le code par WhatsApp': 'Receive the code by WhatsApp',
   'Code reçu (6 chiffres)': 'Received code (6 digits)',
@@ -143,7 +141,6 @@ const EN = {
   'Connexion réussie, redirection…': 'Sign-in successful, redirecting…',
 
   // MyAccount
-  'Mon compte': 'My account',
   'Profil': 'Profile',
   'Votre nom, votre adresse e-mail et votre pays.': 'Your name, email address and country.',
   'Nom': 'Name',
@@ -174,7 +171,6 @@ const EN = {
   'Le mot de passe doit contenir au moins 6 caractères.': 'The password must be at least 6 characters.',
 
   // ShopDashboard
-  'Ma boutique': 'My shop',
   'Gérez vos produits et suivez vos ventes.': 'Manage your products and track your sales.',
   '+ Ajouter un produit': '+ Add a product',
   'Annuler': 'Cancel',
@@ -216,8 +212,6 @@ const EN = {
   'Retrait…': 'Removing…',
 
   // SellerDashboard
-  'Mon espace vendeur': 'My seller space',
-  'Vendez les produits des boutiques et gagnez des commissions.': 'Sell shop products and earn commissions.',
   'Produits disponibles': 'Available products',
   'Commission totale générée': 'Total commission generated',
   'Commission confirmée': 'Confirmed commission',
@@ -225,11 +219,8 @@ const EN = {
   'Prix : {price} {symbol} — Votre commission : {commission} {symbol} par unité': 'Price: {price} {symbol} — Your commission: {commission} {symbol} per unit',
   'Nom de l\'acheteur *': 'Buyer name *',
   'Téléphone de l\'acheteur': 'Buyer phone',
-  'Vendre': 'Sell',
   'Vente enregistrée !': 'Sale recorded!',
-  'Aucun produit disponible pour le moment.': 'No products available right now.',
   'Mes ventes': 'My sales',
-  'Aucune vente pour le moment.': 'No sales yet.',
   'Total de la vente': 'Sale total',
   'Votre commission': 'Your commission',
   'Statut': 'Status',
@@ -237,43 +228,32 @@ const EN = {
   'En attente de confirmation': 'Pending confirmation',
 
   // ClientDashboard
-  'Mon espace client': 'My client space',
   'Bienvenue {name} !': 'Welcome {name}!',
   'Découvrez les produits et offres des boutiques.': 'Discover shop products and offers.',
   'Voir les produits': 'View products',
-  'Voir les offres': 'View offers',
   'Compte créé le {date}': 'Account created on {date}',
   'Derniers produits': 'Latest products',
   'Mes informations': 'My information',
 
   // CreatorDashboard
-  'Mon espace créateur': 'My creator space',
   'Bienvenue {name} ! Faites rayonner vos créations sur le marché Mboppi.': 'Welcome {name}! Showcase your creations on the Mboppi marketplace.',
   'Bientôt disponible : une vitrine dédiée à vos créations.': 'Coming soon: a dedicated showcase for your creations.',
 
   // ProductDetail
   'Retour aux produits': 'Back to products',
   'Boutique': 'Shop',
-  'Prix de vente': 'Sale price',
-  'Garantie {n} mois': '{n}-month warranty',
-  'Livraison {price} {symbol}': 'Delivery {price} {symbol}',
-  'Livraison gratuite': 'Free delivery',
   'Quantité disponible : {n}': 'Available quantity: {n}',
-  'Rupture de stock': 'Out of stock',
   'Commandez sur WhatsApp': 'Order on WhatsApp',
   'Message par défaut': 'Default message',
   'Rétirer ce produit': 'Remove this product',
   'Produit introuvable.': 'Product not found.',
-  'Produit supprimé.': 'Product deleted.',
   'Votre message WhatsApp :': 'Your WhatsApp message:',
 
   // OfferDetail
   'Retour aux offres': 'Back to offers',
   'Prix d\'origine : {price} {symbol}': 'Original price: {price} {symbol}',
-  'Économisez {n} {symbol}': 'Save {n} {symbol}',
   'Commandez cette offre': 'Order this offer',
   'Offre introuvable.': 'Offer not found.',
-  'Votre message WhatsApp :': 'Your WhatsApp message:',
   'Catégorie : {cat}': 'Category: {cat}',
   'Garantie : {warranty}': 'Warranty: {warranty}',
   'Disponible : {n}': 'Available: {n}',
@@ -298,21 +278,16 @@ const EN = {
   'ex : Électronique, Mode, Alimentation…': 'e.g. Electronics, Fashion, Food…',
   'Garantie': 'Warranty',
   'ex : 6 mois, 1 an, 2 ans': 'e.g. 6 months, 1 year, 2 years',
-  'Prix de vente ({symbol}) *': 'Sale price ({symbol}) *',
   'Prix promotionnel ({symbol}) *': 'Promo price ({symbol}) *',
-  'Numéro de téléphone': 'Phone number',
-  'Quantité *': 'Quantity *',
   'Publier l\'offre': 'Publish offer',
   'Offre publiée !': 'Offer published!',
   'Mise à jour réussie !': 'Updated successfully!',
-  'Modifier': 'Edit',
   'Supprimer': 'Delete',
   'Mot de passe requis': 'Password required',
   'Supprimer cette offre ?': 'Delete this offer?',
   'Photo :': 'Photo:',
   'Prix original : {price} {symbol}': 'Original price: {price} {symbol}',
   'Prix promotionnel : {price} {symbol}': 'Promo price: {price} {symbol}',
-  'Disponible : {n}': 'Available: {n}',
 
   // About
   'À propos de Mboppi': 'About Mboppi',
@@ -329,17 +304,13 @@ const EN = {
   'Pour qui ?': 'Who is it for?',
   'Boutiques': 'Shops',
   'Vendez vos produits à travers des vendeurs partenaires.': 'Sell your products through partner sellers.',
-  'Vendeurs': 'Sellers',
   'Gagnez des commissions sur chaque vente.': 'Earn a commission on every sale.',
-  'Clients': 'Clients',
   'Commandez facilement sur WhatsApp.': 'Order easily on WhatsApp.',
-  'Créateurs': 'Creators',
   'Présentez vos créations au marché.': 'Showcase your creations to the market.',
   'Contactez-nous': 'Contact us',
   'Une question ? Écrivez-nous sur WhatsApp.': 'A question? Write to us on WhatsApp.',
 
   // Contact
-  'Contactez-nous': 'Contact us',
   'Une question, un problème ou une suggestion ? Écrivez-nous, nous répondons rapidement.': 'A question, an issue or a suggestion? Write to us, we reply quickly.',
   'Nom *': 'Name *',
   'Votre nom': 'Your name',
@@ -349,7 +320,6 @@ const EN = {
   'Votre message…': 'Your message…',
   'Envoyer via WhatsApp': 'Send via WhatsApp',
   'Ou directement sur WhatsApp': 'Or directly on WhatsApp',
-  'Veuillez remplir tous les champs.': 'Please fill in all fields.',
   'Votre message :': 'Your message:',
 
   // Privacy
@@ -360,7 +330,6 @@ const EN = {
   'Gérer votre compte, afficher vos produits et enregistrer vos ventes.': 'Manage your account, display your products and record your sales.',
   'Combien de temps sont-elles conservées ?': 'How long are they kept?',
   'Tant que votre compte est actif. Vous pouvez le supprimer à tout moment depuis votre espace.': 'As long as your account is active. You can delete it at any time from your space.',
-  'Sécurité': 'Security',
   'Les mots de passe sont chiffrés et les données sont protégées.': 'Passwords are encrypted and data is protected.',
   'Comment supprimer mes données ?': 'How do I delete my data?',
   'Allez dans « Mon compte » puis « Supprimer mon compte ».': 'Go to "My account" then "Delete my account".',
@@ -434,7 +403,6 @@ const EN = {
   'Générez votre code vendeur pour obtenir le lien de vente.': 'Generate your seller code to get the sale link.',
   'La boutique va livrer le produit. Partagez le lien de vente à votre client : il confirmera l\'achat avec votre code {code}.': 'The shop will deliver the product. Share the sale link with your client: they will confirm the purchase with your code {code}.',
   'Prix unitaire : {price} {symbol} — Votre commission : {commission} {symbol} par unité': 'Unit price: {price} {symbol} — Your commission: {commission} {symbol} per unit',
-  'Quantité *': 'Quantity *',
   'Vente en attente': 'Pending sale',
   'Acheté': 'Bought',
   'Annulée': 'Cancelled',
@@ -443,7 +411,6 @@ const EN = {
   'Acheter': 'Buy',
   'Achat confirmé !': 'Purchase confirmed!',
   'Produit non trouvé': 'Product not found',
-  'Retour à l\'accueil': 'Back to home',
   'Confirmer l\'achat': 'Confirm purchase',
   'Code du vendeur *': 'Seller code *',
   'Prix d\'achat ({symbol}) *': 'Purchase price ({symbol}) *',
@@ -501,7 +468,6 @@ const EN = {
   '🏪 Produits des boutiques': '🏪 Shop products',
   '🔍 Rechercher un produit…': '🔍 Search a product…',
   '{n} photos — cliquez pour agrandir': '{n} photos — click to enlarge',
-  'Retrait…': 'Removing…',
   '🗑️ Rétirer ce produit': '🗑️ Remove this product',
   'Retirer « {name} » définitivement ?': 'Remove "{name}" permanently?',
   'Disponibilité : {n} en stock': 'Availability: {n} in stock',
@@ -525,7 +491,6 @@ const EN = {
   '✨ Dernières arrivées': '✨ Latest arrivals',
   'Aucune offre pour le moment. Revenez très vite, ça va chauffer ! 🔥': 'No offers right now. Come back soon, it\'s going to heat up! 🔥',
   'Aucune offre ne correspond à votre recherche.': 'No offer matches your search.',
-  'Réinitialiser les filtres': 'Reset filters',
   '🛍️ Espace Verone': '🛍️ Verone space',
   'Ajoutez vos offres promotionnelles : elles s\'affichent dans la Vitrine d\'offre du site.': 'Add your promotional offers: they appear on the site\'s offers showcase.',
   'Masquer mes Offres': 'Hide my offers',
@@ -639,7 +604,6 @@ const EN = {
   'Animaux & Accessoires': 'Pets & Accessories',
   'Services & Prestations': 'Services',
   'Immobilier': 'Real estate',
-  'Autre': 'Other',
 
   // Cart / Favorites / Orders
   'Mes favoris': 'My favorites',
@@ -650,7 +614,6 @@ const EN = {
   'Ajouté au panier ✓': 'Added to cart ✓',
   'Ajouter aux favoris': 'Add to favorites',
   'Retirer des favoris': 'Remove from favorites',
-  'Retirer': 'Remove',
   'Articles ({n})': 'Items ({n})',
   'Les frais de livraison sont confirmés avec la boutique.': 'Delivery fees are confirmed with the shop.',
   'Connectez-vous pour passer commande.': 'Log in to place your order.',
@@ -671,9 +634,7 @@ const EN = {
   '📦 Mes commandes': '📦 My orders',
   'Commande #{id}': 'Order #{id}',
   'En attente': 'Pending',
-  'Confirmée': 'Confirmed',
   'Expédiée': 'Shipped',
-  'Annulée': 'Cancelled',
   'Suivre sur WhatsApp': 'Track on WhatsApp',
   'Bonjour Mboppi, je souhaite suivre ma commande #{id}.': 'Hello Mboppi, I would like to track my order #{id}.',
   'Bonjour Mboppi, je souhaite confirmer ma commande #{id} :': 'Hello Mboppi, I would like to confirm my order #{id}:',
@@ -763,7 +724,6 @@ const AR = {
   'Rechercher un produit, une boutique…': 'ابحث عن منتج أو متجر…',
   'Catégories populaires': 'فئات شائعة',
   'Voir toutes les offres': 'عرض كل العروض',
-  'Réinitialiser les filtres': 'إعادة تعيين الفلاتر',
   'Filtrer par catégorie': 'تصفية حسب الفئة',
   'Trier': 'ترتيب',
   'Aucun produit dans cette catégorie.': 'لا يوجد منتج في هذه الفئة.',
@@ -832,7 +792,6 @@ const AR = {
   'Connexion réussie, redirection…': 'تم تسجيل الدخول بنجاح، جارٍ التحويل…',
 
   // MyAccount
-  'Mon compte': 'حسابي',
   'Profil': 'الملف الشخصي',
   'Votre nom, votre adresse e-mail et votre pays.': 'اسمك وبريدك الإلكتروني ودولتك.',
   'Nom': 'الاسم',
@@ -863,7 +822,6 @@ const AR = {
   'Le mot de passe doit contenir au moins 6 caractères.': 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل.',
 
   // ShopDashboard
-  'Ma boutique': 'متجري',
   'Gérez vos produits et suivez vos ventes.': 'أدر منتجاتك وتابع مبيعاتك.',
   '+ Ajouter un produit': '+ إضافة منتج',
   'Annuler': 'إلغاء',
@@ -905,8 +863,6 @@ const AR = {
   'Retrait…': 'جارٍ الإزالة…',
 
   // SellerDashboard
-  'Mon espace vendeur': 'فضاء البائع',
-  'Vendez les produits des boutiques et gagnez des commissions.': 'بِع منتجات المتاجر واربح العمولات.',
   'Produits disponibles': 'المنتجات المتاحة',
   'Commission totale générée': 'إجمالي العمولة المولّدة',
   'Commission confirmée': 'العمولة المؤكدة',
@@ -915,16 +871,13 @@ const AR = {
   'Nom de l\'acheteur *': 'اسم المشتري *',
   'Téléphone de l\'acheteur': 'هاتف المشتري',
   'Vente enregistrée !': 'تم تسجيل البيع!',
-  'Aucun produit disponible pour le moment.': 'لا توجد منتجات متاحة حالياً.',
   'Mes ventes': 'مبيعاتي',
   'Total de la vente': 'إجمالي البيع',
   'Votre commission': 'عمولتك',
   'Statut': 'الحالة',
-  'Confirmée': 'مؤكدة',
   'En attente de confirmation': 'بانتظار التأكيد',
 
   // ClientDashboard
-  'Mon espace client': 'فضاء العميل',
   'Bienvenue {name} !': 'مرحباً {name}!',
   'Découvrez les produits et offres des boutiques.': 'اكتشف منتجات وعروض المتاجر.',
   'Voir les produits': 'عرض المنتجات',
@@ -933,7 +886,6 @@ const AR = {
   'Mes informations': 'معلوماتي',
 
   // CreatorDashboard
-  'Mon espace créateur': 'فضاء المبدع',
   'Bienvenue {name} ! Faites rayonner vos créations sur le marché Mboppi.': 'مرحباً {name}! أبرز إبداعاتك في سوق مبوبي.',
   'Bientôt disponible : une vitrine dédiée à vos créations.': 'قريباً: واجهة مخصصة لإبداعاتك.',
 
@@ -974,9 +926,7 @@ const AR = {
   'ex : Électronique, Mode, Alimentation…': 'مثال: إلكترونيات، أزياء، أغذية…',
   'Garantie': 'الضمان',
   'ex : 6 mois, 1 an, 2 ans': 'مثال: 6 أشهر، سنة، سنتان',
-  'Prix de vente ({symbol}) *': 'سعر البيع ({symbol}) *',
   'Prix promotionnel ({symbol}) *': 'السعر الترويجي ({symbol}) *',
-  'Numéro de téléphone': 'رقم الهاتف',
   'Publier l\'offre': 'نشر العرض',
   'Offre publiée !': 'تم نشر العرض!',
   'Mise à jour réussie !': 'تم التحديث بنجاح!',
@@ -1002,17 +952,13 @@ const AR = {
   'Pour qui ?': 'لمن هذه المنصة؟',
   'Boutiques': 'المتاجر',
   'Vendez vos produits à travers des vendeurs partenaires.': 'بِع منتجاتك عبر بائعين شركاء.',
-  'Vendeurs': 'البائعون',
   'Gagnez des commissions sur chaque vente.': 'اربح عمولة على كل عملية بيع.',
-  'Clients': 'العملاء',
   'Commandez facilement sur WhatsApp.': 'اطلب بسهولة عبر واتساب.',
-  'Créateurs': 'المبدعون',
   'Présentez vos créations au marché.': 'قدّم إبداعاتك إلى السوق.',
   'Contactez-nous': 'اتصل بنا',
   'Une question ? Écrivez-nous sur WhatsApp.': 'لديك سؤال؟ اكتب لنا عبر واتساب.',
 
   // Contact
-  'Contactez-nous': 'اتصل بنا',
   'Une question, un problème ou une suggestion ? Écrivez-nous, nous répondons rapidement.': 'سؤال أو مشكلة أو اقتراح؟ اكتب لنا، نرد بسرعة.',
   'Nom *': 'الاسم *',
   'Votre nom': 'اسمك',
@@ -1025,14 +971,12 @@ const AR = {
   'Votre message :': 'رسالتك:',
 
   // Privacy
-  'Données personnelles': 'البيانات الشخصية',
   'Quelles données collectons-nous ?': 'ما البيانات التي نجمعها؟',
   'Nom, adresse e-mail, pays et rôle sur la plateforme.': 'الاسم والبريد الإلكتروني والدولة والدور على المنصة.',
   'À quoi servent vos données ?': 'لأي غرض نستخدم بياناتك؟',
   'Gérer votre compte, afficher vos produits et enregistrer vos ventes.': 'إدارة حسابك وعرض منتجاتك وتسجيل مبيعاتك.',
   'Combien de temps sont-elles conservées ?': 'كم تبقى البيانات محفوظة؟',
   'Tant que votre compte est actif. Vous pouvez le supprimer à tout moment depuis votre espace.': 'طالما حسابك نشط. يمكنك حذفه في أي وقت من مساحتك.',
-  'Sécurité': 'الأمان',
   'Les mots de passe sont chiffrés et les données sont protégées.': 'كلمات المرور مشفرة والبيانات محمية.',
   'Comment supprimer mes données ?': 'كيف أحذف بياناتي؟',
   'Allez dans « Mon compte » puis « Supprimer mon compte ».': 'انتقل إلى «حسابي» ثم «حذف حسابي».',
@@ -1106,16 +1050,13 @@ const AR = {
   'Générez votre code vendeur pour obtenir le lien de vente.': 'ولّد رمز البائع الخاص بك للحصول على رابط البيع.',
   'La boutique va livrer le produit. Partagez le lien de vente à votre client : il confirmera l\'achat avec votre code {code}.': 'سيقوم المتجر بتوصيل المنتج. شارك رابط البيع مع عميلك: سيؤكد الشراء برمزك {code}.',
   'Prix unitaire : {price} {symbol} — Votre commission : {commission} {symbol} par unité': 'السعر للوحدة: {price} {symbol} — عمولتك: {commission} {symbol} للوحدة',
-  'Quantité *': 'الكمية *',
   'Vente en attente': 'بيع قيد الانتظار',
   'Acheté': 'تم الشراء',
-  'Annulée': 'ملغاة',
   'Code vendeur': 'رمز البائع',
   'Prix payé': 'السعر المدفوع',
   'Acheter': 'شراء',
   'Achat confirmé !': 'تم تأكيد الشراء!',
   'Produit non trouvé': 'المنتج غير موجود',
-  'Retour à l\'accueil': 'العودة إلى الرئيسية',
   'Confirmer l\'achat': 'تأكيد الشراء',
   'Code du vendeur *': 'رمز البائع *',
   'Prix d\'achat ({symbol}) *': 'سعر الشراء ({symbol}) *',
@@ -1173,7 +1114,6 @@ const AR = {
   '🏪 Produits des boutiques': '🏪 منتجات المتاجر',
   '🔍 Rechercher un produit…': '🔍 ابحث عن منتج…',
   '{n} photos — cliquez pour agrandir': '{n} صور — انقر للتكبير',
-  'Retrait…': 'جارٍ الإزالة…',
   '🗑️ Rétirer ce produit': '🗑️ إزالة هذا المنتج',
   'Retirer « {name} » définitivement ?': 'إزالة «{name}» نهائياً؟',
   'Disponibilité : {n} en stock': 'التوفر: {n} في المخزون',
@@ -1243,7 +1183,6 @@ const AR = {
   'Nos coordonnées': 'بيانات التواصل',
   'Le moyen le plus rapide de nous joindre.': 'أسرع طريقة للتواصل معنا.',
   'Écrire sur WhatsApp': 'اكتب عبر واتساب',
-  'Téléphone': 'الهاتف',
   'Appelez-nous aux heures de travail.': 'اتصل بنا خلال ساعات العمل.',
   'Pour les demandes écrites détaillées.': 'للطلبات المكتوبة المفصلة.',
   'Envoyer un message': 'إرسال رسالة',
@@ -1311,7 +1250,6 @@ const AR = {
   'Animaux & Accessoires': 'الحيوانات الأليفة وملحقاتها',
   'Services & Prestations': 'الخدمات',
   'Immobilier': 'العقارات',
-  'Autre': 'أخرى',
 
   // Cart / Favorites / Orders
   'Mes favoris': 'المفضلة',
@@ -1322,7 +1260,6 @@ const AR = {
   'Ajouté au panier ✓': 'أُضيف إلى السلة ✓',
   'Ajouter aux favoris': 'أضف إلى المفضلة',
   'Retirer des favoris': 'أزل من المفضلة',
-  'Retirer': 'إزالة',
   'Articles ({n})': 'المنتجات ({n})',
   'Les frais de livraison sont confirmés avec la boutique.': 'يُؤكد المتجر رسوم التوصيل.',
   'Connectez-vous pour passer commande.': 'سجّل الدخول لتقديم طلبك.',
