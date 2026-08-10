@@ -790,6 +790,9 @@ const EN = {
   'ex : 3500 (s\'affiche en vert)': 'e.g.: 3500 (shown in green)',
   '📷 Ajouter une photo ou une vidéo': '📷 Add a photo or a video',
   '🔍 Rechercher une offre…': '🔍 Search for an offer…',
+  'Installer': 'Install',
+  "Installer l'application": 'Install the app',
+  "Sur iPhone ou iPad : touchez Partager puis « Ajouter à l'écran d'accueil ».": 'On iPhone or iPad: tap Share, then "Add to Home Screen".',
 };
 
 const AR = {
@@ -1574,6 +1577,9 @@ const AR = {
   'ex : 3500 (s\'affiche en vert)': 'مثال: 3500 (يظهر بالأخضر)',
   '📷 Ajouter une photo ou une vidéo': '📷 إضافة صورة أو فيديو',
   '🔍 Rechercher une offre…': '🔍 البحث عن عرض…',
+  'Installer': 'تثبيت',
+  "Installer l'application": 'تثبيت التطبيق',
+  "Sur iPhone ou iPad : touchez Partager puis « Ajouter à l'écran d'accueil ».": 'على iPhone أو iPad: اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية».',
 };
 
 export const I18N = { fr: {}, en: EN, ar: AR };

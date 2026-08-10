@@ -163,7 +163,7 @@ router.patch('/:id/status', authRequired, roleRequired('shop'), ah(async (req, r
   res.json({ ok: true });
 }));
 
-router.get('/livreur', authRequired, roleRequired('livreur'), ah(async (req, res) => {
+router.get('/livreur', ah(async (req, res) => {
   const pending = (
     await q(
       `SELECT s.*, p.name AS product_name, p.commission_percent, p.photos, p.shop_id,
@@ -177,24 +177,39 @@ router.get('/livreur', authRequired, roleRequired('livreur'), ah(async (req, res
        ORDER BY s.created_at DESC`
     )
   ).map(saleRow);
-  const delivered = (
-    await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
-              u.name AS seller_name, u.seller_code,
-              shop.name AS shop_name, shop.country AS shop_country
-       FROM sales s
-       JOIN products p ON p.id = s.product_id
-       JOIN users u ON u.id = s.seller_id
-       JOIN users shop ON shop.id = p.shop_id
-       WHERE s.status = 'delivered' AND s.delivered_by = $1
-       ORDER BY s.delivered_at DESC`,
-      [req.user.id]
-    )
-  ).map(saleRow);
+  const delivered = req.user
+    ? (
+        await q(
+          `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
+                  u.name AS seller_name, u.seller_code,
+                  shop.name AS shop_name, shop.country AS shop_country
+           FROM sales s
+           JOIN products p ON p.id = s.product_id
+           JOIN users u ON u.id = s.seller_id
+           JOIN users shop ON shop.id = p.shop_id
+           WHERE s.status = 'delivered' AND s.delivered_by = $1
+           ORDER BY s.delivered_at DESC`,
+          [req.user.id]
+        )
+      ).map(saleRow)
+    : (
+        await q(
+          `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
+                  u.name AS seller_name, u.seller_code,
+                  shop.name AS shop_name, shop.country AS shop_country
+           FROM sales s
+           JOIN products p ON p.id = s.product_id
+           JOIN users u ON u.id = s.seller_id
+           JOIN users shop ON shop.id = p.shop_id
+           WHERE s.status = 'delivered'
+           ORDER BY s.delivered_at DESC
+           LIMIT 50`
+        )
+      ).map(saleRow);
   res.json({ pending, delivered });
 }));
 
-router.post('/:id/deliver', authRequired, roleRequired('livreur'), ah(async (req, res) => {
+router.post('/:id/deliver', ah(async (req, res) => {
   const { delivery_fee, payment_method } = req.body || {};
   const fee = Number(delivery_fee || 0);
   if (!Number.isFinite(fee) || fee < 0) {
@@ -215,7 +230,7 @@ router.post('/:id/deliver', authRequired, roleRequired('livreur'), ah(async (req
     `UPDATE sales
      SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3
      WHERE id = $4 RETURNING id`,
-    [fee, cleanMethod, req.user.id, sale.id]
+    [fee, cleanMethod, req.user ? req.user.id : null, sale.id]
   );
 
   const product = (await q('SELECT shop_id, quantity FROM products WHERE id = $1', [sale.product_id]))[0];

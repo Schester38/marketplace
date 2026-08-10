@@ -1,8 +1,8 @@
 {
-  "name": "Mboppi - Boutiques & Vendeurs",
+  "name": "Mboppi Livreur",
   "short_name": "Mboppi",
-  "description": "Plateforme de vente en ligne : les boutiques publient leurs produits, les vendeurs vendent et gagnent des commissions.",
-  "start_url": "/",
+  "description": "Livraison Mboppi : confirmez les achats des clients, gérez les frais de livraison et téléchargez les factures.",
+  "start_url": "/livreur",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",

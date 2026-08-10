@@ -155,14 +155,7 @@ export default function App() {
               </RoleOnly>
             }
           />
-          <Route
-            path="/livreur"
-            element={
-              <RoleOnly role="livreur">
-                <LivreurDashboard />
-              </RoleOnly>
-            }
-          />
+          <Route path="/livreur" element={<LivreurDashboard />} />
           <Route path="*" element={<Home />} />
         </Routes>
       </Suspense>

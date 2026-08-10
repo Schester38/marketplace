@@ -678,6 +678,9 @@ input, select, textarea { font-size: 16px; }
 .dash-header p strong { color: #fff; }
 .dash-header .btn-outline { border-color: rgba(255, 255, 255, 0.55); color: #fff; }
 .dash-header .btn-outline:hover { border-color: #fff; background: rgba(255, 255, 255, 0.12); color: #fff; }
+.btn-install { background: #fff; color: #4f46e5; white-space: nowrap; }
+.btn-install:hover { background: #eef2ff; transform: translateY(-2px); }
+[data-theme='dark'] .btn-install { background: #e0e7ff; }
 
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 

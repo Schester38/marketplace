@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Seo from '../components/Seo.jsx';
+import PwaInstallButton from '../components/PwaInstallButton.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { downloadInvoice } from '../components/Invoice.jsx';
 import { countrySymbol } from '../config.js';
@@ -64,6 +65,7 @@ export default function LivreurDashboard() {
           <h1>🛵 {t('Livraison')}</h1>
           <p>{t('Livrez les articles en attente de vente et confirmez l\'achat auprès du client.')}</p>
         </div>
+        <PwaInstallButton />
       </section>
 
       {success && <p className="success">{success}</p>}
