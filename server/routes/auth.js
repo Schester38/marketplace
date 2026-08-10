@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { q } from '../db.js';
-import { signToken, authRequired } from '../auth.js';
+import { signToken, authRequired, roleRequired } from '../auth.js';
 import { googleConfigured, googleAuthUrl, getGoogleProfile } from '../google.js';
 import { sendOtp } from '../whatsapp.js';
 
@@ -10,7 +10,7 @@ const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 function publicUser(u) {
-  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, country: u.country || null, phone: u.phone || null };
+  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null };
 }
 
 function normalizePhone(raw) {
@@ -231,6 +231,37 @@ router.delete('/me', authRequired, ah(async (req, res) => {
   }
   await q('DELETE FROM users WHERE id = $1', [user.id]);
   res.json({ ok: true });
+}));
+
+const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+function randomSellerCode() {
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+  }
+  return code;
+}
+
+router.get('/seller-code', authRequired, roleRequired('seller'), ah(async (req, res) => {
+  const user = (await q('SELECT seller_code FROM users WHERE id = $1', [req.user.id]))[0];
+  res.json({ seller_code: user?.seller_code || null });
+}));
+
+router.post('/seller-code', authRequired, roleRequired('seller'), ah(async (req, res) => {
+  const existing = (await q('SELECT seller_code FROM users WHERE id = $1', [req.user.id]))[0];
+  if (existing && existing.seller_code) {
+    return res.json({ seller_code: existing.seller_code });
+  }
+  let code = null;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const candidate = randomSellerCode();
+    const taken = (await q('SELECT id FROM users WHERE seller_code = $1', [candidate]))[0];
+    if (!taken) { code = candidate; break; }
+  }
+  if (!code) return res.status(500).json({ error: 'Impossible de générer un code, réessayez' });
+  await q('UPDATE users SET seller_code = $1 WHERE id = $2', [code, req.user.id]);
+  res.json({ seller_code: code });
 }));
 
 export default router;

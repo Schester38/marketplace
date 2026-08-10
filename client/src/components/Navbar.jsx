@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { LANGS, useLang } from '../i18n.jsx';
 import { useCart, useFavs } from '../store.jsx';
+import { api } from '../api.js';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 function LangSwitcher() {
   const { lang, setLang, t } = useLang();
@@ -44,6 +46,114 @@ function LangSwitcher() {
             </li>
           ))}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function NotifBell() {
+  const { t, locale } = useLang();
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [notifs, setNotifs] = useState([]);
+  const [unread, setUnread] = useState(0);
+  const boxRef = useRef(null);
+
+  const loadNotifs = async () => {
+    if (!user) return;
+    try {
+      const d = await api.notifications();
+      setNotifs(d.notifications);
+      setUnread(d.unread_count);
+    } catch {
+      /* silencieux */
+    }
+  };
+
+  useEffect(() => {
+    if (user) loadNotifs();
+    const iv = setInterval(loadNotifs, 30000);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  useRefreshOnFocus(loadNotifs);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => {
+      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  if (!user) return null;
+
+  const markRead = async () => {
+    try {
+      await api.notificationsRead();
+      setUnread(0);
+      setNotifs((ns) => ns.map((n) => ({ ...n, read: true })));
+    } catch {
+      /* silencieux */
+    }
+  };
+
+  const message = (n) => {
+    const buyer = n.buyer_name || t('le client');
+    if (user.id === n.seller_id) {
+      return t('Votre vente de « {product} » a été achetée par {buyer}.', { product: n.product_name, buyer });
+    }
+    return t('Vente de « {product} » confirmée — vendeur : {seller} ({code}), acheteur : {buyer}.', {
+      product: n.product_name,
+      seller: n.seller_name,
+      code: n.seller_code || '—',
+      buyer,
+    });
+  };
+
+  const linkFor = (n) => (user.id === n.seller_id ? '/seller' : '/shop');
+
+  return (
+    <div className="notif-wrap" ref={boxRef}>
+      <button
+        className="notif-bell"
+        aria-label={t('Notifications')}
+        title={t('Notifications')}
+        onClick={() => {
+          setOpen(!open);
+          if (!open && unread > 0) markRead();
+        }}
+      >
+        🔔
+        {unread > 0 && <span className="notif-dot">{unread > 9 ? '9+' : unread}</span>}
+      </button>
+      {open && (
+        <div className="notif-panel">
+          <div className="notif-header">
+            <strong>{t('Notifications')}</strong>
+            {notifs.length > 0 && (
+              <button className="btn btn-small" onClick={markRead}>{t('Tout marquer comme lu')}</button>
+            )}
+          </div>
+          {notifs.length === 0 ? (
+            <p className="empty" style={{ padding: 16 }}>{t('Aucune notification')}</p>
+          ) : (
+            <ul className="notif-list">
+              {notifs.map((n) => (
+                <li key={n.id} className={`notif-item ${n.read ? '' : 'unread'}`}>
+                  <Link to={linkFor(n)} onClick={() => setOpen(false)}>
+                    <span className="notif-text">{message(n)}</span>
+                    <span className="notif-date">
+                      {new Date(n.created_at).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );
@@ -127,6 +237,8 @@ export default function Navbar({ onLogout }) {
         <span className="hamburger-line"></span>
         <span className="hamburger-line"></span>
       </button>
+
+      <NotifBell />
 
       <nav className="desktop-nav">{links}</nav>
 

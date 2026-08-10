@@ -8,7 +8,7 @@ export function formatMoney(n) {
   return new Intl.NumberFormat('fr-FR').format(Number(n || 0));
 }
 
-export default function ProductCard({ product, action, onAction, secondaryAction, onSecondaryAction, showCommission }) {
+export default function ProductCard({ product, action, onAction, secondaryAction, onSecondaryAction, showCommission, badge, extraAction }) {
   const { t } = useLang();
   const { addToCart } = useCart();
   const { isFav, toggleFav } = useFavs();
@@ -51,6 +51,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
         {fav ? '❤️' : '🤍'}
       </button>
       {sold > 0 && <span className="badge badge-sold">🔥 {sold} {t('vendus')}</span>}
+      {badge && <span className={`badge ${badge.cls}`}>{badge.text}</span>}
       <div className="product-body">
         <h3><Link to={`/produit/${product.id}`}>{product.name}</Link></h3>
         {product.category && (
@@ -89,6 +90,9 @@ export default function ProductCard({ product, action, onAction, secondaryAction
             <button className="btn btn-primary btn-block" onClick={() => onAction(product)}>{t(action)}</button>
             {secondaryAction && (
               <button className="btn btn-danger btn-block" onClick={() => onSecondaryAction(product)}>{t(secondaryAction)}</button>
+            )}
+            {extraAction && (
+              <button className="btn btn-outline btn-block" onClick={() => extraAction.onClick(product)}>{extraAction.label}</button>
             )}
           </div>
         )}

@@ -16,9 +16,9 @@ function saleRow(s) {
 }
 
 router.post('/', authRequired, roleRequired('seller'), ah(async (req, res) => {
-  const { product_id, buyer_name, buyer_phone, quantity } = req.body || {};
-  if (!product_id || !buyer_name) {
-    return res.status(400).json({ error: 'Produit et nom de l\'acheteur sont requis' });
+  const { product_id, quantity } = req.body || {};
+  if (!product_id) {
+    return res.status(400).json({ error: 'Produit requis' });
   }
   const product = (await q('SELECT * FROM products WHERE id = $1', [Number(product_id)]))[0];
   if (!product) return res.status(404).json({ error: 'Produit introuvable' });
@@ -28,22 +28,24 @@ router.post('/', authRequired, roleRequired('seller'), ah(async (req, res) => {
     return res.status(400).json({ error: 'Quantité invalide' });
   }
 
+  const pending = (
+    await q(
+      'SELECT id FROM sales WHERE product_id = $1 AND seller_id = $2 AND status = $3',
+      [product.id, req.user.id, 'pending']
+    )
+  )[0];
+  if (pending) {
+    return res.status(409).json({ error: 'Une vente est déjà en attente pour ce produit' });
+  }
+
   const total = Math.round(Number(product.price) * qty * 100) / 100;
   const commission =
     Math.round(Number(product.price) * (Number(product.commission_percent) / 100) * qty * 100) / 100;
 
   const created = await q(
-    `INSERT INTO sales (product_id, seller_id, buyer_name, buyer_phone, quantity, total_price, commission)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-    [
-      product.id,
-      req.user.id,
-      String(buyer_name).trim(),
-      buyer_phone ? String(buyer_phone).trim() : null,
-      qty,
-      total,
-      commission,
-    ]
+    `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission)
+     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+    [product.id, req.user.id, qty, total, commission]
   );
 
   const sale = saleRow(
@@ -78,7 +80,7 @@ router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
       `SELECT
          COUNT(*) AS total_sales,
          COALESCE(SUM(commission), 0) AS total_commission,
-         COALESCE(SUM(CASE WHEN status = 'confirmed' THEN commission ELSE 0 END), 0) AS earned_commission
+         COALESCE(SUM(CASE WHEN status IN ('confirmed', 'bought') THEN commission ELSE 0 END), 0) AS earned_commission
        FROM sales WHERE seller_id = $1`,
       [req.user.id]
     )
@@ -99,7 +101,7 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop'), ah(async (req, r
   }
   const sales = (
     await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, shop.country AS shop_country
+      `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, u.seller_code, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
        JOIN users u ON u.id = s.seller_id

@@ -15,17 +15,28 @@ const ORDER_STATUS = {
   cancelled: { key: 'Annulée', cls: 'badge-cancelled' },
 };
 
+const PURCHASE_STATUS = {
+  pending: { key: 'Vente en attente', cls: 'badge-pending' },
+  bought: { key: 'Acheté', cls: 'badge-bought' },
+  confirmed: { key: 'Confirmée', cls: 'badge-confirmed' },
+  cancelled: { key: 'Annulée', cls: 'badge-cancelled' },
+};
+
 export default function ClientDashboard() {
   const { user } = useAuth();
   const { t, locale } = useLang();
   const [orders, setOrders] = useState(null);
+  const [purchases, setPurchases] = useState(null);
   const [error, setError] = useState('');
   const mounted = useRef(true);
 
   const load = useCallback(() => {
-    api
-      .myOrders()
-      .then((d) => mounted.current && setOrders(d.orders))
+    Promise.all([api.myOrders(), api.purchasesMy()])
+      .then(([od, pd]) => {
+        if (!mounted.current) return;
+        setOrders(od.orders);
+        setPurchases(pd.purchases);
+      })
       .catch((e) => mounted.current && setError(e.message));
   }, []);
 
@@ -69,6 +80,54 @@ export default function ClientDashboard() {
           <h3>{t('Mes favoris')}</h3>
           <p>{t('Retrouvez les produits que vous avez aimés.')}</p>
         </Link>
+      </section>
+
+      <section style={{ marginTop: 24 }}>
+        <h2 className="section-title">{t('🛍️ Mes achats')}</h2>
+        {purchases === null ? (
+          <div className="card page-center">
+            <div className="skeleton-block" style={{ height: 80 }}></div>
+          </div>
+        ) : purchases.length === 0 ? (
+          <div className="card page-center">
+            <p className="empty">{t('Aucun achat pour le moment.')}</p>
+            <Link to="/" className="btn btn-primary">{t('Découvrir les produits')}</Link>
+          </div>
+        ) : (
+          <div className="order-list">
+            {purchases.map((p) => {
+              const st = PURCHASE_STATUS[p.status] || PURCHASE_STATUS.pending;
+              return (
+                <div className="card order-card" key={p.id}>
+                  <div className="order-head">
+                    <strong>{p.product_name} ×{p.quantity}</strong>
+                    <span className={`badge ${st.cls}`}>{t(st.key)}</span>
+                  </div>
+                  <p className="order-date">
+                    {new Date(p.created_at).toLocaleDateString(locale, { dateStyle: 'medium' })}
+                    {' — '}{t('Vendeur : {seller}', { seller: p.seller_name })}
+                    {p.buyer_code ? ` (${p.buyer_code})` : ''}
+                  </p>
+                  <div className="order-items">
+                    <div className="order-item">
+                      {p.photos && JSON.parse(p.photos || '[]')[0] ? (
+                        <img src={JSON.parse(p.photos)[0]} alt={p.product_name} loading="lazy" />
+                      ) : (
+                        <span className="order-item-thumb">📦</span>
+                      )}
+                      <span className="order-item-name">{p.shop_name}</span>
+                      <strong>{formatMoney(p.purchase_price != null ? p.purchase_price : p.total_price)} {countrySymbol(p.shop_country)}</strong>
+                    </div>
+                  </div>
+                  <div className="order-total">
+                    <span className="label">{t('Prix payé')}</span>
+                    <strong>{formatMoney(p.purchase_price != null ? p.purchase_price : p.total_price)} {countrySymbol(p.shop_country)}</strong>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section style={{ marginTop: 24 }}>

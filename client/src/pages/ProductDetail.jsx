@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
@@ -12,6 +12,8 @@ import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 export default function ProductDetail() {
   const { id } = useParams();
+  const [params] = useSearchParams();
+  const sellerCode = params.get('code');
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLang();
@@ -125,6 +127,20 @@ export default function ProductDetail() {
       <Link to="/" className="btn btn-outline" style={{ marginBottom: 16 }}>
         ← {t('Retour aux produits')}
       </Link>
+
+      {sellerCode && (
+        <div className="seller-cta card">
+          <div>
+            <strong>🛍️ {t('Ce produit vous est proposé par un vendeur Mboppi.')}</strong>
+            <p className="hint" style={{ marginTop: 4 }}>
+              {t('Code du vendeur : {code} — Confirmez votre achat pour le notifier, lui et la boutique.', { code: sellerCode })}
+            </p>
+          </div>
+          <Link className="btn btn-primary" to={`/acheter/${product.id}?code=${sellerCode}`}>
+            ✅ {t('Acheter')}
+          </Link>
+        </div>
+      )}
 
       <div className="card offer-detail">
         <div

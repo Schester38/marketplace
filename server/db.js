@@ -105,6 +105,7 @@ export async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
     ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('shop', 'seller', 'client', 'creator'));
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS seller_code TEXT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS photos TEXT NOT NULL DEFAULT '[]';
     UPDATE products SET photos = json_build_array(image)::text WHERE image IS NOT NULL AND photos = '[]';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;
@@ -114,5 +115,25 @@ export async function initDb() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS quantity INTEGER NOT NULL DEFAULT 1;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS old_price REAL;
     ALTER TABLE products ALTER COLUMN warranty TYPE TEXT USING warranty::text;
+    ALTER TABLE sales ALTER COLUMN buyer_name DROP NOT NULL;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS purchase_price REAL;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_code TEXT;
+    ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_status_check;
+    ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('pending', 'confirmed', 'bought', 'cancelled'));
+  `);
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_seller_code ON users(seller_code) WHERE seller_code IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL DEFAULT 'sale_bought',
+      sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
+      read BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
   `);
 }

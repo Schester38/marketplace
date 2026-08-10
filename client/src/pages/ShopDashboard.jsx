@@ -24,6 +24,13 @@ const EMPTY_FORM = {
 };
 const MAX_PHOTOS = 3;
 
+const SALE_STATUS = {
+  pending: { key: 'Vente en attente', cls: 'badge-pending' },
+  bought: { key: 'Acheté', cls: 'badge-bought' },
+  confirmed: { key: 'Confirmée', cls: 'badge-confirmed' },
+  cancelled: { key: 'Annulée', cls: 'badge-cancelled' },
+};
+
 export default function ShopDashboard() {
   const { user } = useAuth();
   const { t } = useLang();
@@ -329,36 +336,40 @@ export default function ShopDashboard() {
               <tr>
                 <th>{t('Produit')}</th>
                 <th>{t('Vendeur')}</th>
+                <th>{t('Code vendeur')}</th>
                 <th>{t('Acheteur')}</th>
                 <th>{t('Qté')}</th>
                 <th>{t('Total')}</th>
+                <th>{t('Prix payé')}</th>
                 <th>{t('Commission')}</th>
                 <th>{t('Statut')}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {sales.map((s) => (
-                <tr key={s.id}>
-                  <td>{s.product_name}</td>
-                  <td>{s.seller_name}</td>
-                  <td>{s.buyer_name}</td>
-                  <td>{s.quantity}</td>
-                  <td>{formatMoney(s.total_price)} {countrySymbol(s.shop_country)}</td>
-                  <td>{formatMoney(s.commission)} {countrySymbol(s.shop_country)}</td>
-                  <td>
-                    <span className={`badge badge-${s.status}`}>{s.status}</span>
-                  </td>
-                  <td>
-                    {s.status === 'pending' && (
-                      <>
-                        <button className="btn btn-small" onClick={() => changeStatus(s.id, 'confirmed')}>{t('Confirmer')}</button>{' '}
+              {sales.map((s) => {
+                const st = SALE_STATUS[s.status] || SALE_STATUS.pending;
+                return (
+                  <tr key={s.id}>
+                    <td>{s.product_name}</td>
+                    <td>{s.seller_name}</td>
+                    <td><code className="seller-code-inline">{s.seller_code || '—'}</code></td>
+                    <td>{s.buyer_name || '—'}</td>
+                    <td>{s.quantity}</td>
+                    <td>{formatMoney(s.total_price)} {countrySymbol(s.shop_country)}</td>
+                    <td>{s.purchase_price != null ? `${formatMoney(s.purchase_price)} ${countrySymbol(s.shop_country)}` : '—'}</td>
+                    <td>{formatMoney(s.commission)} {countrySymbol(s.shop_country)}</td>
+                    <td>
+                      <span className={`badge ${st.cls}`}>{t(st.key)}</span>
+                    </td>
+                    <td>
+                      {s.status === 'pending' && (
                         <button className="btn btn-small btn-danger" onClick={() => changeStatus(s.id, 'cancelled')}>{t('Annuler')}</button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
