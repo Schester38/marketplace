@@ -43,6 +43,8 @@ export default function ShopDashboard() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [showDelivered, setShowDelivered] = useState(false);
+  const [payForm, setPayForm] = useState(null);
+  const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [picking, setPicking] = useState(false);
@@ -166,6 +168,60 @@ export default function ShopDashboard() {
       load();
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const openPay = async (sale) => {
+    setError('');
+    setSuccess('');
+    try {
+      const d = await api.salePaymentMethods(sale.id);
+      setPayForm({ sale, methods: d.methods, proof: '' });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const addProof = async (file) => {
+    if (!file) return;
+    const isVideo = file.type.startsWith('video/');
+    if (isVideo) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError(t('Vidéo trop lourde : limite 10 Mo.'));
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => setPayForm((f) => ({ ...f, proof: reader.result }));
+      reader.readAsDataURL(file);
+    } else {
+      const compressed = await compressImage(file);
+      setPayForm((f) => ({ ...f, proof: compressed }));
+    }
+  };
+
+  const submitPay = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setPaying(true);
+    try {
+      const d = await api.paySale(payForm.sale.id, { proof: payForm.proof });
+      setSales((prev) => prev.map((s) => (s.id === d.sale.id ? d.sale : s)));
+      setStats((prev) =>
+        prev
+          ? {
+              ...prev,
+              paid_commission: (prev.paid_commission || 0) + d.sale.commission,
+              owed_commission: Math.max(0, (prev.owed_commission || 0) - d.sale.commission),
+            }
+          : prev
+      );
+      setSuccess(t('Vendeur payé ! La preuve a été enregistrée.'));
+      setPayForm(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -377,7 +433,9 @@ export default function ShopDashboard() {
           <div className="stats-row">
             <div><span className="label">{t('Ventes enregistrées')}</span><strong>{stats.total_sales}</strong></div>
             <div><span className="label">{t('Chiffre d\'affaires')}</span><strong>{formatMoney(stats.revenue)} {symbol}</strong></div>
-            <div><span className="label">{t('Commissions versées aux vendeurs')}</span><strong>{formatMoney(stats.total_commission)} {symbol}</strong></div>
+            <div><span className="label">{t('Livraisons')}</span><strong>{formatMoney(stats.delivery_revenue)} {symbol}</strong></div>
+            <div><span className="label">{t('Commissions à verser')}</span><strong className={stats.owed_commission > 0 ? 'text-danger' : ''}>{formatMoney(stats.owed_commission)} {symbol}</strong></div>
+            <div><span className="label">{t('Commissions versées')}</span><strong>{formatMoney(stats.paid_commission)} {symbol}</strong></div>
           </div>
         ) : null}
 
@@ -420,6 +478,12 @@ export default function ShopDashboard() {
                       {s.status === 'pending' && (
                         <button className="btn btn-small btn-danger" onClick={() => changeStatus(s.id, 'cancelled')}>{t('Annuler')}</button>
                       )}
+                      {s.status === 'delivered' && !s.paid && (
+                        <button className="btn btn-small btn-danger" onClick={() => openPay(s)}>{t('Payer le Vendeur')}</button>
+                      )}
+                      {s.status === 'delivered' && s.paid && (
+                        <span className="badge badge-paid">{t('Vendeur payé')}</span>
+                      )}
                       {s.status === 'delivered' && (
                         <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
                           🧾 {t('Facture')}
@@ -434,6 +498,63 @@ export default function ShopDashboard() {
           </div>
         )}
       </section>
+
+      {payForm && (
+        <div className="modal-overlay" onClick={() => setPayForm(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>💸 {t('Payer le vendeur')}</h3>
+              <button className="drawer-close" onClick={() => setPayForm(null)}>✕</button>
+            </div>
+            <div className="deliver-recap">
+              <p><strong>{t('Article')} :</strong> {payForm.sale.product_name}</p>
+              <p><strong>{t('Vendeur')} :</strong> {payForm.sale.seller_name} ({payForm.sale.seller_code || '—'})</p>
+              <p><strong>{t('Commission à verser')} :</strong> {formatMoney(payForm.sale.commission)} {countrySymbol(payForm.sale.shop_country)}</p>
+            </div>
+            {payForm.methods ? (
+              <div className="deliver-recap">
+                <p><strong>{t('Moyens de paiement du vendeur')}</strong></p>
+                {payForm.methods.full_name ? <p>{t('Nom')} : {payForm.methods.full_name}</p> : null}
+                {payForm.methods.wallets.length === 0 ? (
+                  <p className="hint">{t('Le vendeur n\'a pas encore enregistré de moyen de paiement.')}</p>
+                ) : (
+                  payForm.methods.wallets.map((w) => (
+                    <p key={w.name}>💳 {w.name} : <strong>{w.value}</strong></p>
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="deliver-recap">
+                <p className="hint">{t('Le vendeur n\'a pas encore enregistré de moyen de paiement.')}</p>
+              </div>
+            )}
+            <form onSubmit={submitPay}>
+              <label>{t('Preuve du paiement (photo ou vidéo) *')}</label>
+              <div className="photo-input">
+                <label className="photo-picker">
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    capture="environment"
+                    hidden
+                    onChange={(e) => addProof(e.target.files[0])}
+                  />
+                  {payForm.proof ? t('Preuve ajoutée ✓ (cliquez pour changer)') : t('📷 Ajouter une photo ou une vidéo')}
+                </label>
+              </div>
+              {payForm.proof && !payForm.proof.startsWith('data:video/') && (
+                <img src={payForm.proof} alt={t('Preuve')} className="proof-preview" />
+              )}
+              <div className="row2" style={{ marginTop: 14 }}>
+                <button className="btn btn-danger btn-block" disabled={paying || !payForm.proof}>
+                  {paying ? '…' : `✅ ${t('Confirmer le Paiement')}`}
+                </button>
+              </div>
+              <button type="button" className="btn btn-outline btn-block" style={{ marginTop: 8 }} onClick={() => setPayForm(null)}>{t('Annuler')}</button>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

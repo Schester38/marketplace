@@ -82,7 +82,8 @@ router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
       `SELECT
          COUNT(*) AS total_sales,
          COALESCE(SUM(commission), 0) AS total_commission,
-         COALESCE(SUM(CASE WHEN status IN ('confirmed', 'bought') THEN commission ELSE 0 END), 0) AS earned_commission
+         COALESCE(SUM(CASE WHEN paid THEN commission ELSE 0 END), 0) AS earned_commission,
+         COALESCE(SUM(CASE WHEN status = 'delivered' AND NOT paid THEN commission ELSE 0 END), 0) AS pending_commission
        FROM sales WHERE seller_id = $1`,
       [req.user.id]
     )
@@ -93,11 +94,12 @@ router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
       total_sales: Number(stats.total_sales),
       total_commission: Number(stats.total_commission),
       earned_commission: Number(stats.earned_commission),
+      pending_commission: Number(stats.pending_commission),
     },
   });
 }));
 
-router.get('/shop/:shopId', authRequired, roleRequired('shop'), ah(async (req, res) => {
+router.get('/shop/:shopId', authRequired, roleRequired('shop', 'creator'), ah(async (req, res) => {
   if (Number(req.params.shopId) !== req.user.id) {
     return res.status(403).json({ error: 'Accès refusé' });
   }
@@ -118,7 +120,10 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop'), ah(async (req, r
       `SELECT
          COUNT(*) AS total_sales,
          COALESCE(SUM(s.total_price), 0) AS revenue,
-         COALESCE(SUM(s.commission), 0) AS total_commission
+         COALESCE(SUM(s.delivery_fee), 0) AS delivery_revenue,
+         COALESCE(SUM(s.commission), 0) AS total_commission,
+         COALESCE(SUM(CASE WHEN s.paid THEN s.commission ELSE 0 END), 0) AS paid_commission,
+         COALESCE(SUM(CASE WHEN s.status = 'delivered' AND NOT s.paid THEN s.commission ELSE 0 END), 0) AS owed_commission
        FROM sales s
        JOIN products p ON p.id = s.product_id
        WHERE p.shop_id = $1`,
@@ -130,7 +135,10 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop'), ah(async (req, r
     stats: {
       total_sales: Number(stats.total_sales),
       revenue: Number(stats.revenue),
+      delivery_revenue: Number(stats.delivery_revenue),
       total_commission: Number(stats.total_commission),
+      paid_commission: Number(stats.paid_commission),
+      owed_commission: Number(stats.owed_commission),
     },
   });
 }));
@@ -232,6 +240,61 @@ router.post('/:id/deliver', authRequired, roleRequired('livreur'), ah(async (req
     )
   )[0];
 
+  res.json({ sale: saleRow(full), ok: true });
+}));
+
+router.get('/:id/payment-methods', authRequired, roleRequired('shop'), ah(async (req, res) => {
+  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
+  const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
+  if (product.shop_id !== req.user.id) {
+    return res.status(403).json({ error: 'Cette vente ne concerne pas votre boutique' });
+  }
+  const m = (
+    await q('SELECT full_name, wallets, updated_at FROM seller_payment_methods WHERE seller_id = $1', [sale.seller_id])
+  )[0];
+  res.json({
+    methods: m ? { full_name: m.full_name, wallets: Array.isArray(m.wallets) ? m.wallets : [] } : null,
+  });
+}));
+
+router.post('/:id/pay', authRequired, roleRequired('shop'), ah(async (req, res) => {
+  const { proof } = req.body || {};
+  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
+  const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
+  if (product.shop_id !== req.user.id) {
+    return res.status(403).json({ error: 'Cette vente ne concerne pas votre boutique' });
+  }
+  if (sale.status !== 'delivered') {
+    return res.status(409).json({ error: 'Le produit doit être livré avant de payer le vendeur' });
+  }
+  if (sale.paid) {
+    return res.status(409).json({ error: 'Le vendeur a déjà été payé pour cette vente' });
+  }
+  if (!proof || !String(proof).startsWith('data:')) {
+    return res.status(400).json({ error: 'Joignez une photo ou une vidéo de preuve du paiement' });
+  }
+  const updated = await q(
+    `UPDATE sales SET paid = TRUE, paid_at = now(), payment_proof = $1 WHERE id = $2 RETURNING id`,
+    [String(proof).slice(0, 12000000), sale.id]
+  );
+  await q(
+    `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_paid', $2)`,
+    [sale.seller_id, sale.id]
+  );
+  const full = (
+    await q(
+      `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, u.seller_code,
+              shop.name AS shop_name, shop.country AS shop_country
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       JOIN users u ON u.id = s.seller_id
+       JOIN users shop ON shop.id = p.shop_id
+       WHERE s.id = $1`,
+      [updated[0].id]
+    )
+  )[0];
   res.json({ sale: saleRow(full), ok: true });
 }));
 

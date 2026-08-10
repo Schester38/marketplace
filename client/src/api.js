@@ -35,6 +35,8 @@ export const api = {
     request(`/sales/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   livreurSales: () => request('/sales/livreur'),
   deliverSale: (id, payload) => request(`/sales/${id}/deliver`, { method: 'POST', body: JSON.stringify(payload) }),
+  salePaymentMethods: (id) => request(`/sales/${id}/payment-methods`),
+  paySale: (id, payload) => request(`/sales/${id}/pay`, { method: 'POST', body: JSON.stringify(payload) }),
   getSellerCode: () => request('/auth/seller-code'),
   createSellerCode: () => request('/auth/seller-code', { method: 'POST' }),
   getPaymentMethods: () => request('/seller/payment-methods'),

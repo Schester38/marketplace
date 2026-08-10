@@ -5,6 +5,7 @@ import { authRequired, roleRequired } from '../auth.js';
 const router = Router();
 
 const MAX_PRODUCTS_PER_SHOP = 5;
+const OWNER_ROLES = ['shop', 'creator'];
 
 function productRow(p) {
   let photos = [];
@@ -74,7 +75,7 @@ router.get('/', async (req, res) => {
   res.json({ products });
 });
 
-router.get('/mine', authRequired, roleRequired('shop'), async (req, res) => {
+router.get('/mine', authRequired, roleRequired(...OWNER_ROLES), async (req, res) => {
   const products = (
     await q(SELECT_PRODUCT + ' WHERE p.shop_id = $1 ORDER BY p.created_at DESC', [req.user.id])
   ).map(productRow);
@@ -89,7 +90,7 @@ router.get('/:id', async (req, res) => {
   res.json({ product });
 });
 
-router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
+router.post('/', authRequired, roleRequired(...OWNER_ROLES), async (req, res) => {
   const { name, description, price, old_price, commission_percent, photos, category, warranty, delivery_fee, contact, quantity } = req.body || {};
   if (!name || price === undefined) {
     return res.status(400).json({ error: 'Le nom et le prix sont requis' });
@@ -122,9 +123,10 @@ router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
   const count = (await q('SELECT COUNT(*) AS n FROM products WHERE shop_id = $1', [req.user.id]))[0];
   if (Number(count.n) >= MAX_PRODUCTS_PER_SHOP) {
     return res.status(400).json({
-      error: `Limite atteinte : une boutique peut publier maximum ${MAX_PRODUCTS_PER_SHOP} produits`,
+      error: `Limite atteinte : maximum ${MAX_PRODUCTS_PER_SHOP} produits publiés`,
     });
   }
+  const cleanCategory = req.user.role === 'creator' ? 'Arts & Artisanat' : category ? String(category).trim() : null;
   const created = await q(
     `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
@@ -137,7 +139,7 @@ router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
       percentNum,
       photoList[0] || null,
       JSON.stringify(photoList),
-      category ? String(category).trim() : null,
+      cleanCategory,
       warrantyText,
       feeNum,
       contact ? String(contact).trim() : null,
@@ -150,7 +152,7 @@ router.post('/', authRequired, roleRequired('shop'), async (req, res) => {
   res.status(201).json({ product });
 });
 
-router.delete('/:id', authRequired, roleRequired('shop'), async (req, res) => {  const product = (await q('SELECT * FROM products WHERE id = $1', [Number(req.params.id)]))[0];
+router.delete('/:id', authRequired, roleRequired(...OWNER_ROLES), async (req, res) => {  const product = (await q('SELECT * FROM products WHERE id = $1', [Number(req.params.id)]))[0];
   if (!product) return res.status(404).json({ error: 'Produit introuvable' });
   if (product.shop_id !== req.user.id) {
     return res.status(403).json({ error: 'Ce produit ne vous appartient pas' });
@@ -159,7 +161,7 @@ router.delete('/:id', authRequired, roleRequired('shop'), async (req, res) => { 
   res.json({ ok: true });
 });
 
-router.put('/:id', authRequired, roleRequired('shop'), async (req, res) => {
+router.put('/:id', authRequired, roleRequired(...OWNER_ROLES), async (req, res) => {
   const product = (await q('SELECT * FROM products WHERE id = $1', [Number(req.params.id)]))[0];
   if (!product) return res.status(404).json({ error: 'Produit introuvable' });
   if (product.shop_id !== req.user.id) {
@@ -194,6 +196,7 @@ router.put('/:id', authRequired, roleRequired('shop'), async (req, res) => {
   }
   const warrantyText = warranty === '' || warranty === null || warranty === undefined ? null : String(warranty).trim().slice(0, 60);
   const photoList = Array.isArray(photos) ? photos.filter((p) => typeof p === 'string' && p.startsWith('data:image/')).slice(0, 3) : [];
+  const cleanCategory = req.user.role === 'creator' ? 'Arts & Artisanat' : category ? String(category).trim() : null;
   const updated = await q(
     `UPDATE products SET
        name = $1, description = $2, price = $3, old_price = $4, commission_percent = $5,
@@ -208,7 +211,7 @@ router.put('/:id', authRequired, roleRequired('shop'), async (req, res) => {
       percentNum,
       photoList[0] || null,
       JSON.stringify(photoList),
-      category ? String(category).trim() : null,
+      cleanCategory,
       warrantyText,
       feeNum,
       contact ? String(contact).trim() : null,

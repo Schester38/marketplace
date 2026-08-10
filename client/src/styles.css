@@ -874,6 +874,10 @@ input, select, textarea { font-size: 16px; }
   font-weight: 600;
 }
 .badge-pending { background: #fef3c7; color: var(--warn); }
+.badge-paid { background: #dbeafe; color: #1d4ed8; }
+.text-danger { color: var(--danger); }
+.text-warn { color: var(--warn); }
+.proof-preview { margin-top: 10px; max-width: 100%; max-height: 240px; border-radius: 10px; border: 1px solid var(--border); }
 .badge-bought { background: #dbeafe; color: #1d4ed8; }
 .badge-confirmed { background: #dcfce7; color: var(--success); }
 .badge-cancelled { background: #fee2e2; color: var(--danger); }

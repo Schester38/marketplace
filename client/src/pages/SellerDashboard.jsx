@@ -171,8 +171,8 @@ export default function SellerDashboard() {
         <section className="card stats">
           <div className="stats-row">
             <div><span className="label">{t('Ventes réalisées')}</span><strong>{stats.total_sales}</strong></div>
-            <div><span className="label">{t('Commission totale générée')}</span><strong>{formatMoney(stats.total_commission)} {countrySymbol(user?.country)}</strong></div>
-            <div><span className="label">{t('Commission confirmée')}</span><strong>{formatMoney(stats.earned_commission)} {countrySymbol(user?.country)}</strong></div>
+            <div><span className="label">{t('Commission en attente')}</span><strong className={stats.pending_commission > 0 ? 'text-warn' : ''}>{formatMoney(stats.pending_commission)} {countrySymbol(user?.country)}</strong></div>
+            <div><span className="label">{t('Commission payée')}</span><strong>{formatMoney(stats.earned_commission)} {countrySymbol(user?.country)}</strong></div>
           </div>
         </section>
       )}
@@ -274,7 +274,15 @@ export default function SellerDashboard() {
                     <td>{s.quantity}</td>
                     <td>{formatMoney(s.total_price)} {countrySymbol(s.shop_country)}</td>
                     <td>{formatMoney(s.commission)} {countrySymbol(s.shop_country)}</td>
-                    <td><span className={`badge ${st.cls}`}>{t(st.key)}</span></td>
+                    <td>
+                      {s.status === 'delivered' && !s.paid && (
+                        <span className="badge badge-warn">{t('Commission en attente')}</span>
+                      )}
+                      {s.status === 'delivered' && s.paid && (
+                        <span className="badge badge-paid">{t('Commission payée')}</span>
+                      )}
+                      {s.status !== 'delivered' && <span className={`badge ${st.cls}`}>{t(st.key)}</span>}
+                    </td>
                     <td>
                       {s.status === 'delivered' && (
                         <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
