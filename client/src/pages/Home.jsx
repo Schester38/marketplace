@@ -74,6 +74,8 @@ export default function Home() {
         description="Le marché de votre quartier en ligne : produits des boutiques, créations des créateurs, vente avec commissions, commande avec livraison."
       />
 
+      {!user && (
+        <>
       <section className="hero vitrine-hero">
         <div className="hero-floats" aria-hidden="true">
           <span>🛍️</span>
@@ -149,6 +151,14 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <section className="section cta-section">
+        <h2>{t("Prêt à rejoindre l'aventure ?")}</h2>
+        <p>{t("Créez votre compte gratuitement en moins d'une minute.")}</p>
+        <Link to="/register" className="btn btn-primary btn-xl">{t('Créer mon compte')}</Link>
+      </section>
+        </>
+      )}
 
       {user && (
         <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
@@ -233,12 +243,6 @@ export default function Home() {
           )}
         </section>
       )}
-
-      <section className="section cta-section">
-        <h2>{t("Prêt à rejoindre l'aventure ?")}</h2>
-        <p>{t("Créez votre compte gratuitement en moins d'une minute.")}</p>
-        <Link to="/register" className="btn btn-primary btn-xl">{t('Créer mon compte')}</Link>
-      </section>
     </main>
   );
 }
