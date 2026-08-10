@@ -306,8 +306,18 @@ export default function Navbar({ onLogout }) {
   const canInstall = !standalone;
 
   const close = () => setOpen(false);
-  const logout = () => {
+  const logout = async () => {
     close();
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await api.pushUnsubscribe({ endpoint: sub.endpoint });
+        await sub.unsubscribe();
+      }
+    } catch {
+      /* silencieux */
+    }
     onLogout();
   };
   const roleLabel = user
