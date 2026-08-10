@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import ShareVitrine from '../components/ShareVitrine.jsx';
+import PwaInstallButton from '../components/PwaInstallButton.jsx';
 import Seo from '../components/Seo.jsx';
 import { compressImage } from '../utils.js';
 import { useLang } from '../i18n.jsx';
@@ -135,6 +136,7 @@ export default function Verone() {
         <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
           {showForm ? t('Fermer le formulaire') : t('+ Ajouter une Offre')}
         </button>
+        <PwaInstallButton />
         <div className="row2" style={{ width: '100%' }}>
           <button className="btn btn-outline" onClick={toggleMyOffers}>
             {showMyOffers ? t('Masquer mes Offres') : t('Voir mes Offres')}

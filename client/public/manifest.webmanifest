@@ -1,8 +1,9 @@
 {
-  "name": "Mboppi Livreur",
+  "id": "/",
+  "name": "Mboppi",
   "short_name": "Mboppi",
-  "description": "Livraison Mboppi : confirmez les achats des clients, gérez les frais de livraison et téléchargez les factures.",
-  "start_url": "/livreur",
+  "description": "Plateforme de vente en ligne : les boutiques publient leurs produits, les vendeurs vendent et gagnent des commissions.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
