@@ -20,7 +20,7 @@ function normalizePhone(raw) {
   return null;
 }
 
-const VALID_ROLES = ['shop', 'seller', 'client', 'creator', 'livreur'];
+const VALID_ROLES = ['shop', 'seller', 'client', 'creator'];
 
 router.post('/register', ah(async (req, res) => {
   const { name, email, password, role, country } = req.body || {};
@@ -28,7 +28,7 @@ router.post('/register', ah(async (req, res) => {
     return res.status(400).json({ error: 'Nom, email et mot de passe sont requis' });
   }
   if (!VALID_ROLES.includes(role)) {
-    return res.status(400).json({ error: 'Le rôle doit être "shop" (boutique), "seller" (vendeur), "client", "creator" (créateur) ou "livreur" (livreur)' });
+    return res.status(400).json({ error: 'Le rôle doit être "shop" (boutique), "seller" (vendeur), "client" ou "creator" (créateur)' });
   }  if (password.length < 6) {
     return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
   }
@@ -87,7 +87,7 @@ router.post('/otp/request', ah(async (req, res) => {
     return res.status(429).json({ error: 'Un code a déjà été envoyé. Attendez un peu avant de renvoyer.' });
   }
   if (cleanPurpose === 'register' && role && !VALID_ROLES.includes(role)) {
-    return res.status(400).json({ error: 'Le rôle doit être "shop", "seller", "client", "creator" ou "livreur"' });
+    return res.status(400).json({ error: 'Le rôle doit être "shop", "seller", "client" ou "creator"' });
   }
   const code = String(Math.floor(100000 + Math.random() * 900000));
   const hash = bcrypt.hashSync(code, 10);

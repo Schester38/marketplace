@@ -34,6 +34,7 @@ export function dashboardPath(role) {
   if (role === 'shop') return '/shop';
   if (role === 'seller') return '/seller';
   if (role === 'client') return '/client';
+  if (role === 'livreur') return '/livreur';
   return '/creator';
 }
 
