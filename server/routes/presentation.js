@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { q } from '../db.js';
 
 const router = Router();
+const imageRouter = Router();
 
 function firstPhoto(p) {
   let photos = [];
@@ -19,7 +20,7 @@ function dataUriParts(uri) {
   return { type: m[1], buffer: Buffer.from(m[2], 'base64') };
 }
 
-router.get('/img/:id', async (req, res) => {
+imageRouter.get('/:id', async (req, res) => {
   const product = (
     await q('SELECT photos, image FROM products WHERE id = $1', [Number(req.params.id)])
   )[0];
@@ -122,4 +123,5 @@ router.get('/:id', async (req, res) => {
   res.send(page(title, desc, imgUrl, appUrl, buyUrl, body));
 });
 
+export { router as pageRouter, imageRouter };
 export default router;
