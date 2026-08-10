@@ -817,7 +817,7 @@ input, select, textarea { font-size: 16px; }
   padding: 12px 14px;
   border-bottom: 1px solid var(--border);
 }
-.notif-list { list-style: none; max-height: 380px; overflow-y: auto; }
+.notif-list { list-style: none; max-height: 252px; overflow-y: auto; }
 .notif-item { border-bottom: 1px solid var(--border); display: flex; align-items: stretch; }
 .notif-item:last-child { border-bottom: none; }
 .notif-item a { display: block; flex: 1; padding: 10px 14px; color: var(--text); text-decoration: none; }
