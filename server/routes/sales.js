@@ -165,8 +165,7 @@ router.get('/livreur', authRequired, roleRequired('livreur'), ah(async (req, res
     await q(
       `SELECT s.*, p.name AS product_name, p.commission_percent, p.photos, p.shop_id,
               u.name AS seller_name, u.seller_code,
-              shop.name AS shop_name, shop.country AS shop_country,
-              buyer.name AS buyer_name2
+              shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
        JOIN users u ON u.id = s.seller_id
