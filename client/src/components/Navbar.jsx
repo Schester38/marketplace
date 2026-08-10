@@ -251,7 +251,6 @@ export default function Navbar({ onLogout }) {
   const navLinks = (
     <>
       <Link to="/" onClick={close}>{t('Produits')}</Link>
-      <Link to="/vitrine-offre" onClick={close}>{t("Vitrine d'offre")}</Link>
       {user && user.role === 'shop' && <Link to="/shop" onClick={close}>{t('Ma boutique')}</Link>}
       {user && user.role === 'seller' && <Link to="/seller" onClick={close}>{t('Mon espace vendeur')}</Link>}
       {user && user.role === 'client' && <Link to="/client" onClick={close}>{t('Mon espace client')}</Link>}
