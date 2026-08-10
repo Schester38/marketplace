@@ -182,6 +182,7 @@ export default function SellerDashboard() {
         {products.length === 0 ? (
           <p className="empty">{t('Aucun produit disponible à vendre pour le moment.')}</p>
         ) : (
+          <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
@@ -216,6 +217,7 @@ export default function SellerDashboard() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </section>
 
@@ -320,6 +322,7 @@ export default function SellerDashboard() {
         {sales.length === 0 ? (
           <p className="empty">{t('Vous n\'avez pas encore enregistré de vente.')}</p>
         ) : (
+          <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
@@ -351,6 +354,7 @@ export default function SellerDashboard() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </main>

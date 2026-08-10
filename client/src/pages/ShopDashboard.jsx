@@ -331,6 +331,7 @@ export default function ShopDashboard() {
         {sales.length === 0 ? (
           <p className="empty">{t('Aucune vente enregistrée par les vendeurs.')}</p>
         ) : (
+          <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
@@ -372,6 +373,7 @@ export default function ShopDashboard() {
               })}
             </tbody>
           </table>
+          </div>
         )}
       </section>
     </main>
