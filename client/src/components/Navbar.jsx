@@ -171,6 +171,7 @@ export default function Navbar({ onLogout }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
   const [showIosHint, setShowIosHint] = useState(false);
+  const [showGenericHint, setShowGenericHint] = useState(false);
   const [standalone] = useState(() => {
     try {
       return (
@@ -204,7 +205,7 @@ export default function Navbar({ onLogout }) {
     };
   }, []);
 
-  const canInstall = !standalone && (!!deferredPrompt || isIOS);
+  const canInstall = !standalone;
 
   const close = () => setOpen(false);
   const logout = () => {
@@ -292,6 +293,8 @@ export default function Navbar({ onLogout }) {
                   deferredPrompt.userChoice.then(() => setDeferredPrompt(null));
                 } else if (isIOS) {
                   setShowIosHint(!showIosHint);
+                } else {
+                  setShowGenericHint(!showGenericHint);
                 }
               }}
             >
@@ -301,6 +304,13 @@ export default function Navbar({ onLogout }) {
               <p className="install-ios-hint">
                 {t(
                   "Pour installer Mboppi : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil »."
+                )}
+              </p>
+            )}
+            {showGenericHint && (
+              <p className="install-ios-hint">
+                {t(
+                  "Pour installer Mboppi : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application »."
                 )}
               </p>
             )}
