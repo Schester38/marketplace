@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { categoryEmoji, countrySymbol } from '../config.js';
+import { countrySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
 import { useCart, useFavs } from '../store.jsx';
 
@@ -15,7 +15,6 @@ export default function ProductCard({ product, action, onAction, secondaryAction
   const [added, setAdded] = useState(false);
   const commission = Number(product.commission || 0);
   const photo = (product.photos && product.photos[0]) || product.image;
-  const deliveryFee = Number(product.delivery_fee || 0);
   const qty = Number(product.quantity || 0);
   const symbol = countrySymbol(product?.shop_country);
   const fav = isFav(product.id);
@@ -25,6 +24,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
 
   const add = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     addToCart(product, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1200);
@@ -32,7 +32,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
 
   return (
     <div className="card product-card">
-      <Link to={`/produit/${product.id}`} className="product-link">
+      <Link to={`/produit/${product.id}`} className="product-link" aria-label={product.name}>
         <div className="product-thumb">
           {photo ? (
             <img src={photo} alt={product.name} loading="lazy" decoding="async" />
@@ -52,41 +52,24 @@ export default function ProductCard({ product, action, onAction, secondaryAction
       </button>
       {sold > 0 && <span className="badge badge-sold">🔥 {sold} {t('vendus')}</span>}
       {badge && <span className={`badge ${badge.cls}`}>{badge.text}</span>}
-      <div className="product-body">
-        <h3><Link to={`/produit/${product.id}`}>{product.name}</Link></h3>
-        {product.category && (
-          <p className="product-cat">{categoryEmoji(product.category)} {t(product.category)}</p>
-        )}
-        {product.description && <p className="product-desc">{product.description}</p>}
-        <p className="product-shop">
-          {t('Boutique : {shop}', { shop: product.shop_name })}
-          {product.shop_location ? <span className="shop-loc"> · 📍 {product.shop_location}</span> : null}
-        </p>
-        <div className="product-meta">
-          {product.warranty && <span className="meta-chip">🛡️ {t('Garantie : {warranty}', { warranty: product.warranty })}</span>}
-          <span className="meta-chip">🚚 {deliveryFee > 0 ? t('Livraison {price} {symbol}', { price: formatMoney(deliveryFee), symbol }) : t('Livraison gratuite')}</span>
-          {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
-        </div>
+      <Link to={`/produit/${product.id}`} className="product-body">
+        <h3>{product.name}</h3>
         <div className="price-box">
-          <div>
-            <span className="label">{t('Prix de vente')}</span>
-            <span className="price-line">
-              {hasPromo && <span className="old-price">{formatMoney(oldPrice)} {symbol}</span>}
-              <span className="price">{formatMoney(product.price)} {symbol}</span>
-            </span>
-          </div>
+          <span className="price-line">
+            {hasPromo && <span className="old-price">{formatMoney(oldPrice)} {symbol}</span>}
+            <span className="price">{formatMoney(product.price)} {symbol}</span>
+          </span>
           {showCommission && (
-            <div>
-              <span className="label">{t('Commission ({n}%)', { n: product.commission_percent })}</span>
-              <span className="commission">+{formatMoney(commission)} {symbol}</span>
-            </div>
+            <span className="commission">+{formatMoney(commission)} {symbol}</span>
           )}
         </div>
         <p className={`stock-line ${qty > 0 ? '' : 'out'}`}>
           {qty > 0 ? t('En stock : {n}', { n: qty }) : t('Rupture de stock')}
         </p>
-        {action && (
-          <div className="card-actions">
+      </Link>
+      <div className="card-actions">
+        {action ? (
+          <>
             <button className="btn btn-primary btn-block" onClick={() => onAction(product)}>{t(action)}</button>
             {secondaryAction && (
               <button className="btn btn-danger btn-block" onClick={() => onSecondaryAction(product)}>{t(secondaryAction)}</button>
@@ -94,9 +77,8 @@ export default function ProductCard({ product, action, onAction, secondaryAction
             {extraAction && (
               <button className="btn btn-outline btn-block" onClick={() => extraAction.onClick(product)}>{extraAction.label}</button>
             )}
-          </div>
-        )}
-        {!action && (
+          </>
+        ) : (
           <button
             className={`btn btn-block ${qty > 0 ? 'btn-primary' : ''}`}
             disabled={qty <= 0}
