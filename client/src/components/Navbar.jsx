@@ -100,6 +100,15 @@ function NotifBell() {
     }
   };
 
+  const removeNotif = async (n) => {
+    setNotifs((ns) => ns.filter((x) => x.id !== n.id));
+    try {
+      await api.deleteNotification(n.id);
+    } catch {
+      loadNotifs();
+    }
+  };
+
   const message = (n) => {
     const buyer = n.buyer_name || t('le client');
     if (n.type === 'sale_order') {
@@ -173,6 +182,16 @@ function NotifBell() {
                       {new Date(n.created_at).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })}
                     </span>
                   </Link>
+                  {n.read && (
+                    <button
+                      className="notif-del"
+                      aria-label={t('Supprimer la notification')}
+                      title={t('Supprimer la notification')}
+                      onClick={() => removeNotif(n)}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

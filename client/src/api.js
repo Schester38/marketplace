@@ -43,6 +43,7 @@ export const api = {
   purchasesMy: () => request('/purchases/my'),
   notifications: () => request('/notifications'),
   notificationsRead: () => request('/notifications/read', { method: 'POST' }),
+  deleteNotification: (id) => request(`/notifications/${id}`, { method: 'DELETE' }),
   listOffers: () => request('/offers'),
   getOffer: (id) => request(`/offers/${id}`),
   createOffer: (payload) => request('/offers', { method: 'POST', body: JSON.stringify(payload) }),

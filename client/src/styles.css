@@ -818,12 +818,23 @@ input, select, textarea { font-size: 16px; }
   border-bottom: 1px solid var(--border);
 }
 .notif-list { list-style: none; max-height: 380px; overflow-y: auto; }
-.notif-item { border-bottom: 1px solid var(--border); }
+.notif-item { border-bottom: 1px solid var(--border); display: flex; align-items: stretch; }
 .notif-item:last-child { border-bottom: none; }
-.notif-item a { display: block; padding: 10px 14px; color: var(--text); text-decoration: none; }
+.notif-item a { display: block; flex: 1; padding: 10px 14px; color: var(--text); text-decoration: none; }
 .notif-item a:hover { background: var(--soft); }
 .notif-item.unread { background: #eef2ff; }
 .notif-item.unread a:hover { background: #e0e7ff; }
+.notif-del {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 14px;
+  align-self: center;
+}
+.notif-del:hover { color: var(--danger); }
 .notif-text { display: block; font-size: 0.86rem; line-height: 1.45; }
 .notif-date { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 3px; }
 [dir='rtl'] .notif-panel { right: auto; left: 0; }
