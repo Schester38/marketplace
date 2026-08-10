@@ -68,10 +68,13 @@ router.post('/', authRequired, roleRequired('seller'), ah(async (req, res) => {
 router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
   const sales = (
     await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, u.name AS shop_name, u.country AS shop_country
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
+              u.name AS shop_name, u.country AS shop_country,
+              u2.seller_code AS seller_code
        FROM sales s
        JOIN products p ON p.id = s.product_id
        JOIN users u ON u.id = p.shop_id
+       JOIN users u2 ON u2.id = s.seller_id
        WHERE s.seller_id = $1
        ORDER BY s.created_at DESC`,
       [req.user.id]

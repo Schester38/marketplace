@@ -6,7 +6,6 @@ import { downloadInvoice } from '../components/Invoice.jsx';
 import { countrySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
-import { categoryEmoji } from '../config.js';
 
 export default function LivreurDashboard() {
   const { t } = useLang();
@@ -86,7 +85,7 @@ export default function LivreurDashboard() {
                     <span className={`badge badge-pending`}>{t('En attente de vente')}</span>
                   </div>
                   <p className="hint">
-                    {categoryEmoji(s.category)} {formatMoney(s.total_price)} {symbol(s)}
+                    {formatMoney(s.total_price)} {symbol(s)}
                     {s.shop_name ? ` · ${t('Boutique : {shop}', { shop: s.shop_name })}` : ''}
                     {s.seller_name ? ` · ${t('Vendeur : {seller}', { seller: s.seller_name })}` : ''}
                   </p>
