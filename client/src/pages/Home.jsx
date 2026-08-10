@@ -12,21 +12,27 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('');
   const [sort, setSort] = useState('recent');
   const produitsRef = useRef(null);
   const mounted = useRef(true);
 
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(id);
+  }, [search]);
+
   const loadProducts = useCallback(
     (silent) => {
       if (!silent) setLoading(true);
       api
-        .listProducts({ search, category, sort })
-        .then((d) => mounted.current && setProducts(d.products))
+        .listProducts({ search: debouncedSearch, category, sort })
+        .then((d) => { if (mounted.current) { setProducts(d.products); setError(''); } })
         .catch((e) => mounted.current && setError(e.message))
         .finally(() => mounted.current && setLoading(false));
     },
-    [search, category, sort]
+    [debouncedSearch, category, sort]
   );
 
   useEffect(() => {

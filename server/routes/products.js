@@ -49,8 +49,8 @@ router.get('/', async (req, res) => {
   const params = [];
   const where = [];
   if (search) {
-    where.push('(p.name ILIKE $' + (params.length + 1) + ' OR p.description ILIKE $' + (params.length + 2) + ')');
-    params.push(`%${search}%`, `%${search}%`);
+    where.push('(p.name ILIKE $' + (params.length + 1) + ' OR p.description ILIKE $' + (params.length + 2) + ' OR u.name ILIKE $' + (params.length + 3) + ')');
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
   }
   if (shop) {
     where.push('p.shop_id = $' + (params.length + 1));
