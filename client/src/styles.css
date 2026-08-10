@@ -147,6 +147,16 @@ main { animation: pageIn 0.35s ease; }
   cursor: pointer;
 }
 .drawer-nav { display: flex; flex-direction: column; padding: 8px; gap: 3px; overflow-y: auto; flex: 1; }
+.drawer-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-tools .nav-icon-link { text-decoration: none; font-size: 1.05rem; }
+.drawer-tools .nav-icon-link .nav-badge { top: -4px; right: -6px; }
+.drawer-tools .theme-toggle, .drawer-tools .lang-toggle { height: 38px; min-width: 42px; }
 .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip {
   width: 100%;
   text-align: left;

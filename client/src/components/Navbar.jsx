@@ -216,25 +216,42 @@ export default function Navbar({ onLogout }) {
     ? user.role === 'shop' ? t('boutique') : user.role === 'seller' ? t('vendeur') : user.role === 'client' ? t('client') : t('créateur')
     : '';
 
-  const links = (
-    <>
+  const themeToggle = (
+    <button
+      className="theme-toggle"
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      aria-label={t('Basculer le mode sombre ou clair')}
+      title={theme === 'dark' ? t('Passer en mode clair') : t('Passer en mode sombre')}
+    >
+      {theme === 'dark' ? '☀️' : '🌙'}
+    </button>
+  );
+
+  const favLink = (
+    <Link to="/favoris" className="nav-icon-link" onClick={close} aria-label={t('Mes favoris')} title={t('Mes favoris')}>
+      ❤️{favs.length > 0 && <span className="nav-badge">{favs.length}</span>}
+    </Link>
+  );
+
+  const cartLink = (
+    <Link to="/panier" className="nav-icon-link" onClick={close} aria-label={t('Mon panier')} title={t('Mon panier')}>
+      🛒{cartCount > 0 && <span className="nav-badge">{cartCount}</span>}
+    </Link>
+  );
+
+  const tools = (
+    <div className="drawer-tools">
       <LangSwitcher />
-      <button
-        className="theme-toggle"
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        aria-label={t('Basculer le mode sombre ou clair')}
-        title={theme === 'dark' ? t('Passer en mode clair') : t('Passer en mode sombre')}
-      >
-        {theme === 'dark' ? '☀️' : '🌙'}
-      </button>
+      {themeToggle}
+      {favLink}
+      {cartLink}
+    </div>
+  );
+
+  const navLinks = (
+    <>
       <Link to="/" onClick={close}>{t('Produits')}</Link>
       <Link to="/vitrine-offre" onClick={close}>{t("Vitrine d'offre")}</Link>
-      <Link to="/favoris" className="nav-icon-link" onClick={close} aria-label={t('Mes favoris')} title={t('Mes favoris')}>
-        ❤️{favs.length > 0 && <span className="nav-badge">{favs.length}</span>}
-      </Link>
-      <Link to="/panier" className="nav-icon-link" onClick={close} aria-label={t('Mon panier')} title={t('Mon panier')}>
-        🛒{cartCount > 0 && <span className="nav-badge">{cartCount}</span>}
-      </Link>
       {!user && <Link to="/login" onClick={close}>{t('Connexion')}</Link>}
       {!user && <Link to="/register" className="btn btn-primary" onClick={close}>{t('Créer un compte')}</Link>}
       {user && user.role === 'shop' && <Link to="/shop" onClick={close}>{t('Ma boutique')}</Link>}
@@ -250,6 +267,13 @@ export default function Navbar({ onLogout }) {
           <button className="btn btn-outline" onClick={logout}>{t('Déconnexion')}</button>
         </>
       )}
+    </>
+  );
+
+  const links = (
+    <>
+      {tools}
+      {navLinks}
     </>
   );
 
@@ -284,7 +308,8 @@ export default function Navbar({ onLogout }) {
           <span>Mboppi</span>
           <button className="drawer-close" aria-label={t('Fermer le menu')} onClick={close}>✕</button>
         </div>
-        <nav className="drawer-nav">{links}</nav>
+        {tools}
+        <nav className="drawer-nav">{navLinks}</nav>
         {canInstall && (
           <div className="drawer-footer">
             <button
