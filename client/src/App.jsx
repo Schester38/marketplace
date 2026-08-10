@@ -38,6 +38,8 @@ export function dashboardPath(role) {
   return '/creator';
 }
 
+const WELCOME_PATHS = ['/', '/shop', '/seller', '/client', '/creator', '/livreur'];
+
 export function useAuth() {
   return useContext(AuthContext);
 }
@@ -114,7 +116,7 @@ export default function App() {
       <LangProvider>
         <div className="app">
           <Navbar onLogout={() => { logout(); navigate('/'); }} />
-          {location.pathname === '/' && <WelcomeBanner />}
+          {WELCOME_PATHS.includes(location.pathname) && <WelcomeBanner />}
           <Suspense fallback={<LoadingScreen />}>
             <Routes>
             <Route path="/" element={<Home />} />

@@ -11,7 +11,21 @@ import { useAuth } from '../App.jsx';
 export default function Home() {
   const { t } = useLang();
   const { user } = useAuth();
-  const [products, setProducts] = useState([]);
+  const mounted = useRef(true);
+  const hasLoaded = useRef(false);
+  const [products, setProducts] = useState(() => {
+    try {
+      const cached = sessionStorage.getItem('mboppi_products');
+      const arr = cached ? JSON.parse(cached) : null;
+      if (Array.isArray(arr) && arr.length) {
+        hasLoaded.current = true;
+        return arr;
+      }
+    } catch {
+      /* cache invalide : on ignore */
+    }
+    return [];
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -20,8 +34,6 @@ export default function Home() {
   const [sort, setSort] = useState('recent');
   const [scope, setScope] = useState('product');
   const produitsRef = useRef(null);
-  const mounted = useRef(true);
-  const hasLoaded = useRef(false);
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim()), 150);
@@ -30,6 +42,11 @@ export default function Home() {
 
   const loadProducts = useCallback(
     (silent) => {
+      if (!user) {
+        setProducts([]);
+        setLoading(false);
+        return;
+      }
       if (!silent && !hasLoaded.current) setLoading(true);
       api
         .listProducts({ search: debouncedSearch, category, sort, scope })
@@ -38,12 +55,19 @@ export default function Home() {
             hasLoaded.current = true;
             setProducts(d.products);
             setError('');
+            if (!debouncedSearch && !category && sort === 'recent' && scope === 'product') {
+              try {
+                sessionStorage.setItem('mboppi_products', JSON.stringify(d.products));
+              } catch {
+                /* stockage indisponible : on ignore */
+              }
+            }
           }
         })
         .catch((e) => mounted.current && setError(e.message))
         .finally(() => mounted.current && setLoading(false));
     },
-    [debouncedSearch, category, sort, scope]
+    [user, debouncedSearch, category, sort, scope]
   );
 
   useEffect(() => {
