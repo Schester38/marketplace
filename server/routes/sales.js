@@ -188,7 +188,7 @@ router.get('/livreur', ah(async (req, res) => {
   const shopParam = shop ? [shop.id] : [];
   const pending = (
     await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, p.photos, p.shop_id,
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
               u.name AS seller_name, u.seller_code,
               shop.name AS shop_name, shop.country AS shop_country
        FROM sales s

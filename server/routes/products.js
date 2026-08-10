@@ -1,24 +1,21 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired, roleRequired } from '../auth.js';
+import { listPhotos, fullPhotos, normalizeUploadPhotos } from '../photo.js';
 
 const router = Router();
 
 const MAX_PRODUCTS_PER_SHOP = 5;
 const OWNER_ROLES = ['shop', 'creator'];
 
-function productRow(p) {
-  let photos = [];
-  try {
-    photos = JSON.parse(p.photos || '[]');
-  } catch {
-    photos = [];
-  }
+function productRow(p, mode = 'list') {
+  const photos = mode === 'detail' ? fullPhotos(p.photos) : listPhotos(p.photos);
+  const image = (mode === 'detail' ? fullPhotos(p.photos) : listPhotos(p.photos))[0] || p.image || null;
   const { n, pending_n, ...rest } = p;
   return {
     ...rest,
     photos,
-    image: photos[0] || p.image || null,
+    image,
     price: Number(p.price),
     old_price: p.old_price === null || p.old_price === undefined ? null : Number(p.old_price),
     commission_percent: Number(p.commission_percent),
@@ -88,7 +85,8 @@ router.get('/mine', authRequired, roleRequired(...OWNER_ROLES), async (req, res)
 
 router.get('/:id', async (req, res) => {
   const product = productRow(
-    (await q(SELECT_PRODUCT + ' WHERE p.id = $1', [Number(req.params.id)]))[0]
+    (await q(SELECT_PRODUCT + ' WHERE p.id = $1', [Number(req.params.id)]))[0],
+    'detail'
   );
   if (!product) return res.status(404).json({ error: 'Produit introuvable' });
   res.json({ product });
@@ -123,7 +121,7 @@ router.post('/', authRequired, roleRequired(...OWNER_ROLES), async (req, res) =>
     return res.status(400).json({ error: 'La quantité doit être un nombre entier positif' });
   }
   const warrantyText = warranty === '' || warranty === null || warranty === undefined ? null : String(warranty).trim().slice(0, 60);
-  const photoList = Array.isArray(photos) ? photos.filter((p) => typeof p === 'string' && p.startsWith('data:image/')).slice(0, 3) : [];
+  const photoList = normalizeUploadPhotos(photos);
   const count = (await q('SELECT COUNT(*) AS n FROM products WHERE shop_id = $1', [req.user.id]))[0];
   if (Number(count.n) >= MAX_PRODUCTS_PER_SHOP) {
     return res.status(400).json({
@@ -141,7 +139,7 @@ router.post('/', authRequired, roleRequired(...OWNER_ROLES), async (req, res) =>
       priceNum,
       oldPriceNum,
       percentNum,
-      photoList[0] || null,
+      photoList[0] ? photoList[0].thumb : null,
       JSON.stringify(photoList),
       cleanCategory,
       warrantyText,
@@ -199,7 +197,7 @@ router.put('/:id', authRequired, roleRequired(...OWNER_ROLES), async (req, res) 
     return res.status(400).json({ error: 'La quantité doit être un nombre entier positif' });
   }
   const warrantyText = warranty === '' || warranty === null || warranty === undefined ? null : String(warranty).trim().slice(0, 60);
-  const photoList = Array.isArray(photos) ? photos.filter((p) => typeof p === 'string' && p.startsWith('data:image/')).slice(0, 3) : [];
+  const photoList = normalizeUploadPhotos(photos);
   const cleanCategory = req.user.role === 'creator' ? 'Arts & Artisanat' : category ? String(category).trim() : null;
   const updated = await q(
     `UPDATE products SET
@@ -213,7 +211,7 @@ router.put('/:id', authRequired, roleRequired(...OWNER_ROLES), async (req, res) 
       priceNum,
       oldPriceNum,
       percentNum,
-      photoList[0] || null,
+      photoList[0] ? photoList[0].thumb : null,
       JSON.stringify(photoList),
       cleanCategory,
       warrantyText,

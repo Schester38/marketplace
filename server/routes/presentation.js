@@ -1,17 +1,12 @@
 import { Router } from 'express';
 import { q } from '../db.js';
+import { fullPhotos } from '../photo.js';
 
 const router = Router();
 const imageRouter = Router();
 
 function firstPhoto(p) {
-  let photos = [];
-  try {
-    photos = JSON.parse(p.photos || '[]');
-  } catch {
-    photos = [];
-  }
-  return photos[0] || p.image || null;
+  return fullPhotos(p.photos)[0] || p.image || null;
 }
 
 function dataUriParts(uri) {

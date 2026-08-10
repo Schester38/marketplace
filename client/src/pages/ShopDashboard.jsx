@@ -5,7 +5,7 @@ import { formatMoney } from '../components/ProductCard.jsx';
 import { downloadInvoice } from '../components/Invoice.jsx';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
-import { compressImage } from '../utils.js';
+import { compressImage, thumbFromDataUrl } from '../utils.js';
 import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
@@ -88,7 +88,12 @@ export default function ShopDashboard() {
     try {
       const remaining = MAX_PHOTOS - form.photos.length;
       const batch = list.slice(0, remaining);
-      const compressed = await Promise.all(batch.map((f) => compressImage(f)));
+      const compressed = await Promise.all(
+        batch.map(async (f) => {
+          const full = await compressImage(f);
+          return { thumb: await thumbFromDataUrl(full), full };
+        })
+      );
       setForm((f) => ({ ...f, photos: [...f.photos, ...compressed].slice(0, MAX_PHOTOS) }));
     } finally {
       setPicking(false);
@@ -158,11 +163,22 @@ export default function ShopDashboard() {
     }
   };
 
-  const editProduct = (p) => {
+  const editProduct = async (p) => {
     const currentPrefix = countryPhone(user?.country);
     const contact = p.contact && p.contact.startsWith(currentPrefix)
       ? p.contact.slice(currentPrefix.length)
       : (p.contact || '');
+    let photos = Array.isArray(p.photos) && p.photos.length ? p.photos : p.image ? [p.image] : [];
+    try {
+      const detail = await api.getProduct(p.id);
+      const fulls = detail.product.photos || [];
+      if (fulls.length) {
+        const thumbs = Array.isArray(p.photos) ? p.photos : [];
+        photos = fulls.map((full, i) => ({ thumb: thumbs[i] || full, full }));
+      }
+    } catch {
+      /* silencieux */
+    }
     setForm({
       name: p.name || '',
       description: p.description || '',
@@ -174,7 +190,7 @@ export default function ShopDashboard() {
       price: p.price != null ? String(p.price) : '',
       old_price: p.old_price != null ? String(p.old_price) : '',
       commission_percent: p.commission_percent != null ? String(p.commission_percent) : '',
-      photos: Array.isArray(p.photos) && p.photos.length ? p.photos : p.image ? [p.image] : [],
+      photos,
     });
     setEditingId(p.id);
     setShowForm(true);
@@ -373,7 +389,7 @@ export default function ShopDashboard() {
               <div className="photo-previews">
                 {form.photos.map((photo, i) => (
                   <div key={i} className="photo-thumb">
-                    <img src={photo} alt={`${t('Photo')} ${i + 1}`} />
+                    <img src={photo.thumb || photo} alt={`${t('Photo')} ${i + 1}`} />
                     <button type="button" className="photo-remove" onClick={() => removePhoto(i)}>✕</button>
                   </div>
                 ))}

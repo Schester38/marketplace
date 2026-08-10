@@ -22,6 +22,15 @@ const PURCHASE_STATUS = {
   cancelled: { key: 'Annulée', cls: 'badge-cancelled' },
 };
 
+function purchasePhoto(p) {
+  if (Array.isArray(p.photos)) return p.photos[0] || '';
+  try {
+    return JSON.parse(p.photos || '[]')[0] || '';
+  } catch {
+    return '';
+  }
+}
+
 export default function ClientDashboard() {
   const { user } = useAuth();
   const { t, locale } = useLang();
@@ -110,8 +119,8 @@ export default function ClientDashboard() {
                   </p>
                   <div className="order-items">
                     <div className="order-item">
-                      {p.photos && JSON.parse(p.photos || '[]')[0] ? (
-                        <img src={JSON.parse(p.photos)[0]} alt={p.product_name} loading="lazy" />
+                      {purchasePhoto(p) ? (
+                        <img src={purchasePhoto(p)} alt={p.product_name} loading="lazy" />
                       ) : (
                         <span className="order-item-thumb">📦</span>
                       )}

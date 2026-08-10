@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired } from '../auth.js';
 import { sendPush } from '../push.js';
+import { listPhotos } from '../photo.js';
 
 const router = Router();
 
@@ -113,7 +114,7 @@ router.get('/my', authRequired, ah(async (req, res) => {
        ORDER BY s.created_at DESC`,
       [req.user.id]
     )
-  ).map(saleRow);
+  ).map((s) => ({ ...saleRow(s), photos: listPhotos(s.photos) }));
   res.json({ purchases });
 }));
 

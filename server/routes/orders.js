@@ -1,17 +1,9 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired } from '../auth.js';
+import { listPhotos } from '../photo.js';
 
 const router = Router();
-
-function parsePhotos(raw) {
-  try {
-    const arr = JSON.parse(raw || '[]');
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
 
 function orderRow(o) {
   return {
@@ -42,7 +34,7 @@ router.post('/', async (req, res) => {
     if (Number(p.quantity) < qty) {
       return res.status(400).json({ error: `Stock insuffisant pour « ${p.name} »` });
     }
-    const photos = parsePhotos(p.photos);
+    const photos = listPhotos(p.photos);
     cleanItems.push({
       product_id: pid,
       name: p.name,

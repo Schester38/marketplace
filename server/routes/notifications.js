@@ -9,7 +9,7 @@ const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 router.get('/', authRequired, ah(async (req, res) => {
   const notifications = (
     await q(
-      `SELECT n.*, s.product_id, p.name AS product_name, p.photos,
+      `SELECT n.*, s.product_id, p.name AS product_name,
               seller.name AS seller_name, seller.id AS seller_id, seller.seller_code,
               shop.name AS shop_name, shop.id AS shop_id,
               buyer.name AS buyer_name, buyer.id AS buyer_id
