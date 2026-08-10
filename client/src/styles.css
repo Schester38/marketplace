@@ -175,6 +175,11 @@ main { animation: pageIn 0.35s ease; }
   gap: 6px;
 }
 .drawer-install { width: 100%; justify-content: center; }
+.drawer-account {
+  border-top: 1px solid var(--border);
+  padding: 10px 12px;
+}
+.drawer-auth-btn { width: 100%; justify-content: center; }
 .install-ios-hint {
   margin: 0;
   font-size: 0.75rem;

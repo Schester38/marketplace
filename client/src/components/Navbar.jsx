@@ -252,7 +252,6 @@ export default function Navbar({ onLogout }) {
     <>
       <Link to="/" onClick={close}>{t('Produits')}</Link>
       <Link to="/vitrine-offre" onClick={close}>{t("Vitrine d'offre")}</Link>
-      {!user && <Link to="/login" onClick={close}>{t('Connexion')}</Link>}
       {!user && <Link to="/register" className="btn btn-primary" onClick={close}>{t('Créer un compte')}</Link>}
       {user && user.role === 'shop' && <Link to="/shop" onClick={close}>{t('Ma boutique')}</Link>}
       {user && user.role === 'seller' && <Link to="/seller" onClick={close}>{t('Mon espace vendeur')}</Link>}
@@ -264,7 +263,6 @@ export default function Navbar({ onLogout }) {
           <span className="user-chip">
             {user.name} ({roleLabel})
           </span>
-          <button className="btn btn-outline" onClick={logout}>{t('Déconnexion')}</button>
         </>
       )}
     </>
@@ -343,6 +341,13 @@ export default function Navbar({ onLogout }) {
             )}
           </div>
         )}
+        <div className="drawer-account">
+          {user ? (
+            <button className="btn btn-outline drawer-auth-btn" onClick={logout}>{t('Déconnexion')}</button>
+          ) : (
+            <Link to="/login" className="btn btn-primary drawer-auth-btn" onClick={close}>{t('Connexion')}</Link>
+          )}
+        </div>
       </aside>
     </header>
   );
