@@ -58,6 +58,8 @@ function NotifBell() {
   const [notifs, setNotifs] = useState([]);
   const [unread, setUnread] = useState(0);
   const boxRef = useRef(null);
+  const seenRef = useRef(new Set());
+  const firstLoadRef = useRef(true);
 
   const loadNotifs = async () => {
     if (!user) return;
@@ -65,8 +67,38 @@ function NotifBell() {
       const d = await api.notifications();
       setNotifs(d.notifications);
       setUnread(d.unread_count);
+      const news = d.notifications.filter((n) => !n.read && !seenRef.current.has(n.id));
+      if (firstLoadRef.current) {
+        firstLoadRef.current = false;
+        d.notifications.forEach((n) => seenRef.current.add(n.id));
+        return;
+      }
+      news.forEach((n) => seenRef.current.add(n.id));
+      if (news.length && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        news.forEach((n) => {
+          try {
+            new Notification('Mboppi', {
+              body: message(n),
+              icon: '/icon-192.png',
+              tag: 'mboppi-' + n.id,
+              renotify: true,
+            });
+          } catch {
+            /* silencieux */
+          }
+        });
+        if (navigator.vibrate) {
+          try { navigator.vibrate([200, 100, 200]); } catch { /* silencieux */ }
+        }
+      }
     } catch {
       /* silencieux */
+    }
+  };
+
+  const ensurePermission = () => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
     }
   };
 
@@ -157,6 +189,7 @@ function NotifBell() {
         onClick={() => {
           setOpen(!open);
           if (!open && unread > 0) markRead();
+          ensurePermission();
         }}
       >
         🔔
