@@ -44,13 +44,21 @@ const SORTS = {
 };
 
 router.get('/', async (req, res) => {
-  const { search, shop, category, sort } = req.query;
+  const { search, shop, category, sort, scope } = req.query;
   let sql = SELECT_PRODUCT;
   const params = [];
   const where = [];
   if (search) {
-    where.push('(p.name ILIKE $' + (params.length + 1) + ' OR p.description ILIKE $' + (params.length + 2) + ' OR u.name ILIKE $' + (params.length + 3) + ')');
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    if (scope === 'shop') {
+      where.push('u.name ILIKE $' + (params.length + 1));
+      params.push(`%${search}%`);
+    } else {
+      where.push('(p.name ILIKE $' + (params.length + 1) + ' OR p.description ILIKE $' + (params.length + 2) + ')');
+      params.push(`%${search}%`, `%${search}%`);
+      if (scope === 'creation') {
+        where.push("p.category = 'Arts & Artisanat'");
+      }
+    }
   }
   if (shop) {
     where.push('p.shop_id = $' + (params.length + 1));

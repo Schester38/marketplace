@@ -15,24 +15,32 @@ export default function Home() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('');
   const [sort, setSort] = useState('recent');
+  const [scope, setScope] = useState('product');
   const produitsRef = useRef(null);
   const mounted = useRef(true);
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    const id = setTimeout(() => setDebouncedSearch(search.trim()), 150);
     return () => clearTimeout(id);
   }, [search]);
 
   const loadProducts = useCallback(
     (silent) => {
-      if (!silent) setLoading(true);
+      if (!silent && !hasLoaded.current) setLoading(true);
       api
-        .listProducts({ search: debouncedSearch, category, sort })
-        .then((d) => { if (mounted.current) { setProducts(d.products); setError(''); } })
+        .listProducts({ search: debouncedSearch, category, sort, scope })
+        .then((d) => {
+          if (mounted.current) {
+            hasLoaded.current = true;
+            setProducts(d.products);
+            setError('');
+          }
+        })
         .catch((e) => mounted.current && setError(e.message))
         .finally(() => mounted.current && setLoading(false));
     },
-    [debouncedSearch, category, sort]
+    [debouncedSearch, category, sort, scope]
   );
 
   useEffect(() => {
@@ -131,9 +139,19 @@ export default function Home() {
             <option value="price_asc">{t('Prix croissant')}</option>
             <option value="price_desc">{t('Prix décroissant')}</option>
           </select>
+          <select
+            className="input filter-select"
+            value={scope}
+            onChange={(e) => setScope(e.target.value)}
+            aria-label={t('Type de recherche')}
+          >
+            <option value="product">{t('Rechercher un produit')}</option>
+            <option value="shop">{t('Rechercher une boutique')}</option>
+            <option value="creation">{t('Rechercher une création')}</option>
+          </select>
         </div>
         {error && <p className="error" role="alert">{error}</p>}
-        {loading ? (
+        {loading && !hasLoaded.current ? (
           <div className="grid">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="card product-card skeleton" aria-hidden="true">
