@@ -133,12 +133,6 @@ const EN = {
   "S'inscrire ici": 'Register here',
   'Email ou mot de passe incorrect.': 'Incorrect email or password.',
   'Numéro de téléphone': 'Phone number',
-  'Recevoir le code par WhatsApp': 'Receive the code by WhatsApp',
-  'Code reçu (6 chiffres)': 'Received code (6 digits)',
-  'Code envoyé par WhatsApp au numéro {phone}.': 'Code sent by WhatsApp to {phone}.',
-  'Renvoyer le code': 'Resend the code',
-  'Envoi…': 'Sending…',
-  'Mode démo : votre code est {code}': 'Demo mode: your code is {code}',
 
   // AuthGoogle
   'Connexion en cours…': 'Signing in…',
@@ -923,12 +917,6 @@ const AR = {
   'Email ou mot de passe incorrect.': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
   'Téléphone': 'الهاتف',
   'Numéro de téléphone': 'رقم الهاتف',
-  'Recevoir le code par WhatsApp': 'استلام الرمز عبر واتساب',
-  'Code reçu (6 chiffres)': 'الرمز المستلم (6 أرقام)',
-  'Code envoyé par WhatsApp au numéro {phone}.': 'تم إرسال الرمز عبر واتساب إلى {phone}.',
-  'Renvoyer le code': 'إعادة إرسال الرمز',
-  'Envoi…': 'جارٍ الإرسال…',
-  'Mode démo : votre code est {code}': 'الوضع التجريبي: رمزك هو {code}',
 
   // AuthGoogle
   'Connexion en cours…': 'جارٍ تسجيل الدخول…',

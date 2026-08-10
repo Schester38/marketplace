@@ -77,19 +77,7 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
-    CREATE TABLE IF NOT EXISTS otp_codes (
-      id SERIAL PRIMARY KEY,
-      phone TEXT NOT NULL,
-      purpose TEXT NOT NULL DEFAULT 'login',
-      code_hash TEXT NOT NULL,
-      name TEXT,
-      role TEXT,
-      country TEXT,
-      attempts INTEGER NOT NULL DEFAULT 0,
-      expires_at TIMESTAMPTZ NOT NULL,
-      used BOOLEAN NOT NULL DEFAULT FALSE,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
+    DROP TABLE IF EXISTS otp_codes;
 
     CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
     CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id);
