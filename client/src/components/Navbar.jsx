@@ -260,20 +260,22 @@ export default function Navbar({ onLogout }) {
         <span>Mboppi</span>
       </Link>
 
-      <button
-        className="hamburger"
-        aria-label={t('Ouvrir le menu')}
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
-        <span className="hamburger-line"></span>
-        <span className="hamburger-line"></span>
-        <span className="hamburger-line"></span>
-      </button>
-
-      <NotifBell />
-
       <nav className="desktop-nav">{links}</nav>
+
+      <div className="navbar-right">
+        <NotifBell />
+
+        <button
+          className="hamburger"
+          aria-label={t('Ouvrir le menu')}
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          <span className="hamburger-line"></span>
+          <span className="hamburger-line"></span>
+          <span className="hamburger-line"></span>
+        </button>
+      </div>
 
       {open && <div className="drawer-overlay" onClick={close}></div>}
       <aside className={`drawer ${open ? 'open' : ''}`} aria-hidden={!open}>

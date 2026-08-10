@@ -177,6 +177,8 @@ main { animation: pageIn 0.35s ease; }
 
 .navbar .desktop-nav { display: none; }
 
+.navbar-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
 @media (min-width: 1024px) {
   .drawer { width: 300px; box-shadow: var(--shadow-lg); }
   .drawer-header { padding: 14px 18px; font-size: 1.1rem; }
