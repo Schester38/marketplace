@@ -148,6 +148,14 @@ export async function initDb() {
       wallets JSONB NOT NULL DEFAULT '[]',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+
+    CREATE TABLE IF NOT EXISTS shop_payment_methods (
+      id SERIAL PRIMARY KEY,
+      shop_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      full_name TEXT,
+      wallets JSONB NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
   `);
 
   await pool.query(`

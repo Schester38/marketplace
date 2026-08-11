@@ -418,6 +418,18 @@ textarea.input { resize: vertical; }
 }
 .payment-option input { width: 17px; height: 17px; accent-color: var(--primary); }
 .payment-option.selected { border-color: var(--primary); box-shadow: var(--ring); }
+.payment-options { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 18px; }
+button.payment-option {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  background: var(--soft);
+  justify-content: flex-start;
+  text-align: start;
+}
+button.payment-option.active { border-color: var(--primary); box-shadow: var(--ring); background: color-mix(in srgb, var(--primary) 8%, var(--soft)); }
+.wallet-card { margin: 0 0 18px; }
+.wallet-name { font-weight: 600; min-width: 130px; flex-shrink: 0; }
 @media (max-width: 600px) {
   .livreur-item { flex-direction: column; align-items: stretch; }
 }

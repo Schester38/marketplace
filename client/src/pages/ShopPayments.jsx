@@ -5,38 +5,9 @@ import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { getCountry } from '../config.js';
+import { WALLETS_BY_COUNTRY, DEFAULT_WALLETS } from './SellerPayments.jsx';
 
-export const WALLETS_BY_COUNTRY = {
-  Cameroun: ['Orange Money', 'MTN Mobile Money', 'Yoomee', 'Virement bancaire'],
-  "Côte d'Ivoire": ['Orange Money', 'MTN Mobile Money', 'Moov Money', 'Wave', 'Virement bancaire'],
-  Sénégal: ['Orange Money', 'Wave', 'Free Money', 'Virement bancaire'],
-  Mali: ['Orange Money', 'Moov Money', 'Virement bancaire'],
-  'Burkina Faso': ['Orange Money', 'Moov Money', 'Virement bancaire'],
-  Niger: ['Orange Money', 'Moov Money', 'Virement bancaire'],
-  Togo: ['T-Money', 'Flooz', 'Moov Money', 'Virement bancaire'],
-  Bénin: ['MTN Mobile Money', 'Moov Money', 'Virement bancaire'],
-  Guinée: ['Orange Money', 'MTN Mobile Money', 'Virement bancaire'],
-  Gabon: ['Airtel Money', 'Moov Money', 'Virement bancaire'],
-  'République du Congo': ['Airtel Money', 'MTN Mobile Money', 'Virement bancaire'],
-  'République démocratique du Congo': ['Orange Money', 'Airtel Money', 'M-Pesa', 'Virement bancaire'],
-  Kenya: ['M-Pesa', 'Airtel Money', 'Virement bancaire'],
-  Ouganda: ['MTN Mobile Money', 'Airtel Money', 'Virement bancaire'],
-  Tanzanie: ['M-Pesa', 'Tigo Pesa', 'Airtel Money', 'Virement bancaire'],
-  Rwanda: ['MTN Mobile Money', 'Airtel Money', 'Virement bancaire'],
-  Ghana: ['MTN Mobile Money', 'Virement bancaire'],
-  Nigeria: ['Virement bancaire', 'USSD'],
-  'Afrique du Sud': ['Virement bancaire', 'SnapScan'],
-  Éthiopie: ['M-Pesa', 'Virement bancaire'],
-  France: ['Virement bancaire', 'PayPal', 'Carte bancaire'],
-  Belgique: ['Virement bancaire', 'PayPal', 'Carte bancaire'],
-  Suisse: ['Virement bancaire', 'PayPal', 'Carte bancaire'],
-  Canada: ['Virement bancaire', 'PayPal', 'Carte bancaire'],
-  'États-Unis': ['Virement bancaire', 'PayPal', 'Carte bancaire'],
-};
-
-export const DEFAULT_WALLETS = ['Orange Money', 'MTN Mobile Money', 'M-Pesa', 'Airtel Money', 'Wave', 'Moov Money', 'Virement bancaire', 'PayPal'];
-
-export default function SellerPayments() {
+export default function ShopPayments() {
   const { user } = useAuth();
   const { t } = useLang();
   const [fullName, setFullName] = useState('');
@@ -49,7 +20,7 @@ export default function SellerPayments() {
 
   const loadPaymentMethods = useCallback(() => {
     api
-      .getPaymentMethods()
+      .getShopPaymentMethods()
       .then((d) => {
         const saved = d.methods ? d.methods.wallets : [];
         setFullName(d.methods ? d.methods.full_name || '' : '');
@@ -89,7 +60,7 @@ export default function SellerPayments() {
         setSaving(false);
         return;
       }
-      const d = await api.updatePaymentMethods({ full_name: fullName, wallets: list });
+      const d = await api.updateShopPaymentMethods({ full_name: fullName, wallets: list });
       setSavedCount(d.methods.wallets.length);
       setSuccess(t('Moyens de paiement enregistrés !'));
     } catch (err) {
@@ -101,11 +72,11 @@ export default function SellerPayments() {
 
   return (
     <main className="container narrow">
-      <Seo title={t('Mes moyens de paiement') + ' — Mboppi'} description={t('Enregistrez vos portefeuilles électroniques pour recevoir vos commissions.')} />
+      <Seo title={t('Mes moyens de paiement') + ' — Mboppi'} description={t('Enregistrez vos portefeuilles électroniques pour recevoir les paiements de vos clients.')} />
       <section className="dash-header">
         <div>
           <h1>💳 {t('Mes moyens de paiement')}</h1>
-          <p>{t('Ces informations seront visibles par les boutiques pour vous payer vos commissions.')}</p>
+          <p>{t('Ces informations seront visibles par vos clients sur le formulaire de commande.')}</p>
         </div>
       </section>
 

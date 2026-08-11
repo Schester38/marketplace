@@ -22,6 +22,7 @@ export default function LivreurDashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [deliverForm, setDeliverForm] = useState(null);
+  const [shopWallets, setShopWallets] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const load = async (silent) => {
@@ -77,6 +78,20 @@ export default function LivreurDashboard() {
     setPending([]);
     setDelivered([]);
     setShopName(null);
+    setShopWallets(null);
+  };
+
+  const openDeliver = (s) => {
+    setShopWallets(null);
+    if (s.shop_id) {
+      api.shopPaymentMethods(s.shop_id).then((r) => setShopWallets(r.methods)).catch(() => {});
+    }
+    setDeliverForm({
+      sale: s,
+      delivery_fee: '',
+      payment_method: s.payment_method === 'mobile' ? 'mobile' : 'espece',
+      client_code: '',
+    });
   };
 
   const removeDelivered = async (s) => {
@@ -195,7 +210,7 @@ export default function LivreurDashboard() {
                         <p className="hint">📍 {[s.buyer_city, s.buyer_address].filter(Boolean).join(', ')}</p>
                       ) : null}
                     </div>
-                    <button className="btn btn-primary" onClick={() => setDeliverForm({ sale: s, delivery_fee: '', payment_method: 'espece', client_code: '' })}>
+                    <button className="btn btn-primary" onClick={() => openDeliver(s)}>
                       🛵 {t('Livrer')}
                     </button>
                   </div>
@@ -304,6 +319,30 @@ export default function LivreurDashboard() {
                   <span>📱 {t('Par Mobile')}</span>
                 </label>
               </div>
+              {deliverForm.payment_method === 'mobile' && (
+                <div className="wallet-card" style={{ marginTop: 10 }}>
+                  {shopWallets && shopWallets.wallets.length > 0 ? (
+                    <>
+                      <p className="hint" style={{ marginTop: 0 }}>
+                        {t('Envoyez le paiement à la boutique sur l\'un de ces portefeuilles :')}
+                      </p>
+                      {shopWallets.full_name && <p className="hint">{t('Titulaire : {name}', { name: shopWallets.full_name })}</p>}
+                      <div className="wallet-list" style={{ marginBottom: 0 }}>
+                        {shopWallets.wallets.map((w) => (
+                          <div className="wallet-row" key={w.name}>
+                            <span className="wallet-name">{w.name}</span>
+                            <span className="wallet-value">{w.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="hint" style={{ marginTop: 0 }}>
+                      {t('La boutique n\'a pas configuré de portefeuille.')}
+                    </p>
+                  )}
+                </div>
+              )}
               <div className="row2" style={{ marginTop: 14 }}>
                 <button className="btn btn-primary" disabled={submitting}>
                   {submitting ? '…' : `✅ ${t('Confirmer l\'Achat')}`}

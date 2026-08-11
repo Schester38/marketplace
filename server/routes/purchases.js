@@ -42,10 +42,12 @@ function saleRow(s) {
 }
 
 router.post('/', optionalAuth, ah(async (req, res) => {
-  const { product_id, seller_code, purchase_price, quantity, buyer_name, buyer_phone, buyer_city, buyer_address } = req.body || {};
+  const { product_id, seller_code, purchase_price, quantity, buyer_name, buyer_phone, buyer_city, buyer_address, payment_method } = req.body || {};
   if (!product_id || !seller_code) {
     return res.status(400).json({ error: 'Produit et code vendeur sont requis' });
   }
+
+  const method = payment_method === 'mobile' ? 'mobile' : 'espece';
 
   const code = String(seller_code).trim().toUpperCase();
   const seller = (await q('SELECT id, name, seller_code FROM users WHERE seller_code = $1', [code]))[0];
@@ -92,8 +94,8 @@ router.post('/', optionalAuth, ah(async (req, res) => {
   }
 
   const created = await q(
-    `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by)
-     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
+    `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by, payment_method)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id`,
     [
       product.id,
       seller.id,
@@ -110,6 +112,7 @@ router.post('/', optionalAuth, ah(async (req, res) => {
       confirmCode,
       referralCommission,
       referredBy,
+      method,
     ]
   );
 

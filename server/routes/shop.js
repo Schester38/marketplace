@@ -7,6 +7,46 @@ const router = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
+function rowMethods(m) {
+  if (!m) return null;
+  return {
+    full_name: m.full_name,
+    wallets: Array.isArray(m.wallets) ? m.wallets : [],
+    updated_at: m.updated_at,
+  };
+}
+
+router.get('/payment-methods', authRequired, roleRequired('shop'), ah(async (req, res) => {
+  const m = (
+    await q('SELECT full_name, wallets, updated_at FROM shop_payment_methods WHERE shop_id = $1', [req.user.id])
+  )[0];
+  res.json({ methods: rowMethods(m) });
+}));
+
+router.put('/payment-methods', authRequired, roleRequired('shop'), ah(async (req, res) => {
+  const { full_name, wallets } = req.body || {};
+  const name = full_name ? String(full_name).trim() : null;
+  const list = Array.isArray(wallets)
+    ? wallets
+        .filter((w) => w && String(w.name || '').trim() && String(w.value || '').trim())
+        .map((w) => ({
+          name: String(w.name).trim(),
+          value: String(w.value).trim(),
+        }))
+    : [];
+  const updated = (
+    await q(
+      `INSERT INTO shop_payment_methods (shop_id, full_name, wallets, updated_at)
+       VALUES ($1, $2, $3::jsonb, now())
+       ON CONFLICT (shop_id)
+       DO UPDATE SET full_name = EXCLUDED.full_name, wallets = EXCLUDED.wallets, updated_at = now()
+       RETURNING full_name, wallets, updated_at`,
+      [req.user.id, name, JSON.stringify(list)]
+    )
+  )[0];
+  res.json({ methods: rowMethods(updated), ok: true });
+}));
+
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 function randomShopCode() {
@@ -36,6 +76,19 @@ router.post('/code', authRequired, roleRequired('shop'), ah(async (req, res) => 
   if (!code) return res.status(500).json({ error: 'Impossible de générer un code, réessayez' });
   await q('UPDATE users SET shop_code = $1 WHERE id = $2', [code, req.user.id]);
   res.json({ shop_code: code });
+}));
+
+router.get('/:id/payment-methods', ah(async (req, res) => {
+  const m = (
+    await q(
+      `SELECT full_name, wallets FROM shop_payment_methods
+       WHERE shop_id = $1
+       AND EXISTS (SELECT 1 FROM users WHERE id = $1 AND role IN ('shop', 'creator'))`,
+      [Number(req.params.id)]
+    )
+  )[0];
+  if (!m) return res.json({ methods: null });
+  res.json({ methods: rowMethods(m) });
 }));
 
 router.get('/:id', ah(async (req, res) => {

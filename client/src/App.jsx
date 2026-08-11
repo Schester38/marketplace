@@ -16,6 +16,7 @@ const Favorites = React.lazy(() => import('./pages/Favorites.jsx'));
 const ShopDashboard = React.lazy(() => import('./pages/ShopDashboard.jsx'));
 const SellerDashboard = React.lazy(() => import('./pages/SellerDashboard.jsx'));
 const SellerPayments = React.lazy(() => import('./pages/SellerPayments.jsx'));
+const ShopPayments = React.lazy(() => import('./pages/ShopPayments.jsx'));
 const LivreurDashboard = React.lazy(() => import('./pages/LivreurDashboard.jsx'));
 const ClientDashboard = React.lazy(() => import('./pages/ClientDashboard.jsx'));
 const CreatorDashboard = React.lazy(() => import('./pages/CreatorDashboard.jsx'));
@@ -208,6 +209,14 @@ export default function App() {
             element={
               <RoleOnly role="seller">
                 <SellerPayments />
+              </RoleOnly>
+            }
+          />
+          <Route
+            path="/shop/paiements"
+            element={
+              <RoleOnly role="shop">
+                <ShopPayments />
               </RoleOnly>
             }
           />

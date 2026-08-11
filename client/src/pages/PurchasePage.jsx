@@ -14,6 +14,7 @@ export default function PurchasePage() {
   const { t } = useLang();
   const [product, setProduct] = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [shopWallets, setShopWallets] = useState(null);
   const [form, setForm] = useState({
     seller_code: params.get('code') || '',
     buyer_name: '',
@@ -21,6 +22,8 @@ export default function PurchasePage() {
     buyer_address: '',
     buyer_phone: '',
   });
+  const [paymentMethod, setPaymentMethod] = useState('espece');
+  const [copiedWallet, setCopiedWallet] = useState(null);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
   const [purchase, setPurchase] = useState(null);
@@ -29,9 +32,25 @@ export default function PurchasePage() {
   useEffect(() => {
     api
       .getProduct(id)
-      .then((d) => setProduct(d.product))
+      .then((d) => {
+        setProduct(d.product);
+        if (d.product && d.product.shop_id) {
+          api
+            .shopPaymentMethods(d.product.shop_id)
+            .then((r) => setShopWallets(r.methods))
+            .catch(() => {});
+        }
+      })
       .catch(() => setNotFound(true));
   }, [id]);
+
+  const copyWallet = async (value) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedWallet(value);
+      setTimeout(() => setCopiedWallet(null), 1500);
+    } catch {}
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -45,6 +64,7 @@ export default function PurchasePage() {
         buyer_city: form.buyer_city,
         buyer_address: form.buyer_address,
         buyer_phone: form.buyer_phone,
+        payment_method: paymentMethod,
       });
       setPurchase(d.sale || null);
       setDone(true);
@@ -174,6 +194,54 @@ export default function PurchasePage() {
               onChange={(e) => setForm({ ...form, seller_code: e.target.value.toUpperCase() })}
               placeholder="ABC123"
             />
+
+            <div className="payment-options">
+              <button
+                type="button"
+                className={`payment-option ${paymentMethod === 'espece' ? 'active' : ''}`}
+                onClick={() => setPaymentMethod('espece')}
+              >
+                💵 {t('En espèces (à la livraison)')}
+              </button>
+              <button
+                type="button"
+                className={`payment-option ${paymentMethod === 'mobile' ? 'active' : ''}`}
+                onClick={() => setPaymentMethod('mobile')}
+              >
+                📱 {t('Portefeuille (Mobile Money)')}
+              </button>
+            </div>
+
+            {paymentMethod === 'mobile' && (
+              <div className="card wallet-card">
+                {shopWallets && shopWallets.wallets.length > 0 ? (
+                  <>
+                    <p className="hint" style={{ marginTop: 0 }}>
+                      {t('Envoyez le paiement à la boutique sur l\'un de ces portefeuilles :')}
+                    </p>
+                    {shopWallets.full_name && <p className="hint">{t('Titulaire : {name}', { name: shopWallets.full_name })}</p>}
+                    <div className="wallet-list">
+                      {shopWallets.wallets.map((w) => (
+                        <div className="wallet-row" key={w.name}>
+                          <span className="wallet-name">{w.name}</span>
+                          <span className="wallet-value">{w.value}</span>
+                          <button type="button" className="btn btn-outline btn-sm" onClick={() => copyWallet(w.value)}>
+                            {copiedWallet === w.value ? t('Copié !') : t('Copier')}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="hint">
+                      {t('Indiquez votre nom et votre numéro lors du transfert pour faciliter la livraison.')}
+                    </p>
+                  </>
+                ) : (
+                  <p className="hint" style={{ marginTop: 0 }}>
+                    {t('La boutique n\'a pas encore configuré ses portefeuilles de paiement. Paiement à la livraison recommandé.')}
+                  </p>
+                )}
+              </div>
+            )}
             {error && <p className="error">{error}</p>}
             <button className="btn btn-primary btn-block" disabled={submitting}>
               {submitting ? '…' : `✅ ${t('Confirmer la Commande')}`}

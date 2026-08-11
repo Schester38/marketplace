@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
@@ -309,6 +310,9 @@ export default function ShopDashboard() {
           </p>
         </div>
         <div className="row2 dash-actions">
+          <Link className="btn btn-outline btn-sm" to="/shop/paiements" style={{ flexShrink: 0 }}>
+            💳 {t('Moyens de paiement')}
+          </Link>
           <button
             className={`btn ${showDelivered ? 'btn-primary' : 'btn-outline'}`}
             onClick={() => setShowDelivered(!showDelivered)}
