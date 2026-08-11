@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v14';
+const CACHE_NAME = 'mboppi-v15';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/og-image.svg', '/robots.txt', '/sitemap.xml'];
 
 self.addEventListener('install', (event) => {
@@ -77,23 +77,6 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (event.request.mode === 'navigate' || url.pathname === '/') {
-    event.respondWith(
-      (async () => {
-        try {
-          const fresh = await fetch(event.request);
-          if (fresh.ok) {
-            const clone = fresh.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('/', clone));
-            return fresh;
-          }
-          throw new Error('reponse non valide');
-        } catch {
-          const cached = await caches.match('/');
-          if (cached) return cached;
-          return Response.error();
-        }
-      })()
-    );
     return;
   }
 

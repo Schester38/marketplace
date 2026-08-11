@@ -396,6 +396,9 @@ export default function Navbar({ onLogout }) {
       <nav className="desktop-nav">{links}</nav>
 
       <div className="navbar-right">
+        {!user && (
+          <Link to="/login" className="nav-user-btn" onClick={close}>{t('Connexion')}</Link>
+        )}
         <NotifBell />
 
         <button
