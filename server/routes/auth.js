@@ -130,8 +130,9 @@ router.get('/google', (req, res) => {
     const msg = encodeURIComponent('La connexion Google n\'est pas encore configurée');
     return res.redirect(`/auth-google?error=${msg}`);
   }
-  const role = VALID_ROLES.includes(req.query.role) ? req.query.role : 'seller';
-  res.redirect(googleAuthUrl(role, req.query.country, req));
+  const ref = String(req.query.ref || '').trim().toUpperCase();
+  const role = VALID_ROLES.includes(req.query.role) ? req.query.role : ref ? 'client' : 'seller';
+  res.redirect(googleAuthUrl(ref ? 'client' : role, req.query.country, ref, req));
 });
 
 router.get('/google/callback', ah(async (req, res) => {
@@ -143,12 +144,23 @@ router.get('/google/callback', ah(async (req, res) => {
     const profile = await getGoogleProfile(code, req);
     let user = (await q('SELECT * FROM users WHERE email = $1', [profile.email]))[0];
     if (!user) {
-      const [role, country] = String(state || '').split('|');
-      const cleanRole = VALID_ROLES.includes(role) ? role : 'seller';
+      const [role, country, ref] = String(state || '').split('|');
+      let cleanRole = VALID_ROLES.includes(role) ? role : 'seller';
       const cleanCountry = country && country.length <= 60 ? country : null;
+      let referredBy = null;
+      const cleanRef = ref ? String(ref).trim().toUpperCase() : '';
+      if (cleanRef) {
+        const referrer = (
+          await q('SELECT id, code FROM users WHERE role = \'seller\' AND code = $1', [cleanRef])
+        )[0];
+        if (referrer) {
+          referredBy = referrer.id;
+          cleanRole = 'client';
+        }
+      }
       const created = await q(
-        'INSERT INTO users (name, email, password, provider, role, country) VALUES ($1, $2, NULL, \'google\', $3, $4) RETURNING id',
-        [profile.name, profile.email, cleanRole, cleanCountry]
+        'INSERT INTO users (name, email, password, provider, role, country, referred_by) VALUES ($1, $2, NULL, \'google\', $3, $4, $5) RETURNING id',
+        [profile.name, profile.email, cleanRole, cleanCountry, referredBy]
       );
       user = (await q('SELECT * FROM users WHERE id = $1', [created[0].id]))[0];
     }

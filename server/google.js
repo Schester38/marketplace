@@ -12,14 +12,14 @@ function callbackUrl(req) {
   );
 }
 
-export function googleAuthUrl(role, country, req) {
+export function googleAuthUrl(role, country, ref, req) {
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
     redirect_uri: callbackUrl(req),
     response_type: 'code',
     scope: 'openid email profile',
     prompt: 'select_account',
-    state: `${role || 'seller'}|${country || ''}`,
+    state: `${role || 'seller'}|${country || ''}|${ref || ''}`,
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }

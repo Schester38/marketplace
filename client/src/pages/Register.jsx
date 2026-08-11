@@ -164,7 +164,9 @@ export default function Register() {
             type="button"
             className="btn btn-google btn-block"
             onClick={() => {
-              window.location.href = `/api/auth/google?role=${form.role}&country=${encodeURIComponent(form.country || '')}`;
+              const params = new URLSearchParams({ role: refCode ? 'client' : form.role, country: form.country || '' });
+              if (refCode) params.set('ref', refCode);
+              window.location.href = `/api/auth/google?${params.toString()}`;
             }}
           >
             <GoogleIcon />
