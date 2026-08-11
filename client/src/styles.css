@@ -107,7 +107,7 @@ main { animation: pageIn 0.35s ease; }
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  z-index: 90;
+  z-index: 940;
 }
 
 .drawer {
@@ -118,7 +118,7 @@ main { animation: pageIn 0.35s ease; }
   width: min(262px, 82vw);
   background: var(--card);
   border-right: 1px solid var(--border);
-  z-index: 100;
+  z-index: 950;
   transform: translateX(-100%);
   transition: transform 0.25s ease;
   display: flex;
