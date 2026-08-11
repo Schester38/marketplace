@@ -347,16 +347,7 @@ export default function Navbar({ onLogout }) {
     </Link>
   );
 
-  const userIcon = user ? (
-    <button
-      className="logout-btn"
-      onClick={logout}
-      aria-label={t('Déconnexion')}
-      title={t('Déconnexion')}
-    >
-      🚪 {t('Déconnexion')}
-    </button>
-  ) : (
+  const userIcon = user ? null : (
     <Link
       to="/login"
       className="nav-icon-link"
@@ -479,7 +470,7 @@ export default function Navbar({ onLogout }) {
         )}
         <div className="drawer-account">
           {user && (
-            <button className="btn btn-outline drawer-auth-btn" onClick={logout}>{t('Déconnexion')}</button>
+            <button className="btn btn-outline drawer-auth-btn" onClick={logout}>🚪 {t('Déconnexion')}</button>
           )}
         </div>
       </aside>
