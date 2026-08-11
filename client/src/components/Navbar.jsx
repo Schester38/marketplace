@@ -372,7 +372,6 @@ export default function Navbar({ onLogout }) {
   const navLinks = (
     <>
       <Link to="/" onClick={close}>{t('Produits')}</Link>
-      <Link to="/contact" onClick={close}>{t('Contact')}</Link>
       {user && user.role === 'shop' && <Link to="/shop" onClick={close}>{t('Ma boutique')}</Link>}
       {user && user.role === 'seller' && <Link to="/seller" onClick={close}>{t('Mon espace vendeur')}</Link>}
       {user && user.role === 'seller' && <Link to="/seller/paiements" onClick={close}>{t('Mes moyens de paiement')}</Link>}
