@@ -9,15 +9,15 @@ const ALLOWED_ORIGINS = [
 
 const CSP =
   "default-src 'self' data: blob:; " +
-  "script-src 'self'; " +
+  "script-src 'self' https://www.google.com https://www.gstatic.com; " +
   "style-src 'self' 'unsafe-inline'; " +
   "img-src 'self' data: blob: https:; " +
   "font-src 'self' data:; " +
-  "connect-src 'self'; " +
-  "frame-src 'self'; " +
+  "connect-src 'self' https://www.google.com https://www.gstatic.com; " +
+  "frame-src 'self' https://www.google.com; " +
   "object-src 'none'; " +
   "base-uri 'self'; " +
-  "form-action 'self'";
+  "form-action 'self' https://www.google.com";
 
 export function securityHeaders(req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');

@@ -7,6 +7,7 @@ import Seo from '../components/Seo.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
 import { COUNTRIES } from '../config.js';
 import { useLang } from '../i18n.jsx';
+import { getRecaptchaToken } from '../recaptcha.js';
 
 export default function Register() {
   const { login } = useAuth();
@@ -25,7 +26,8 @@ export default function Register() {
       return;
     }
     try {
-      const data = await api.register(form);
+      const recaptchaToken = await getRecaptchaToken('register');
+      const data = await api.register({ ...form, recaptchaToken });
       login(data.user, data.token);
       localStorage.setItem('mboppi_welcome', 'register');
       navigate('/');

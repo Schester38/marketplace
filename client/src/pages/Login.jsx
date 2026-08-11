@@ -5,6 +5,7 @@ import { useAuth, dashboardPath } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
+import { getRecaptchaToken } from '../recaptcha.js';
 
 export default function Login() {
   const { login } = useAuth();
@@ -17,7 +18,8 @@ export default function Login() {
     e.preventDefault();
     setError('');
     try {
-      const data = await api.login(form);
+      const recaptchaToken = await getRecaptchaToken('login');
+      const data = await api.login({ ...form, recaptchaToken });
       login(data.user, data.token);
       localStorage.setItem('mboppi_welcome', 'login');
       navigate(dashboardPath(data.user.role));

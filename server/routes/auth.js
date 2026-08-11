@@ -16,6 +16,24 @@ function validEmail(v) {
   return typeof v === 'string' && v.length <= 120 && EMAIL_RE.test(v.trim());
 }
 
+const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY;
+
+async function verifyRecaptcha(token) {
+  if (!RECAPTCHA_SECRET) return true;
+  if (!token) return false;
+  try {
+    const params = new URLSearchParams({ secret: RECAPTCHA_SECRET, response: String(token) });
+    const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      body: params,
+    });
+    const data = await res.json();
+    return !!(data && data.success === true && data.score >= 0.5);
+  } catch {
+    return false;
+  }
+}
+
 function publicUser(u) {
   return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null };
 }
@@ -23,7 +41,10 @@ function publicUser(u) {
 const VALID_ROLES = ['shop', 'seller', 'client', 'creator'];
 
 router.post('/register', ah(async (req, res) => {
-  const { name, email, password, role, country } = req.body || {};
+  const { name, email, password, role, country, recaptchaToken } = req.body || {};
+  if (!(await verifyRecaptcha(recaptchaToken))) {
+    return res.status(400).json({ error: 'Vérification anti-robot échouée, réessayez' });
+  }
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Nom, email et mot de passe sont requis' });
   }
@@ -54,7 +75,10 @@ router.post('/register', ah(async (req, res) => {
 }));
 
 router.post('/login', ah(async (req, res) => {
-  const { email, password } = req.body || {};
+  const { email, password, recaptchaToken } = req.body || {};
+  if (!(await verifyRecaptcha(recaptchaToken))) {
+    return res.status(400).json({ error: 'Vérification anti-robot échouée, réessayez' });
+  }
   if (!email || !password) {
     return res.status(400).json({ error: 'Email et mot de passe sont requis' });
   }
