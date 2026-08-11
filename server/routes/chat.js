@@ -8,6 +8,8 @@ const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const API_KEY = process.env.GEMINI_API_KEY || '';
 
+const MODEL_FALLBACKS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+
 const MAX_MESSAGE = 2000;
 const MAX_HISTORY = 12;
 
@@ -17,8 +19,8 @@ const FALLBACKS = {
   ar: 'عذراً، لا أستطيع الإجابة الآن. يرجى التواصل معنا عبر صفحة الاتصال وسنرد خلال 24 ساعة! 💬',
 };
 
-function fallback(lang) {
-  return { reply: FALLBACKS[lang] || FALLBACKS.fr, offline: true };
+function fallback(lang, extra = {}) {
+  return { reply: FALLBACKS[lang] || FALLBACKS.fr, ...extra };
 }
 
 router.post('/', ah(async (req, res) => {
@@ -29,7 +31,7 @@ router.post('/', ah(async (req, res) => {
   }
 
   if (!API_KEY) {
-    return res.json(fallback(lang));
+    return res.json(fallback(lang, { offline: true }));
   }
 
   const sys = SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.fr;
@@ -43,44 +45,52 @@ router.post('/', ah(async (req, res) => {
   }
   contents.push({ role: 'user', parts: [{ text: clean }] });
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 25000);
+  const body = {
+    systemInstruction: { parts: [{ text: sys }] },
+    contents,
+    generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+  };
 
-  try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(MODEL)}:generateContent?key=${encodeURIComponent(API_KEY)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: sys }] },
-          contents,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
-        }),
+  const models = [MODEL, ...MODEL_FALLBACKS.filter((m) => m !== MODEL)];
+
+  for (const model of models) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(API_KEY)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!r.ok) {
+        const text = await r.text().catch(() => '');
+        console.error(`Gemini ${model} -> HTTP ${r.status}:`, text.slice(0, 300));
+        continue;
       }
-    );
 
-    if (!r.ok) {
-      const body = await r.text().catch(() => '');
-      console.error(`Gemini ${r.status}:`, body.slice(0, 300));
-      return res.json(fallback(lang));
+      const data = await r.json();
+      const text = data.candidates?.[0]?.content?.parts
+        ?.map((p) => p.text || '')
+        .join('')
+        .trim();
+      if (text) return res.json({ reply: text });
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.error(`Gemini ${model} -> délai dépassé`);
+      } else {
+        console.error(`Gemini ${model} ->`, err.message);
+      }
+    } finally {
+      clearTimeout(timeout);
     }
-
-    const data = await r.json();
-    const text = data.candidates?.[0]?.content?.parts
-      ?.map((p) => p.text || '')
-      .join('')
-      .trim();
-
-    if (!text) return res.json(fallback(lang));
-    res.json({ reply: text });
-  } catch (err) {
-    if (err.name !== 'AbortError') console.error('Chat Gemini:', err.message);
-    res.json(fallback(lang));
-  } finally {
-    clearTimeout(timeout);
   }
+
+  res.json(fallback(lang));
 }));
 
 export default router;

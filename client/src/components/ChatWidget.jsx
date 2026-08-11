@@ -40,7 +40,15 @@ export default function ChatWidget() {
         .slice(-MAX_CONTEXT)
         .map((m) => ({ role: m.role === 'user' ? 'user' : 'model', text: m.text }));
       const d = await api.chat({ message: text, history, lang: langKey });
-      setMessages((prev) => [...prev, { role: 'bot', text: d.reply }]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'bot',
+          text: d.offline
+            ? t('Le chatbot n\'est pas encore configuré (clé IA manquante côté serveur).')
+            : d.reply,
+        },
+      ]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
