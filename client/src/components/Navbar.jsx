@@ -349,12 +349,12 @@ export default function Navbar({ onLogout }) {
 
   const userIcon = user ? (
     <button
-      className="nav-icon-link"
+      className="logout-btn"
       onClick={logout}
       aria-label={t('Déconnexion')}
       title={t('Déconnexion')}
     >
-      🚪
+      🚪 {t('Déconnexion')}
     </button>
   ) : (
     <Link

@@ -162,6 +162,20 @@ main { animation: pageIn 0.35s ease; }
   cursor: pointer;
   font-size: 1.05rem;
 }
+.drawer-tools .logout-btn {
+  background: none;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.drawer-tools .logout-btn:active {
+  opacity: 0.8;
+}
 .drawer-tools .nav-icon-link .nav-badge { top: -4px; right: -6px; }
 .drawer-tools .theme-toggle, .drawer-tools .lang-toggle { height: 38px; min-width: 42px; }
 .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip {
