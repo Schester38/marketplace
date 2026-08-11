@@ -25,6 +25,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',

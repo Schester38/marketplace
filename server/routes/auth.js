@@ -28,8 +28,13 @@ async function verifyRecaptcha(token) {
       body: params,
     });
     const data = await res.json();
-    return !!(data && data.success === true && data.score >= 0.5);
-  } catch {
+    if (!(data && data.success === true)) {
+      console.error('reCAPTCHA refusé:', JSON.stringify(data));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('reCAPTCHA erreur:', err.message);
     return false;
   }
 }

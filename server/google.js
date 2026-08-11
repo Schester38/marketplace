@@ -38,6 +38,12 @@ export async function getGoogleProfile(code, req) {
   });
   const tokenData = await tokenRes.json();
   if (!tokenRes.ok || !tokenData.access_token) {
+    if (tokenData.error === 'invalid_grant') {
+      throw new Error('Connexion Google : la demande a expiré ou a déjà été utilisée. Réessayez.');
+    }
+    if (tokenData.error === 'invalid_client') {
+      throw new Error('Connexion Google : configuration invalide (secret client).');
+    }
     throw new Error(tokenData.error_description || 'Échec de la connexion Google');
   }
   const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
