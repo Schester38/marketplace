@@ -59,7 +59,6 @@ export default function BottomNav() {
         <span className="bn-icon">🔍</span>
         <span className="bn-label">{t('Recherche')}</span>
       </button>
-      {item('/contact', t('Contact'), '💬', 0, path === '/contact')}
       {item('/favoris', t('Favoris'), '❤️', favs.length, path === '/favoris')}
       {item('/panier', t('Panier'), '🛒', cartCount, path === '/panier')}
       {!user && item('/login', t('Connexion'), '👤', 0, path === '/login')}
