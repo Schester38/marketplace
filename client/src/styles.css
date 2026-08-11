@@ -1478,19 +1478,19 @@ a.step { text-decoration: none; color: inherit; }
   right: 0;
   z-index: 900;
   display: none;
-  align-items: stretch;
   background: var(--card);
   border-top: 1px solid var(--border);
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
   padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  overflow: hidden;
 }
 .bottom-nav a,
 .bottom-nav button {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-height: 0;
   gap: 2px;
   padding: 5px 2px;
   background: none;
@@ -1503,9 +1503,6 @@ a.step { text-decoration: none; color: inherit; }
   font-weight: 600;
   line-height: 1.1;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
 }
 .bottom-nav .bn-icon {
   position: relative;
@@ -1539,8 +1536,11 @@ a.step { text-decoration: none; color: inherit; }
 }
 
 @media (max-width: 768px) {
-  .bottom-nav { display: flex; }
-  .app { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .bottom-nav {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .app { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
   .footer { padding: 14px 14px 10px; margin-top: 16px; }
   .footer-inner { gap: 8px; }
   .footer-nav {
