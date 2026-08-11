@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { getCountry } from '../config.js';
 
 const WALLETS_BY_COUNTRY = {
@@ -46,7 +47,7 @@ export default function SellerPayments() {
   const [success, setSuccess] = useState('');
   const [savedCount, setSavedCount] = useState(0);
 
-  useEffect(() => {
+  const loadPaymentMethods = useCallback(() => {
     api
       .getPaymentMethods()
       .then((d) => {
@@ -69,6 +70,12 @@ export default function SellerPayments() {
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [user]);
+
+  useEffect(() => {
+    loadPaymentMethods();
+  }, [loadPaymentMethods]);
+
+  useRefreshOnFocus(loadPaymentMethods);
 
   const save = async (e) => {
     e.preventDefault();

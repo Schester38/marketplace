@@ -95,6 +95,41 @@ function RoleOnly({ role, children }) {
   return children;
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  render() {
+    const { t } = this.props;
+    if (this.state.error) {
+      return (
+        <main className="container narrow" style={{ textAlign: 'center', paddingTop: 48 }}>
+          <div className="card page-center">
+            <p style={{ fontSize: 42, marginBottom: 4 }}>😵</p>
+            <h2>{t('Oups, une erreur est survenue.')}</h2>
+            <p className="hint">{t('Réessayez ou rechargez la page. Vos données sont en sécurité.')}</p>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => {
+                this.setState({ error: null });
+                window.location.reload();
+              }}
+            >
+              🔄 {t('Réessayer')}
+            </button>
+          </div>
+        </main>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function WelcomeBanner() {
   const { user } = useAuth();
   const { t } = useLang();
@@ -120,6 +155,7 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const { t } = useLang();
 
   return (
     <StoreProvider>
@@ -127,8 +163,9 @@ export default function App() {
         <div className="app">
           <Navbar onLogout={() => { logout(); navigate('/'); }} />
           {WELCOME_PATHS.includes(location.pathname) && <WelcomeBanner />}
-          <Suspense fallback={<LoadingScreen />}>
-            <Routes>
+          <ErrorBoundary t={t}>
+            <Suspense fallback={<LoadingScreen />}>
+              <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/panier" element={<Cart />} />
             <Route path="/favoris" element={<Favorites />} />
@@ -208,6 +245,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+    </ErrorBoundary>
       <CookiesBanner />
       <Footer />
       <BottomNav />

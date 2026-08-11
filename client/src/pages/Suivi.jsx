@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { waLink, BASE_URL, countrySymbol } from '../config.js';
 import { formatMoney } from '../components/ProductCard.jsx';
 
@@ -21,6 +22,16 @@ export default function Suivi() {
   const [sale, setSale] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const refreshSale = () => {
+    if (!sale || !id || !code.trim()) return;
+    api
+      .trackSale(id, code.trim())
+      .then((d) => d.sale && setSale(d.sale))
+      .catch(() => {});
+  };
+
+  useRefreshOnFocus(refreshSale);
 
   const submit = async (e) => {
     e.preventDefault();

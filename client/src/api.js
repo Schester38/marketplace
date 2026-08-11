@@ -1,13 +1,23 @@
 const API = '/api';
 
-async function request(path, options = {}) {
+async function request(path, options = {}, retries = 1) {
   const token = localStorage.getItem('token');
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(API + path, { ...options, headers });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
-  return data;
+  const method = (options.method || 'GET').toUpperCase();
+  try {
+    const res = await fetch(API + path, { ...options, headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+    return data;
+  } catch (err) {
+    const network = err instanceof TypeError;
+    if (network && method === 'GET' && retries > 0) {
+      await new Promise((r) => setTimeout(r, 1200));
+      return request(path, options, retries - 1);
+    }
+    throw err;
+  }
 }
 
 export const api = {

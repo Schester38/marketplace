@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import ProductCard from '../components/ProductCard.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
+import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { waLink, countryPhone } from '../config.js';
 
 export default function ShopPage() {
@@ -13,15 +14,22 @@ export default function ShopPage() {
   const [products, setProducts] = useState(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const load = useCallback(() => {
     api
       .shop(id)
       .then((d) => {
         setShop(d.shop);
         setProducts(d.products);
+        setError('');
       })
       .catch((e) => setError(e.message));
   }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useRefreshOnFocus(load);
 
   if (error) {
     return (
