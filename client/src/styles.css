@@ -1576,7 +1576,12 @@ a.step { text-decoration: none; color: inherit; }
   .nav-user-btn { display: inline-flex; }
 }
 
+@media (max-width: 768px) and (display-mode: standalone) {
+  .drawer { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+}
+
 @media (max-width: 768px) {
+  .drawer { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
   .bottom-nav { display: flex; }
   .app { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
   .footer { padding: 14px 14px 10px; margin-top: 16px; }
