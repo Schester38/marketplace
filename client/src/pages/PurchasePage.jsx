@@ -115,7 +115,8 @@ export default function PurchasePage() {
           <p className="hint">{t('Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison.')}</p>
           {purchase && purchase.buyer_code && (
             <p className="buyer-code-box">
-              {t('Votre code client : {code}', { code: purchase.buyer_code })}
+              <span className="buyer-code-label">{t('Votre code client')} :</span>
+              <span className="buyer-code-value">{purchase.buyer_code}</span>
             </p>
           )}
           {purchase && purchase.id && (
