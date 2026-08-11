@@ -2,6 +2,7 @@ import React, { Suspense, createContext, useContext, useEffect, useState } from 
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
+import BottomNav from './components/BottomNav.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
 import Home from './pages/Home.jsx';
 import { LangProvider, useLang } from './i18n.jsx';
@@ -209,6 +210,7 @@ export default function App() {
       </Suspense>
       <CookiesBanner />
       <Footer />
+      <BottomNav />
       </div>
       </LangProvider>
     </StoreProvider>

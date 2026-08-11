@@ -1456,10 +1456,89 @@ a.step { text-decoration: none; color: inherit; }
   color: var(--primary);
   font-size: 1.1rem;
 }
-.footer-nav { display: flex; gap: 22px; }
-.footer-nav a { color: var(--text); text-decoration: none; font-weight: 500; }
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 20px;
+}
+.footer-nav a {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.92rem;
+}
 .footer-nav a:hover { color: var(--primary); }
 .footer-copy { color: var(--muted); font-size: 0.82rem; }
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 900;
+  display: none;
+  align-items: stretch;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+  padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+}
+.bottom-nav a,
+.bottom-nav button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 5px 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  text-decoration: none;
+  font-family: inherit;
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.bottom-nav .bn-icon {
+  position: relative;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+.bottom-nav .nav-badge {
+  position: absolute;
+  top: -6px;
+  right: -12px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.bottom-nav a.active,
+.bottom-nav button.active {
+  color: var(--primary);
+}
+.bottom-nav a:active,
+.bottom-nav button:active {
+  transform: scale(0.96);
+}
+
+@media (max-width: 768px) {
+  .bottom-nav { display: flex; }
+  .app { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .footer { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+}
 
 .privacy-list { display: flex; flex-direction: column; gap: 16px; }
 .privacy-list .card h2 { font-size: 1.15rem; margin-bottom: 8px; }
