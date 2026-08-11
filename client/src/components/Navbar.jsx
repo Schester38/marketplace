@@ -347,12 +347,34 @@ export default function Navbar({ onLogout }) {
     </Link>
   );
 
+  const userIcon = user ? (
+    <button
+      className="nav-icon-link"
+      onClick={logout}
+      aria-label={t('Déconnexion')}
+      title={t('Déconnexion')}
+    >
+      🚪
+    </button>
+  ) : (
+    <Link
+      to="/login"
+      className="nav-icon-link"
+      onClick={close}
+      aria-label={t('Connexion')}
+      title={t('Connexion')}
+    >
+      👤
+    </Link>
+  );
+
   const tools = (
     <div className="drawer-tools">
       <LangSwitcher />
       {themeToggle}
       {favLink}
       {cartLink}
+      {userIcon}
     </div>
   );
 
