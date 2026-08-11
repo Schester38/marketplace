@@ -100,9 +100,10 @@ export async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
-    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('shop', 'seller', 'client', 'creator', 'livreur'));
+    ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('shop', 'seller', 'client', 'creator', 'livreur', 'admin'));
     ALTER TABLE users ADD COLUMN IF NOT EXISTS seller_code TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS shop_code TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS photos TEXT NOT NULL DEFAULT '[]';
     UPDATE products SET photos = json_build_array(image)::text WHERE image IS NOT NULL AND photos = '[]';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;
@@ -152,5 +153,16 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+
+    CREATE TABLE IF NOT EXISTS reviews (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      buyer_name TEXT,
+      rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+      comment TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
   `);
 }

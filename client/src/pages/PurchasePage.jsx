@@ -23,6 +23,7 @@ export default function PurchasePage() {
   });
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const [purchase, setPurchase] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export default function PurchasePage() {
     setError('');
     setSubmitting(true);
     try {
-      await api.purchaseCreate({
+      const d = await api.purchaseCreate({
         product_id: id,
         seller_code: form.seller_code,
         buyer_name: form.buyer_name,
@@ -45,6 +46,7 @@ export default function PurchasePage() {
         buyer_address: form.buyer_address,
         buyer_phone: form.buyer_phone,
       });
+      setPurchase(d.sale || null);
       setDone(true);
     } catch (err) {
       setError(err.message);
@@ -111,8 +113,18 @@ export default function PurchasePage() {
         <div className="card page-center">
           <h2>✅ {t('Commande confirmée !')}</h2>
           <p className="hint">{t('Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison.')}</p>
+          {purchase && purchase.buyer_code && (
+            <p className="buyer-code-box">
+              {t('Votre code client : {code}', { code: purchase.buyer_code })}
+            </p>
+          )}
+          {purchase && purchase.id && (
+            <Link className="btn btn-primary" to={`/suivi/${purchase.id}?code=${encodeURIComponent(purchase.buyer_code || '')}`}>
+              📦 {t('Suivre ma commande')}
+            </Link>
+          )}
           {user && (
-            <Link className="btn btn-primary" to="/client">{t('Voir mes achats')}</Link>
+            <Link className="btn btn-outline" style={{ marginTop: 8 }} to="/client">{t('Voir mes achats')}</Link>
           )}
           <Link className="btn btn-outline" style={{ marginTop: 8 }} to="/">{t('Continuer mes achats')}</Link>
         </div>

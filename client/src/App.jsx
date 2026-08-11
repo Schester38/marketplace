@@ -27,6 +27,14 @@ const About = React.lazy(() => import('./pages/About.jsx'));
 const Contact = React.lazy(() => import('./pages/Contact.jsx'));
 const Privacy = React.lazy(() => import('./pages/Privacy.jsx'));
 const MyAccount = React.lazy(() => import('./pages/MyAccount.jsx'));
+const ShopPage = React.lazy(() => import('./pages/ShopPage.jsx'));
+const Suivi = React.lazy(() => import('./pages/Suivi.jsx'));
+const NotFound = React.lazy(() => import('./pages/NotFound.jsx'));
+const Admin = React.lazy(() => import('./pages/Admin.jsx'));
+const Cgv = React.lazy(() => import('./pages/Cgv.jsx'));
+const Faq = React.lazy(() => import('./pages/Faq.jsx'));
+const MentionsLegales = React.lazy(() => import('./pages/MentionsLegales.jsx'));
+const CookiesBanner = React.lazy(() => import('./components/CookiesBanner.jsx'));
 
 const AuthContext = createContext(null);
 
@@ -35,10 +43,11 @@ export function dashboardPath(role) {
   if (role === 'seller') return '/seller';
   if (role === 'client') return '/client';
   if (role === 'livreur') return '/livreur';
+  if (role === 'admin') return '/admin';
   return '/creator';
 }
 
-const WELCOME_PATHS = ['/', '/shop', '/seller', '/client', '/creator', '/livreur'];
+const WELCOME_PATHS = ['/', '/shop', '/seller', '/client', '/creator', '/livreur', '/admin'];
 
 export function useAuth() {
   return useContext(AuthContext);
@@ -182,9 +191,23 @@ export default function App() {
             }
           />
           <Route path="/livreur" element={<LivreurDashboard />} />
-          <Route path="*" element={<Home />} />
+          <Route path="/boutique/:id" element={<ShopPage />} />
+          <Route path="/suivi/:id" element={<Suivi />} />
+          <Route path="/cgv" element={<Cgv />} />
+          <Route path="/faq" element={<Faq />} />
+          <Route path="/mentions-legales" element={<MentionsLegales />} />
+          <Route
+            path="/admin"
+            element={
+              <RoleOnly role="admin">
+                <Admin />
+              </RoleOnly>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      <CookiesBanner />
       <Footer />
       </div>
       </LangProvider>

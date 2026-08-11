@@ -390,5 +390,52 @@ router.post('/:id/pay', authRequired, roleRequired('shop'), ah(async (req, res) 
   res.json({ sale: saleRow(full), ok: true });
 }));
 
+router.get('/track/:id', ah(async (req, res) => {
+  const code = req.query.code ? String(req.query.code).trim().toUpperCase() : '';
+  if (!code) return res.status(400).json({ error: 'Code client requis' });
+  const sale = (
+    await q(
+      `SELECT s.id, s.status, s.quantity, s.buyer_name, s.buyer_code, s.buyer_city, s.created_at,
+              s.delivered_at, s.paid_at,
+              p.name AS product_name, p.price, p.shop_id,
+              u.name AS seller_name, u.phone AS seller_phone,
+              shop.name AS shop_name, shop.country AS shop_country, shop.location AS shop_location
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       JOIN users u ON u.id = s.seller_id
+       JOIN users shop ON shop.id = p.shop_id
+       WHERE s.id = $1 AND s.buyer_code = $2`,
+      [Number(req.params.id), code]
+    )
+  )[0];
+  if (!sale) return res.status(404).json({ error: 'Commande introuvable ou code incorrect' });
+  res.json({
+    sale: {
+      ...sale,
+      quantity: Number(sale.quantity),
+      price: Number(sale.price),
+      total_price: Math.round(Number(sale.price) * Number(sale.quantity) * 100) / 100,
+    },
+  });
+}));
+
+router.get('/export', authRequired, roleRequired('seller', 'shop', 'creator'), ah(async (req, res) => {
+  const isSeller = req.user.role === 'seller';
+  const sales = await q(
+    `SELECT s.id, s.created_at, s.status, s.buyer_name, s.buyer_city, s.quantity,
+            s.total_price, s.commission, s.purchase_price, s.delivery_fee, s.paid_at, s.delivered_at,
+            p.name AS product_name, shop.name AS shop_name, shop.country AS shop_country,
+            u.name AS seller_name
+     FROM sales s
+     JOIN products p ON p.id = s.product_id
+     JOIN users shop ON shop.id = p.shop_id
+     JOIN users u ON u.id = s.seller_id
+     WHERE ${isSeller ? 's.seller_id = $1' : 'p.shop_id = $1'}
+     ORDER BY s.created_at DESC`,
+    [req.user.id]
+  );
+  res.json({ sales });
+}));
+
 export default router;
 

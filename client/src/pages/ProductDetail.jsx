@@ -9,6 +9,7 @@ import { useAuth } from '../App.jsx';
 import { useCart, useFavs } from '../store.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
+import Reviews from '../components/Reviews.jsx';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -178,12 +179,24 @@ export default function ProductDetail() {
             {product.category && <span className="badge badge-cat">{categoryEmoji(product.category)} {t(product.category)}</span>}
           </div>
           <h2>{product.name}</h2>
+          {product.review_count > 0 && (
+            <p className="product-rating">
+              <span className="stars stars-16">{'★'.repeat(Math.round(product.rating_avg))}</span>
+              <strong>{product.rating_avg} / 5</strong>
+              <span className="hint"> ({t('{n} avis', { n: product.review_count })})</span>
+            </p>
+          )}
           <p className="product-shop">
-            {t('Boutique : {shop}', { shop: product.shop_name })}
+            <Link to={`/boutique/${product.shop_id}`}>
+              {t('Boutique : {shop}', { shop: product.shop_name })}
+              {product.shop_verified && <span className="badge badge-verified" title={t('Boutique vérifiée')}>✓ {t('Vérifiée')}</span>}
+            </Link>
             {product.shop_location ? <span className="shop-loc"> · 📍 {product.shop_location}</span> : null}
           </p>
           {product.description && <p>{product.description}</p>}
           <div className="product-meta">
+            {Number(product.sold) > 0 && <span className="meta-chip">🔥 {t('{n} vendus', { n: product.sold })}</span>}
+            {Number(product.pending_count) > 0 && <span className="meta-chip">⏳ {t('{n} en attente', { n: product.pending_count })}</span>}
             {product.warranty && <span className="meta-chip">🛡️ {t('Garantie : {warranty}', { warranty: product.warranty })}</span>}
             <span className="meta-chip">🚚 {deliveryFee > 0 ? t('Livraison {price} {symbol}', { price: formatMoney(deliveryFee), symbol }) : t('Livraison gratuite')}</span>
             {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
@@ -258,6 +271,8 @@ export default function ProductDetail() {
           )}
         </div>
       </div>
+
+      <Reviews product={product} />
 
       {related.length > 0 && (
         <section>

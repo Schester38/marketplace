@@ -109,8 +109,13 @@ export function offerUrl(id) {
   return `${BASE_URL}/offre/${id}`;
 }
 
+export function waLink(number, message) {
+  const digits = String(number || '').replace(/[^\d]/g, '');
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
+
 export function whatsappLink(message) {
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+  return waLink(WHATSAPP_NUMBER, message);
 }
 
 export function offerDiscount(offer) {

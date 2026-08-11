@@ -11,11 +11,13 @@ const OWNER_ROLES = ['shop', 'creator'];
 function productRow(p, mode = 'list') {
   const photos = mode === 'detail' ? fullPhotos(p.photos) : listPhotos(p.photos);
   const image = (mode === 'detail' ? fullPhotos(p.photos) : listPhotos(p.photos))[0] || p.image || null;
-  const { n, pending_n, ...rest } = p;
+  const { n, pending_n, rating_avg, review_count, ...rest } = p;
   return {
     ...rest,
     photos,
     image,
+    rating_avg: Number(rating_avg || 0),
+    review_count: Number(review_count || 0),
     price: Number(p.price),
     old_price: p.old_price === null || p.old_price === undefined ? null : Number(p.old_price),
     commission_percent: Number(p.commission_percent),
@@ -29,13 +31,16 @@ function productRow(p, mode = 'list') {
 
 const SELECT_PRODUCT = `
   SELECT p.*, u.name AS shop_name, u.location AS shop_location, u.country AS shop_country,
-         s.n, s.pending_n
+         u.verified AS shop_verified, u.phone AS shop_phone,
+         s.n, s.pending_n, r.review_count, r.rating_avg
   FROM products p
   JOIN users u ON u.id = p.shop_id
   LEFT JOIN (SELECT product_id,
                     SUM(quantity) FILTER (WHERE status = 'delivered') AS n,
                     SUM(quantity) FILTER (WHERE status IN ('pending', 'bought', 'confirmed')) AS pending_n
              FROM sales GROUP BY product_id) s ON s.product_id = p.id
+  LEFT JOIN (SELECT product_id, COUNT(*) AS review_count, COALESCE(AVG(rating), 0)::numeric(3, 2) AS rating_avg
+             FROM reviews GROUP BY product_id) r ON r.product_id = p.id
 `;
 
 const SORTS = {
@@ -43,10 +48,11 @@ const SORTS = {
   popular: 'COALESCE(s.n, 0) DESC, p.created_at DESC',
   price_asc: 'p.price ASC, p.created_at DESC',
   price_desc: 'p.price DESC, p.created_at DESC',
+  rating: 'COALESCE(r.rating_avg, 0) DESC, p.created_at DESC',
 };
 
 router.get('/', async (req, res) => {
-  const { search, shop, category, sort, scope } = req.query;
+  const { search, shop, category, sort, scope, min_price, max_price } = req.query;
   let sql = SELECT_PRODUCT;
   const params = [];
   const where = [];
@@ -69,6 +75,16 @@ router.get('/', async (req, res) => {
   if (category) {
     where.push('p.category = $' + (params.length + 1));
     params.push(String(category).trim());
+  }
+  const minP = Number(min_price);
+  const maxP = Number(max_price);
+  if (Number.isFinite(minP) && minP >= 0) {
+    where.push('p.price >= $' + (params.length + 1));
+    params.push(minP);
+  }
+  if (Number.isFinite(maxP) && maxP >= 0) {
+    where.push('p.price <= $' + (params.length + 1));
+    params.push(maxP);
   }
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
   sql += ' ORDER BY ' + (SORTS[sort] || SORTS.recent);

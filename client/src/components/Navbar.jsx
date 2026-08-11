@@ -321,7 +321,7 @@ export default function Navbar({ onLogout }) {
     onLogout();
   };
   const roleLabel = user
-    ? user.role === 'shop' ? t('boutique') : user.role === 'seller' ? t('vendeur') : user.role === 'client' ? t('client') : user.role === 'creator' ? t('créateur') : t('livreur')
+    ? user.role === 'shop' ? t('boutique') : user.role === 'seller' ? t('vendeur') : user.role === 'client' ? t('client') : user.role === 'creator' ? t('créateur') : user.role === 'admin' ? t('admin') : t('livreur')
     : '';
 
   const themeToggle = (
@@ -365,6 +365,7 @@ export default function Navbar({ onLogout }) {
       {user && user.role === 'client' && <Link to="/client" onClick={close}>{t('Mon espace client')}</Link>}
       {user && user.role === 'creator' && <Link to="/creator" onClick={close}>{t('Mon espace créateur')}</Link>}
       {user && user.role === 'livreur' && <Link to="/livreur" onClick={close}>🛵 {t('Mes livraisons')}</Link>}
+      {user && user.role === 'admin' && <Link to="/admin" onClick={close}>🛡️ {t('Administration')}</Link>}
       {user && (
         <>
           <Link to="/compte" onClick={close}>{t('Mon compte')}</Link>

@@ -62,4 +62,15 @@ export const api = {
   deleteOffer: (id) => request(`/offers/${id}`, { method: 'DELETE' }),
   createOrder: (payload) => request('/orders', { method: 'POST', body: JSON.stringify(payload) }),
   myOrders: () => request('/orders/me'),
+  productReviews: (id) => request(`/reviews/product/${id}`),
+  createReview: (payload) => request('/reviews', { method: 'POST', body: JSON.stringify(payload) }),
+  shop: (id) => request(`/shop/${id}`),
+  trackSale: (id, code) => request(`/sales/track/${id}?code=${encodeURIComponent(code)}`),
+  exportSales: () => request('/sales/export'),
+  adminStats: () => request('/admin/stats'),
+  adminUsers: (search = '') => request('/admin/users' + (search ? `?search=${encodeURIComponent(search)}` : '')),
+  adminSetVerified: (id, verified) =>
+    request(`/admin/users/${id}/verified`, { method: 'PATCH', body: JSON.stringify({ verified }) }),
+  adminProducts: () => request('/admin/products'),
+  adminDeleteProduct: (id) => request(`/admin/products/${id}`, { method: 'DELETE' }),
 };

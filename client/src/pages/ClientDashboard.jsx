@@ -132,6 +132,11 @@ export default function ClientDashboard() {
                     <span className="label">{t('Prix payé')}</span>
                     <strong>{formatMoney(p.purchase_price != null ? p.purchase_price : p.total_price)} {countrySymbol(p.shop_country)}</strong>
                   </div>
+                  {p.buyer_code && (
+                    <Link className="btn btn-outline btn-small" to={`/suivi/${p.id}?code=${encodeURIComponent(p.buyer_code)}`}>
+                      📦 {t('Suivre ma commande')}
+                    </Link>
+                  )}
                 </div>
               );
             })}

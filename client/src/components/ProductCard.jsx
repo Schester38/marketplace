@@ -53,9 +53,19 @@ export default function ProductCard({ product, action, onAction, secondaryAction
       </button>
       {pendingCount > 0 && <span className="badge badge-pending">⏳ {pendingCount} {t('en attente')}</span>}
       {sold > 0 && <span className="badge badge-sold">🔥 {sold} {t('vendus')}</span>}
+      {product.review_count > 0 && (
+        <span className="badge badge-review">⭐ {product.rating_avg} ({product.review_count})</span>
+      )}
       {badge && <span className={`badge ${badge.cls}`}>{badge.text}</span>}
       <Link to={`/produit/${product.id}`} className="product-body">
         <h3>{product.name}</h3>
+        {product.shop_name && (
+          <p className="card-shop">
+            <Link to={`/boutique/${product.shop_id}`} onClick={(e) => e.stopPropagation()}>
+              {product.shop_name} {product.shop_verified && <span title={t('Boutique vérifiée')}>✓</span>}
+            </Link>
+          </p>
+        )}
         <div className="price-box">
           <span className="price-line">
             {hasPromo && <span className="old-price">{formatMoney(oldPrice)} {symbol}</span>}

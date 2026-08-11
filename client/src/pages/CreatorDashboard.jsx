@@ -7,6 +7,7 @@ import { compressImage, thumbFromDataUrl } from '../utils.js';
 import { countryPhone, countrySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
+import ExportSalesButton from '../components/ExportSalesButton.jsx';
 
 const EMPTY_FORM = {
   name: '',
@@ -299,7 +300,10 @@ export default function CreatorDashboard() {
       </section>
 
       <section className="card stats">
-        <h2>{t('Statistiques de mes créations')}</h2>
+        <div className="stats-head">
+          <h2>{t('Statistiques de mes créations')}</h2>
+          <ExportSalesButton />
+        </div>
         {stats ? (
           <div className="stats-row">
             <div><span className="label">{t('Ventes enregistrées')}</span><strong>{stats.total_sales}</strong></div>

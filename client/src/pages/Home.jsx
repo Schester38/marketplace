@@ -33,6 +33,8 @@ export default function Home() {
   const [category, setCategory] = useState('');
   const [sort, setSort] = useState('recent');
   const [scope, setScope] = useState('product');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
   const produitsRef = useRef(null);
 
   useEffect(() => {
@@ -49,7 +51,14 @@ export default function Home() {
       }
       if (!silent && !hasLoaded.current) setLoading(true);
       api
-        .listProducts({ search: debouncedSearch, category, sort, scope })
+        .listProducts({
+          search: debouncedSearch,
+          category,
+          sort,
+          scope,
+          min_price: minPrice === '' ? undefined : minPrice,
+          max_price: maxPrice === '' ? undefined : maxPrice,
+        })
         .then((d) => {
           if (mounted.current) {
             hasLoaded.current = true;
@@ -67,7 +76,7 @@ export default function Home() {
         .catch((e) => mounted.current && setError(e.message))
         .finally(() => mounted.current && setLoading(false));
     },
-    [user, debouncedSearch, category, sort, scope]
+    [user, debouncedSearch, category, sort, scope, minPrice, maxPrice]
   );
 
   useEffect(() => {
@@ -188,11 +197,19 @@ export default function Home() {
         <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
           <div className="section-head">
             <h2 className="section-title">🛍️ {t('Produits et créations')}</h2>
-            {category && (
-              <button type="button" className="section-link" onClick={() => setCategory('')}>
+            {category || minPrice || maxPrice ? (
+              <button
+                type="button"
+                className="section-link"
+                onClick={() => {
+                  setCategory('');
+                  setMinPrice('');
+                  setMaxPrice('');
+                }}
+              >
                 ✕ {t('Réinitialiser les filtres')}
               </button>
-            )}
+            ) : null}
           </div>
           <form className="hero-search" onSubmit={submitSearch} role="search">
             <span className="emoji" aria-hidden="true">🔍</span>
@@ -225,9 +242,28 @@ export default function Home() {
             >
               <option value="recent">{t('Plus récents')}</option>
               <option value="popular">{t('🔥 Plus populaires')}</option>
+              <option value="rating">{t('⭐ Mieux notés')}</option>
               <option value="price_asc">{t('Prix croissant')}</option>
               <option value="price_desc">{t('Prix décroissant')}</option>
             </select>
+            <input
+              className="input filter-price"
+              type="number"
+              min="0"
+              placeholder={t('Prix min')}
+              aria-label={t('Prix minimum')}
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+            />
+            <input
+              className="input filter-price"
+              type="number"
+              min="0"
+              placeholder={t('Prix max')}
+              aria-label={t('Prix maximum')}
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+            />
             <select
               className="input filter-select"
               value={scope}

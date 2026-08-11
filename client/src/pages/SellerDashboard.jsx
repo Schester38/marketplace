@@ -8,6 +8,7 @@ import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
+import ExportSalesButton from '../components/ExportSalesButton.jsx';
 
 const SALE_STATUS = {
   pending: { key: 'En attente de vente', cls: 'badge-pending' },
@@ -218,7 +219,10 @@ export default function SellerDashboard() {
       </section>
 
       <section className="card stats">
-        <h2>{t('Mes ventes et commissions')}</h2>
+        <div className="stats-head">
+          <h2>{t('Mes ventes et commissions')}</h2>
+          <ExportSalesButton />
+        </div>
         <div className="row2" style={{ alignItems: 'center' }}>
           <p className="hint" style={{ margin: 0 }}>
             {t('Vous ne voyez que vos propres ventes en attente. Les livrées ne peuvent pas être supprimées.')}

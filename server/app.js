@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { rateLimit } from 'express-rate-limit';
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
 import saleRoutes from './routes/sales.js';
@@ -14,6 +15,8 @@ import sellerRoutes from './routes/seller.js';
 import shopRoutes from './routes/shop.js';
 import pushRoutes from './routes/push.js';
 import activityRoutes from './routes/activity.js';
+import reviewRoutes from './routes/reviews.js';
+import adminRoutes from './routes/admin.js';
 import presentationRoutes, { pageRouter, imageRouter } from './routes/presentation.js';
 import { authRequired } from './auth.js';
 
@@ -22,6 +25,18 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '12mb' }));
+
+const limiter = (windowMs, max) =>
+  rateLimit({ windowMs, max, standardHeaders: true, legacyHeaders: false, message: { error: 'Trop de requêtes, réessayez plus tard' } });
+
+app.use('/api/auth/login', limiter(15 * 60 * 1000, 20));
+app.use('/api/auth/register', limiter(60 * 60 * 1000, 15));
+app.use('/api/auth/seller-code', limiter(10 * 60 * 1000, 5));
+app.use('/api/shop/code', limiter(10 * 60 * 1000, 5));
+app.use('/api/purchases', limiter(10 * 60 * 1000, 30));
+app.use('/api/orders', limiter(10 * 60 * 1000, 30));
+app.use('/api/reviews', limiter(10 * 60 * 1000, 15));
+app.use('/api/sales/livreur', limiter(5 * 60 * 1000, 60));
 
 app.get('/', (req, res) => res.json({ name: 'Mboppi API', version: '1.0.0' }));
 
@@ -36,6 +51,8 @@ app.use('/api/seller', sellerRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/activity', activityRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/img', imageRouter);
 app.use('/p', pageRouter);
 app.get('/api/me', authRequired, (req, res) => res.json({ user: req.user }));

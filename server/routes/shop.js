@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired, roleRequired } from '../auth.js';
+import { listPhotos } from '../photo.js';
 
 const router = Router();
 
@@ -35,6 +36,38 @@ router.post('/code', authRequired, roleRequired('shop'), ah(async (req, res) => 
   if (!code) return res.status(500).json({ error: 'Impossible de générer un code, réessayez' });
   await q('UPDATE users SET shop_code = $1 WHERE id = $2', [code, req.user.id]);
   res.json({ shop_code: code });
+}));
+
+router.get('/:id', ah(async (req, res) => {
+  const shop = (
+    await q(
+      `SELECT id, name, location, country, phone, verified, shop_code, created_at
+       FROM users WHERE id = $1 AND role IN ('shop', 'creator')`,
+      [Number(req.params.id)]
+    )
+  )[0];
+  if (!shop) return res.status(404).json({ error: 'Boutique introuvable' });
+  const products = (
+    await q(
+      `SELECT p.*, u.name AS shop_name, u.location AS shop_location, u.country AS shop_country,
+              s.n, s.pending_n
+       FROM products p
+       JOIN users u ON u.id = p.shop_id
+       LEFT JOIN (SELECT product_id, SUM(quantity) AS n,
+                         SUM(quantity) FILTER (WHERE status IN ('pending', 'bought', 'confirmed')) AS pending_n
+                  FROM sales GROUP BY product_id) s ON s.product_id = p.id
+       WHERE p.shop_id = $1 ORDER BY p.created_at DESC LIMIT 24`,
+      [shop.id]
+    )
+  ).map((p) => ({
+    ...p,
+    photos: listPhotos(p.photos),
+    image: listPhotos(p.photos)[0] || p.image || null,
+    price: Number(p.price),
+    sold: Number(p.n || 0),
+    pending_count: Number(p.pending_n || 0),
+  }));
+  res.json({ shop, products });
 }));
 
 export default router;

@@ -4,6 +4,17 @@ import { BrowserRouter } from 'react-router-dom';
 import App, { AuthProvider } from './App.jsx';
 import './styles.css';
 
+import * as Sentry from '@sentry/react';
+
+const DSN = import.meta.env.VITE_SENTRY_DSN;
+if (DSN) {
+  Sentry.init({
+    dsn: DSN,
+    integrations: [Sentry.browserTracingIntegration()],
+    tracesSampleRate: 0.1,
+  });
+}
+
 const pathname = window.location.pathname;
 
 if (pathname.startsWith('/verone')) {
@@ -26,7 +37,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   });
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+const Root = () => (
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
@@ -35,3 +46,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
