@@ -928,6 +928,21 @@ const EN = {
   'Marché en ligne — livraison confirmée': 'Online marketplace — delivery confirmed',
   'N°': 'No.',
   'Merci pour votre avis !': 'Thank you for your review!',
+  'Mon lien de parrainage': 'My referral link',
+  'Partagez ce lien : chaque personne qui s\'inscrit via ce lien devient votre filleul. Vous gagnez 2% du prix de chacun de ses achats (commission payée par la boutique).': 'Share this link: anyone who signs up through it becomes your referral. You earn 2% of the price of each of their purchases (commission paid by the shop).',
+  'Copier le lien': 'Copy link',
+  'Générez d\'abord votre code vendeur ci-dessus pour obtenir votre lien.': 'First generate your seller code above to get your link.',
+  'Réclamer': 'Claim',
+  'Réclamée': 'Claimed',
+  'Paiement réclamé': 'Payment claimed',
+  'Réclamer le paiement de vos commissions pour « {name} » à la boutique ?': 'Claim your commissions for « {name} » from the shop?',
+  'Paiement réclamé ! La boutique a été notifiée.': 'Payment claimed! The shop has been notified.',
+  'parrainage': 'referral',
+  'Commission produit': 'Product commission',
+  'Commission parrainage (2%)': 'Referral commission (2%)',
+  'Vous vous inscrivez via le lien d\'un vendeur Mboppi : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.': 'You are signing up through a Mboppi seller link: it is free, and the "Client" role is preselected for you.',
+  'Code du vendeur (parrainage)': 'Seller code (referral)',
+  'Le vendeur {seller} réclame le paiement de sa commission pour « {product} ».': 'Seller {seller} is claiming payment of their commission for « {product} ».',
 };
 
 const AR = {
@@ -1849,6 +1864,21 @@ const AR = {
   'Marché en ligne — livraison confirmée': 'سوق إلكتروني — تم تأكيد التوصيل',
   'N°': 'رقم',
   'Merci pour votre avis !': 'شكراً على تقييمك!',
+  'Mon lien de parrainage': 'رابط الإحالة الخاص بي',
+  'Partagez ce lien : chaque personne qui s\'inscrit via ce lien devient votre filleul. Vous gagnez 2% du prix de chacun de ses achats (commission payée par la boutique).': 'شارك هذا الرابط: كل شخص يسجل عبره يصبح من ضمن محاليك. تربح 2% من ثمن كل مشترياته (عمولة يدفعها المتجر).',
+  'Copier le lien': 'نسخ الرابط',
+  'Générez d\'abord votre code vendeur ci-dessus pour obtenir votre lien.': 'أولاً أنشئ رمز البائع أعلاه للحصول على رابطك.',
+  'Réclamer': 'المطالبة',
+  'Réclamée': 'تمت المطالبة',
+  'Paiement réclamé': 'تمت المطالبة بالدفع',
+  'Réclamer le paiement de vos commissions pour « {name} » à la boutique ?': 'المطالبة بعمولاتك عن « {name} » من المتجر؟',
+  'Paiement réclamé ! La boutique a été notifiée.': 'تمت المطالبة بالدفع! تم إشعار المتجر.',
+  'parrainage': 'إحالة',
+  'Commission produit': 'عمولة المنتج',
+  'Commission parrainage (2%)': 'عمولة الإحالة (2%)',
+  'Vous vous inscrivez via le lien d\'un vendeur Mboppi : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.': 'أنت تسجل عبر رابط بائع Mboppi: التسجيل مجاني ودور «عميل» محدد تلقائياً.',
+  'Code du vendeur (parrainage)': 'رمز البائع (إحالة)',
+  'Le vendeur {seller} réclame le paiement de sa commission pour « {product} ».': 'البائع {seller} يطالب بدفع عمولته عن « {product} ».',
 };
 
 export const I18N = { fr: {}, en: EN, ar: AR };

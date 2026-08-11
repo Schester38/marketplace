@@ -262,8 +262,8 @@ export default function ShopDashboard() {
         prev
           ? {
               ...prev,
-              paid_commission: (prev.paid_commission || 0) + d.sale.commission,
-              owed_commission: Math.max(0, (prev.owed_commission || 0) - d.sale.commission),
+              paid_commission: (prev.paid_commission || 0) + d.sale.commission + (d.sale.referral_commission || 0),
+              owed_commission: Math.max(0, (prev.owed_commission || 0) - d.sale.commission - (d.sale.referral_commission || 0)),
             }
           : prev
       );
@@ -609,7 +609,10 @@ export default function ShopDashboard() {
                         </div>
                       )}
                       {s.status === 'delivered' && !s.paid && (
-                        <button className="btn btn-small btn-danger" onClick={() => openPay(s)}>{t('Payer le Vendeur')}</button>
+                        <>
+                          {s.commission_claimed_at && <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>}
+                          <button className="btn btn-small btn-danger" onClick={() => openPay(s)}>{t('Payer le Vendeur')}</button>
+                        </>
                       )}
                       {s.status === 'delivered' && s.paid && (
                         <span className="badge badge-paid">{t('Vendeur payé')}</span>
@@ -639,7 +642,11 @@ export default function ShopDashboard() {
             <div className="deliver-recap">
               <p><strong>{t('Article')} :</strong> {payForm.sale.product_name}</p>
               <p><strong>{t('Vendeur')} :</strong> {payForm.sale.seller_name} ({payForm.sale.seller_code || '—'})</p>
-              <p><strong>{t('Commission à verser')} :</strong> {formatMoney(payForm.sale.commission)} {countrySymbol(payForm.sale.shop_country)}</p>
+              <p><strong>{t('Commission produit')} :</strong> {formatMoney(payForm.sale.commission)} {countrySymbol(payForm.sale.shop_country)}</p>
+              {Number(payForm.sale.referral_commission || 0) > 0 && (
+                <p><strong>🎁 {t('Commission parrainage (2%)')} :</strong> {formatMoney(payForm.sale.referral_commission)} {countrySymbol(payForm.sale.shop_country)}</p>
+              )}
+              <p><strong>{t('Total à payer')} :</strong> {formatMoney(Number(payForm.sale.commission) + Number(payForm.sale.referral_commission || 0))} {countrySymbol(payForm.sale.shop_country)}</p>
             </div>
             {payForm.methods ? (
               <div className="deliver-recap">

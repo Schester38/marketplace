@@ -189,6 +189,12 @@ function NotifBell() {
     if (n.type === 'sale_paid') {
       return t('Votre commission pour « {product} » a été payée par {shop}.', { product: n.product_name, shop: n.shop_name });
     }
+    if (n.type === 'commission_claimed') {
+      return t('Le vendeur {seller} réclame le paiement de sa commission pour « {product} ».', {
+        seller: n.seller_name,
+        product: n.product_name,
+      });
+    }
     if (user.id === n.seller_id) {
       return t('Votre vente de « {product} » a été achetée par {buyer}.', { product: n.product_name, buyer });
     }

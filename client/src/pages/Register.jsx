@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
@@ -13,7 +13,15 @@ export default function Register() {
   const { login } = useAuth();
   const { t } = useLang();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'seller', country: '' });
+  const [searchParams] = useSearchParams();
+  const refCode = (searchParams.get('ref') || '').trim().toUpperCase();
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: refCode ? 'client' : 'seller',
+    country: '',
+  });
   const [error, setError] = useState('');
 
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
@@ -27,7 +35,7 @@ export default function Register() {
     }
     try {
       const recaptchaToken = await getRecaptchaToken('register');
-      const data = await api.register({ ...form, recaptchaToken });
+      const data = await api.register({ ...form, recaptchaToken, ref: refCode || undefined });
       login(data.user, data.token);
       localStorage.setItem('mboppi_welcome', 'register');
       navigate('/');
@@ -56,53 +64,72 @@ export default function Register() {
             emptyLabel={t('Aucun résultat')}
           />
 
-          <label>{t('Je veux m\'inscrire en tant que :')}</label>
-          <div className="role-picker">
-            <label className={`role-option ${form.role === 'shop' ? 'selected' : ''}`}>
+          {refCode && (
+            <div className="card referral-banner">
+              <p className="hint" style={{ margin: 0 }}>
+                🎁 {t('Vous vous inscrivez via le lien d\'un vendeur Mboppi : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.')}
+              </p>
+              <label style={{ marginTop: 10 }}>{t('Code du vendeur (parrainage)')}</label>
               <input
-                type="radio"
-                name="role"
-                value="shop"
-                checked={form.role === 'shop'}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                className="input code-input"
+                value={refCode}
+                onChange={(e) => navigate(`/register${e.target.value ? `?ref=${encodeURIComponent(e.target.value.toUpperCase())}` : ''}`, { replace: true })}
+                maxLength="6"
               />
-              <span>🏪 {t('Boutique')}</span>
-              <small>{t('Je publie mes produits (max 5) et je fixe les commissions')}</small>
-            </label>
-            <label className={`role-option ${form.role === 'seller' ? 'selected' : ''}`}>
-              <input
-                type="radio"
-                name="role"
-                value="seller"
-                checked={form.role === 'seller'}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-              />
-              <span>🛒 {t('Vendeur')}</span>
-              <small>{t('Je vends les produits des boutiques et je gagne des commissions')}</small>
-            </label>
-            <label className={`role-option ${form.role === 'client' ? 'selected' : ''}`}>
-              <input
-                type="radio"
-                name="role"
-                value="client"
-                checked={form.role === 'client'}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-              />
-              <span>🛍️ {t('Client')}</span>
-              <small>{t('Je consulte les offres et les produits, je commande facilement')}</small>
-            </label>
-            <label className={`role-option ${form.role === 'creator' ? 'selected' : ''}`}>
-              <input
-                type="radio"
-                name="role"
-                value="creator"
-                checked={form.role === 'creator'}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-              />
-              <span>🎨 {t('Créateur')}</span>
-              <small>{t('Je présente et vends mes créations au marché Mboppi')}</small>
-            </label>
-          </div>
+            </div>
+          )}
+
+          {!refCode && (
+            <>
+              <label>{t('Je veux m\'inscrire en tant que :')}</label>
+              <div className="role-picker">
+                <label className={`role-option ${form.role === 'shop' ? 'selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="shop"
+                    checked={form.role === 'shop'}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  />
+                  <span>🏪 {t('Boutique')}</span>
+                  <small>{t('Je publie mes produits (max 5) et je fixe les commissions')}</small>
+                </label>
+                <label className={`role-option ${form.role === 'seller' ? 'selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="seller"
+                    checked={form.role === 'seller'}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  />
+                  <span>🛒 {t('Vendeur')}</span>
+                  <small>{t('Je vends les produits des boutiques et je gagne des commissions')}</small>
+                </label>
+                <label className={`role-option ${form.role === 'client' ? 'selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="client"
+                    checked={form.role === 'client'}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  />
+                  <span>🛍️ {t('Client')}</span>
+                  <small>{t('Je consulte les offres et les produits, je commande facilement')}</small>
+                </label>
+                <label className={`role-option ${form.role === 'creator' ? 'selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="creator"
+                    checked={form.role === 'creator'}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  />
+                  <span>🎨 {t('Créateur')}</span>
+                  <small>{t('Je présente et vends mes créations au marché Mboppi')}</small>
+                </label>
+              </div>
+            </>
+          )}
 
           <label>{t('Nom complet / Nom de la boutique')}</label>
           <input

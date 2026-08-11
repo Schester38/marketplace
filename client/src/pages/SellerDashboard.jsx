@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
 import { downloadInvoice } from '../components/Invoice.jsx';
-import { countrySymbol } from '../config.js';
+import { BASE_URL, countrySymbol } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
@@ -129,6 +129,21 @@ export default function SellerDashboard() {
     }
   };
 
+  const claimPayment = async (s) => {
+    if (!window.confirm(t('Réclamer le paiement de vos commissions pour « {name} » à la boutique ?', { name: s.product_name }))) return;
+    setError('');
+    setSuccess('');
+    try {
+      await api.claimSale(s.id);
+      setSuccess(t('Paiement réclamé ! La boutique a été notifiée.'));
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const referralLink = sellerCode ? `${BASE_URL}/register?ref=${encodeURIComponent(sellerCode)}` : null;
+
   const openProof = async (s) => {
     setError('');
     setProofLoading(true);
@@ -179,6 +194,29 @@ export default function SellerDashboard() {
           <Link to="/seller/paiements" className="btn btn-outline btn-sm">
             💳 {t('Mes moyens de paiement')}
           </Link>
+        </div>
+      </section>
+
+      <section className="card seller-code-card">
+        <div>
+          <h2>🎁 {t('Mon lien de parrainage')}</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            {t('Partagez ce lien : chaque personne qui s\'inscrit via ce lien devient votre filleul. Vous gagnez 2% du prix de chacun de ses achats (commission payée par la boutique).')}
+          </p>
+        </div>
+        <div className="seller-code-actions">
+          {sellerCode ? (
+            <>
+              <code className="seller-code referral-link">{referralLink}</code>
+              <button className="btn btn-outline btn-sm" onClick={() => copy('ref', referralLink)}>
+                {copied === 'ref' ? t('Lien copié !') : t('Copier le lien')}
+              </button>
+            </>
+          ) : (
+            <p className="hint" style={{ margin: 0 }}>
+              {t('Générez d\'abord votre code vendeur ci-dessus pour obtenir votre lien.')}
+            </p>
+          )}
         </div>
       </section>
 
@@ -263,10 +301,20 @@ export default function SellerDashboard() {
                     <td>{[s.buyer_city, s.buyer_address].filter(Boolean).join(', ') || '—'}</td>
                     <td>{s.quantity}</td>
                     <td>{formatMoney(s.total_price)} {countrySymbol(s.shop_country)}</td>
-                    <td>{formatMoney(s.commission)} {countrySymbol(s.shop_country)}</td>
+                    <td>
+                      <span>{formatMoney(s.commission)} {countrySymbol(s.shop_country)}</span>
+                      {Number(s.referral_commission || 0) > 0 && (
+                        <span className="muted referral-comm">
+                          <br />🎁 {formatMoney(s.referral_commission)} {countrySymbol(s.shop_country)} ({t('parrainage')})
+                        </span>
+                      )}
+                    </td>
                     <td>
                       {s.status === 'delivered' && !s.paid && (
-                        <span className="badge badge-warn">{t('Commission en attente')}</span>
+                        <>
+                          <span className="badge badge-warn">{t('Commission en attente')}</span>
+                          {s.commission_claimed_at && <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>}
+                        </>
                       )}
                       {s.status === 'delivered' && s.paid && (
                         <span className="badge badge-paid">{t('Commission payée')}</span>
@@ -276,6 +324,15 @@ export default function SellerDashboard() {
                     <td>
                       {s.status === 'delivered' && (
                         <div className="row2" style={{ justifyContent: 'flex-end', gap: 6 }}>
+                          {!s.paid && (
+                            <button
+                              className="btn btn-small btn-primary"
+                              disabled={!!s.commission_claimed_at}
+                              onClick={() => claimPayment(s)}
+                            >
+                              {s.commission_claimed_at ? t('Réclamée') : `💰 ${t('Réclamer')}`}
+                            </button>
+                          )}
                           <button className="btn btn-small" disabled={proofLoading} onClick={() => openProof(s)}>
                             📷 {t('Preuve')}
                           </button>

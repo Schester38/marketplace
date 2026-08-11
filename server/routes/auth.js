@@ -41,14 +41,26 @@ function publicUser(u) {
 const VALID_ROLES = ['shop', 'seller', 'client', 'creator'];
 
 router.post('/register', ah(async (req, res) => {
-  const { name, email, password, role, country, recaptchaToken } = req.body || {};
+  const { name, email, password, role, country, ref, recaptchaToken } = req.body || {};
   if (!(await verifyRecaptcha(recaptchaToken))) {
     return res.status(400).json({ error: 'Vérification anti-robot échouée, réessayez' });
   }
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Nom, email et mot de passe sont requis' });
   }
-  if (!VALID_ROLES.includes(role)) {
+  let referredBy = null;
+  let finalRole = role;
+  if (ref && String(ref).trim()) {
+    const referrer = (
+      await q('SELECT id, role FROM users WHERE seller_code = $1', [String(ref).trim().toUpperCase()])
+    )[0];
+    if (!referrer || referrer.role !== 'seller') {
+      return res.status(400).json({ error: 'Code de vendeur (parrainage) invalide' });
+    }
+    referredBy = referrer.id;
+    finalRole = 'client';
+  }
+  if (!VALID_ROLES.includes(finalRole)) {
     return res.status(400).json({ error: 'Le rôle doit être "shop" (boutique), "seller" (vendeur), "client" ou "creator" (créateur)' });
   }
   if (String(password).length < MIN_PASSWORD) {
@@ -67,8 +79,8 @@ router.post('/register', ah(async (req, res) => {
   }
   const hash = bcrypt.hashSync(String(password), 12);
   const created = await q(
-    'INSERT INTO users (name, email, password, role, country) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-    [String(name).trim(), emailNorm, hash, role, country ? String(country).trim() : null]
+    'INSERT INTO users (name, email, password, role, country, referred_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+    [String(name).trim(), emailNorm, hash, finalRole, country ? String(country).trim() : null, referredBy]
   );
   const user = (await q('SELECT * FROM users WHERE id = $1', [created[0].id]))[0];
   res.status(201).json({ token: signToken(user), user: publicUser(user) });

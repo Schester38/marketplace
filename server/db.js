@@ -132,6 +132,13 @@ export async function initDb() {
     ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_status_check;
     ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('pending', 'confirmed', 'bought', 'delivered', 'cancelled'));
 
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_commission REAL NOT NULL DEFAULT 0;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_paid BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_paid_at TIMESTAMPTZ;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS referred_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS commission_claimed_at TIMESTAMPTZ;
+
     ALTER TABLE orders ALTER COLUMN user_id DROP NOT NULL;
 
     CREATE TABLE IF NOT EXISTS seller_payment_methods (

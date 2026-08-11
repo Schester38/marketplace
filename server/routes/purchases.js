@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import { q } from '../db.js';
 import { authRequired } from '../auth.js';
 import { sendPush } from '../push.js';
@@ -7,6 +8,18 @@ import { listPhotos } from '../photo.js';
 const router = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+const optionalAuth = (req, res, next) => {
+  const header = req.headers.authorization;
+  if (header && header.startsWith('Bearer ')) {
+    try {
+      req.user = jwt.verify(header.slice(7), process.env.JWT_SECRET);
+    } catch {
+      /* token invalide/expiré : achat en tant qu'invité */
+    }
+  }
+  next();
+};
 
 const CONFIRM_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -28,7 +41,7 @@ function saleRow(s) {
   };
 }
 
-router.post('/', ah(async (req, res) => {
+router.post('/', optionalAuth, ah(async (req, res) => {
   const { product_id, seller_code, purchase_price, quantity, buyer_name, buyer_phone, buyer_city, buyer_address } = req.body || {};
   if (!product_id || !seller_code) {
     return res.status(400).json({ error: 'Produit et code vendeur sont requis' });
@@ -61,6 +74,16 @@ router.post('/', ah(async (req, res) => {
   const total = Math.round(price * qty * 100) / 100;
   const commission = Math.round(Number(product.price) * (Number(product.commission_percent) / 100) * qty * 100) / 100;
 
+  let referralCommission = 0;
+  let referredBy = null;
+  if (buyer) {
+    const b = (await q('SELECT referred_by FROM users WHERE id = $1', [buyer.id]))[0];
+    referredBy = b && b.referred_by ? Number(b.referred_by) : null;
+    if (referredBy) {
+      referralCommission = Math.round((price * qty * 2) / 100 * 100) / 100;
+    }
+  }
+
   let confirmCode = null;
   for (let attempt = 0; attempt < 10; attempt++) {
     const candidate = randomConfirmCode();
@@ -69,8 +92,8 @@ router.post('/', ah(async (req, res) => {
   }
 
   const created = await q(
-    `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code)
-     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
+    `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id`,
     [
       product.id,
       seller.id,
@@ -85,6 +108,8 @@ router.post('/', ah(async (req, res) => {
       buyer_city ? String(buyer_city).trim() : null,
       buyer_address ? String(buyer_address).trim() : null,
       confirmCode,
+      referralCommission,
+      referredBy,
     ]
   );
 

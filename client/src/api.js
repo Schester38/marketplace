@@ -54,6 +54,7 @@ export const api = {
   createShopCode: () => request('/shop/code', { method: 'POST' }),
   salePaymentMethods: (id) => request(`/sales/${id}/payment-methods`),
   paySale: (id, payload) => request(`/sales/${id}/pay`, { method: 'POST', body: JSON.stringify(payload) }),
+  claimSale: (id) => request(`/sales/${id}/claim`, { method: 'POST' }),
   getSellerCode: () => request('/auth/seller-code'),
   createSellerCode: () => request('/auth/seller-code', { method: 'POST' }),
   getPaymentMethods: () => request('/seller/payment-methods'),
