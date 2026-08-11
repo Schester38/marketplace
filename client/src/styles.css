@@ -1499,13 +1499,17 @@ a.step { text-decoration: none; color: inherit; }
   color: var(--muted);
   text-decoration: none;
   font-family: inherit;
-  font-size: 0.66rem;
+  font-size: 0.62rem;
   font-weight: 600;
   line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 .bottom-nav .bn-icon {
   position: relative;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   line-height: 1;
 }
 .bottom-nav .nav-badge {

@@ -1,9 +1,11 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useLang } from '../i18n.jsx';
 import { useCart, useFavs } from '../store.jsx';
+import { useAuth } from '../App.jsx';
 
 export default function BottomNav() {
   const { t } = useLang();
+  const { user } = useAuth();
   const { cartCount } = useCart();
   const { favs } = useFavs();
   const navigate = useNavigate();
@@ -60,6 +62,7 @@ export default function BottomNav() {
       {item('/contact', t('Contact'), '💬', 0, path === '/contact')}
       {item('/favoris', t('Favoris'), '❤️', favs.length, path === '/favoris')}
       {item('/panier', t('Panier'), '🛒', cartCount, path === '/panier')}
+      {!user && item('/login', t('Connexion'), '👤', 0, path === '/login')}
     </nav>
   );
 }

@@ -359,6 +359,7 @@ export default function Navbar({ onLogout }) {
   const navLinks = (
     <>
       <Link to="/" onClick={close}>{t('Produits')}</Link>
+      <Link to="/contact" onClick={close}>{t('Contact')}</Link>
       {user && user.role === 'shop' && <Link to="/shop" onClick={close}>{t('Ma boutique')}</Link>}
       {user && user.role === 'seller' && <Link to="/seller" onClick={close}>{t('Mon espace vendeur')}</Link>}
       {user && user.role === 'seller' && <Link to="/seller/paiements" onClick={close}>{t('Mes moyens de paiement')}</Link>}
@@ -374,6 +375,7 @@ export default function Navbar({ onLogout }) {
           </span>
         </>
       )}
+      {!user && <Link to="/login" onClick={close}>{t('Connexion')}</Link>}
     </>
   );
 
@@ -451,10 +453,8 @@ export default function Navbar({ onLogout }) {
           </div>
         )}
         <div className="drawer-account">
-          {user ? (
+          {user && (
             <button className="btn btn-outline drawer-auth-btn" onClick={logout}>{t('Déconnexion')}</button>
-          ) : (
-            <Link to="/login" className="btn btn-primary drawer-auth-btn" onClick={close}>{t('Connexion')}</Link>
           )}
         </div>
       </aside>
