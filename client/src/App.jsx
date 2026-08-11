@@ -158,10 +158,8 @@ export default function App() {
   const { t } = useLang();
 
   return (
-    <StoreProvider>
-      <LangProvider>
-        <div className="app">
-          <Navbar onLogout={() => { logout(); navigate('/'); }} />
+    <div className="app">
+      <Navbar onLogout={() => { logout(); navigate('/'); }} />
           {WELCOME_PATHS.includes(location.pathname) && <WelcomeBanner />}
           <ErrorBoundary t={t}>
             <Suspense fallback={<LoadingScreen />}>
@@ -249,8 +247,6 @@ export default function App() {
       <CookiesBanner />
       <Footer />
       <BottomNav />
-      </div>
-      </LangProvider>
-    </StoreProvider>
+    </div>
   );
 }

@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App, { AuthProvider } from './App.jsx';
+import { LangProvider } from './i18n.jsx';
+import { StoreProvider } from './store.jsx';
 import './styles.css';
 
 import * as Sentry from '@sentry/react';
@@ -40,9 +42,13 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 const Root = () => (
   <React.StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <StoreProvider>
+        <LangProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </LangProvider>
+      </StoreProvider>
     </BrowserRouter>
   </React.StrictMode>
 );
