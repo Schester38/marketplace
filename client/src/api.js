@@ -87,4 +87,5 @@ export const api = {
     request(`/admin/users/${id}/verified`, { method: 'PATCH', body: JSON.stringify({ verified }) }),
   adminProducts: () => request('/admin/products'),
   adminDeleteProduct: (id) => request(`/admin/products/${id}`, { method: 'DELETE' }),
+  chat: (payload) => request('/chat', { method: 'POST', body: JSON.stringify(payload) }),
 };
