@@ -1,10 +1,13 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired, roleRequired } from '../auth.js';
+import { logAudit } from '../security.js';
 
 const router = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+const isId = (v) => Number.isInteger(v) && v > 0;
 
 router.use(authRequired, roleRequired('admin'));
 
@@ -35,7 +38,7 @@ router.get('/stats', ah(async (req, res) => {
 }));
 
 router.get('/users', ah(async (req, res) => {
-  const search = req.query.search ? String(req.query.search).trim() : '';
+  const search = req.query.search ? String(req.query.search).trim().slice(0, 60) : '';
   const users = await q(
     `SELECT id, name, email, role, country, location, phone, verified, seller_code, shop_code, created_at
      FROM users
@@ -48,9 +51,11 @@ router.get('/users', ah(async (req, res) => {
 
 router.patch('/users/:id/verified', ah(async (req, res) => {
   const id = Number(req.params.id);
-  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Identifiant invalide' });
+  if (!isId(id)) return res.status(400).json({ error: 'Identifiant invalide' });
   const verified = Boolean(req.body && req.body.verified);
-  await q('UPDATE users SET verified = $1 WHERE id = $2', [verified, id]);
+  const updated = await q('UPDATE users SET verified = $1 WHERE id = $2 RETURNING id', [verified, id]);
+  if (!updated.length) return res.status(404).json({ error: 'Utilisateur introuvable' });
+  await logAudit(req.user.id, 'admin.set_verified', `user=${id} verified=${verified}`, req.ip);
   res.json({ ok: true, verified });
 }));
 
@@ -67,9 +72,12 @@ router.get('/products', ah(async (req, res) => {
 }));
 
 router.delete('/products/:id', ah(async (req, res) => {
-  const product = (await q('SELECT id FROM products WHERE id = $1', [Number(req.params.id)]))[0];
+  const id = Number(req.params.id);
+  if (!isId(id)) return res.status(400).json({ error: 'Identifiant invalide' });
+  const product = (await q('SELECT id FROM products WHERE id = $1', [id]))[0];
   if (!product) return res.status(404).json({ error: 'Produit introuvable' });
   await q('DELETE FROM products WHERE id = $1', [product.id]);
+  await logAudit(req.user.id, 'admin.delete_product', `product=${product.id}`, req.ip);
   res.json({ ok: true });
 }));
 

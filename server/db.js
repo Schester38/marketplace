@@ -104,6 +104,8 @@ export async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS seller_code TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS shop_code TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_attempts INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS photos TEXT NOT NULL DEFAULT '[]';
     UPDATE products SET photos = json_build_array(image)::text WHERE image IS NOT NULL AND photos = '[]';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;
@@ -164,5 +166,16 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
+
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      action TEXT NOT NULL,
+      detail TEXT,
+      ip TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
   `);
 }

@@ -1,12 +1,16 @@
 import jwt from 'jsonwebtoken';
 
-export const SECRET = process.env.JWT_SECRET || 'marketplace-dev-secret-change-me';
+const SECRET = process.env.JWT_SECRET;
+if (!SECRET || SECRET.length < 32) {
+  console.error('ERREUR: la variable JWT_SECRET (au moins 32 caractères) doit être définie.');
+  process.exit(1);
+}
 
 export function signToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role, name: user.name },
     SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '24h' }
   );
 }
 

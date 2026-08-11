@@ -3,10 +3,18 @@ import bcrypt from 'bcryptjs';
 import { q } from '../db.js';
 import { signToken, authRequired, roleRequired } from '../auth.js';
 import { googleConfigured, googleAuthUrl, getGoogleProfile } from '../google.js';
+import { logAudit } from '../security.js';
 
 const router = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const MIN_PASSWORD = 8;
+
+function validEmail(v) {
+  return typeof v === 'string' && v.length <= 120 && EMAIL_RE.test(v.trim());
+}
 
 function publicUser(u) {
   return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null };
@@ -21,15 +29,22 @@ router.post('/register', ah(async (req, res) => {
   }
   if (!VALID_ROLES.includes(role)) {
     return res.status(400).json({ error: 'Le rôle doit être "shop" (boutique), "seller" (vendeur), "client" ou "creator" (créateur)' });
-  }  if (password.length < 6) {
-    return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères' });
+  }
+  if (String(password).length < MIN_PASSWORD) {
+    return res.status(400).json({ error: 'Le mot de passe doit contenir au moins ' + MIN_PASSWORD + ' caractères' });
+  }
+  if (String(name).trim().length > 100) {
+    return res.status(400).json({ error: 'Le nom est trop long' });
+  }
+  if (!validEmail(email)) {
+    return res.status(400).json({ error: 'Adresse email invalide' });
   }
   const emailNorm = String(email).trim().toLowerCase();
   const exists = await q('SELECT id FROM users WHERE email = $1', [emailNorm]);
   if (exists.length) {
     return res.status(409).json({ error: 'Un compte existe déjà avec cet email' });
   }
-  const hash = bcrypt.hashSync(String(password), 10);
+  const hash = bcrypt.hashSync(String(password), 12);
   const created = await q(
     'INSERT INTO users (name, email, password, role, country) VALUES ($1, $2, $3, $4, $5) RETURNING id',
     [String(name).trim(), emailNorm, hash, role, country ? String(country).trim() : null]
@@ -46,8 +61,30 @@ router.post('/login', ah(async (req, res) => {
   const user = (
     await q('SELECT * FROM users WHERE email = $1', [String(email).trim().toLowerCase()])
   )[0];
-  if (!user || !user.password || !bcrypt.compareSync(String(password), user.password)) {
+  if (user && user.locked_until && new Date(user.locked_until) > new Date()) {
+    return res.status(429).json({ error: 'Trop de tentatives, compte verrouillé. Réessayez dans 15 minutes' });
+  }
+  const valid = user && user.password && bcrypt.compareSync(String(password), user.password);
+  if (!valid) {
+    if (user && user.password) {
+      const attempts = (user.failed_attempts || 0) + 1;
+      if (attempts >= 5) {
+        await q(
+          'UPDATE users SET failed_attempts = 0, locked_until = now() + interval \'15 minutes\' WHERE id = $1',
+          [user.id]
+        );
+      } else {
+        await q('UPDATE users SET failed_attempts = $1 WHERE id = $2', [attempts, user.id]);
+      }
+    }
+    if (user && user.role === 'admin') {
+      await logAudit(user.id, 'admin.login_failed', String(email).trim().toLowerCase(), req.ip);
+    }
     return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+  }
+  await q('UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = $1', [user.id]);
+  if (user.role === 'admin') {
+    await logAudit(user.id, 'admin.login', req.ip, null);
   }
   res.json({ token: signToken(user), user: publicUser(user) });
 }));
@@ -99,6 +136,12 @@ router.put('/me', authRequired, ah(async (req, res) => {
   if (!email || !String(email).trim()) {
     return res.status(400).json({ error: 'L\'email ne peut pas être vide' });
   }
+  if (!validEmail(email)) {
+    return res.status(400).json({ error: 'Adresse email invalide' });
+  }
+  if (String(name).trim().length > 100 || String(location || '').length > 150 || String(country || '').length > 60) {
+    return res.status(400).json({ error: 'Des champs sont trop longs' });
+  }
   const emailNorm = String(email).trim().toLowerCase();
   const dup = await q('SELECT id FROM users WHERE email = $1 AND id <> $2', [emailNorm, req.user.id]);
   if (dup.length) {
@@ -114,8 +157,8 @@ router.put('/me', authRequired, ah(async (req, res) => {
 
 router.put('/password', authRequired, ah(async (req, res) => {
   const { currentPassword, newPassword } = req.body || {};
-  if (!newPassword || String(newPassword).length < 6) {
-    return res.status(400).json({ error: 'Le nouveau mot de passe doit contenir au moins 6 caractères' });
+  if (!newPassword || String(newPassword).length < MIN_PASSWORD) {
+    return res.status(400).json({ error: 'Le nouveau mot de passe doit contenir au moins ' + MIN_PASSWORD + ' caractères' });
   }
   const user = (await q('SELECT * FROM users WHERE id = $1', [req.user.id]))[0];
   if (!user) return res.status(404).json({ error: 'Compte introuvable' });
@@ -124,7 +167,7 @@ router.put('/password', authRequired, ah(async (req, res) => {
       return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
     }
   }
-  const hash = bcrypt.hashSync(String(newPassword), 10);
+  const hash = bcrypt.hashSync(String(newPassword), 12);
   await q('UPDATE users SET password = $1 WHERE id = $2', [hash, user.id]);
   res.json({ ok: true });
 }));

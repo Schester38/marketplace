@@ -19,12 +19,24 @@ import reviewRoutes from './routes/reviews.js';
 import adminRoutes from './routes/admin.js';
 import presentationRoutes, { pageRouter, imageRouter } from './routes/presentation.js';
 import { authRequired } from './auth.js';
+import { securityHeaders, originCheck } from './security.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-app.use(cors());
+app.disable('x-powered-by');
+
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  process.env.ALLOWED_ORIGIN,
+  'https://mboppi-mboppi.vercel.app',
+].filter(Boolean);
+
+app.use(cors({ origin: ALLOWED_ORIGINS }));
+app.use(securityHeaders);
 app.use(express.json({ limit: '12mb' }));
+app.use(originCheck);
 
 const limiter = (windowMs, max) =>
   rateLimit({ windowMs, max, standardHeaders: true, legacyHeaders: false, message: { error: 'Trop de requêtes, réessayez plus tard' } });
@@ -37,6 +49,8 @@ app.use('/api/purchases', limiter(10 * 60 * 1000, 30));
 app.use('/api/orders', limiter(10 * 60 * 1000, 30));
 app.use('/api/reviews', limiter(10 * 60 * 1000, 15));
 app.use('/api/sales/livreur', limiter(5 * 60 * 1000, 60));
+app.use('/api/admin', limiter(5 * 60 * 1000, 60));
+app.use('/api', limiter(60 * 1000, 300));
 
 app.get('/', (req, res) => res.json({ name: 'Mboppi API', version: '1.0.0' }));
 
