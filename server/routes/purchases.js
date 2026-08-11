@@ -8,6 +8,16 @@ const router = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
+const CONFIRM_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+function randomConfirmCode() {
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += CONFIRM_CHARS[Math.floor(Math.random() * CONFIRM_CHARS.length)];
+  }
+  return code;
+}
+
 function saleRow(s) {
   return {
     ...s,
@@ -51,9 +61,16 @@ router.post('/', ah(async (req, res) => {
   const total = Math.round(price * qty * 100) / 100;
   const commission = Math.round(Number(product.price) * (Number(product.commission_percent) / 100) * qty * 100) / 100;
 
+  let confirmCode = null;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const candidate = randomConfirmCode();
+    const taken = (await q('SELECT id FROM sales WHERE confirm_code = $1', [candidate]))[0];
+    if (!taken) { confirmCode = candidate; break; }
+  }
+
   const created = await q(
-    `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address)
-     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12) RETURNING id`,
+    `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
     [
       product.id,
       seller.id,
@@ -67,6 +84,7 @@ router.post('/', ah(async (req, res) => {
       buyer_phone ? String(buyer_phone).trim() : null,
       buyer_city ? String(buyer_city).trim() : null,
       buyer_address ? String(buyer_address).trim() : null,
+      confirmCode,
     ]
   );
 
@@ -83,7 +101,7 @@ router.post('/', ah(async (req, res) => {
   });
   await sendPush(product.shop_id, {
     title: 'Nouvelle commande 🛒',
-    body: `${productName} — vendeur : ${seller.name} (${code}), client : ${name}.`,
+    body: `${productName} — vendeur : ${seller.name} (${code}), client : ${name}${confirmCode ? `, code : ${confirmCode}` : ''}.`,
     url: '/shop',
   });
 

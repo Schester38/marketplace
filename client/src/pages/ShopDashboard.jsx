@@ -36,10 +36,12 @@ const SALE_STATUS = {
 
 export default function ShopDashboard() {
   const { user } = useAuth();
-  const { t } = useLang();
+  const { t, locale } = useLang();
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
   const [stats, setStats] = useState(null);
+  const [series, setSeries] = useState([]);
+  const [topProducts, setTopProducts] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -114,6 +116,8 @@ export default function ShopDashboard() {
       setProducts(prodData.products);
       setSales(saleData.sales);
       setStats(saleData.stats);
+      setSeries(saleData.series || []);
+      setTopProducts(saleData.topProducts || []);
     } catch (e) {
       setError(e.message);
     }
@@ -273,6 +277,23 @@ export default function ShopDashboard() {
   };
 
   const deliveredSales = sales.filter((s) => s.status === 'delivered');
+
+  const seriesMap = Object.fromEntries((series || []).map((s) => [s.day, s]));
+  const now = new Date();
+  const bars = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(now.getDate() - (13 - i));
+    const key = d.toISOString().slice(0, 10);
+    const s = seriesMap[key];
+    return {
+      key,
+      label: d.toLocaleDateString(locale, { day: '2-digit', month: '2-digit' }),
+      cnt: s ? s.cnt : 0,
+      rev: s ? s.rev : 0,
+    };
+  });
+  const maxRev = Math.max(1, ...bars.map((b) => b.rev));
+  bars.forEach((b) => { b.pct = Math.round((b.rev / maxRev) * 100); });
 
   const remaining = (products?.length ?? 0) < 5;
 
@@ -512,6 +533,39 @@ export default function ShopDashboard() {
           </div>
         ) : null}
 
+        {stats && (series.length > 0 || topProducts.length > 0) && (
+          <div className="stats-extra">
+            <h3>{t('📈 Ventes des 14 derniers jours')}</h3>
+            <div className="bar-chart" role="img" aria-label={t('Graphique des ventes des 14 derniers jours')}>
+              {bars.map((b) => (
+                <div
+                  className="bar-col"
+                  key={b.key}
+                  title={`${b.label} : ${b.cnt} ${t('vente(s)')} — ${formatMoney(b.rev)} ${symbol}`}
+                >
+                  <div className="bar-fill" style={{ height: `${b.pct}%` }}></div>
+                  <span className="bar-label">{b.label}</span>
+                </div>
+              ))}
+            </div>
+            {topProducts.length > 0 && (
+              <>
+                <h3 style={{ marginTop: 16 }}>{t('🏆 Meilleurs produits')}</h3>
+                <ul className="top-products">
+                  {topProducts.map((p, i) => (
+                    <li key={p.name}>
+                      <span className="top-rank">{i + 1}</span>
+                      <span className="top-name">{p.name}</span>
+                      <span className="top-count">{p.cnt} {t('vente(s)')}</span>
+                      <strong>{formatMoney(p.rev)} {symbol}</strong>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
+
         {sales.length === 0 ? (
           <p className="empty">{t('Aucune vente enregistrée par les vendeurs.')}</p>
         ) : (
@@ -549,7 +603,10 @@ export default function ShopDashboard() {
                     </td>
                     <td>
                       {s.status === 'pending' && (
-                        <button className="btn btn-small btn-danger" onClick={() => changeStatus(s.id, 'cancelled')}>{t('Annuler')}</button>
+                        <div className="row2">
+                          <button className="btn btn-small btn-primary" onClick={() => changeStatus(s.id, 'confirmed')}>{t('Confirmer')}</button>
+                          <button className="btn btn-small btn-danger" onClick={() => changeStatus(s.id, 'cancelled')}>{t('Annuler')}</button>
+                        </div>
                       )}
                       {s.status === 'delivered' && !s.paid && (
                         <button className="btn btn-small btn-danger" onClick={() => openPay(s)}>{t('Payer le Vendeur')}</button>

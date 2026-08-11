@@ -123,6 +123,7 @@ export async function initDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_address TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivery_fee REAL NOT NULL DEFAULT 0;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS confirm_code TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivered_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT FALSE;
@@ -166,6 +167,9 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
+    DELETE FROM reviews a USING reviews b
+      WHERE a.product_id = b.product_id AND a.user_id = b.user_id AND a.id > b.id;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_user_product ON reviews(product_id, user_id) WHERE user_id IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS audit_log (
       id SERIAL PRIMARY KEY,

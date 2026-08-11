@@ -101,6 +101,7 @@ export default function LivreurDashboard() {
       const d = await api.deliverSale(deliverForm.sale.id, {
         delivery_fee: Number(deliverForm.delivery_fee || 0),
         payment_method: deliverForm.payment_method,
+        client_code: (deliverForm.client_code || '').trim().toUpperCase(),
       });
       setPending((prev) => prev.filter((s) => s.id !== d.sale.id));
       setDelivered((prev) => [d.sale, ...prev]);
@@ -194,7 +195,7 @@ export default function LivreurDashboard() {
                         <p className="hint">📍 {[s.buyer_city, s.buyer_address].filter(Boolean).join(', ')}</p>
                       ) : null}
                     </div>
-                    <button className="btn btn-primary" onClick={() => setDeliverForm({ sale: s, delivery_fee: '', payment_method: 'espece' })}>
+                    <button className="btn btn-primary" onClick={() => setDeliverForm({ sale: s, delivery_fee: '', payment_method: 'espece', client_code: '' })}>
                       🛵 {t('Livrer')}
                     </button>
                   </div>
@@ -270,6 +271,16 @@ export default function LivreurDashboard() {
                 value={deliverForm.delivery_fee}
                 onChange={(e) => setDeliverForm({ ...deliverForm, delivery_fee: e.target.value })}
               />
+              <label style={{ marginTop: 12 }}>{t('Code de confirmation du client *')}</label>
+              <input
+                className="input code-input"
+                required
+                maxLength="6"
+                value={deliverForm.client_code || ''}
+                onChange={(e) => setDeliverForm({ ...deliverForm, client_code: e.target.value.toUpperCase() })}
+                placeholder="ABC234"
+              />
+              <p className="hint">{t('Demandez ce code au client. Il l\'a reçu à la commande et sur le suivi de commande.')}</p>
               <label style={{ marginTop: 12 }}>{t('Paiement *')}</label>
               <div className="row2">
                 <label className={`payment-option ${deliverForm.payment_method === 'espece' ? 'selected' : ''}`}>

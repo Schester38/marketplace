@@ -109,7 +109,7 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop', 'creator'), ah(as
   }
   const sales = (
     await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, u.seller_code, shop.country AS shop_country
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.seller_code, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
        JOIN users u ON u.id = s.seller_id
@@ -134,6 +134,29 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop', 'creator'), ah(as
       [req.user.id]
     )
   )[0];
+  const series = (
+    await q(
+      `SELECT to_char(date_trunc('day', s.created_at), 'YYYY-MM-DD') AS day,
+              COUNT(*) AS cnt, COALESCE(SUM(s.total_price), 0) AS rev
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       WHERE p.shop_id = $1 AND s.created_at >= now() - interval '13 days'
+       GROUP BY 1 ORDER BY 1`,
+      [req.user.id]
+    )
+  ).map((r) => ({ day: r.day, cnt: Number(r.cnt), rev: Number(r.rev) }));
+  const topProducts = (
+    await q(
+      `SELECT p.name, COUNT(*) AS cnt, COALESCE(SUM(s.total_price), 0) AS rev
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       WHERE p.shop_id = $1
+       GROUP BY p.id, p.name
+       ORDER BY rev DESC, cnt DESC
+       LIMIT 5`,
+      [req.user.id]
+    )
+  ).map((r) => ({ name: r.name, cnt: Number(r.cnt), rev: Number(r.rev) }));
   res.json({
     sales,
     stats: {
@@ -144,6 +167,8 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop', 'creator'), ah(as
       paid_commission: Number(stats.paid_commission),
       owed_commission: Number(stats.owed_commission),
     },
+    series,
+    topProducts,
   });
 }));
 
@@ -160,8 +185,53 @@ router.patch('/:id/status', authRequired, roleRequired('shop'), ah(async (req, r
   if (product.shop_id !== req.user.id) {
     return res.status(403).json({ error: 'Cette vente ne concerne pas votre boutique' });
   }
+  const previous = sale.status;
   await q('UPDATE sales SET status = $1 WHERE id = $2', [status, sale.id]);
-  res.json({ ok: true });
+
+  const type = status === 'cancelled' ? 'sale_cancelled' : 'sale_confirmed';
+  const buyers = sale.buyer_id ? [sale.buyer_id] : [];
+  const userIds = [...new Set([sale.seller_id, product.shop_id, ...buyers])];
+  if (userIds.length) {
+    const values = userIds.map((uid) => `(${Number(uid)}, '${type}', ${sale.id})`).join(', ');
+    await q(`INSERT INTO notifications (user_id, type, sale_id) VALUES ${values}`);
+  }
+
+  const info = (await q('SELECT name FROM products WHERE id = $1', [sale.product_id]))[0];
+  const productName = info ? String(info.name) : 'article';
+  const buyerName = String(sale.buyer_name || 'client');
+  const clientUrl = `/suivi/${sale.id}?code=${encodeURIComponent(sale.confirm_code || sale.buyer_code || '')}`;
+  if (status === 'cancelled') {
+    await sendPush(sale.seller_id, {
+      title: 'Commande annulée ❌',
+      body: `${productName} — la commande de ${buyerName} a été annulée par la boutique.`,
+      url: '/seller',
+    });
+    if (sale.buyer_id) {
+      await sendPush(sale.buyer_id, {
+        title: 'Commande annulée ❌',
+        body: `${productName} — votre commande a été annulée. Contactez le vendeur si besoin.`,
+        url: clientUrl,
+      });
+    }
+  } else if (status === 'confirmed') {
+    await sendPush(sale.seller_id, {
+      title: 'Commande confirmée ✅',
+      body: `${productName} — la boutique a confirmé la commande de ${buyerName}.`,
+      url: '/seller',
+    });
+    if (sale.buyer_id) {
+      await sendPush(sale.buyer_id, {
+        title: 'Commande confirmée ✅',
+        body: `${productName} — votre commande a été confirmée par la boutique.`,
+        url: clientUrl,
+      });
+    }
+  }
+  if (previous !== status) {
+    res.json({ ok: true, previous_status: previous });
+  } else {
+    res.json({ ok: true });
+  }
 }));
 
 router.delete('/:id', authRequired, roleRequired('seller'), ah(async (req, res) => {
@@ -262,7 +332,7 @@ router.get('/:id/proof', authRequired, ah(async (req, res) => {
 }));
 
 router.post('/:id/deliver', ah(async (req, res) => {
-  const { delivery_fee, payment_method } = req.body || {};
+  const { delivery_fee, payment_method, client_code } = req.body || {};
   const fee = Number(delivery_fee || 0);
   if (!Number.isFinite(fee) || fee < 0) {
     return res.status(400).json({ error: 'Frais de livraison invalides' });
@@ -276,6 +346,13 @@ router.post('/:id/deliver', ah(async (req, res) => {
   if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
   if (sale.status !== 'pending') {
     return res.status(409).json({ error: 'Cette vente n\'est plus en attente' });
+  }
+
+  if (sale.confirm_code) {
+    const typed = String(client_code || '').trim().toUpperCase();
+    if (typed !== sale.confirm_code) {
+      return res.status(400).json({ error: 'Code de confirmation du client incorrect. Demandez le code à l\'acheteur.' });
+    }
   }
 
   const updated = await q(
@@ -295,6 +372,12 @@ router.post('/:id/deliver', ah(async (req, res) => {
     `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_delivered', $2), ($3, 'sale_delivered', $2)`,
     [sale.seller_id, sale.id, product.shop_id]
   );
+  if (sale.buyer_id) {
+    await q(
+      `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_delivered', $2)`,
+      [sale.buyer_id, sale.id]
+    );
+  }
 
   const deliveredProduct = (
     await q('SELECT name FROM products WHERE id = $1', [sale.product_id])
@@ -311,6 +394,13 @@ router.post('/:id/deliver', ah(async (req, res) => {
     body: `${deliveredName} livré — client : ${buyerName}.`,
     url: '/shop',
   });
+  if (sale.buyer_id) {
+    await sendPush(sale.buyer_id, {
+      title: 'Commande livrée 🎉',
+      body: `${deliveredName} vous a été livré. Merci d\'avoir commandé sur Mboppi !`,
+      url: `/suivi/${sale.id}?code=${encodeURIComponent(sale.confirm_code || sale.buyer_code || '')}`,
+    });
+  }
 
   const full = (
     await q(
@@ -395,7 +485,7 @@ router.get('/track/:id', ah(async (req, res) => {
   if (!code) return res.status(400).json({ error: 'Code client requis' });
   const sale = (
     await q(
-      `SELECT s.id, s.status, s.quantity, s.buyer_name, s.buyer_code, s.buyer_city, s.created_at,
+      `SELECT s.id, s.status, s.quantity, s.buyer_name, s.buyer_code, s.confirm_code, s.buyer_city, s.created_at,
               s.delivered_at, s.paid_at,
               p.name AS product_name, p.price, p.shop_id,
               u.name AS seller_name, u.phone AS seller_phone,
@@ -404,7 +494,7 @@ router.get('/track/:id', ah(async (req, res) => {
        JOIN products p ON p.id = s.product_id
        JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
-       WHERE s.id = $1 AND s.buyer_code = $2`,
+       WHERE s.id = $1 AND (s.buyer_code = $2 OR s.confirm_code = $2)`,
       [Number(req.params.id), code]
     )
   )[0];

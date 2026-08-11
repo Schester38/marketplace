@@ -113,14 +113,14 @@ export default function PurchasePage() {
         <div className="card page-center">
           <h2>✅ {t('Commande confirmée !')}</h2>
           <p className="hint">{t('Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison.')}</p>
-          {purchase && purchase.buyer_code && (
+          {purchase && (purchase.confirm_code || purchase.buyer_code) && (
             <p className="buyer-code-box">
-              <span className="buyer-code-label">{t('Votre code client')} :</span>
-              <span className="buyer-code-value">{purchase.buyer_code}</span>
+              <span className="buyer-code-label">{t('Votre code de confirmation')} :</span>
+              <span className="buyer-code-value">{purchase.confirm_code || purchase.buyer_code}</span>
             </p>
           )}
           {purchase && purchase.id && (
-            <Link className="btn btn-primary" to={`/suivi/${purchase.id}?code=${encodeURIComponent(purchase.buyer_code || '')}`}>
+            <Link className="btn btn-primary" to={`/suivi/${purchase.id}?code=${encodeURIComponent(purchase.confirm_code || purchase.buyer_code || '')}`}>
               📦 {t('Suivre ma commande')}
             </Link>
           )}

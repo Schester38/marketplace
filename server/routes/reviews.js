@@ -12,6 +12,12 @@ router.get('/product/:id', ah(async (req, res) => {
     'SELECT COUNT(*) AS n, COALESCE(AVG(rating), 0)::numeric(3, 2) AS avg FROM reviews WHERE product_id = $1',
     [productId]
   );
+  const distribution = await q(
+    `SELECT rating, COUNT(*) AS n
+     FROM reviews WHERE product_id = $1
+     GROUP BY rating`,
+    [productId]
+  );
   const reviews = await q(
     `SELECT r.*, u.name AS user_name
      FROM reviews r LEFT JOIN users u ON u.id = r.user_id
@@ -19,8 +25,10 @@ router.get('/product/:id', ah(async (req, res) => {
      ORDER BY r.created_at DESC LIMIT 50`,
     [productId]
   );
+  const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  for (const d of distribution) dist[d.rating] = Number(d.n);
   res.json({
-    summary: { count: Number(summary.n), avg: Number(summary.avg) },
+    summary: { count: Number(summary.n), avg: Number(summary.avg), distribution: dist },
     reviews: reviews.map((r) => ({ ...r, rating: Number(r.rating) })),
   });
 }));
@@ -37,12 +45,25 @@ router.post('/', authRequired, ah(async (req, res) => {
   if (Number(product.shop_id) === Number(req.user.id)) {
     return res.status(400).json({ error: 'Vous ne pouvez pas noter votre propre produit' });
   }
-  const created = await q(
-    `INSERT INTO reviews (product_id, user_id, buyer_name, rating, comment)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [pid, req.user.id, req.user.name, r, comment ? String(comment).trim().slice(0, 500) : null]
-  );
-  res.status(201).json({ review: { ...created[0], rating: Number(created[0].rating) } });
+  const existing = (
+    await q('SELECT id FROM reviews WHERE product_id = $1 AND user_id = $2', [pid, req.user.id])
+  )[0];
+  const created = existing
+    ? (
+        await q(
+          `UPDATE reviews SET rating = $1, comment = $2, created_at = now()
+           WHERE id = $3 RETURNING *`,
+          [r, comment ? String(comment).trim().slice(0, 500) : null, existing.id]
+        )
+      )[0]
+    : (
+        await q(
+          `INSERT INTO reviews (product_id, user_id, buyer_name, rating, comment)
+           VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+          [pid, req.user.id, req.user.name, r, comment ? String(comment).trim().slice(0, 500) : null]
+        )
+      )[0];
+  res.status(201).json({ review: { ...created, rating: Number(created.rating) }, updated: !!existing });
 }));
 
 export default router;

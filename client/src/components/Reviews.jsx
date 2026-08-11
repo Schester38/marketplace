@@ -6,23 +6,34 @@ import { useAuth } from '../App.jsx';
 
 function Stars({ value, size = 16, onChange }) {
   const [hover, setHover] = useState(0);
-  const active = onChange ? (hover || value) : Math.round(value);
+  const active = onChange ? (hover || value) : value;
   return (
-    <span className={`stars stars-${size}`} role={onChange ? 'radiogroup' : 'img'} aria-label={`${active}/5`}>
-      {[1, 2, 3, 4, 5].map((i) => (
-        <button
-          key={i}
-          type="button"
-          className={`star ${i <= active ? 'on' : ''}`}
-          disabled={!onChange}
-          onClick={() => onChange && onChange(i)}
-          onMouseEnter={() => onChange && setHover(i)}
-          onMouseLeave={() => onChange && setHover(0)}
-          aria-label={`${i}/5`}
-        >
-          ★
-        </button>
-      ))}
+    <span className={`stars stars-${size}`} role={onChange ? 'radiogroup' : 'img'} aria-label={`${Math.round(value)}/5`}>
+      {[1, 2, 3, 4, 5].map((i) => {
+        const filled = active >= i;
+        const half = !filled && active >= i - 0.5;
+        return (
+          <button
+            key={i}
+            type="button"
+            className={`star ${filled || half ? 'on' : ''}`}
+            disabled={!onChange}
+            onClick={() => onChange && onChange(i)}
+            onMouseEnter={() => onChange && setHover(i)}
+            onMouseLeave={() => onChange && setHover(0)}
+            aria-label={`${i}/5`}
+          >
+            {half ? (
+              <span className="star-half">
+                <span className="star-half-off">★</span>
+                <span className="star-half-on">★</span>
+              </span>
+            ) : (
+              '★'
+            )}
+          </button>
+        );
+      })}
     </span>
   );
 }
@@ -78,9 +89,28 @@ export default function Reviews({ product }) {
       <h2 className="section-title">⭐ {t('Avis clients')}</h2>
       {summary && summary.count > 0 && (
         <div className="reviews-summary">
-          <strong>{summary.avg} / 5</strong>
-          <Stars value={summary.avg} />
-          <span>{t('{n} avis', { n: summary.count })}</span>
+          <div>
+            <strong>{summary.avg} / 5</strong>
+            <Stars value={summary.avg} />
+            <span>{t('{n} avis', { n: summary.count })}</span>
+          </div>
+          {summary.distribution && (
+            <div className="reviews-distribution">
+              {[5, 4, 3, 2, 1].map((star) => {
+                const n = summary.distribution[star] || 0;
+                const pct = Math.round((n / summary.count) * 100);
+                return (
+                  <div className="dist-row" key={star}>
+                    <span className="dist-star">{star} ★</span>
+                    <div className="dist-track">
+                      <div className="dist-fill" style={{ width: `${pct}%` }}></div>
+                    </div>
+                    <span className="dist-count">{n}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
