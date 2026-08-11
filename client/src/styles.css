@@ -1537,7 +1537,15 @@ a.step { text-decoration: none; color: inherit; }
 @media (max-width: 768px) {
   .bottom-nav { display: flex; }
   .app { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
-  .footer { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+  .footer { padding: 14px 14px 10px; margin-top: 16px; }
+  .footer-inner { gap: 8px; }
+  .footer-nav {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 16px;
+    width: 100%;
+  }
+  .footer-nav a { font-size: 0.85rem; }
 }
 
 .privacy-list { display: flex; flex-direction: column; gap: 16px; }
