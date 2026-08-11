@@ -1,4 +1,4 @@
-export const RECAPTCHA_SITE_KEY = ''; // à remplir : clé publique Google (gratuite) — voir https://www.google.com/recaptcha/admin
+export const RECAPTCHA_SITE_KEY = '6Lfwo4AtAAAAAAAuZ9N_1hMBZh5vuvUlzGNu5cbp';
 
 let scriptPromise = null;
 
