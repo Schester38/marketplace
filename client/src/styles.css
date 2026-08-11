@@ -2376,3 +2376,41 @@ a.step { text-decoration: none; color: inherit; }
 .filter-price { max-width: 120px; }
 .export-wrap { display: inline-flex; align-items: center; gap: 8px; }
 .export-error { font-size: 0.8rem; }
+
+/* Bouton retour en haut (apparaît après 75% de scroll) */
+.back-to-top {
+  position: fixed;
+  inset-inline-end: 16px;
+  bottom: 16px;
+  z-index: 950;
+  width: 46px;
+  height: 46px;
+  border: none;
+  border-radius: 50%;
+  background: var(--grad);
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(14px) scale(0.9);
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.back-to-top.back-to-top-show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.back-to-top:hover { background: var(--primary-dark); }
+@media (max-width: 640px) {
+  .back-to-top {
+    bottom: calc(64px + env(safe-area-inset-bottom) + 12px);
+    inset-inline-end: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top { transition: none; }
+}
