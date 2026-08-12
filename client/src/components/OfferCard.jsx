@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { formatMoney } from './ProductCard.jsx';
-import { offerUrl, whatsappLink, offerDiscount, offerSavings, categoryEmoji } from '../config.js';
+import { offerUrl, offersWhatsappLink, offerDiscount, offerSavings, categoryEmoji } from '../config.js';
 import { useLang } from '../i18n.jsx';
 
 export default function OfferCard({ offer }) {
@@ -48,7 +48,7 @@ export default function OfferCard({ offer }) {
             📞 {t('Appeler')}
           </a>
         )}
-        <a className="btn btn-whatsapp btn-block" href={whatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">
+        <a className="btn btn-whatsapp btn-block" href={offersWhatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">
           <WhatsAppIcon /> {t('Commander sur WhatsApp')}
         </a>
         <p className="offer-qty">{t('Disponibilité : {n} unité(s)', { n: offer.quantity })}</p>

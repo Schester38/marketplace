@@ -1,4 +1,5 @@
 export const WHATSAPP_NUMBER = '237672886348';
+export const OFFERS_WHATSAPP_NUMBER = '237679475343';
 export const BASE_URL = 'https://mboppi-mboppi.vercel.app';
 
 export const COUNTRIES = [
@@ -116,6 +117,10 @@ export function waLink(number, message) {
 
 export function whatsappLink(message) {
   return waLink(WHATSAPP_NUMBER, message);
+}
+
+export function offersWhatsappLink(message) {
+  return waLink(OFFERS_WHATSAPP_NUMBER, message);
 }
 
 export function offerDiscount(offer) {

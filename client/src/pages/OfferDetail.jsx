@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { formatMoney } from '../components/ProductCard.jsx';
-import { offerUrl, whatsappLink, offerDiscount, offerSavings, categoryEmoji } from '../config.js';
+import { offerUrl, offersWhatsappLink, offerDiscount, offerSavings, categoryEmoji } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
@@ -117,7 +117,7 @@ export default function OfferDetail() {
               📞 {t('Appeler')}
             </a>
           )}
-          <a className="btn btn-whatsapp btn-block" href={whatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">
+          <a className="btn btn-whatsapp btn-block" href={offersWhatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">
             <WhatsAppIcon /> {t('Commander sur WhatsApp')}
           </a>
         </div>
