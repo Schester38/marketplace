@@ -69,7 +69,7 @@ function FollowUs() {
   const socialLinks = [
     { label: 'Facebook', icon: '📘', url: 'https://facebook.com/mboppi' },
     { label: 'Instagram', icon: '📷', url: 'https://instagram.com/mboppi' },
-    { label: 'WhatsApp', icon: '💚', url: 'https://wa.me/229XXXXXXXX' },
+    { label: 'WhatsApp', icon: '💚', url: 'https://wa.me/237672886348' },
     { label: 'TikTok', icon: '🎵', url: 'https://tiktok.com/@mboppi' },
   ];
 
@@ -420,7 +420,6 @@ export default function Navbar({ onLogout }) {
   const tools = (
     <div className="drawer-tools">
       <LangSwitcher />
-      <FollowUs />
       {themeToggle}
       {favLink}
       {cartLink}
@@ -430,6 +429,7 @@ export default function Navbar({ onLogout }) {
 
   const navLinks = (
     <>
+      <FollowUs />
       <Link to="/" onClick={close}>{t('Produits')}</Link>
       {user && user.role === 'shop' && <Link to="/shop" onClick={close}>{t('Ma boutique')}</Link>}
       {user && user.role === 'seller' && <Link to="/seller" onClick={close}>{t('Mon espace vendeur')}</Link>}

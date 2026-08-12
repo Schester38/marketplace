@@ -1,4 +1,4 @@
-export const WHATSAPP_NUMBER = '237679475343';
+export const WHATSAPP_NUMBER = '237672886348';
 export const BASE_URL = 'https://mboppi-mboppi.vercel.app';
 
 export const COUNTRIES = [

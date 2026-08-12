@@ -19,6 +19,13 @@ if (DSN) {
 
 const pathname = window.location.pathname;
 
+try {
+  const t = localStorage.getItem('theme');
+  if (t) document.documentElement.setAttribute('data-theme', t);
+} catch {
+  /* stockage indisponible */
+}
+
 if (pathname.startsWith('/verone')) {
   const link = document.querySelector('link[rel="manifest"]');
   if (link) link.href = '/manifest-verone.webmanifest';

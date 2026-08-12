@@ -33,15 +33,24 @@ export default function Register() {
       setError(t('Veuillez remplir tous les champs.'));
       return;
     }
-    try {
-      const recaptchaToken = await getRecaptchaToken('register');
-      const data = await api.register({ ...form, recaptchaToken, ref: refCode || undefined });
-      login(data.user, data.token);
-      localStorage.setItem('mboppi_welcome', 'register');
-      navigate('/');
-    } catch (err) {
-      setError(err.message);
-    }
+    const trySubmit = async (remaining) => {
+      try {
+        const recaptchaToken = await getRecaptchaToken('register');
+        const data = await api.register({ ...form, recaptchaToken, ref: refCode || undefined });
+        login(data.user, data.token);
+        localStorage.setItem('mboppi_welcome', 'register');
+        navigate('/');
+        return true;
+      } catch (err) {
+        if (remaining > 0 && /recaptcha|anti-robot|vérification/i.test(err.message)) {
+          await new Promise((r) => setTimeout(r, 1200));
+          return trySubmit(remaining - 1);
+        }
+        setError(err.message);
+        return false;
+      }
+    };
+    await trySubmit(2);
   };
 
   return (

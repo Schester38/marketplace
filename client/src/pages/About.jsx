@@ -18,7 +18,6 @@ export default function About() {
         </p>
         <div className="hero-actions">
           <Link to="/register" className="btn btn-primary">{t('Créer un compte gratuit')}</Link>
-          <Link to="/vitrine-offre" className="btn btn-outline">{t('Voir les offres')}</Link>
         </div>
       </section>
 

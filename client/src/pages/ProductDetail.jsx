@@ -187,10 +187,10 @@ export default function ProductDetail() {
             </p>
           )}
           <p className="product-shop">
-            <Link to={`/boutique/${product.shop_id}`}>
+            <span className="shop-name-text">
               {t('Boutique : {shop}', { shop: product.shop_name })}
               {product.shop_verified && <span className="badge badge-verified" title={t('Boutique vérifiée')}>✓ {t('Vérifiée')}</span>}
-            </Link>
+            </span>
             {product.shop_location ? <span className="shop-loc"> · 📍 {product.shop_location}</span> : null}
           </p>
           {product.description && <p>{product.description}</p>}

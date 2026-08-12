@@ -54,7 +54,7 @@ router.post('/', authRequired, roleRequired('seller'), ah(async (req, res) => {
   const sale = saleRow(
     (
       await q(
-        `SELECT s.*, p.name AS product_name, p.price, p.commission_percent, u.name AS seller_name
+        `SELECT s.*, p.name AS product_name, p.price, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone
          FROM sales s
          JOIN products p ON p.id = s.product_id
          JOIN users u ON u.id = s.seller_id
@@ -71,7 +71,7 @@ router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
     await q(
       `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
               u.name AS shop_name, u.country AS shop_country,
-              u2.seller_code AS seller_code
+              u2.seller_code AS seller_code, u2.phone AS seller_phone
        FROM sales s
        JOIN products p ON p.id = s.product_id
        JOIN users u ON u.id = p.shop_id
@@ -109,10 +109,10 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop', 'creator'), ah(as
   }
   const sales = (
     await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.seller_code, shop.country AS shop_country
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone, u.seller_code, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
-       JOIN users u ON u.id = s.seller_id
+       LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
        WHERE p.shop_id = $1
        ORDER BY s.created_at DESC`,
@@ -186,11 +186,15 @@ router.patch('/:id/status', authRequired, roleRequired('shop'), ah(async (req, r
     return res.status(403).json({ error: 'Cette vente ne concerne pas votre boutique' });
   }
   const previous = sale.status;
-  await q('UPDATE sales SET status = $1 WHERE id = $2', [status, sale.id]);
+  if (status === 'confirmed') {
+    await q('UPDATE sales SET shop_confirmed_at = COALESCE(shop_confirmed_at, now()) WHERE id = $1', [sale.id]);
+  } else {
+    await q('UPDATE sales SET status = $1 WHERE id = $2', [status, sale.id]);
+  }
 
   const type = status === 'cancelled' ? 'sale_cancelled' : 'sale_confirmed';
   const buyers = sale.buyer_id ? [sale.buyer_id] : [];
-  const userIds = [...new Set([sale.seller_id, product.shop_id, ...buyers])];
+  const userIds = [...new Set([sale.seller_id, product.shop_id, ...buyers].filter(Boolean))];
   if (userIds.length) {
     const values = userIds.map((uid) => `(${Number(uid)}, '${type}', ${sale.id})`).join(', ');
     await q(`INSERT INTO notifications (user_id, type, sale_id) VALUES ${values}`);
@@ -201,11 +205,13 @@ router.patch('/:id/status', authRequired, roleRequired('shop'), ah(async (req, r
   const buyerName = String(sale.buyer_name || 'client');
   const clientUrl = `/suivi/${sale.id}?code=${encodeURIComponent(sale.confirm_code || sale.buyer_code || '')}`;
   if (status === 'cancelled') {
-    await sendPush(sale.seller_id, {
-      title: 'Commande annulée ❌',
-      body: `${productName} — la commande de ${buyerName} a été annulée par la boutique.`,
-      url: '/seller',
-    });
+    if (sale.seller_id) {
+      await sendPush(sale.seller_id, {
+        title: 'Commande annulée ❌',
+        body: `${productName} — la commande de ${buyerName} a été annulée par la boutique.`,
+        url: '/seller',
+      });
+    }
     if (sale.buyer_id) {
       await sendPush(sale.buyer_id, {
         title: 'Commande annulée ❌',
@@ -214,11 +220,13 @@ router.patch('/:id/status', authRequired, roleRequired('shop'), ah(async (req, r
       });
     }
   } else if (status === 'confirmed') {
-    await sendPush(sale.seller_id, {
-      title: 'Commande confirmée ✅',
-      body: `${productName} — la boutique a confirmé la commande de ${buyerName}.`,
-      url: '/seller',
-    });
+    if (sale.seller_id) {
+      await sendPush(sale.seller_id, {
+        title: 'Commande confirmée ✅',
+        body: `${productName} — la boutique a confirmé la commande de ${buyerName}.`,
+        url: '/seller',
+      });
+    }
     if (sale.buyer_id) {
       await sendPush(sale.buyer_id, {
         title: 'Commande confirmée ✅',
@@ -258,12 +266,12 @@ router.get('/livreur', ah(async (req, res) => {
   const shopParam = shop ? [shop.id] : [];
   const pending = (
     await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
-              u.name AS seller_name, u.seller_code,
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
+              u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
               shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
-       JOIN users u ON u.id = s.seller_id
+       LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
        WHERE s.status = 'pending'${shopFilter}
        ORDER BY s.created_at DESC`,
@@ -273,14 +281,14 @@ router.get('/livreur', ah(async (req, res) => {
   const delivered = req.user
     ? (
         await q(
-          `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
-                  u.name AS seller_name, u.seller_code,
-                  shop.name AS shop_name, shop.country AS shop_country
-           FROM sales s
-           JOIN products p ON p.id = s.product_id
-           JOIN users u ON u.id = s.seller_id
-           JOIN users shop ON shop.id = p.shop_id
-           WHERE s.status = 'delivered' AND s.delivered_by = $1${shopFilter.replace('$1', '$2')}
+`SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
+                    u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
+                    shop.name AS shop_name, shop.country AS shop_country
+             FROM sales s
+             JOIN products p ON p.id = s.product_id
+             LEFT JOIN users u ON u.id = s.seller_id
+             JOIN users shop ON shop.id = p.shop_id
+             WHERE s.status = 'delivered' AND s.delivered_by = $1${shopFilter.replace('$1', '$2')}
            ORDER BY s.delivered_at DESC`,
           [req.user.id, ...shopParam]
         )
@@ -288,12 +296,12 @@ router.get('/livreur', ah(async (req, res) => {
     : shop
       ? (
           await q(
-            `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id,
-                    u.name AS seller_name, u.seller_code,
+            `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
+                    u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
                     shop.name AS shop_name, shop.country AS shop_country
              FROM sales s
              JOIN products p ON p.id = s.product_id
-             JOIN users u ON u.id = s.seller_id
+             LEFT JOIN users u ON u.id = s.seller_id
              JOIN users shop ON shop.id = p.shop_id
              WHERE s.status = 'delivered' AND p.shop_id = $1
              ORDER BY s.delivered_at DESC
@@ -344,7 +352,7 @@ router.post('/:id/deliver', ah(async (req, res) => {
 
   const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
   if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
-  if (sale.status !== 'pending') {
+  if (!['pending', 'confirmed'].includes(sale.status)) {
     return res.status(409).json({ error: 'Cette vente n\'est plus en attente' });
   }
 
@@ -368,27 +376,26 @@ router.post('/:id/deliver', ah(async (req, res) => {
     await q('UPDATE products SET quantity = $1 WHERE id = $2', [remaining, sale.product_id]);
   }
 
+  const notifyIds = [];
+  if (sale.seller_id) notifyIds.push(sale.seller_id);
+  notifyIds.push(product.shop_id);
+  if (sale.buyer_id) notifyIds.push(sale.buyer_id);
   await q(
-    `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_delivered', $2), ($3, 'sale_delivered', $2)`,
-    [sale.seller_id, sale.id, product.shop_id]
+    `INSERT INTO notifications (user_id, type, sale_id) VALUES ${notifyIds.map((uid) => `(${Number(uid)}, 'sale_delivered', ${sale.id})`).join(', ')}`
   );
-  if (sale.buyer_id) {
-    await q(
-      `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_delivered', $2)`,
-      [sale.buyer_id, sale.id]
-    );
-  }
 
   const deliveredProduct = (
     await q('SELECT name FROM products WHERE id = $1', [sale.product_id])
   )[0];
   const deliveredName = deliveredProduct ? String(deliveredProduct.name) : 'article';
   const buyerName = String(sale.buyer_name || 'client');
-  await sendPush(sale.seller_id, {
-    title: 'Vente livrée ✅',
-    body: `${deliveredName} livré à ${buyerName}.`,
-    url: '/seller',
-  });
+  if (sale.seller_id) {
+    await sendPush(sale.seller_id, {
+      title: 'Vente livrée ✅',
+      body: `${deliveredName} livré à ${buyerName}.`,
+      url: '/seller',
+    });
+  }
   await sendPush(product.shop_id, {
     title: 'Vente livrée ✅',
     body: `${deliveredName} livré — client : ${buyerName}.`,
@@ -404,11 +411,11 @@ router.post('/:id/deliver', ah(async (req, res) => {
 
   const full = (
     await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, u.seller_code,
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
               shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
-       JOIN users u ON u.id = s.seller_id
+       LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
        WHERE s.id = $1`,
       [updated[0].id]
@@ -438,8 +445,11 @@ router.post('/:id/pay', authRequired, roleRequired('shop'), ah(async (req, res) 
   const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
   if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
   const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
-  if (product.shop_id !== req.user.id) {
+  if (sale.seller_id && product.shop_id !== req.user.id) {
     return res.status(403).json({ error: 'Cette vente ne concerne pas votre boutique' });
+  }
+  if (!sale.seller_id) {
+    return res.status(409).json({ error: 'Cette commande en direct n\'a pas de vendeur à payer' });
   }
   if (sale.status !== 'delivered') {
     return res.status(409).json({ error: 'Le produit doit être livré avant de payer le vendeur' });
@@ -468,11 +478,11 @@ router.post('/:id/pay', authRequired, roleRequired('shop'), ah(async (req, res) 
   });
   const full = (
     await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, u.seller_code,
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
               shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
-       JOIN users u ON u.id = s.seller_id
+       LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
        WHERE s.id = $1`,
       [updated[0].id]
@@ -521,10 +531,10 @@ router.get('/track/:id', ah(async (req, res) => {
               s.delivered_at, s.paid_at,
               p.name AS product_name, p.price, p.shop_id,
               u.name AS seller_name, u.phone AS seller_phone,
-              shop.name AS shop_name, shop.country AS shop_country, shop.location AS shop_location
+              shop.name AS shop_name, shop.country AS shop_country, shop.location AS shop_location, p.contact AS shop_contact
        FROM sales s
        JOIN products p ON p.id = s.product_id
-       JOIN users u ON u.id = s.seller_id
+       LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
        WHERE s.id = $1 AND (s.buyer_code = $2 OR s.confirm_code = $2)`,
       [Number(req.params.id), code]
@@ -547,11 +557,11 @@ router.get('/export', authRequired, roleRequired('seller', 'shop', 'creator'), a
     `SELECT s.id, s.created_at, s.status, s.buyer_name, s.buyer_city, s.quantity,
             s.total_price, s.commission, s.purchase_price, s.delivery_fee, s.paid_at, s.delivered_at,
             p.name AS product_name, shop.name AS shop_name, shop.country AS shop_country,
-            u.name AS seller_name
+            COALESCE(u.name, '—') AS seller_name
      FROM sales s
      JOIN products p ON p.id = s.product_id
      JOIN users shop ON shop.id = p.shop_id
-     JOIN users u ON u.id = s.seller_id
+     LEFT JOIN users u ON u.id = s.seller_id
      WHERE ${isSeller ? 's.seller_id = $1' : 'p.shop_id = $1'}
      ORDER BY s.created_at DESC`,
     [req.user.id]

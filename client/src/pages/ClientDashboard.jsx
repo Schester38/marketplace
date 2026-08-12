@@ -1,24 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
-import { whatsappLink, countrySymbol } from '../config.js';
+import { countrySymbol } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
-
-const ORDER_STATUS = {
-  new: { key: 'En attente', cls: 'badge-pending' },
-  confirmed: { key: 'Confirmée', cls: 'badge-confirmed' },
-  shipped: { key: 'Expédiée', cls: 'badge-confirmed' },
-  cancelled: { key: 'Annulée', cls: 'badge-cancelled' },
-};
+import CopyCode from '../components/CopyCode.jsx';
 
 const PURCHASE_STATUS = {
-  pending: { key: 'Vente en attente', cls: 'badge-pending' },
+  pending: { key: 'En attente', cls: 'badge-pending' },
   bought: { key: 'Acheté', cls: 'badge-bought' },
   confirmed: { key: 'Confirmée', cls: 'badge-confirmed' },
+  delivered: { key: 'Livré', cls: 'badge-bought' },
   cancelled: { key: 'Annulée', cls: 'badge-cancelled' },
 };
 
@@ -34,16 +29,15 @@ function purchasePhoto(p) {
 export default function ClientDashboard() {
   const { user } = useAuth();
   const { t, locale } = useLang();
-  const [orders, setOrders] = useState(null);
   const [purchases, setPurchases] = useState(null);
   const [error, setError] = useState('');
   const mounted = useRef(true);
 
   const load = useCallback(() => {
-    Promise.all([api.myOrders(), api.purchasesMy()])
-      .then(([od, pd]) => {
+    api
+      .purchasesMy()
+      .then((pd) => {
         if (!mounted.current) return;
-        setOrders(od.orders);
         setPurchases(pd.purchases);
       })
       .catch((e) => mounted.current && setError(e.message));
@@ -57,6 +51,9 @@ export default function ClientDashboard() {
   }, [load]);
 
   useRefreshOnFocus(load);
+
+  const activePurchases = (purchases || []).filter((p) => p.status !== 'delivered');
+  const deliveredPurchases = (purchases || []).filter((p) => p.status === 'delivered');
 
   return (
     <main className="container">
@@ -92,19 +89,20 @@ export default function ClientDashboard() {
       </section>
 
       <section style={{ marginTop: 24 }}>
-        <h2 className="section-title">{t('🛍️ Mes achats')}</h2>
+        <h2 className="section-title">{t('📦 Mes commandes')}</h2>
+        {error && <p className="error">{error}</p>}
         {purchases === null ? (
           <div className="card page-center">
             <div className="skeleton-block" style={{ height: 80 }}></div>
           </div>
-        ) : purchases.length === 0 ? (
+        ) : activePurchases.length === 0 ? (
           <div className="card page-center">
-            <p className="empty">{t('Aucun achat pour le moment.')}</p>
-            <Link to="/" className="btn btn-primary">{t('Découvrir les produits')}</Link>
+            <p className="empty">{t('Aucune commande pour le moment.')}</p>
+            <Link to="/" className="btn btn-primary">{t('Parcourir les produits')}</Link>
           </div>
         ) : (
           <div className="order-list">
-            {purchases.map((p) => {
+            {activePurchases.map((p) => {
               const st = PURCHASE_STATUS[p.status] || PURCHASE_STATUS.pending;
               return (
                 <div className="card order-card" key={p.id}>
@@ -114,26 +112,22 @@ export default function ClientDashboard() {
                   </div>
                   <p className="order-date">
                     {new Date(p.created_at).toLocaleDateString(locale, { dateStyle: 'medium' })}
-                    {' — '}{t('Vendeur : {seller}', { seller: p.seller_name })}
-                    {p.confirm_code ? ` · 🔑 ${t('Code')} : ${p.confirm_code}` : p.buyer_code ? ` (${p.buyer_code})` : ''}
+                    {' — '}{t('Boutique : {shop}', { shop: p.shop_name })}
+                    {p.seller_name && p.seller_name !== '—' ? ` · ${t('Vendeur : {seller}', { seller: p.seller_name })}` : ''}
                   </p>
-                  <div className="order-items">
-                    <div className="order-item">
-                      {purchasePhoto(p) ? (
-                        <img src={purchasePhoto(p)} alt={p.product_name} loading="lazy" />
-                      ) : (
-                        <span className="order-item-thumb">📦</span>
-                      )}
-                      <span className="order-item-name">{p.shop_name}</span>
-                      <strong>{formatMoney(p.purchase_price != null ? p.purchase_price : p.total_price)} {countrySymbol(p.shop_country)}</strong>
-                    </div>
-                  </div>
                   <div className="order-total">
-                    <span className="label">{t('Prix payé')}</span>
-                    <strong>{formatMoney(p.purchase_price != null ? p.purchase_price : p.total_price)} {countrySymbol(p.shop_country)}</strong>
+                    <span className="label">{t('Total')}</span>
+                    <strong>{formatMoney(p.total_price)} {countrySymbol(p.shop_country)}</strong>
                   </div>
-                  {(p.confirm_code || p.buyer_code) && (
-                    <Link className="btn btn-outline btn-small" to={`/suivi/${p.id}?code=${encodeURIComponent(p.confirm_code || p.buyer_code)}`}>
+                  {p.confirm_code && (
+                    <div className="buyer-code-box" style={{ margin: '8px 0' }}>
+                      <span className="buyer-code-label">{t('Code de confirmation')} :</span>
+                      <span className="buyer-code-value">{p.confirm_code}</span>
+                      <CopyCode code={p.confirm_code} />
+                    </div>
+                  )}
+                  {p.confirm_code && (
+                    <Link className="btn btn-outline btn-small" to={`/suivi/${p.id}?code=${encodeURIComponent(p.confirm_code)}`}>
                       📦 {t('Suivre ma commande')}
                     </Link>
                   )}
@@ -145,52 +139,55 @@ export default function ClientDashboard() {
       </section>
 
       <section style={{ marginTop: 24 }}>
-        <h2 className="section-title">{t('📦 Mes commandes')}</h2>
-        {error && <p className="error">{error}</p>}
-        {orders === null ? (
+        <h2 className="section-title">{t('🛍️ Mes achats')}</h2>
+        {purchases === null ? (
           <div className="card page-center">
             <div className="skeleton-block" style={{ height: 80 }}></div>
           </div>
-        ) : orders.length === 0 ? (
+        ) : deliveredPurchases.length === 0 ? (
           <div className="card page-center">
-            <p className="empty">{t('Aucune commande pour le moment.')}</p>
-            <Link to="/" className="btn btn-primary">{t('Parcourir les produits')}</Link>
+            <p className="empty">{t('Aucun achat pour le moment.')}</p>
+            <Link to="/" className="btn btn-primary">{t('Découvrir les produits')}</Link>
           </div>
         ) : (
           <div className="order-list">
-            {orders.map((o) => {
-              const st = ORDER_STATUS[o.status] || ORDER_STATUS.new;
-              return (
-                <div className="card order-card" key={o.id}>
-                  <div className="order-head">
-                    <strong>{t('Commande #{id}', { id: o.id })}</strong>
-                    <span className={`badge ${st.cls}`}>{t(st.key)}</span>
-                  </div>
-                  <p className="order-date">{new Date(o.created_at).toLocaleDateString(locale, { dateStyle: 'medium' })}</p>
-                  <div className="order-items">
-                    {o.items.map((it, i) => (
-                      <div className="order-item" key={i}>
-                        {it.photo && <img src={it.photo} alt={it.name} loading="lazy" />}
-                        <span className="order-item-name">{it.name} ×{it.quantity}</span>
-                        <strong>{formatMoney(it.price * it.quantity)} {countrySymbol(user && user.country)}</strong>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="order-total">
-                    <span className="label">{t('Total')}</span>
-                    <strong>{formatMoney(o.total)} {countrySymbol(user && user.country)}</strong>
-                  </div>
-                  <a
-                    className="btn btn-outline btn-sm"
-                    href={whatsappLink(t('Bonjour Mboppi, je souhaite suivre ma commande #{id}.', { id: o.id }))}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    💬 {t('Suivre sur WhatsApp')}
-                  </a>
+            {deliveredPurchases.map((p) => (
+              <div className="card order-card" key={p.id}>
+                <div className="order-head">
+                  <strong>{p.product_name} ×{p.quantity}</strong>
+                  <span className="badge badge-bought">{t('Livré')}</span>
                 </div>
-              );
-            })}
+                <p className="order-date">
+                  {p.delivered_at
+                    ? new Date(p.delivered_at).toLocaleDateString(locale, { dateStyle: 'medium' })
+                    : new Date(p.created_at).toLocaleDateString(locale, { dateStyle: 'medium' })}
+                  {' — '}{t('Boutique : {shop}', { shop: p.shop_name })}
+                  {p.seller_name && p.seller_name !== '—' ? ` · ${t('Vendeur : {seller}', { seller: p.seller_name })}` : ''}
+                </p>
+                <div className="order-items">
+                  <div className="order-item">
+                    {purchasePhoto(p) ? (
+                      <img src={purchasePhoto(p)} alt={p.product_name} loading="lazy" />
+                    ) : (
+                      <span className="order-item-thumb">📦</span>
+                    )}
+                    <span className="order-item-name">{p.shop_name}</span>
+                    <strong>{formatMoney(p.purchase_price != null ? p.purchase_price : p.total_price)} {countrySymbol(p.shop_country)}</strong>
+                  </div>
+                </div>
+                <div className="order-total">
+                  <span className="label">{t('Prix payé')}</span>
+                  <strong>{formatMoney(p.purchase_price != null ? p.purchase_price : p.total_price)} {countrySymbol(p.shop_country)}</strong>
+                </div>
+                {p.confirm_code && (
+                  <div className="buyer-code-box" style={{ margin: '8px 0' }}>
+                    <span className="buyer-code-label">{t('Code de confirmation')} :</span>
+                    <span className="buyer-code-value">{p.confirm_code}</span>
+                    <CopyCode code={p.confirm_code} />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </section>

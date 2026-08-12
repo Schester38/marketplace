@@ -156,7 +156,7 @@ router.get('/google/callback', ah(async (req, res) => {
       const cleanRef = ref ? String(ref).trim().toUpperCase() : '';
       if (cleanRef) {
         const referrer = (
-          await q('SELECT id, code FROM users WHERE role = \'seller\' AND code = $1', [cleanRef])
+          await q('SELECT id, seller_code FROM users WHERE role = \'seller\' AND seller_code = $1', [cleanRef])
         )[0];
         if (referrer) {
           referredBy = referrer.id;

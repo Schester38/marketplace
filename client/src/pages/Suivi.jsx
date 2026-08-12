@@ -6,14 +6,7 @@ import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { waLink, BASE_URL, countrySymbol } from '../config.js';
 import { formatMoney } from '../components/ProductCard.jsx';
-
-const STEPS = {
-  pending: 0,
-  bought: 1,
-  confirmed: 1,
-  delivered: 2,
-  cancelled: -1,
-};
+import CopyCode from '../components/CopyCode.jsx';
 
 export default function Suivi() {
   const { id } = useParams();
@@ -50,11 +43,19 @@ export default function Suivi() {
 
   const symbol = sale ? countrySymbol(sale.shop_country) : '';
 
-  const step = sale ? STEPS[sale.status] ?? -2 : -2;
+  const step = sale
+    ? sale.status === 'cancelled'
+      ? -1
+      : sale.status === 'delivered'
+        ? 2
+        : sale.shop_confirmed_at || sale.status === 'confirmed' || sale.status === 'bought'
+          ? 1
+          : 0
+    : -2;
   const labels = sale
     ? [
         { key: 'Commande enregistrée', date: sale.created_at },
-        { key: 'Commande confirmée', date: sale.buyer_name ? sale.buyer_name : null },
+        { key: 'Commande confirmée', date: sale.shop_confirmed_at || null },
         { key: 'Commande livrée', date: sale.delivered_at },
       ]
     : [];
@@ -92,12 +93,13 @@ export default function Suivi() {
               {t('Boutique : {shop}', { shop: sale.shop_name })}
               {sale.shop_location ? ` · ${sale.shop_location}` : ''}
             </p>
-            <p className="hint">{t('Vendeur : {seller}', { seller: sale.seller_name })}</p>
+            <p className="hint">{t('Vendeur : {seller}', { seller: sale.seller_name || '—' })}</p>
 
             {sale.confirm_code && (
               <div className="buyer-code-box" style={{ margin: '10px 0' }}>
                 <span className="buyer-code-label">{t('Votre code de confirmation')} :</span>
                 <span className="buyer-code-value">{sale.confirm_code}</span>
+                <CopyCode code={sale.confirm_code} />
                 {step === 0 && (
                   <p className="hint" style={{ marginTop: 6 }}>
                     {t('Communiquez ce code au livreur lors de la remise pour valider la livraison.')}
@@ -119,6 +121,9 @@ export default function Suivi() {
                         <strong>{t(l.key)}</strong>
                         {i === 0 && l.date && (
                           <span className="hint">{new Date(l.date).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                        )}
+                        {i === 1 && sale.shop_confirmed_at && (
+                          <span className="hint">{new Date(sale.shop_confirmed_at).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</span>
                         )}
                         {i === 2 && sale.delivered_at && (
                           <span className="hint">{new Date(sale.delivered_at).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' })}</span>

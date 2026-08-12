@@ -1,5 +1,5 @@
-function money(v) {
-  return `${Number(v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} F`;
+function money(v, symbol = 'F') {
+  return `${Number(v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} ${symbol}`;
 }
 
 const BLUE = [37, 99, 235];
@@ -32,6 +32,22 @@ export async function downloadInvoice(sale, t, symbol = 'F') {
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
 
+  let logo = null;
+  try {
+    const resp = await fetch('/navbar-logo.png');
+    if (resp.ok) {
+      const blob = await resp.blob();
+      logo = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(blob);
+      });
+    }
+  } catch {
+    logo = null;
+  }
+
   doc.setFillColor(...BLUE_DARK);
   doc.rect(0, 0, W, 34, 'F');
   doc.setFillColor(...BLUE);
@@ -39,10 +55,19 @@ export async function downloadInvoice(sale, t, symbol = 'F') {
 
   doc.setFillColor(255, 255, 255);
   doc.circle(14, 17, 9, 'F');
-  doc.setTextColor(...BLUE_DARK);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.text('M', 14, 20.5, { align: 'center' });
+  if (logo) {
+    try {
+      doc.addImage(logo, 'PNG', 5.5, 8.5, 17, 17);
+    } catch {
+      logo = null;
+    }
+  }
+  if (!logo) {
+    doc.setTextColor(...BLUE_DARK);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('M', 14, 20.5, { align: 'center' });
+  }
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(19);
@@ -107,6 +132,11 @@ export async function downloadInvoice(sale, t, symbol = 'F') {
   if (sale.buyer_city) y = row(doc, t('Ville'), sale.buyer_city, y);
   if (sale.buyer_address) y = row(doc, t('Adresse'), sale.buyer_address, y) + 3;
 
+  const unitPrice =
+    sale.purchase_price != null
+      ? Number(sale.purchase_price)
+      : Math.round((Number(sale.total_price || 0) / Number(sale.quantity || 1)) * 100) / 100;
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(...BLUE_DARK);
@@ -115,18 +145,18 @@ export async function downloadInvoice(sale, t, symbol = 'F') {
   box(doc, 14, y - 4.5, W - 28, 26, LIGHT);
   y = row(doc, t('Produit'), sale.product_name || '—', y + 1);
   y = row(doc, t('Quantité'), sale.quantity, y);
-  y = row(doc, t('Prix unitaire'), `${money(sale.product_price)} ${symbol}`, y) + 3;
+  y = row(doc, t('Prix unitaire'), money(unitPrice, symbol), y) + 3;
 
   doc.setDrawColor(190, 200, 220);
   doc.setLineWidth(0.3);
   doc.line(16, y - 3, W - 16, y - 3);
   y += 2;
-  y = row(doc, t('Montant article'), `${money(sale.total_price)} ${symbol}`, y, { bold: true });
-  y = row(doc, t('Frais de livraison'), `${money(sale.delivery_fee)} ${symbol}`, y);
+  y = row(doc, t('Montant article'), money(sale.total_price, symbol), y, { bold: true });
+  y = row(doc, t('Frais de livraison'), money(sale.delivery_fee, symbol), y);
   y = row(
     doc,
     t('Total à payer'),
-    `${money(Number(sale.total_price || 0) + Number(sale.delivery_fee || 0))} ${symbol}`,
+    money(Number(sale.total_price || 0) + Number(sale.delivery_fee || 0), symbol),
     y + 1,
     { bold: true, color: BLUE }
   );

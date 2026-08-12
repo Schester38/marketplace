@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired } from '../auth.js';
+import { sendPush } from '../push.js';
 import { listPhotos } from '../photo.js';
 
 const router = Router();
@@ -13,16 +14,30 @@ function orderRow(o) {
   };
 }
 
+const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+function randomCode(len) {
+  return Array.from({ length: len }).map(() => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('');
+}
+
+async function uniqueConfirmCode() {
+  for (let i = 0; i < 20; i++) {
+    const c = randomCode(6);
+    const exists = await q('SELECT id FROM sales WHERE confirm_code = $1', [c]);
+    if (!exists.length) return c;
+  }
+  throw new Error('Impossible de générer un code de commande');
+}
+
 router.post('/', async (req, res) => {
-  const { items, buyer_name, buyer_phone, buyer_address } = req.body || {};
+  const { items, buyer_name, buyer_phone, buyer_address, buyer_city } = req.body || {};
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Le panier est vide' });
   }
   if (!buyer_name || !String(buyer_name).trim()) {
     return res.status(400).json({ error: 'Le nom est requis' });
   }
-  const cleanItems = [];
-  let total = 0;
+  const sales = [];
   for (const it of items) {
     const pid = Number(it && it.product_id);
     const qty = Number(it && it.quantity);
@@ -34,29 +49,49 @@ router.post('/', async (req, res) => {
     if (Number(p.quantity) < qty) {
       return res.status(400).json({ error: `Stock insuffisant pour « ${p.name} »` });
     }
-    const photos = listPhotos(p.photos);
-    cleanItems.push({
-      product_id: pid,
-      name: p.name,
-      price: Number(p.price),
-      quantity: qty,
-      photo: photos[0] || p.image || null,
+    const commission = Math.round(Number(p.price) * (Number(p.commission_percent) / 100) * qty * 100) / 100;
+    const code = await uniqueConfirmCode();
+    const created = await q(
+      `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, confirm_code, payment_method, buyer_name, buyer_phone, buyer_city, buyer_address, buyer_id)
+       VALUES ($1, NULL, $2, $3, $4, 'pending', $5, 'espece', $6, $7, $8, $9, $10) RETURNING id`,
+      [
+        pid,
+        qty,
+        Math.round(Number(p.price) * qty * 100) / 100,
+        commission,
+        code,
+        String(buyer_name).trim(),
+        buyer_phone ? String(buyer_phone).trim() : null,
+        buyer_city ? String(buyer_city).trim() : null,
+        buyer_address ? String(buyer_address).trim() : null,
+        req.user ? req.user.id : null,
+      ]
+    );
+    const sale = (
+      await q(
+        `SELECT s.*, p.name AS product_name, p.price, p.contact AS shop_contact, shop.name AS shop_name, shop.country AS shop_country, shop.location AS shop_location
+         FROM sales s
+         JOIN products p ON p.id = s.product_id
+         JOIN users shop ON shop.id = p.shop_id
+         WHERE s.id = $1`,
+        [created[0].id]
+      )
+    )[0];
+    sale.total_price = Number(sale.total_price);
+    sale.price = Number(sale.price);
+    sales.push(sale);
+
+    await q(
+      `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_confirmed', $2)`,
+      [p.shop_id, sale.id]
+    );
+    await sendPush(p.shop_id, {
+      title: 'Nouvelle commande 🛒',
+      body: `${sale.product_name} ×${qty} — ${String(buyer_name).trim()}.`,
+      url: '/shop',
     });
-    total += Number(p.price) * qty;
   }
-  const created = await q(
-    `INSERT INTO orders (user_id, buyer_name, buyer_phone, buyer_address, items, total)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [
-      req.user ? req.user.id : null,
-      String(buyer_name).trim(),
-      buyer_phone ? String(buyer_phone).trim() : null,
-      buyer_address ? String(buyer_address).trim() : null,
-      JSON.stringify(cleanItems),
-      Math.round(total * 100) / 100,
-    ]
-  );
-  res.status(201).json({ order: orderRow(created[0]) });
+  res.status(201).json({ sales });
 });
 
 router.get('/me', authRequired, async (req, res) => {

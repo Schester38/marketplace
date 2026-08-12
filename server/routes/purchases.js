@@ -151,10 +151,10 @@ router.post('/', optionalAuth, ah(async (req, res) => {
 router.get('/my', authRequired, ah(async (req, res) => {
   const purchases = (
     await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, p.photos, u.name AS seller_name, shop.name AS shop_name, shop.country AS shop_country
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.photos, p.contact AS shop_contact, COALESCE(u.name, '—') AS seller_name, u.phone AS seller_phone, shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
-       JOIN users u ON u.id = s.seller_id
+       LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
        WHERE s.buyer_id = $1
        ORDER BY s.created_at DESC`,

@@ -331,7 +331,7 @@ export default function CreatorDashboard() {
                 {sales.map((s) => (
                   <tr key={s.id}>
                     <td>{s.product_name}</td>
-                    <td>{s.seller_name}</td>
+                    <td>{s.seller_name || '—'}</td>
                     <td>{s.buyer_name || '—'}</td>
                     <td>{s.quantity}</td>
                     <td>{formatMoney(s.total_price)} {countrySymbol(s.shop_country)}</td>

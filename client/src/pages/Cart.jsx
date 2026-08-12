@@ -3,10 +3,11 @@ import { Link } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
 import { formatMoney } from '../components/ProductCard.jsx';
-import { countrySymbol, whatsappLink } from '../config.js';
+import { countrySymbol } from '../config.js';
 import { useAuth } from '../App.jsx';
 import { useCart } from '../store.jsx';
 import { useLang } from '../i18n.jsx';
+import CopyCode from '../components/CopyCode.jsx';
 
 export default function Cart() {
   const { user } = useAuth();
@@ -14,27 +15,11 @@ export default function Cart() {
   const { cart, setQty, removeFromCart, clearCart, cartCount, cartTotal } = useCart();
   const [buyerName, setBuyerName] = useState(user ? user.name : '');
   const [phone, setPhone] = useState('');
+  const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
   const [error, setError] = useState('');
   const [placing, setPlacing] = useState(false);
-  const [order, setOrder] = useState(null);
-
-  const orderMessage = order
-    ? [
-        t('Bonjour Mboppi, je souhaite confirmer ma commande #{id} :', { id: order.id }),
-        '',
-        ...order.items.map(
-          (i) => `• ${i.name} ×${i.quantity} — ${formatMoney(i.price * i.quantity)} ${countrySymbol(user && user.country)}`
-        ),
-        '',
-        t('Total : {total} F', { total: formatMoney(order.total) }),
-        t('Nom : {name}', { name: order.buyer_name }),
-        order.buyer_phone ? t('Téléphone : {phone}', { phone: order.buyer_phone }) : null,
-        order.buyer_address ? t('Adresse : {address}', { address: order.buyer_address }) : null,
-      ]
-        .filter(Boolean)
-        .join('\n')
-    : '';
+  const [sales, setSales] = useState(null);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -49,9 +34,10 @@ export default function Cart() {
         items: cart.map((i) => ({ product_id: i.id, quantity: i.qty })),
         buyer_name: buyerName.trim(),
         buyer_phone: phone.trim() || null,
+        buyer_city: city.trim() || null,
         buyer_address: address.trim() || null,
       });
-      setOrder(data.order);
+      setSales(data.sales);
       clearCart();
     } catch (err) {
       setError(err.message);
@@ -60,7 +46,7 @@ export default function Cart() {
     }
   };
 
-  if (order) {
+  if (sales && sales.length > 0) {
     return (
       <main className="container narrow">
         <Seo title={t('Commande enregistrée') + ' — Mboppi'} />
@@ -68,20 +54,46 @@ export default function Cart() {
           <div className="auth-brand">✅</div>
           <h2>{t('Commande enregistrée !')}</h2>
           <p className="hint">
-            {t('Merci {name} ! Votre commande #{id} est bien enregistrée.', {
-              name: order.buyer_name,
-              id: order.id,
+            {t('Merci {name} ! Vos commandes sont enregistrées et la boutique a été notifiée.', {
+              name: sales[0].buyer_name,
             })}
           </p>
-          <p className="hint">{t('Confirmez-la maintenant sur WhatsApp pour la finaliser.')}</p>
-          <a
-            className="btn btn-success btn-block"
-            href={whatsappLink(orderMessage)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            💬 {t('Confirmer sur WhatsApp')}
-          </a>
+          <p className="hint">
+            {t('Chaque article a son code de confirmation : communiquez-le à la boutique ou au livreur, ou suivez votre commande avec celui-ci.')}
+          </p>
+          <div className="order-list" style={{ width: '100%' }}>
+            {sales.map((s) => (
+              <div className="card order-card" key={s.id}>
+                <div className="order-head">
+                  <strong>{s.product_name} ×{s.quantity}</strong>
+                  <span className={`badge badge-pending`}>{t('En attente')}</span>
+                </div>
+                <div className="order-total" style={{ flexWrap: 'wrap', gap: 8 }}>
+                  <span className="label">{t('Total')}</span>
+                  <strong>{formatMoney(s.total_price)} {countrySymbol(s.shop_country)}</strong>
+                </div>
+                {s.confirm_code && (
+                  <div className="buyer-code-box" style={{ margin: '8px 0' }}>
+                    <span className="buyer-code-label">{t('Code de confirmation')} :</span>
+                    <span className="buyer-code-value">{s.confirm_code}</span>
+                    <CopyCode code={s.confirm_code} />
+                  </div>
+                )}
+                <div className="row2">
+                  {s.confirm_code && (
+                    <Link className="btn btn-outline btn-small" to={`/suivi/${s.id}?code=${encodeURIComponent(s.confirm_code)}`}>
+                      📦 {t('Suivre ma commande')}
+                    </Link>
+                  )}
+                  {s.shop_contact && (
+                    <a className="btn btn-outline btn-small" href={`tel:${s.shop_contact}`}>
+                      📞 {t('Contacter la boutique')}
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
           <Link to={user ? '/client' : '/'} className="btn btn-outline btn-block">
             {t('Voir mes commandes')}
           </Link>
@@ -147,6 +159,13 @@ export default function Cart() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+237 6XX XX XX XX"
+              />
+              <label>{t('Votre ville')}</label>
+              <input
+                className="input"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder={t('Ville')}
               />
               <label>{t('Adresse de livraison')}</label>
               <input

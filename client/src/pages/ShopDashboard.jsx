@@ -298,6 +298,8 @@ export default function ShopDashboard() {
 
   const remaining = (products?.length ?? 0) < 5;
 
+  const activeSales = (sales || []).filter((s) => s.status !== 'delivered');
+
   return (
     <main className="container">
       <Seo title={t('Ma boutique') + ' — Mboppi'} description={t('Gérez vos produits et suivez vos ventes.')} />
@@ -357,7 +359,7 @@ export default function ShopDashboard() {
 
       {showDelivered && (
         <section className="card stats" id="facture-livree">
-          <h2>🧾 {t('Facture livrée')}</h2>
+          <h2>📦 {t('Mes commandes livrées')}</h2>
           {deliveredSales.length === 0 ? (
             <p className="empty">{t('Aucune vente livrée pour le moment.')}</p>
           ) : (
@@ -370,6 +372,7 @@ export default function ShopDashboard() {
                     <th>{t('Acheteur')}</th>
                     <th>{t('Total')}</th>
                     <th>{t('Livré le')}</th>
+                    <th>{t('Statut')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -377,10 +380,22 @@ export default function ShopDashboard() {
                   {deliveredSales.map((s) => (
                     <tr key={s.id}>
                       <td>{s.product_name}</td>
-                      <td>{s.seller_name}</td>
+                      <td>{s.seller_name || '—'}</td>
                       <td>{s.buyer_name || '—'}</td>
                       <td>{formatMoney(Number(s.total_price || 0) + Number(s.delivery_fee || 0))} {countrySymbol(s.shop_country)}</td>
                       <td>{s.delivered_at ? new Date(s.delivered_at).toLocaleDateString() : '—'}</td>
+                      <td>
+                        {s.paid ? (
+                          <span className="badge badge-paid">{t('Vendeur payé')}</span>
+                        ) : (
+                          <>
+                            {s.commission_claimed_at && <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>}
+                            {s.seller_id && (
+                              <button className="btn btn-small btn-danger" onClick={() => openPay(s)}>{t('Payer le Vendeur')}</button>
+                            )}
+                          </>
+                        )}
+                      </td>
                       <td>
                         <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
                           🧾 {t('Voir la facture')}
@@ -570,8 +585,9 @@ export default function ShopDashboard() {
           </div>
         )}
 
-        {sales.length === 0 ? (
-          <p className="empty">{t('Aucune vente enregistrée par les vendeurs.')}</p>
+        <h3 style={{ marginTop: 16 }}>📦 {t('Mes commandes')}</h3>
+        {activeSales.length === 0 ? (
+          <p className="empty">{t('Aucune commande en attente.')}</p>
         ) : (
           <div className="table-wrap">
           <table className="table">
@@ -590,12 +606,12 @@ export default function ShopDashboard() {
               </tr>
             </thead>
             <tbody>
-              {sales.map((s) => {
+              {activeSales.map((s) => {
                 const st = SALE_STATUS[s.status] || SALE_STATUS.pending;
                 return (
                   <tr key={s.id}>
                     <td>{s.product_name}</td>
-                    <td>{s.seller_name}</td>
+                    <td>{s.seller_name || '—'}</td>
                     <td><code className="seller-code-inline">{s.seller_code || '—'}</code></td>
                     <td>{s.buyer_name || '—'}</td>
                     <td>{s.quantity}</td>
@@ -608,23 +624,13 @@ export default function ShopDashboard() {
                     <td>
                       {s.status === 'pending' && (
                         <div className="row2">
-                          <button className="btn btn-small btn-primary" onClick={() => changeStatus(s.id, 'confirmed')}>{t('Confirmer')}</button>
+                          {s.shop_confirmed_at ? (
+                            <span className="badge badge-confirmed">✓ {t('Vue')}</span>
+                          ) : (
+                            <button className="btn btn-small btn-primary" onClick={() => changeStatus(s.id, 'confirmed')}>{t('Confirmer')}</button>
+                          )}
                           <button className="btn btn-small btn-danger" onClick={() => changeStatus(s.id, 'cancelled')}>{t('Annuler')}</button>
                         </div>
-                      )}
-                      {s.status === 'delivered' && !s.paid && (
-                        <>
-                          {s.commission_claimed_at && <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>}
-                          <button className="btn btn-small btn-danger" onClick={() => openPay(s)}>{t('Payer le Vendeur')}</button>
-                        </>
-                      )}
-                      {s.status === 'delivered' && s.paid && (
-                        <span className="badge badge-paid">{t('Vendeur payé')}</span>
-                      )}
-                      {s.status === 'delivered' && (
-                        <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
-                          🧾 {t('Facture')}
-                        </button>
                       )}
                     </td>
                   </tr>

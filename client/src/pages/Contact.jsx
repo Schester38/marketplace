@@ -3,7 +3,7 @@ import Seo from '../components/Seo.jsx';
 import { WHATSAPP_NUMBER, whatsappLink } from '../config.js';
 import { useLang } from '../i18n.jsx';
 
-const PHONE = '237679475343';
+const PHONE = '237672886348';
 
 export default function Contact() {
   const { t } = useLang();
@@ -53,7 +53,7 @@ export default function Contact() {
             <div>
               <h3>{t('Téléphone')}</h3>
               <p>{t('Appelez-nous aux heures de travail.')}</p>
-              <a className="btn btn-outline" href={`tel:+${PHONE}`}>+237 679 47 53 43</a>
+              <a className="btn btn-outline" href={`tel:+${PHONE}`}>+237 672 88 63 48</a>
             </div>
           </div>
           <div className="contact-item">
