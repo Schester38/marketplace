@@ -140,6 +140,8 @@ export async function initDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_paid_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS referred_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS commission_claimed_at TIMESTAMPTZ;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_claimed_at TIMESTAMPTZ;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_payment_proof TEXT;
 
     ALTER TABLE orders ALTER COLUMN user_id DROP NOT NULL;
 

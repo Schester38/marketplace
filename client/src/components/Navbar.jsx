@@ -6,6 +6,8 @@ import { useCart, useFavs } from '../store.jsx';
 import { api } from '../api.js';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { urlBase64ToUint8Array } from '../utils.js';
+import { formatMoney } from './ProductCard.jsx';
+import { countrySymbol } from '../config.js';
 
 function LangSwitcher() {
   const { lang, setLang, t } = useLang();
@@ -241,6 +243,31 @@ function NotifBell() {
     if (n.type === 'sale_paid') {
       return t('Votre commission pour « {product} » a été payée par {shop}.', { product: n.product_name, shop: n.shop_name });
     }
+    if (n.type === 'referral_earned') {
+      return t('Votre filleul {buyer} a commandé « {product} » chez {shop} — 2% ({amount} {symbol}) à recevoir après livraison.', {
+        buyer: n.buyer_name || t('un client'),
+        product: n.product_name,
+        shop: n.shop_name,
+        amount: formatMoney(n.referral_commission),
+        symbol: countrySymbol(n.shop_country),
+      });
+    }
+    if (n.type === 'referral_claimed') {
+      return t('Le parrain {parrain} réclame 2% ({amount} {symbol}) pour « {product} ».', {
+        parrain: n.parrain_name || '—',
+        amount: formatMoney(n.referral_commission),
+        symbol: countrySymbol(n.shop_country),
+        product: n.product_name,
+      });
+    }
+    if (n.type === 'referral_paid') {
+      return t('Votre commission de parrainage ({amount} {symbol}) pour « {product} » a été payée par {shop}.', {
+        amount: formatMoney(n.referral_commission),
+        symbol: countrySymbol(n.shop_country),
+        product: n.product_name,
+        shop: n.shop_name,
+      });
+    }
     if (n.type === 'commission_claimed') {
       return t('Le vendeur {seller} réclame le paiement de sa commission pour « {product} ».', {
         seller: n.seller_name,
@@ -253,6 +280,14 @@ function NotifBell() {
       }
       if (user.id === n.buyer_id) {
         return t('Votre commande « {product} » a été confirmée par la boutique.', { product: n.product_name });
+      }
+      if (user.id === n.shop_id && Number(n.referral_commission || 0) > 0) {
+        return t('Commande parrainée de {buyer} pour « {product} » — 2% ({amount} {symbol}) à verser au parrain après livraison.', {
+          buyer: n.buyer_name || t('un client'),
+          product: n.product_name,
+          amount: formatMoney(n.referral_commission),
+          symbol: countrySymbol(n.shop_country),
+        });
       }
       return t('Vente de « {product} » confirmée — vendeur : {seller} ({code}), acheteur : {buyer}.', {
         product: n.product_name,

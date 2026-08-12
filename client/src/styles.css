@@ -480,6 +480,7 @@ input, select, textarea { font-size: 16px; }
 .btn-outline { background: transparent; border: 1px solid var(--border); }
 .btn-outline:hover { border-color: var(--primary); color: var(--primary); filter: none; }
 .btn-danger { background: #fee2e2; color: var(--danger); }
+.btn-warn { background: #fef3c7; color: #b45309; }
 .dash-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 @media (max-width: 600px) { .dash-actions { justify-content: stretch; } .dash-actions .btn { flex: 1; } }
 .btn-whatsapp { background: #25D366; color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }

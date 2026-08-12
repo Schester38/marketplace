@@ -129,9 +129,21 @@ router.post('/', optionalAuth, ah(async (req, res) => {
   });
   await sendPush(product.shop_id, {
     title: 'Nouvelle commande 🛒',
-    body: `${productName} — vendeur : ${seller.name} (${code}), client : ${name}${confirmCode ? `, code : ${confirmCode}` : ''}.`,
+    body: `${productName} — vendeur : ${seller.name} (${code}), client : ${name}${confirmCode ? `, code : ${confirmCode}` : ''}${referredBy ? `, client parrainé (2% pour le parrain : ${referralCommission} F)` : ''}.`,
     url: '/shop',
   });
+  if (referredBy) {
+    const referrer = (await q('SELECT name FROM users WHERE id = $1', [referredBy]))[0];
+    await q(
+      `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'referral_earned', $2)`,
+      [referredBy, created[0].id]
+    );
+    await sendPush(referredBy, {
+      title: 'Votre filleul a commandé 🎁',
+      body: `${name} a commandé « ${productName} » — vous recevrez 2% (${referralCommission} F) après livraison.`,
+      url: '/seller',
+    });
+  }
 
   const full = (
     await q(

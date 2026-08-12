@@ -41,6 +41,7 @@ export default function SellerDashboard() {
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
   const [stats, setStats] = useState(null);
+  const [referred, setReferred] = useState([]);
   const [sellerCode, setSellerCode] = useState(null);
   const [codeLoading, setCodeLoading] = useState(false);
   const [error, setError] = useState('');
@@ -59,6 +60,7 @@ export default function SellerDashboard() {
       setProducts(prodData.products);
       setSales(saleData.sales);
       setStats(saleData.stats);
+      setReferred(saleData.referred || []);
       setSellerCode(codeData.seller_code);
     } catch (e) {
       setError(e.message);
@@ -135,6 +137,19 @@ export default function SellerDashboard() {
     setSuccess('');
     try {
       await api.claimSale(s.id);
+      setSuccess(t('Paiement réclamé ! La boutique a été notifiée.'));
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const claimReferral = async (s) => {
+    if (!window.confirm(t('Réclamer le paiement de votre commission de parrainage pour « {name} » à la boutique ?', { name: s.product_name }))) return;
+    setError('');
+    setSuccess('');
+    try {
+      await api.claimReferral(s.id);
       setSuccess(t('Paiement réclamé ! La boutique a été notifiée.'));
       load();
     } catch (err) {
@@ -226,6 +241,8 @@ export default function SellerDashboard() {
             <div><span className="label">{t('Ventes réalisées')}</span><strong>{stats.total_sales}</strong></div>
             <div><span className="label">{t('Commission en attente')}</span><strong className={stats.pending_commission > 0 ? 'text-warn' : ''}>{formatMoney(stats.pending_commission)} {countrySymbol(user?.country)}</strong></div>
             <div><span className="label">{t('Commission payée')}</span><strong>{formatMoney(stats.earned_commission)} {countrySymbol(user?.country)}</strong></div>
+            <div><span className="label">{t('Parrainage en attente')}</span><strong className={stats.referral_pending > 0 ? 'text-warn' : ''}>{formatMoney(stats.referral_pending)} {countrySymbol(user?.country)}</strong></div>
+            <div><span className="label">{t('Parrainage payé')}</span><strong>{formatMoney(stats.referral_earned)} {countrySymbol(user?.country)}</strong></div>
           </div>
         </section>
       )}
@@ -350,6 +367,68 @@ export default function SellerDashboard() {
                   </tr>
                 );
               })}
+            </tbody>
+          </table>
+          </div>
+        )}
+      </section>
+
+      <section className="card stats">
+        <div className="stats-head">
+          <h2>🎁 {t('Mes filleuls — commissions de parrainage (2%)')}</h2>
+        </div>
+        <p className="hint" style={{ marginTop: 0 }}>
+          {t('Chaque commande passée par un client inscrit avec votre lien vous rapporte 2% du montant, payés par la boutique après livraison.')}
+        </p>
+        {referred.length === 0 ? (
+          <p className="empty">{t('Aucune commande de filleul pour le moment.')}</p>
+        ) : (
+          <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t('Produit')}</th>
+                <th>{t('Boutique')}</th>
+                <th>{t('Filleul')}</th>
+                <th>{t('Date')}</th>
+                <th>{t('2% commission')}</th>
+                <th>{t('Statut')}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {referred.map((s) => (
+                <tr key={s.id}>
+                  <td>{s.product_name}</td>
+                  <td>{s.shop_name}</td>
+                  <td>{s.buyer_name || '—'}</td>
+                  <td>{s.created_at ? new Date(s.created_at).toLocaleDateString() : '—'}</td>
+                  <td>{formatMoney(s.referral_commission)} {countrySymbol(s.shop_country)}</td>
+                  <td>
+                    {s.status !== 'delivered' && <span className="badge badge-pending">{t('En attente de livraison')}</span>}
+                    {s.status === 'delivered' && s.referral_claimed_at && !s.referral_paid && (
+                      <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>
+                    )}
+                    {s.status === 'delivered' && !s.referral_claimed_at && !s.referral_paid && (
+                      <span className="badge badge-warn">{t('Commission en attente')}</span>
+                    )}
+                    {s.referral_paid && <span className="badge badge-paid">{t('Commission payée')}</span>}
+                  </td>
+                  <td>
+                    {s.status === 'delivered' && s.referral_claimed_at && !s.referral_paid && (
+                      <span className="badge badge-confirmed">{t('Réclamée')}</span>
+                    )}
+                    {s.status === 'delivered' && !s.referral_claimed_at && !s.referral_paid && (
+                      <button
+                        className="btn btn-small btn-primary"
+                        onClick={() => claimReferral(s)}
+                      >
+                        💰 {t('Réclamer')}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
           </div>

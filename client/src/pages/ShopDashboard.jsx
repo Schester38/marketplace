@@ -223,12 +223,12 @@ export default function ShopDashboard() {
     }
   };
 
-  const openPay = async (sale) => {
+  const openPay = async (sale, kind = 'seller') => {
     setError('');
     setSuccess('');
     try {
-      const d = await api.salePaymentMethods(sale.id);
-      setPayForm({ sale, methods: d.methods, proof: '' });
+      const d = await api.salePaymentMethods(sale.id, kind === 'referral' ? 'referral' : null);
+      setPayForm({ sale, kind, methods: d.methods, proof: '' });
     } catch (err) {
       setError(err.message);
     }
@@ -257,7 +257,9 @@ export default function ShopDashboard() {
     setSuccess('');
     setPaying(true);
     try {
-      const d = await api.paySale(payForm.sale.id, { proof: payForm.proof });
+      const d = payForm.kind === 'referral'
+        ? await api.payReferral(payForm.sale.id, { proof: payForm.proof })
+        : await api.paySale(payForm.sale.id, { proof: payForm.proof });
       setSales((prev) => prev.map((s) => (s.id === d.sale.id ? d.sale : s)));
       setStats((prev) =>
         prev
@@ -268,7 +270,7 @@ export default function ShopDashboard() {
             }
           : prev
       );
-      setSuccess(t('Vendeur payé ! La preuve a été enregistrée.'));
+      setSuccess(payForm.kind === 'referral' ? t('Parrain payé ! La preuve a été enregistrée.') : t('Vendeur payé ! La preuve a été enregistrée.'));
       setPayForm(null);
     } catch (err) {
       setError(err.message);
@@ -391,10 +393,18 @@ export default function ShopDashboard() {
                           <>
                             {s.commission_claimed_at && <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>}
                             {s.seller_id && (
-                              <button className="btn btn-small btn-danger" onClick={() => openPay(s)}>{t('Payer le Vendeur')}</button>
+                              <button className="btn btn-small btn-danger" onClick={() => openPay(s, 'seller')}>{t('Payer le Vendeur')}</button>
                             )}
                           </>
                         )}
+                        {s.referral_paid ? (
+                          <span className="badge badge-paid">🎁 {t('Parrain payé')}</span>
+                        ) : s.referred_by ? (
+                          <>
+                            {s.referral_claimed_at && <span className="badge badge-confirmed">🎁 {t('Paiement 2% réclamé')}</span>}
+                            <button className="btn btn-small btn-warn" onClick={() => openPay(s, 'referral')}>🎁 {t('Payer le parrain')}</button>
+                          </>
+                        ) : null}
                       </td>
                       <td>
                         <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
@@ -646,21 +656,30 @@ export default function ShopDashboard() {
         <div className="modal-overlay" onClick={() => setPayForm(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>💸 {t('Payer le vendeur')}</h3>
+              <h3>💸 {payForm.kind === 'referral' ? t('Payer le parrain') : t('Payer le vendeur')}</h3>
               <button className="drawer-close" onClick={() => setPayForm(null)}>✕</button>
             </div>
             <div className="deliver-recap">
               <p><strong>{t('Article')} :</strong> {payForm.sale.product_name}</p>
-              <p><strong>{t('Vendeur')} :</strong> {payForm.sale.seller_name} ({payForm.sale.seller_code || '—'})</p>
-              <p><strong>{t('Commission produit')} :</strong> {formatMoney(payForm.sale.commission)} {countrySymbol(payForm.sale.shop_country)}</p>
-              {Number(payForm.sale.referral_commission || 0) > 0 && (
-                <p><strong>🎁 {t('Commission parrainage (2%)')} :</strong> {formatMoney(payForm.sale.referral_commission)} {countrySymbol(payForm.sale.shop_country)}</p>
+              {payForm.kind === 'referral' ? (
+                <>
+                  <p><strong>{t('Parrain')} :</strong> {payForm.sale.parrain_name || '—'}</p>
+                  <p><strong>🎁 {t('Commission parrainage (2%)')} :</strong> {formatMoney(payForm.sale.referral_commission)} {countrySymbol(payForm.sale.shop_country)}</p>
+                </>
+              ) : (
+                <>
+                  <p><strong>{t('Vendeur')} :</strong> {payForm.sale.seller_name} ({payForm.sale.seller_code || '—'})</p>
+                  <p><strong>{t('Commission produit')} :</strong> {formatMoney(payForm.sale.commission)} {countrySymbol(payForm.sale.shop_country)}</p>
+                  {Number(payForm.sale.referral_commission || 0) > 0 && (
+                    <p><strong>🎁 {t('Commission parrainage (2%)')} :</strong> {formatMoney(payForm.sale.referral_commission)} {countrySymbol(payForm.sale.shop_country)} ({t('à payer séparément au parrain')})</p>
+                  )}
+                </>
               )}
-              <p><strong>{t('Total à payer')} :</strong> {formatMoney(Number(payForm.sale.commission) + Number(payForm.sale.referral_commission || 0))} {countrySymbol(payForm.sale.shop_country)}</p>
+              <p><strong>{t('Total à payer')} :</strong> {formatMoney(payForm.kind === 'referral' ? Number(payForm.sale.referral_commission || 0) : Number(payForm.sale.commission))} {countrySymbol(payForm.sale.shop_country)}</p>
             </div>
             {payForm.methods ? (
               <div className="deliver-recap">
-                <p><strong>{t('Moyens de paiement du vendeur')}</strong></p>
+                <p><strong>{payForm.kind === 'referral' ? t('Moyens de paiement du parrain') : t('Moyens de paiement du vendeur')}</strong></p>
                 {payForm.methods.full_name ? <p>{t('Nom')} : {payForm.methods.full_name}</p> : null}
                 {payForm.methods.wallets.length === 0 ? (
                   <p className="hint">{t('Le vendeur n\'a pas encore enregistré de moyen de paiement.')}</p>

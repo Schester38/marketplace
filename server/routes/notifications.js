@@ -11,12 +11,14 @@ router.get('/', authRequired, ah(async (req, res) => {
     await q(
       `SELECT n.*, s.product_id, p.name AS product_name,
               seller.name AS seller_name, seller.id AS seller_id, seller.seller_code,
-              shop.name AS shop_name, shop.id AS shop_id,
-              buyer.name AS buyer_name, buyer.id AS buyer_id
+              parrain.name AS parrain_name, parrain.id AS parrain_id,
+              shop.name AS shop_name, shop.id AS shop_id, shop.country AS shop_country,
+              buyer.name AS buyer_name, buyer.id AS buyer_id, s.referral_commission
        FROM notifications n
        JOIN sales s ON s.id = n.sale_id
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users seller ON seller.id = s.seller_id
+       LEFT JOIN users parrain ON parrain.id = s.referred_by
        JOIN users shop ON shop.id = p.shop_id
        LEFT JOIN users buyer ON buyer.id = s.buyer_id
        WHERE n.user_id = $1

@@ -92,6 +92,28 @@ router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
       [req.user.id]
     )
   )[0];
+  const referralStats = (
+    await q(
+      `SELECT
+         COALESCE(SUM(CASE WHEN NOT referral_paid THEN referral_commission ELSE 0 END), 0) AS referral_pending,
+         COALESCE(SUM(CASE WHEN referral_paid THEN referral_commission ELSE 0 END), 0) AS referral_earned
+       FROM sales WHERE referred_by = $1 AND status = 'delivered'`,
+      [req.user.id]
+    )
+  )[0];
+  const referred = (
+    await q(
+      `SELECT s.id, s.status, s.buyer_name, s.created_at, s.delivered_at, s.referral_commission,
+              s.referral_paid, s.referral_claimed_at, p.name AS product_name, p.contact AS shop_contact,
+              shop.name AS shop_name, shop.country AS shop_country
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       JOIN users shop ON shop.id = p.shop_id
+       WHERE s.referred_by = $1
+       ORDER BY s.created_at DESC`,
+      [req.user.id]
+    )
+  ).map(saleRow);
   res.json({
     sales,
     stats: {
@@ -99,7 +121,10 @@ router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
       total_commission: Number(stats.total_commission),
       earned_commission: Number(stats.earned_commission),
       pending_commission: Number(stats.pending_commission),
+      referral_pending: Number(referralStats.referral_pending),
+      referral_earned: Number(referralStats.referral_earned),
     },
+    referred,
   });
 }));
 
@@ -109,10 +134,11 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop', 'creator'), ah(as
   }
   const sales = (
     await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone, u.seller_code, shop.country AS shop_country
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone, u.seller_code, parrain.name AS parrain_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
+       LEFT JOIN users parrain ON parrain.id = s.referred_by
        JOIN users shop ON shop.id = p.shop_id
        WHERE p.shop_id = $1
        ORDER BY s.created_at DESC`,
@@ -435,6 +461,15 @@ router.get('/:id/payment-methods', authRequired, roleRequired('shop'), ah(async 
   const m = (
     await q('SELECT full_name, wallets, updated_at FROM seller_payment_methods WHERE seller_id = $1', [sale.seller_id])
   )[0];
+  if (req.query.target === 'referral') {
+    if (!sale.referred_by) {
+      return res.status(409).json({ error: 'Cette vente n\'a pas de parrain à payer' });
+    }
+    const r = (
+      await q('SELECT full_name, wallets, updated_at FROM seller_payment_methods WHERE seller_id = $1', [sale.referred_by])
+    )[0];
+    return res.json({ methods: r ? { full_name: r.full_name, wallets: Array.isArray(r.wallets) ? r.wallets : [] } : null });
+  }
   res.json({
     methods: m ? { full_name: m.full_name, wallets: Array.isArray(m.wallets) ? m.wallets : [] } : null,
   });
@@ -461,7 +496,7 @@ router.post('/:id/pay', authRequired, roleRequired('shop'), ah(async (req, res) 
     return res.status(400).json({ error: 'Joignez une photo ou une vidéo de preuve du paiement' });
   }
   const updated = await q(
-    `UPDATE sales SET paid = TRUE, paid_at = now(), referral_paid = TRUE, referral_paid_at = now(), payment_proof = $1 WHERE id = $2 RETURNING id`,
+    `UPDATE sales SET paid = TRUE, paid_at = now(), payment_proof = $1 WHERE id = $2 RETURNING id`,
     [String(proof).slice(0, 12000000), sale.id]
   );
   await q(
@@ -470,7 +505,7 @@ router.post('/:id/pay', authRequired, roleRequired('shop'), ah(async (req, res) 
   );
 
   const paidProduct = (await q('SELECT name FROM products WHERE id = $1', [sale.product_id]))[0];
-  const paidTotal = Number(sale.commission || 0) + Number(sale.referral_commission || 0);
+  const paidTotal = Number(sale.commission || 0);
   await sendPush(sale.seller_id, {
     title: 'Commission payée 💰',
     body: `${paidProduct ? paidProduct.name : 'Votre vente'} — vos commissions (${paidTotal} F) ont été versées par la boutique.`,
@@ -520,6 +555,85 @@ router.post('/:id/claim', authRequired, roleRequired('seller'), ah(async (req, r
     url: '/shop',
   });
   res.json({ ok: true });
+}));
+
+router.post('/:id/claim-referral', authRequired, roleRequired('seller'), ah(async (req, res) => {
+  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
+  if (!sale.referred_by || Number(sale.referred_by) !== Number(req.user.id)) {
+    return res.status(403).json({ error: 'Cette commission de parrainage ne vous appartient pas' });
+  }
+  if (sale.status !== 'delivered') {
+    return res.status(409).json({ error: 'Le produit doit être livré avant de réclamer le paiement' });
+  }
+  if (sale.referral_paid) {
+    return res.status(409).json({ error: 'Cette commission a déjà été payée' });
+  }
+  if (sale.referral_claimed_at) {
+    return res.status(409).json({ error: 'Paiement déjà réclamé, la boutique a été notifiée' });
+  }
+  await q('UPDATE sales SET referral_claimed_at = now() WHERE id = $1', [sale.id]);
+  const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
+  await q(
+    `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'referral_claimed', $2)`,
+    [product.shop_id, sale.id]
+  );
+  const info = (await q('SELECT name FROM products WHERE id = $1', [sale.product_id]))[0];
+  await sendPush(product.shop_id, {
+    title: 'Parrainage réclamé 💰',
+    body: `${info ? info.name : 'Vente'} — le parrain ${req.user.name} réclame ${Number(sale.referral_commission || 0)} F de commission.`,
+    url: '/shop',
+  });
+  res.json({ ok: true });
+}));
+
+router.post('/:id/pay-referral', authRequired, roleRequired('shop'), ah(async (req, res) => {
+  const { proof } = req.body || {};
+  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
+  if (!sale.referred_by) {
+    return res.status(409).json({ error: 'Cette vente n\'a pas de parrain à payer' });
+  }
+  const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
+  if (product.shop_id !== req.user.id) {
+    return res.status(403).json({ error: 'Cette vente ne concerne pas votre boutique' });
+  }
+  if (sale.status !== 'delivered') {
+    return res.status(409).json({ error: 'Le produit doit être livré avant de payer le parrain' });
+  }
+  if (sale.referral_paid) {
+    return res.status(409).json({ error: 'Le parrain a déjà été payé pour cette vente' });
+  }
+  if (!proof || !String(proof).startsWith('data:')) {
+    return res.status(400).json({ error: 'Joignez une photo ou une vidéo de preuve du paiement' });
+  }
+  await q(
+    `UPDATE sales SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1 WHERE id = $2`,
+    [String(proof).slice(0, 12000000), sale.id]
+  );
+  await q(
+    `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'referral_paid', $2)`,
+    [sale.referred_by, sale.id]
+  );
+  const paidProduct = (await q('SELECT name FROM products WHERE id = $1', [sale.product_id]))[0];
+  await sendPush(sale.referred_by, {
+    title: 'Parrainage payé 💰',
+    body: `${paidProduct ? paidProduct.name : 'Votre filleul'} — votre commission de parrainage (${Number(sale.referral_commission || 0)} F) a été versée par la boutique.`,
+    url: '/seller',
+  });
+  const full = (
+    await q(
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
+              shop.name AS shop_name, shop.country AS shop_country
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       LEFT JOIN users u ON u.id = s.seller_id
+       JOIN users shop ON shop.id = p.shop_id
+       WHERE s.id = $1`,
+      [sale.id]
+    )
+  )[0];
+  res.json({ sale: saleRow(full), ok: true });
 }));
 
 router.get('/track/:id', ah(async (req, res) => {
