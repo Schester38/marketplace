@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
 import { formatMoney } from '../components/ProductCard.jsx';
-import { countrySymbol } from '../config.js';
+import { countrySymbol, BASE_URL } from '../config.js';
 import { useAuth } from '../App.jsx';
 import { useCart } from '../store.jsx';
 import { useLang } from '../i18n.jsx';
@@ -77,6 +77,13 @@ export default function Cart() {
                     <span className="buyer-code-label">{t('Code de confirmation')} :</span>
                     <span className="buyer-code-value">{s.confirm_code}</span>
                     <CopyCode code={s.confirm_code} />
+                  </div>
+                )}
+                {s.confirm_code && (
+                  <div className="buyer-code-box" style={{ margin: '8px 0' }}>
+                    <span className="buyer-code-label">{t('Lien de suivi')} :</span>
+                    <span className="buyer-code-value" style={{ fontSize: 12, wordBreak: 'break-all' }}>{`${BASE_URL}/suivi/${s.id}?code=${s.confirm_code}`}</span>
+                    <CopyCode code={`${BASE_URL}/suivi/${s.id}?code=${s.confirm_code}`} label={t('Copier le lien')} />
                   </div>
                 )}
                 <div className="row2">

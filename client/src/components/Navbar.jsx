@@ -247,6 +247,34 @@ function NotifBell() {
         product: n.product_name,
       });
     }
+    if (n.type === 'sale_confirmed') {
+      if (user.id === n.seller_id) {
+        return t('Votre vente de « {product} » a été confirmée par la boutique pour {buyer}.', { product: n.product_name, buyer });
+      }
+      if (user.id === n.buyer_id) {
+        return t('Votre commande « {product} » a été confirmée par la boutique.', { product: n.product_name });
+      }
+      return t('Vente de « {product} » confirmée — vendeur : {seller} ({code}), acheteur : {buyer}.', {
+        product: n.product_name,
+        seller: n.seller_name || '—',
+        code: n.seller_code || '—',
+        buyer,
+      });
+    }
+    if (n.type === 'sale_cancelled') {
+      if (user.id === n.seller_id) {
+        return t('Votre vente de « {product} » a été annulée par la boutique.', { product: n.product_name });
+      }
+      if (user.id === n.buyer_id) {
+        return t('Votre commande « {product} » a été annulée par la boutique.', { product: n.product_name });
+      }
+      return t('Vente de « {product} » annulée — vendeur : {seller} ({code}), acheteur : {buyer}.', {
+        product: n.product_name,
+        seller: n.seller_name || '—',
+        code: n.seller_code || '—',
+        buyer,
+      });
+    }
     if (user.id === n.seller_id) {
       return t('Votre vente de « {product} » a été achetée par {buyer}.', { product: n.product_name, buyer });
     }

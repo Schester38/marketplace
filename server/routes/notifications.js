@@ -16,7 +16,7 @@ router.get('/', authRequired, ah(async (req, res) => {
        FROM notifications n
        JOIN sales s ON s.id = n.sale_id
        JOIN products p ON p.id = s.product_id
-       JOIN users seller ON seller.id = s.seller_id
+       LEFT JOIN users seller ON seller.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
        LEFT JOIN users buyer ON buyer.id = s.buyer_id
        WHERE n.user_id = $1

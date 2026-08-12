@@ -528,7 +528,7 @@ router.get('/track/:id', ah(async (req, res) => {
   const sale = (
     await q(
       `SELECT s.id, s.status, s.quantity, s.buyer_name, s.buyer_code, s.confirm_code, s.buyer_city, s.created_at,
-              s.delivered_at, s.paid_at,
+              s.delivered_at, s.paid_at, s.shop_confirmed_at,
               p.name AS product_name, p.price, p.shop_id,
               u.name AS seller_name, u.phone AS seller_phone,
               shop.name AS shop_name, shop.country AS shop_country, shop.location AS shop_location, p.contact AS shop_contact

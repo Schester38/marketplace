@@ -46,7 +46,7 @@ export default function ShopDashboard() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [showDelivered, setShowDelivered] = useState(false);
+  const [showDelivered, setShowDelivered] = useState(true);
   const [payForm, setPayForm] = useState(null);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
@@ -319,7 +319,7 @@ export default function ShopDashboard() {
             className={`btn ${showDelivered ? 'btn-primary' : 'btn-outline'}`}
             onClick={() => setShowDelivered(!showDelivered)}
           >
-            🛵 {t('Livreur')} {deliveredSales.length > 0 ? `(${deliveredSales.length})` : ''}
+            🚚 {t('Commandes livrées')} {deliveredSales.length > 0 ? `(${deliveredSales.length})` : ''}
           </button>
           <button
             className="btn btn-primary"
