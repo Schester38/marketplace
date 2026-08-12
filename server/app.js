@@ -52,6 +52,7 @@ app.use('/api/orders', limiter(10 * 60 * 1000, 30));
 app.use('/api/reviews', limiter(10 * 60 * 1000, 15));
 app.use('/api/chat', limiter(15 * 60 * 1000, 30));
 app.use('/api/sales/livreur', limiter(5 * 60 * 1000, 60));
+app.use('/api/admin/pass', limiter(60 * 1000, 5));
 app.use('/api/admin', limiter(5 * 60 * 1000, 60));
 app.use('/api', limiter(60 * 1000, 300));
 

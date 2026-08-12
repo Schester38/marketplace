@@ -243,14 +243,7 @@ export default function App() {
           <Route path="/cgv" element={<Cgv />} />
           <Route path="/faq" element={<Faq />} />
           <Route path="/mentions-legales" element={<MentionsLegales />} />
-          <Route
-            path="/admin"
-            element={
-              <RoleOnly role="admin">
-                <Admin />
-              </RoleOnly>
-            }
-          />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

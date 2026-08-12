@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { q } from '../db.js';
-import { authRequired, roleRequired } from '../auth.js';
+import { authRequired, roleRequired, signToken } from '../auth.js';
 import { logAudit } from '../security.js';
 
 const router = Router();
@@ -8,6 +8,23 @@ const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 const isId = (v) => Number.isInteger(v) && v > 0;
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Ver@ne9124';
+
+router.post('/pass', ah(async (req, res) => {
+  const { password } = req.body || {};
+  if (!password || password.length > 200) {
+    return res.status(400).json({ error: 'Mot de passe manquant' });
+  }
+  if (password !== ADMIN_PASSWORD) {
+    logAudit(null, 'admin.pass_failed', null, req.ip);
+    return res.status(401).json({ error: 'Mot de passe incorrect' });
+  }
+  const admin = { id: 0, email: 'admin@mboppi.local', role: 'admin', name: 'Administrateur' };
+  const token = signToken(admin);
+  logAudit(null, 'admin.pass_ok', 'Connexion admin par mot de passe', req.ip);
+  res.json({ token, user: { id: admin.id, name: admin.name, role: 'admin', email: admin.email } });
+}));
 
 router.use(authRequired, roleRequired('admin'));
 

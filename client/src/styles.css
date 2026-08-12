@@ -2442,6 +2442,8 @@ a.step { text-decoration: none; color: inherit; }
 .stat-card { padding: 14px; }
 .stat-label { display: block; color: var(--muted); font-size: 0.8rem; margin-bottom: 4px; }
 .stat-value { font-size: 1.25rem; }
+.admin-login { max-width: 360px; margin: 24px auto; display: flex; flex-direction: column; gap: 12px; padding: 20px; }
+.admin-login-input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 1rem; background: var(--card-bg, #fff); color: var(--text); }
 
 /* Divers */
 .stats-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

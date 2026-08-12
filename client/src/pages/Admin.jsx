@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Seo from '../components/Seo.jsx';
+import PwaInstallButton from '../components/PwaInstallButton.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
@@ -8,6 +9,10 @@ import { countrySymbol } from '../config.js';
 
 export default function Admin() {
   const { t } = useLang();
+  const [gate, setGate] = useState(() => !localStorage.getItem('admin_token'));
+  const [password, setPassword] = useState('');
+  const [gateError, setGateError] = useState('');
+  const [busy, setBusy] = useState(false);
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState(null);
   const [products, setProducts] = useState(null);
@@ -20,8 +25,34 @@ export default function Admin() {
     api.adminProducts().then((d) => setProducts(d.products)).catch(() => {});
   }, []);
 
-  useEffect(load, [load]);
+  useEffect(() => {
+    if (!gate) load();
+  }, [gate, load]);
   useRefreshOnFocus(load);
+
+  const submitGate = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setGateError('');
+    try {
+      const d = await api.adminPass(password);
+      localStorage.setItem('admin_token', d.token);
+      setGate(false);
+      setPassword('');
+    } catch (err) {
+      setGateError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('admin_token');
+    setGate(true);
+    setStats(null);
+    setUsers(null);
+    setProducts(null);
+  };
 
   const searchUsers = async (e) => {
     e.preventDefault();
@@ -59,6 +90,35 @@ export default function Admin() {
     </div>
   );
 
+  if (gate) {
+    return (
+      <main className="container narrow">
+        <Seo title={t('Administration') + ' — Mboppi'} description={t('Administration')} />
+        <section className="dash-header">
+          <div>
+            <h1>🛡️ {t('Administration')}</h1>
+            <p>{t('Espace réservé. Entrez le mot de passe administrateur.')}</p>
+          </div>
+          <PwaInstallButton />
+        </section>
+        <form onSubmit={submitGate} className="card admin-login">
+          <input
+            type="password"
+            className="admin-login-input"
+            placeholder={t('Mot de passe')}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoFocus
+          />
+          {gateError && <p className="error" role="alert">{gateError}</p>}
+          <button type="submit" className="btn btn-primary btn-block" disabled={busy || !password}>
+            {busy ? t('Vérification…') : t('Entrer')}
+          </button>
+        </form>
+      </main>
+    );
+  }
+
   return (
     <main className="container">
       <Seo title={t('Administration') + ' — Mboppi'} description={t('Administration')} />
@@ -66,6 +126,12 @@ export default function Admin() {
         <div>
           <h1>🛡️ {t('Administration')}</h1>
           <p>{t('Vue globale de la plateforme.')}</p>
+        </div>
+        <div className="dash-actions">
+          <PwaInstallButton />
+          <button type="button" className="btn btn-outline btn-small" onClick={logout}>
+            {t('Se déconnecter')}
+          </button>
         </div>
       </section>
 

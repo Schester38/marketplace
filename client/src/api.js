@@ -20,6 +20,16 @@ async function request(path, options = {}, retries = 1) {
   }
 }
 
+async function adminRequest(path, options = {}) {
+  const token = localStorage.getItem('admin_token');
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(API + path, { ...options, headers });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+  return data;
+}
+
 export const api = {
   register: (payload) => request('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
   login: (payload) => request('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
@@ -85,11 +95,12 @@ export const api = {
   shop: (id) => request(`/shop/${id}`),
   trackSale: (id, code) => request(`/sales/track/${id}?code=${encodeURIComponent(code)}`),
   exportSales: () => request('/sales/export'),
-  adminStats: () => request('/admin/stats'),
-  adminUsers: (search = '') => request('/admin/users' + (search ? `?search=${encodeURIComponent(search)}` : '')),
+  adminPass: (password) => adminRequest('/admin/pass', { method: 'POST', body: JSON.stringify({ password }) }),
+  adminStats: () => adminRequest('/admin/stats'),
+  adminUsers: (search = '') => adminRequest('/admin/users' + (search ? `?search=${encodeURIComponent(search)}` : '')),
   adminSetVerified: (id, verified) =>
-    request(`/admin/users/${id}/verified`, { method: 'PATCH', body: JSON.stringify({ verified }) }),
-  adminProducts: () => request('/admin/products'),
-  adminDeleteProduct: (id) => request(`/admin/products/${id}`, { method: 'DELETE' }),
+    adminRequest(`/admin/users/${id}/verified`, { method: 'PATCH', body: JSON.stringify({ verified }) }),
+  adminProducts: () => adminRequest('/admin/products'),
+  adminDeleteProduct: (id) => adminRequest(`/admin/products/${id}`, { method: 'DELETE' }),
   chat: (payload) => request('/chat', { method: 'POST', body: JSON.stringify(payload) }),
 };

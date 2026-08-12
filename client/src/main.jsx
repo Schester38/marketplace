@@ -38,6 +38,12 @@ if (pathname.startsWith('/verone')) {
   document.title = 'Mboppi Livreur';
   const theme = document.querySelector('meta[name="theme-color"]');
   if (theme) theme.content = '#4f46e5';
+} else if (pathname.startsWith('/admin')) {
+  const link = document.querySelector('link[rel="manifest"]');
+  if (link) link.href = '/manifest-admin.webmanifest';
+  document.title = 'Mboppi Admin';
+  const theme = document.querySelector('meta[name="theme-color"]');
+  if (theme) theme.content = '#4f46e5';
 }
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
