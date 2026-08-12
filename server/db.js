@@ -171,10 +171,12 @@ export async function initDb() {
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       type TEXT NOT NULL DEFAULT 'sale_bought',
       sale_id INTEGER REFERENCES sales(id) ON DELETE CASCADE,
+      amount REAL,
       read BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS amount REAL;
 
     CREATE TABLE IF NOT EXISTS reviews (
       id SERIAL PRIMARY KEY,

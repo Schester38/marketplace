@@ -157,6 +157,23 @@ export default function SellerDashboard() {
     }
   };
 
+  const claimGrouped = async (kind, group) => {
+    const isSale = kind === 'sale';
+    const msg = isSale
+      ? t('Réclamer vos commissions ({amount}) chez {shop} ?', { amount: formatMoney(group.pending), shop: group.shop_name })
+      : t('Réclamer votre commission de parrainage ({amount}) chez {shop} ?', { amount: formatMoney(group.pending), shop: group.shop_name });
+    if (!window.confirm(msg)) return;
+    setError('');
+    setSuccess('');
+    try {
+      await api.groupedClaim(kind, group.shop_id);
+      setSuccess(t('Paiement réclamé ! La boutique a été notifiée.'));
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const referralLink = sellerCode ? `${BASE_URL}/register?ref=${encodeURIComponent(sellerCode)}` : null;
 
   const openProof = async (s) => {
@@ -286,6 +303,51 @@ export default function SellerDashboard() {
             💳 {t('Modifier mon moyen de paiement')}
           </Link>
         </div>
+        {(() => {
+          const groups = new Map();
+          for (const s of sales) {
+            if (!s.shop_id) continue;
+            const key = String(s.shop_id);
+            if (!groups.has(key)) groups.set(key, { shop_id: s.shop_id, shop_name: s.shop_name, items: [], pending: 0, anyClaimed: false });
+            const g = groups.get(key);
+            g.items.push(s);
+            if (s.status === 'delivered' && !s.paid) g.pending += Number(s.commission || 0);
+            if (s.commission_claimed_at) g.anyClaimed = true;
+          }
+          const gs = [...groups.values()].filter((g) => g.pending > 0).sort((a, b) => b.pending - a.pending);
+          if (!gs.length) return null;
+          return (
+            <div className="table-wrap" style={{ margin: '12px 0 20px' }}>
+              <h3>💼 {t('Commissions de vente — par boutique')}</h3>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('Boutique')}</th>
+                    <th>{t('Nombre de ventes')}</th>
+                    <th>{t('Commission en attente')}</th>
+                    <th>{t('Statut')}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gs.map((g) => (
+                    <tr key={g.shop_id}>
+                      <td>{g.shop_name}</td>
+                      <td>{g.items.length}</td>
+                      <td>{formatMoney(g.pending)} {countrySymbol(user?.country)}</td>
+                      <td>{g.anyClaimed && <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>}</td>
+                      <td>
+                        <button className="btn btn-small btn-primary" onClick={() => claimGrouped('sale', g)}>
+                          💰 {t('Réclamer')} ({formatMoney(g.pending)})
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
         {sales.length === 0 ? (
           <p className="empty">{t('Vous n\'avez pas encore enregistré de vente.')}</p>
         ) : (
@@ -341,15 +403,6 @@ export default function SellerDashboard() {
                     <td>
                       {s.status === 'delivered' && (
                         <div className="row2" style={{ justifyContent: 'flex-end', gap: 6 }}>
-                          {!s.paid && (
-                            <button
-                              className="btn btn-small btn-primary"
-                              disabled={!!s.commission_claimed_at}
-                              onClick={() => claimPayment(s)}
-                            >
-                              {s.commission_claimed_at ? t('Réclamée') : `💰 ${t('Réclamer')}`}
-                            </button>
-                          )}
                           <button className="btn btn-small" disabled={proofLoading} onClick={() => openProof(s)}>
                             📷 {t('Preuve')}
                           </button>
@@ -383,6 +436,51 @@ export default function SellerDashboard() {
         {referred.length === 0 ? (
           <p className="empty">{t('Aucune commande de filleul pour le moment.')}</p>
         ) : (
+          <>
+          {(() => {
+            const groups = new Map();
+            for (const s of referred) {
+              const shopId = s.shop_id ? String(s.shop_id) : '0';
+              if (!groups.has(shopId)) groups.set(shopId, { shop_id: s.shop_id, shop_name: s.shop_name, items: [], pending: 0, anyClaimed: false });
+              const g = groups.get(shopId);
+              g.items.push(s);
+              if (s.status === 'delivered' && !s.referral_paid) g.pending += Number(s.referral_commission || 0);
+              if (s.referral_claimed_at) g.anyClaimed = true;
+            }
+            const gs = [...groups.values()].filter((g) => g.pending > 0).sort((a, b) => b.pending - a.pending);
+            if (!gs.length) return null;
+            return (
+              <div className="table-wrap" style={{ marginBottom: 20 }}>
+                <h3>🏪 {t('Parrainage (2%) — par boutique')}</h3>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t('Boutique')}</th>
+                      <th>{t('Nombre de ventes')}</th>
+                      <th>{t('Commission en attente')}</th>
+                      <th>{t('Statut')}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gs.map((g) => (
+                      <tr key={g.shop_id}>
+                        <td>{g.shop_name}</td>
+                        <td>{g.items.length}</td>
+                        <td>{formatMoney(g.pending)} {countrySymbol(g.items[0]?.shop_country)}</td>
+                        <td>{g.anyClaimed && <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>}</td>
+                        <td>
+                          <button className="btn btn-small btn-primary" onClick={() => claimGrouped('referral', g)}>
+                            💰 {t('Réclamer')} ({formatMoney(g.pending)})
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
           <div className="table-wrap">
           <table className="table">
             <thead>
@@ -393,7 +491,6 @@ export default function SellerDashboard() {
                 <th>{t('Date')}</th>
                 <th>{t('2% commission')}</th>
                 <th>{t('Statut')}</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -414,24 +511,12 @@ export default function SellerDashboard() {
                     )}
                     {s.referral_paid && <span className="badge badge-paid">{t('Commission payée')}</span>}
                   </td>
-                  <td>
-                    {s.status === 'delivered' && s.referral_claimed_at && !s.referral_paid && (
-                      <span className="badge badge-confirmed">{t('Réclamée')}</span>
-                    )}
-                    {s.status === 'delivered' && !s.referral_claimed_at && !s.referral_paid && (
-                      <button
-                        className="btn btn-small btn-primary"
-                        onClick={() => claimReferral(s)}
-                      >
-                        💰 {t('Réclamer')}
-                      </button>
-                    )}
-                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
           </div>
+          </>
         )}
       </section>
 

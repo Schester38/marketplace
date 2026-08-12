@@ -228,7 +228,19 @@ export default function ShopDashboard() {
     setSuccess('');
     try {
       const d = await api.salePaymentMethods(sale.id, kind === 'referral' ? 'referral' : null);
-      setPayForm({ sale, kind, methods: d.methods, proof: '' });
+      setPayForm({ target: 'single', kind, sale, methods: d.methods, proof: '' });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const openPayGrouped = async (kind, group) => {
+    setError('');
+    setSuccess('');
+    try {
+      const first = group.items[0];
+      const d = first ? await api.salePaymentMethods(first.id, kind === 'referral' ? 'referral' : null) : { methods: null };
+      setPayForm({ target: 'grouped', kind, group, methods: d.methods, proof: '' });
     } catch (err) {
       setError(err.message);
     }
@@ -257,6 +269,13 @@ export default function ShopDashboard() {
     setSuccess('');
     setPaying(true);
     try {
+      if (payForm.target === 'grouped') {
+        const d = await api.groupedPay(payForm.kind, payForm.group.seller_id || payForm.group.parrain_id, payForm.proof);
+        setSuccess(payForm.kind === 'referral' ? t('Parrain payé ! La preuve a été enregistrée.') : t('Vendeur payé ! La preuve a été enregistrée.'));
+        setPayForm(null);
+        load();
+        return;
+      }
       const d = payForm.kind === 'referral'
         ? await api.payReferral(payForm.sale.id, { proof: payForm.proof })
         : await api.paySale(payForm.sale.id, { proof: payForm.proof });
@@ -362,6 +381,97 @@ export default function ShopDashboard() {
       {showDelivered && (
         <section className="card stats" id="facture-livree">
           <h2>📦 {t('Mes commandes livrées')}</h2>
+          {(() => {
+            const sellerGroups = new Map();
+            const referralGroups = new Map();
+            for (const s of deliveredSales) {
+              if (s.seller_id) {
+                const key = 's' + s.seller_id;
+                if (!sellerGroups.has(key)) sellerGroups.set(key, { seller_id: s.seller_id, seller_name: s.seller_name, seller_code: s.seller_code, items: [], pending: 0, anyClaimed: false });
+                const g = sellerGroups.get(key);
+                g.items.push(s);
+                if (!s.paid) g.pending += Number(s.commission || 0);
+                if (s.commission_claimed_at) g.anyClaimed = true;
+              }
+              if (s.referred_by) {
+                const key = 'r' + s.referred_by;
+                if (!referralGroups.has(key)) referralGroups.set(key, { parrain_id: s.referred_by, parrain_name: s.parrain_name || '—', items: [], pending: 0, anyClaimed: false });
+                const g = referralGroups.get(key);
+                g.items.push(s);
+                if (!s.referral_paid) g.pending += Number(s.referral_commission || 0);
+                if (s.referral_claimed_at) g.anyClaimed = true;
+              }
+            }
+            const sgs = [...sellerGroups.values()].filter((g) => g.pending > 0).sort((a, b) => b.pending - a.pending);
+            const rgs = [...referralGroups.values()].filter((g) => g.pending > 0).sort((a, b) => b.pending - a.pending);
+            if (!sgs.length && !rgs.length) return null;
+            return (
+              <div style={{ marginBottom: 16 }}>
+                {sgs.length > 0 && (
+                  <div className="table-wrap">
+                    <h3>💼 {t('Commissions de vente — par vendeur')}</h3>
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>{t('Vendeur')}</th>
+                          <th>{t('Nombre de ventes')}</th>
+                          <th>{t('Commission en attente')}</th>
+                          <th>{t('Statut')}</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sgs.map((g) => (
+                          <tr key={g.seller_id}>
+                            <td>{g.seller_name} ({g.seller_code || '—'})</td>
+                            <td>{g.items.length}</td>
+                            <td>{formatMoney(g.pending)} {countrySymbol(g.items[0]?.shop_country)}</td>
+                            <td>{g.anyClaimed && <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>}</td>
+                            <td>
+                              <button className="btn btn-small btn-danger" onClick={() => openPayGrouped('seller', g)}>
+                                💰 {t('Payer le Vendeur')} ({formatMoney(g.pending)})
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {rgs.length > 0 && (
+                  <div className="table-wrap">
+                    <h3>🎁 {t('Parrainage (2%) — par parrain')}</h3>
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>{t('Parrain')}</th>
+                          <th>{t('Nombre de ventes')}</th>
+                          <th>{t('Commission en attente')}</th>
+                          <th>{t('Statut')}</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rgs.map((g) => (
+                          <tr key={g.parrain_id}>
+                            <td>{g.parrain_name}</td>
+                            <td>{g.items.length}</td>
+                            <td>{formatMoney(g.pending)} {countrySymbol(g.items[0]?.shop_country)}</td>
+                            <td>{g.anyClaimed && <span className="badge badge-confirmed">{t('Paiement 2% réclamé')}</span>}</td>
+                            <td>
+                              <button className="btn btn-small btn-warn" onClick={() => openPayGrouped('referral', g)}>
+                                🎁 {t('Payer le parrain')} ({formatMoney(g.pending)})
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
           {deliveredSales.length === 0 ? (
             <p className="empty">{t('Aucune vente livrée pour le moment.')}</p>
           ) : (
@@ -390,20 +500,12 @@ export default function ShopDashboard() {
                         {s.paid ? (
                           <span className="badge badge-paid">{t('Vendeur payé')}</span>
                         ) : (
-                          <>
-                            {s.commission_claimed_at && <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>}
-                            {s.seller_id && (
-                              <button className="btn btn-small btn-danger" onClick={() => openPay(s, 'seller')}>{t('Payer le Vendeur')}</button>
-                            )}
-                          </>
+                          <span className="badge badge-warn">{t('Commission en attente')}</span>
                         )}
                         {s.referral_paid ? (
                           <span className="badge badge-paid">🎁 {t('Parrain payé')}</span>
                         ) : s.referred_by ? (
-                          <>
-                            {s.referral_claimed_at && <span className="badge badge-confirmed">🎁 {t('Paiement 2% réclamé')}</span>}
-                            <button className="btn btn-small btn-warn" onClick={() => openPay(s, 'referral')}>🎁 {t('Payer le parrain')}</button>
-                          </>
+                          <span className="badge badge-warn">🎁 {t('Commission 2% en attente')}</span>
                         ) : null}
                       </td>
                       <td>
@@ -659,6 +761,24 @@ export default function ShopDashboard() {
               <h3>💸 {payForm.kind === 'referral' ? t('Payer le parrain') : t('Payer le vendeur')}</h3>
               <button className="drawer-close" onClick={() => setPayForm(null)}>✕</button>
             </div>
+            {payForm.target === 'grouped' ? (
+              <div className="deliver-recap">
+                {payForm.kind === 'referral' ? (
+                  <>
+                    <p><strong>{t('Parrain')} :</strong> {payForm.group.parrain_name}</p>
+                    <p><strong>{t('Nombre de ventes')} :</strong> {payForm.group.items.length}</p>
+                    <p><strong>🎁 {t('Commission parrainage (2%)')} :</strong> {formatMoney(payForm.group.pending)} {countrySymbol(payForm.group.items[0]?.shop_country)}</p>
+                  </>
+                ) : (
+                  <>
+                    <p><strong>{t('Vendeur')} :</strong> {payForm.group.seller_name} ({payForm.group.seller_code || '—'})</p>
+                    <p><strong>{t('Nombre de ventes')} :</strong> {payForm.group.items.length}</p>
+                    <p><strong>{t('Commission produit')} :</strong> {formatMoney(payForm.group.pending)} {countrySymbol(payForm.group.items[0]?.shop_country)}</p>
+                  </>
+                )}
+                <p><strong>{t('Total à payer')} :</strong> {formatMoney(payForm.group.pending)} {countrySymbol(payForm.group.items[0]?.shop_country)}</p>
+              </div>
+            ) : (
             <div className="deliver-recap">
               <p><strong>{t('Article')} :</strong> {payForm.sale.product_name}</p>
               {payForm.kind === 'referral' ? (
@@ -677,6 +797,7 @@ export default function ShopDashboard() {
               )}
               <p><strong>{t('Total à payer')} :</strong> {formatMoney(payForm.kind === 'referral' ? Number(payForm.sale.referral_commission || 0) : Number(payForm.sale.commission))} {countrySymbol(payForm.sale.shop_country)}</p>
             </div>
+            )}
             {payForm.methods ? (
               <div className="deliver-recap">
                 <p><strong>{payForm.kind === 'referral' ? t('Moyens de paiement du parrain') : t('Moyens de paiement du vendeur')}</strong></p>

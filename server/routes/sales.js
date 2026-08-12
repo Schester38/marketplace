@@ -104,7 +104,7 @@ router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
   const referred = (
     await q(
       `SELECT s.id, s.status, s.buyer_name, s.created_at, s.delivered_at, s.referral_commission,
-              s.referral_paid, s.referral_claimed_at, p.name AS product_name, p.contact AS shop_contact,
+              s.referral_paid, s.referral_claimed_at, p.shop_id, p.name AS product_name, p.contact AS shop_contact,
               shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
@@ -634,6 +634,110 @@ router.post('/:id/pay-referral', authRequired, roleRequired('shop'), ah(async (r
     )
   )[0];
   res.json({ sale: saleRow(full), ok: true });
+}));
+
+router.post('/grouped-claim', authRequired, roleRequired('seller'), ah(async (req, res) => {
+  const { kind, shop_id } = req.body || {};
+  if (!['sale', 'referral'].includes(kind)) {
+    return res.status(400).json({ error: 'Type invalide' });
+  }
+  const shopId = Number(shop_id);
+  if (!Number.isInteger(shopId)) {
+    return res.status(400).json({ error: 'Boutique invalide' });
+  }
+  const isSale = kind === 'sale';
+  const target = isSale ? 's.seller_id' : 's.referred_by';
+  const col = isSale ? 'commission_claimed_at' : 'referral_claimed_at';
+  const sold = isSale ? 'NOT s.paid' : 'NOT s.referral_paid';
+  const amountCol = isSale ? 's.commission' : 's.referral_commission';
+  const rows = await q(
+    `SELECT s.id, ${amountCol} AS amt
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+      WHERE ${target} = $1 AND p.shop_id = $2 AND s.status = 'delivered' AND ${sold} AND s.${col} IS NULL
+      ORDER BY s.created_at DESC`,
+    [req.user.id, shopId]
+  );
+  if (!rows.length) {
+    return res.status(409).json({ error: 'Aucune commission à réclamer chez cette boutique' });
+  }
+  const total = Math.round(rows.reduce((a, r) => a + Number(r.amt || 0), 0) * 100) / 100;
+  await q(
+    `UPDATE sales s SET ${col} = now()
+       FROM products p
+      WHERE p.id = s.product_id AND ${target} = $1 AND p.shop_id = $2 AND s.status = 'delivered' AND ${sold} AND s.${col} IS NULL`,
+    [req.user.id, shopId]
+  );
+  const me = (await q('SELECT name FROM users WHERE id = $1', [req.user.id]))[0];
+  const type = isSale ? 'commission_claimed_group' : 'referral_claimed_group';
+  await q(
+    `INSERT INTO notifications (user_id, type, sale_id, amount) VALUES ($1, $2, $3, $4)`,
+    [shopId, type, rows[0].id, total]
+  );
+  await sendPush(shopId, {
+    title: 'Commissions réclamées 💰',
+    body: `${isSale ? 'Le vendeur' : 'Le parrain'} ${me ? me.name : '—'} réclame ${total} F de commissions (${rows.length} vente${rows.length > 1 ? 's' : ''}).`,
+    url: '/shop',
+  });
+  res.json({ ok: true, count: rows.length, amount: total });
+}));
+
+router.post('/grouped-pay', authRequired, roleRequired('shop'), ah(async (req, res) => {
+  const { kind, seller_id, proof } = req.body || {};
+  if (!['seller', 'referral'].includes(kind)) {
+    return res.status(400).json({ error: 'Type invalide' });
+  }
+  const sellerId = Number(seller_id);
+  if (!Number.isInteger(sellerId)) {
+    return res.status(400).json({ error: 'Vendeur invalide' });
+  }
+  if (!proof || !String(proof).startsWith('data:')) {
+    return res.status(400).json({ error: 'Joignez une photo ou une vidéo de preuve du paiement' });
+  }
+  const isSeller = kind === 'seller';
+  const target = isSeller ? 's.seller_id' : 's.referred_by';
+  const sold = isSeller ? 'NOT s.paid' : 'NOT s.referral_paid';
+  const amountCol = isSeller ? 's.commission' : 's.referral_commission';
+  const rows = await q(
+    `SELECT s.id, ${amountCol} AS amt
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+      WHERE ${target} = $1 AND p.shop_id = $2 AND s.status = 'delivered' AND ${sold}
+      ORDER BY s.created_at DESC`,
+    [sellerId, req.user.id]
+  );
+  if (!rows.length) {
+    return res.status(409).json({ error: 'Aucune commission à payer' });
+  }
+  const total = Math.round(rows.reduce((a, r) => a + Number(r.amt || 0), 0) * 100) / 100;
+  const proofShort = String(proof).slice(0, 12000000);
+  if (isSeller) {
+    await q(
+      `UPDATE sales s SET paid = TRUE, paid_at = now(), payment_proof = $1
+         FROM products p
+        WHERE p.id = s.product_id AND s.seller_id = $2 AND p.shop_id = $3 AND s.status = 'delivered' AND NOT s.paid`,
+      [proofShort, sellerId, req.user.id]
+    );
+  } else {
+    await q(
+      `UPDATE sales s SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1
+         FROM products p
+        WHERE p.id = s.product_id AND s.referred_by = $2 AND p.shop_id = $3 AND s.status = 'delivered' AND NOT s.referral_paid`,
+      [proofShort, sellerId, req.user.id]
+    );
+  }
+  const me = (await q('SELECT name FROM users WHERE id = $1', [req.user.id]))[0];
+  const payee = (await q('SELECT name FROM users WHERE id = $1', [sellerId]))[0];
+  await q(
+    `INSERT INTO notifications (user_id, type, sale_id, amount) VALUES ($1, $2, $3, $4)`,
+    [sellerId, isSeller ? 'commission_paid_group' : 'referral_paid_group', rows[0].id, total]
+  );
+  await sendPush(sellerId, {
+    title: isSeller ? 'Commissions payées 💰' : 'Parrainage payé 💰',
+    body: `${isSeller ? 'Vos commissions' : 'Votre commission de parrainage'} (${total} F) pour ${rows.length} vente${rows.length > 1 ? 's' : ''} chez ${me ? me.name : 'la boutique'} ont été versées.`,
+    url: '/seller',
+  });
+  res.json({ ok: true, count: rows.length, amount: total, payee: payee ? payee.name : null });
 }));
 
 router.get('/track/:id', ah(async (req, res) => {

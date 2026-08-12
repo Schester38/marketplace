@@ -71,7 +71,7 @@ function FollowUs() {
   const socialLinks = [
     { label: 'Facebook', icon: '📘', url: 'https://facebook.com/mboppi' },
     { label: 'Instagram', icon: '📷', url: 'https://instagram.com/mboppi' },
-    { label: 'WhatsApp', icon: '💚', url: 'https://wa.me/237672886348' },
+    { label: 'WhatsApp', icon: '💚', url: 'https://whatsapp.com/channel/0029VbDs0PKKmCPInjtQZi0u' },
     { label: 'TikTok', icon: '🎵', url: 'https://tiktok.com/@mboppi' },
   ];
 
@@ -265,6 +265,34 @@ function NotifBell() {
         amount: formatMoney(n.referral_commission),
         symbol: countrySymbol(n.shop_country),
         product: n.product_name,
+        shop: n.shop_name,
+      });
+    }
+    if (n.type === 'commission_claimed_group') {
+      return t('Le vendeur {seller} réclame {amount} {symbol} de commissions chez votre boutique.', {
+        seller: n.seller_name || '—',
+        amount: formatMoney(n.amount),
+        symbol: countrySymbol(n.shop_country),
+      });
+    }
+    if (n.type === 'referral_claimed_group') {
+      return t('Le parrain {parrain} réclame {amount} {symbol} de commissions de parrainage.', {
+        parrain: n.parrain_name || '—',
+        amount: formatMoney(n.amount),
+        symbol: countrySymbol(n.shop_country),
+      });
+    }
+    if (n.type === 'commission_paid_group') {
+      return t('Vos commissions ({amount} {symbol}) pour vos ventes chez {shop} ont été versées.', {
+        amount: formatMoney(n.amount),
+        symbol: countrySymbol(n.shop_country),
+        shop: n.shop_name,
+      });
+    }
+    if (n.type === 'referral_paid_group') {
+      return t('Votre commission de parrainage ({amount} {symbol}) chez {shop} a été versée.', {
+        amount: formatMoney(n.amount),
+        symbol: countrySymbol(n.shop_country),
         shop: n.shop_name,
       });
     }
