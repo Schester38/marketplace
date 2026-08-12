@@ -1786,6 +1786,66 @@ a.step { text-decoration: none; color: inherit; }
 }
 [dir='rtl'] .drawer-tools .lang-menu { left: 12px; right: 12px; }
 
+/* ===== Suivez-nous (FollowUs) ===== */
+
+.follow-wrap { position: relative; display: inline-flex; }
+.follow-toggle {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 10px;
+  height: 40px;
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  transition: background 0.15s;
+}
+.follow-toggle:hover { background: var(--soft); }
+.follow-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  min-width: 180px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  padding: 6px;
+  list-style: none;
+  margin: 0;
+}
+.follow-menu li a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.92rem;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+}
+.follow-menu li a:hover { background: var(--soft); }
+.follow-menu .ss-icon { font-size: 1.05rem; line-height: 1; }
+[dir='rtl'] .follow-menu { right: auto; left: 0; }
+.drawer-tools .follow-wrap { position: static; }
+.drawer-tools .follow-menu {
+  left: 12px;
+  right: 12px;
+  width: auto;
+  min-width: 0;
+  top: calc(100% + 8px);
+}
+[dir='rtl'] .drawer-tools .follow-menu { left: 12px; right: 12px; }
+
 /* ===== SearchSelect (pays filtrable) ===== */
 
 .search-select { position: relative; }

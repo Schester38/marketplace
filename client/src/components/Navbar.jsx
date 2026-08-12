@@ -52,6 +52,58 @@ function LangSwitcher() {
   );
 }
 
+function FollowUs() {
+  const { t } = useLang();
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  const socialLinks = [
+    { label: 'Facebook', icon: '📘', url: 'https://facebook.com/mboppi' },
+    { label: 'Instagram', icon: '📷', url: 'https://instagram.com/mboppi' },
+    { label: 'WhatsApp', icon: '💚', url: 'https://wa.me/229XXXXXXXX' },
+    { label: 'TikTok', icon: '🎵', url: 'https://tiktok.com/@mboppi' },
+  ];
+
+  return (
+    <div className="follow-wrap" ref={ref}>
+      <button
+        className="follow-toggle"
+        aria-label={t('Suivez-nous sur les réseaux sociaux')}
+        title={t('Suivez-nous sur les réseaux sociaux')}
+        onClick={() => setOpen(!open)}
+      >
+        👥 <span>{t('Suivez sur')}</span>
+      </button>
+      {open && (
+        <ul className="follow-menu">
+          {socialLinks.map((s) => (
+            <li key={s.label}>
+              <a
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="follow-item"
+                onClick={() => setOpen(false)}
+              >
+                <span className="ss-icon">{s.icon}</span> {s.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function NotifBell() {
   const { t, locale } = useLang();
   const { user } = useAuth();
@@ -368,6 +420,7 @@ export default function Navbar({ onLogout }) {
   const tools = (
     <div className="drawer-tools">
       <LangSwitcher />
+      <FollowUs />
       {themeToggle}
       {favLink}
       {cartLink}
