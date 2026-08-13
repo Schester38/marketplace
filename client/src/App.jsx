@@ -36,6 +36,7 @@ const Suivi = React.lazy(() => import('./pages/Suivi.jsx'));
 const NotFound = React.lazy(() => import('./pages/NotFound.jsx'));
 const Admin = React.lazy(() => import('./pages/Admin.jsx'));
 const Cgv = React.lazy(() => import('./pages/Cgv.jsx'));
+const Cgu = React.lazy(() => import('./pages/Cgu.jsx'));
 const Faq = React.lazy(() => import('./pages/Faq.jsx'));
 const MentionsLegales = React.lazy(() => import('./pages/MentionsLegales.jsx'));
 const CookiesBanner = React.lazy(() => import('./components/CookiesBanner.jsx'));
@@ -241,6 +242,7 @@ export default function App() {
           <Route path="/boutique/:id" element={<ShopPage />} />
           <Route path="/suivi/:id" element={<Suivi />} />
           <Route path="/cgv" element={<Cgv />} />
+          <Route path="/cgu" element={<Cgu />} />
           <Route path="/faq" element={<Faq />} />
           <Route path="/mentions-legales" element={<MentionsLegales />} />
           <Route path="/admin" element={<Admin />} />

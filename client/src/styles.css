@@ -299,6 +299,24 @@ main { animation: pageIn 0.35s ease; }
 }
 .form-card h2 { margin-bottom: 16px; font-size: 1.3rem; }
 
+.terms-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  margin: 6px 0 14px;
+  line-height: 1.45;
+}
+.terms-check input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+}
+.terms-check a { color: var(--primary); font-weight: 600; text-decoration: underline; }
+
 .auth-brand {
   font-size: 1.35rem;
   font-weight: 800;

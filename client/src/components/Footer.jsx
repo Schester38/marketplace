@@ -15,6 +15,7 @@ export default function Footer() {
           <Link to="/faq">❓ {t('FAQ')}</Link>
           <Link to="/donnees">{t('Données & confidentialité')}</Link>
           <Link to="/cgv">{t('CGV')}</Link>
+          <Link to="/cgu">{t('CGU')}</Link>
           <Link to="/mentions-legales">{t('Mentions légales')}</Link>
         </nav>
         <p className="footer-copy">

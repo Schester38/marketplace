@@ -46,9 +46,12 @@ function publicUser(u) {
 const VALID_ROLES = ['shop', 'seller', 'client', 'creator'];
 
 router.post('/register', ah(async (req, res) => {
-  const { name, email, password, role, country, ref, recaptchaToken } = req.body || {};
+  const { name, email, password, role, country, ref, recaptchaToken, acceptedTerms } = req.body || {};
   if (!(await verifyRecaptcha(recaptchaToken))) {
     return res.status(400).json({ error: 'Vérification anti-robot échouée, réessayez' });
+  }
+  if (acceptedTerms !== true) {
+    return res.status(400).json({ error: 'Vous devez accepter les Conditions Générales d\'Utilisation pour vous inscrire' });
   }
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Nom, email et mot de passe sont requis' });
@@ -84,7 +87,7 @@ router.post('/register', ah(async (req, res) => {
   }
   const hash = bcrypt.hashSync(String(password), 12);
   const created = await q(
-    'INSERT INTO users (name, email, password, role, country, referred_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+    'INSERT INTO users (name, email, password, role, country, referred_by, accepted_terms_at) VALUES ($1, $2, $3, $4, $5, $6, now()) RETURNING id',
     [String(name).trim(), emailNorm, hash, finalRole, country ? String(country).trim() : null, referredBy]
   );
   const user = (await q('SELECT * FROM users WHERE id = $1', [created[0].id]))[0];
@@ -135,6 +138,10 @@ router.get('/google', (req, res) => {
     const msg = encodeURIComponent('La connexion Google n\'est pas encore configurée');
     return res.redirect(`/auth-google?error=${msg}`);
   }
+  if (req.query.accepted !== '1') {
+    const msg = encodeURIComponent('Vous devez accepter les Conditions Générales d\'Utilisation pour vous inscrire');
+    return res.redirect(`/auth-google?error=${msg}`);
+  }
   const ref = String(req.query.ref || '').trim().toUpperCase();
   const role = VALID_ROLES.includes(req.query.role) ? req.query.role : ref ? 'client' : 'seller';
   res.redirect(googleAuthUrl(ref ? 'client' : role, req.query.country, ref, req));
@@ -164,7 +171,7 @@ router.get('/google/callback', ah(async (req, res) => {
         }
       }
       const created = await q(
-        'INSERT INTO users (name, email, password, provider, role, country, referred_by) VALUES ($1, $2, NULL, \'google\', $3, $4, $5) RETURNING id',
+        'INSERT INTO users (name, email, password, provider, role, country, referred_by, accepted_terms_at) VALUES ($1, $2, NULL, \'google\', $3, $4, $5, now()) RETURNING id',
         [profile.name, profile.email, cleanRole, cleanCountry, referredBy]
       );
       user = (await q('SELECT * FROM users WHERE id = $1', [created[0].id]))[0];

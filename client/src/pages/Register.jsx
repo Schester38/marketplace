@@ -23,8 +23,17 @@ export default function Register() {
     country: '',
   });
   const [error, setError] = useState('');
+  const [accepted, setAccepted] = useState(false);
 
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
+
+  const ensureAccepted = () => {
+    if (!accepted) {
+      setError(t('Vous devez accepter les Conditions Générales d\'Utilisation pour vous inscrire.'));
+      return false;
+    }
+    return true;
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -33,10 +42,11 @@ export default function Register() {
       setError(t('Veuillez remplir tous les champs.'));
       return;
     }
+    if (!ensureAccepted()) return;
     const trySubmit = async (remaining) => {
       try {
         const recaptchaToken = await getRecaptchaToken('register');
-        const data = await api.register({ ...form, recaptchaToken, ref: refCode || undefined });
+        const data = await api.register({ ...form, acceptedTerms: true, recaptchaToken, ref: refCode || undefined });
         login(data.user, data.token);
         localStorage.setItem('mboppi_welcome', 'register');
         navigate('/');
@@ -156,26 +166,43 @@ export default function Register() {
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
-          <label>{t('Mot de passe (6 caractères minimum)')}</label>
+          <label>{t('Mot de passe (8 caractères minimum)')}</label>
           <input
             className="input"
             type="password"
             required
-            minLength={6}
+            minLength={8}
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
 
           {error && <p className="error">{error}</p>}
+
+          <label className="terms-check">
+            <input
+              type="checkbox"
+              checked={accepted}
+              onChange={(e) => setAccepted(e.target.checked)}
+              required
+            />
+            <span>
+              {t('J\'ai lu et j\'accepte les')}{' '}
+              <Link to="/cgu" target="_blank" rel="noopener noreferrer">
+                {t('Conditions générales d\'utilisation')}
+              </Link>
+            </span>
+          </label>
+
           <button className="btn btn-primary btn-block">{t("S'inscrire")}</button>
           <div className="divider"><span>{t('ou')}</span></div>
           <button
             type="button"
             className="btn btn-google btn-block"
             onClick={() => {
+              if (!ensureAccepted()) return;
               const params = new URLSearchParams({ role: refCode ? 'client' : form.role, country: form.country || '' });
               if (refCode) params.set('ref', refCode);
-              window.location.href = `/api/auth/google?${params.toString()}`;
+              window.location.href = `/api/auth/google?${params.toString()}&accepted=1`;
             }}
           >
             <GoogleIcon />
