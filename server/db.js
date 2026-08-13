@@ -146,6 +146,7 @@ export async function initDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS commission_claimed_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_claimed_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_payment_proof TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS hidden_for INTEGER[] NOT NULL DEFAULT '{}';
 
     ALTER TABLE orders ALTER COLUMN user_id DROP NOT NULL;
 
@@ -207,4 +208,19 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id);
     CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
   `);
+
+  try {
+    await purgeOldTransactions();
+  } catch {
+    /* purge best-effort : un échec ne doit pas bloquer le démarrage */
+  }
+}
+
+const RETENTION_DAYS = 7;
+
+export async function purgeOldTransactions() {
+  const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  await pool.query('DELETE FROM sales WHERE created_at < $1', [cutoff]);
+  await pool.query('DELETE FROM orders WHERE created_at < $1', [cutoff]);
+  await pool.query('DELETE FROM notifications WHERE created_at < $1', [cutoff]);
 }

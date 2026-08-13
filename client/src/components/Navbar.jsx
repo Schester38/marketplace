@@ -69,10 +69,10 @@ function FollowUs() {
   }, [open]);
 
   const socialLinks = [
-    { label: 'Facebook', icon: '📘', url: 'https://facebook.com/mboppi' },
-    { label: 'Instagram', icon: '📷', url: 'https://instagram.com/mboppi' },
+    { label: 'Facebook', icon: '📘', url: 'https://www.facebook.com/share/1dpjKVQQwn/' },
+    { label: 'YouTube', icon: '▶️', url: 'https://www.youtube.com/channel/UC0afKxIhEIsvYxbvDiz74Ow' },
     { label: 'WhatsApp', icon: '💚', url: 'https://whatsapp.com/channel/0029VbDs0PKKmCPInjtQZi0u' },
-    { label: 'TikTok', icon: '🎵', url: 'https://tiktok.com/@mboppi' },
+    { label: 'TikTok', icon: '🎵', url: 'https://www.tiktok.com/@mboppishop' },
   ];
 
   return (

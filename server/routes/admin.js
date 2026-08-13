@@ -9,9 +9,12 @@ const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 
 const isId = (v) => Number.isInteger(v) && v > 0;
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Ver@ne9124';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 router.post('/pass', ah(async (req, res) => {
+  if (!ADMIN_PASSWORD) {
+    return res.status(503).json({ error: 'Accès admin non configuré' });
+  }
   const { password } = req.body || {};
   if (!password || password.length > 200) {
     return res.status(400).json({ error: 'Mot de passe manquant' });
@@ -96,6 +99,67 @@ router.delete('/products/:id', ah(async (req, res) => {
   await q('DELETE FROM products WHERE id = $1', [product.id]);
   await logAudit(req.user.id, 'admin.delete_product', `product=${product.id}`, req.ip);
   res.json({ ok: true });
+}));
+
+router.get('/transactions', ah(async (req, res) => {
+  const rows = await q(
+    `SELECT s.id, s.status, s.created_at, s.quantity, s.total_price, s.commission,
+            s.referral_commission, s.paid, s.referral_paid, s.delivered_at, s.payment_method,
+            s.buyer_name, s.buyer_city,
+            p.name AS product_name, p.shop_id,
+            shop.name AS shop_name, shop.country AS shop_country,
+            COALESCE(u.name, '—') AS seller_name, u.seller_code,
+            COALESCE(parrain.name, '—') AS parrain_name
+     FROM sales s
+     JOIN products p ON p.id = s.product_id
+     JOIN users shop ON shop.id = p.shop_id
+     LEFT JOIN users u ON u.id = s.seller_id
+     LEFT JOIN users parrain ON parrain.id = s.referred_by
+     ORDER BY s.created_at DESC
+     LIMIT 300`
+  );
+  const byStatus = await q(
+    `SELECT status, COUNT(*) AS cnt, COALESCE(SUM(total_price), 0) AS total
+     FROM sales GROUP BY status ORDER BY cnt DESC`
+  );
+  const byShop = await q(
+    `SELECT shop.name AS shop_name, shop.country AS shop_country, COUNT(*) AS cnt,
+            COALESCE(SUM(s.total_price), 0) AS revenue,
+            COALESCE(SUM(s.commission), 0) + COALESCE(SUM(s.referral_commission), 0) AS commission
+     FROM sales s
+     JOIN products p ON p.id = s.product_id
+     JOIN users shop ON shop.id = p.shop_id
+     GROUP BY shop.id, shop.name, shop.country
+     ORDER BY revenue DESC LIMIT 20`
+  );
+  const bySeller = await q(
+    `SELECT COALESCE(u.name, '—') AS seller_name, u.seller_code, COUNT(*) AS cnt,
+            COALESCE(SUM(s.commission), 0) AS commission,
+            COALESCE(SUM(CASE WHEN s.paid THEN s.commission ELSE 0 END), 0) AS paid
+     FROM sales s
+     LEFT JOIN users u ON u.id = s.seller_id
+     GROUP BY u.id, u.name, u.seller_code
+     ORDER BY commission DESC LIMIT 20`
+  );
+  const [direct] = await q(
+    'SELECT COUNT(*) AS cnt, COALESCE(SUM(total_price), 0) AS total FROM sales WHERE seller_id IS NULL'
+  );
+  const [withSeller] = await q(
+    'SELECT COUNT(*) AS cnt, COALESCE(SUM(total_price), 0) AS total FROM sales WHERE seller_id IS NOT NULL'
+  );
+  res.json({
+    rows: rows.map((r) => ({
+      ...r,
+      total_price: Number(r.total_price),
+      commission: Number(r.commission),
+      referral_commission: Number(r.referral_commission),
+    })),
+    by_status: byStatus.map((r) => ({ status: r.status, count: Number(r.cnt), total: Number(r.total) })),
+    by_shop: byShop.map((r) => ({ shop_name: r.shop_name, country: r.shop_country, count: Number(r.cnt), revenue: Number(r.revenue), commission: Number(r.commission) })),
+    by_seller: bySeller.map((r) => ({ seller_name: r.seller_name, seller_code: r.seller_code, count: Number(r.cnt), commission: Number(r.commission), paid: Number(r.paid) })),
+    direct: { count: Number(direct.cnt), total: Number(direct.total) },
+    with_seller: { count: Number(withSeller.cnt), total: Number(withSeller.total) },
+  });
 }));
 
 router.get('/activity', ah(async (req, res) => {

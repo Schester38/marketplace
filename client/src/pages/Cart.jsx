@@ -24,7 +24,7 @@ export default function Cart() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!buyerName.trim()) {
+    if (!buyerName.trim() || !phone.trim() || !city.trim() || !address.trim()) {
       setError(t('Veuillez remplir tous les champs.'));
       return;
     }
@@ -33,9 +33,9 @@ export default function Cart() {
       const data = await api.createOrder({
         items: cart.map((i) => ({ product_id: i.id, quantity: i.qty })),
         buyer_name: buyerName.trim(),
-        buyer_phone: phone.trim() || null,
-        buyer_city: city.trim() || null,
-        buyer_address: address.trim() || null,
+        buyer_phone: phone.trim(),
+        buyer_city: city.trim(),
+        buyer_address: address.trim(),
       });
       setSales(data.sales);
       clearCart();
@@ -159,24 +159,27 @@ export default function Cart() {
             <form onSubmit={submit}>
               <label>{t('Votre nom *')}</label>
               <input className="input" required value={buyerName} onChange={(e) => setBuyerName(e.target.value)} />
-              <label>{t('Votre téléphone')}</label>
+              <label>{t('Votre téléphone *')}</label>
               <input
                 className="input"
                 type="tel"
+                required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+237 6XX XX XX XX"
               />
-              <label>{t('Votre ville')}</label>
+              <label>{t('Votre ville *')}</label>
               <input
                 className="input"
+                required
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder={t('Ville')}
               />
-              <label>{t('Adresse de livraison')}</label>
+              <label>{t('Adresse de livraison *')}</label>
               <input
                 className="input"
+                required
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder={t('Quartier, ville…')}

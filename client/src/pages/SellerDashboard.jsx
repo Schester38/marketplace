@@ -176,15 +176,24 @@ export default function SellerDashboard() {
 
   const referralLink = sellerCode ? `${BASE_URL}/register?ref=${encodeURIComponent(sellerCode)}` : null;
 
-  const openProof = async (s) => {
+  const openProof = async (s, kind = 'commission') => {
     setError('');
     setProofLoading(true);
     try {
       const d = await api.saleProof(s.id);
-      if (!d.proof) {
-        setError(t('Aucune preuve disponible pour cette vente.'));
+      const proof = kind === 'referral' ? d.referral_proof : d.proof;
+      if (!proof) {
+        setError(
+          kind === 'referral'
+            ? t('Aucune preuve de paiement du parrainage disponible pour cette vente.')
+            : t('Aucune preuve disponible pour cette vente.')
+        );
       } else {
-        setProofSale({ sale: s, proof: d.proof });
+        setProofSale({
+          sale: s,
+          proof,
+          title: kind === 'referral' ? t('Preuve de paiement du parrainage') : t('Preuve de paiement'),
+        });
       }
     } catch (err) {
       setError(err.message);
@@ -369,6 +378,7 @@ export default function SellerDashboard() {
             <tbody>
               {sales.map((s) => {
                 const st = SALE_STATUS[s.status] || SALE_STATUS.pending;
+                const isDirect = Number(s.commission || 0) <= 0 && Number(s.referral_commission || 0) <= 0;
                 return (
                   <tr key={s.id}>
                     <td>{s.product_name}</td>
@@ -381,21 +391,30 @@ export default function SellerDashboard() {
                     <td>{s.quantity}</td>
                     <td>{formatMoney(s.total_price)} {countrySymbol(s.shop_country)}</td>
                     <td>
-                      <span>{formatMoney(s.commission)} {countrySymbol(s.shop_country)}</span>
-                      {Number(s.referral_commission || 0) > 0 && (
-                        <span className="muted referral-comm">
-                          <br />🎁 {formatMoney(s.referral_commission)} {countrySymbol(s.shop_country)} ({t('parrainage')})
-                        </span>
+                      {isDirect ? (
+                        <span className="muted">{t('Sans commission')}</span>
+                      ) : (
+                        <>
+                          <span>{formatMoney(s.commission)} {countrySymbol(s.shop_country)}</span>
+                          {Number(s.referral_commission || 0) > 0 && (
+                            <span className="muted referral-comm">
+                              <br />🎁 {formatMoney(s.referral_commission)} {countrySymbol(s.shop_country)} ({t('parrainage')})
+                            </span>
+                          )}
+                        </>
                       )}
                     </td>
                     <td>
-                      {s.status === 'delivered' && !s.paid && (
+                      {s.status === 'delivered' && isDirect && (
+                        <span className="badge badge-pending">{t('Vente directe')}</span>
+                      )}
+                      {s.status === 'delivered' && !isDirect && !s.paid && (
                         <>
                           <span className="badge badge-warn">{t('Commission en attente')}</span>
                           {s.commission_claimed_at && <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>}
                         </>
                       )}
-                      {s.status === 'delivered' && s.paid && (
+                      {s.status === 'delivered' && !isDirect && s.paid && (
                         <span className="badge badge-paid">{t('Commission payée')}</span>
                       )}
                       {s.status !== 'delivered' && <span className={`badge ${st.cls}`}>{t(st.key)}</span>}
@@ -491,6 +510,7 @@ export default function SellerDashboard() {
                 <th>{t('Date')}</th>
                 <th>{t('2% commission')}</th>
                 <th>{t('Statut')}</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -511,6 +531,13 @@ export default function SellerDashboard() {
                     )}
                     {s.referral_paid && <span className="badge badge-paid">{t('Commission payée')}</span>}
                   </td>
+                  <td>
+                    {s.referral_paid && (
+                      <button className="btn btn-small" disabled={proofLoading} onClick={() => openProof(s, 'referral')}>
+                        📷 {t('Preuve')}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -524,7 +551,7 @@ export default function SellerDashboard() {
         <div className="modal-overlay" onClick={() => setProofSale(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>📷 {t('Preuve de paiement')} — {proofSale.sale.product_name}</h3>
+              <h3>📷 {proofSale.title || t('Preuve de paiement')} — {proofSale.sale.product_name}</h3>
               <button className="drawer-close" onClick={() => setProofSale(null)}>✕</button>
             </div>
             {String(proofSale.proof).startsWith('data:video') ? (

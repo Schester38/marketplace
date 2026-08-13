@@ -70,8 +70,20 @@ router.post('/', optionalAuth, ah(async (req, res) => {
 
   const buyer = req.user || null;
   const name = (buyer_name && String(buyer_name).trim()) || (buyer ? buyer.name : '');
+  const phone = buyer_phone ? String(buyer_phone).trim() : '';
+  const city = buyer_city ? String(buyer_city).trim() : '';
+  const address = buyer_address ? String(buyer_address).trim() : '';
   if (!name) {
     return res.status(400).json({ error: 'Le nom du client est requis' });
+  }
+  if (!phone) {
+    return res.status(400).json({ error: 'Le numéro de téléphone est requis' });
+  }
+  if (!city) {
+    return res.status(400).json({ error: 'La ville est requise' });
+  }
+  if (!address) {
+    return res.status(400).json({ error: 'L\'adresse de livraison est requise' });
   }
   const total = Math.round(price * qty * 100) / 100;
   const commission = Math.round(Number(product.price) * (Number(product.commission_percent) / 100) * qty * 100) / 100;
@@ -106,9 +118,9 @@ router.post('/', optionalAuth, ah(async (req, res) => {
       buyer ? buyer.id : null,
       code,
       name,
-      buyer_phone ? String(buyer_phone).trim() : null,
-      buyer_city ? String(buyer_city).trim() : null,
-      buyer_address ? String(buyer_address).trim() : null,
+      phone,
+      city,
+      address,
       confirmCode,
       referralCommission,
       referredBy,
@@ -168,7 +180,7 @@ router.get('/my', authRequired, ah(async (req, res) => {
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
-       WHERE s.buyer_id = $1
+       WHERE s.buyer_id = $1 AND NOT ($1 = ANY(s.hidden_for))
        ORDER BY s.created_at DESC`,
       [req.user.id]
     )

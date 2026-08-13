@@ -50,6 +50,15 @@ router.post('/', optionalAuth, async (req, res) => {
   if (!buyer_name || !String(buyer_name).trim()) {
     return res.status(400).json({ error: 'Le nom est requis' });
   }
+  if (!buyer_phone || !String(buyer_phone).trim()) {
+    return res.status(400).json({ error: 'Le numéro de téléphone est requis' });
+  }
+  if (!buyer_city || !String(buyer_city).trim()) {
+    return res.status(400).json({ error: 'La ville est requise' });
+  }
+  if (!buyer_address || !String(buyer_address).trim()) {
+    return res.status(400).json({ error: 'L\'adresse de livraison est requise' });
+  }
   const sales = [];
   for (const it of items) {
     const pid = Number(it && it.product_id);
@@ -83,9 +92,9 @@ router.post('/', optionalAuth, async (req, res) => {
         commission,
         code,
         String(buyer_name).trim(),
-        buyer_phone ? String(buyer_phone).trim() : null,
-        buyer_city ? String(buyer_city).trim() : null,
-        buyer_address ? String(buyer_address).trim() : null,
+        String(buyer_phone).trim(),
+        String(buyer_city).trim(),
+        String(buyer_address).trim(),
         req.user ? req.user.id : null,
         referralCommission,
         referredBy,

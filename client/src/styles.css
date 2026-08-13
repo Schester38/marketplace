@@ -941,6 +941,34 @@ input, select, textarea { font-size: 16px; }
   color: var(--muted);
   white-space: nowrap;
 }
+.chart-wrap { margin-top: 4px; }
+.line-chart { width: 100%; height: auto; display: block; }
+.chart-grid { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; }
+.chart-line { stroke-width: 2.5; stroke: var(--primary); }
+.chart-dot { fill: var(--primary); stroke: var(--card); stroke-width: 1.5; }
+.chart-labels {
+  display: flex;
+  gap: 0;
+  margin-top: 6px;
+  font-size: 0.62rem;
+  color: var(--muted);
+  text-align: center;
+}
+.chart-labels span { flex: 1 1 0; white-space: nowrap; }
+.chart-label-muted { color: transparent; }
+.chart-caption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.chart-legend { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+.chart-legend i { width: 14px; height: 3px; border-radius: 3px; display: inline-block; }
+@media (max-width: 460px) {
+  .chart-labels { font-size: 0.55rem; }
+  .chart-labels span.chart-label-muted { display: none; }
+}
 .top-products { list-style: none; padding: 0; margin: 0; }
 .top-products li {
   display: flex;
@@ -1915,6 +1943,13 @@ a.step { text-decoration: none; color: inherit; }
 [data-theme='dark'] .dash-header { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
 [data-theme='dark'] .user-chip { background: var(--soft); }
 [data-theme='dark'] .drawer { background: var(--card); }
+[data-theme='dark'] .chat-panel { background: var(--card); }
+[data-theme='dark'] .chat-msg-bot { background: #111827; border-color: var(--border); color: var(--text); }
+[data-theme='dark'] .chat-chip { background: var(--card); color: var(--text); }
+[data-theme='dark'] .chat-input-row { background: var(--card); }
+[data-theme='dark'] .buyer-code-box { background: #1b2438; border-color: #a78bfa; }
+[data-theme='dark'] .notif-item.unread { background: rgba(79, 70, 229, 0.25); }
+[data-theme='dark'] .notif-item.unread a:hover { background: rgba(79, 70, 229, 0.35); }
 
 /* ===== Panier / Favoris / Commandes ===== */
 .fav-btn {
@@ -2600,6 +2635,7 @@ a.step { text-decoration: none; color: inherit; }
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
+  color: var(--text);
 }
 .chat-msg-bot {
   align-self: flex-start;

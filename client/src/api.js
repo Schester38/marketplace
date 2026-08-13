@@ -97,6 +97,7 @@ export const api = {
   exportSales: () => request('/sales/export'),
   adminPass: (password) => adminRequest('/admin/pass', { method: 'POST', body: JSON.stringify({ password }) }),
   adminStats: () => adminRequest('/admin/stats'),
+  adminTransactions: () => adminRequest('/admin/transactions'),
   adminUsers: (search = '') => adminRequest('/admin/users' + (search ? `?search=${encodeURIComponent(search)}` : '')),
   adminSetVerified: (id, verified) =>
     adminRequest(`/admin/users/${id}/verified`, { method: 'PATCH', body: JSON.stringify({ verified }) }),

@@ -16,6 +16,7 @@ export default function Admin() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState(null);
   const [products, setProducts] = useState(null);
+  const [transactions, setTransactions] = useState(null);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 
@@ -23,6 +24,7 @@ export default function Admin() {
     api.adminStats().then(setStats).catch(() => {});
     api.adminUsers().then((d) => setUsers(d.users)).catch(() => {});
     api.adminProducts().then((d) => setProducts(d.products)).catch(() => {});
+    api.adminTransactions().then(setTransactions).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -52,6 +54,7 @@ export default function Admin() {
     setStats(null);
     setUsers(null);
     setProducts(null);
+    setTransactions(null);
   };
 
   const searchUsers = async (e) => {
@@ -89,6 +92,18 @@ export default function Admin() {
       <strong className="stat-value">{value}</strong>
     </div>
   );
+
+  const statusInfo = {
+    pending: { label: 'En attente', cls: 'badge-pending' },
+    bought: { label: 'Acheté', cls: 'badge-bought' },
+    confirmed: { label: 'Confirmée', cls: 'badge-confirmed' },
+    delivered: { label: 'Livré', cls: 'badge-bought' },
+    cancelled: { label: 'Annulée', cls: 'badge-cancelled' },
+  };
+  const statusBadge = (s) => {
+    const st = statusInfo[s] || { label: s, cls: 'badge' };
+    return <span className={`badge ${st.cls}`}>{t(st.label)}</span>;
+  };
 
   if (gate) {
     return (
@@ -243,6 +258,144 @@ export default function Admin() {
           </tbody>
         </table>
       </div>
+
+      <h2 className="section-title">{t('💸 Toutes les transactions')}</h2>
+      <p className="hint">
+        {t('Activité regroupée de tous les utilisateurs (boutiques, vendeurs, clients, livreurs, créateurs).')}
+      </p>
+      {transactions === null ? (
+        <div className="card page-center">
+          <div className="skeleton-block" style={{ height: 80 }}></div>
+        </div>
+      ) : (
+        <>
+          <div className="stats-grid">
+            {card(t('Transactions avec vendeur'), transactions.with_seller.count)}
+            {card(t('Commandes directes (panier)'), transactions.direct.count)}
+            {card(t('Montant commandes directes'), `${formatMoney(transactions.direct.total)} ${countrySymbol('')}`)}
+          </div>
+
+          <h3>{t('Par statut')}</h3>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t('Statut')}</th>
+                  <th>{t('Nombre')}</th>
+                  <th>{t('Total')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.by_status.map((r) => (
+                  <tr key={r.status}>
+                    <td>{statusBadge(r.status)}</td>
+                    <td>{r.count}</td>
+                    <td>{formatMoney(r.total)} {countrySymbol('')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <h3>{t('Par boutique')}</h3>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t('Boutique')}</th>
+                  <th>{t('Pays')}</th>
+                  <th>{t('Ventes')}</th>
+                  <th>{t('Chiffre d\'affaires')}</th>
+                  <th>{t('Commissions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.by_shop.length === 0 ? (
+                  <tr><td colSpan="5" className="empty">{t('Aucune transaction')}</td></tr>
+                ) : (
+                  transactions.by_shop.map((r) => (
+                    <tr key={r.shop_name + r.country}>
+                      <td>{r.shop_name}</td>
+                      <td>{r.country || '—'}</td>
+                      <td>{r.count}</td>
+                      <td>{formatMoney(r.revenue)} {countrySymbol('')}</td>
+                      <td>{formatMoney(r.commission)} {countrySymbol('')}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <h3>{t('Par vendeur')}</h3>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t('Vendeur')}</th>
+                  <th>{t('Code')}</th>
+                  <th>{t('Ventes')}</th>
+                  <th>{t('Commissions')}</th>
+                  <th>{t('Payées')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.by_seller.length === 0 ? (
+                  <tr><td colSpan="5" className="empty">{t('Aucune transaction')}</td></tr>
+                ) : (
+                  transactions.by_seller.map((r) => (
+                    <tr key={r.seller_name + (r.seller_code || '')}>
+                      <td>{r.seller_name}</td>
+                      <td><code className="seller-code-inline">{r.seller_code || '—'}</code></td>
+                      <td>{r.count}</td>
+                      <td>{formatMoney(r.commission)} {countrySymbol('')}</td>
+                      <td>{formatMoney(r.paid)} {countrySymbol('')}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <h3>{t('Dernières transactions')}</h3>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t('Produit')}</th>
+                  <th>{t('Boutique')}</th>
+                  <th>{t('Vendeur')}</th>
+                  <th>{t('Parrain')}</th>
+                  <th>{t('Client')}</th>
+                  <th>{t('Montant')}</th>
+                  <th>{t('Commission')}</th>
+                  <th>{t('Statut')}</th>
+                  <th>{t('Date')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transactions.rows.length === 0 ? (
+                  <tr><td colSpan="9" className="empty">{t('Aucune transaction')}</td></tr>
+                ) : (
+                  transactions.rows.map((r) => (
+                    <tr key={r.id}>
+                      <td>{r.product_name}</td>
+                      <td>{r.shop_name}</td>
+                      <td>{r.seller_name}</td>
+                      <td>{r.parrain_name && r.parrain_name !== '—' ? r.parrain_name : '—'}</td>
+                      <td>{r.buyer_name || '—'}</td>
+                      <td>{formatMoney(r.total_price)} {countrySymbol(r.shop_country)}</td>
+                      <td>{formatMoney(r.commission + r.referral_commission)} {countrySymbol(r.shop_country)}</td>
+                      <td>{statusBadge(r.status)}</td>
+                      <td className="hint">{new Date(r.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </main>
   );
 }

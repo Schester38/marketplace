@@ -1,5 +1,5 @@
 import app from './app.js';
-import { initDb } from './db.js';
+import { initDb, purgeOldTransactions } from './db.js';
 
 const PORT = process.env.PORT || 4000;
 
@@ -14,6 +14,13 @@ async function main() {
   app.listen(PORT, () => {
     console.log(`API Mboppi démarrée sur http://localhost:${PORT}`);
   });
+  setInterval(async () => {
+    try {
+      await purgeOldTransactions();
+    } catch {
+      /* purge best-effort */
+    }
+  }, 60 * 60 * 1000);
 }
 
 main();

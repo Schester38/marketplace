@@ -72,11 +72,11 @@ router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
       `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
               u.name AS shop_name, u.country AS shop_country,
               u2.seller_code AS seller_code, u2.phone AS seller_phone
-       FROM sales s
+FROM sales s
        JOIN products p ON p.id = s.product_id
        JOIN users u ON u.id = p.shop_id
        JOIN users u2 ON u2.id = s.seller_id
-       WHERE s.seller_id = $1
+       WHERE s.seller_id = $1 AND NOT ($1 = ANY(s.hidden_for))
        ORDER BY s.created_at DESC`,
       [req.user.id]
     )
@@ -88,7 +88,7 @@ router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
          COALESCE(SUM(commission + referral_commission), 0) AS total_commission,
          COALESCE(SUM(CASE WHEN paid THEN commission + referral_commission ELSE 0 END), 0) AS earned_commission,
          COALESCE(SUM(CASE WHEN status = 'delivered' AND NOT paid THEN commission + referral_commission ELSE 0 END), 0) AS pending_commission
-       FROM sales WHERE seller_id = $1`,
+       FROM sales WHERE seller_id = $1 AND NOT ($1 = ANY(hidden_for))`,
       [req.user.id]
     )
   )[0];
@@ -97,7 +97,7 @@ router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
       `SELECT
          COALESCE(SUM(CASE WHEN NOT referral_paid THEN referral_commission ELSE 0 END), 0) AS referral_pending,
          COALESCE(SUM(CASE WHEN referral_paid THEN referral_commission ELSE 0 END), 0) AS referral_earned
-       FROM sales WHERE referred_by = $1 AND status = 'delivered'`,
+       FROM sales WHERE referred_by = $1 AND status = 'delivered' AND NOT ($1 = ANY(hidden_for))`,
       [req.user.id]
     )
   )[0];
@@ -109,7 +109,7 @@ router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
        FROM sales s
        JOIN products p ON p.id = s.product_id
        JOIN users shop ON shop.id = p.shop_id
-       WHERE s.referred_by = $1
+       WHERE s.referred_by = $1 AND NOT ($1 = ANY(s.hidden_for))
        ORDER BY s.created_at DESC`,
       [req.user.id]
     )
@@ -135,12 +135,12 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop', 'creator'), ah(as
   const sales = (
     await q(
       `SELECT s.*, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone, u.seller_code, parrain.name AS parrain_name, shop.country AS shop_country
-       FROM sales s
+FROM sales s
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
        LEFT JOIN users parrain ON parrain.id = s.referred_by
        JOIN users shop ON shop.id = p.shop_id
-       WHERE p.shop_id = $1
+       WHERE p.shop_id = $1 AND NOT ($1 = ANY(s.hidden_for))
        ORDER BY s.created_at DESC`,
       [req.user.id]
     )
@@ -151,12 +151,12 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop', 'creator'), ah(as
          COUNT(*) AS total_sales,
          COALESCE(SUM(s.total_price), 0) AS revenue,
          COALESCE(SUM(s.delivery_fee), 0) AS delivery_revenue,
-         COALESCE(SUM(s.commission + s.referral_commission), 0) AS total_commission,
-         COALESCE(SUM(CASE WHEN s.paid THEN s.commission + s.referral_commission ELSE 0 END), 0) AS paid_commission,
-         COALESCE(SUM(CASE WHEN s.status = 'delivered' AND NOT s.paid THEN s.commission + s.referral_commission ELSE 0 END), 0) AS owed_commission
+         COALESCE(SUM(CASE WHEN s.seller_id IS NOT NULL THEN s.commission ELSE 0 END) + SUM(CASE WHEN s.referred_by IS NOT NULL THEN s.referral_commission ELSE 0 END), 0) AS total_commission,
+         COALESCE(SUM(CASE WHEN s.paid AND s.seller_id IS NOT NULL THEN s.commission ELSE 0 END) + SUM(CASE WHEN s.referral_paid AND s.referred_by IS NOT NULL THEN s.referral_commission ELSE 0 END), 0) AS paid_commission,
+         COALESCE(SUM(CASE WHEN s.status = 'delivered' AND NOT s.paid AND s.seller_id IS NOT NULL THEN s.commission ELSE 0 END) + SUM(CASE WHEN s.status = 'delivered' AND NOT s.referral_paid AND s.referred_by IS NOT NULL THEN s.referral_commission ELSE 0 END), 0) AS owed_commission
        FROM sales s
        JOIN products p ON p.id = s.product_id
-       WHERE p.shop_id = $1`,
+       WHERE p.shop_id = $1 AND NOT ($1 = ANY(s.hidden_for))`,
       [req.user.id]
     )
   )[0];
@@ -166,7 +166,7 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop', 'creator'), ah(as
               COUNT(*) AS cnt, COALESCE(SUM(s.total_price), 0) AS rev
        FROM sales s
        JOIN products p ON p.id = s.product_id
-       WHERE p.shop_id = $1 AND s.created_at >= now() - interval '13 days'
+       WHERE p.shop_id = $1 AND s.created_at >= now() - interval '13 days' AND NOT ($1 = ANY(s.hidden_for))
        GROUP BY 1 ORDER BY 1`,
       [req.user.id]
     )
@@ -176,7 +176,7 @@ router.get('/shop/:shopId', authRequired, roleRequired('shop', 'creator'), ah(as
       `SELECT p.name, COUNT(*) AS cnt, COALESCE(SUM(s.total_price), 0) AS rev
        FROM sales s
        JOIN products p ON p.id = s.product_id
-       WHERE p.shop_id = $1
+       WHERE p.shop_id = $1 AND NOT ($1 = ANY(s.hidden_for))
        GROUP BY p.id, p.name
        ORDER BY rev DESC, cnt DESC
        LIMIT 5`,
@@ -314,7 +314,7 @@ router.get('/livreur', ah(async (req, res) => {
              JOIN products p ON p.id = s.product_id
              LEFT JOIN users u ON u.id = s.seller_id
              JOIN users shop ON shop.id = p.shop_id
-             WHERE s.status = 'delivered' AND s.delivered_by = $1${shopFilter.replace('$1', '$2')}
+WHERE s.status = 'delivered' AND s.delivered_by = $1 AND NOT ($1 = ANY(s.hidden_for))${shopFilter.replace('$1', '$2')}
            ORDER BY s.delivered_at DESC`,
           [req.user.id, ...shopParam]
         )
@@ -339,16 +339,22 @@ router.get('/livreur', ah(async (req, res) => {
   res.json({ pending, delivered, shop_name: shop ? (await q('SELECT name FROM users WHERE id = $1', [shop.id]))[0].name : null });
 }));
 
-router.delete('/:id/delivered', ah(async (req, res) => {
+router.delete('/:id/delivered', authRequired, ah(async (req, res) => {
   const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
   if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
   if (sale.status !== 'delivered') {
     return res.status(409).json({ error: 'Cette vente n\'est pas une livraison effectuée' });
   }
-  if (req.user && sale.delivered_by && sale.delivered_by !== req.user.id) {
+  const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
+  const isShop = product && Number(product.shop_id) === Number(req.user.id);
+  const isDeliverer = sale.delivered_by && Number(sale.delivered_by) === Number(req.user.id);
+  if (!isShop && !isDeliverer) {
     return res.status(403).json({ error: 'Vous ne pouvez supprimer que vos propres livraisons' });
   }
-  await q('DELETE FROM sales WHERE id = $1', [sale.id]);
+  await q(
+    'UPDATE sales SET hidden_for = array_append(array_remove(hidden_for, $1), $1) WHERE id = $2',
+    [req.user.id, sale.id]
+  );
   res.json({ ok: true });
 }));
 
@@ -356,13 +362,19 @@ router.get('/:id/proof', authRequired, ah(async (req, res) => {
   const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
   if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
   const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
-  if (sale.seller_id !== req.user.id && product.shop_id !== req.user.id) {
+  const isSeller = sale.seller_id && Number(sale.seller_id) === Number(req.user.id);
+  const isShop = product && Number(product.shop_id) === Number(req.user.id);
+  const isReferrer = sale.referred_by && Number(sale.referred_by) === Number(req.user.id);
+  if (!isSeller && !isShop && !isReferrer) {
     return res.status(403).json({ error: 'Accès refusé' });
   }
-  if (sale.status !== 'delivered' || !sale.paid) {
-    return res.status(409).json({ error: 'Aucune preuve de paiement pour cette vente' });
+  if (sale.status !== 'delivered') {
+    return res.status(409).json({ error: 'Le produit doit être livré avant de consulter une preuve' });
   }
-  res.json({ proof: sale.payment_proof || null });
+  res.json({
+    proof: isShop || isSeller ? (sale.paid ? sale.payment_proof || null : null) : null,
+    referral_proof: isShop || isReferrer ? (sale.referral_paid ? sale.referral_payment_proof || null : null) : null,
+  });
 }));
 
 router.post('/:id/deliver', ah(async (req, res) => {

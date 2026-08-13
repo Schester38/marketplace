@@ -223,6 +223,19 @@ export default function ShopDashboard() {
     }
   };
 
+  const removeDelivered = async (s) => {
+    if (!window.confirm(t('Supprimer cette livraison « {name} » de mon espace ?', { name: s.product_name }))) return;
+    setError('');
+    setSuccess('');
+    try {
+      await api.deleteDeliveredSale(s.id);
+      setSales((prev) => prev.filter((x) => x.id !== s.id));
+      setSuccess(t('Livraison supprimée de votre espace.'));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const openPay = async (sale, kind = 'seller') => {
     setError('');
     setSuccess('');
@@ -316,6 +329,15 @@ export default function ShopDashboard() {
   });
   const maxRev = Math.max(1, ...bars.map((b) => b.rev));
   bars.forEach((b) => { b.pct = Math.round((b.rev / maxRev) * 100); });
+
+  const CH_W = 720;
+  const CH_H = 210;
+  const CH_PAD = 24;
+  const chMax = Math.max(1, ...bars.map((b) => b.rev));
+  const chX = (i) => CH_PAD + (i * (CH_W - 2 * CH_PAD)) / Math.max(1, bars.length - 1);
+  const chY = (v) => CH_H - CH_PAD - ((Number(v) / chMax) * (CH_H - 2 * CH_PAD));
+  const chLine = bars.map((b, i) => `${chX(i)},${chY(b.rev)}`).join(' ');
+  const chArea = `M${chX(0)},${CH_H - CH_PAD} L${chLine} L${chX(bars.length - 1)},${CH_H - CH_PAD} Z`;
 
   const remaining = (products?.length ?? 0) < 5;
 
@@ -497,10 +519,14 @@ export default function ShopDashboard() {
                       <td>{formatMoney(Number(s.total_price || 0) + Number(s.delivery_fee || 0))} {countrySymbol(s.shop_country)}</td>
                       <td>{s.delivered_at ? new Date(s.delivered_at).toLocaleDateString() : '—'}</td>
                       <td>
-                        {s.paid ? (
-                          <span className="badge badge-paid">{t('Vendeur payé')}</span>
+                        {s.seller_id ? (
+                          s.paid ? (
+                            <span className="badge badge-paid">{t('Vendeur payé')}</span>
+                          ) : (
+                            <span className="badge badge-warn">{t('Commission en attente')}</span>
+                          )
                         ) : (
-                          <span className="badge badge-warn">{t('Commission en attente')}</span>
+                          <span className="badge badge-pending">{t('Vente directe')}</span>
                         )}
                         {s.referral_paid ? (
                           <span className="badge badge-paid">🎁 {t('Parrain payé')}</span>
@@ -509,9 +535,14 @@ export default function ShopDashboard() {
                         ) : null}
                       </td>
                       <td>
-                        <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
-                          🧾 {t('Voir la facture')}
-                        </button>
+                        <div className="row2" style={{ justifyContent: 'flex-end', gap: 6 }}>
+                          <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
+                            🧾 {t('Voir la facture')}
+                          </button>
+                          <button className="btn btn-small btn-danger" onClick={() => removeDelivered(s)}>
+                            🗑️ {t('Supprimer')}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -667,17 +698,53 @@ export default function ShopDashboard() {
         {stats && (series.length > 0 || topProducts.length > 0) && (
           <div className="stats-extra">
             <h3>{t('📈 Ventes des 14 derniers jours')}</h3>
-            <div className="bar-chart" role="img" aria-label={t('Graphique des ventes des 14 derniers jours')}>
-              {bars.map((b) => (
-                <div
-                  className="bar-col"
-                  key={b.key}
-                  title={`${b.label} : ${b.cnt} ${t('vente(s)')} — ${formatMoney(b.rev)} ${symbol}`}
-                >
-                  <div className="bar-fill" style={{ height: `${b.pct}%` }}></div>
-                  <span className="bar-label">{b.label}</span>
-                </div>
-              ))}
+            <div className="chart-wrap">
+              <svg
+                viewBox={`0 0 ${CH_W} ${CH_H}`}
+                className="line-chart"
+                role="img"
+                aria-label={t('Graphique des ventes des 14 derniers jours')}
+              >
+                <defs>
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.35" />
+                    <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.02" />
+                  </linearGradient>
+                </defs>
+                {[0.25, 0.5, 0.75, 1].map((f) => (
+                  <line
+                    key={f}
+                    className="chart-grid"
+                    x1={CH_PAD}
+                    y1={chY(chMax * f)}
+                    x2={CH_W - CH_PAD}
+                    y2={chY(chMax * f)}
+                  />
+                ))}
+                <path d={chArea} fill="url(#revGrad)" />
+                <polyline
+                  points={chLine}
+                  className="chart-line"
+                  fill="none"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+                {bars.map((b, i) =>
+                  b.rev > 0 || b.cnt > 0 ? (
+                    <circle key={b.key} className="chart-dot" cx={chX(i)} cy={chY(b.rev)} r="3.4">
+                      <title>{`${b.label} : ${b.cnt} ${t('vente(s)')} — ${formatMoney(b.rev)} ${symbol}`}</title>
+                    </circle>
+                  ) : null
+                )}
+              </svg>
+              <div className="chart-labels">
+                {bars.map((b, i) => (
+                  <span key={b.key} className={i % 2 ? 'chart-label-muted' : ''}>{b.label}</span>
+                ))}
+              </div>
+              <p className="chart-caption hint">
+                <span className="chart-legend"><i style={{ background: 'var(--primary)' }}></i>{t('Chiffre d\'affaires ({symbol})', { symbol })}</span>
+              </p>
             </div>
             {topProducts.length > 0 && (
               <>
