@@ -131,6 +131,17 @@ export default function SellerDashboard() {
     }
   };
 
+  const removeReferral = async (s) => {
+    if (!window.confirm(t('Supprimer cette commission de parrainage « {name} » ?', { name: s.product_name }))) return;
+    try {
+      await api.deleteReferralSale(s.id);
+      setSuccess(t('Commission supprimée.'));
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const claimPayment = async (s) => {
     if (!window.confirm(t('Réclamer le paiement de vos commissions pour « {name} » à la boutique ?', { name: s.product_name }))) return;
     setError('');
@@ -306,7 +317,7 @@ export default function SellerDashboard() {
         </div>
         <div className="row2" style={{ alignItems: 'center' }}>
           <p className="hint" style={{ margin: 0 }}>
-            {t('Vous ne voyez que vos propres ventes en attente. Les livrées ne peuvent pas être supprimées.')}
+            {t('Vous pouvez retirer une vente livrée (ou une commission de parrainage) uniquement une fois sa commission payée.')}
           </p>
           <Link to="/seller/paiements" className="btn btn-outline btn-sm" style={{ flexShrink: 0 }}>
             💳 {t('Modifier mon moyen de paiement')}
@@ -379,6 +390,8 @@ export default function SellerDashboard() {
               {sales.map((s) => {
                 const st = SALE_STATUS[s.status] || SALE_STATUS.pending;
                 const isDirect = Number(s.commission || 0) <= 0 && Number(s.referral_commission || 0) <= 0;
+                const isAlsoReferrer = Number(s.referred_by || 0) === Number(user?.id);
+                const pendingForMe = (Number(s.commission || 0) > 0 && !s.paid) || (isAlsoReferrer && Number(s.referral_commission || 0) > 0 && !s.referral_paid);
                 return (
                   <tr key={s.id}>
                     <td>{s.product_name}</td>
@@ -427,6 +440,14 @@ export default function SellerDashboard() {
                           </button>
                           <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
                             🧾 {t('Facture')}
+                          </button>
+                          <button
+                            className="btn btn-small btn-danger"
+                            onClick={() => removeSale(s)}
+                            disabled={pendingForMe}
+                            title={pendingForMe ? t('Cette vente ne peut pas être retirée tant que sa commission n\'est pas payée.') : undefined}
+                          >
+                            🗑️ {pendingForMe ? t('Commission non payée') : t('Supprimer')}
                           </button>
                         </div>
                       )}
@@ -532,11 +553,18 @@ export default function SellerDashboard() {
                     {s.referral_paid && <span className="badge badge-paid">{t('Commission payée')}</span>}
                   </td>
                   <td>
-                    {s.referral_paid && (
-                      <button className="btn btn-small" disabled={proofLoading} onClick={() => openProof(s, 'referral')}>
-                        📷 {t('Preuve')}
-                      </button>
-                    )}
+                    <div className="row2" style={{ justifyContent: 'flex-end', gap: 6 }}>
+                      {s.referral_paid && (
+                        <button className="btn btn-small" disabled={proofLoading} onClick={() => openProof(s, 'referral')}>
+                          📷 {t('Preuve')}
+                        </button>
+                      )}
+                      {s.referral_paid && (
+                        <button className="btn btn-small btn-danger" onClick={() => removeReferral(s)}>
+                          🗑️ {t('Supprimer')}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

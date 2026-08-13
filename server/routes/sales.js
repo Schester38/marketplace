@@ -275,9 +275,40 @@ router.delete('/:id', authRequired, roleRequired('seller'), ah(async (req, res) 
     return res.status(403).json({ error: 'Cette vente ne vous appartient pas' });
   }
   if (sale.status === 'delivered') {
-    return res.status(409).json({ error: 'Une vente livrée ne peut pas être supprimée (document comptable)' });
+    const isAlsoReferrer = Number(sale.referred_by || 0) === req.user.id;
+    const pendingSeller = Number(sale.commission || 0) > 0 && !sale.paid;
+    const pendingOwnReferral = isAlsoReferrer && Number(sale.referral_commission || 0) > 0 && !sale.referral_paid;
+    if (pendingSeller || pendingOwnReferral) {
+      return res.status(409).json({
+        error: 'Vous ne pouvez pas retirer cette vente tant que sa commission (vendeur ou parrainage) n\'a pas été payée.',
+      });
+    }
+    await q(
+      'UPDATE sales SET hidden_for = array_append(array_remove(hidden_for, $1), $1) WHERE id = $2',
+      [req.user.id, sale.id]
+    );
+    return res.json({ ok: true });
   }
   await q('DELETE FROM sales WHERE id = $1', [sale.id]);
+  res.json({ ok: true });
+}));
+
+router.delete('/:id/referral', authRequired, ah(async (req, res) => {
+  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
+  if (Number(sale.referred_by || 0) !== req.user.id) {
+    return res.status(403).json({ error: 'Cette commission de parrainage ne vous appartient pas' });
+  }
+  if (sale.status !== 'delivered') {
+    return res.status(409).json({ error: 'La commande doit être livrée avant de pouvoir la retirer' });
+  }
+  if (sale.referral_paid !== true || Number(sale.referral_commission || 0) <= 0) {
+    return res.status(409).json({ error: 'Vous ne pouvez pas retirer cette commission tant que le paiement du parrainage n\'a pas été effectué.' });
+  }
+  await q(
+    'UPDATE sales SET hidden_for = array_append(array_remove(hidden_for, $1), $1) WHERE id = $2',
+    [req.user.id, sale.id]
+  );
   res.json({ ok: true });
 }));
 

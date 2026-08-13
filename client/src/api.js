@@ -59,6 +59,7 @@ export const api = {
   livreurSales: (shopCode) => request('/sales/livreur' + (shopCode ? `?shop_code=${encodeURIComponent(shopCode)}` : '')),
   deliverSale: (id, payload) => request(`/sales/${id}/deliver`, { method: 'POST', body: JSON.stringify(payload) }),
   deleteDeliveredSale: (id) => request(`/sales/${id}/delivered`, { method: 'DELETE' }),
+  deleteReferralSale: (id) => request(`/sales/${id}/referral`, { method: 'DELETE' }),
   saleProof: (id) => request(`/sales/${id}/proof`),
   shopCode: () => request('/shop/code'),
   createShopCode: () => request('/shop/code', { method: 'POST' }),
