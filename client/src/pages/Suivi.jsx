@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
@@ -10,11 +10,31 @@ import CopyCode from '../components/CopyCode.jsx';
 
 export default function Suivi() {
   const { id } = useParams();
+  const [params] = useSearchParams();
+  const urlCode = (params.get('code') || '').trim().toUpperCase();
   const { t, locale } = useLang();
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(urlCode);
   const [sale, setSale] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!id || !urlCode) return;
+    setCode(urlCode);
+    setError('');
+    setLoading(true);
+    api
+      .trackSale(id, urlCode)
+      .then((d) => {
+        setSale(d.sale || null);
+        if (!d.sale) setError(t('Aucune commande trouvée avec ce code.'));
+      })
+      .catch((err) => {
+        setSale(null);
+        setError(err.message);
+      })
+      .finally(() => setLoading(false));
+  }, [id, urlCode]);
 
   const refreshSale = () => {
     if (!sale || !id || !code.trim()) return;

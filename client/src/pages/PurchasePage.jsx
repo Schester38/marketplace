@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { countrySymbol, categoryEmoji } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
+import CopyCode from '../components/CopyCode.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
 
@@ -134,10 +135,11 @@ export default function PurchasePage() {
           <h2>✅ {t('Commande confirmée !')}</h2>
           <p className="hint">{t('Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison.')}</p>
           {purchase && (purchase.confirm_code || purchase.buyer_code) && (
-            <p className="buyer-code-box">
+            <div className="buyer-code-box">
               <span className="buyer-code-label">{t('Votre code de confirmation')} :</span>
               <span className="buyer-code-value">{purchase.confirm_code || purchase.buyer_code}</span>
-            </p>
+              <CopyCode code={purchase.confirm_code || purchase.buyer_code} />
+            </div>
           )}
           {purchase && purchase.id && (
             <Link className="btn btn-primary" to={`/suivi/${purchase.id}?code=${encodeURIComponent(purchase.confirm_code || purchase.buyer_code || '')}`}>
