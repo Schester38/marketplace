@@ -84,7 +84,9 @@ export default function ChatWidget() {
         <div className="chat-panel" role="dialog" aria-label={t('Assistant Mboppi')}>
           <div className="chat-header">
             <div className="chat-header-title">
-              <span className="chat-avatar">🤖</span>
+              <span className="chat-avatar">
+                <img src="/navbar-logo.png" alt="Mboppi" className="chat-avatar-logo" />
+              </span>
               <div>
                 <strong>{t('Assistant Mboppi')}</strong>
                 <span className="chat-status">● {t('En ligne')}</span>
@@ -139,7 +141,7 @@ export default function ChatWidget() {
         onClick={toggle}
         aria-label={t('Assistant Mboppi')}
       >
-        {open ? '✕' : '💬'}
+        {open ? '✕' : <img src="/navbar-logo.png" alt="Mboppi" className="chat-bubble-logo" />}
         {!open && unread > 0 && <span className="chat-badge">{unread}</span>}
       </button>
     </>

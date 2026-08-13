@@ -2565,6 +2565,13 @@ a.step { text-decoration: none; color: inherit; }
   transition: transform 0.2s ease;
 }
 .chat-bubble:hover { transform: scale(1.06); }
+.chat-bubble-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: block;
+  object-fit: contain;
+}
 .chat-badge {
   position: absolute;
   top: -2px;
@@ -2622,6 +2629,12 @@ a.step { text-decoration: none; color: inherit; }
   justify-content: center;
   font-size: 1.2rem;
   flex-shrink: 0;
+}
+.chat-avatar-logo {
+  width: 27px;
+  height: 27px;
+  border-radius: 7px;
+  object-fit: contain;
 }
 .chat-header-title div { display: flex; flex-direction: column; line-height: 1.25; }
 .chat-status { font-size: 0.72rem; opacity: 0.9; }
