@@ -221,17 +221,23 @@ function NotifBell() {
     const buyer = n.buyer_name || t('le client');
     if (n.type === 'sale_order') {
       if (user.id === n.seller_id) {
-        return t('Nouvelle commande pour « {product} » — {buyer}. Article en attente de vente.', { product: n.product_name, buyer });
+        return t('Nouvelle commande pour « {product} » — {buyer}.', { product: n.product_name, buyer });
       }
-      return t('Nouvelle commande pour « {product} » — vendeur : {seller} ({code}). Article en attente de vente.', {
-        product: n.product_name,
-        seller: n.seller_name,
-        code: n.seller_code || '—',
-      });
+      if (n.seller_name) {
+        return t('Nouvelle commande pour « {product} » — vendeur : {seller} ({code}).', {
+          product: n.product_name,
+          seller: n.seller_name,
+          code: n.seller_code || '—',
+        });
+      }
+      return t('Nouvelle commande pour « {product} » — {buyer}.', { product: n.product_name, buyer });
     }
     if (n.type === 'sale_delivered') {
       if (user.id === n.seller_id) {
         return t('Votre vente de « {product} » a été livrée à {buyer}.', { product: n.product_name, buyer });
+      }
+      if (user.id === n.buyer_id) {
+        return t('Votre commande « {product} » a été livrée.', { product: n.product_name });
       }
       return t('Vente de « {product} » livrée — vendeur : {seller} ({code}), acheteur : {buyer}.', {
         product: n.product_name,
@@ -323,6 +329,15 @@ function NotifBell() {
         code: n.seller_code || '—',
         buyer,
       });
+    }
+    if (n.type === 'sale_cancelled_client') {
+      if (user.id === n.buyer_id) {
+        return t('Votre commande « {product} » a été annulée comme demandé.', { product: n.product_name });
+      }
+      if (user.id === n.seller_id) {
+        return t('Votre vente de « {product} » a été annulée par le client.', { product: n.product_name });
+      }
+      return t('Commande « {product} » de {buyer} annulée par le client.', { product: n.product_name, buyer });
     }
     if (n.type === 'sale_cancelled') {
       if (user.id === n.seller_id) {

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { q } from '../db.js';
+import { authRequired, roleRequired } from '../auth.js';
 
 const router = Router();
 const MAX_PHOTOS = 3;
@@ -28,13 +29,23 @@ router.get('/', async (req, res) => {
   res.json({ offers });
 });
 
+router.get('/mine', authRequired, roleRequired('shop', 'seller', 'creator', 'admin'), async (req, res) => {
+  const offers = (
+    await q(
+      'SELECT * FROM offers WHERE owner_id = $1 ORDER BY created_at DESC',
+      [req.user.id]
+    )
+  ).map(offerRow);
+  res.json({ offers });
+});
+
 router.get('/:id', async (req, res) => {
   const offer = (await q('SELECT * FROM offers WHERE id = $1', [Number(req.params.id)]))[0];
   if (!offer) return res.status(404).json({ error: 'Offre introuvable' });
   res.json({ offer: offerRow(offer) });
 });
 
-router.post('/', async (req, res) => {
+router.post('/', authRequired, roleRequired('shop', 'seller', 'creator', 'admin'), async (req, res) => {
   const { name, category, description, warranty, original_price, promo_price, phone, quantity, photos } =
     req.body || {};
 
@@ -85,9 +96,12 @@ router.post('/', async (req, res) => {
   res.status(201).json({ offer });
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authRequired, roleRequired('shop', 'seller', 'creator', 'admin'), async (req, res) => {
   const offer = (await q('SELECT * FROM offers WHERE id = $1', [Number(req.params.id)]))[0];
   if (!offer) return res.status(404).json({ error: 'Offre introuvable' });
+  if (req.user.role !== 'admin' && Number(offer.owner_id) !== Number(req.user.id)) {
+    return res.status(403).json({ error: 'Vous ne pouvez supprimer que vos propres offres' });
+  }
   await q('DELETE FROM offers WHERE id = $1', [offer.id]);
   res.json({ ok: true });
 });

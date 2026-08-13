@@ -12,6 +12,9 @@ async function request(path, options = {}, retries = 1) {
     return data;
   } catch (err) {
     const network = err instanceof TypeError;
+    if (network && typeof navigator !== 'undefined' && !navigator.onLine) {
+      window.dispatchEvent(new Event('app-offline'));
+    }
     if (network && method === 'GET' && retries > 0) {
       await new Promise((r) => setTimeout(r, 1200));
       return request(path, options, retries - 1);
@@ -105,5 +108,9 @@ export const api = {
     adminRequest(`/admin/users/${id}/verified`, { method: 'PATCH', body: JSON.stringify({ verified }) }),
   adminProducts: () => adminRequest('/admin/products'),
   adminDeleteProduct: (id) => adminRequest(`/admin/products/${id}`, { method: 'DELETE' }),
+  adminMessages: () => adminRequest('/admin/messages'),
+  adminSendMessage: (payload) => adminRequest('/admin/messages', { method: 'POST', body: JSON.stringify(payload) }),
+  popupMessage: () => request('/messages/popup'),
+  ackMessage: (id) => request(`/messages/${id}/ack`, { method: 'POST' }),
   chat: (payload) => request('/chat', { method: 'POST', body: JSON.stringify(payload) }),
 };

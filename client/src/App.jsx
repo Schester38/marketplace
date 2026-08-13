@@ -40,6 +40,8 @@ const Cgu = React.lazy(() => import('./pages/Cgu.jsx'));
 const Faq = React.lazy(() => import('./pages/Faq.jsx'));
 const MentionsLegales = React.lazy(() => import('./pages/MentionsLegales.jsx'));
 const CookiesBanner = React.lazy(() => import('./components/CookiesBanner.jsx'));
+import OfflinePage from './pages/OfflinePage.jsx';
+import AdminMessagePopup from './components/AdminMessagePopup.jsx';
 
 const AuthContext = createContext(null);
 
@@ -161,9 +163,32 @@ export default function App() {
   const { logout } = useAuth();
   const { t } = useLang();
 
+  const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    window.addEventListener('app-offline', off);
+    return () => {
+      window.removeEventListener('online', on);
+      window.removeEventListener('offline', off);
+      window.removeEventListener('app-offline', off);
+    };
+  }, []);
+
+  if (!online) {
+    return (
+      <div className="app">
+        <OfflinePage />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <Navbar onLogout={() => { logout(); navigate('/'); }} />
+      <AdminMessagePopup />
           {WELCOME_PATHS.includes(location.pathname) && <WelcomeBanner />}
           <ErrorBoundary t={t}>
             <Suspense fallback={<LoadingScreen />}>

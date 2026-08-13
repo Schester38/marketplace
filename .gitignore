@@ -3,4 +3,11 @@ dist/
 *.db
 *.log
 .env
+.env.*
+!.env.example
 .DS_Store
+server/.env
+client/.env
+
+.vercel
+.env*

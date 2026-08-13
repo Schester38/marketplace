@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { q } from '../db.js';
+import { q, withTransaction } from '../db.js';
 import { authRequired, roleRequired } from '../auth.js';
 import { sendPush } from '../push.js';
 
@@ -20,49 +20,63 @@ function saleRow(s) {
 
 router.post('/', authRequired, roleRequired('seller'), ah(async (req, res) => {
   const { product_id, quantity } = req.body || {};
-  if (!product_id) {
+  const productId = Number(product_id);
+  if (!Number.isInteger(productId) || productId < 1) {
     return res.status(400).json({ error: 'Produit requis' });
   }
-  const product = (await q('SELECT * FROM products WHERE id = $1', [Number(product_id)]))[0];
-  if (!product) return res.status(404).json({ error: 'Produit introuvable' });
-
   const qty = Number(quantity ?? 1);
   if (!Number.isInteger(qty) || qty < 1) {
     return res.status(400).json({ error: 'Quantité invalide' });
   }
 
-  const pending = (
-    await q(
+  const result = await withTransaction(async (tx) => {
+    const product = (await tx.query('SELECT * FROM products WHERE id = $1 FOR UPDATE', [productId]))[0];
+    if (!product) {
+      const error = new Error('Produit introuvable');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const pending = (await tx.query(
       'SELECT id FROM sales WHERE product_id = $1 AND seller_id = $2 AND status = $3',
       [product.id, req.user.id, 'pending']
-    )
-  )[0];
-  if (pending) {
-    return res.status(409).json({ error: 'Une vente est déjà en attente pour ce produit' });
-  }
+    ))[0];
+    if (pending) {
+      const error = new Error('Une vente est déjà en attente pour ce produit');
+      error.statusCode = 409;
+      throw error;
+    }
 
-  const total = Math.round(Number(product.price) * qty * 100) / 100;
-  const commission =
-    Math.round(Number(product.price) * (Number(product.commission_percent) / 100) * qty * 100) / 100;
+    const reserved = (await tx.query(
+      `UPDATE products SET quantity = quantity - $1, reserved_quantity = COALESCE(reserved_quantity, 0) + $1
+       WHERE id = $2 AND quantity >= $1 RETURNING id`,
+      [qty, product.id]
+    ))[0];
+    if (!reserved) {
+      const error = new Error('Stock insuffisant');
+      error.statusCode = 409;
+      throw error;
+    }
 
-  const created = await q(
-    `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-    [product.id, req.user.id, qty, total, commission]
-  );
+    const total = Math.round(Number(product.price) * qty * 100) / 100;
+    const commission = Math.round(Number(product.price) * (Number(product.commission_percent) / 100) * qty * 100) / 100;
+    const created = (await tx.query(
+      `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, stock_reserved)
+       VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
+      [product.id, req.user.id, qty, total, commission]
+    ))[0];
+    return { id: created.id };
+  });
 
-  const sale = saleRow(
-    (
-      await q(
-        `SELECT s.*, p.name AS product_name, p.price, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone
-         FROM sales s
-         JOIN products p ON p.id = s.product_id
-         JOIN users u ON u.id = s.seller_id
-         WHERE s.id = $1`,
-        [created[0].id]
-      )
-    )[0]
-  );
+  const sale = saleRow((await q(
+    `SELECT s.*, p.name AS product_name, p.price, p.commission_percent, p.contact AS shop_contact,
+            u.name AS seller_name, u.phone AS seller_phone
+     FROM sales s
+     JOIN products p ON p.id = s.product_id
+     JOIN users u ON u.id = s.seller_id
+     WHERE s.id = $1`,
+    [result.id]
+  ))[0]);
   res.status(201).json({ sale });
 }));
 
@@ -212,10 +226,19 @@ router.patch('/:id/status', authRequired, roleRequired('shop'), ah(async (req, r
     return res.status(403).json({ error: 'Cette vente ne concerne pas votre boutique' });
   }
   const previous = sale.status;
+  if (['delivered', 'cancelled'].includes(sale.status) && status !== sale.status) {
+    return res.status(409).json({ error: 'Cette vente ne peut plus changer de statut' });
+  }
+  if (status === 'cancelled' && sale.stock_reserved) {
+    await q(
+      'UPDATE products SET quantity = quantity + $1, reserved_quantity = GREATEST(COALESCE(reserved_quantity, 0) - $1, 0) WHERE id = $2',
+      [sale.quantity, sale.product_id]
+    );
+  }
   if (status === 'confirmed') {
-    await q('UPDATE sales SET shop_confirmed_at = COALESCE(shop_confirmed_at, now()) WHERE id = $1', [sale.id]);
+    await q("UPDATE sales SET status = 'confirmed', shop_confirmed_at = COALESCE(shop_confirmed_at, now()) WHERE id = $1", [sale.id]);
   } else {
-    await q('UPDATE sales SET status = $1 WHERE id = $2', [status, sale.id]);
+    await q('UPDATE sales SET status = $1, stock_reserved = CASE WHEN $1 = \'cancelled\' THEN FALSE ELSE stock_reserved END WHERE id = $2', [status, sale.id]);
   }
 
   const type = status === 'cancelled' ? 'sale_cancelled' : 'sale_confirmed';
@@ -312,13 +335,11 @@ router.delete('/:id/referral', authRequired, ah(async (req, res) => {
   res.json({ ok: true });
 }));
 
-router.get('/livreur', ah(async (req, res) => {
+router.get('/livreur', authRequired, roleRequired('livreur'), ah(async (req, res) => {
   const shopCode = req.query.shop_code ? String(req.query.shop_code).trim().toUpperCase() : '';
-  let shop = null;
-  if (shopCode) {
-    shop = (await q('SELECT id FROM users WHERE shop_code = $1', [shopCode]))[0];
-    if (!shop) return res.status(404).json({ error: 'Code boutique invalide' });
-  }
+  if (!shopCode) return res.status(400).json({ error: 'Code boutique requis' });
+  const shop = (await q('SELECT id FROM users WHERE shop_code = $1', [shopCode]))[0];
+  if (!shop) return res.status(404).json({ error: 'Code boutique invalide' });
   const shopFilter = shop ? ' AND p.shop_id = $1' : ' AND FALSE';
   const shopParam = shop ? [shop.id] : [];
   const pending = (
@@ -335,38 +356,20 @@ router.get('/livreur', ah(async (req, res) => {
       shopParam
     )
   ).map(saleRow);
-  const delivered = req.user
-    ? (
-        await q(
-`SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
-                    u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
-                    shop.name AS shop_name, shop.country AS shop_country
-             FROM sales s
-             JOIN products p ON p.id = s.product_id
-             LEFT JOIN users u ON u.id = s.seller_id
-             JOIN users shop ON shop.id = p.shop_id
-WHERE s.status = 'delivered' AND s.delivered_by = $1 AND NOT ($1 = ANY(s.hidden_for))${shopFilter.replace('$1', '$2')}
-           ORDER BY s.delivered_at DESC`,
-          [req.user.id, ...shopParam]
-        )
-      ).map(saleRow)
-    : shop
-      ? (
-          await q(
-            `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
-                    u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
-                    shop.name AS shop_name, shop.country AS shop_country
-             FROM sales s
-             JOIN products p ON p.id = s.product_id
-             LEFT JOIN users u ON u.id = s.seller_id
-             JOIN users shop ON shop.id = p.shop_id
-             WHERE s.status = 'delivered' AND p.shop_id = $1
-             ORDER BY s.delivered_at DESC
-             LIMIT 50`,
-            [shop.id]
-          )
-        ).map(saleRow)
-      : [];
+  const delivered = (
+    await q(
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
+              u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
+              shop.name AS shop_name, shop.country AS shop_country
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       LEFT JOIN users u ON u.id = s.seller_id
+       JOIN users shop ON shop.id = p.shop_id
+       WHERE s.status = 'delivered' AND s.delivered_by = $1 AND p.shop_id = $2 AND NOT ($1 = ANY(s.hidden_for))
+       ORDER BY s.delivered_at DESC`,
+      [req.user.id, shop.id]
+    )
+  ).map(saleRow);
   res.json({ pending, delivered, shop_name: shop ? (await q('SELECT name FROM users WHERE id = $1', [shop.id]))[0].name : null });
 }));
 
@@ -416,18 +419,24 @@ router.post('/:id/cancel', ah(async (req, res) => {
   if (!['pending', 'bought', 'confirmed'].includes(sale.status)) {
     return res.status(409).json({ error: 'Cette commande ne peut plus être annulée.' });
   }
+  if (sale.stock_reserved) {
+    await q(
+      'UPDATE products SET quantity = quantity + $1, reserved_quantity = GREATEST(COALESCE(reserved_quantity, 0) - $1, 0) WHERE id = $2',
+      [sale.quantity, sale.product_id]
+    );
+  }
   const product = (await q('SELECT shop_id, name FROM products WHERE id = $1', [sale.product_id]))[0];
   const hiddenIds = [...new Set([product.shop_id, sale.seller_id, sale.referred_by, sale.buyer_id, sale.delivered_by].filter(Boolean))];
   const current = (await q('SELECT hidden_for FROM sales WHERE id = $1', [sale.id]))[0].hidden_for;
   const merged = [...new Set([...(Array.isArray(current) ? current : []), ...hiddenIds])];
   await q(
-    'UPDATE sales SET status = $1, hidden_for = $2::int[] WHERE id = $3',
+    'UPDATE sales SET status = $1, stock_reserved = FALSE, hidden_for = $2::int[] WHERE id = $3',
     ['cancelled', merged, sale.id]
   );
 
   const notifyIds = [...new Set([product.shop_id, sale.seller_id, sale.referred_by, sale.buyer_id].filter(Boolean))];
   if (notifyIds.length) {
-    const values = notifyIds.map((uid) => `(${Number(uid)}, 'sale_cancelled', ${sale.id})`).join(', ');
+    const values = notifyIds.map((uid) => `(${Number(uid)}, 'sale_cancelled_client', ${sale.id})`).join(', ');
     await q(`INSERT INTO notifications (user_id, type, sale_id) VALUES ${values}`);
   }
 
@@ -481,8 +490,10 @@ router.get('/:id/proof', authRequired, ah(async (req, res) => {
   });
 }));
 
-router.post('/:id/deliver', ah(async (req, res) => {
-  const { delivery_fee, payment_method, client_code } = req.body || {};
+router.post('/:id/deliver', authRequired, roleRequired('livreur'), ah(async (req, res) => {
+  const { delivery_fee, payment_method, client_code, shop_code } = req.body || {};
+  const shopCode = String(shop_code || '').trim().toUpperCase();
+  if (!shopCode) return res.status(400).json({ error: 'Code boutique requis' });
   const fee = Number(delivery_fee || 0);
   if (!Number.isFinite(fee) || fee < 0) {
     return res.status(400).json({ error: 'Frais de livraison invalides' });
@@ -505,18 +516,43 @@ router.post('/:id/deliver', ah(async (req, res) => {
     }
   }
 
-  const updated = await q(
-    `UPDATE sales
-     SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3
-     WHERE id = $4 RETURNING id`,
-    [fee, cleanMethod, req.user ? req.user.id : null, sale.id]
-  );
+  const result = await withTransaction(async (tx) => {
+    const lockedSale = (await tx.query('SELECT * FROM sales WHERE id = $1 FOR UPDATE', [sale.id]))[0];
+    if (!lockedSale || !['pending', 'confirmed'].includes(lockedSale.status)) {
+      const error = new Error('Cette vente n\'est plus en attente');
+      error.statusCode = 409;
+      throw error;
+    }
+    const product = (await tx.query('SELECT shop_id FROM products WHERE id = $1 FOR SHARE', [lockedSale.product_id]))[0];
+    if (!product) { const error = new Error('Produit introuvable'); error.statusCode = 404; throw error; }
+    const assignedShop = (await tx.query('SELECT id FROM users WHERE id = $1', [product.shop_id]))[0];
+    if (!assignedShop) { const error = new Error('Boutique introuvable'); error.statusCode = 404; throw error; }
+    // Le livreur doit avoir présenté le code de la boutique ; l'accès est limité à cette boutique.
+    const shopByCode = (await tx.query('SELECT id FROM users WHERE shop_code = $1', [shopCode]))[0];
+    if (!shopByCode || Number(shopByCode.id) !== Number(product.shop_id)) { const error = new Error('Code boutique non autorisé pour cette commande'); error.statusCode = 403; throw error; }
+    const updated = (await tx.query(
+      `UPDATE sales SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3 WHERE id = $4 RETURNING id`,
+      [fee, cleanMethod, req.user.id, lockedSale.id]
+    ))[0];
+    // Les nouvelles ventes ont déjà réservé leur stock. Pour les anciennes ventes,
+    // on décrémente encore la quantité disponible afin de préserver la compatibilité.
+    if (lockedSale.stock_reserved) {
+      await tx.query(
+        'UPDATE products SET reserved_quantity = GREATEST(COALESCE(reserved_quantity, 0) - $1, 0) WHERE id = $2',
+        [lockedSale.quantity, lockedSale.product_id]
+      );
+    } else {
+      const consumed = (await tx.query(
+        'UPDATE products SET quantity = GREATEST(quantity - $1, 0) WHERE id = $2 AND quantity >= $1 RETURNING id',
+        [lockedSale.quantity, lockedSale.product_id]
+      ))[0];
+      if (!consumed) { const error = new Error('Stock insuffisant pour finaliser cette livraison'); error.statusCode = 409; throw error; }
+    }
+    return { id: updated.id, shopId: product.shop_id };
+  });
 
-  const product = (await q('SELECT shop_id, quantity FROM products WHERE id = $1', [sale.product_id]))[0];
-  if (product && Number(product.quantity) > 0) {
-    const remaining = Math.max(0, Number(product.quantity) - Number(sale.quantity));
-    await q('UPDATE products SET quantity = $1 WHERE id = $2', [remaining, sale.product_id]);
-  }
+  const updated = [{ id: result.id }];
+  const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
 
   const notifyIds = [];
   if (sale.seller_id) notifyIds.push(sale.seller_id);
@@ -611,10 +647,29 @@ router.post('/:id/pay', authRequired, roleRequired('shop'), ah(async (req, res) 
   if (!proof || !String(proof).startsWith('data:')) {
     return res.status(400).json({ error: 'Joignez une photo ou une vidéo de preuve du paiement' });
   }
-  const updated = await q(
-    `UPDATE sales SET paid = TRUE, paid_at = now(), payment_proof = $1 WHERE id = $2 RETURNING id`,
-    [String(proof).slice(0, 12000000), sale.id]
-  );
+  const updated = await withTransaction(async (tx) => {
+    const changed = await tx.query(
+      `UPDATE sales SET paid = TRUE, paid_at = now(), payment_proof = $1
+       WHERE id = $2 AND paid = FALSE RETURNING id, commission`,
+      [String(proof).slice(0, 12000000), sale.id]
+    );
+    if (!changed.length) {
+      const error = new Error('Le vendeur a déjà été payé pour cette vente');
+      error.statusCode = 409;
+      throw error;
+    }
+    await tx.query(
+      `INSERT INTO wallet_accounts (user_id) VALUES ($1) ON CONFLICT (user_id) DO UPDATE SET updated_at = now()`,
+      [sale.seller_id]
+    );
+    await tx.query(
+      `INSERT INTO wallet_transactions (user_id, amount, transaction_type, reference_type, reference_id, description)
+       VALUES ($1, $2, 'commission_credit', 'sale', $3, $4)
+       ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
+      [sale.seller_id, Number(changed[0].commission), sale.id, 'Commission de vente payée par la boutique']
+    );
+    return changed;
+  });
   await q(
     `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_paid', $2)`,
     [sale.seller_id, sale.id]
@@ -723,10 +778,28 @@ router.post('/:id/pay-referral', authRequired, roleRequired('shop'), ah(async (r
   if (!proof || !String(proof).startsWith('data:')) {
     return res.status(400).json({ error: 'Joignez une photo ou une vidéo de preuve du paiement' });
   }
-  await q(
-    `UPDATE sales SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1 WHERE id = $2`,
-    [String(proof).slice(0, 12000000), sale.id]
-  );
+  await withTransaction(async (tx) => {
+    const changed = await tx.query(
+      `UPDATE sales SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1
+       WHERE id = $2 AND referral_paid = FALSE RETURNING id, referral_commission`,
+      [String(proof).slice(0, 12000000), sale.id]
+    );
+    if (!changed.length) {
+      const error = new Error('Le parrain a déjà été payé pour cette vente');
+      error.statusCode = 409;
+      throw error;
+    }
+    await tx.query(
+      `INSERT INTO wallet_accounts (user_id) VALUES ($1) ON CONFLICT (user_id) DO UPDATE SET updated_at = now()`,
+      [sale.referred_by]
+    );
+    await tx.query(
+      `INSERT INTO wallet_transactions (user_id, amount, transaction_type, reference_type, reference_id, description)
+       VALUES ($1, $2, 'referral_credit', 'sale', $3, $4)
+       ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
+      [sale.referred_by, Number(changed[0].referral_commission), sale.id, 'Commission de parrainage payée par la boutique']
+    );
+  });
   await q(
     `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'referral_paid', $2)`,
     [sale.referred_by, sale.id]
@@ -827,21 +900,31 @@ router.post('/grouped-pay', authRequired, roleRequired('shop'), ah(async (req, r
   }
   const total = Math.round(rows.reduce((a, r) => a + Number(r.amt || 0), 0) * 100) / 100;
   const proofShort = String(proof).slice(0, 12000000);
-  if (isSeller) {
-    await q(
+  await withTransaction(async (tx) => {
+    if (isSeller) {
+    await tx.query(
       `UPDATE sales s SET paid = TRUE, paid_at = now(), payment_proof = $1
          FROM products p
         WHERE p.id = s.product_id AND s.seller_id = $2 AND p.shop_id = $3 AND s.status = 'delivered' AND NOT s.paid`,
       [proofShort, sellerId, req.user.id]
     );
   } else {
-    await q(
+    await tx.query(
       `UPDATE sales s SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1
          FROM products p
         WHERE p.id = s.product_id AND s.referred_by = $2 AND p.shop_id = $3 AND s.status = 'delivered' AND NOT s.referral_paid`,
       [proofShort, sellerId, req.user.id]
     );
-  }
+    }
+    await tx.query(`INSERT INTO wallet_accounts (user_id) VALUES ($1) ON CONFLICT (user_id) DO UPDATE SET updated_at = now()`, [sellerId]);
+    for (const row of rows) {
+      await tx.query(
+        `INSERT INTO wallet_transactions (user_id, amount, transaction_type, reference_type, reference_id, description)
+         VALUES ($1, $2, $3, 'sale', $4, $5) ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
+        [sellerId, Number(row.amt), isSeller ? 'commission_credit' : 'referral_credit', Number(row.id), isSeller ? 'Commission groupée payée par la boutique' : 'Commission de parrainage groupée payée par la boutique']
+      );
+    }
+  });
   const me = (await q('SELECT name FROM users WHERE id = $1', [req.user.id]))[0];
   const payee = (await q('SELECT name FROM users WHERE id = $1', [sellerId]))[0];
   await q(

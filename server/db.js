@@ -19,6 +19,24 @@ export async function q(text, params = []) {
   return res.rows;
 }
 
+export async function withTransaction(fn) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const tx = {
+      query: async (text, params = []) => (await client.query(text, params)).rows,
+    };
+    const result = await fn(tx);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function initDb() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -94,6 +112,8 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
     CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id);
     CREATE INDEX IF NOT EXISTS idx_sales_seller ON sales(seller_id);
+    CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(status);
+    CREATE INDEX IF NOT EXISTS idx_sales_confirm_code ON sales(confirm_code) WHERE confirm_code IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
   `);
 
@@ -117,7 +137,13 @@ export async function initDb() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS delivery_fee REAL NOT NULL DEFAULT 0;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS contact TEXT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS quantity INTEGER NOT NULL DEFAULT 1;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS reserved_quantity INTEGER NOT NULL DEFAULT 0;
+    UPDATE products SET reserved_quantity = 0 WHERE reserved_quantity IS NULL;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS old_price REAL;
+    ALTER TABLE products ALTER COLUMN price TYPE NUMERIC(14,2) USING round(price::numeric, 2);
+    ALTER TABLE products ALTER COLUMN commission_percent TYPE NUMERIC(6,2) USING round(commission_percent::numeric, 2);
+    ALTER TABLE products ALTER COLUMN delivery_fee TYPE NUMERIC(14,2) USING round(delivery_fee::numeric, 2);
+    ALTER TABLE products ALTER COLUMN old_price TYPE NUMERIC(14,2) USING CASE WHEN old_price IS NULL THEN NULL ELSE round(old_price::numeric, 2) END;
     ALTER TABLE products ALTER COLUMN warranty TYPE TEXT USING warranty::text;
     ALTER TABLE sales ALTER COLUMN buyer_name DROP NOT NULL;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS purchase_price REAL;
@@ -148,6 +174,12 @@ export async function initDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_claimed_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_payment_proof TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS hidden_for INTEGER[] NOT NULL DEFAULT '{}';
+    ALTER TABLE sales ALTER COLUMN total_price TYPE NUMERIC(14,2) USING round(total_price::numeric, 2);
+    ALTER TABLE sales ALTER COLUMN commission TYPE NUMERIC(14,2) USING round(commission::numeric, 2);
+    ALTER TABLE sales ALTER COLUMN purchase_price TYPE NUMERIC(14,2) USING CASE WHEN purchase_price IS NULL THEN NULL ELSE round(purchase_price::numeric, 2) END;
+    ALTER TABLE sales ALTER COLUMN delivery_fee TYPE NUMERIC(14,2) USING round(delivery_fee::numeric, 2);
+    ALTER TABLE sales ALTER COLUMN referral_commission TYPE NUMERIC(14,2) USING round(referral_commission::numeric, 2);
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS stock_reserved BOOLEAN NOT NULL DEFAULT FALSE;
 
     ALTER TABLE orders ALTER COLUMN user_id DROP NOT NULL;
 
@@ -169,6 +201,12 @@ export async function initDb() {
   `);
 
   await pool.query(`
+    ALTER TABLE offers ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL;\n    ALTER TABLE offers ALTER COLUMN original_price TYPE NUMERIC(14,2) USING round(original_price::numeric, 2);
+    ALTER TABLE offers ALTER COLUMN promo_price TYPE NUMERIC(14,2) USING round(promo_price::numeric, 2);
+    ALTER TABLE orders ALTER COLUMN total TYPE NUMERIC(14,2) USING round(total::numeric, 2);
+  `);
+
+  await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_seller_code ON users(seller_code) WHERE seller_code IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_shop_code ON users(shop_code) WHERE shop_code IS NOT NULL;
 
@@ -183,6 +221,7 @@ export async function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     ALTER TABLE notifications ADD COLUMN IF NOT EXISTS amount REAL;
+    ALTER TABLE notifications ALTER COLUMN amount TYPE NUMERIC(14,2) USING CASE WHEN amount IS NULL THEN NULL ELSE round(amount::numeric, 2) END;
 
     CREATE TABLE IF NOT EXISTS reviews (
       id SERIAL PRIMARY KEY,
@@ -208,6 +247,47 @@ export async function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id);
     CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
+
+    CREATE TABLE IF NOT EXISTS admin_messages (
+      id SERIAL PRIMARY KEY,
+      message TEXT NOT NULL,
+      target TEXT NOT NULL DEFAULT 'all' CHECK (target IN ('all', 'user')),
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_admin_messages_target ON admin_messages(target);
+    CREATE INDEX IF NOT EXISTS idx_admin_messages_user ON admin_messages(user_id);
+
+    CREATE TABLE IF NOT EXISTS admin_message_reads (
+      message_id INTEGER NOT NULL REFERENCES admin_messages(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      read_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (message_id, user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_admin_message_reads_user ON admin_message_reads(user_id);
+
+    CREATE TABLE IF NOT EXISTS wallet_accounts (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS wallet_transactions (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      amount NUMERIC(14,2) NOT NULL CHECK (amount <> 0),
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      transaction_type TEXT NOT NULL CHECK (transaction_type IN ('commission_credit','referral_credit','payout_debit','adjustment')),
+      reference_type TEXT,
+      reference_id INTEGER,
+      description TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (user_id, transaction_type, reference_type, reference_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created ON wallet_transactions(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_wallet_transactions_reference ON wallet_transactions(reference_type, reference_id);
   `);
 
   try {
@@ -217,11 +297,13 @@ export async function initDb() {
   }
 }
 
-const RETENTION_DAYS = 7;
+const RETENTION_DAYS = Number(process.env.TRANSACTION_RETENTION_DAYS || 2555);
+const NOTIFICATION_RETENTION_DAYS = Number(process.env.NOTIFICATION_RETENTION_DAYS || 90);
 
 export async function purgeOldTransactions() {
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  await pool.query('DELETE FROM sales WHERE created_at < $1', [cutoff]);
-  await pool.query('DELETE FROM orders WHERE created_at < $1', [cutoff]);
-  await pool.query('DELETE FROM notifications WHERE created_at < $1', [cutoff]);
+  // Les données financières sont conservées par défaut ~7 ans.
+  await pool.query('DELETE FROM notifications WHERE created_at < $1', [new Date(Date.now() - NOTIFICATION_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString()]);
+  // Ne jamais supprimer automatiquement les ventes/commandes : elles constituent l'historique financier.
+  void cutoff;
 }

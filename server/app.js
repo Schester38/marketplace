@@ -11,6 +11,7 @@ import offerRoutes from './routes/offers.js';
 import orderRoutes from './routes/orders.js';
 import purchaseRoutes from './routes/purchases.js';
 import notificationRoutes from './routes/notifications.js';
+import messageRoutes from './routes/messages.js';
 import sellerRoutes from './routes/seller.js';
 import shopRoutes from './routes/shop.js';
 import pushRoutes from './routes/push.js';
@@ -18,6 +19,7 @@ import activityRoutes from './routes/activity.js';
 import reviewRoutes from './routes/reviews.js';
 import adminRoutes from './routes/admin.js';
 import chatRoutes from './routes/chat.js';
+import walletRoutes from './routes/wallet.js';
 import presentationRoutes, { pageRouter, imageRouter } from './routes/presentation.js';
 import { authRequired } from './auth.js';
 import { securityHeaders, originCheck } from './security.js';
@@ -65,12 +67,14 @@ app.use('/api/offers', offerRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/purchases', purchaseRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/messages', messageRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/wallet', walletRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/img', imageRouter);
 app.use('/p', pageRouter);
@@ -87,7 +91,8 @@ if (fs.existsSync(clientDist)) {
 
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).json({ error: 'Erreur interne du serveur' });
+  const status = Number(err?.statusCode) >= 400 && Number(err?.statusCode) < 600 ? Number(err.statusCode) : 500;
+  res.status(status).json({ error: status === 500 ? 'Erreur interne du serveur' : (err.message || 'Requête invalide') });
 });
 
 export default app;

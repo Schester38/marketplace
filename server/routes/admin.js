@@ -177,4 +177,35 @@ router.get('/activity', ah(async (req, res) => {
   });
 }));
 
+router.post('/messages', ah(async (req, res) => {
+  const { message, target, userId } = req.body || {};
+  const text = String(message || '').trim().slice(0, 2000);
+  if (!text) return res.status(400).json({ error: 'Message vide' });
+  const kind = target === 'user' ? 'user' : 'all';
+  let uid = null;
+  if (kind === 'user') {
+    uid = Number(userId);
+    if (!isId(uid)) return res.status(400).json({ error: 'Utilisateur invalide' });
+    const user = (await q('SELECT id FROM users WHERE id = $1', [uid]))[0];
+    if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
+  }
+  const created = await q(
+    `INSERT INTO admin_messages (message, target, user_id)
+     VALUES ($1, $2, $3) RETURNING id`,
+    [text, kind, uid]
+  );
+  await logAudit(req.user.id, 'admin.send_message', `target=${kind} user=${uid}`, req.ip);
+  res.json({ ok: true, id: created[0].id });
+}));
+
+router.get('/messages', ah(async (req, res) => {
+  const rows = await q(
+    `SELECT m.id, m.message, m.target, m.user_id, u.name AS user_name, m.created_at
+     FROM admin_messages m
+     LEFT JOIN users u ON u.id = m.user_id
+     ORDER BY m.id DESC LIMIT 50`
+  );
+  res.json({ messages: rows });
+}));
+
 export default router;

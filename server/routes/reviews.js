@@ -45,6 +45,13 @@ router.post('/', authRequired, ah(async (req, res) => {
   if (Number(product.shop_id) === Number(req.user.id)) {
     return res.status(400).json({ error: 'Vous ne pouvez pas noter votre propre produit' });
   }
+  const deliveredPurchase = (await q(
+    `SELECT id FROM sales WHERE product_id = $1 AND buyer_id = $2 AND status = 'delivered' LIMIT 1`,
+    [pid, req.user.id]
+  ))[0];
+  if (!deliveredPurchase) {
+    return res.status(403).json({ error: 'Vous devez avoir acheté et reçu ce produit avant de laisser un avis' });
+  }
   const existing = (
     await q('SELECT id FROM reviews WHERE product_id = $1 AND user_id = $2', [pid, req.user.id])
   )[0];

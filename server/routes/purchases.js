@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
-import { q } from '../db.js';
+import { q, withTransaction } from '../db.js';
 import { authRequired } from '../auth.js';
 import { sendPush } from '../push.js';
 import { listPhotos } from '../photo.js';
@@ -55,7 +55,10 @@ router.post('/', optionalAuth, ah(async (req, res) => {
     return res.status(400).json({ error: 'Code vendeur invalide' });
   }
 
-  const product = (await q('SELECT * FROM products WHERE id = $1', [Number(product_id)]))[0];
+  const productId = Number(product_id);
+  if (!Number.isInteger(productId) || productId < 1) return res.status(400).json({ error: 'Produit invalide' });
+
+  const product = (await q('SELECT * FROM products WHERE id = $1', [productId]))[0];
   if (!product) return res.status(404).json({ error: 'Produit introuvable' });
 
   const qty = Number(quantity ?? 1);
@@ -63,10 +66,9 @@ router.post('/', optionalAuth, ah(async (req, res) => {
     return res.status(400).json({ error: 'Quantité invalide' });
   }
 
-  const price = purchase_price != null ? Number(purchase_price) : Number(product.price);
-  if (!Number.isFinite(price) || price < 0) {
-    return res.status(400).json({ error: 'Prix d\'achat invalide' });
-  }
+  // Le prix catalogue est la source de vérité. Un prix client arbitraire ne doit pas modifier le calcul financier.
+  const price = Number(product.price);
+  if (!Number.isFinite(price) || price < 0) return res.status(500).json({ error: 'Prix produit invalide' });
 
   const buyer = req.user || null;
   const name = (buyer_name && String(buyer_name).trim()) || (buyer ? buyer.name : '');
@@ -98,40 +100,46 @@ router.post('/', optionalAuth, ah(async (req, res) => {
     }
   }
 
-  let confirmCode = null;
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const candidate = randomConfirmCode();
-    const taken = (await q('SELECT id FROM sales WHERE confirm_code = $1', [candidate]))[0];
-    if (!taken) { confirmCode = candidate; break; }
-  }
+  const result = await withTransaction(async (tx) => {
+    // Réserve le stock atomiquement au moment de la commande.
+    const locked = (await tx.query(
+      `UPDATE products
+       SET quantity = quantity - $1, reserved_quantity = COALESCE(reserved_quantity, 0) + $1
+       WHERE id = $2 AND quantity >= $1
+       RETURNING *`,
+      [qty, product.id]
+    ))[0];
+    if (!locked) {
+      const stock = Number(product.quantity || 0);
+      const error = new Error(stock <= 0 ? 'Produit en rupture de stock' : 'Stock insuffisant');
+      error.statusCode = 409;
+      throw error;
+    }
 
-  const created = await q(
-    `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by, payment_method)
-     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id`,
-    [
-      product.id,
-      seller.id,
-      qty,
-      total,
-      commission,
-      price,
-      buyer ? buyer.id : null,
-      code,
-      name,
-      phone,
-      city,
-      address,
-      confirmCode,
-      referralCommission,
-      referredBy,
-      method,
-    ]
-  );
+    let confirmCode = null;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const candidate = randomConfirmCode();
+      const taken = (await tx.query('SELECT id FROM sales WHERE confirm_code = $1 FOR SHARE', [candidate]))[0];
+      if (!taken) { confirmCode = candidate; break; }
+    }
+    if (!confirmCode) {
+      const error = new Error('Impossible de générer le code de confirmation');
+      error.statusCode = 503;
+      throw error;
+    }
 
-  await q(
-    `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_order', $2), ($3, 'sale_order', $2)`,
-    [seller.id, created[0].id, product.shop_id]
-  );
+    const created = await tx.query(
+      `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
+       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, TRUE) RETURNING id`,
+      [product.id, seller.id, qty, total, commission, price, buyer ? buyer.id : null, code, name, phone, city, address, confirmCode, referralCommission, referredBy, method]
+    );
+
+    await tx.query(
+      `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_order', $2), ($3, 'sale_order', $2)`,
+      [seller.id, created[0].id, product.shop_id]
+    );
+    return { id: created[0].id, confirmCode };
+  });
 
   const productName = String(product.name || 'article');
   await sendPush(seller.id, {
@@ -141,14 +149,14 @@ router.post('/', optionalAuth, ah(async (req, res) => {
   });
   await sendPush(product.shop_id, {
     title: 'Nouvelle commande 🛒',
-    body: `${productName} — vendeur : ${seller.name} (${code}), client : ${name}${confirmCode ? `, code : ${confirmCode}` : ''}${referredBy ? `, client parrainé (2% pour le parrain : ${referralCommission} F)` : ''}.`,
+    body: `${productName} — vendeur : ${seller.name} (${code}), client : ${name}${result.confirmCode ? `, code : ${result.confirmCode}` : ''}${referredBy ? `, client parrainé (2% pour le parrain : ${referralCommission} F)` : ''}.`,
     url: '/shop',
   });
   if (referredBy) {
     const referrer = (await q('SELECT name FROM users WHERE id = $1', [referredBy]))[0];
     await q(
       `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'referral_earned', $2)`,
-      [referredBy, created[0].id]
+      [referredBy, result.id]
     );
     await sendPush(referredBy, {
       title: 'Votre filleul a commandé 🎁',
@@ -165,7 +173,7 @@ router.post('/', optionalAuth, ah(async (req, res) => {
        JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
        WHERE s.id = $1`,
-      [created[0].id]
+      [result.id]
     )
   )[0];
 
