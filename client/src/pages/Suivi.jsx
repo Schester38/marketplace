@@ -72,6 +72,21 @@ export default function Suivi() {
           ? 1
           : 0
     : -2;
+  const cancellable = sale && sale.status !== 'delivered' && sale.status !== 'cancelled';
+
+  const cancelOrder = async () => {
+    if (!window.confirm(t('Annuler cette commande ? Cette action est définitive.'))) return;
+    setError('');
+    setLoading(true);
+    try {
+      await api.cancelSale(id, code.trim());
+      setSale((prev) => (prev ? { ...prev, status: 'cancelled' } : prev));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   const labels = sale
     ? [
         { key: 'Commande enregistrée', date: sale.created_at },
@@ -192,6 +207,16 @@ export default function Suivi() {
               >
                 🔗 {t('Partager le suivi')}
               </button>
+              {cancellable && (
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  disabled={loading}
+                  onClick={cancelOrder}
+                >
+                  🗙 {t('Annuler la commande')}
+                </button>
+              )}
             </div>
           </div>
         )}

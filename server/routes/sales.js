@@ -399,6 +399,69 @@ router.delete('/:id/delivered', authRequired, ah(async (req, res) => {
   res.json({ ok: true });
 }));
 
+router.post('/:id/cancel', ah(async (req, res) => {
+  const typed = req.body && req.body.code ? String(req.body.code).trim().toUpperCase() : '';
+  if (!typed) return res.status(400).json({ error: 'Code client requis' });
+  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!sale) return res.status(404).json({ error: 'Commande introuvable' });
+  if (typed !== String(sale.confirm_code || sale.buyer_code || '').trim().toUpperCase()) {
+    return res.status(403).json({ error: 'Code incorrect. Vous ne pouvez annuler que votre propre commande.' });
+  }
+  if (sale.status === 'delivered') {
+    return res.status(409).json({ error: 'Une commande livrée ne peut plus être annulée.' });
+  }
+  if (sale.status === 'cancelled') {
+    return res.status(409).json({ error: 'Cette commande est déjà annulée.' });
+  }
+  if (!['pending', 'bought', 'confirmed'].includes(sale.status)) {
+    return res.status(409).json({ error: 'Cette commande ne peut plus être annulée.' });
+  }
+  const product = (await q('SELECT shop_id, name FROM products WHERE id = $1', [sale.product_id]))[0];
+  const hiddenIds = [...new Set([product.shop_id, sale.seller_id, sale.referred_by, sale.buyer_id, sale.delivered_by].filter(Boolean))];
+  const current = (await q('SELECT hidden_for FROM sales WHERE id = $1', [sale.id]))[0].hidden_for;
+  const merged = [...new Set([...(Array.isArray(current) ? current : []), ...hiddenIds])];
+  await q(
+    'UPDATE sales SET status = $1, hidden_for = $2::int[] WHERE id = $3',
+    ['cancelled', merged, sale.id]
+  );
+
+  const notifyIds = [...new Set([product.shop_id, sale.seller_id, sale.referred_by, sale.buyer_id].filter(Boolean))];
+  if (notifyIds.length) {
+    const values = notifyIds.map((uid) => `(${Number(uid)}, 'sale_cancelled', ${sale.id})`).join(', ');
+    await q(`INSERT INTO notifications (user_id, type, sale_id) VALUES ${values}`);
+  }
+
+  const productName = product ? String(product.name) : 'article';
+  const buyerName = String(sale.buyer_name || 'client');
+  if (sale.seller_id) {
+    await sendPush(sale.seller_id, {
+      title: 'Commande annulée par le client ❌',
+      body: `${productName} — la commande de ${buyerName} a été annulée par le client.`,
+      url: '/seller',
+    });
+  }
+  if (sale.referred_by) {
+    await sendPush(sale.referred_by, {
+      title: 'Commande annulée par le client ❌',
+      body: `${productName} — la commande de ${buyerName} a été annulée par le client.`,
+      url: '/seller',
+    });
+  }
+  await sendPush(product.shop_id, {
+    title: 'Commande annulée par le client ❌',
+    body: `${productName} — la commande de ${buyerName} a été annulée par le client.`,
+    url: '/shop',
+  });
+  if (sale.buyer_id) {
+    await sendPush(sale.buyer_id, {
+      title: 'Commande annulée ✅',
+      body: `Votre commande « ${productName} » a bien été annulée.`,
+      url: `/suivi/${sale.id}?code=${encodeURIComponent(sale.confirm_code || sale.buyer_code || '')}`,
+    });
+  }
+  res.json({ ok: true });
+}));
+
 router.get('/:id/proof', authRequired, ah(async (req, res) => {
   const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
   if (!sale) return res.status(404).json({ error: 'Vente introuvable' });

@@ -52,6 +52,17 @@ export default function ClientDashboard() {
 
   useRefreshOnFocus(load);
 
+  const cancelPurchase = async (p) => {
+    if (!window.confirm(t('Annuler cette commande « {name} » ? Cette action est définitive.', { name: p.product_name }))) return;
+    setError('');
+    try {
+      await api.cancelSale(p.id, p.confirm_code || p.buyer_code || '');
+      setPurchases((prev) => (prev ? prev.filter((x) => x.id !== p.id) : prev));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const activePurchases = (purchases || []).filter((p) => p.status !== 'delivered');
   const deliveredPurchases = (purchases || []).filter((p) => p.status === 'delivered');
 
@@ -130,6 +141,11 @@ export default function ClientDashboard() {
                     <Link className="btn btn-outline btn-small" to={`/suivi/${p.id}?code=${encodeURIComponent(p.confirm_code)}`}>
                       📦 {t('Suivre ma commande')}
                     </Link>
+                  )}
+                  {p.status !== 'delivered' && p.status !== 'cancelled' && (
+                    <button className="btn btn-danger btn-small" onClick={() => cancelPurchase(p)}>
+                      🗙 {t('Annuler')}
+                    </button>
                   )}
                 </div>
               );
