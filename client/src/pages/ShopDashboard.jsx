@@ -511,7 +511,11 @@ export default function ShopDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {deliveredSales.map((s) => (
+                  {deliveredSales.map((s) => {
+                        const pendingCommission =
+                          (s.seller_id && Number(s.commission || 0) > 0 && !s.paid) ||
+                          (s.referred_by && Number(s.referral_commission || 0) > 0 && !s.referral_paid);
+                        return (
                     <tr key={s.id}>
                       <td>{s.product_name}</td>
                       <td>{s.seller_name || '—'}</td>
@@ -539,13 +543,19 @@ export default function ShopDashboard() {
                           <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
                             🧾 {t('Voir la facture')}
                           </button>
-                          <button className="btn btn-small btn-danger" onClick={() => removeDelivered(s)}>
-                            🗑️ {t('Supprimer')}
+                          <button
+                            className="btn btn-small btn-danger"
+                            onClick={() => removeDelivered(s)}
+                            disabled={pendingCommission}
+                            title={pendingCommission ? t('Cette vente ne peut pas être supprimée tant que sa commission n\'est pas payée.') : undefined}
+                          >
+                            🗑️ {pendingCommission ? t('Commission non payée') : t('Supprimer')}
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                        );
+                      })}
                 </tbody>
               </table>
             </div>

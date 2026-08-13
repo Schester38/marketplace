@@ -351,6 +351,16 @@ router.delete('/:id/delivered', authRequired, ah(async (req, res) => {
   if (!isShop && !isDeliverer) {
     return res.status(403).json({ error: 'Vous ne pouvez supprimer que vos propres livraisons' });
   }
+  if (isShop) {
+    const unpaidCommission =
+      (sale.seller_id && Number(sale.commission || 0) > 0 && !sale.paid) ||
+      (sale.referred_by && Number(sale.referral_commission || 0) > 0 && !sale.referral_paid);
+    if (unpaidCommission) {
+      return res.status(409).json({
+        error: 'Impossible de retirer cette vente : la commission n\'a pas encore été payée au vendeur ou au parrain.',
+      });
+    }
+  }
   await q(
     'UPDATE sales SET hidden_for = array_append(array_remove(hidden_for, $1), $1) WHERE id = $2',
     [req.user.id, sale.id]
