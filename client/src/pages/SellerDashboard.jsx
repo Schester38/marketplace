@@ -433,7 +433,9 @@ export default function SellerDashboard() {
                       {s.status !== 'delivered' && <span className={`badge ${st.cls}`}>{t(st.key)}</span>}
                     </td>
                     <td>
-                      {s.status === 'delivered' && (
+                      {s.status === 'delivered' && (() => {
+                        const canRemove = !pendingForMe || (Number(s.commission || 0) <= 0 && Number(s.referral_commission || 0) <= 0);
+                        return (
                         <div className="row2" style={{ justifyContent: 'flex-end', gap: 6 }}>
                           <button className="btn btn-small" disabled={proofLoading} onClick={() => openProof(s)}>
                             📷 {t('Preuve')}
@@ -441,16 +443,14 @@ export default function SellerDashboard() {
                           <button className="btn btn-small" onClick={() => downloadInvoice(s, t, countrySymbol(s.shop_country))}>
                             🧾 {t('Facture')}
                           </button>
-                          <button
-                            className="btn btn-small btn-danger"
-                            onClick={() => removeSale(s)}
-                            disabled={pendingForMe}
-                            title={pendingForMe ? t('Cette vente ne peut pas être retirée tant que sa commission n\'est pas payée.') : undefined}
-                          >
-                            🗑️ {pendingForMe ? t('Commission non payée') : t('Supprimer')}
-                          </button>
+                          {canRemove && (
+                            <button className="btn btn-small btn-danger" onClick={() => removeSale(s)}>
+                              🗑️ {t('Supprimer')}
+                            </button>
+                          )}
                         </div>
-                      )}
+                        );
+                      })()}
                       {s.status !== 'delivered' && (
                         <button className="btn btn-small btn-danger" onClick={() => removeSale(s)}>
                           🗑️ {t('Supprimer')}
