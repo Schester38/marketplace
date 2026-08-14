@@ -364,6 +364,11 @@ export default function Home() {
                       ? t('Aucun résultat pour votre recherche.')
                       : t('Aucun produit disponible.')}
               </p>
+              {!category && !debouncedCity && !search && (
+                <button type="button" className="btn btn-outline" onClick={() => loadProducts(true)}>
+                  {t('Actualiser')}
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid">
