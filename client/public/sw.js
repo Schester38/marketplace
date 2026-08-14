@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v26';
+const CACHE_NAME = 'mboppi-v27';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/og-image.svg', '/robots.txt', '/sitemap.xml', '/splash.js'];
 
 self.addEventListener('install', (event) => {
@@ -15,6 +15,14 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then(() => caches.open(CACHE_NAME))
+      .then((cache) =>
+        cache.keys().then((reqs) =>
+          Promise.all(
+            reqs.filter((r) => new URL(r.url).pathname.startsWith('/api/')).map((r) => cache.delete(r))
+          )
+        )
+      )
       .then(() => self.clients.claim())
       .then(() =>
         self.clients.matchAll({ includeUncontrolled: true }).then((clients) => {
@@ -64,21 +72,11 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   if (url.pathname.startsWith('/api/')) {
-    if (url.pathname === '/api/offers' || url.pathname === '/api/products') {
+    if (url.pathname === '/api/offers' || url.pathname === '/api/products' || url.pathname === '/api/offers/mine') {
       event.respondWith(
-        (async () => {
-          const cached = await caches.match(event.request);
-          try {
-            const network = await fetch(event.request);
-            if (network.ok) {
-              const clone = network.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-            }
-            return network;
-          } catch (err) {
-            return cached || new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
-          }
-        })()
+        fetch(event.request).catch(
+          () => new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' })
+        )
       );
     }
     return;
