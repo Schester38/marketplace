@@ -84,7 +84,7 @@ router.get('/', async (req, res) => {
   }
   if (city) {
     const norm = String(city).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    const match = NORMALIZE_TEXT(`COALESCE(u.city, '') || ' ' || u.location`);
+    const match = NORMALIZE_TEXT(`COALESCE(u.city, '') || ' ' || COALESCE(u.location, '')`);
     where.push(match + ` ILIKE '%' || $${params.length + 1} || '%'`);
     params.push(norm);
   }
