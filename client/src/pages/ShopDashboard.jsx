@@ -357,7 +357,7 @@ export default function ShopDashboard() {
 
   return (
     <main className="container">
-      <Seo title={t('Ma boutique') + ' — Mboppi'} description={t('Gérez vos produits et suivez vos ventes.')} />
+      <Seo title={t('Ma boutique') + ' — Mboppi'} description={t('Gérez vos produits et suivez vos ventes.')} noindex/>
       <section className="dash-header">
         <div>
           <h1>{t('Ma boutique')}</h1>

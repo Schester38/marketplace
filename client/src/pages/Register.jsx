@@ -67,8 +67,7 @@ export default function Register() {
     <main className="container narrow">
       <Seo
         title={t('Créer un compte') + ' — Mboppi'}
-        description={t('Inscription') + ' : ' + t('Boutique (shop)') + ', vendeur, client ou créateur.'}
-      />
+        description={t('Inscription') + ' : ' + t('Boutique (shop)') + ', vendeur, client ou créateur.'} noindex/>
       <div className="card form-card">
         <div className="auth-brand">🛍️</div>
         <h2>{t('Créer un compte')}</h2>

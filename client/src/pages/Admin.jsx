@@ -156,7 +156,7 @@ export default function Admin() {
   if (gate) {
     return (
       <main className="container narrow">
-        <Seo title={t('Administration') + ' — Mboppi'} description={t('Administration')} />
+        <Seo title={t('Administration') + ' — Mboppi'} description={t('Administration')} noindex/>
         <section className="dash-header">
           <div>
             <h1>🛡️ {t('Administration')}</h1>
@@ -184,7 +184,7 @@ export default function Admin() {
 
   return (
     <main className="container">
-      <Seo title={t('Administration') + ' — Mboppi'} description={t('Administration')} />
+      <Seo title={t('Administration') + ' — Mboppi'} description={t('Administration')} noindex/>
       <section className="dash-header">
         <div>
           <h1>🛡️ {t('Administration')}</h1>

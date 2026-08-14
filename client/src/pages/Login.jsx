@@ -30,7 +30,7 @@ export default function Login() {
 
   return (
     <main className="container narrow">
-      <Seo title={t('Connexion') + ' — Mboppi'} description={t('Connexion à Mboppi')} />
+      <Seo title={t('Connexion') + ' — Mboppi'} description={t('Connexion à Mboppi')} noindex/>
       <div className="card form-card">
         <div className="auth-brand">🛍️</div>
         <h2>{t('Connexion')}</h2>

@@ -127,8 +127,7 @@ export default function Support() {
     <main className="container">
       <Seo
         title={t('Je soutiens Mboppi') + ' — Mboppi'}
-        description={t('Soutenez Mboppi : Orange Money, MTN Mobile Money, PayPal ou virement bancaire UBA.')}
-      />
+        description={t('Soutenez Mboppi : Orange Money, MTN Mobile Money, PayPal ou virement bancaire UBA.')} noindex/>
       <section className="hero vitrine-hero">
         <span className="hero-badge">💛 {t('Je soutiens Mboppi')}</span>
         <h1>{t("Chaque geste compte pour faire grandir Mboppi")}</h1>

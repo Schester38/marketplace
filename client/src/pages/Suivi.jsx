@@ -97,7 +97,7 @@ export default function Suivi() {
 
   return (
     <main className="container narrow">
-      <Seo title={t('Suivi de commande') + ' — Mboppi'} description={t('Suivez l\'état de votre commande Mboppi en temps réel.')} />
+      <Seo title={t('Suivi de commande') + ' — Mboppi'} description={t('Suivez l\'état de votre commande Mboppi en temps réel.')} noindex/>
       <Link to="/" className="btn btn-outline" style={{ marginBottom: 16 }}>
         ← {t('Retour à l\'accueil')}
       </Link>

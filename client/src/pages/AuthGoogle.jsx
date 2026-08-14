@@ -44,7 +44,7 @@ export default function AuthGoogle() {
 
   return (
     <main className="container narrow">
-      <Seo title={t('Connexion en cours…') + ' — Mboppi'} description={t('Connexion en cours…')} />
+      <Seo title={t('Connexion en cours…') + ' — Mboppi'} description={t('Connexion en cours…')} noindex/>
       <div className="card form-card page-center">
         <div className="auth-brand">🛍️</div>
         {error ? (

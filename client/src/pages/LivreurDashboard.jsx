@@ -134,7 +134,7 @@ export default function LivreurDashboard() {
 
   return (
     <main className="container">
-      <Seo title={t('Livraison') + ' — Mboppi'} description={t('Livrez les articles commandés et confirmez l\'achat.')} />
+      <Seo title={t('Livraison') + ' — Mboppi'} description={t('Livrez les articles commandés et confirmez l\'achat.')} noindex/>
       <section className="dash-header">
         <div>
           <h1>🛵 {t('Livraison')}</h1>

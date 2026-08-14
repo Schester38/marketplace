@@ -18,7 +18,7 @@ export default function NotFound() {
 
   return (
     <main className="container">
-      <Seo title={t('Page introuvable') + ' — Mboppi'} description={t('Page introuvable')} />
+      <Seo title={t('Page introuvable') + ' — Mboppi'} description={t('Page introuvable')} noindex/>
       <div className="card page-center notfound">
         <span className="notfound-icon">🧭</span>
         <h1>{t('Page introuvable')}</h1>

@@ -255,8 +255,7 @@ export default function MyAccount() {
     <main className="container">
       <Seo
         title={t('Mon compte') + ' — Mboppi'}
-        description={t('Profil') + ', ' + t('Mot de passe') + ', ' + t('Supprimer mon compte') + '.'}
-      />
+        description={t('Profil') + ', ' + t('Mot de passe') + ', ' + t('Supprimer mon compte') + '.'} noindex/>
       <div className="dash-header">
         <div>
           <h1>👤 {t('Mon compte')}</h1>

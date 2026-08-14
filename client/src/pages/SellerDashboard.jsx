@@ -215,7 +215,7 @@ export default function SellerDashboard() {
 
   return (
     <main className="container">
-      <Seo title={t('Mon espace vendeur') + ' — Mboppi'} description={t('Vendez les produits des boutiques et gagnez des commissions.')} />
+      <Seo title={t('Mon espace vendeur') + ' — Mboppi'} description={t('Vendez les produits des boutiques et gagnez des commissions.')} noindex/>
       <section className="dash-header">
         <div>
           <h1>{t('Mon espace vendeur')}</h1>

@@ -68,7 +68,7 @@ export default function ClientDashboard() {
 
   return (
     <main className="container">
-      <Seo title={t('Mon espace client') + ' — Mboppi'} description={t('Découvrez les produits et offres des boutiques.')} />
+      <Seo title={t('Mon espace client') + ' — Mboppi'} description={t('Découvrez les produits et offres des boutiques.')} noindex/>
       <section className="dash-header">
         <div>
           <h1>{t('Mon espace client')}</h1>

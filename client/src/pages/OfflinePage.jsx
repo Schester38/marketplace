@@ -21,7 +21,7 @@ export default function OfflinePage() {
 
   return (
     <main className="container">
-      <Seo title={t('Pas de connexion internet') + ' — Mboppi'} description={t('Pas de connexion internet')} />
+      <Seo title={t('Pas de connexion internet') + ' — Mboppi'} description={t('Pas de connexion internet')} noindex/>
       <div className="card page-center">
         <span className="notfound-icon">📡</span>
         <h1>{t('Pas de connexion internet')}</h1>

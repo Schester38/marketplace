@@ -101,7 +101,7 @@ export default function SellerPayments() {
 
   return (
     <main className="container narrow">
-      <Seo title={t('Mes moyens de paiement') + ' — Mboppi'} description={t('Enregistrez vos portefeuilles électroniques pour recevoir vos commissions.')} />
+      <Seo title={t('Mes moyens de paiement') + ' — Mboppi'} description={t('Enregistrez vos portefeuilles électroniques pour recevoir vos commissions.')} noindex/>
       <section className="dash-header">
         <div>
           <h1>💳 {t('Mes moyens de paiement')}</h1>

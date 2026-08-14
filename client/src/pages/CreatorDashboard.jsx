@@ -178,7 +178,7 @@ export default function CreatorDashboard() {
 
   return (
     <main className="container">
-      <Seo title={t('Mon espace créateur') + ' — Mboppi'} description={t('Publiez et gérez vos créations.')} />
+      <Seo title={t('Mon espace créateur') + ' — Mboppi'} description={t('Publiez et gérez vos créations.')} noindex/>
       <section className="dash-header">
         <div>
           <h1>🎨 {t('Mon espace créateur')}</h1>

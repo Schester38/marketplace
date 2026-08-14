@@ -102,7 +102,7 @@ export default function PurchasePage() {
 
   return (
     <main className="container narrow">
-      <Seo title={`${t('Acheter')} — ${product.name} — Mboppi`} description={t('Confirmez votre commande avec le code du vendeur.')} />
+      <Seo title={`${t('Acheter')} — ${product.name} — Mboppi`} description={t('Confirmez votre commande avec le code du vendeur.')} noindex/>
       <section className="dash-header">
         <div>
           <h1>🛍️ {t('Acheter')}</h1>

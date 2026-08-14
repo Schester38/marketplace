@@ -49,7 +49,7 @@ export default function Cart() {
   if (sales && sales.length > 0) {
     return (
       <main className="container narrow">
-        <Seo title={t('Commande enregistrée') + ' — Mboppi'} />
+        <Seo title={t('Commande enregistrée') + ' — Mboppi'} noindex/>
         <div className="card form-card success-card">
           <div className="auth-brand">✅</div>
           <h2>{t('Commande enregistrée !')}</h2>
@@ -111,7 +111,7 @@ export default function Cart() {
 
   return (
     <main className="container narrow">
-      <Seo title={t('Mon panier') + ' — Mboppi'} />
+      <Seo title={t('Mon panier') + ' — Mboppi'} noindex/>
       <h1 className="section-title">{t('🛒 Mon panier')}</h1>
 
       {cart.length === 0 ? (

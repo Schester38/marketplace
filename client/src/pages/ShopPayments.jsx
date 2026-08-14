@@ -72,7 +72,7 @@ export default function ShopPayments() {
 
   return (
     <main className="container narrow">
-      <Seo title={t('Mes moyens de paiement') + ' — Mboppi'} description={t('Enregistrez vos portefeuilles électroniques pour recevoir les paiements de vos clients.')} />
+      <Seo title={t('Mes moyens de paiement') + ' — Mboppi'} description={t('Enregistrez vos portefeuilles électroniques pour recevoir les paiements de vos clients.')} noindex/>
       <section className="dash-header">
         <div>
           <h1>💳 {t('Mes moyens de paiement')}</h1>
