@@ -179,4 +179,47 @@ router.get('/produit/:id', async (req, res) => {
   }
 });
 
+router.get('/boutique/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(404).type('html').send(notFoundHtml);
+    const [shop] = await q(
+      `SELECT id, name, location, country, verified,
+              (SELECT COUNT(*) FROM products p WHERE p.shop_id = users.id) AS product_count,
+              (SELECT image FROM products p WHERE p.shop_id = users.id AND image IS NOT NULL ORDER BY p.created_at DESC LIMIT 1) AS sample_image
+       FROM users WHERE id = $1 AND role IN ('shop', 'creator')`,
+      [id]
+    );
+    if (!shop) return res.status(404).type('html').send(notFoundHtml);
+    const title = `${shop.name}${shop.location ? ` — Boutique à ${shop.location}` : ''} | Mboppi`;
+    const canonical = `${BASE_URL}/boutique/${id}`;
+    const count = Number(shop.product_count || 0);
+    const descText = `${shop.name} est une boutique sur Mboppi${shop.location ? `, située à ${shop.location}${shop.country ? ` (${shop.country})` : ''}` : ''}. ${count} produit${count > 1 ? 's' : ''} disponible${count > 1 ? 's' : ''}. Commandez en ligne ou par WhatsApp.`.slice(0, 155);
+    const image = shop.sample_image || '';
+    const absImage = image ? (/^https?:/.test(image) ? image : `${BASE_URL}${image}`) : `${BASE_URL}/og-image.svg`;
+
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Store',
+      name: shop.name,
+      url: canonical,
+      image: image || undefined,
+      description: descText,
+      ...(shop.location
+        ? { address: { '@type': 'PostalAddress', addressLocality: shop.location, addressCountry: shop.country || undefined } }
+        : {}),
+    };
+
+    let html = await loadIndexHtml();
+    html = injectHead(html, { title, description: descText, canonical, ogImage: absImage, ogType: 'website' });
+    html = injectJsonLd(html, jsonLd);
+    if (!html) return res.status(200).type('html').send(`<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title><meta name="description" content="${descText}"/></head><body><h1>${title}</h1></body></html>`);
+    res.type('html').send(html);
+  } catch {
+    const html = await loadIndexHtml();
+    if (html) return res.type('html').send(html);
+    res.status(500).send('Erreur serveur');
+  }
+});
+
 export default router;
