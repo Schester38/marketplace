@@ -51,20 +51,16 @@ export default function SellerDashboard() {
   const [proofLoading, setProofLoading] = useState(false);
 
   const load = async () => {
-    try {
-      const [prodData, saleData, codeData] = await Promise.all([
-        api.listProducts(),
-        api.mySales(),
-        api.getSellerCode(),
-      ]);
-      setProducts(prodData.products);
-      setSales(saleData.sales);
-      setStats(saleData.stats);
-      setReferred(saleData.referred || []);
-      setSellerCode(codeData.seller_code);
-    } catch (e) {
-      setError(e.message);
-    }
+    const [prodData, saleData, codeData] = await Promise.all([
+      api.listProducts().catch((e) => { setError(e.message); return { products: [] }; }),
+      api.mySales().catch((e) => { setError(e.message); return { sales: [], stats: {}, referred: [] }; }),
+      api.getSellerCode().catch(() => ({ seller_code: null })),
+    ]);
+    setProducts(prodData.products);
+    setSales(saleData.sales);
+    setStats(saleData.stats);
+    setReferred(saleData.referred || []);
+    setSellerCode(codeData.seller_code);
   };
 
   useEffect(() => { load(); }, []);
