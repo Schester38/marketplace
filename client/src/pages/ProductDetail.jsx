@@ -10,6 +10,7 @@ import { useCart, useFavs } from '../store.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import Reviews from '../components/Reviews.jsx';
+import ReviewQuote from '../components/ReviewQuote.jsx';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -229,6 +230,7 @@ export default function ProductDetail() {
               <span className="hint"> ({t('{n} avis', { n: product.review_count })})</span>
             </p>
           )}
+          {product.review_count > 0 && <ReviewQuote productId={product.id} count={product.review_count} />}
           <p className="product-shop">
             <span className="shop-name-text">
               {t('Boutique : {shop}', { shop: product.shop_name })}

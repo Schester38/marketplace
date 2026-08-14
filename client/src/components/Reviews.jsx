@@ -159,6 +159,7 @@ export default function Reviews({ product }) {
             <div className="card review-card" key={r.id}>
               <div className="review-head">
                 <strong>{r.user_name || r.buyer_name || t('Client')}</strong>
+                {r.buyer_name && <span className="badge badge-verified" title={t('Acheteur ayant confirmé la commande')}>✓ {t('Achat vérifié')}</span>}
                 <Stars value={r.rating} />
                 <span className="review-date">
                   {new Date(r.created_at).toLocaleDateString(undefined, { dateStyle: 'medium' })}
