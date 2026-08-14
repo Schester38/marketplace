@@ -31,6 +31,10 @@ export default function ProductDetail() {
   const [related, setRelated] = useState([]);
 
   useEffect(() => {
+    setProduct(null);
+    setError('');
+    setRelated([]);
+    setLightboxIndex(0);
     api
       .getProduct(id)
       .then((d) => {
@@ -85,7 +89,7 @@ export default function ProductDetail() {
     );
   }
 
-  if (!product) {
+  if (!product || Number(product.id) !== Number(id)) {
     return (
       <main className="container narrow">
         <div className="card page-center">

@@ -47,10 +47,17 @@ if (pathname.startsWith('/verone')) {
   if (theme) theme.content = '#4f46e5';
 }
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((err) => console.error('SW error:', err));
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'APP_UPDATED') {
+      window.location.reload();
+    }
   });
+  if (import.meta.env.PROD) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch((err) => console.error('SW error:', err));
+    });
+  }
 }
 
 const Root = () => (

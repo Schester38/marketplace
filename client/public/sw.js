@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v21';
+const CACHE_NAME = 'mboppi-v22';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/og-image.svg', '/robots.txt', '/sitemap.xml', '/splash.js'];
 
 self.addEventListener('install', (event) => {
@@ -16,6 +16,11 @@ self.addEventListener('activate', (event) => {
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
+      .then(() =>
+        self.clients.matchAll({ includeUncontrolled: true }).then((clients) => {
+          clients.forEach((client) => client.postMessage({ type: 'APP_UPDATED' }));
+        })
+      )
   );
 });
 
