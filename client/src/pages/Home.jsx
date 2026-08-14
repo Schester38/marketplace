@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import Seo from '../components/Seo.jsx';
+import RecentSales from '../components/RecentSales.jsx';
 import { useLang } from '../i18n.jsx';
 import { PRODUCT_CATEGORIES } from '../config.js';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
@@ -195,6 +196,7 @@ export default function Home() {
 
       {user && (
         <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
+          <RecentSales />
           <div className="section-head">
             <h2 className="section-title">🛍️ {t('Produits et créations')}</h2>
             {category || minPrice || maxPrice ? (

@@ -12,7 +12,7 @@ const OWNER_ROLES = ['shop', 'creator'];
 function productRow(p, mode = 'list') {
   const photos = mode === 'detail' ? fullPhotos(p.photos) : listPhotos(p.photos);
   const image = (mode === 'detail' ? fullPhotos(p.photos) : listPhotos(p.photos))[0] || p.image || null;
-  const { n, pending_n, rating_avg, review_count, ...rest } = p;
+  const { n, n_month, pending_n, rating_avg, review_count, ...rest } = p;
   return {
     ...rest,
     photos,
@@ -26,6 +26,7 @@ function productRow(p, mode = 'list') {
     delivery_fee: Number(p.delivery_fee || 0),
     quantity: Number(p.quantity || 1),
     sold: Number(n || 0),
+    sold_month: Number(n_month || 0),
     pending_count: Number(pending_n || 0),
   };
 }
@@ -33,11 +34,12 @@ function productRow(p, mode = 'list') {
 const SELECT_PRODUCT = `
   SELECT p.*, u.name AS shop_name, u.location AS shop_location, u.country AS shop_country,
          u.verified AS shop_verified, u.phone AS shop_phone,
-         s.n, s.pending_n, r.review_count, r.rating_avg
+         s.n, s.n_month, s.pending_n, r.review_count, r.rating_avg
   FROM products p
   JOIN users u ON u.id = p.shop_id
   LEFT JOIN (SELECT product_id,
                     SUM(quantity) FILTER (WHERE status = 'delivered') AS n,
+                    SUM(quantity) FILTER (WHERE status = 'delivered' AND created_at >= date_trunc('month', now())) AS n_month,
                     SUM(quantity) FILTER (WHERE status IN ('pending', 'bought', 'confirmed')) AS pending_n
              FROM sales GROUP BY product_id) s ON s.product_id = p.id
   LEFT JOIN (SELECT product_id, COUNT(*) AS review_count, COALESCE(AVG(rating), 0)::numeric(3, 2) AS rating_avg
@@ -180,6 +182,44 @@ router.delete('/:id', authRequired, roleRequired(...OWNER_ROLES), async (req, re
   }
   await q('DELETE FROM products WHERE id = $1', [product.id]);
   res.json({ ok: true });
+});
+
+router.post('/:id/duplicate', authRequired, roleRequired(...OWNER_ROLES), async (req, res) => {
+  const product = (await q('SELECT * FROM products WHERE id = $1', [Number(req.params.id)]))[0];
+  if (!product) return res.status(404).json({ error: 'Produit introuvable' });
+  if (product.shop_id !== req.user.id) {
+    return res.status(403).json({ error: 'Ce produit ne vous appartient pas' });
+  }
+  const count = (await q('SELECT COUNT(*) AS n FROM products WHERE shop_id = $1', [req.user.id]))[0];
+  if (Number(count.n) >= MAX_PRODUCTS_PER_SHOP) {
+    return res.status(400).json({
+      error: `Limite atteinte : maximum ${MAX_PRODUCTS_PER_SHOP} produits publiés`,
+    });
+  }
+  const created = await q(
+    `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
+    [
+      product.shop_id,
+      `${String(product.name).trim()} (copie)`,
+      product.description,
+      Number(product.price),
+      product.old_price,
+      Number(product.commission_percent),
+      product.image,
+      product.photos || '[]',
+      product.category,
+      product.warranty,
+      Number(product.delivery_fee || 0),
+      product.contact,
+      Number(product.quantity || 1),
+      product.currency || 'XAF',
+    ]
+  );
+  const newProduct = productRow(
+    (await q(SELECT_PRODUCT + ' WHERE p.id = $1', [created[0].id]))[0]
+  );
+  res.status(201).json({ product: newProduct });
 });
 
 router.put('/:id', authRequired, roleRequired(...OWNER_ROLES), async (req, res) => {

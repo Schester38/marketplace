@@ -214,6 +214,18 @@ export default function ShopDashboard() {
     }
   };
 
+  const duplicateProduct = async (id) => {
+    setError('');
+    setSuccess('');
+    try {
+      const { product } = await api.duplicateProduct(id);
+      setSuccess(t('Produit « {name} » dupliqué. Pensez à modifier la copie.', { name: product.name }));
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const changeStatus = async (id, status) => {
     try {
       await api.updateSaleStatus(id, status);
@@ -685,6 +697,7 @@ export default function ShopDashboard() {
               onAction={() => editProduct(p)}
               secondaryAction="Rétirer"
               onSecondaryAction={() => removeProduct(p.id)}
+              extraAction={{ label: t('📋 Dupliquer'), onClick: () => duplicateProduct(p.id) }}
             />
           ))}
         </div>

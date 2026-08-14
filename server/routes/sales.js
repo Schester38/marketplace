@@ -80,6 +80,26 @@ router.post('/', authRequired, roleRequired('seller'), ah(async (req, res) => {
   res.status(201).json({ sale });
 }));
 
+router.get('/recent', ah(async (req, res) => {
+  const rows = await q(
+    `SELECT p.name AS product_name, u.name AS shop_name, s.buyer_city, s.created_at
+     FROM sales s
+     JOIN products p ON p.id = s.product_id
+     JOIN users u ON u.id = p.shop_id
+     WHERE s.status IN ('delivered', 'bought', 'confirmed')
+     ORDER BY s.created_at DESC
+     LIMIT 12`
+  );
+  res.json({
+    recent: rows.map((r) => ({
+      product_name: r.product_name,
+      shop_name: r.shop_name,
+      buyer_city: r.buyer_city || '',
+      created_at: r.created_at,
+    })),
+  });
+}));
+
 router.get('/my', authRequired, roleRequired('seller'), ah(async (req, res) => {
   const sales = (
     await q(

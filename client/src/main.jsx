@@ -19,6 +19,20 @@ if (DSN) {
 
 const pathname = window.location.pathname;
 
+// Monitoring léger : remontée des erreurs globales (auto-hébergé, sans compte externe).
+if (!pathname.startsWith('/admin')) {
+  let lastSent = 0;
+  const sendLog = (message, stack) => {
+    const now = Date.now();
+    if (now - lastSent < 5000) return; // anti-flood
+    lastSent = now;
+    const payload = { message, stack, url: window.location.href, username: (() => { try { return JSON.parse(localStorage.getItem('user') || 'null')?.name || ''; } catch { return ''; } })() };
+    try { navigator.sendBeacon('/api/logs', new Blob([JSON.stringify(payload)], { type: 'application/json' })); } catch { fetch('/api/logs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {}); }
+  };
+  window.addEventListener('error', (e) => sendLog(String(e.message || 'Erreur inconnue'), e.error?.stack));
+  window.addEventListener('unhandledrejection', (e) => sendLog(String(e.reason?.message || e.reason || 'Promesse rejetée'), e.reason?.stack));
+}
+
 try {
   let t = localStorage.getItem('theme');
   if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';

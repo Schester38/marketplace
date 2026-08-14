@@ -257,6 +257,17 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_audit_log_user ON audit_log(user_id);
     CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
 
+    CREATE TABLE IF NOT EXISTS client_logs (
+      id BIGSERIAL PRIMARY KEY,
+      message TEXT NOT NULL,
+      stack TEXT,
+      url TEXT,
+      username TEXT,
+      user_id INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_client_logs_created ON client_logs(created_at);
+
     CREATE TABLE IF NOT EXISTS admin_messages (
       id SERIAL PRIMARY KEY,
       message TEXT NOT NULL,

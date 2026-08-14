@@ -25,6 +25,7 @@ export default function Admin() {
   const [msgUserId, setMsgUserId] = useState('');
   const [msgBusy, setMsgBusy] = useState(false);
   const [msgOk, setMsgOk] = useState('');
+  const [logs, setLogs] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback((silent) => {
@@ -44,6 +45,7 @@ export default function Admin() {
     api.adminProducts().then((d) => setProducts(d.products)).catch(onErr);
     api.adminTransactions().then(setTransactions).catch(onErr);
     api.adminMessages().then((d) => setMessages(d.messages)).catch(onErr);
+    api.adminLogs(100).then((d) => setLogs(d.logs)).catch(onErr);
   }, []);
 
   useEffect(() => {
@@ -76,6 +78,7 @@ export default function Admin() {
     setProducts(null);
     setTransactions(null);
     setMessages(null);
+    setLogs(null);
   };
 
   const searchUsers = async (e) => {
@@ -306,7 +309,40 @@ export default function Admin() {
         </table>
       </div>
 
-      <h2 className="section-title">{t('👥 Utilisateurs')}</h2>
+      <h2 className="section-title">🛠️ {t('Erreurs signalées par les visiteurs')}</h2>
+      <p className="hint">
+        {t('Erreurs JavaScript remontées automatiquement par le navigateur des clients (une toutes les 5 s maximum par client).')}
+      </p>
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t('Message')}</th>
+              <th>{t('Utilisateur')}</th>
+              <th>{t('Page')}</th>
+              <th>{t('Date')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs === null ? (
+              <tr><td colSpan="4"><div className="skeleton-block" style={{ height: 30 }}></div></td></tr>
+            ) : logs.length === 0 ? (
+              <tr><td colSpan="4" className="empty">{t('Aucune erreur signalée 🎉')}</td></tr>
+            ) : (
+              logs.map((l) => (
+                <tr key={l.id} title={l.stack || ''}>
+                  <td>{l.message}</td>
+                  <td className="hint">{l.username || '—'}</td>
+                  <td className="hint">{l.url || '—'}</td>
+                  <td className="hint">{new Date(l.created_at).toLocaleString()}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="section-title">👥 {t('Utilisateurs')}</h2>
       <form onSubmit={searchUsers} className="hero-search" role="search">
         <span className="emoji" aria-hidden="true">🔍</span>
         <input

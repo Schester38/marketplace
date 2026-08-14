@@ -68,6 +68,43 @@ export default function ProductDetail() {
     };
   }, [product && product.id, product && product.category]);
 
+  // Données structurées schema.org (Rich Results Google : prix, note, stock)
+  useEffect(() => {
+    if (!product) return;
+    const inStock = Number(product.quantity || 0) > 0;
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.name,
+      image: (product.photos && product.photos[0]) || product.image || undefined,
+      description: product.description || product.name,
+      sku: String(product.id),
+      brand: { '@type': 'Brand', name: product.shop_name },
+      offers: {
+        '@type': 'Offer',
+        url: `${BASE_URL}/produit/${product.id}`,
+        price: Number(product.price).toFixed(2),
+        priceCurrency: (product.currency || 'XAF').toUpperCase(),
+        availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        priceValidUntil: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+      },
+      ...(Number(product.review_count) > 0
+        ? {
+            aggregateRating: {
+              '@type': 'AggregateRating',
+              ratingValue: String(Number(product.rating_avg || 0).toFixed(1)),
+              reviewCount: String(product.review_count),
+            },
+          }
+        : {}),
+    };
+    const el = document.createElement('script');
+    el.type = 'application/ld+json';
+    el.text = JSON.stringify(jsonLd);
+    document.head.appendChild(el);
+    return () => el.remove();
+  }, [product && product.id]);
+
   const photos = product ? product.photos || [] : [];
   useEffect(() => {
     if (!lightbox) return;
@@ -199,10 +236,13 @@ export default function ProductDetail() {
           </p>
           {product.description && <p>{product.description}</p>}
           <div className="product-meta">
+            {Number(product.sold_month) > 0 && <span className="meta-chip">🔥 {t('{n} vendus ce mois-ci', { n: product.sold_month })}</span>}
             {Number(product.sold) > 0 && <span className="meta-chip">🔥 {t('{n} vendus', { n: product.sold })}</span>}
             {Number(product.pending_count) > 0 && <span className="meta-chip">⏳ {t('{n} en attente', { n: product.pending_count })}</span>}
             {product.warranty && <span className="meta-chip">🛡️ {t('Garantie : {warranty}', { warranty: product.warranty })}</span>}
             <span className="meta-chip">🚚 {deliveryFee > 0 ? t('Livraison {price} {symbol}', { price: formatMoney(deliveryFee), symbol }) : t('Livraison gratuite')}</span>
+            <span className="meta-chip">⏱️ {t('Livraison en 24-72h')}</span>
+            <span className="meta-chip">🛡️ {t('Satisfait ou remboursé')}</span>
             {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
           </div>
           <div className="offer-prices">

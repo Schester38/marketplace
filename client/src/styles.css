@@ -642,6 +642,26 @@ input, select, textarea { font-size: 16px; }
   grid-template-columns: repeat(2, 1fr);
 }
 
+/* Bandeau de preuve sociale : dernieres commandes */
+.recent-sales {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  border-radius: 14px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: var(--text);
+  animation: fadeUp 0.5s ease;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.recent-sales-icon { font-size: 1.05rem; flex-shrink: 0; }
+.recent-sales-text { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.recent-sales-ago { color: var(--muted); flex-shrink: 0; }
+
 .product-card { display: flex; flex-direction: column; overflow: hidden; padding: 0; transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; border-radius: 14px; }
 .product-link { display: block; }
 .product-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
