@@ -36,15 +36,7 @@
     <meta name="apple-mobile-web-app-title" content="Mboppi" />
     <meta name="mobile-web-app-capable" content="yes" />
 
-    <script>
-      (function () {
-        try {
-          var t = localStorage.getItem('theme');
-          if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-          document.documentElement.setAttribute('data-theme', t);
-        } catch (e) {}
-      })();
-    </script>
+    <script src="/splash.js" defer></script>
 
     <style>
       .splash{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:linear-gradient(160deg,#f8fafc,#eef2ff);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}

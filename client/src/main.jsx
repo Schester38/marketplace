@@ -20,8 +20,9 @@ if (DSN) {
 const pathname = window.location.pathname;
 
 try {
-  const t = localStorage.getItem('theme');
-  if (t) document.documentElement.setAttribute('data-theme', t);
+  let t = localStorage.getItem('theme');
+  if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', t);
 } catch {
   /* stockage indisponible */
 }

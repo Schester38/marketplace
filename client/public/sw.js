@@ -1,5 +1,5 @@
-const CACHE_NAME = 'mboppi-v20';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/og-image.svg', '/robots.txt', '/sitemap.xml'];
+const CACHE_NAME = 'mboppi-v21';
+const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/og-image.svg', '/robots.txt', '/sitemap.xml', '/splash.js'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -60,16 +60,16 @@ self.addEventListener('fetch', (event) => {
       event.respondWith(
         (async () => {
           const cached = await caches.match(event.request);
-          const network = fetch(event.request)
-            .then((response) => {
-              if (response.ok) {
-                const clone = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-              }
-              return response;
-            })
-            .catch(() => cached);
-          return cached || network;
+          try {
+            const network = await fetch(event.request);
+            if (network.ok) {
+              const clone = network.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+            }
+            return network;
+          } catch (err) {
+            return cached || new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
+          }
         })()
       );
     }
