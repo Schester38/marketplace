@@ -27,6 +27,7 @@ export default function Verone() {
   const [showShare, setShowShare] = useState(false);
   const [showMyOffers, setShowMyOffers] = useState(false);
   const [myOffers, setMyOffers] = useState([]);
+  const [loadingOffers, setLoadingOffers] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -35,11 +36,15 @@ export default function Verone() {
   const [submitting, setSubmitting] = useState(false);
 
   const loadOffers = useCallback(async () => {
+    setLoadingOffers(true);
+    setError('');
     try {
       const d = await api.myOffers();
-      setMyOffers(d.offers);
+      setMyOffers(d.offers || []);
     } catch (e) {
       setError(e.message);
+    } finally {
+      setLoadingOffers(false);
     }
   }, []);
 
@@ -150,7 +155,10 @@ export default function Verone() {
       {showMyOffers && (
         <section className="card">
           <h2 className="section-title" style={{ marginTop: 0 }}>{t('Mes offres')}</h2>
-          {myOffers.length === 0 ? (
+          {error && <p className="error">{error}</p>}
+          {loadingOffers ? (
+            <p className="hint">{t('Chargement…')}</p>
+          ) : myOffers.length === 0 ? (
             <p className="empty">{t('Aucune offre ajoutée pour le moment.')}</p>
           ) : (
             <div className="my-offers">
