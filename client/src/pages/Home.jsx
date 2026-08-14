@@ -40,31 +40,17 @@ export default function Home() {
   const [scope, setScope] = useState('product');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [mode, setMode] = useState('products');
   const [city, setCity] = useState('');
-  const [debouncedCity, setDebouncedCity] = useState('');
-  const [citySuggestions, setCitySuggestions] = useState([]);
+  const [shops, setShops] = useState([]);
+  const [shopsLoading, setShopsLoading] = useState(false);
+  const [shopsError, setShopsError] = useState('');
   const produitsRef = useRef(null);
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim()), 150);
     return () => clearTimeout(id);
   }, [search]);
-
-  useEffect(() => {
-    const id = setTimeout(() => {
-      const v = city.trim();
-      setDebouncedCity(v);
-      if (v.length >= 2) {
-        api
-          .listCities(v)
-          .then((d) => mounted.current && setCitySuggestions(d.cities))
-          .catch(() => {});
-      } else {
-        setCitySuggestions([]);
-      }
-    }, 120);
-    return () => clearTimeout(id);
-  }, [city]);
 
   const loadProducts = useCallback(
     (silent) => {
@@ -77,13 +63,12 @@ export default function Home() {
           scope,
           min_price: minPrice === '' ? undefined : minPrice,
           max_price: maxPrice === '' ? undefined : maxPrice,
-          city: debouncedCity || undefined,
         })
         .then((d) => {
           if (mounted.current) {
             hasLoaded.current = true;
             const next = d.products || [];
-            const unfiltered = !debouncedSearch && !category && !debouncedCity && !minPrice && !maxPrice && scope === 'product';
+            const unfiltered = !debouncedSearch && !category && !minPrice && !maxPrice && scope === 'product';
             if (next.length === 0 && hasData.current && unfiltered) {
               setError('');
             } else {
@@ -109,7 +94,6 @@ export default function Home() {
               hasLoaded.current &&
               !debouncedSearch &&
               !category &&
-              !debouncedCity &&
               !minPrice &&
               !maxPrice &&
               scope === 'product' &&
@@ -121,7 +105,7 @@ export default function Home() {
           }
         });
     },
-    [user, debouncedSearch, category, sort, scope, minPrice, maxPrice, debouncedCity]
+    [user, debouncedSearch, category, sort, scope, minPrice, maxPrice]
   );
 
   useEffect(() => {
@@ -134,7 +118,22 @@ export default function Home() {
 
   useRefreshOnFocus(() => loadProducts(true));
 
-  const shopsCount = new Set(products.map((p) => p.shop_id)).size;
+  useEffect(() => {
+    if (mode !== 'city' || !city) return;
+    let ok = true;
+    setShopsLoading(true);
+    setShopsError('');
+    api
+      .listShops({ city })
+      .then((d) => {
+        if (ok) setShops(d.shops || []);
+      })
+      .catch((e) => ok && setShopsError(e.message))
+      .finally(() => ok && setShopsLoading(false));
+    return () => {
+      ok = false;
+    };
+  }, [mode, city]);
 
   const goToProducts = () => {
     produitsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -243,7 +242,7 @@ export default function Home() {
       <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
           <div className="section-head">
             <h2 className="section-title">🛍️ {t('Produits et créations')}</h2>
-            {category || minPrice || maxPrice || city ? (
+            {category || minPrice || maxPrice ? (
               <button
                 type="button"
                 className="section-link"
@@ -251,8 +250,6 @@ export default function Home() {
                   setCategory('');
                   setMinPrice('');
                   setMaxPrice('');
-                  setCity('');
-                  setDebouncedCity('');
                 }}
               >
                 ✕ {t('Réinitialiser les filtres')}
@@ -270,28 +267,23 @@ export default function Home() {
             />
             <button type="submit" className="btn btn-primary">{t('Rechercher')}</button>
           </form>
+          <div className="view-switch">
+            <button
+              type="button"
+              className={`btn ${mode === 'products' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setMode('products')}
+            >
+              🛍️ {t('Voir tous les produits')}
+            </button>
+            <button
+              type="button"
+              className={`btn ${mode === 'city' ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setMode('city')}
+            >
+              📍 {t('Voir par ville')}
+            </button>
+          </div>
           <div className="toolbar">
-            <input
-              className="input filter-select city-input"
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder={t('Ville…')}
-              aria-label={t('Filtrer par ville')}
-              list="mboppi-city-suggestions"
-              autoComplete="off"
-            />
-            <datalist id="mboppi-city-suggestions">
-              {CITIES.map((c) => (
-                <option key={c.name} value={c.name} />
-              ))}
-              {citySuggestions
-                .map((s) => s.label)
-                .filter((label, i, arr) => label && arr.indexOf(label) === i)
-                .map((label) => (
-                  <option key={label} value={label} />
-                ))}
-            </datalist>
             <select
               className="input filter-select"
               value={category}
@@ -344,8 +336,55 @@ export default function Home() {
               <option value="creation">{t('Rechercher une création')}</option>
             </select>
           </div>
-          {error && <p className="error" role="alert">{error}</p>}
-          {loading && !hasLoaded.current ? (
+          {error && mode === 'products' && <p className="error" role="alert">{error}</p>}
+          {mode === 'city' ? (
+            <div className="city-shops">
+              <select
+                className="input filter-select"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                aria-label={t('Choisir une ville')}
+              >
+                <option value="">{t('Choisir une ville…')}</option>
+                {CITIES.map((c) => (
+                  <option key={c.slug} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+              {city ? (
+                shopsLoading ? (
+                  <p className="muted">{t('Chargement…')}</p>
+                ) : shopsError ? (
+                  <p className="error" role="alert">{shopsError}</p>
+                ) : shops.length === 0 ? (
+                  <p className="empty">{t('Aucune boutique dans cette ville pour le moment. Revenez bientôt !')}</p>
+                ) : (
+                  <div className="grid shops-grid">
+                    {shops.map((s) => (
+                      <Link key={s.id} to={`/boutique/${s.id}`} className="card shop-card">
+                        <div className="shop-thumb">
+                          {s.sample_image ? (
+                            <img src={s.sample_image} alt={s.name} loading="lazy" decoding="async" />
+                          ) : (
+                            <span>🏪</span>
+                          )}
+                        </div>
+                        <div className="shop-body">
+                          <h3>
+                            {s.name}
+                            {s.verified && <span className="badge">✓ {t('Boutique vérifiée')}</span>}
+                          </h3>
+                          <p>📍 {[s.city, s.location].filter(Boolean).join(', ') || t('Ville non renseignée')}</p>
+                          <p className="muted">{t('{n} produits', { n: s.product_count || 0 })}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )
+              ) : (
+                <p className="muted">{t('Sélectionnez une ville pour voir les boutiques disponibles.')}</p>
+              )}
+            </div>
+          ) : loading && !hasLoaded.current ? (
             <div className="grid">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="card product-card skeleton" aria-hidden="true">
@@ -358,17 +397,10 @@ export default function Home() {
               <p className="empty">
                 {category
                   ? t('Aucun produit dans cette catégorie.')
-                  : debouncedCity
-                    ? t('Aucun produit dans cette ville pour le moment.')
-                    : search
-                      ? t('Aucun résultat pour votre recherche.')
-                      : t('Aucun produit disponible.')}
+                  : search
+                    ? t('Aucun résultat pour votre recherche.')
+                    : t('Aucun produit disponible.')}
               </p>
-              {!category && !debouncedCity && !search && (
-                <button type="button" className="btn btn-outline" onClick={() => loadProducts(true)}>
-                  {t('Actualiser')}
-                </button>
-              )}
             </div>
           ) : (
             <div className="grid">

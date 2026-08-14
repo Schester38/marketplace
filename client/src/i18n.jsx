@@ -1105,6 +1105,13 @@ const EN = {
   'Vous vous inscrivez via le lien d\'un vendeur Mboppi : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.': 'You are signing up through a Mboppi seller link: it is free, and the "Client" role is preselected for you.',
   'Code du vendeur (parrainage)': 'Seller code (referral)',
   'Le vendeur {seller} réclame le paiement de sa commission pour « {product} ».': 'Seller {seller} is claiming payment of their commission for « {product} ».',
+  'Voir tous les produits': 'View all products',
+  'Voir par ville': 'View by city',
+  'Choisir une ville…': 'Choose a city…',
+  'Sélectionnez une ville pour voir les boutiques disponibles.': 'Select a city to see the available shops.',
+  'Aucune boutique dans cette ville pour le moment. Revenez bientôt !': 'No shops in this city for now. Come back soon!',
+  '{n} produits': '{n} products',
+  'Ville non renseignée': 'City not provided',
 };
 
 const AR = {
@@ -2203,6 +2210,13 @@ const AR = {
   'Vous vous inscrivez via le lien d\'un vendeur Mboppi : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.': 'أنت تسجل عبر رابط بائع Mboppi: التسجيل مجاني ودور «عميل» محدد تلقائياً.',
   'Code du vendeur (parrainage)': 'رمز البائع (إحالة)',
   'Le vendeur {seller} réclame le paiement de sa commission pour « {product} ».': 'البائع {seller} يطالب بدفع عمولته عن « {product} ».',
+  'Voir tous les produits': 'عرض كل المنتجات',
+  'Voir par ville': 'عرض حسب المدينة',
+  'Choisir une ville…': 'اختر مدينة…',
+  'Sélectionnez une ville pour voir les boutiques disponibles.': 'اختر مدينة لعرض المتاجر المتاحة.',
+  'Aucune boutique dans cette ville pour le moment. Revenez bientôt !': 'لا توجد متاجر في هذه المدينة حالياً. عد لاحقاً!',
+  '{n} produits': '{n} منتجات',
+  'Ville non renseignée': 'المدينة غير محددة',
 };
 
 export const I18N = { fr: {}, en: EN, ar: AR };

@@ -49,6 +49,10 @@ export const api = {
     return request('/products' + (qs ? `?${qs}` : ''));
   },
   listCities: (search = '') => request('/products/cities' + (search ? `?q=${encodeURIComponent(search)}` : '')),
+  listShops: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request('/shops' + (qs ? `?${qs}` : ''));
+  },
   getProduct: (id) => request(`/products/${id}`),
   myProducts: () => request('/products/mine'),
   createProduct: (payload) => request('/products', { method: 'POST', body: JSON.stringify(payload) }),

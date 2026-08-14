@@ -91,6 +91,31 @@ router.get('/:id/payment-methods', ah(async (req, res) => {
   res.json({ methods: rowMethods(m) });
 }));
 
+const NORMALIZE_TEXT = (col) =>
+  `regexp_replace(translate(lower(${col}), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn'), '[^a-z0-9]', '', 'g')`;
+
+router.get('/', ah(async (req, res) => {
+  const { city } = req.query;
+  const where = ["u.role IN ('shop', 'creator')"];
+  const params = [];
+  if (city) {
+    const norm = String(city).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    where.push(NORMALIZE_TEXT(`COALESCE(u.city, '') || ' ' || COALESCE(u.location, '')`) + ` ILIKE '%' || $${params.length + 1} || '%'`);
+    params.push(norm);
+  }
+  const sql = `
+    SELECT u.id, u.name, u.city, u.location, u.country, u.phone, u.verified,
+           COUNT(p.id)::int AS product_count,
+           (SELECT image FROM products p2 WHERE p2.shop_id = u.id ORDER BY p2.created_at DESC LIMIT 1) AS sample_image
+    FROM users u
+    LEFT JOIN products p ON p.shop_id = u.id
+    WHERE ${where.join(' AND ')}
+    GROUP BY u.id
+    ORDER BY u.name ASC`;
+  const shops = await q(sql, params);
+  res.json({ shops });
+}));
+
 router.get('/:id', ah(async (req, res) => {
   const shop = (
     await q(
