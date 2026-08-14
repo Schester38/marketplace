@@ -11,8 +11,6 @@ export default function BackButton() {
   const navs = useRef(0);
   const first = useRef(true);
 
-  if (NO_BACK_PATHS.includes(location.pathname)) return null;
-
   useEffect(() => {
     if (first.current) {
       first.current = false;
@@ -20,6 +18,8 @@ export default function BackButton() {
     }
     navs.current += 1;
   }, [location.key]);
+
+  if (NO_BACK_PATHS.includes(location.pathname)) return null;
 
   const goBack = () => {
     if (navs.current > 0) navigate(-1);
