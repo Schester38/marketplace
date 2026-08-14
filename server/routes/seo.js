@@ -222,4 +222,36 @@ router.get('/boutique/:id', async (req, res) => {
   }
 });
 
+router.get('/sitemap.xml', async (req, res) => {
+  try {
+    const staticUrls = [
+      ['/', 'daily', '1.0'],
+      ['/vitrine-offre', 'hourly', '0.9'],
+      ['/a-propos', 'monthly', '0.7'],
+      ['/contact', 'monthly', '0.7'],
+      ['/faq', 'monthly', '0.6'],
+      ['/cgv', 'yearly', '0.4'],
+      ['/cgu', 'yearly', '0.4'],
+      ['/mentions-legales', 'yearly', '0.4'],
+      ['/donnees', 'monthly', '0.5'],
+    ];
+    const [products, shops] = await Promise.all([
+      q('SELECT id FROM products ORDER BY id DESC'),
+      q("SELECT id FROM users WHERE role IN ('shop', 'creator') ORDER BY id DESC"),
+    ]);
+    const entries = [
+      ...staticUrls.map(([loc, freq, prio]) => ({ loc: BASE_URL + loc, freq, prio })),
+      ...products.map((p) => ({ loc: `${BASE_URL}/produit/${p.id}`, freq: 'weekly', prio: '0.8' })),
+      ...shops.map((s) => ({ loc: `${BASE_URL}/boutique/${s.id}`, freq: 'weekly', prio: '0.7' })),
+    ];
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${entries.map((e) => `  <url><loc>${e.loc}</loc><changefreq>${e.freq}</changefreq><priority>${e.prio}</priority></url>`).join('\n')}
+</urlset>`;
+    res.type('application/xml').send(xml);
+  } catch {
+    res.status(500).send('Erreur serveur');
+  }
+});
+
 export default router;

@@ -6,6 +6,7 @@
     { "source": "/p/(.*)", "destination": "/api/index" },
     { "source": "/produit/:id", "destination": "/api/index" },
     { "source": "/boutique/:id", "destination": "/api/index" },
+    { "source": "/sitemap.xml", "destination": "/api/index" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
