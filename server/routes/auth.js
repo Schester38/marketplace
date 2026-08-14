@@ -138,13 +138,10 @@ router.get('/google', (req, res) => {
     const msg = encodeURIComponent('La connexion Google n\'est pas encore configurée');
     return res.redirect(`/auth-google?error=${msg}`);
   }
-  if (req.query.accepted !== '1') {
-    const msg = encodeURIComponent('Vous devez accepter les Conditions Générales d\'Utilisation pour vous inscrire');
-    return res.redirect(`/auth-google?error=${msg}`);
-  }
   const ref = String(req.query.ref || '').trim().toUpperCase();
   const role = VALID_ROLES.includes(req.query.role) ? req.query.role : ref ? 'client' : 'seller';
-  res.redirect(googleAuthUrl(ref ? 'client' : role, req.query.country, ref, req));
+  const accepted = req.query.accepted === '1' ? '1' : '';
+  res.redirect(googleAuthUrl(ref ? 'client' : role, req.query.country, ref, accepted, req));
 });
 
 router.get('/google/callback', ah(async (req, res) => {
@@ -156,7 +153,11 @@ router.get('/google/callback', ah(async (req, res) => {
     const profile = await getGoogleProfile(code, req);
     let user = (await q('SELECT * FROM users WHERE email = $1', [profile.email]))[0];
     if (!user) {
-      const [role, country, ref] = String(state || '').split('|');
+      const [role, country, ref, accepted] = String(state || '').split('|');
+      if (accepted !== '1') {
+        const msg = encodeURIComponent('Vous devez accepter les Conditions Générales d\'Utilisation pour vous inscrire');
+        return res.redirect(`/auth-google?error=${msg}`);
+      }
       let cleanRole = VALID_ROLES.includes(role) ? role : 'seller';
       const cleanCountry = country && country.length <= 60 ? country : null;
       let referredBy = null;
