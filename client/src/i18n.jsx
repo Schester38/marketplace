@@ -39,6 +39,7 @@ const EN = {
   'Chargement…': 'Loading…',
   'Page introuvable': 'Page not found',
   'Retour à l\'accueil': 'Back to home',
+  'Retour': 'Back',
 
   // Footer
   'À propos': 'About',
@@ -1137,6 +1138,7 @@ const AR = {
   'Chargement…': 'جارٍ التحميل…',
   'Page introuvable': 'الصفحة غير موجودة',
   'Retour à l\'accueil': 'العودة إلى الرئيسية',
+  'Retour': 'رجوع',
 
   // Footer
   'À propos': 'من نحن',

@@ -4,6 +4,7 @@ import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import BackToTop from './components/BackToTop.jsx';
+import BackButton from './components/BackButton.jsx';
 import ChatWidget from './components/ChatWidget.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
 import Home from './pages/Home.jsx';
@@ -281,6 +282,7 @@ export default function App() {
       <Footer />
       <BottomNav />
       <BackToTop />
+      <BackButton />
       <ChatWidget />
     </div>
   );

@@ -31,7 +31,7 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [category, setCategory] = useState('');
-  const [sort, setSort] = useState('recent');
+  const [sort, setSort] = useState('popular');
   const [scope, setScope] = useState('product');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
