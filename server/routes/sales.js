@@ -86,9 +86,9 @@ router.get('/recent', ah(async (req, res) => {
      FROM sales s
      JOIN products p ON p.id = s.product_id
      JOIN users u ON u.id = p.shop_id
-     WHERE s.status IN ('delivered', 'bought', 'confirmed')
+     WHERE s.status <> 'cancelled'
      ORDER BY s.created_at DESC
-     LIMIT 12`
+     LIMIT 10`
   );
   res.json({
     recent: rows.map((r) => ({
