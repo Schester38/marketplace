@@ -38,12 +38,30 @@ export default function Home() {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [city, setCity] = useState('');
+  const [debouncedCity, setDebouncedCity] = useState('');
+  const [citySuggestions, setCitySuggestions] = useState([]);
   const produitsRef = useRef(null);
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search.trim()), 150);
     return () => clearTimeout(id);
   }, [search]);
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const v = city.trim();
+      setDebouncedCity(v);
+      if (v.length >= 2) {
+        api
+          .listCities(v)
+          .then((d) => mounted.current && setCitySuggestions(d.cities))
+          .catch(() => {});
+      } else {
+        setCitySuggestions([]);
+      }
+    }, 120);
+    return () => clearTimeout(id);
+  }, [city]);
 
   const loadProducts = useCallback(
     (silent) => {
@@ -56,7 +74,7 @@ export default function Home() {
           scope,
           min_price: minPrice === '' ? undefined : minPrice,
           max_price: maxPrice === '' ? undefined : maxPrice,
-          city: city || undefined,
+          city: debouncedCity || undefined,
         })
         .then((d) => {
           if (mounted.current) {
@@ -75,7 +93,7 @@ export default function Home() {
         .catch((e) => mounted.current && setError(e.message))
         .finally(() => mounted.current && setLoading(false));
     },
-    [user, debouncedSearch, category, sort, scope, minPrice, maxPrice, city]
+    [user, debouncedSearch, category, sort, scope, minPrice, maxPrice, debouncedCity]
   );
 
   useEffect(() => {
@@ -206,6 +224,7 @@ export default function Home() {
                   setMinPrice('');
                   setMaxPrice('');
                   setCity('');
+                  setDebouncedCity('');
                 }}
               >
                 ✕ {t('Réinitialiser les filtres')}
@@ -224,17 +243,27 @@ export default function Home() {
             <button type="submit" className="btn btn-primary">{t('Rechercher')}</button>
           </form>
           <div className="toolbar">
-            <select
-              className="input filter-select"
+            <input
+              className="input filter-select city-input"
+              type="text"
               value={city}
               onChange={(e) => setCity(e.target.value)}
+              placeholder={t('Ville…')}
               aria-label={t('Filtrer par ville')}
-            >
-              <option value="">{t('Toutes les villes')}</option>
+              list="mboppi-city-suggestions"
+              autoComplete="off"
+            />
+            <datalist id="mboppi-city-suggestions">
               {CITIES.map((c) => (
-                <option key={c.slug} value={c.slug}>{c.name}</option>
+                <option key={c.name} value={c.name} />
               ))}
-            </select>
+              {citySuggestions
+                .map((s) => s.label)
+                .filter((label, i, arr) => label && arr.indexOf(label) === i)
+                .map((label) => (
+                  <option key={label} value={label} />
+                ))}
+            </datalist>
             <select
               className="input filter-select"
               value={category}
@@ -301,7 +330,7 @@ export default function Home() {
               <p className="empty">
                 {category
                   ? t('Aucun produit dans cette catégorie.')
-                  : city
+                  : debouncedCity
                     ? t('Aucun produit dans cette ville pour le moment.')
                     : search
                       ? t('Aucun résultat pour votre recherche.')

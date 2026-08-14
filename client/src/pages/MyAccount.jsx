@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { useAuth } from '../App.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
 import { COUNTRIES } from '../config.js';
+import { CITIES } from '../cities.js';
 import { useLang } from '../i18n.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 
@@ -187,6 +188,7 @@ export default function MyAccount() {
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [location, setLocation] = useState(user?.location || '');
+  const [city, setCity] = useState(user?.city || '');
   const [country, setCountry] = useState(user?.country || '');
   const [profileMsg, setProfileMsg] = useState('');
   const [profileError, setProfileError] = useState('');
@@ -209,7 +211,7 @@ export default function MyAccount() {
     setProfileMsg('');
     setProfileError('');
     try {
-      const { user: updated } = await api.updateProfile({ name, email, location, country });
+      const { user: updated } = await api.updateProfile({ name, email, location, city, country });
       login(updated, localStorage.getItem('token'));
       setProfileMsg(t('Profil mis à jour avec succès.'));
     } catch (err) {
@@ -289,6 +291,22 @@ export default function MyAccount() {
               />
             </label>
             {user?.role === 'shop' && (
+              <>
+              <label className="field">
+                <span>{t('📍 Ville de la boutique')}</span>
+                <input
+                  type="text"
+                  list="mboppi-shop-cities"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Ex : Douala, Yaoundé…"
+                />
+              </label>
+              <datalist id="mboppi-shop-cities">
+                {CITIES.map((c) => (
+                  <option key={c.name} value={c.name} />
+                ))}
+              </datalist>
               <label className="field">
                 <span>{t('📍 Localisation de la boutique')}</span>
                 <input
@@ -298,6 +316,7 @@ export default function MyAccount() {
                   placeholder="Ex : Yaoundé, Mvog-Mbi, rue 1.123"
                 />
               </label>
+              </>
             )}
             {profileError && <p className="error">{profileError}</p>}
             {profileMsg && <p className="success">{profileMsg}</p>}

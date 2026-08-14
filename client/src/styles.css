@@ -1360,6 +1360,7 @@ input, select, textarea { font-size: 16px; }
 }
 .toolbar .search { max-width: none; flex: 1 1 260px; }
 .filter-select { max-width: 260px; min-width: 180px; }
+.city-input { max-width: 260px; min-width: 180px; width: 100%; }
 
 .section-head {
   display: flex;

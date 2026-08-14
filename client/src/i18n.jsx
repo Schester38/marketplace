@@ -860,6 +860,8 @@ const EN = {
   'Statistiques de mes créations': 'Statistics of my creations',
   // Missing keys (polish pass)
   'Ville': 'City',
+  'Ville…': 'City…',
+  '📍 Ville de la boutique': '📍 Shop city',
   'Adresse': 'Address',
   'Frais de livraison': 'Delivery fee',
   'Paiement': 'Payment',
@@ -1956,6 +1958,8 @@ const AR = {
   'Statistiques de mes créations': 'إحصائيات إبداعاتي',
   // Missing keys (polish pass)
   'Ville': 'المدينة',
+  'Ville…': 'المدينة…',
+  '📍 Ville de la boutique': '📍 مدينة المتجر',
   'Adresse': 'العنوان',
   'Frais de livraison': 'رسوم التوصيل',
   'Paiement': 'الدفع',

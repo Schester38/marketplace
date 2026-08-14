@@ -32,7 +32,7 @@ function productRow(p, mode = 'list') {
 }
 
 const SELECT_PRODUCT = `
-  SELECT p.*, u.name AS shop_name, u.location AS shop_location, u.country AS shop_country,
+  SELECT p.*, u.name AS shop_name, u.location AS shop_location, u.city AS shop_city, u.country AS shop_country,
          u.verified AS shop_verified, u.phone AS shop_phone,
          s.n, s.n_month, s.pending_n, r.review_count, r.rating_avg
   FROM products p
@@ -45,6 +45,9 @@ const SELECT_PRODUCT = `
   LEFT JOIN (SELECT product_id, COUNT(*) AS review_count, COALESCE(AVG(rating), 0)::numeric(3, 2) AS rating_avg
              FROM reviews GROUP BY product_id) r ON r.product_id = p.id
 `;
+
+const NORMALIZE_TEXT = (col) =>
+  `regexp_replace(translate(lower(${col}), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn'), '[^a-z0-9]', '', 'g')`;
 
 const SORTS = {
   recent: 'p.created_at DESC',
@@ -81,11 +84,8 @@ router.get('/', async (req, res) => {
   }
   if (city) {
     const norm = String(city).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-    where.push(
-      `translate(lower(u.location), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn') ILIKE '%' || $` +
-        (params.length + 1) +
-        ` || '%'`
-    );
+    const match = NORMALIZE_TEXT(`COALESCE(u.city, '') || ' ' || u.location`);
+    where.push(match + ` ILIKE '%' || $${params.length + 1} || '%'`);
     params.push(norm);
   }
   const minP = Number(min_price);
@@ -109,6 +109,32 @@ router.get('/mine', authRequired, roleRequired(...OWNER_ROLES), async (req, res)
     await q(SELECT_PRODUCT + ' WHERE p.shop_id = $1 ORDER BY p.created_at DESC', [req.user.id])
   ).map(productRow);
   res.json({ products, limit: MAX_PRODUCTS_PER_SHOP });
+});
+
+router.get('/cities', async (req, res) => {
+  const { q: search } = req.query;
+  const rows = await q(
+    `SELECT DISTINCT
+       regexp_replace(translate(lower(COALESCE(u.city, '') || ' ' || COALESCE(u.location, '')), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn'), '[^a-z0-9]', '', 'g') AS norm,
+       COALESCE(NULLIF(TRIM(u.city), ''), u.location) AS label
+     FROM users u
+     WHERE u.role IN ('shop', 'creator') AND (COALESCE(u.city, '') <> '' OR COALESCE(u.location, '') <> '')
+     ORDER BY norm ASC LIMIT 100`
+  );
+  const suggestions = [];
+  const seen = new Set();
+  for (const r of rows) {
+    const norm = r.norm || '';
+    if (!norm) continue;
+    const key = norm.slice(0, 12);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    suggestions.push({ label: r.label, norm });
+  }
+  const filtered = search
+    ? suggestions.filter((s) => s.norm.includes(String(search).trim().toLowerCase().replace(/[^a-z0-9]/g, '')))
+    : suggestions;
+  res.json({ cities: filtered });
 });
 
 router.get('/:id', async (req, res) => {

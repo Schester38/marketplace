@@ -357,7 +357,7 @@ router.get('/ville/:slug', async (req, res) => {
       `SELECT COUNT(DISTINCT p.id) AS products,
               COUNT(DISTINCT u.id) AS shops
        FROM products p JOIN users u ON u.id = p.shop_id
-       WHERE translate(lower(u.location), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn') ILIKE '%' || $1 || '%'`,
+       WHERE regexp_replace(translate(lower(COALESCE(u.city, '') || ' ' || COALESCE(u.location, '')), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn'), '[^a-z0-9]', '', 'g') ILIKE '%' || $1 || '%'`,
       [slug.replace(/[^a-z0-9]/g, '')]
     );
     const count = Number(stats?.products || 0);

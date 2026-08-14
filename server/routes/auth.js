@@ -40,7 +40,7 @@ async function verifyRecaptcha(token) {
 }
 
 function publicUser(u) {
-  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null };
+  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, city: u.city || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null };
 }
 
 const VALID_ROLES = ['shop', 'seller', 'client', 'creator'];
@@ -190,7 +190,7 @@ router.get('/me', authRequired, ah(async (req, res) => {
 }));
 
 router.put('/me', authRequired, ah(async (req, res) => {
-  const { name, email, location, country } = req.body || {};
+  const { name, email, location, city, country } = req.body || {};
   if (!name || !String(name).trim()) {
     return res.status(400).json({ error: 'Le nom ne peut pas être vide' });
   }
@@ -200,7 +200,7 @@ router.put('/me', authRequired, ah(async (req, res) => {
   if (!validEmail(email)) {
     return res.status(400).json({ error: 'Adresse email invalide' });
   }
-  if (String(name).trim().length > 100 || String(location || '').length > 150 || String(country || '').length > 60) {
+  if (String(name).trim().length > 100 || String(location || '').length > 150 || String(city || '').length > 60 || String(country || '').length > 60) {
     return res.status(400).json({ error: 'Des champs sont trop longs' });
   }
   const emailNorm = String(email).trim().toLowerCase();
@@ -209,8 +209,8 @@ router.put('/me', authRequired, ah(async (req, res) => {
     return res.status(409).json({ error: 'Un compte existe déjà avec cet email' });
   }
   const updated = await q(
-    'UPDATE users SET name = $1, email = $2, location = $3, country = $4 WHERE id = $5 RETURNING *',
-    [String(name).trim(), emailNorm, location ? String(location).trim() : null, country ? String(country).trim() : null, req.user.id]
+    'UPDATE users SET name = $1, email = $2, location = $3, city = $4, country = $5 WHERE id = $6 RETURNING *',
+    [String(name).trim(), emailNorm, location ? String(location).trim() : null, city ? String(city).trim() : null, country ? String(country).trim() : null, req.user.id]
   );
   if (!updated.length) return res.status(404).json({ error: 'Compte introuvable' });
   res.json({ user: publicUser(updated[0]) });
