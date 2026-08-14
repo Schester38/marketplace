@@ -35,7 +35,6 @@ export default function BackButton() {
       title={t('Retour')}
     >
       <span className="back-btn-icon" aria-hidden="true">←</span>
-      <span className="back-btn-label">{t('Retour')}</span>
     </button>
   );
 }

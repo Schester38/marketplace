@@ -2625,8 +2625,10 @@ a.step { text-decoration: none; color: inherit; }
   z-index: 900;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 14px;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--card);
@@ -2639,14 +2641,15 @@ a.step { text-decoration: none; color: inherit; }
 }
 .back-btn:hover { background: var(--soft); }
 .back-btn:active { transform: scale(0.95); }
-.back-btn-icon { display: inline-block; font-size: 1.05rem; line-height: 1; }
+.back-btn-icon { display: inline-block; font-size: 1.15rem; line-height: 1; }
 [dir='rtl'] .back-btn-icon { transform: scaleX(-1); }
 
 @media (max-width: 640px) {
   .back-btn {
     top: calc(56px + env(safe-area-inset-top));
     inset-inline-start: 8px;
-    padding: 8px 12px;
+    width: 36px;
+    height: 36px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

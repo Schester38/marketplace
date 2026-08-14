@@ -11,37 +11,47 @@ import Home from './pages/Home.jsx';
 import { LangProvider, useLang } from './i18n.jsx';
 import { StoreProvider } from './store.jsx';
 
-const Login = React.lazy(() => import('./pages/Login.jsx'));
-const Register = React.lazy(() => import('./pages/Register.jsx'));
-const Cart = React.lazy(() => import('./pages/Cart.jsx'));
-const Favorites = React.lazy(() => import('./pages/Favorites.jsx'));
-const ShopDashboard = React.lazy(() => import('./pages/ShopDashboard.jsx'));
-const SellerDashboard = React.lazy(() => import('./pages/SellerDashboard.jsx'));
-const SellerPayments = React.lazy(() => import('./pages/SellerPayments.jsx'));
-const ShopPayments = React.lazy(() => import('./pages/ShopPayments.jsx'));
-const LivreurDashboard = React.lazy(() => import('./pages/LivreurDashboard.jsx'));
-const ClientDashboard = React.lazy(() => import('./pages/ClientDashboard.jsx'));
-const CreatorDashboard = React.lazy(() => import('./pages/CreatorDashboard.jsx'));
-const VitrineOffre = React.lazy(() => import('./pages/VitrineOffre.jsx'));
-const Verone = React.lazy(() => import('./pages/Verone.jsx'));
-const OfferDetail = React.lazy(() => import('./pages/OfferDetail.jsx'));
-const ProductDetail = React.lazy(() => import('./pages/ProductDetail.jsx'));
-const PurchasePage = React.lazy(() => import('./pages/PurchasePage.jsx'));
-const AuthGoogle = React.lazy(() => import('./pages/AuthGoogle.jsx'));
-const About = React.lazy(() => import('./pages/About.jsx'));
-const Contact = React.lazy(() => import('./pages/Contact.jsx'));
-const Privacy = React.lazy(() => import('./pages/Privacy.jsx'));
-const MyAccount = React.lazy(() => import('./pages/MyAccount.jsx'));
-const ShopPage = React.lazy(() => import('./pages/ShopPage.jsx'));
-const Suivi = React.lazy(() => import('./pages/Suivi.jsx'));
-const NotFound = React.lazy(() => import('./pages/NotFound.jsx'));
-const Admin = React.lazy(() => import('./pages/Admin.jsx'));
-const Cgv = React.lazy(() => import('./pages/Cgv.jsx'));
-const Cgu = React.lazy(() => import('./pages/Cgu.jsx'));
-const Faq = React.lazy(() => import('./pages/Faq.jsx'));
-const MentionsLegales = React.lazy(() => import('./pages/MentionsLegales.jsx'));
-const Support = React.lazy(() => import('./pages/Support.jsx'));
-const CookiesBanner = React.lazy(() => import('./components/CookiesBanner.jsx'));
+const lazyRetry = (importer) =>
+  React.lazy(async () => {
+    try {
+      return await importer();
+    } catch (err) {
+      await new Promise((r) => setTimeout(r, 1200));
+      return importer();
+    }
+  });
+
+const Login = lazyRetry(() => import('./pages/Login.jsx'));
+const Register = lazyRetry(() => import('./pages/Register.jsx'));
+const Cart = lazyRetry(() => import('./pages/Cart.jsx'));
+const Favorites = lazyRetry(() => import('./pages/Favorites.jsx'));
+const ShopDashboard = lazyRetry(() => import('./pages/ShopDashboard.jsx'));
+const SellerDashboard = lazyRetry(() => import('./pages/SellerDashboard.jsx'));
+const SellerPayments = lazyRetry(() => import('./pages/SellerPayments.jsx'));
+const ShopPayments = lazyRetry(() => import('./pages/ShopPayments.jsx'));
+const LivreurDashboard = lazyRetry(() => import('./pages/LivreurDashboard.jsx'));
+const ClientDashboard = lazyRetry(() => import('./pages/ClientDashboard.jsx'));
+const CreatorDashboard = lazyRetry(() => import('./pages/CreatorDashboard.jsx'));
+const VitrineOffre = lazyRetry(() => import('./pages/VitrineOffre.jsx'));
+const Verone = lazyRetry(() => import('./pages/Verone.jsx'));
+const OfferDetail = lazyRetry(() => import('./pages/OfferDetail.jsx'));
+const ProductDetail = lazyRetry(() => import('./pages/ProductDetail.jsx'));
+const PurchasePage = lazyRetry(() => import('./pages/PurchasePage.jsx'));
+const AuthGoogle = lazyRetry(() => import('./pages/AuthGoogle.jsx'));
+const About = lazyRetry(() => import('./pages/About.jsx'));
+const Contact = lazyRetry(() => import('./pages/Contact.jsx'));
+const Privacy = lazyRetry(() => import('./pages/Privacy.jsx'));
+const MyAccount = lazyRetry(() => import('./pages/MyAccount.jsx'));
+const ShopPage = lazyRetry(() => import('./pages/ShopPage.jsx'));
+const Suivi = lazyRetry(() => import('./pages/Suivi.jsx'));
+const NotFound = lazyRetry(() => import('./pages/NotFound.jsx'));
+const Admin = lazyRetry(() => import('./pages/Admin.jsx'));
+const Cgv = lazyRetry(() => import('./pages/Cgv.jsx'));
+const Cgu = lazyRetry(() => import('./pages/Cgu.jsx'));
+const Faq = lazyRetry(() => import('./pages/Faq.jsx'));
+const MentionsLegales = lazyRetry(() => import('./pages/MentionsLegales.jsx'));
+const Support = lazyRetry(() => import('./pages/Support.jsx'));
+const CookiesBanner = lazyRetry(() => import('./components/CookiesBanner.jsx'));
 import OfflinePage from './pages/OfflinePage.jsx';
 import AdminMessagePopup from './components/AdminMessagePopup.jsx';
 

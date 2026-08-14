@@ -25,13 +25,25 @@ export default function Admin() {
   const [msgUserId, setMsgUserId] = useState('');
   const [msgBusy, setMsgBusy] = useState(false);
   const [msgOk, setMsgOk] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const load = useCallback(() => {
-    api.adminStats().then(setStats).catch(() => {});
-    api.adminUsers().then((d) => setUsers(d.users)).catch(() => {});
-    api.adminProducts().then((d) => setProducts(d.products)).catch(() => {});
-    api.adminTransactions().then(setTransactions).catch(() => {});
-    api.adminMessages().then((d) => setMessages(d.messages)).catch(() => {});
+  const load = useCallback((silent) => {
+    if (!silent) setLoading(true);
+    const onErr = (e) => {
+      if (e && (e.status === 401 || e.status === 403)) {
+        localStorage.removeItem('admin_token');
+        setGate(true);
+        setGateError(t('Session expirée ou invalide. Entrez à nouveau le mot de passe administrateur.'));
+      } else if (e && e.message) {
+        setError(e.message);
+      }
+      setLoading(false);
+    };
+    api.adminStats().then((d) => { setStats(d.stats); setLoading(false); }).catch(onErr);
+    api.adminUsers().then((d) => setUsers(d.users)).catch(onErr);
+    api.adminProducts().then((d) => setProducts(d.products)).catch(onErr);
+    api.adminTransactions().then(setTransactions).catch(onErr);
+    api.adminMessages().then((d) => setMessages(d.messages)).catch(onErr);
   }, []);
 
   useEffect(() => {
@@ -58,6 +70,7 @@ export default function Admin() {
   const logout = () => {
     localStorage.removeItem('admin_token');
     setGate(true);
+    setLoading(false);
     setStats(null);
     setUsers(null);
     setProducts(null);
@@ -183,6 +196,9 @@ export default function Admin() {
       </section>
 
       {error && <p className="error" role="alert">{error}</p>}
+      {!error && !loading && stats === null && users === null && (
+        <p className="hint">{t('Chargement des données…')}</p>
+      )}
 
       <section className="stats-grid">
         {card(t('Utilisateurs'), stats ? stats.users : '…')}
