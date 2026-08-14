@@ -10,6 +10,7 @@
     { "source": "/offre/:id", "destination": "/api/index" },
     { "source": "/sitemap.xml", "destination": "/api/index" },
     { "source": "/", "destination": "/api/index" },
+    { "handle": "filesystem" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "headers": [
