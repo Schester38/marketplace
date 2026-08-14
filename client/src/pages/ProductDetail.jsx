@@ -245,7 +245,7 @@ export default function ProductDetail() {
             {Number(product.pending_count) > 0 && <span className="meta-chip">⏳ {t('{n} en attente', { n: product.pending_count })}</span>}
             {product.warranty && <span className="meta-chip">🛡️ {t('Garantie : {warranty}', { warranty: product.warranty })}</span>}
             <span className="meta-chip">🚚 {deliveryFee > 0 ? t('Livraison {price} {symbol}', { price: formatMoney(deliveryFee), symbol }) : t('Livraison gratuite')}</span>
-            <span className="meta-chip">⏱️ {t('Livraison en 24-72h')}</span>
+            <span className="meta-chip">⏱️ {t('Livraison Rapide')}</span>
             <span className="meta-chip">🛡️ {t('Satisfait ou remboursé')}</span>
             {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
           </div>

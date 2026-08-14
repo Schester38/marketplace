@@ -117,6 +117,7 @@ export default function LivreurDashboard() {
         delivery_fee: Number(deliverForm.delivery_fee || 0),
         payment_method: deliverForm.payment_method,
         client_code: (deliverForm.client_code || '').trim().toUpperCase(),
+        shop_code: code,
       });
       setPending((prev) => prev.filter((s) => s.id !== d.sale.id));
       setDelivered((prev) => [d.sale, ...prev]);

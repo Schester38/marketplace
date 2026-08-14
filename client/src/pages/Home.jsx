@@ -6,6 +6,7 @@ import Seo from '../components/Seo.jsx';
 import RecentSales from '../components/RecentSales.jsx';
 import { useLang } from '../i18n.jsx';
 import { PRODUCT_CATEGORIES } from '../config.js';
+import { CITIES } from '../cities.js';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { useAuth } from '../App.jsx';
 
@@ -36,6 +37,7 @@ export default function Home() {
   const [scope, setScope] = useState('product');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [city, setCity] = useState('');
   const produitsRef = useRef(null);
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export default function Home() {
           scope,
           min_price: minPrice === '' ? undefined : minPrice,
           max_price: maxPrice === '' ? undefined : maxPrice,
+          city: city || undefined,
         })
         .then((d) => {
           if (mounted.current) {
@@ -72,7 +75,7 @@ export default function Home() {
         .catch((e) => mounted.current && setError(e.message))
         .finally(() => mounted.current && setLoading(false));
     },
-    [user, debouncedSearch, category, sort, scope, minPrice, maxPrice]
+    [user, debouncedSearch, category, sort, scope, minPrice, maxPrice, city]
   );
 
   useEffect(() => {
@@ -194,7 +197,7 @@ export default function Home() {
       <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
           <div className="section-head">
             <h2 className="section-title">🛍️ {t('Produits et créations')}</h2>
-            {category || minPrice || maxPrice ? (
+            {category || minPrice || maxPrice || city ? (
               <button
                 type="button"
                 className="section-link"
@@ -202,6 +205,7 @@ export default function Home() {
                   setCategory('');
                   setMinPrice('');
                   setMaxPrice('');
+                  setCity('');
                 }}
               >
                 ✕ {t('Réinitialiser les filtres')}
@@ -220,6 +224,17 @@ export default function Home() {
             <button type="submit" className="btn btn-primary">{t('Rechercher')}</button>
           </form>
           <div className="toolbar">
+            <select
+              className="input filter-select"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              aria-label={t('Filtrer par ville')}
+            >
+              <option value="">{t('Toutes les villes')}</option>
+              {CITIES.map((c) => (
+                <option key={c.slug} value={c.slug}>{c.name}</option>
+              ))}
+            </select>
             <select
               className="input filter-select"
               value={category}
@@ -286,9 +301,11 @@ export default function Home() {
               <p className="empty">
                 {category
                   ? t('Aucun produit dans cette catégorie.')
-                  : search
-                    ? t('Aucun résultat pour votre recherche.')
-                    : t('Aucun produit disponible.')}
+                  : city
+                    ? t('Aucun produit dans cette ville pour le moment.')
+                    : search
+                      ? t('Aucun résultat pour votre recherche.')
+                      : t('Aucun produit disponible.')}
               </p>
             </div>
           ) : (

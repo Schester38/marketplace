@@ -95,6 +95,7 @@ export const api = {
   pushSubscribe: (payload) => request('/push/subscribe', { method: 'POST', body: JSON.stringify(payload) }),
   pushUnsubscribe: (payload) => request('/push/unsubscribe', { method: 'POST', body: JSON.stringify(payload) }),
   listOffers: () => request('/offers'),
+  myOffers: () => request('/offers/mine'),
   getOffer: (id) => request(`/offers/${id}`),
   createOffer: (payload) => request('/offers', { method: 'POST', body: JSON.stringify(payload) }),
   deleteOffer: (id) => request(`/offers/${id}`, { method: 'DELETE' }),

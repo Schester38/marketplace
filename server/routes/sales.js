@@ -256,7 +256,10 @@ router.patch('/:id/status', authRequired, roleRequired('shop'), ah(async (req, r
     );
   }
   if (status === 'confirmed') {
-    await q("UPDATE sales SET status = 'confirmed', shop_confirmed_at = COALESCE(shop_confirmed_at, now()) WHERE id = $1", [sale.id]);
+    // La boutique ne fait que confirmer avoir vu la commande : le client est informé
+    // sur son suivi, mais le statut reste 'pending' pour que le livreur puisse la livrer
+    // et que le vendeur garde sa commission.
+    await q("UPDATE sales SET shop_confirmed_at = COALESCE(shop_confirmed_at, now()) WHERE id = $1", [sale.id]);
   } else {
     await q('UPDATE sales SET status = $1, stock_reserved = CASE WHEN $1 = \'cancelled\' THEN FALSE ELSE stock_reserved END WHERE id = $2', [status, sale.id]);
   }
@@ -355,7 +358,7 @@ router.delete('/:id/referral', authRequired, ah(async (req, res) => {
   res.json({ ok: true });
 }));
 
-router.get('/livreur', authRequired, roleRequired('livreur'), ah(async (req, res) => {
+router.get('/livreur', ah(async (req, res) => {
   const shopCode = req.query.shop_code ? String(req.query.shop_code).trim().toUpperCase() : '';
   if (!shopCode) return res.status(400).json({ error: 'Code boutique requis' });
   const shop = (await q('SELECT id FROM users WHERE shop_code = $1', [shopCode]))[0];
@@ -371,13 +374,14 @@ router.get('/livreur', authRequired, roleRequired('livreur'), ah(async (req, res
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
-       WHERE s.status = 'pending'${shopFilter}
+       WHERE s.status IN ('pending', 'confirmed')${shopFilter}
        ORDER BY s.created_at DESC`,
       shopParam
     )
   ).map(saleRow);
-  const delivered = (
-    await q(
+  const me = req.user ? req.user.id : null;
+  const delivered = me
+    ? (await q(
       `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
               u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
               shop.name AS shop_name, shop.country AS shop_country
@@ -387,9 +391,20 @@ router.get('/livreur', authRequired, roleRequired('livreur'), ah(async (req, res
        JOIN users shop ON shop.id = p.shop_id
        WHERE s.status = 'delivered' AND s.delivered_by = $1 AND p.shop_id = $2 AND NOT ($1 = ANY(s.hidden_for))
        ORDER BY s.delivered_at DESC`,
-      [req.user.id, shop.id]
-    )
-  ).map(saleRow);
+      [me, shop.id]
+    )).map(saleRow)
+    : (await q(
+      `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
+              u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
+              shop.name AS shop_name, shop.country AS shop_country
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       LEFT JOIN users u ON u.id = s.seller_id
+       JOIN users shop ON shop.id = p.shop_id
+       WHERE s.status = 'delivered' AND p.shop_id = $1
+       ORDER BY s.delivered_at DESC`,
+      [shop.id]
+    )).map(saleRow);
   res.json({ pending, delivered, shop_name: shop ? (await q('SELECT name FROM users WHERE id = $1', [shop.id]))[0].name : null });
 }));
 
@@ -510,7 +525,7 @@ router.get('/:id/proof', authRequired, ah(async (req, res) => {
   });
 }));
 
-router.post('/:id/deliver', authRequired, roleRequired('livreur'), ah(async (req, res) => {
+router.post('/:id/deliver', ah(async (req, res) => {
   const { delivery_fee, payment_method, client_code, shop_code } = req.body || {};
   const shopCode = String(shop_code || '').trim().toUpperCase();
   if (!shopCode) return res.status(400).json({ error: 'Code boutique requis' });
@@ -552,7 +567,7 @@ router.post('/:id/deliver', authRequired, roleRequired('livreur'), ah(async (req
     if (!shopByCode || Number(shopByCode.id) !== Number(product.shop_id)) { const error = new Error('Code boutique non autorisé pour cette commande'); error.statusCode = 403; throw error; }
     const updated = (await tx.query(
       `UPDATE sales SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3 WHERE id = $4 RETURNING id`,
-      [fee, cleanMethod, req.user.id, lockedSale.id]
+      [fee, cleanMethod, req.user ? req.user.id : null, lockedSale.id]
     ))[0];
     // Les nouvelles ventes ont déjà réservé leur stock. Pour les anciennes ventes,
     // on décrémente encore la quantité disponible afin de préserver la compatibilité.

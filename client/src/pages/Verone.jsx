@@ -36,7 +36,7 @@ export default function Verone() {
 
   const loadOffers = useCallback(async () => {
     try {
-      const d = await api.listOffers();
+      const d = await api.myOffers();
       setMyOffers(d.offers);
     } catch (e) {
       setError(e.message);

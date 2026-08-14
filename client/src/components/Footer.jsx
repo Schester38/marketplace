@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { useLang } from '../i18n.jsx';
-import { CITIES } from '../cities.js';
 
 export default function Footer() {
   const { t } = useLang();
@@ -18,13 +17,6 @@ export default function Footer() {
           <Link to="/cgv">{t('CGV')}</Link>
           <Link to="/cgu">{t('CGU')}</Link>
           <Link to="/mentions-legales">{t('Mentions légales')}</Link>
-        </nav>
-        <nav className="footer-nav footer-cities" aria-label={t('Villes')}>
-          {CITIES.map((c) => (
-            <Link key={c.slug} to={`/ville/${c.slug}`} className="footer-city-link">
-              {c.name}
-            </Link>
-          ))}
         </nav>
         <p className="footer-copy">
           © {new Date().getFullYear()} Mboppi. {t('Tous droits réservés.')}

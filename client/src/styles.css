@@ -123,6 +123,9 @@ main { animation: pageIn 0.35s ease; }
   transition: transform 0.25s ease;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: 100vh;
 }
 .drawer.open { transform: translateX(0); }
 .drawer-header {
@@ -146,7 +149,7 @@ main { animation: pageIn 0.35s ease; }
   font-size: 0.95rem;
   cursor: pointer;
 }
-.drawer-nav { display: flex; flex-direction: column; padding: 8px; gap: 3px; overflow-y: auto; flex: 1; }
+.drawer-nav { display: flex; flex-direction: column; padding: 8px; gap: 3px; overflow-y: auto; overflow-x: hidden; flex: 1; min-width: 0; }
 .drawer-tools {
   display: flex;
   align-items: center;
@@ -186,6 +189,10 @@ main { animation: pageIn 0.35s ease; }
   border-radius: 8px;
   margin: 0;
   font-size: 0.9rem;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  box-sizing: border-box;
 }
 .drawer-nav .btn { margin-top: 4px; }
 .drawer-nav .user-chip { box-sizing: border-box; font-size: 0.82rem; }
