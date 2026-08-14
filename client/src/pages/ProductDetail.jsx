@@ -101,6 +101,8 @@ export default function ProductDetail() {
     const el = document.createElement('script');
     el.type = 'application/ld+json';
     el.text = JSON.stringify(jsonLd);
+    const prev = document.head.querySelector('script[data-ssr]');
+    if (prev) prev.remove();
     document.head.appendChild(el);
     return () => el.remove();
   }, [product && product.id]);

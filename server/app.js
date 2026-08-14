@@ -21,6 +21,7 @@ import adminRoutes from './routes/admin.js';
 import chatRoutes from './routes/chat.js';
 import walletRoutes from './routes/wallet.js';
 import logRoutes from './routes/logs.js';
+import seoRoutes from './routes/seo.js';
 import presentationRoutes, { pageRouter, imageRouter } from './routes/presentation.js';
 import { authRequired } from './auth.js';
 import { securityHeaders, originCheck } from './security.js';
@@ -81,6 +82,7 @@ app.use('/api/logs', logRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/img', imageRouter);
 app.use('/p', pageRouter);
+app.use(seoRoutes);
 app.get('/api/me', authRequired, (req, res) => res.json({ user: req.user }));
 
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
