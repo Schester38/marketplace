@@ -80,9 +80,10 @@ router.post('/', authRequired, roleRequired('shop', 'seller', 'creator', 'admin'
   const currencyCode = validCurrency(currency) ? String(currency).trim().toUpperCase() : defaultCurrencyFor(req.user?.country);
 
   const created = await q(
-    `INSERT INTO offers (name, category, description, warranty, original_price, promo_price, phone, quantity, photos, currency)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+    `INSERT INTO offers (owner_id, name, category, description, warranty, original_price, promo_price, phone, quantity, photos, currency)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
     [
+      req.user.id,
       String(name).trim(),
       category ? String(category).trim() : null,
       description ? String(description).trim() : null,
