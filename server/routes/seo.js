@@ -235,13 +235,15 @@ router.get('/sitemap.xml', async (req, res) => {
       ['/mentions-legales', 'yearly', '0.4'],
       ['/donnees', 'monthly', '0.5'],
     ];
-    const [products, shops] = await Promise.all([
+    const [products, shops, offers] = await Promise.all([
       q('SELECT id FROM products ORDER BY id DESC'),
       q("SELECT id FROM users WHERE role IN ('shop', 'creator') ORDER BY id DESC"),
+      q('SELECT id FROM offers ORDER BY id DESC'),
     ]);
     const entries = [
       ...staticUrls.map(([loc, freq, prio]) => ({ loc: BASE_URL + loc, freq, prio })),
       ...CITIES.map(([slug]) => ({ loc: `${BASE_URL}/ville/${slug}`, freq: 'weekly', prio: '0.7' })),
+      ...offers.map((o) => ({ loc: `${BASE_URL}/offre/${o.id}`, freq: 'weekly', prio: '0.7' })),
       ...products.map((p) => ({ loc: `${BASE_URL}/produit/${p.id}`, freq: 'weekly', prio: '0.8' })),
       ...shops.map((s) => ({ loc: `${BASE_URL}/boutique/${s.id}`, freq: 'weekly', prio: '0.7' })),
     ];
@@ -309,6 +311,52 @@ router.get('/ville/:slug', async (req, res) => {
 
     let html = await loadIndexHtml();
     html = injectHead(html, { title, description: descText, canonical, ogImage: `${BASE_URL}/og-image.svg`, ogType: 'website' });
+    html = injectJsonLd(html, jsonLd);
+    if (!html) return res.status(200).type('html').send(`<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title><meta name="description" content="${descText}"/></head><body><h1>${title}</h1></body></html>`);
+    res.type('html').send(html);
+  } catch {
+    const html = await loadIndexHtml();
+    if (html) return res.type('html').send(html);
+    res.status(500).send('Erreur serveur');
+  }
+});
+
+router.get('/offre/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(404).type('html').send(notFoundHtml);
+    const [o] = await q(
+      `SELECT o.*, u.name AS owner_name FROM offers o LEFT JOIN users u ON u.id = o.owner_id WHERE o.id = $1`,
+      [id]
+    );
+    if (!o) return res.status(404).type('html').send(notFoundHtml);
+    const photos = parsePhotos(o.photos, null);
+    const image = photos[0] || '';
+    const absImage = image ? (/^https?:/.test(image) ? image : `${BASE_URL}${image}`) : `${BASE_URL}/og-image.svg`;
+    const title = `${o.name}${o.owner_name ? ` — Offre de ${o.owner_name}` : ''} | Mboppi`;
+    const canonical = `${BASE_URL}/offre/${id}`;
+    const promo = Number(o.promo_price);
+    const descText = (o.description || `${o.name} en promotion sur Mboppi.`).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 155);
+
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: o.name,
+      image: image || undefined,
+      description: descText,
+      url: canonical,
+      offers: {
+        '@type': 'Offer',
+        price: String(promo),
+        priceCurrency: (o.currency || 'XAF').toUpperCase(),
+        priceValidUntil: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+        availability: Number(o.quantity) > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        url: canonical,
+      },
+    };
+
+    let html = await loadIndexHtml();
+    html = injectHead(html, { title, description: descText, canonical, ogImage: absImage, ogType: 'product' });
     html = injectJsonLd(html, jsonLd);
     if (!html) return res.status(200).type('html').send(`<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title><meta name="description" content="${descText}"/></head><body><h1>${title}</h1></body></html>`);
     res.type('html').send(html);

@@ -7,6 +7,7 @@
     { "source": "/produit/:id", "destination": "/api/index" },
     { "source": "/boutique/:id", "destination": "/api/index" },
     { "source": "/ville/:slug", "destination": "/api/index" },
+    { "source": "/offre/:id", "destination": "/api/index" },
     { "source": "/sitemap.xml", "destination": "/api/index" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
