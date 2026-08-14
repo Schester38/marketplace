@@ -49,6 +49,22 @@ const EN = {
   'Compte': 'Account',
   'Tous droits réservés.': 'All rights reserved.',
 
+  // Support / menu
+  'Je soutiens': 'Support us',
+  'Formations et Digital': 'Training & Digital',
+  'Je soutiens Mboppi': 'Support Mboppi',
+  'Chaque geste compte pour faire grandir Mboppi': 'Every gesture counts to grow Mboppi',
+  'Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.': 'Your support helps us pay for the site, improve the platform and support our shops and sellers. Every contribution, however small, moves the project forward.',
+  'Comment pouvez-vous soutenir le projet ?': 'How can you support the project?',
+  'Choisissez le moyen qui vous convient.': 'Choose the method that suits you.',
+  'Orange Money': 'Orange Money',
+  'MTN Mobile Money': 'MTN Mobile Money',
+  'PayPal': 'PayPal',
+  'Virement bancaire (UBA)': 'Bank transfer (UBA)',
+  'Merci pour votre soutien !': 'Thank you for your support!',
+  'Avec votre aide, Mboppi continue de connecter les boutiques, les vendeurs et les clients de toute la communauté.': 'With your help, Mboppi keeps connecting shops, sellers and customers across the community.',
+  'Soutenez Mboppi : Orange Money, MTN Mobile Money, PayPal ou virement bancaire UBA.': 'Support Mboppi: Orange Money, MTN Mobile Money, PayPal or UBA bank transfer.',
+
   // ProductCard
   'Boutique : {shop}': 'Shop: {shop}',
   'Garantie {n} mois': '{n}-month warranty',
@@ -1131,6 +1147,22 @@ const AR = {
   'Accueil': 'الرئيسية',
   'Compte': 'الحساب',
   'Tous droits réservés.': 'جميع الحقوق محفوظة.',
+
+  // Support / menu
+  'Je soutiens': 'أدعم',
+  'Formations et Digital': 'تدريب ورقمنة',
+  'Je soutiens Mboppi': 'أدعم مبوّي',
+  'Chaque geste compte pour faire grandir Mboppi': 'كل مساهمة تصنع الفرق لتنمية مبوّي',
+  'Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.': 'دعمكم يساعدنا في دفع تكاليف الموقع، وتحسين المنصة، ومرافقة متاجرنا وبائعينا. كل مساهمة، مهما صغرت، تدفع المشروع إلى الأمام.',
+  'Comment pouvez-vous soutenir le projet ?': 'كيف يمكنك دعم المشروع؟',
+  'Choisissez le moyen qui vous convient.': 'اختر الطريقة التي تناسبك.',
+  'Orange Money': 'أورنج موني',
+  'MTN Mobile Money': 'إم تي إن موبايل موني',
+  'PayPal': 'PayPal',
+  'Virement bancaire (UBA)': 'تحويل بنكي (UBA)',
+  'Merci pour votre soutien !': 'شكراً لدعمكم!',
+  'Avec votre aide, Mboppi continue de connecter les boutiques, les vendeurs et les clients de toute la communauté.': 'بمساعدتكم، تواصل مبوّي ربط المتاجر والبائعين والعملاء في كل المجتمع.',
+  'Soutenez Mboppi : Orange Money, MTN Mobile Money, PayPal ou virement bancaire UBA.': 'ادعم مبوّي: أورنج موني، إم تي إن موبايل موني، باي بال أو تحويل بنكي UBA.',
 
   // ProductCard
   'Boutique : {shop}': 'المتجر: {shop}',

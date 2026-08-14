@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired, roleRequired } from '../auth.js';
 import { listPhotos, fullPhotos, normalizeUploadPhotos } from '../photo.js';
+import { defaultCurrencyFor, validCurrency } from '../currency.js';
 
 const router = Router();
 
@@ -109,7 +110,7 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', authRequired, roleRequired(...OWNER_ROLES), async (req, res) => {
-  const { name, description, price, old_price, commission_percent, photos, category, warranty, delivery_fee, contact, quantity } = req.body || {};
+  const { name, description, price, old_price, commission_percent, photos, category, warranty, delivery_fee, contact, quantity, currency } = req.body || {};
   if (!name || price === undefined) {
     return res.status(400).json({ error: 'Le nom et le prix sont requis' });
   }
@@ -145,9 +146,10 @@ router.post('/', authRequired, roleRequired(...OWNER_ROLES), async (req, res) =>
     });
   }
   const cleanCategory = req.user.role === 'creator' ? 'Arts & Artisanat' : category ? String(category).trim() : null;
+  const currencyCode = validCurrency(currency) ? String(currency).trim().toUpperCase() : defaultCurrencyFor(req.user.country);
   const created = await q(
-    `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
+    `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
     [
       req.user.id,
       String(name).trim(),
@@ -162,6 +164,7 @@ router.post('/', authRequired, roleRequired(...OWNER_ROLES), async (req, res) =>
       feeNum,
       contact ? String(contact).trim() : null,
       qtyNum,
+      currencyCode,
     ]
   );
   const product = productRow(
@@ -185,7 +188,7 @@ router.put('/:id', authRequired, roleRequired(...OWNER_ROLES), async (req, res) 
   if (product.shop_id !== req.user.id) {
     return res.status(403).json({ error: 'Ce produit ne vous appartient pas' });
   }
-  const { name, description, price, old_price, commission_percent, photos, category, warranty, delivery_fee, contact, quantity } = req.body || {};
+  const { name, description, price, old_price, commission_percent, photos, category, warranty, delivery_fee, contact, quantity, currency } = req.body || {};
   if (!name || price === undefined) {
     return res.status(400).json({ error: 'Le nom et le prix sont requis' });
   }
@@ -215,12 +218,13 @@ router.put('/:id', authRequired, roleRequired(...OWNER_ROLES), async (req, res) 
   const warrantyText = warranty === '' || warranty === null || warranty === undefined ? null : String(warranty).trim().slice(0, 60);
   const photoList = normalizeUploadPhotos(photos);
   const cleanCategory = req.user.role === 'creator' ? 'Arts & Artisanat' : category ? String(category).trim() : null;
+  const currencyCode = validCurrency(currency) ? String(currency).trim().toUpperCase() : (product.currency || defaultCurrencyFor(req.user.country));
   const updated = await q(
     `UPDATE products SET
        name = $1, description = $2, price = $3, old_price = $4, commission_percent = $5,
        image = $6, photos = $7, category = $8, warranty = $9, delivery_fee = $10,
-       contact = $11, quantity = $12
-     WHERE id = $13 RETURNING id`,
+       contact = $11, quantity = $12, currency = $13
+     WHERE id = $14 RETURNING id`,
     [
       String(name).trim(),
       description ? String(description).trim() : null,
@@ -234,6 +238,7 @@ router.put('/:id', authRequired, roleRequired(...OWNER_ROLES), async (req, res) 
       feeNum,
       contact ? String(contact).trim() : null,
       qtyNum,
+      currencyCode,
       product.id,
     ]
   );

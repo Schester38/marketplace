@@ -39,6 +39,7 @@ const Cgv = React.lazy(() => import('./pages/Cgv.jsx'));
 const Cgu = React.lazy(() => import('./pages/Cgu.jsx'));
 const Faq = React.lazy(() => import('./pages/Faq.jsx'));
 const MentionsLegales = React.lazy(() => import('./pages/MentionsLegales.jsx'));
+const Support = React.lazy(() => import('./pages/Support.jsx'));
 const CookiesBanner = React.lazy(() => import('./components/CookiesBanner.jsx'));
 import OfflinePage from './pages/OfflinePage.jsx';
 import AdminMessagePopup from './components/AdminMessagePopup.jsx';
@@ -270,6 +271,7 @@ export default function App() {
           <Route path="/cgu" element={<Cgu />} />
           <Route path="/faq" element={<Faq />} />
           <Route path="/mentions-legales" element={<MentionsLegales />} />
+          <Route path="/soutien" element={<Support />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

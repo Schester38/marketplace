@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired, roleRequired } from '../auth.js';
+import { defaultCurrencyFor, validCurrency } from '../currency.js';
 
 const router = Router();
 const MAX_PHOTOS = 3;
@@ -46,7 +47,7 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', authRequired, roleRequired('shop', 'seller', 'creator', 'admin'), async (req, res) => {
-  const { name, category, description, warranty, original_price, promo_price, phone, quantity, photos } =
+  const { name, category, description, warranty, original_price, promo_price, phone, quantity, photos, currency } =
     req.body || {};
 
   if (!name || original_price === undefined || promo_price === undefined) {
@@ -76,9 +77,11 @@ router.post('/', authRequired, roleRequired('shop', 'seller', 'creator', 'admin'
     }
   }
 
+  const currencyCode = validCurrency(currency) ? String(currency).trim().toUpperCase() : defaultCurrencyFor(req.user?.country);
+
   const created = await q(
-    `INSERT INTO offers (name, category, description, warranty, original_price, promo_price, phone, quantity, photos)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+    `INSERT INTO offers (name, category, description, warranty, original_price, promo_price, phone, quantity, photos, currency)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
     [
       String(name).trim(),
       category ? String(category).trim() : null,
@@ -89,6 +92,7 @@ router.post('/', authRequired, roleRequired('shop', 'seller', 'creator', 'admin'
       phone ? String(phone).trim() : null,
       qtyNum,
       JSON.stringify(photos),
+      currencyCode,
     ]
   );
 

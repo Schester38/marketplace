@@ -57,6 +57,7 @@ export async function initDb() {
       price REAL NOT NULL CHECK (price >= 0),
       commission_percent REAL NOT NULL DEFAULT 0 CHECK (commission_percent >= 0 AND commission_percent <= 100),
       image TEXT,
+      currency TEXT NOT NULL DEFAULT 'XAF',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
@@ -70,6 +71,7 @@ export async function initDb() {
       total_price REAL NOT NULL,
       commission REAL NOT NULL,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'cancelled')),
+      currency TEXT NOT NULL DEFAULT 'XAF',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
@@ -84,6 +86,7 @@ export async function initDb() {
       phone TEXT,
       quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 0),
       photos TEXT NOT NULL DEFAULT '[]',
+      currency TEXT NOT NULL DEFAULT 'XAF',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
@@ -96,6 +99,7 @@ export async function initDb() {
       items JSONB NOT NULL DEFAULT '[]',
       total REAL NOT NULL DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'confirmed', 'shipped', 'cancelled')),
+      currency TEXT NOT NULL DEFAULT 'XAF',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
@@ -180,6 +184,11 @@ export async function initDb() {
     ALTER TABLE sales ALTER COLUMN delivery_fee TYPE NUMERIC(14,2) USING round(delivery_fee::numeric, 2);
     ALTER TABLE sales ALTER COLUMN referral_commission TYPE NUMERIC(14,2) USING round(referral_commission::numeric, 2);
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS stock_reserved BOOLEAN NOT NULL DEFAULT FALSE;
+
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
+    ALTER TABLE offers ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
 
     ALTER TABLE orders ALTER COLUMN user_id DROP NOT NULL;
 

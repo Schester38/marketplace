@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { SYSTEM_PROMPTS } from '../chat-knowledge.js';
+import { q } from '../db.js';
 
 const router = Router();
 
@@ -12,6 +13,56 @@ const MODEL_FALLBACKS = ['gemini-flash-latest', 'gemini-3.6-flash', 'gemini-3.5-
 
 const MAX_MESSAGE = 2000;
 const MAX_HISTORY = 12;
+const CATALOG_MAX_ITEMS = 8;
+
+function tokens(text) {
+  return String(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length > 2);
+}
+
+function scoreProduct(kws, p) {
+  const name = String(p.name || '').toLowerCase();
+  const category = String(p.category || '').toLowerCase();
+  const description = String(p.description || '').toLowerCase();
+  let s = 0;
+  for (const kw of kws) {
+    if (name.includes(kw)) s += 3;
+    else if (category.includes(kw)) s += 2;
+    else if (description.includes(kw)) s += 1;
+  }
+  return s;
+}
+
+async function catalogSnapshot(message) {
+  const kws = tokens(message);
+  const products = await q(
+    `SELECT p.id, p.name, p.price, p.currency, p.category, p.description, p.quantity, p.delivery_fee,
+            u.name AS shop_name
+     FROM products p JOIN users u ON u.id = p.shop_id
+     WHERE p.quantity > 0
+     ORDER BY p.created_at DESC
+     LIMIT 60`
+  );
+  const scored = products
+    .map((p) => ({ ...p, _s: scoreProduct(kws, p) }))
+    .filter((p) => kws.length === 0 || p._s > 0)
+    .sort((a, b) => b._s - a._s)
+    .slice(0, CATALOG_MAX_ITEMS);
+  const list = scored.map((p) => {
+    const parts = [`« ${p.name} »`, `prix : ${Number(p.price)} ${p.currency || 'XAF'}`];
+    if (p.category) parts.push(`catégorie : ${p.category}`);
+    parts.push(`stock : ${Number(p.quantity)}`);
+    if (p.shop_name) parts.push(`boutique : ${p.shop_name}`);
+    if (Number(p.delivery_fee) > 0) parts.push(`livraison : ${Number(p.delivery_fee)} ${p.currency || 'XAF'}`);
+    return '- ' + parts.join(' | ');
+  });
+  if (list.length) return list.join('\n');
+  return null;
+}
 
 const FALLBACKS = {
   fr: 'Je suis désolé, je ne peux pas répondre pour le moment. Contactez-nous via la page Contact et nous vous répondrons sous 24 heures ! 💬',
@@ -36,6 +87,22 @@ router.post('/', ah(async (req, res) => {
 
   const sys = SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.fr;
 
+  let catalog = null;
+  try {
+    catalog = await catalogSnapshot(clean);
+  } catch (err) {
+    console.error('Chat : impossible de charger le catalogue ->', err.message);
+  }
+
+  const baseSys = catalog
+    ? sys + `
+
+CATALOGUE EN TEMPS RÉEL (produits actuellement disponibles sur le site, vérifiés à la base de données) :
+${catalog}
+
+Tu peux utiliser ces prix et cette disponibilité dans ta réponse. Ne cite que les prix/listes présents dans ce catalogue ; pour toute autre information, renvoie vers la fiche produit, la FAQ ou la page Contact.`
+    : sys;
+
   const contents = [];
   const hist = Array.isArray(history) ? history.slice(-MAX_HISTORY) : [];
   for (const m of hist) {
@@ -46,7 +113,7 @@ router.post('/', ah(async (req, res) => {
   contents.push({ role: 'user', parts: [{ text: clean }] });
 
   const body = {
-    systemInstruction: { parts: [{ text: sys }] },
+    systemInstruction: { parts: [{ text: baseSys }] },
     contents,
     generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
   };

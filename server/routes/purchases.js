@@ -129,9 +129,9 @@ router.post('/', optionalAuth, ah(async (req, res) => {
     }
 
     const created = await tx.query(
-      `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
-       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, TRUE) RETURNING id`,
-      [product.id, seller.id, qty, total, commission, price, buyer ? buyer.id : null, code, name, phone, city, address, confirmCode, referralCommission, referredBy, method]
+      `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, currency, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
+       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, TRUE) RETURNING id`,
+      [product.id, seller.id, qty, total, commission, price, product.currency || 'XAF', buyer ? buyer.id : null, code, name, phone, city, address, confirmCode, referralCommission, referredBy, method]
     );
 
     await tx.query(

@@ -539,6 +539,10 @@ export default function Navbar({ onLogout }) {
       <FollowUs />
       <SuggestionButton onOpened={close} />
       <Link to="/" onClick={close}>{t('Produits')}</Link>
+      <Link to="/soutien" onClick={close}>{t('Je soutiens')}</Link>
+      <a href="https://www.chariow.pics/U6Z28RUJ" target="_blank" rel="noopener noreferrer" onClick={close}>
+        {t('Formations et Digital')}
+      </a>
       {user && user.role === 'shop' && <Link to="/shop" onClick={close}>{t('Ma boutique')}</Link>}
       {user && user.role === 'seller' && <Link to="/seller" onClick={close}>{t('Mon espace vendeur')}</Link>}
       {user && user.role === 'seller' && <Link to="/seller/paiements" onClick={close}>{t('Mes moyens de paiement')}</Link>}
