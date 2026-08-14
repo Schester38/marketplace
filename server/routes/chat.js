@@ -24,15 +24,82 @@ function tokens(text) {
     .filter((w) => w.length > 2);
 }
 
+// Synonymes courants : permet de retrouver un produit même si le client n'emploie
+// pas exactement les mots du nom/titre (ex : « téléphone portable » → « smartphone »).
+const SYNONYMS = {
+  telephone: ['telephone', 'smartphone', 'mobile', 'portable', 'xmax'],
+  smartphone: ['smartphone', 'telephone', 'portable', 'mobile'],
+  portable: ['portable', 'smartphone', 'telephone', 'mobile', 'xmax'],
+  mobile: ['mobile', 'telephone', 'portable', 'smartphone'],
+  ordinateur: ['ordinateur', 'pc', 'laptop', 'portable'],
+  pc: ['ordinateur', 'laptop', 'portable'],
+  laptop: ['ordinateur', 'pc', 'portable'],
+  ecouteurs: ['ecouteurs', 'audio', 'bluetooth', 'casque'],
+  ecouteur: ['ecouteurs', 'audio', 'bluetooth', 'casque'],
+  audio: ['audio', 'ecouteurs', 'bluetooth'],
+  casque: ['casque', 'ecouteurs', 'audio'],
+  bluetooth: ['bluetooth', 'ecouteurs', 'audio'],
+  sac: ['sac', 'sac a dos', 'cartable'],
+  creme: ['creme', 'hydratant', 'visage', 'soin', 'beaute'],
+  visage: ['visage', 'creme', 'soin', 'beaute'],
+  soin: ['soin', 'beaute', 'creme'],
+  beaute: ['beaute', 'soin', 'creme', 'maquillage'],
+  chemise: ['chemise', 'vetement', 'habit'],
+  vetement: ['vetement', 'mode', 'chemise', 'habit'],
+  chaussure: ['chaussure', 'basket', 'soulier'],
+  // catégories
+  electronique: ['electronique', 'high', 'tech'],
+  high: ['electronique', 'high', 'tech'],
+  tech: ['electronique', 'high', 'tech'],
+  mode: ['mode', 'vetement', 'accessoire'],
+  accessoire: ['mode', 'accessoire', 'sac'],
+  alimentation: ['alimentation', 'nourriture', 'produit'],
+  artisanat: ['artisanat', 'art'],
+};
+
+function expand(kws) {
+  const out = new Set();
+  for (const kw of kws) {
+    out.add(kw);
+    for (const alt of SYNONYMS[kw] || []) out.add(alt);
+  }
+  return [...out];
+}
+
+// Regroupe les jetons numériques consécutifs (« 185 000 » -> 185000) et renvoie
+// les montants mentionnés par le client.
+function mentionedPrices(kws) {
+  const amounts = [];
+  let acc = 0;
+  let digits = 0;
+  for (const kw of kws) {
+    if (/^[0-9]+$/.test(kw)) {
+      acc = acc * 10 ** kw.length + Number(kw);
+      digits += kw.length;
+    } else {
+      if (digits >= 3) amounts.push(acc);
+      acc = 0;
+      digits = 0;
+    }
+  }
+  if (digits >= 3) amounts.push(acc);
+  return amounts;
+}
+
 function scoreProduct(kws, p) {
   const name = String(p.name || '').toLowerCase();
   const category = String(p.category || '').toLowerCase();
   const description = String(p.description || '').toLowerCase();
+  const allKws = expand(kws);
   let s = 0;
-  for (const kw of kws) {
-    if (name.includes(kw)) s += 3;
-    else if (category.includes(kw)) s += 2;
-    else if (description.includes(kw)) s += 1;
+  for (const kw of allKws) {
+    if (name.includes(kw)) s += 4;
+    else if (category.includes(kw)) s += 3;
+    else if (description.includes(kw)) s += 2;
+  }
+  const price = Number(p.price || 0);
+  for (const amount of mentionedPrices(kws)) {
+    if (price > 0 && Math.abs(price - amount) / price <= 0.3) s += 2;
   }
   return s;
 }
@@ -47,11 +114,16 @@ async function catalogSnapshot(message) {
      ORDER BY p.created_at DESC
      LIMIT 60`
   );
-  const scored = products
+  let scored = products
     .map((p) => ({ ...p, _s: scoreProduct(kws, p) }))
     .filter((p) => kws.length === 0 || p._s > 0)
     .sort((a, b) => b._s - a._s)
     .slice(0, CATALOG_MAX_ITEMS);
+  // Repli : si rien ne correspond, on propose quand même les dernières références pour
+  // éviter que l'IA annonce à tort « aucun produit disponible ».
+  if (kws.length && !scored.length) {
+    scored = products.slice(0, 3);
+  }
   const list = scored.map((p) => {
     const parts = [`« ${p.name} »`, `prix : ${Number(p.price)} ${p.currency || 'XAF'}`];
     if (p.category) parts.push(`catégorie : ${p.category}`);
