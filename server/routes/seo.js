@@ -106,7 +106,7 @@ function parsePhotos(raw, fallback) {
 
 router.get('/', async (req, res) => {
   try {
-    const [rows] = await q(
+    const products = (await q(
       `SELECT p.id, p.name, p.price, p.currency, p.image, u.name AS shop_name,
               COALESCE(s.n, 0) AS sold
        FROM products p
@@ -115,8 +115,7 @@ router.get('/', async (req, res) => {
                   FROM sales GROUP BY product_id) s ON s.product_id = p.id
        ORDER BY COALESCE(s.n, 0) DESC, p.created_at DESC
        LIMIT 12`
-    );
-    const products = rows || [];
+    )) || [];
     const title = 'Mboppi — Boutiques, vendeurs et offres du moment';
     const canonical = `${BASE_URL}/`;
     const descText =
