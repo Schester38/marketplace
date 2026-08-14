@@ -45,11 +45,6 @@ export default function Home() {
 
   const loadProducts = useCallback(
     (silent) => {
-      if (!user) {
-        setProducts([]);
-        setLoading(false);
-        return;
-      }
       if (!silent && !hasLoaded.current) setLoading(true);
       api
         .listProducts({
@@ -196,8 +191,7 @@ export default function Home() {
         </>
       )}
 
-      {user && (
-        <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
+      <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
           <div className="section-head">
             <h2 className="section-title">🛍️ {t('Produits et créations')}</h2>
             {category || minPrice || maxPrice ? (
@@ -305,7 +299,6 @@ export default function Home() {
             </div>
           )}
         </section>
-      )}
     </main>
   );
 }

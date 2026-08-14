@@ -60,7 +60,11 @@ app.use('/api/admin/pass', limiter(60 * 1000, 5));
 app.use('/api/admin', limiter(5 * 60 * 1000, 60));
 app.use('/api', limiter(60 * 1000, 300));
 
-app.get('/', (req, res) => res.json({ name: 'Mboppi API', version: '1.0.0' }));
+app.get('/', (req, res, next) => {
+  const wantsHtml = /text\/html|application\/xhtml\+xml/i.test(req.headers.accept || '');
+  if (wantsHtml) return next();
+  res.json({ name: 'Mboppi API', version: '1.0.0' });
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);

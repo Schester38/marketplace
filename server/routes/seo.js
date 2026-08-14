@@ -104,6 +104,73 @@ function parsePhotos(raw, fallback) {
   return fallback ? [fallback] : [];
 }
 
+router.get('/', async (req, res) => {
+  try {
+    const [rows] = await q(
+      `SELECT p.id, p.name, p.price, p.currency, p.image, u.name AS shop_name,
+              COALESCE(s.n, 0) AS sold
+       FROM products p
+       JOIN users u ON u.id = p.shop_id
+       LEFT JOIN (SELECT product_id, SUM(quantity) FILTER (WHERE status = 'delivered') AS n
+                  FROM sales GROUP BY product_id) s ON s.product_id = p.id
+       ORDER BY COALESCE(s.n, 0) DESC, p.created_at DESC
+       LIMIT 12`
+    );
+    const products = rows || [];
+    const title = 'Mboppi — Boutiques, vendeurs et offres du moment';
+    const canonical = `${BASE_URL}/`;
+    const descText =
+      'Mboppi, le marché de votre quartier en ligne : produits des boutiques, créations des créateurs, vente avec commissions, commande avec livraison et paiement mobile.';
+    const image = products[0]?.image || '';
+    const absImage = image && /^https?:/.test(image) ? image : image ? `${BASE_URL}${image}` : `${BASE_URL}/og-image.svg`;
+
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'Mboppi',
+      url: canonical,
+      description: descText,
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: `${BASE_URL}/?q={search_term_string}`,
+        'query-input': 'required name=search_term_string',
+      },
+    };
+    if (products.length) {
+      jsonLd.mainEntity = {
+        '@type': 'ItemList',
+        itemListElement: products.map((p, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: p.name,
+          url: `${BASE_URL}/produit/${p.id}`,
+          image: p.image && /^https?:/.test(p.image) ? p.image : p.image ? `${BASE_URL}${p.image}` : undefined,
+          offers: { '@type': 'Offer', price: String(Number(p.price || 0)), priceCurrency: (p.currency || 'XAF').toUpperCase() },
+        })),
+      };
+    }
+
+    let html = await loadIndexHtml();
+    html = injectHead(html, { title, description: descText, canonical, ogImage: absImage });
+    html = injectJsonLd(html, jsonLd);
+    if (!html) {
+      return res.status(200).type('html').send(
+        `<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title>
+<meta name="description" content="${descText}"/><link rel="canonical" href="${canonical}"/>
+<script type="application/ld+json">${JSON.stringify(jsonLd)}</script></head>
+<body><h1>${title}</h1><p>${descText}</p>
+<ul>${products.map((p) => `<li><a href="${BASE_URL}/produit/${p.id}">${p.name}</a></li>`).join('')}</ul>
+</body></html>`
+      );
+    }
+    res.type('html').send(html);
+  } catch {
+    const html = await loadIndexHtml();
+    if (html) return res.type('html').send(html);
+    res.status(500).send('Erreur serveur');
+  }
+});
+
 router.get('/produit/:id', async (req, res) => {
   try {
     const id = Number(req.params.id);

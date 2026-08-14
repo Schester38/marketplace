@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
 import { downloadInvoice } from '../components/Invoice.jsx';
-import { BASE_URL, countrySymbol } from '../config.js';
+import { BASE_URL, countrySymbol, whatsappLink } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
@@ -187,6 +187,12 @@ export default function SellerDashboard() {
 
   const referralLink = sellerCode ? `${BASE_URL}/register?ref=${encodeURIComponent(sellerCode)}` : null;
 
+  const shareReferralWhatsApp = () => {
+    if (!referralLink) return;
+    const msg = t('Rejoins Mboppi et parraine tes amis ! Gagne 2% de leurs achats. Inscris-toi avec mon lien : {link}', { link: referralLink });
+    window.open(whatsappLink(msg), '_blank', 'noopener,noreferrer');
+  };
+
   const openProof = async (s, kind = 'commission') => {
     setError('');
     setProofLoading(true);
@@ -263,6 +269,11 @@ export default function SellerDashboard() {
               <button className="btn btn-outline btn-sm" onClick={() => copy('ref', referralLink)}>
                 {copied === 'ref' ? t('Lien copié !') : t('Copier le lien')}
               </button>
+              {referralLink && (
+                <button className="btn btn-whatsapp btn-sm" onClick={shareReferralWhatsApp}>
+                  📲 {t('Partager sur WhatsApp')}
+                </button>
+              )}
             </>
           ) : (
             <p className="hint" style={{ margin: 0 }}>

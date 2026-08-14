@@ -2073,8 +2073,26 @@ a.step { text-decoration: none; color: inherit; }
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  transition: transform 0.15s ease;
 }
+.share-btn {
+  position: absolute;
+  top: 10px;
+  right: 54px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: #25d366;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  text-decoration: none;
+}
+.share-btn:hover { transform: scale(1.12); }
 .fav-btn:hover { transform: scale(1.12); }
 .product-card { position: relative; }
 .badge-sold {
@@ -2311,6 +2329,7 @@ a.step { text-decoration: none; color: inherit; }
   .card-actions { padding: 4px 10px 10px; gap: 5px; }
   .card-actions .btn { padding: 7px 8px; font-size: 0.8rem; }
   .fav-btn { top: 6px; right: 6px; width: 28px; height: 28px; font-size: 0.8rem; }
+  .share-btn { top: 6px; right: 40px; width: 28px; height: 28px; }
   .badge-sold { top: 6px; left: 6px; }
   .badge-promo { top: 6px; left: 6px; }
   .product-card:has(.badge-promo) .badge-sold { top: 34px; }
