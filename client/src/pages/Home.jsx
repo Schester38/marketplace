@@ -108,6 +108,8 @@ export default function Home() {
         description="Le marché de votre quartier en ligne : produits des boutiques, créations des créateurs, vente avec commissions, commande avec livraison."
       />
 
+      <RecentSales />
+
       {!user && (
         <>
       <section className="hero vitrine-hero">
@@ -196,7 +198,6 @@ export default function Home() {
 
       {user && (
         <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
-          <RecentSales />
           <div className="section-head">
             <h2 className="section-title">🛍️ {t('Produits et créations')}</h2>
             {category || minPrice || maxPrice ? (
