@@ -40,7 +40,7 @@ export default function AdminMessagePopup() {
   };
 
   return (
-    <div className="modal-overlay" onClick={close} role="dialog" aria-modal="true">
+    <div className="modal-overlay admin-msg-overlay" onClick={close} role="dialog" aria-modal="true">
       <div className="modal admin-msg-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>💬 {t('Message de l\'équipe Mboppi')}</h3>

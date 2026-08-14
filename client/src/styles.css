@@ -1918,6 +1918,8 @@ a.step { text-decoration: none; color: inherit; }
   transition: background 0.15s;
 }
 .suggest-toggle:hover { background: var(--soft); }
+.suggest-overlay { z-index: 1001; }
+.admin-msg-overlay { z-index: 1001; }
 .msg-form { display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
 .msg-textarea {
   width: 100%;
