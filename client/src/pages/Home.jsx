@@ -15,12 +15,14 @@ export default function Home() {
   const { user } = useAuth();
   const mounted = useRef(true);
   const hasLoaded = useRef(false);
+  const hasData = useRef(false);
   const [products, setProducts] = useState(() => {
     try {
       const cached = sessionStorage.getItem('mboppi_products');
       const arr = cached ? JSON.parse(cached) : null;
       if (Array.isArray(arr) && arr.length) {
         hasLoaded.current = true;
+        hasData.current = true;
         return arr;
       }
     } catch {
@@ -79,11 +81,18 @@ export default function Home() {
         .then((d) => {
           if (mounted.current) {
             hasLoaded.current = true;
-            setProducts(d.products);
-            setError('');
-            if (!debouncedSearch && !category && sort === 'recent' && scope === 'product') {
+            const next = d.products || [];
+            const unfiltered = !debouncedSearch && !category && !debouncedCity && !minPrice && !maxPrice && scope === 'product';
+            if (next.length === 0 && hasData.current && unfiltered) {
+              setError('');
+            } else {
+              setProducts(next);
+              hasData.current = next.length > 0;
+              setError('');
+            }
+            if (unfiltered && sort === 'recent') {
               try {
-                sessionStorage.setItem('mboppi_products', JSON.stringify(d.products));
+                sessionStorage.setItem('mboppi_products', JSON.stringify(next));
               } catch {
                 /* stockage indisponible : on ignore */
               }
