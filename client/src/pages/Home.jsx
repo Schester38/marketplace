@@ -16,6 +16,7 @@ export default function Home() {
   const mounted = useRef(true);
   const hasLoaded = useRef(false);
   const hasData = useRef(false);
+  const retryRef = useRef(0);
   const [products, setProducts] = useState(() => {
     try {
       const cached = sessionStorage.getItem('mboppi_products');
@@ -88,6 +89,7 @@ export default function Home() {
             } else {
               setProducts(next);
               hasData.current = next.length > 0;
+              if (next.length > 0) retryRef.current = 0;
               setError('');
             }
             if (unfiltered && sort === 'recent') {
@@ -100,7 +102,24 @@ export default function Home() {
           }
         })
         .catch((e) => mounted.current && setError(e.message))
-        .finally(() => mounted.current && setLoading(false));
+        .finally(() => {
+          if (mounted.current) {
+            setLoading(false);
+            if (
+              hasLoaded.current &&
+              !debouncedSearch &&
+              !category &&
+              !debouncedCity &&
+              !minPrice &&
+              !maxPrice &&
+              scope === 'product' &&
+              retryRef.current < 2
+            ) {
+              retryRef.current += 1;
+              setTimeout(() => loadProducts(true), 900);
+            }
+          }
+        });
     },
     [user, debouncedSearch, category, sort, scope, minPrice, maxPrice, debouncedCity]
   );
