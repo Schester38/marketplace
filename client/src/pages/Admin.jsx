@@ -19,12 +19,19 @@ export default function Admin() {
   const [transactions, setTransactions] = useState(null);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const [messages, setMessages] = useState(null);
+  const [msgText, setMsgText] = useState('');
+  const [msgTarget, setMsgTarget] = useState('all');
+  const [msgUserId, setMsgUserId] = useState('');
+  const [msgBusy, setMsgBusy] = useState(false);
+  const [msgOk, setMsgOk] = useState('');
 
   const load = useCallback(() => {
     api.adminStats().then(setStats).catch(() => {});
     api.adminUsers().then((d) => setUsers(d.users)).catch(() => {});
     api.adminProducts().then((d) => setProducts(d.products)).catch(() => {});
     api.adminTransactions().then(setTransactions).catch(() => {});
+    api.adminMessages().then((d) => setMessages(d.messages)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -55,6 +62,7 @@ export default function Admin() {
     setUsers(null);
     setProducts(null);
     setTransactions(null);
+    setMessages(null);
   };
 
   const searchUsers = async (e) => {
@@ -83,6 +91,30 @@ export default function Admin() {
       setProducts((ps) => ps.filter((x) => x.id !== p.id));
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    setMsgOk('');
+    const text = msgText.trim();
+    if (!text) return;
+    if (msgTarget === 'user' && !msgUserId) return;
+    setMsgBusy(true);
+    try {
+      await api.adminSendMessage({
+        message: text,
+        target: msgTarget,
+        userId: msgTarget === 'user' ? Number(msgUserId) : null,
+      });
+      setMsgText('');
+      setMsgUserId('');
+      setMsgOk(t('Message envoyé avec succès.'));
+      api.adminMessages().then((d) => setMessages(d.messages)).catch(() => {});
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setMsgBusy(false);
     }
   };
 
@@ -167,6 +199,96 @@ export default function Admin() {
         {card(t('Avis'), stats ? `${stats.reviews} (${stats.rating_avg}/5)` : '…')}
         {card(t('Inscrits aujourd\'hui'), stats ? stats.users_today : '…')}
       </section>
+
+      <h2 className="section-title">✉️ {t('Messages aux utilisateurs')}</h2>
+      <form onSubmit={sendMessage} className="card msg-form">
+        <p className="hint">
+          {t('Envoyez un message qui s\'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).')}
+        </p>
+        <textarea
+          className="msg-textarea"
+          rows="4"
+          maxLength="2000"
+          placeholder={t('Votre message…')}
+          value={msgText}
+          onChange={(e) => setMsgText(e.target.value)}
+        />
+        <div className="msg-target-row">
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="msg-target"
+              checked={msgTarget === 'all'}
+              onChange={() => setMsgTarget('all')}
+            />
+            <span>{t('À tous les utilisateurs')}</span>
+          </label>
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="msg-target"
+              checked={msgTarget === 'user'}
+              onChange={() => setMsgTarget('user')}
+            />
+            <span>{t('À un utilisateur')}</span>
+          </label>
+        </div>
+        {msgTarget === 'user' && (
+          <select
+            className="msg-select"
+            value={msgUserId}
+            onChange={(e) => setMsgUserId(e.target.value)}
+            required
+          >
+            <option value="">{t('Choisir un utilisateur…')}</option>
+            {(users || []).map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name} — {u.email} ({u.role})
+              </option>
+            ))}
+          </select>
+        )}
+        {msgOk && <p className="success" role="status">{msgOk}</p>}
+        <button
+          type="submit"
+          className="btn btn-primary btn-block"
+          disabled={msgBusy || !msgText.trim() || (msgTarget === 'user' && !msgUserId)}
+        >
+          {msgBusy ? t('Envoi…') : t('Envoyer')}
+        </button>
+      </form>
+
+      <h3>{t('Messages envoyés')}</h3>
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t('Message')}</th>
+              <th>{t('Destinataires')}</th>
+              <th>{t('Date')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {messages === null ? (
+              <tr><td colSpan="3"><div className="skeleton-block" style={{ height: 30 }}></div></td></tr>
+            ) : messages.length === 0 ? (
+              <tr><td colSpan="3" className="empty">{t('Aucun message envoyé')}</td></tr>
+            ) : (
+              messages.map((m) => (
+                <tr key={m.id}>
+                  <td>{m.message}</td>
+                  <td>
+                    {m.target === 'all'
+                      ? t('Tous les utilisateurs')
+                      : `${t('Utilisateur')} : ${m.user_name || '—'}`}
+                  </td>
+                  <td className="hint">{new Date(m.created_at).toLocaleString()}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <h2 className="section-title">{t('👥 Utilisateurs')}</h2>
       <form onSubmit={searchUsers} className="hero-search" role="search">

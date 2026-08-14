@@ -9,5 +9,5 @@ dist/
 server/.env
 client/.env
 
+# Vercel
 .vercel
-.env*

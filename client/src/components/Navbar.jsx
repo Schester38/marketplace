@@ -8,6 +8,7 @@ import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { urlBase64ToUint8Array } from '../utils.js';
 import { formatMoney } from './ProductCard.jsx';
 import { countrySymbol } from '../config.js';
+import SuggestionButton from './SuggestionButton.jsx';
 
 function LangSwitcher() {
   const { lang, setLang, t } = useLang();
@@ -536,6 +537,7 @@ export default function Navbar({ onLogout }) {
   const navLinks = (
     <>
       <FollowUs />
+      <SuggestionButton onOpened={close} />
       <Link to="/" onClick={close}>{t('Produits')}</Link>
       {user && user.role === 'shop' && <Link to="/shop" onClick={close}>{t('Ma boutique')}</Link>}
       {user && user.role === 'seller' && <Link to="/seller" onClick={close}>{t('Mon espace vendeur')}</Link>}
