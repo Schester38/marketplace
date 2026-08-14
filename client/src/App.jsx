@@ -8,6 +8,7 @@ import BackButton from './components/BackButton.jsx';
 import ChatWidget from './components/ChatWidget.jsx';
 import LoadingScreen from './components/LoadingScreen.jsx';
 import Home from './pages/Home.jsx';
+import CityPage from './pages/CityPage.jsx';
 import { LangProvider, useLang } from './i18n.jsx';
 import { StoreProvider } from './store.jsx';
 
@@ -220,6 +221,7 @@ export default function App() {
             }
           />
           <Route path="/vitrine-offre" element={<VitrineOffre />} />
+          <Route path="/ville/:slug" element={<CityPage />} />
           <Route path="/offre/:id" element={<OfferDetail />} />
           <Route path="/produit/:id" element={<ProductDetail />} />
           <Route path="/acheter/:id" element={<PurchasePage />} />

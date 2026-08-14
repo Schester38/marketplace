@@ -241,6 +241,7 @@ router.get('/sitemap.xml', async (req, res) => {
     ]);
     const entries = [
       ...staticUrls.map(([loc, freq, prio]) => ({ loc: BASE_URL + loc, freq, prio })),
+      ...CITIES.map(([slug]) => ({ loc: `${BASE_URL}/ville/${slug}`, freq: 'weekly', prio: '0.7' })),
       ...products.map((p) => ({ loc: `${BASE_URL}/produit/${p.id}`, freq: 'weekly', prio: '0.8' })),
       ...shops.map((s) => ({ loc: `${BASE_URL}/boutique/${s.id}`, freq: 'weekly', prio: '0.7' })),
     ];
@@ -250,6 +251,70 @@ ${entries.map((e) => `  <url><loc>${e.loc}</loc><changefreq>${e.freq}</changefre
 </urlset>`;
     res.type('application/xml').send(xml);
   } catch {
+    res.status(500).send('Erreur serveur');
+  }
+});
+
+const CITIES = [
+  ['douala', 'Douala'],
+  ['yaounde', 'Yaoundé'],
+  ['bafoussam', 'Bafoussam'],
+  ['bamenda', 'Bamenda'],
+  ['garoua', 'Garoua'],
+  ['maroua', 'Maroua'],
+  ['kribi', 'Kribi'],
+  ['limbe', 'Limbé'],
+  ['buea', 'Buéa'],
+  ['nkongsamba', 'Nkongsamba'],
+  ['edea', 'Edéa'],
+  ['ngaoundere', 'Ngaoundéré'],
+  ['kumba', 'Kumba'],
+];
+
+const cityName = (slug) => {
+  const found = CITIES.find(([s]) => s === slug);
+  if (found) return found[1];
+  return slug
+    .split('-')
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ');
+};
+
+router.get('/ville/:slug', async (req, res) => {
+  try {
+    const slug = String(req.params.slug || '').trim().toLowerCase();
+    if (!/^[a-z0-9-]{2,40}$/.test(slug)) return res.status(404).type('html').send(notFoundHtml);
+    const name = cityName(slug);
+    const [stats] = await q(
+      `SELECT COUNT(DISTINCT p.id) AS products,
+              COUNT(DISTINCT u.id) AS shops
+       FROM products p JOIN users u ON u.id = p.shop_id
+       WHERE translate(lower(u.location), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn') ILIKE '%' || $1 || '%'`,
+      [slug.replace(/[^a-z0-9]/g, '')]
+    );
+    const count = Number(stats?.products || 0);
+    const title = `Acheter à ${name} — Boutiques et produits | Mboppi`;
+    const canonical = `${BASE_URL}/ville/${slug}`;
+    const descText = count
+      ? `Commandez ${count} produit${count > 1 ? 's' : ''} des boutiques de ${name} en ligne : téléphones, mode, alimentation, artisanat. Livraison rapide avec Mboppi.`
+      : `Achetez et vendez à ${name} avec Mboppi : le marché de votre quartier en ligne. Boutiques, créations et livraison.`;
+
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: title,
+      url: canonical,
+      description: descText,
+    };
+
+    let html = await loadIndexHtml();
+    html = injectHead(html, { title, description: descText, canonical, ogImage: `${BASE_URL}/og-image.svg`, ogType: 'website' });
+    html = injectJsonLd(html, jsonLd);
+    if (!html) return res.status(200).type('html').send(`<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title><meta name="description" content="${descText}"/></head><body><h1>${title}</h1></body></html>`);
+    res.type('html').send(html);
+  } catch {
+    const html = await loadIndexHtml();
+    if (html) return res.type('html').send(html);
     res.status(500).send('Erreur serveur');
   }
 });

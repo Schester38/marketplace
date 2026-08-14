@@ -55,7 +55,7 @@ const SORTS = {
 };
 
 router.get('/', async (req, res) => {
-  const { search, shop, category, sort, scope, min_price, max_price } = req.query;
+  const { search, shop, category, sort, scope, min_price, max_price, city } = req.query;
   let sql = SELECT_PRODUCT;
   const params = [];
   const where = [];
@@ -78,6 +78,15 @@ router.get('/', async (req, res) => {
   if (category) {
     where.push('p.category = $' + (params.length + 1));
     params.push(String(category).trim());
+  }
+  if (city) {
+    const norm = String(city).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    where.push(
+      `translate(lower(u.location), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn') ILIKE '%' || $` +
+        (params.length + 1) +
+        ` || '%'`
+    );
+    params.push(norm);
   }
   const minP = Number(min_price);
   const maxP = Number(max_price);

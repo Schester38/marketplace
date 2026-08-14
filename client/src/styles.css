@@ -1660,6 +1660,8 @@ a.step { text-decoration: none; color: inherit; }
 }
 .footer-nav a:hover { color: var(--primary); }
 .footer-copy { color: var(--muted); font-size: 0.82rem; }
+.footer-cities { margin-top: 6px; }
+.footer-cities .footer-city-link { font-size: 0.82rem; color: var(--muted); }
 
 .bottom-nav {
   position: fixed;
