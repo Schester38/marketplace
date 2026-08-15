@@ -9,11 +9,11 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Installation des dépendances
         run: npm --prefix server install --no-audit --no-fund
@@ -25,7 +25,7 @@ jobs:
           BACKUP_UPLOAD_URL: ${{ secrets.BACKUP_UPLOAD_URL }}
 
       - name: Stockage comme artefact GitHub (90 jours)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sauvegarde-mboppi
           path: _backups/*.ndjson
