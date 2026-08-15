@@ -240,9 +240,9 @@ main { animation: pageIn 0.35s ease; }
 @media (min-width: 1024px) {
   .drawer { width: 300px; box-shadow: var(--shadow-lg); }
   .drawer-header { padding: 14px 18px; font-size: 1.1rem; }
-  .drawer-nav { padding: 4px 8px; gap: 1px; }
-  .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip { padding: 6px 12px; font-size: 0.95rem; border-radius: 10px; }
-  .drawer-footer { padding: 10px 12px; }
+  .drawer-nav { padding: 6px 8px; gap: 2px; }
+  .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip { padding: 8px 14px; font-size: 0.95rem; border-radius: 10px; }
+  .drawer-footer { padding: 12px 14px; }
   .install-ios-hint { font-size: 0.8rem; }
 }
 .navbar nav { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
