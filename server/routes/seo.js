@@ -104,6 +104,14 @@ function parsePhotos(raw, fallback) {
   return fallback ? [fallback] : [];
 }
 
+const OG_DEFAULT = `${BASE_URL}/og-image.png`;
+
+function absImageOf(image) {
+  if (!image || /^data:/.test(image)) return OG_DEFAULT;
+  if (/^https?:/.test(image)) return image;
+  return `${BASE_URL}${image}`;
+}
+
 router.get('/', async (req, res) => {
   try {
     const products = (await q(
@@ -122,7 +130,7 @@ router.get('/', async (req, res) => {
     const descText =
       'Mboppi, le marché de votre quartier en ligne : produits des boutiques, créations des créateurs, vente avec commissions, commande avec livraison et paiement mobile.';
     const image = products[0]?.image || '';
-    const absImage = image && /^https?:/.test(image) ? image : image ? `${BASE_URL}${image}` : `${BASE_URL}/og-image.svg`;
+    const absImage = absImageOf(image);
 
     const jsonLd = {
       '@context': 'https://schema.org',
@@ -185,11 +193,7 @@ router.get('/produit/:id', async (req, res) => {
     if (!p) return res.status(404).type('html').send(notFoundHtml);
     const images = parsePhotos(p.photos, p.image);
     const image = images[0] || '';
-    const absImage = image
-      ? /^https?:/.test(image)
-        ? image
-        : `${BASE_URL}${image}`
-      : `${BASE_URL}/og-image.svg`;
+    const absImage = absImageOf(image);
     const description = (p.description || '')
       .replace(/<[^>]*>/g, ' ')
       .replace(/\s+/g, ' ')
@@ -263,7 +267,7 @@ router.get('/boutique/:id', async (req, res) => {
     const count = Number(shop.product_count || 0);
     const descText = `${shop.name} est une boutique sur Mboppi${shop.location ? `, située à ${shop.location}${shop.country ? ` (${shop.country})` : ''}` : ''}. ${count} produit${count > 1 ? 's' : ''} disponible${count > 1 ? 's' : ''}. Commandez en ligne ou par WhatsApp.`.slice(0, 155);
     const image = shop.sample_image || '';
-    const absImage = image ? (/^https?:/.test(image) ? image : `${BASE_URL}${image}`) : `${BASE_URL}/og-image.svg`;
+    const absImage = absImageOf(image);
 
     const jsonLd = {
       '@context': 'https://schema.org',
@@ -289,11 +293,55 @@ router.get('/boutique/:id', async (req, res) => {
   }
 });
 
+router.get('/createur/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(404).type('html').send(notFoundHtml);
+    const [shop] = await q(
+      `SELECT id, name, location, country, verified,
+              (SELECT COUNT(*) FROM products p WHERE p.shop_id = users.id AND p.quantity > 0) AS product_count,
+              (SELECT image FROM products p WHERE p.shop_id = users.id AND p.quantity > 0 AND image IS NOT NULL ORDER BY p.created_at DESC LIMIT 1) AS sample_image
+       FROM users WHERE id = $1 AND role = 'creator'`,
+      [id]
+    );
+    if (!shop) return res.status(404).type('html').send(notFoundHtml);
+    const title = `${shop.name}${shop.location ? ` — Créateur à ${shop.location}` : ''} | Mboppi`;
+    const canonical = `${BASE_URL}/createur/${id}`;
+    const count = Number(shop.product_count || 0);
+    const descText = `${shop.name} est un créateur sur Mboppi${shop.location ? `, situé à ${shop.location}${shop.country ? ` (${shop.country})` : ''}` : ''}. ${count} création${count > 1 ? 's' : ''} exposée${count > 1 ? 's' : ''}. Découvrez et commandez ses créations en ligne ou par WhatsApp.`.slice(0, 155);
+    const image = shop.sample_image || '';
+    const absImage = absImageOf(image);
+
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Person',
+      name: shop.name,
+      url: canonical,
+      description: descText,
+      ...(shop.verified ? { image: absImage } : {}),
+      ...(shop.location
+        ? { address: { '@type': 'PostalAddress', addressLocality: shop.location, addressCountry: shop.country || undefined } }
+        : {}),
+    };
+
+    let html = await loadIndexHtml();
+    html = injectHead(html, { title, description: descText, canonical, ogImage: absImage, ogType: 'website' });
+    html = injectJsonLd(html, jsonLd);
+    if (!html) return res.status(200).type('html').send(`<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title><meta name="description" content="${descText}"/></head><body><h1>${title}</h1></body></html>`);
+    res.type('html').send(html);
+  } catch {
+    const html = await loadIndexHtml();
+    if (html) return res.type('html').send(html);
+    res.status(500).send('Erreur serveur');
+  }
+});
+
 router.get('/sitemap.xml', async (req, res) => {
   try {
     const staticUrls = [
       ['/', 'daily', '1.0'],
       ['/vitrine-offre', 'hourly', '0.9'],
+      ['/createurs', 'weekly', '0.7'],
       ['/a-propos', 'monthly', '0.7'],
       ['/contact', 'monthly', '0.7'],
       ['/faq', 'monthly', '0.6'],
@@ -302,21 +350,25 @@ router.get('/sitemap.xml', async (req, res) => {
       ['/mentions-legales', 'yearly', '0.4'],
       ['/donnees', 'monthly', '0.5'],
     ];
-    const [products, shops, offers] = await Promise.all([
-      q('SELECT id FROM products ORDER BY id DESC'),
-      q("SELECT id FROM users WHERE role IN ('shop', 'creator') ORDER BY id DESC"),
-      q('SELECT id FROM offers ORDER BY id DESC'),
+    const [products, users, offers] = await Promise.all([
+      q('SELECT id, created_at FROM products WHERE quantity > 0 ORDER BY created_at DESC'),
+      q("SELECT id, role FROM users WHERE role IN ('shop', 'creator') ORDER BY id DESC"),
+      q('SELECT id, created_at FROM offers ORDER BY id DESC'),
     ]);
     const entries = [
       ...staticUrls.map(([loc, freq, prio]) => ({ loc: BASE_URL + loc, freq, prio })),
       ...CITIES.map(([slug]) => ({ loc: `${BASE_URL}/ville/${slug}`, freq: 'weekly', prio: '0.7' })),
-      ...offers.map((o) => ({ loc: `${BASE_URL}/offre/${o.id}`, freq: 'weekly', prio: '0.7' })),
-      ...products.map((p) => ({ loc: `${BASE_URL}/produit/${p.id}`, freq: 'weekly', prio: '0.8' })),
-      ...shops.map((s) => ({ loc: `${BASE_URL}/boutique/${s.id}`, freq: 'weekly', prio: '0.7' })),
+      ...offers.map((o) => ({ loc: `${BASE_URL}/offre/${o.id}`, freq: 'weekly', prio: '0.7', lastmod: o.created_at })),
+      ...products.map((p) => ({ loc: `${BASE_URL}/produit/${p.id}`, freq: 'weekly', prio: '0.8', lastmod: p.created_at })),
+      ...users.map((s) => ({
+        loc: s.role === 'creator' ? `${BASE_URL}/createur/${s.id}` : `${BASE_URL}/boutique/${s.id}`,
+        freq: 'weekly',
+        prio: '0.7',
+      })),
     ];
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${entries.map((e) => `  <url><loc>${e.loc}</loc><changefreq>${e.freq}</changefreq><priority>${e.prio}</priority></url>`).join('\n')}
+${entries.map((e) => `  <url><loc>${e.loc}</loc><changefreq>${e.freq}</changefreq><priority>${e.prio}</priority>${e.lastmod ? `<lastmod>${String(e.lastmod).slice(0, 10)}</lastmod>` : ''}</url>`).join('\n')}
 </urlset>`;
     res.type('application/xml').send(xml);
   } catch {
@@ -377,7 +429,7 @@ router.get('/ville/:slug', async (req, res) => {
     };
 
     let html = await loadIndexHtml();
-    html = injectHead(html, { title, description: descText, canonical, ogImage: `${BASE_URL}/og-image.svg`, ogType: 'website' });
+    html = injectHead(html, { title, description: descText, canonical, ogImage: OG_DEFAULT, ogType: 'website' });
     html = injectJsonLd(html, jsonLd);
     if (!html) return res.status(200).type('html').send(`<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title><meta name="description" content="${descText}"/></head><body><h1>${title}</h1></body></html>`);
     res.type('html').send(html);
@@ -399,7 +451,7 @@ router.get('/offre/:id', async (req, res) => {
     if (!o) return res.status(404).type('html').send(notFoundHtml);
     const photos = parsePhotos(o.photos, null);
     const image = photos[0] || '';
-    const absImage = image ? (/^https?:/.test(image) ? image : `${BASE_URL}${image}`) : `${BASE_URL}/og-image.svg`;
+    const absImage = absImageOf(image);
     const title = `${o.name}${o.owner_name ? ` — Offre de ${o.owner_name}` : ''} | Mboppi`;
     const canonical = `${BASE_URL}/offre/${id}`;
     const promo = Number(o.promo_price);

@@ -3054,3 +3054,44 @@ a.step { text-decoration: none; color: inherit; }
 @media (max-width: 640px) {
   .support-grid { grid-template-columns: 1fr; }
 }
+
+/* ==== Polish v2 (2026) : micro-interactions et accents ==== */
+.product-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(31, 41, 55, 0.14);
+  border-color: rgba(99, 102, 241, 0.35);
+}
+[data-theme='dark'] .product-card:hover {
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+  border-color: rgba(129, 140, 248, 0.35);
+}
+.btn:focus-visible { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.45); }
+.section-title { position: relative; padding-bottom: 2px; }
+.section-title::after {
+  content: '';
+  display: block;
+  width: 56px;
+  height: 4px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #4f46e5, #ec4899);
+}
+.badge-verified {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+}
+.creator-avatar {
+  font-size: 34px;
+  background: linear-gradient(135deg, #ede9fe, #e0e7ff);
+  box-shadow: 0 4px 14px rgba(109, 40, 217, 0.16);
+}
+.creator-card { transition: transform 0.16s ease, box-shadow 0.16s ease; }
+.creator-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(31, 41, 55, 0.12);
+}
+[data-theme='dark'] .creator-card:hover { box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
+.shop-item-cta { margin-top: 12px; }

@@ -410,12 +410,12 @@ const loadProducts = useCallback(
                         <h3 className="section-title">🏪 {t('Boutiques et créateurs')}</h3>
                         <div className="grid shops-grid">
                           {shops.map((s) => (
-                            <Link key={s.id} to={`/boutique/${s.id}`} className="card shop-card">
+                            <Link key={s.id} to={s.role === 'creator' ? `/createur/${s.id}` : `/boutique/${s.id}`} className="card shop-card">
                               <div className="shop-thumb">
                                 {s.sample_image ? (
                                   <img src={s.sample_image} alt={s.name} loading="lazy" decoding="async" />
                                 ) : (
-                                  <span>🏪</span>
+                                  <span>{s.role === 'creator' ? '🎨' : '🏪'}</span>
                                 )}
                               </div>
                               <div className="shop-body">

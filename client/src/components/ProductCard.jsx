@@ -74,7 +74,10 @@ export default function ProductCard({ product, action, onAction, secondaryAction
         <h3>{product.name}</h3>
         {product.shop_name && (
           <p className="card-shop">
-            <Link to={`/boutique/${product.shop_id}`} onClick={(e) => e.stopPropagation()}>
+            <Link
+              to={product.shop_role === 'creator' ? `/createur/${product.shop_id}` : `/boutique/${product.shop_id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
               {product.shop_name} {product.shop_verified && <span title={t('Boutique vérifiée')}>✓</span>}
             </Link>
           </p>

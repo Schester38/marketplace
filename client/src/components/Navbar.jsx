@@ -539,6 +539,7 @@ export default function Navbar({ onLogout }) {
       <FollowUs />
       <SuggestionButton onOpened={close} />
       <Link to="/" onClick={close}>{t('Produits')}</Link>
+      <Link to="/createurs" onClick={close}>🎨 {t('Créateurs')}</Link>
       <Link to="/soutien" onClick={close}>{t('Je soutiens')}</Link>
       <a href="https://www.chariow.pics/U6Z28RUJ" target="_blank" rel="noopener noreferrer" onClick={close}>
         {t('Formations et Digital')}

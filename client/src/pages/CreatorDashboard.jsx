@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
 import Seo from '../components/Seo.jsx';
@@ -184,15 +185,20 @@ export default function CreatorDashboard() {
           <h1>🎨 {t('Mon espace créateur')}</h1>
           <p>{t('Publiez vos créations : elles rejoignent la catégorie Arts & Artisanat du marché.')}</p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
+        <div className="dash-actions">
+          <Link to={`/createur/${user.id}`} className="btn btn-outline">
+            🔗 {t('Voir ma vitrine')}
+          </Link>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
             if (showForm) { setForm(EMPTY_FORM); setEditingId(null); }
             setShowForm(!showForm);
           }}
         >
           {showForm ? t('Annuler') : t('+ Publier une création')}
         </button>
+        </div>
       </section>
 
       {showForm && (

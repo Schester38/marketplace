@@ -44,6 +44,8 @@ const Contact = lazyRetry(() => import('./pages/Contact.jsx'));
 const Privacy = lazyRetry(() => import('./pages/Privacy.jsx'));
 const MyAccount = lazyRetry(() => import('./pages/MyAccount.jsx'));
 const ShopPage = lazyRetry(() => import('./pages/ShopPage.jsx'));
+const CreatorShowcase = lazyRetry(() => import('./pages/CreatorShowcase.jsx'));
+const Creators = lazyRetry(() => import('./pages/Creators.jsx'));
 const Suivi = lazyRetry(() => import('./pages/Suivi.jsx'));
 const NotFound = lazyRetry(() => import('./pages/NotFound.jsx'));
 const Admin = lazyRetry(() => import('./pages/Admin.jsx'));
@@ -221,6 +223,8 @@ export default function App() {
             }
           />
           <Route path="/vitrine-offre" element={<VitrineOffre />} />
+          <Route path="/createurs" element={<Creators />} />
+          <Route path="/createur/:id" element={<CreatorShowcase />} />
           <Route path="/ville/:slug" element={<CityPage />} />
           <Route path="/offre/:id" element={<OfferDetail />} />
           <Route path="/produit/:id" element={<ProductDetail />} />

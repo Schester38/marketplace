@@ -5,8 +5,18 @@ function money(v, symbol = 'F') {
 const BLUE = [37, 99, 235];
 const BLUE_DARK = [23, 37, 84];
 const GREEN = [22, 163, 74];
+const AMBER = [217, 119, 6];
 const GRAY = [120, 120, 120];
 const LIGHT = [243, 246, 251];
+
+const fmtDate = (v) =>
+  new Date(v).toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
 function box(doc, x, y, w, h, fill = LIGHT) {
   doc.setFillColor(...fill);
@@ -75,7 +85,7 @@ export async function downloadInvoice(sale, t, symbol = 'F') {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(190, 205, 235);
-  doc.text(t('Marché en ligne — livraison confirmée'), 27, 24);
+  doc.text(t(sale.delivered_at ? 'Marché en ligne — livraison confirmée' : 'Marché en ligne — commande enregistrée'), 27, 24);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
@@ -84,21 +94,26 @@ export async function downloadInvoice(sale, t, symbol = 'F') {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.text(`${t('N°')} ${sale.id}`, W - 14, 21, { align: 'right' });
-  if (sale.delivered_at) {
-    doc.text(
-      new Date(sale.delivered_at).toLocaleString(),
-      W - 14,
-      27,
-      { align: 'right' }
-    );
+  const docDate = sale.delivered_at || sale.created_at || null;
+  if (docDate) {
+    doc.text(fmtDate(docDate), W - 14, 27, { align: 'right' });
   }
 
-  doc.setFillColor(...GREEN);
-  doc.roundedRect(W - 52, 39, 38, 12, 2, 2, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9.5);
-  doc.text(`✓ ${t('LIVRÉ')}`, W - 33, 47, { align: 'center' });
+  if (sale.delivered_at) {
+    doc.setFillColor(...GREEN);
+    doc.roundedRect(W - 52, 39, 38, 12, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.text(`✓ ${t('LIVRÉ')}`, W - 33, 47, { align: 'center' });
+  } else {
+    doc.setFillColor(...AMBER);
+    doc.roundedRect(W - 52, 39, 38, 12, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.text(`⏳ ${t('en attente')}`, W - 39, 47, { align: 'center' });
+  }
 
   let y = 58;
 
@@ -184,7 +199,7 @@ export async function downloadInvoice(sale, t, symbol = 'F') {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(...GRAY);
-  doc.text(t('Facture générée par Mboppi — marchandise livrée.'), 16, y + 2);
+  doc.text(t(sale.delivered_at ? 'Facture générée par Mboppi — marchandise livrée.' : 'Facture générée par Mboppi.'), 16, y + 2);
   doc.text('https://mboppi-mboppi.vercel.app', 16, y + 7);
 
   doc.setFont('helvetica', 'bold');

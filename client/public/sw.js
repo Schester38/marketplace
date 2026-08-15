@@ -1,5 +1,5 @@
-const CACHE_NAME = 'mboppi-v27';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/og-image.svg', '/robots.txt', '/sitemap.xml', '/splash.js'];
+const CACHE_NAME = 'mboppi-v28';
+const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/og-image.svg', '/og-image.png', '/robots.txt', '/sitemap.xml', '/splash.js'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -104,6 +104,22 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (event.request.mode === 'navigate' || url.pathname === '/') {
+    // Navigation : reseau d'abord, sinon le shell index.html en cache pour naviguer hors ligne.
+    event.respondWith(
+      (async () => {
+        try {
+          const network = await fetch(event.request);
+          if (network.ok) {
+            const clone = network.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/', clone));
+          }
+          return network;
+        } catch (err) {
+          const shell = await caches.match('/');
+          return shell || new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
+        }
+      })()
+    );
     return;
   }
 

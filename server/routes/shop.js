@@ -95,16 +95,20 @@ const NORMALIZE_TEXT = (col) =>
   `regexp_replace(translate(lower(${col}), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn'), '[^a-z0-9]', '', 'g')`;
 
 router.get('/', ah(async (req, res) => {
-  const { city } = req.query;
+  const { city, role } = req.query;
   const where = ["u.role IN ('shop', 'creator')"];
   const params = [];
+  if (role === 'shop' || role === 'creator') {
+    where.push(`u.role = $${params.length + 1}`);
+    params.push(role);
+  }
   if (city) {
     const norm = String(city).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
     where.push(NORMALIZE_TEXT(`COALESCE(u.city, '') || ' ' || COALESCE(u.location, '')`) + ` ILIKE '%' || $${params.length + 1} || '%'`);
     params.push(norm);
   }
   const sql = `
-    SELECT u.id, u.name, u.city, u.location, u.country, u.phone, u.verified,
+    SELECT u.id, u.role, u.name, u.city, u.location, u.country, u.phone, u.verified,
            COUNT(p.id) FILTER (WHERE p.quantity > 0)::int AS product_count,
            (SELECT image FROM products p2 WHERE p2.shop_id = u.id AND p2.quantity > 0 ORDER BY p2.created_at DESC LIMIT 1) AS sample_image
     FROM users u
@@ -119,7 +123,7 @@ router.get('/', ah(async (req, res) => {
 router.get('/:id', ah(async (req, res) => {
   const shop = (
     await q(
-      `SELECT id, name, location, country, phone, verified, shop_code, created_at
+      `SELECT id, name, role, location, country, phone, verified, shop_code, created_at
        FROM users WHERE id = $1 AND role IN ('shop', 'creator')`,
       [Number(req.params.id)]
     )

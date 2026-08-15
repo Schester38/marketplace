@@ -32,7 +32,7 @@ function productRow(p, mode = 'list') {
 }
 
 const SELECT_PRODUCT = `
-  SELECT p.*, u.name AS shop_name, u.location AS shop_location, u.city AS shop_city, u.country AS shop_country,
+  SELECT p.*, u.name AS shop_name, u.role AS shop_role, u.location AS shop_location, u.city AS shop_city, u.country AS shop_country,
          u.verified AS shop_verified, u.phone AS shop_phone,
          s.n, s.n_month, s.pending_n, r.review_count, r.rating_avg
   FROM products p

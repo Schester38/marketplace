@@ -6,6 +6,7 @@
     { "src": "/p/(.*)", "dest": "/api/index" },
     { "src": "/produit/(\\d+)", "dest": "/api/index" },
     { "src": "/boutique/(\\d+)", "dest": "/api/index" },
+    { "src": "/createur/(\\d+)", "dest": "/api/index" },
     { "src": "/ville/([^/]+)", "dest": "/api/index" },
     { "src": "/offre/(\\d+)", "dest": "/api/index" },
     { "src": "/sitemap\\.xml", "dest": "/api/index" },
