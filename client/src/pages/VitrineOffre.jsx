@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import OfferCard from '../components/OfferCard.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
-import { offerDiscount, categoryEmoji } from '../config.js';
+import { offerDiscount, categoryEmoji, currencySymbol } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
@@ -74,6 +74,8 @@ export default function VitrineOffre() {
     [offers]
   );
 
+  const offerSymbol = useMemo(() => currencySymbol(offers[0]?.currency || 'XAF'), [offers]);
+
   const topOffers = useMemo(
     () => [...offers].sort((a, b) => offerDiscount(b) - offerDiscount(a)).slice(0, 5),
     [offers]
@@ -137,7 +139,7 @@ export default function VitrineOffre() {
             <span>{t('Offres actives')}</span>
           </div>
           <div className="stat">
-            <strong>{formatMoney(totalSavings)} F</strong>
+            <strong>{formatMoney(totalSavings)} {offerSymbol}</strong>
             <span>{t('Économies cumulées')}</span>
           </div>
           <div className="stat">
@@ -156,7 +158,7 @@ export default function VitrineOffre() {
             {[...topOffers, ...topOffers].map((o, i) => (
               <span key={i} className="ticker-item">
                 🔥 {o.name} {offerDiscount(o) > 0 ? `− ${offerDiscount(o)}%` : ''} —{' '}
-                <b>{formatMoney(o.promo_price)} F</b>
+                <b>{formatMoney(o.promo_price)} {offerSymbol}</b>
               </span>
             ))}
           </div>

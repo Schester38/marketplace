@@ -3,23 +3,23 @@ export const OFFERS_WHATSAPP_NUMBER = '237679475343';
 export const BASE_URL = 'https://mboppi-mboppi.vercel.app';
 
 export const COUNTRIES = [
-  { name: 'Cameroun', flag: '🇨🇲', phone: '+237', symbol: 'F' },
-  { name: 'Côte d\'Ivoire', flag: '🇨🇮', phone: '+225', symbol: 'F' },
-  { name: 'Sénégal', flag: '🇸🇳', phone: '+221', symbol: 'F' },
-  { name: 'Mali', flag: '🇲🇱', phone: '+223', symbol: 'F' },
-  { name: 'Burkina Faso', flag: '🇧🇫', phone: '+226', symbol: 'F' },
-  { name: 'Niger', flag: '🇳🇪', phone: '+227', symbol: 'F' },
-  { name: 'Togo', flag: '🇹🇬', phone: '+228', symbol: 'F' },
-  { name: 'Bénin', flag: '🇧🇯', phone: '+229', symbol: 'F' },
-  { name: 'Guinée', flag: '🇬🇳', phone: '+224', symbol: 'GF' },
-  { name: 'Gabon', flag: '🇬🇦', phone: '+241', symbol: 'F' },
-  { name: 'Tchad', flag: '🇹🇩', phone: '+235', symbol: 'F' },
-  { name: 'République du Congo', flag: '🇨🇬', phone: '+242', symbol: 'F' },
-  { name: 'République démocratique du Congo', flag: '🇨🇩', phone: '+243', symbol: 'FC' },
-  { name: 'Guinée équatoriale', flag: '🇬🇶', phone: '+240', symbol: 'F' },
-  { name: 'République centrafricaine', flag: '🇨🇫', phone: '+236', symbol: 'F' },
-  { name: 'Rwanda', flag: '🇷🇼', phone: '+250', symbol: 'FRw' },
-  { name: 'Burundi', flag: '🇧🇮', phone: '+257', symbol: 'FBu' },
+  { name: 'Cameroun', flag: '🇨🇲', phone: '+237', symbol: 'XAF' },
+  { name: 'Côte d\'Ivoire', flag: '🇨🇮', phone: '+225', symbol: 'XOF' },
+  { name: 'Sénégal', flag: '🇸🇳', phone: '+221', symbol: 'XOF' },
+  { name: 'Mali', flag: '🇲🇱', phone: '+223', symbol: 'XOF' },
+  { name: 'Burkina Faso', flag: '🇧🇫', phone: '+226', symbol: 'XOF' },
+  { name: 'Niger', flag: '🇳🇪', phone: '+227', symbol: 'XOF' },
+  { name: 'Togo', flag: '🇹🇬', phone: '+228', symbol: 'XOF' },
+  { name: 'Bénin', flag: '🇧🇯', phone: '+229', symbol: 'XOF' },
+  { name: 'Guinée', flag: '🇬🇳', phone: '+224', symbol: 'GNF' },
+  { name: 'Gabon', flag: '🇬🇦', phone: '+241', symbol: 'XAF' },
+  { name: 'Tchad', flag: '🇹🇩', phone: '+235', symbol: 'XAF' },
+  { name: 'République du Congo', flag: '🇨🇬', phone: '+242', symbol: 'XAF' },
+  { name: 'République démocratique du Congo', flag: '🇨🇩', phone: '+243', symbol: 'CDF' },
+  { name: 'Guinée équatoriale', flag: '🇬🇶', phone: '+240', symbol: 'XAF' },
+  { name: 'République centrafricaine', flag: '🇨🇫', phone: '+236', symbol: 'XAF' },
+  { name: 'Rwanda', flag: '🇷🇼', phone: '+250', symbol: 'RWF' },
+  { name: 'Burundi', flag: '🇧🇮', phone: '+257', symbol: 'BIF' },
   { name: 'Kenya', flag: '🇰🇪', phone: '+254', symbol: 'KSh' },
   { name: 'Nigeria', flag: '🇳🇬', phone: '+234', symbol: '₦' },
   { name: 'Ghana', flag: '🇬🇭', phone: '+233', symbol: 'GH₵' },
@@ -36,10 +36,10 @@ export const COUNTRIES = [
   { name: 'Libye', flag: '🇱🇾', phone: '+218', symbol: 'LYD' },
   { name: 'Mauritanie', flag: '🇲🇷', phone: '+222', symbol: 'MRU' },
   { name: 'Soudan', flag: '🇸🇩', phone: '+249', symbol: 'SDG' },
-  { name: 'Algérie', flag: '🇩🇿', phone: '+213', symbol: 'DA' },
-  { name: 'Maroc', flag: '🇲🇦', phone: '+212', symbol: 'DH' },
-  { name: 'Tunisie', flag: '🇹🇳', phone: '+216', symbol: 'DT' },
-  { name: 'Égypte', flag: '🇪🇬', phone: '+20', symbol: 'LE' },
+  { name: 'Algérie', flag: '🇩🇿', phone: '+213', symbol: 'DZD' },
+  { name: 'Maroc', flag: '🇲🇦', phone: '+212', symbol: 'MAD' },
+  { name: 'Tunisie', flag: '🇹🇳', phone: '+216', symbol: 'TND' },
+  { name: 'Égypte', flag: '🇪🇬', phone: '+20', symbol: 'EGP' },
   { name: 'France', flag: '🇫🇷', phone: '+33', symbol: '€' },
   { name: 'Belgique', flag: '🇧🇪', phone: '+32', symbol: '€' },
   { name: 'Suisse', flag: '🇨🇭', phone: '+41', symbol: 'CHF' },
@@ -98,7 +98,33 @@ export function getCountry(countryName) {
 
 export function countrySymbol(countryName) {
   const c = getCountry(countryName);
-  return c ? c.symbol : 'F';
+  return c ? c.symbol : 'XAF';
+}
+
+const CURRENCY_SYMBOLS = {
+  EUR: '€',
+  USD: '$',
+  GBP: '£',
+  JPY: '¥',
+  CNY: '¥',
+  KRW: '₩',
+  INR: '₹',
+  NGN: '₦',
+  ZAR: 'R',
+  RUB: '₽',
+  TRY: '₺',
+  UAH: '₴',
+  BRL: 'R$',
+  ILS: '₪',
+  VND: '₫',
+  CHF: 'CHF',
+  PLN: 'zł',
+  RON: 'lei',
+};
+
+export function currencySymbol(code) {
+  const c = String(code || '').trim().toUpperCase();
+  return CURRENCY_SYMBOLS[c] || c || 'XAF';
 }
 
 export function countryPhone(countryName) {

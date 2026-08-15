@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { formatMoney } from '../components/ProductCard.jsx';
-import { offerUrl, offersWhatsappLink, offerDiscount, offerSavings, categoryEmoji } from '../config.js';
+import { offerUrl, offersWhatsappLink, offerDiscount, offerSavings, categoryEmoji, currencySymbol } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
@@ -62,7 +62,7 @@ export default function OfferDetail() {
     );
   }
 
-  const symbol = 'F';
+  const symbol = currencySymbol(offer.currency || 'XAF');
   const waMessage = t('Bonjour, je suis intéressé(e) par votre offre « {name} » : {url}', {
     name: offer.name,
     url: offerUrl(offer.id),

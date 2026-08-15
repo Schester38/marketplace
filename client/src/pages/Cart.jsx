@@ -152,7 +152,7 @@ export default function Cart() {
           <div className="card cart-summary">
             <div className="info-row">
               <span className="label">{t('Articles ({n})', { n: cartCount })}</span>
-              <strong>{formatMoney(cartTotal)} F</strong>
+              <strong>{formatMoney(cartTotal)} {countrySymbol(cart[0] && cart[0].country)}</strong>
             </div>
             <p className="hint">{t('Les frais de livraison sont confirmés avec la boutique.')}</p>
 

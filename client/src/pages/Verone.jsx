@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useAuth } from '../App.jsx';
 import ShareVitrine from '../components/ShareVitrine.jsx';
 import PwaInstallButton from '../components/PwaInstallButton.jsx';
 import Seo from '../components/Seo.jsx';
 import { compressImage } from '../utils.js';
+import { currencySymbol, countrySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
@@ -23,6 +25,8 @@ const MAX_PHOTOS = 3;
 
 export default function Verone() {
   const { t } = useLang();
+  const { user } = useAuth();
+  const formSymbol = countrySymbol(user?.country);
   const [showForm, setShowForm] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showMyOffers, setShowMyOffers] = useState(false);
@@ -174,8 +178,8 @@ export default function Verone() {
                   <div className="my-offer-info">
                     <strong>{o.name}</strong>
                     <span>
-                      <span className="old-price">{o.original_price.toLocaleString('fr-FR')} F</span>{' '}
-                      <span className="promo-price">{o.promo_price.toLocaleString('fr-FR')} F</span>
+                      <span className="old-price">{o.original_price.toLocaleString('fr-FR')} {currencySymbol(o.currency || 'XAF')}</span>{' '}
+                      <span className="promo-price">{o.promo_price.toLocaleString('fr-FR')} {currencySymbol(o.currency || 'XAF')}</span>
                     </span>
                   </div>
                   <button className="btn btn-danger" onClick={() => setDeleteTarget(o)}>{t('Rétirer')}</button>
@@ -251,11 +255,11 @@ export default function Verone() {
 
             <div className="row2">
               <div>
-                <label>{t('Prix de vente ({symbol}) *', { symbol: 'F' })}</label>
+                <label>{t('Prix de vente ({symbol}) *', { symbol: formSymbol })}</label>
                 <input className="input price-old" type="number" min="0" required value={form.original_price} onChange={(e) => setForm({ ...form, original_price: e.target.value })} />
               </div>
               <div>
-                <label>{t('Prix promotionnel ({symbol}) *', { symbol: 'F' })}</label>
+                <label>{t('Prix promotionnel ({symbol}) *', { symbol: formSymbol })}</label>
                 <input className="input price-new" type="number" min="0" required value={form.promo_price} onChange={(e) => setForm({ ...form, promo_price: e.target.value })} />
               </div>
             </div>

@@ -1,4 +1,4 @@
-function money(v, symbol = 'F') {
+function money(v, symbol = 'XAF') {
   return `${Number(v || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} ${symbol}`;
 }
 
@@ -36,7 +36,7 @@ function row(doc, label, value, y, options = {}) {
   return y + 6.5;
 }
 
-export async function downloadInvoice(sale, t, symbol = 'F') {
+export async function downloadInvoice(sale, t, symbol = 'XAF') {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF();
   const W = doc.internal.pageSize.getWidth();

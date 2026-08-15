@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { formatMoney } from './ProductCard.jsx';
-import { offerUrl, offersWhatsappLink, offerDiscount, offerSavings, categoryEmoji } from '../config.js';
+import { offerUrl, offersWhatsappLink, offerDiscount, offerSavings, categoryEmoji, currencySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
 
 export default function OfferCard({ offer }) {
@@ -10,7 +10,7 @@ export default function OfferCard({ offer }) {
   const hasPhotos = photos.length > 0;
   const discount = offerDiscount(offer);
   const savings = offerSavings(offer);
-  const symbol = 'F';
+  const symbol = currencySymbol(offer.currency || 'XAF');
 
   const waMessage = t('Bonjour, je suis intéressé(e) par votre offre « {name} » : {url}', {
     name: offer.name,
