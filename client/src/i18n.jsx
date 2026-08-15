@@ -54,6 +54,7 @@ const EN = {
   // Support / menu
   'Je soutiens': 'Support us',
   'Formations et Digital': 'Training & Digital',
+  'Formation Mboppi': 'Mboppi Training',
   'Je soutiens Mboppi': 'Support Mboppi',
   'Chaque geste compte pour faire grandir Mboppi': 'Every gesture counts to grow Mboppi',
   'Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.': 'Your support helps us pay for the site, improve the platform and support our shops and sellers. Every contribution, however small, moves the project forward.',
@@ -1176,6 +1177,7 @@ const AR = {
   // Support / menu
   'Je soutiens': 'أدعم',
   'Formations et Digital': 'تدريب ورقمنة',
+  'Formation Mboppi': 'تدريب Mboppi',
   'Je soutiens Mboppi': 'أدعم مبوّي',
   'Chaque geste compte pour faire grandir Mboppi': 'كل مساهمة تصنع الفرق لتنمية مبوّي',
   'Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.': 'دعمكم يساعدنا في دفع تكاليف الموقع، وتحسين المنصة، ومرافقة متاجرنا وبائعينا. كل مساهمة، مهما صغرت، تدفع المشروع إلى الأمام.',
@@ -2285,9 +2287,10 @@ const ES = {
   'Navigation': 'Navegación',
   'Accueil': 'Inicio',
   'Compte': 'Cuenta',
-  'Tous droits réservés.': 'Todos los derechos reservados.',
+'Tous droits réservés.': 'Todos los derechos reservados.',
   'Je soutiens': 'Apoyo',
   'Formations et Digital': 'Formación y Digital',
+  'Formation Mboppi': 'Formación Mboppi',
   'Je soutiens Mboppi': 'Apoyo a Mboppi',
   'Chaque geste compte pour faire grandir Mboppi': 'Cada gesto cuenta para hacer crecer a Mboppi',
   'Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.': 'Tu apoyo nos ayuda a pagar los gastos del sitio, a mejorar la plataforma y a acompañar a nuestras tiendas y vendedores. Cada aporte, por pequeño que sea, hace avanzar el proyecto.',
