@@ -8,7 +8,12 @@ async function request(path, options = {}, retries = 1) {
   try {
     const res = await fetch(API + path, { ...options, headers });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+    if (!res.ok) {
+      const err = new Error(data.error || `Erreur ${res.status}`);
+      err.status = res.status;
+      err.code = data.code;
+      throw err;
+    }
     return data;
   } catch (err) {
     const network = err instanceof TypeError;
@@ -39,6 +44,8 @@ async function adminRequest(path, options = {}) {
 
 export const api = {
   register: (payload) => request('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  verifyEmail: (token) => request('/auth/verify', { method: 'POST', body: JSON.stringify({ token }) }),
+  resendVerification: (email) => request('/auth/resend', { method: 'POST', body: JSON.stringify({ email }) }),
   login: (payload) => request('/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   me: () => request('/auth/me'),
   updateProfile: (payload) => request('/auth/me', { method: 'PUT', body: JSON.stringify(payload) }),

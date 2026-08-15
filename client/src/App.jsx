@@ -24,6 +24,7 @@ const lazyRetry = (importer) =>
 
 const Login = lazyRetry(() => import('./pages/Login.jsx'));
 const Register = lazyRetry(() => import('./pages/Register.jsx'));
+const ConfirmEmail = lazyRetry(() => import('./pages/ConfirmEmail.jsx'));
 const Cart = lazyRetry(() => import('./pages/Cart.jsx'));
 const Favorites = lazyRetry(() => import('./pages/Favorites.jsx'));
 const ShopDashboard = lazyRetry(() => import('./pages/ShopDashboard.jsx'));
@@ -232,6 +233,7 @@ export default function App() {
           <Route path="/verone" element={<Verone />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verifier-email" element={<ConfirmEmail />} />
           <Route path="/auth-google" element={<AuthGoogle />} />
           <Route
             path="/shop"

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { useAuth } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
 import Seo from '../components/Seo.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
@@ -10,7 +9,6 @@ import { useLang } from '../i18n.jsx';
 import { getRecaptchaToken } from '../recaptcha.js';
 
 export default function Register() {
-  const { login } = useAuth();
   const { t } = useLang();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -24,6 +22,8 @@ export default function Register() {
   });
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
 
@@ -33,6 +33,18 @@ export default function Register() {
       return false;
     }
     return true;
+  };
+
+  const resend = async () => {
+    setResending(true);
+    setError('');
+    try {
+      await api.resendVerification(form.email);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResending(false);
+    }
   };
 
   const submit = async (e) => {
@@ -46,10 +58,8 @@ export default function Register() {
     const trySubmit = async (remaining) => {
       try {
         const recaptchaToken = await getRecaptchaToken('register');
-        const data = await api.register({ ...form, acceptedTerms: true, recaptchaToken, ref: refCode || undefined });
-        login(data.user, data.token);
-        localStorage.setItem('mboppi_welcome', 'register');
-        navigate('/');
+        await api.register({ ...form, acceptedTerms: true, recaptchaToken, ref: refCode || undefined });
+        setSent(true);
         return true;
       } catch (err) {
         if (remaining > 0 && /recaptcha|anti-robot|vérification/i.test(err.message)) {
@@ -62,6 +72,31 @@ export default function Register() {
     };
     await trySubmit(2);
   };
+
+  if (sent) {
+    return (
+      <main className="container narrow">
+        <Seo title={t('Vérifiez votre email') + ' — Mboppi'} noindex/>
+        <div className="card form-card" style={{ textAlign: 'center' }}>
+          <div className="auth-brand">📬</div>
+          <h2>{t('Vérifiez votre email')}</h2>
+          <p className="hint" style={{ textAlign: 'center' }}>
+            {t('Un email de confirmation a été envoyé à')} <strong>{form.email}</strong>.
+            <br />
+            {t('Cliquez sur le lien qu\'il contient pour activer votre compte, puis connectez-vous.')}
+          </p>
+          <p className="hint" style={{ textAlign: 'center' }}>
+            {t('Vous ne l\'avez pas reçu ? Vérifiez les spams ou')}{' '}
+            <button type="button" className="link-button" onClick={resend} disabled={resending}>
+              {resending ? t('Envoi…') : t('renvoyer l\'email')}
+            </button>
+          </p>
+          {error && <p className="error">{error}</p>}
+          <Link to="/login" className="btn btn-primary btn-block">{t('Aller à la connexion')}</Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="container narrow">

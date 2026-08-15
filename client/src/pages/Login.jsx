@@ -13,10 +13,13 @@ export default function Login() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [unverified, setUnverified] = useState('');
+  const [resending, setResending] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+    setUnverified('');
     try {
       const recaptchaToken = await getRecaptchaToken('login');
       const data = await api.login({ ...form, recaptchaToken });
@@ -24,7 +27,26 @@ export default function Login() {
       localStorage.setItem('mboppi_welcome', 'login');
       navigate(dashboardPath(data.user.role));
     } catch (err) {
+      if (err.code === 'EMAIL_NOT_VERIFIED') {
+        setUnverified(err.email || form.email);
+        return;
+      }
       setError(err.message);
+    }
+  };
+
+  const resend = async () => {
+    setResending(true);
+    setError('');
+    try {
+      await api.resendVerification(unverified);
+      setError('');
+      setUnverified('');
+      alert(t('Un nouveau lien de confirmation vient d\'être envoyé. Vérifiez votre boîte mail.'));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResending(false);
     }
   };
 
@@ -34,6 +56,17 @@ export default function Login() {
       <div className="card form-card">
         <div className="auth-brand">🛍️</div>
         <h2>{t('Connexion')}</h2>
+
+        {unverified && (
+          <div className="card" style={{ background: '#fffbeb', borderColor: '#fde68a', marginBottom: 16 }}>
+            <p className="hint" style={{ margin: 0 }}>
+              ⚠️ {t('Votre adresse email n\'est pas encore confirmée. Cliquez sur le lien reçu par email pour activer votre compte.')}
+            </p>
+            <button className="link-button" onClick={resend} disabled={resending} style={{ marginTop: 8 }}>
+              {resending ? t('Envoi…') : t('Renvoyer le lien de confirmation')}
+            </button>
+          </div>
+        )}
 
         <form onSubmit={submit}>
           <label>{t('Email')}</label>

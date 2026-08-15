@@ -61,6 +61,8 @@ const limiter = (windowMs, max) =>
 
 app.use('/api/auth/login', limiter(15 * 60 * 1000, 20));
 app.use('/api/auth/register', limiter(60 * 60 * 1000, 15));
+app.use('/api/auth/verify', limiter(60 * 60 * 1000, 20));
+app.use('/api/auth/resend', limiter(10 * 60 * 1000, 6));
 app.use('/api/auth/seller-code', limiter(10 * 60 * 1000, 5));
 app.use('/api/shop/code', limiter(10 * 60 * 1000, 5));
 app.use('/api/purchases', limiter(10 * 60 * 1000, 30));
