@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useLang } from '../i18n.jsx';
+import pkg from '../../package.json';
 
 export default function Footer() {
   const { t } = useLang();
@@ -20,6 +21,9 @@ export default function Footer() {
         </nav>
         <p className="footer-copy">
           © {new Date().getFullYear()} Mboppi. {t('Tous droits réservés.')}
+        </p>
+        <p className="footer-copy">
+          v{pkg.version}
         </p>
       </div>
     </footer>
