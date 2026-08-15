@@ -1116,6 +1116,8 @@ const EN = {
   'Saisissez une ville pour voir ses boutiques, ses créateurs et ses produits.': 'Enter a city to see its shops, creators and products.',
   'Aucune boutique ni produit dans cette ville pour le moment.': 'No shops or products in this city for now.',
   'Boutiques et créateurs': 'Shops and creators',
+  'ex : +237 6 00 00 00 00': 'e.g. +237 6 00 00 00 00',
+  'Votre nom, votre adresse e-mail, votre numéro de téléphone et votre pays.': 'Your name, email, phone number and country.',
 };
 
 const AR = {
@@ -2225,6 +2227,8 @@ const AR = {
   'Saisissez une ville pour voir ses boutiques, ses créateurs et ses produits.': 'أدخل مدينة لعرض متاجرها ومبدعيها ومنتجاتها.',
   'Aucune boutique ni produit dans cette ville pour le moment.': 'لا توجد متاجر أو منتجات في هذه المدينة حالياً.',
   'Boutiques et créateurs': 'المتاجر والمبدعون',
+  'ex : +237 6 00 00 00 00': 'مثال: +237 6 00 00 00 00',
+  'Votre nom, votre adresse e-mail, votre numéro de téléphone et votre pays.': 'اسمك وبريدك الإلكتروني ورقم هاتفك ودولتك.',
 };
 
 export const I18N = { fr: {}, en: EN, ar: AR };

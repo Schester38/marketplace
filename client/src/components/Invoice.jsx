@@ -119,7 +119,7 @@ export async function downloadInvoice(sale, t, symbol = 'F') {
   box(doc, 14, y - 4.5, W - 28, 28, LIGHT);
   y = row(doc, t('Nom'), sale.seller_name || '—', y + 1);
   y = row(doc, t('Code vendeur'), sale.seller_code || '—', y);
-  y = row(doc, t('Téléphone'), sale.seller_phone || '—', y) + 3;
+  y = row(doc, t('Téléphone'), sale.seller_phone || sale.shop_contact || '—', y) + 3;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);

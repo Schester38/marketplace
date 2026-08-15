@@ -187,6 +187,7 @@ export default function MyAccount() {
 
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [phone, setPhone] = useState(user?.phone || '');
   const [location, setLocation] = useState(user?.location || '');
   const [city, setCity] = useState(user?.city || '');
   const [country, setCountry] = useState(user?.country || '');
@@ -211,7 +212,7 @@ export default function MyAccount() {
     setProfileMsg('');
     setProfileError('');
     try {
-      const { user: updated } = await api.updateProfile({ name, email, location, city, country });
+      const { user: updated } = await api.updateProfile({ name, email, phone, location, city, country });
       login(updated, localStorage.getItem('token'));
       setProfileMsg(t('Profil mis à jour avec succès.'));
     } catch (err) {
@@ -270,7 +271,7 @@ export default function MyAccount() {
       <div className="account-grid">
         <div className="card">
           <h2>{t('Profil')}</h2>
-          <p className="contact-hint">{t('Votre nom, votre adresse e-mail et votre pays.')}</p>
+          <p className="contact-hint">{t('Votre nom, votre adresse e-mail, votre numéro de téléphone et votre pays.')}</p>
           <form className="contact-form" onSubmit={saveProfile}>
             <label className="field">
               <span>{t('Nom')}</span>
@@ -279,6 +280,15 @@ export default function MyAccount() {
             <label className="field">
               <span>{t('E-mail')}</span>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </label>
+            <label className="field">
+              <span>{t('Numéro de téléphone')}</span>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder={t('ex : +237 6 00 00 00 00')}
+              />
             </label>
             <label className="field">
               <span>{t('Pays')}</span>
