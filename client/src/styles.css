@@ -150,12 +150,12 @@ main { animation: pageIn 0.35s ease; }
   font-size: 0.95rem;
   cursor: pointer;
 }
-.drawer-nav { display: flex; flex-direction: column; padding: 8px; gap: 3px; overflow-x: hidden; min-width: 0; }
+.drawer-nav { display: flex; flex-direction: column; padding: 4px 6px; gap: 1px; overflow-x: hidden; min-width: 0; }
 .drawer-tools {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px 6px;
+  padding: 6px 10px 4px;
   border-bottom: 1px solid var(--border);
   position: relative;
   flex-shrink: 0;
@@ -187,7 +187,7 @@ main { animation: pageIn 0.35s ease; }
 .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip {
   width: 100%;
   text-align: left;
-  padding: 10px 12px;
+  padding: 6px 10px;
   border-radius: 8px;
   margin: 0;
   font-size: 0.9rem;
@@ -196,13 +196,13 @@ main { animation: pageIn 0.35s ease; }
   word-break: break-word;
   box-sizing: border-box;
 }
-.drawer-nav .btn { margin-top: 4px; }
+.drawer-nav .btn { margin-top: 2px; }
 .drawer-nav .user-chip { box-sizing: border-box; font-size: 0.82rem; }
 .drawer-nav .suggest-toggle {
   width: 100%;
   justify-content: flex-start;
   text-align: left;
-  padding: 10px 12px;
+  padding: 6px 10px;
   border-radius: 8px;
   margin: 0;
   font-size: 0.9rem;
@@ -210,16 +210,16 @@ main { animation: pageIn 0.35s ease; }
 }
 .drawer-footer {
   border-top: 1px solid var(--border);
-  padding: 10px 12px;
+  padding: 6px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
 }
 .drawer-install { width: 100%; justify-content: center; }
 .drawer-account {
   border-top: 1px solid var(--border);
-  padding: 10px 12px;
+  padding: 6px 10px;
   flex-shrink: 0;
 }
 .drawer-auth-btn { width: 100%; justify-content: center; }
@@ -240,9 +240,9 @@ main { animation: pageIn 0.35s ease; }
 @media (min-width: 1024px) {
   .drawer { width: 300px; box-shadow: var(--shadow-lg); }
   .drawer-header { padding: 14px 18px; font-size: 1.1rem; }
-  .drawer-nav { padding: 12px; gap: 5px; }
-  .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip { padding: 12px 16px; font-size: 0.95rem; border-radius: 10px; }
-  .drawer-footer { padding: 12px 14px; }
+  .drawer-nav { padding: 4px 8px; gap: 1px; }
+  .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip { padding: 6px 12px; font-size: 0.95rem; border-radius: 10px; }
+  .drawer-footer { padding: 10px 12px; }
   .install-ios-hint { font-size: 0.8rem; }
 }
 .navbar nav { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
