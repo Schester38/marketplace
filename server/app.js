@@ -76,6 +76,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/shop', shopRoutes);
+  app.use('/api/shops', shopRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/reviews', reviewRoutes);

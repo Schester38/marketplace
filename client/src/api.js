@@ -51,7 +51,7 @@ export const api = {
   listCities: (search = '') => request('/products/cities' + (search ? `?q=${encodeURIComponent(search)}` : '')),
   listShops: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
-    return request('/shops' + (qs ? `?${qs}` : ''));
+    return request('/shop' + (qs ? `?${qs}` : ''));
   },
   getProduct: (id) => request(`/products/${id}`),
   myProducts: () => request('/products/mine'),
