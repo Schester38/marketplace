@@ -67,6 +67,10 @@ export const api = {
     const qs = new URLSearchParams(params).toString();
     return request('/activity' + (qs ? `?${qs}` : ''));
   },
+  activityEvents: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request('/activity/events' + (qs ? `?${qs}` : ''));
+  },
   shopSales: (shopId) => request(`/sales/shop/${shopId}`),
   updateSaleStatus: (id, status) =>
     request(`/sales/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),

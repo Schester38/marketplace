@@ -20,6 +20,12 @@ function monthAgoStr() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function fmtDateTime(iso) {
+  const d = new Date(iso);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 function downloadCsv(filename, header, rows) {
   const esc = (v) => {
     const s = String(v == null ? '' : v);
@@ -53,6 +59,15 @@ function ActivityJournal() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
+  const TYPE_LABEL = {
+    product: t('Publication de produit'),
+    sale: t('Vente'),
+    payment: t('Commission payée'),
+    referral: t('Commission de parrainage'),
+    purchase: t('Achat'),
+    order: t('Commande'),
+  };
+
   const load = async (download) => {
     if (!from || !to) {
       setError(t('Choisissez une date de début et une date de fin.'));
@@ -64,39 +79,27 @@ function ActivityJournal() {
     try {
       const d = await api.activity({ from, to, period });
       setRows(d.rows);
-      if (download && d.rows.length) {
-        const label = d.rows[0].period;
-        const header = [
-          t('Période'),
-          t('Ventes enregistrées'),
-          t('Montant des ventes'),
-          t('Commissions'),
-          t('Commissions payées'),
-          t('Achats'),
-          t('Montant des achats'),
-          t('Commandes'),
-          t('Montant des commandes'),
-          t('Produits publiés'),
-        ];
-        downloadCsv(
-          `mboppi-activite-${from}-${to}-${period}.csv`,
-          header,
-          d.rows.map((r) => [
-            r.period,
-            r.sales_count,
-            r.sales_total,
-            r.commission,
-            r.commission_paid,
-            r.purchases_count,
-            r.purchases_total,
-            r.orders_count,
-            r.orders_total,
-            r.products_count,
-          ])
-        );
-        setMessage(t('Journal téléchargé !'));
-      } else if (download) {
-        setMessage(t('Aucune activité sur cette période.'));
+      if (download) {
+        const eventsRes = await api.activityEvents({ from, to });
+        if (eventsRes.events.length) {
+          const header = [t('Date'), t('Activité'), t('Détails'), t('Montant'), t('Commission'), t('Statut'), t('Référence')];
+          downloadCsv(
+            `mboppi-activites-${from}-${to}.csv`,
+            header,
+            eventsRes.events.map((e) => [
+              fmtDateTime(e.date),
+              TYPE_LABEL[e.type] || e.type,
+              e.description,
+              e.amount,
+              e.commission != null ? e.commission : '',
+              e.status,
+              e.ref,
+            ])
+          );
+          setMessage(t('Journal téléchargé !'));
+        } else {
+          setMessage(t('Aucune activité sur cette période.'));
+        }
       }
     } catch (e) {
       setError(e.message);
@@ -114,6 +117,9 @@ function ActivityJournal() {
       <h2>📋 {t('Journal d\'activité')}</h2>
       <p className="contact-hint">
         {t('Téléchargez un inventaire de votre activité entre deux dates, par jour, par semaine ou par mois.')}
+      </p>
+      <p className="contact-hint">
+        {t('Le fichier téléchargé liste chaque activité du compte : publications de produits, ventes, commissions payées, achats et commandes.')}
       </p>
       <div className="activity-filters">
         <label className="field">
@@ -138,7 +144,7 @@ function ActivityJournal() {
           {loading ? '…' : t('Afficher le journal')}
         </button>
         <button className="btn btn-primary" disabled={loading} onClick={() => load(true)}>
-          ⬇️ {t('Télécharger (CSV)')}
+          ⬇️ {t('Télécharger le tableau (Excel)')}
         </button>
       </div>
       {error && <p className="error">{error}</p>}

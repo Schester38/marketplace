@@ -144,4 +144,95 @@ router.get('/', authRequired, ah(async (req, res) => {
   res.json({ period: p, rows });
 }));
 
+router.get('/events', authRequired, ah(async (req, res) => {
+  const { from, to } = req.query || {};
+  const today = new Date();
+  const end = to ? new Date(to) : today;
+  const start = from ? new Date(from) : new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() - 29));
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return res.status(400).json({ error: 'Dates invalides' });
+  }
+  const endInclusive = new Date(end);
+  endInclusive.setUTCDate(endInclusive.getUTCDate() + 1);
+  endInclusive.setUTCHours(0, 0, 0, 0);
+  const sISO = start.toISOString();
+  const eISO = endInclusive.toISOString();
+  const uid = req.user.id;
+
+  const events = [];
+  const push = (date, type, description, amount, status, ref) => {
+    if (!date) return;
+    events.push({
+      date: new Date(date).toISOString(),
+      type,
+      description,
+      amount: Math.round(Number(amount || 0) * 100) / 100,
+      status: status || '',
+      ref: ref || '',
+    });
+  };
+
+  const products = await q(
+    `SELECT id, name, price, created_at FROM products
+     WHERE shop_id = $1 AND created_at >= $2 AND created_at < $3`,
+    [uid, sISO, eISO]
+  );
+  for (const p of products) {
+    push(p.created_at, 'product', p.name, p.price, '', `#P${p.id}`);
+  }
+
+  const salesAsSeller = await q(
+    `SELECT s.id, s.status, s.total_price, s.commission, s.created_at, p.name AS product_name
+     FROM sales s JOIN products p ON p.id = s.product_id
+     WHERE s.seller_id = $1 AND s.created_at >= $2 AND s.created_at < $3`,
+    [uid, sISO, eISO]
+  );
+  for (const s of salesAsSeller) {
+    push(s.created_at, 'sale', `${s.product_name || ''} — x${s.quantity}`, s.total_price, s.status, `#V${s.id}`);
+    events[events.length - 1].commission = Math.round(Number(s.commission || 0) * 100) / 100;
+  }
+
+  const paidCommissions = await q(
+    `SELECT s.id, s.commission, s.paid_at, p.name AS product_name
+     FROM sales s JOIN products p ON p.id = s.product_id
+     WHERE s.seller_id = $1 AND s.paid = TRUE AND s.paid_at >= $2 AND s.paid_at < $3`,
+    [uid, sISO, eISO]
+  );
+  for (const s of paidCommissions) {
+    push(s.paid_at, 'payment', s.product_name || '', s.commission, 'payé', `#V${s.id}`);
+  }
+
+  const paidReferrals = await q(
+    `SELECT s.id, s.referral_commission, s.referral_paid_at, p.name AS product_name
+     FROM sales s JOIN products p ON p.id = s.product_id
+     WHERE s.referred_by = $1 AND s.referral_paid = TRUE AND s.referral_paid_at >= $2 AND s.referral_paid_at < $3`,
+    [uid, sISO, eISO]
+  );
+  for (const s of paidReferrals) {
+    push(s.referral_paid_at, 'referral', s.product_name || '', s.referral_commission, 'payé', `#V${s.id}`);
+  }
+
+  const purchases = await q(
+    `SELECT s.id, s.purchase_price, s.status, s.created_at, p.name AS product_name
+     FROM sales s JOIN products p ON p.id = s.product_id
+     WHERE s.buyer_id = $1 AND s.created_at >= $2 AND s.created_at < $3`,
+    [uid, sISO, eISO]
+  );
+  for (const s of purchases) {
+    push(s.created_at, 'purchase', s.product_name || '', s.purchase_price, s.status, `#V${s.id}`);
+  }
+
+  const orders = await q(
+    `SELECT id, status, total, jsonb_array_length(items) AS items, created_at
+     FROM orders WHERE user_id = $1 AND created_at >= $2 AND created_at < $3`,
+    [uid, sISO, eISO]
+  );
+  for (const o of orders) {
+    push(o.created_at, 'order', `${o.items || 0} article(s)`, o.total, o.status, `#C${o.id}`);
+  }
+
+  events.sort((a, b) => a.date.localeCompare(b.date));
+  res.json({ events });
+}));
+
 export default router;
