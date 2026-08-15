@@ -311,6 +311,17 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_wallet_transactions_reference ON wallet_transactions(reference_type, reference_id);
   `);
 
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_sales_buyer ON sales(buyer_id) WHERE buyer_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_sales_referred_by ON sales(referred_by) WHERE referred_by IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_sales_paid_at ON sales(paid_at) WHERE paid_at IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_sales_created ON sales(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_products_shop_created ON products(shop_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id) WHERE read = FALSE;
+    CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_users_city ON users(city);
+  `);
+
   try {
     await purgeOldTransactions();
   } catch {

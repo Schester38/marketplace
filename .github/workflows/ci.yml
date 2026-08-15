@@ -6,24 +6,25 @@ on:
   pull_request:
 
 jobs:
-  build:
+  build-and-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
 
-      - name: Build client
-        working-directory: client
+      - name: Syntaxe des fichiers serveur
         run: |
-          npm install
-          npm run build
+          find server -name "*.js" -not -path "*/node_modules/*" -print0 | xargs -0 -n1 node --check
 
-      - name: Check server syntax
-        working-directory: server
-        run: |
-          npm install
-          node -e "import('./app.js').then(() => console.log('server OK'))"
+      - name: Installation du client
+        run: npm --prefix client install --no-audit --no-fund
+
+      - name: Build du client
+        run: npm --prefix client run build

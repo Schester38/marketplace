@@ -4,6 +4,8 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { rateLimit } from 'express-rate-limit';
+import * as Sentry from '@sentry/node';
+import { pool } from './db.js';
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
 import saleRoutes from './routes/sales.js';
@@ -27,6 +29,14 @@ import { authRequired } from './auth.js';
 import { securityHeaders, originCheck } from './security.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'production',
+    tracesSampleRate: 0.1,
+  });
+}
 
 const app = express();
 app.disable('x-powered-by');
@@ -66,6 +76,16 @@ app.get('/', (req, res, next) => {
   res.json({ name: 'Mboppi API', version: '1.0.0' });
 });
 
+app.get('/api/health', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    await pool.query('SELECT 1');
+    res.json({ ok: true, db: 'up', time: new Date().toISOString() });
+  } catch {
+    res.status(503).json({ ok: false, db: 'down', time: new Date().toISOString() });
+  }
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sales', saleRoutes);
@@ -100,7 +120,16 @@ if (fs.existsSync(clientDist)) {
 }
 
 app.use((err, req, res, next) => {
-  console.error(err);
+  if (err) {
+    if (process.env.SENTRY_DSN) {
+      Sentry.withScope((scope) => {
+        scope.setTag('route', req.path);
+        if (req.user?.id) scope.setUser({ id: String(req.user.id) });
+        Sentry.captureException(err);
+      });
+    }
+    console.error(err);
+  }
   const status = Number(err?.statusCode) >= 400 && Number(err?.statusCode) < 600 ? Number(err.statusCode) : 500;
   res.status(status).json({ error: status === 500 ? 'Erreur interne du serveur' : (err.message || 'Requête invalide') });
 });

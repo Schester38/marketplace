@@ -1,0 +1,25 @@
+name: Sauvegarde nocturne
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Installation des dépendances
+        run: npm --prefix server install --no-audit --no-fund
+
+      - name: Exécution de la sauvegarde
+        run: node server/scripts/backup.mjs
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_UPLOAD_URL: ${{ secrets.BACKUP_UPLOAD_URL }}

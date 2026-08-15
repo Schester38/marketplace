@@ -57,6 +57,26 @@ router.get('/stats', ah(async (req, res) => {
   });
 }));
 
+router.get('/backup', ah(async (req, res) => {
+  const tables = [
+    'users', 'products', 'sales', 'offers', 'orders',
+    'notifications', 'reviews', 'audit_log', 'client_logs',
+    'admin_messages', 'admin_message_reads',
+    'seller_payment_methods', 'shop_payment_methods',
+    'wallet_accounts', 'wallet_transactions',
+  ];
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.set('Content-Type', 'application/x-ndjson');
+  res.set('Content-Disposition', `attachment; filename="mboppi-backup-${stamp}.ndjson"`);
+  res.set('Cache-Control', 'no-store');
+  logAudit(req.user.id, 'admin.backup', `Sauvegarde complète (${tables.length} tables)`, req.ip);
+  for (const t of tables) {
+    const rows = await q(`SELECT * FROM ${t}`);
+    res.write(`${JSON.stringify({ table: t, exported_at: new Date().toISOString(), rows })}\n`);
+  }
+  res.end();
+}));
+
 router.get('/users', ah(async (req, res) => {
   const search = req.query.search ? String(req.query.search).trim().slice(0, 60) : '';
   const users = await q(
