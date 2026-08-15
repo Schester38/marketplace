@@ -113,6 +113,7 @@ router.get('/', async (req, res) => {
        JOIN users u ON u.id = p.shop_id
        LEFT JOIN (SELECT product_id, SUM(quantity) FILTER (WHERE status = 'delivered') AS n
                   FROM sales GROUP BY product_id) s ON s.product_id = p.id
+       WHERE p.quantity > 0
        ORDER BY COALESCE(s.n, 0) DESC, p.created_at DESC
        LIMIT 12`
     )) || [];
@@ -357,7 +358,7 @@ router.get('/ville/:slug', async (req, res) => {
       `SELECT COUNT(DISTINCT p.id) AS products,
               COUNT(DISTINCT u.id) AS shops
        FROM products p JOIN users u ON u.id = p.shop_id
-       WHERE regexp_replace(translate(lower(COALESCE(u.city, '') || ' ' || COALESCE(u.location, '')), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn'), '[^a-z0-9]', '', 'g') ILIKE '%' || $1 || '%'`,
+       WHERE p.quantity > 0 AND regexp_replace(translate(lower(COALESCE(u.city, '') || ' ' || COALESCE(u.location, '')), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn'), '[^a-z0-9]', '', 'g') ILIKE '%' || $1 || '%'`,
       [slug.replace(/[^a-z0-9]/g, '')]
     );
     const count = Number(stats?.products || 0);

@@ -98,6 +98,7 @@ router.get('/', async (req, res) => {
     where.push('p.price <= $' + (params.length + 1));
     params.push(maxP);
   }
+  where.push('p.quantity > 0');
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
   sql += ' ORDER BY ' + (SORTS[sort] || SORTS.recent);
   const products = (await q(sql, params)).map(productRow);

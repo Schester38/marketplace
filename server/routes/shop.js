@@ -134,7 +134,7 @@ router.get('/:id', ah(async (req, res) => {
        LEFT JOIN (SELECT product_id, SUM(quantity) AS n,
                          SUM(quantity) FILTER (WHERE status IN ('pending', 'bought', 'confirmed')) AS pending_n
                   FROM sales GROUP BY product_id) s ON s.product_id = p.id
-       WHERE p.shop_id = $1 ORDER BY p.created_at DESC LIMIT 24`,
+       WHERE p.shop_id = $1 AND p.quantity > 0 ORDER BY p.created_at DESC LIMIT 24`,
       [shop.id]
     )
   ).map((p) => ({
