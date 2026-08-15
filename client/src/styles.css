@@ -2505,6 +2505,14 @@ a.step { text-decoration: none; color: inherit; }
 }
 .activity-filters .field { margin-bottom: 0; }
 
+/* Pagination */
+.load-more-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+.load-more-wrap .btn { min-width: 220px; }
+
 /* Avis clients */
 .stars { display: inline-flex; gap: 2px; color: #f59e0b; line-height: 1; }
 .stars button {

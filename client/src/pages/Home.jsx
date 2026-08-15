@@ -9,6 +9,12 @@ import { PRODUCT_CATEGORIES } from '../config.js';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { useAuth } from '../App.jsx';
 
+function mergeUnique(prev, next) {
+  if (!prev.length) return next;
+  const seen = new Set(prev.map((p) => p.id));
+  return [...prev, ...next.filter((p) => !seen.has(p.id))];
+}
+
 export default function Home() {
   const { t } = useLang();
   const { user } = useAuth();
@@ -46,15 +52,23 @@ export default function Home() {
   const [cityProducts, setCityProducts] = useState([]);
   const [shopsLoading, setShopsLoading] = useState(false);
   const [shopsError, setShopsError] = useState('');
+  const PER_PAGE = 24;
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const appendRef = useRef(false);
   const produitsRef = useRef(null);
 
   useEffect(() => {
-    const id = setTimeout(() => setDebouncedSearch(search.trim()), 150);
+    const id = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setOffset(0);
+    }, 150);
     return () => clearTimeout(id);
   }, [search]);
 
-  const loadProducts = useCallback(
-    (silent) => {
+const loadProducts = useCallback(
+    (silent, append) => {
       if (!silent && !hasLoaded.current) setLoading(true);
       api
         .listProducts({
@@ -64,6 +78,8 @@ export default function Home() {
           scope,
           min_price: minPrice === '' ? undefined : minPrice,
           max_price: maxPrice === '' ? undefined : maxPrice,
+          limit: PER_PAGE,
+          offset,
         })
         .then((d) => {
           if (mounted.current) {
@@ -73,12 +89,13 @@ export default function Home() {
             if (next.length === 0 && hasData.current && unfiltered) {
               setError('');
             } else {
-              setProducts(next);
-              hasData.current = next.length > 0;
+              setHasMore(Boolean(d.hasMore));
+              setProducts((prev) => (append ? mergeUnique(prev, next) : next));
+              hasData.current = d.total != null ? d.total > 0 : next.length > 0;
               if (next.length > 0) retryRef.current = 0;
               setError('');
             }
-            if (unfiltered && sort === 'recent') {
+            if (unfiltered && sort === 'recent' && !append) {
               try {
                 sessionStorage.setItem('mboppi_products', JSON.stringify(next));
               } catch {
@@ -91,6 +108,7 @@ export default function Home() {
         .finally(() => {
           if (mounted.current) {
             setLoading(false);
+            setLoadingMore(false);
             if (
               hasLoaded.current &&
               !debouncedSearch &&
@@ -106,12 +124,14 @@ export default function Home() {
           }
         });
     },
-    [user, debouncedSearch, category, sort, scope, minPrice, maxPrice]
+    [user, debouncedSearch, category, sort, scope, minPrice, maxPrice, offset]
+
   );
 
   useEffect(() => {
     mounted.current = true;
-    loadProducts();
+    loadProducts(false, appendRef.current);
+    appendRef.current = false;
     return () => {
       mounted.current = false;
     };
@@ -151,6 +171,17 @@ export default function Home() {
   const submitSearch = (e) => {
     e.preventDefault();
     goToProducts();
+  };
+
+  const loadMore = () => {
+    appendRef.current = true;
+    setLoadingMore(true);
+    setOffset((o) => o + PER_PAGE);
+  };
+
+  const changeFilter = (setter) => (e) => {
+    setter(e.target.value);
+    setOffset(0);
   };
 
   return (
@@ -296,7 +327,7 @@ export default function Home() {
             <select
               className="input filter-select"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={changeFilter(setCategory)}
               aria-label={t('Filtrer par catégorie')}
             >
               <option value="">{t('Toutes les catégories')}</option>
@@ -307,7 +338,7 @@ export default function Home() {
             <select
               className="input filter-select"
               value={sort}
-              onChange={(e) => setSort(e.target.value)}
+              onChange={changeFilter(setSort)}
               aria-label={t('Trier')}
             >
               <option value="recent">{t('Plus récents')}</option>
@@ -323,7 +354,7 @@ export default function Home() {
               placeholder={t('Prix min')}
               aria-label={t('Prix minimum')}
               value={minPrice}
-              onChange={(e) => setMinPrice(e.target.value)}
+              onChange={changeFilter(setMinPrice)}
             />
             <input
               className="input filter-price"
@@ -332,12 +363,12 @@ export default function Home() {
               placeholder={t('Prix max')}
               aria-label={t('Prix maximum')}
               value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
+              onChange={changeFilter(setMaxPrice)}
             />
             <select
               className="input filter-select"
               value={scope}
-              onChange={(e) => setScope(e.target.value)}
+              onChange={changeFilter(setScope)}
               aria-label={t('Type de recherche')}
             >
               <option value="product">{t('Rechercher un produit')}</option>
@@ -435,11 +466,20 @@ export default function Home() {
               </p>
             </div>
           ) : (
-            <div className="grid">
-              {products.map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
-            </div>
+            <>
+              <div className="grid">
+                {products.map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+              {hasMore && (
+                <div className="load-more-wrap">
+                  <button className="btn btn-outline" disabled={loadingMore} onClick={loadMore}>
+                    {loadingMore ? '…' : `⬇️ ${t('Voir plus de produits')}`}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
     </main>

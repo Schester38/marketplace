@@ -58,7 +58,7 @@ const SORTS = {
 };
 
 router.get('/', async (req, res) => {
-  const { search, shop, category, sort, scope, min_price, max_price, city } = req.query;
+  const { search, shop, category, sort, scope, min_price, max_price, city, limit, offset } = req.query;
   let sql = SELECT_PRODUCT;
   const params = [];
   const where = [];
@@ -101,6 +101,30 @@ router.get('/', async (req, res) => {
   where.push('p.quantity > 0');
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
   sql += ' ORDER BY ' + (SORTS[sort] || SORTS.recent);
+  const rawLimit = Number(limit);
+  const rawOffset = Number(offset);
+  const paging =
+    (Number.isInteger(rawLimit) && rawLimit > 0) || (Number.isInteger(rawOffset) && rawOffset > 0);
+  if (paging) {
+    const pageSize = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 60) : 24;
+    const skip = Number.isInteger(rawOffset) && rawOffset > 0 ? rawOffset : 0;
+    const [countRow] = await q(
+      `SELECT COUNT(*) AS n FROM products p JOIN users u ON u.id = p.shop_id` +
+        (where.length ? ' WHERE ' + where.join(' AND ') : ''),
+      params
+    );
+    sql += ` LIMIT ${pageSize} OFFSET ${skip}`;
+    const products = (await q(sql, params)).map(productRow);
+    const total = Number(countRow.n);
+    res.json({
+      products,
+      total,
+      limit: pageSize,
+      offset: skip,
+      hasMore: skip + products.length < total,
+    });
+    return;
+  }
   const products = (await q(sql, params)).map(productRow);
   res.json({ products });
 });
