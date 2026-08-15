@@ -4,7 +4,6 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { rateLimit } from 'express-rate-limit';
-import * as Sentry from '@sentry/node';
 import { pool } from './db.js';
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
@@ -30,12 +29,15 @@ import { securityHeaders, originCheck } from './security.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+let SentryModule = null;
+
 if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV || 'production',
-    tracesSampleRate: 0.1,
-  });
+  import('@sentry/node')
+    .then(({ default: Sentry }) => {
+      Sentry.init?.({ dsn: process.env.SENTRY_DSN, environment: process.env.NODE_ENV || 'production', tracesSampleRate: 0.1 });
+      SentryModule = Sentry;
+    })
+    .catch(() => {});
 }
 
 const app = express();
@@ -121,12 +123,14 @@ if (fs.existsSync(clientDist)) {
 
 app.use((err, req, res, next) => {
   if (err) {
-    if (process.env.SENTRY_DSN) {
-      Sentry.withScope((scope) => {
-        scope.setTag('route', req.path);
-        if (req.user?.id) scope.setUser({ id: String(req.user.id) });
-        Sentry.captureException(err);
-      });
+    if (SentryModule) {
+      try {
+        SentryModule.withScope((scope) => {
+          scope.setTag('route', req.path);
+          if (req.user?.id) scope.setUser({ id: String(req.user.id) });
+          SentryModule.captureException(err);
+        });
+      } catch { /* best effort */ }
     }
     console.error(err);
   }
