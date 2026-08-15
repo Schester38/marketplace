@@ -1112,6 +1112,10 @@ const EN = {
   'Aucune boutique dans cette ville pour le moment. Revenez bientôt !': 'No shops in this city for now. Come back soon!',
   '{n} produits': '{n} products',
   'Ville non renseignée': 'City not provided',
+  'Saisir une ville (ex : Yaoundé)…': 'Enter a city (e.g. Yaoundé)…',
+  'Saisissez une ville pour voir ses boutiques, ses créateurs et ses produits.': 'Enter a city to see its shops, creators and products.',
+  'Aucune boutique ni produit dans cette ville pour le moment.': 'No shops or products in this city for now.',
+  'Boutiques et créateurs': 'Shops and creators',
 };
 
 const AR = {
@@ -2217,6 +2221,10 @@ const AR = {
   'Aucune boutique dans cette ville pour le moment. Revenez bientôt !': 'لا توجد متاجر في هذه المدينة حالياً. عد لاحقاً!',
   '{n} produits': '{n} منتجات',
   'Ville non renseignée': 'المدينة غير محددة',
+  'Saisir une ville (ex : Yaoundé)…': 'أدخل المدينة (مثال: ياوندي)…',
+  'Saisissez une ville pour voir ses boutiques, ses créateurs et ses produits.': 'أدخل مدينة لعرض متاجرها ومبدعيها ومنتجاتها.',
+  'Aucune boutique ni produit dans cette ville pour le moment.': 'لا توجد متاجر أو منتجات في هذه المدينة حالياً.',
+  'Boutiques et créateurs': 'المتاجر والمبدعون',
 };
 
 export const I18N = { fr: {}, en: EN, ar: AR };

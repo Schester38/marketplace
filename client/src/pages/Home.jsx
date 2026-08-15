@@ -6,7 +6,6 @@ import Seo from '../components/Seo.jsx';
 import RecentSales from '../components/RecentSales.jsx';
 import { useLang } from '../i18n.jsx';
 import { PRODUCT_CATEGORIES } from '../config.js';
-import { CITIES } from '../cities.js';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { useAuth } from '../App.jsx';
 
@@ -41,8 +40,10 @@ export default function Home() {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [mode, setMode] = useState('products');
+  const [cityInput, setCityInput] = useState('');
   const [city, setCity] = useState('');
   const [shops, setShops] = useState([]);
+  const [cityProducts, setCityProducts] = useState([]);
   const [shopsLoading, setShopsLoading] = useState(false);
   const [shopsError, setShopsError] = useState('');
   const produitsRef = useRef(null);
@@ -119,14 +120,22 @@ export default function Home() {
   useRefreshOnFocus(() => loadProducts(true));
 
   useEffect(() => {
+    if (mode !== 'city') return;
+    const id = setTimeout(() => setCity(cityInput.trim()), 500);
+    return () => clearTimeout(id);
+  }, [cityInput, mode]);
+
+  useEffect(() => {
     if (mode !== 'city' || !city) return;
     let ok = true;
     setShopsLoading(true);
     setShopsError('');
-    api
-      .listShops({ city })
-      .then((d) => {
-        if (ok) setShops(d.shops || []);
+    Promise.all([api.listShops({ city }), api.listProducts({ city })])
+      .then(([shopsRes, productsRes]) => {
+        if (ok) {
+          setShops(shopsRes.shops || []);
+          setCityProducts(productsRes.products || []);
+        }
       })
       .catch((e) => ok && setShopsError(e.message))
       .finally(() => ok && setShopsLoading(false));
@@ -339,49 +348,72 @@ export default function Home() {
           {error && mode === 'products' && <p className="error" role="alert">{error}</p>}
           {mode === 'city' ? (
             <div className="city-shops">
-              <select
-                className="input filter-select"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                aria-label={t('Choisir une ville')}
+              <form
+                className="city-search"
+                role="search"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setCity(cityInput.trim());
+                }}
               >
-                <option value="">{t('Choisir une ville…')}</option>
-                {CITIES.map((c) => (
-                  <option key={c.slug} value={c.name}>{c.name}</option>
-                ))}
-              </select>
+                <input
+                  type="search"
+                  value={cityInput}
+                  onChange={(e) => setCityInput(e.target.value)}
+                  placeholder={t('Saisir une ville (ex : Yaoundé)…')}
+                  aria-label={t('Saisir une ville')}
+                />
+                <button type="submit" className="btn btn-primary">{t('Rechercher')}</button>
+              </form>
               {city ? (
                 shopsLoading ? (
                   <p className="muted">{t('Chargement…')}</p>
                 ) : shopsError ? (
                   <p className="error" role="alert">{shopsError}</p>
-                ) : shops.length === 0 ? (
-                  <p className="empty">{t('Aucune boutique dans cette ville pour le moment. Revenez bientôt !')}</p>
+                ) : shops.length === 0 && cityProducts.length === 0 ? (
+                  <p className="empty">{t('Aucune boutique ni produit dans cette ville pour le moment.')}</p>
                 ) : (
-                  <div className="grid shops-grid">
-                    {shops.map((s) => (
-                      <Link key={s.id} to={`/boutique/${s.id}`} className="card shop-card">
-                        <div className="shop-thumb">
-                          {s.sample_image ? (
-                            <img src={s.sample_image} alt={s.name} loading="lazy" decoding="async" />
-                          ) : (
-                            <span>🏪</span>
-                          )}
+                  <>
+                    {shops.length > 0 && (
+                      <section aria-label={t('Boutiques et créateurs')}>
+                        <h3 className="section-title">🏪 {t('Boutiques et créateurs')}</h3>
+                        <div className="grid shops-grid">
+                          {shops.map((s) => (
+                            <Link key={s.id} to={`/boutique/${s.id}`} className="card shop-card">
+                              <div className="shop-thumb">
+                                {s.sample_image ? (
+                                  <img src={s.sample_image} alt={s.name} loading="lazy" decoding="async" />
+                                ) : (
+                                  <span>🏪</span>
+                                )}
+                              </div>
+                              <div className="shop-body">
+                                <h3>
+                                  {s.name}
+                                  {s.verified && <span className="badge">✓ {t('Boutique vérifiée')}</span>}
+                                </h3>
+                                <p>📍 {[s.city, s.location].filter(Boolean).join(', ') || t('Ville non renseignée')}</p>
+                                <p className="muted">{t('{n} produits', { n: s.product_count || 0 })}</p>
+                              </div>
+                            </Link>
+                          ))}
                         </div>
-                        <div className="shop-body">
-                          <h3>
-                            {s.name}
-                            {s.verified && <span className="badge">✓ {t('Boutique vérifiée')}</span>}
-                          </h3>
-                          <p>📍 {[s.city, s.location].filter(Boolean).join(', ') || t('Ville non renseignée')}</p>
-                          <p className="muted">{t('{n} produits', { n: s.product_count || 0 })}</p>
+                      </section>
+                    )}
+                    {cityProducts.length > 0 && (
+                      <section aria-label={t('Produits')}>
+                        <h3 className="section-title">🛍️ {t('Produits')}</h3>
+                        <div className="grid">
+                          {cityProducts.map((p) => (
+                            <ProductCard key={p.id} product={p} />
+                          ))}
                         </div>
-                      </Link>
-                    ))}
-                  </div>
+                      </section>
+                    )}
+                  </>
                 )
               ) : (
-                <p className="muted">{t('Sélectionnez une ville pour voir les boutiques disponibles.')}</p>
+                <p className="muted">{t('Saisissez une ville pour voir ses boutiques, ses créateurs et ses produits.')}</p>
               )}
             </div>
           ) : loading && !hasLoaded.current ? (
