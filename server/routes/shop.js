@@ -105,8 +105,8 @@ router.get('/', ah(async (req, res) => {
   }
   const sql = `
     SELECT u.id, u.name, u.city, u.location, u.country, u.phone, u.verified,
-           COUNT(p.id)::int AS product_count,
-           (SELECT image FROM products p2 WHERE p2.shop_id = u.id ORDER BY p2.created_at DESC LIMIT 1) AS sample_image
+           COUNT(p.id) FILTER (WHERE p.quantity > 0)::int AS product_count,
+           (SELECT image FROM products p2 WHERE p2.shop_id = u.id AND p2.quantity > 0 ORDER BY p2.created_at DESC LIMIT 1) AS sample_image
     FROM users u
     LEFT JOIN products p ON p.shop_id = u.id
     WHERE ${where.join(' AND ')}
