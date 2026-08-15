@@ -92,6 +92,8 @@ export const COUNTRIES = [
   { name: 'Nouvelle-Zélande', flag: '🇳🇿', phone: '+64', symbol: 'NZ$' },
 ];
 
+COUNTRIES.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+
 export function getCountry(countryName) {
   return COUNTRIES.find((c) => c.name === countryName);
 }
