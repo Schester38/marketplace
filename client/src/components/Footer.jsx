@@ -13,7 +13,6 @@ export default function Footer() {
         </div>
         <nav className="footer-nav">
           <Link to="/a-propos">{t('À propos')}</Link>
-          <Link to="/createurs">🎨 {t('Créateurs')}</Link>
           <Link to="/faq">❓ {t('FAQ')}</Link>
           <Link to="/donnees">{t('Données & confidentialité')}</Link>
           <Link to="/cgv">{t('CGV')}</Link>
