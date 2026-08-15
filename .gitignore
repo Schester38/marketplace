@@ -11,3 +11,4 @@ client/.env
 
 # Vercel
 .vercel
+_backups/

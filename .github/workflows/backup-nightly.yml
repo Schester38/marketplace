@@ -23,3 +23,11 @@ jobs:
         env:
           BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
           BACKUP_UPLOAD_URL: ${{ secrets.BACKUP_UPLOAD_URL }}
+
+      - name: Stockage comme artefact GitHub (90 jours)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sauvegarde-mboppi
+          path: _backups/*.ndjson
+          if-no-files-found: warn
+          retention-days: 90
