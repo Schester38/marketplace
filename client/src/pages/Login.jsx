@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { useAuth, dashboardPath } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
 import Seo from '../components/Seo.jsx';
+import Logo from '../components/Logo.jsx';
 import { useLang } from '../i18n.jsx';
 
 export default function Login() {
@@ -52,7 +53,7 @@ export default function Login() {
     <main className="container narrow">
       <Seo title={t('Connexion') + ' — Mboppi'} description={t('Connexion à Mboppi')} noindex/>
       <div className="card form-card">
-        <div className="auth-brand">🛍️</div>
+        <div className="auth-brand"><Logo className="logo-inline" /></div>
         <h2>{t('Connexion')}</h2>
 
         {unverified && (

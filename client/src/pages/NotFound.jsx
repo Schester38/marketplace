@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import ProductCard from '../components/ProductCard.jsx';
+import Logo from '../components/Logo.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
 
@@ -30,7 +31,7 @@ export default function NotFound() {
       </div>
       {products.length > 0 && (
         <section>
-          <h2 className="section-title">🛍️ {t('Suggestions')}</h2>
+          <h2 className="section-title"><Logo className="logo-inline" /> {t('Suggestions')}</h2>
           <div className="grid">
             {products.map((p) => (
               <ProductCard key={p.id} product={p} />

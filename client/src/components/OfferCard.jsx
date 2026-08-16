@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { formatMoney } from './ProductCard.jsx';
 import { offerUrl, offersWhatsappLink, offerDiscount, offerSavings, categoryEmoji, currencySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
+import Logo from './Logo.jsx';
 
 export default function OfferCard({ offer }) {
   const { t } = useLang();
@@ -23,7 +24,7 @@ export default function OfferCard({ offer }) {
         {hasPhotos ? (
           <img src={photos[0]} alt={offer.name} loading="lazy" decoding="async" />
         ) : (
-          <span>🛍️</span>
+          <Logo className="logo-inline" />
         )}
         {discount > 0 && <span className="discount-badge">−{discount}%</span>}
         {photos.length > 1 && (

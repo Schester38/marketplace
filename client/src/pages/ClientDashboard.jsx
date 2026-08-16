@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { countrySymbol } from '../config.js';
 import Seo from '../components/Seo.jsx';
+import Logo from '../components/Logo.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
@@ -155,7 +156,7 @@ export default function ClientDashboard() {
       </section>
 
       <section style={{ marginTop: 24 }}>
-        <h2 className="section-title">{t('🛍️ Mes achats')}</h2>
+        <h2 className="section-title"><Logo className="logo-inline" /> {t('Mes achats')}</h2>
         {purchases === null ? (
           <div className="card page-center">
             <div className="skeleton-block" style={{ height: 80 }}></div>

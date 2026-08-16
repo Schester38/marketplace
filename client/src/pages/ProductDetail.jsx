@@ -10,6 +10,7 @@ import { useCart, useFavs } from '../store.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import Reviews from '../components/Reviews.jsx';
+import Logo from '../components/Logo.jsx';
 import ReviewQuote from '../components/ReviewQuote.jsx';
 
 export default function ProductDetail() {
@@ -176,7 +177,7 @@ export default function ProductDetail() {
       {sellerCode && (
         <div className="seller-cta card">
           <div>
-            <strong>🛍️ {t('Ce produit vous est proposé par un vendeur Mboppi.')}</strong>
+            <strong><Logo className="logo-inline" /> {t('Ce produit vous est proposé par un vendeur Mboppi.')}</strong>
             <p className="hint" style={{ marginTop: 4 }}>
               {t('Code du vendeur : {code} — Confirmez votre achat pour le notifier, lui et la boutique.', { code: sellerCode })}
             </p>

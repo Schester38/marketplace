@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { countrySymbol, categoryEmoji } from '../config.js';
 import Seo from '../components/Seo.jsx';
+import Logo from '../components/Logo.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 import CopyCode from '../components/CopyCode.jsx';
 import { useAuth } from '../App.jsx';
@@ -105,7 +106,7 @@ export default function PurchasePage() {
       <Seo title={`${t('Acheter')} — ${product.name} — Mboppi`} description={t('Confirmez votre commande avec le code du vendeur.')} noindex/>
       <section className="dash-header">
         <div>
-          <h1>🛍️ {t('Acheter')}</h1>
+          <h1><Logo className="logo-inline" /> {t('Acheter')}</h1>
           <p>{t('Confirmez votre commande : la boutique et le vendeur seront notifiés.')}</p>
         </div>
       </section>

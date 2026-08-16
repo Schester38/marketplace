@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard.jsx';
 import Seo from '../components/Seo.jsx';
+import Logo from '../components/Logo.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
 import { cityFromSlug } from '../cities.js';
@@ -53,7 +54,7 @@ export default function CityPage() {
 
       <section className="section" aria-label={t('Produits à {city}', { city })}>
         <div className="section-head">
-          <h2 className="section-title">🛍️ {t('Produits disponibles à {city}', { city })}</h2>
+          <h2 className="section-title"><Logo className="logo-inline" /> {t('Produits disponibles à {city}', { city })}</h2>
         </div>
         {error && <p className="error">{error}</p>}
         {products === null ? (

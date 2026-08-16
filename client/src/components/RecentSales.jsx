@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
+import Logo from './Logo.jsx';
 
 function timeAgo(iso, locale) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -40,7 +41,7 @@ export default function RecentSales() {
   const it = items[idx];
   return (
     <div className="recent-sales" role="status">
-      <span className="recent-sales-icon" aria-hidden="true">🛍️</span>
+      <Logo className="recent-sales-icon" aria-hidden="true" />
       <span className="recent-sales-text">
         {t('{city} — « {product} » commandé chez {shop}', {
           city: it.buyer_city || t('Un client'),

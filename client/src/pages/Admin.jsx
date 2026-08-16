@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Seo from '../components/Seo.jsx';
+import Logo from '../components/Logo.jsx';
 import PwaInstallButton from '../components/PwaInstallButton.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
@@ -464,7 +465,7 @@ export default function Admin() {
         </table>
       </div>
 
-      <h2 className="section-title">{t('🛍️ Produits')}</h2>
+      <h2 className="section-title"><Logo className="logo-inline" /> {t('Produits')}</h2>
       <div className="table-wrap">
         <table className="table">
           <thead>

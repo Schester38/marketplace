@@ -5,6 +5,7 @@ import OfferCard from '../components/OfferCard.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { offerDiscount, categoryEmoji, currencySymbol } from '../config.js';
 import Seo from '../components/Seo.jsx';
+import Logo from '../components/Logo.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
@@ -121,7 +122,7 @@ export default function VitrineOffre() {
       />
       <section className="hero vitrine-hero">
         <div className="hero-floats" aria-hidden="true">
-          <span>🛍️</span>
+          <span className="logo-float"><Logo className="hero-float-logo" /></span>
           <span>⚡</span>
           <span>💥</span>
           <span>✨</span>

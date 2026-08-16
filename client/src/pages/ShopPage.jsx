@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import ProductCard from '../components/ProductCard.jsx';
+import Logo from '../components/Logo.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
@@ -86,7 +87,7 @@ export default function ShopPage() {
         </div>
       </div>
 
-      <h2 className="section-title">🛍️ {t('Produits de la boutique')}</h2>
+      <h2 className="section-title"><Logo className="logo-inline" /> {t('Produits de la boutique')}</h2>
       {products === null ? (
         <div className="card page-center">
           <div className="skeleton-block" style={{ height: 120 }}></div>

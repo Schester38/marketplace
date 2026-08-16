@@ -4,6 +4,7 @@ import { useAuth } from '../App.jsx';
 import ShareVitrine from '../components/ShareVitrine.jsx';
 import PwaInstallButton from '../components/PwaInstallButton.jsx';
 import Seo from '../components/Seo.jsx';
+import Logo from '../components/Logo.jsx';
 import { compressImage } from '../utils.js';
 import { currencySymbol, countrySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
@@ -136,7 +137,7 @@ export default function Verone() {
       <Seo title="Verone — Mboppi" description={t('Gestion des offres')} />
       <section className="dash-header">
         <div>
-          <div className="hero-badge" style={{ marginBottom: 10 }}>{t('🛍️ Espace Verone')}</div>
+          <div className="hero-badge" style={{ marginBottom: 10 }}><Logo className="logo-inline" /> {t('Espace Verone')}</div>
           <h1>Verone</h1>
           <p>
             {t('Ajoutez vos offres promotionnelles : elles s\'affichent dans la Vitrine d\'offre du site.')}
@@ -172,7 +173,7 @@ export default function Verone() {
                     {o.photos && o.photos.length > 0 ? (
                       <img src={o.photos[0]} alt={o.name} loading="lazy" />
                     ) : (
-                      <span>🛍️</span>
+                      <Logo className="logo-inline" />
                     )}
                   </div>
                   <div className="my-offer-info">

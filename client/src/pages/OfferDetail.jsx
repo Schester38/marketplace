@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { offerUrl, offersWhatsappLink, offerDiscount, offerSavings, categoryEmoji, currencySymbol } from '../config.js';
 import Seo from '../components/Seo.jsx';
+import Logo from '../components/Logo.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
@@ -89,7 +90,7 @@ export default function OfferDetail() {
           {photos.length > 0 ? (
             <img src={photos[lightboxIndex]} alt={offer.name} />
           ) : (
-            <span>🛍️</span>
+            <Logo className="logo-inline" />
           )}
           {discount > 0 && <span className="discount-badge">−{discount}%</span>}
           {photos.length > 1 && (

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
+import Logo from '../components/Logo.jsx';
 import { useLang } from '../i18n.jsx';
 
 export default function About() {
@@ -11,7 +12,7 @@ export default function About() {
         description={t('Mboppi est un marché en ligne conçu pour connecter boutiques, vendeurs, clients et créateurs.')}
       />
       <section className="hero vitrine-hero">
-        <span className="hero-badge">🛍️ {t('À propos')}</span>
+        <span className="hero-badge"><Logo className="logo-inline" /> {t('À propos')}</span>
         <h1>{t('Mboppi, le marché de votre quartier, en ligne')}</h1>
         <p>
           {t('Mboppi est née d\'une idée simple : permettre à chacun de vendre et d\'acheter près de chez soi, sans commission écrasante et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les vendeurs gagnent des commissions, les créateurs exposent leurs talents et les clients trouvent tout au même endroit.')}
@@ -40,7 +41,7 @@ export default function About() {
             <p>{t('Vendez en ligne et gagnez une commission sur chaque vente.')}</p>
           </div>
           <div className="step">
-            <div className="step-icon">🛍️</div>
+            <div className="step-icon"><Logo className="logo-inline" /></div>
             <div className="step-num">3</div>
             <h3>{t('Client')}</h3>
             <p>{t('Parcourez les offres du moment et commandez en un clic.')}</p>

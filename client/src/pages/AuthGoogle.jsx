@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth, dashboardPath } from '../App.jsx';
 import Seo from '../components/Seo.jsx';
+import Logo from '../components/Logo.jsx';
 import { useLang } from '../i18n.jsx';
 
 export default function AuthGoogle() {
@@ -46,7 +47,7 @@ export default function AuthGoogle() {
     <main className="container narrow">
       <Seo title={t('Connexion en cours…') + ' — Mboppi'} description={t('Connexion en cours…')} noindex/>
       <div className="card form-card page-center">
-        <div className="auth-brand">🛍️</div>
+        <div className="auth-brand"><Logo className="logo-inline" /></div>
         {error ? (
           <>
             <p className="error" style={{ textAlign: 'center' }}>{error}</p>

@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { GoogleIcon } from '../components/icons.jsx';
 import Seo from '../components/Seo.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
+import Logo from '../components/Logo.jsx';
 import { COUNTRIES } from '../config.js';
 import { useLang } from '../i18n.jsx';
 
@@ -93,7 +94,7 @@ export default function Register() {
         title={t('Créer un compte') + ' — Mboppi'}
         description={t('Inscription') + ' : ' + t('Boutique (shop)') + ', vendeur, client ou créateur.'} noindex/>
       <div className="card form-card">
-        <div className="auth-brand">🛍️</div>
+        <div className="auth-brand"><Logo className="logo-inline" /></div>
         <h2>{t('Créer un compte')}</h2>
 
         <form onSubmit={submit}>
@@ -155,7 +156,7 @@ export default function Register() {
                     checked={form.role === 'client'}
                     onChange={(e) => setForm({ ...form, role: e.target.value })}
                   />
-                  <span>🛍️ {t('Client')}</span>
+                  <span><Logo className="logo-inline" /> {t('Client')}</span>
                   <small>{t('Je consulte les offres et les produits, je commande facilement')}</small>
                 </label>
                 <label className={`role-option ${form.role === 'creator' ? 'selected' : ''}`}>

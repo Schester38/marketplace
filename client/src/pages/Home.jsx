@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import Seo from '../components/Seo.jsx';
 import RecentSales from '../components/RecentSales.jsx';
+import Logo from '../components/Logo.jsx';
 import { useLang } from '../i18n.jsx';
 import { PRODUCT_CATEGORIES } from '../config.js';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
@@ -197,14 +198,14 @@ const loadProducts = useCallback(
         <>
       <section className="hero vitrine-hero">
         <div className="hero-floats" aria-hidden="true">
-          <span>🛍️</span>
+          <span className="logo-float"><Logo className="hero-float-logo" /></span>
           <span>💸</span>
           <span>🛒</span>
           <span>✨</span>
           <span>💰</span>
           <span>🎊</span>
         </div>
-        <span className="hero-badge">🛍️ {t('BIENVENUE SUR MBOPPI')}</span>
+        <span className="hero-badge"><Logo className="logo-inline" /> {t('BIENVENUE SUR MBOPPI')}</span>
         <h1>{t('Mboppi, le marché de votre quartier, en ligne')}</h1>
         <p>
           {t("Mboppi est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans prix écrasant et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les créateurs exposent leurs talents, juste avec un téléphone et une connexion internet, les vendeurs vendent et gagnent des commissions, et les clients trouvent tout au même endroit avec satisfaction, sans se déplacer.")}
@@ -239,7 +240,7 @@ const loadProducts = useCallback(
             <p>{t('Vendez en ligne et gagnez une commission sur chaque vente.')}</p>
           </div>
           <div className="step">
-            <div className="step-icon">🛍️</div>
+            <div className="step-icon"><Logo className="logo-inline" /></div>
             <div className="step-num">4</div>
             <h3>{t('Client')}</h3>
             <p>{t('Commandez en un clic et recevez chez vous avec un livreur.')}</p>
@@ -281,7 +282,7 @@ const loadProducts = useCallback(
 
       <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
           <div className="section-head">
-            <h2 className="section-title">🛍️ {t('Produits et créations')}</h2>
+            <h2 className="section-title"><Logo className="logo-inline" /> {t('Produits et créations')}</h2>
             {category || minPrice || maxPrice ? (
               <button
                 type="button"
@@ -313,7 +314,7 @@ const loadProducts = useCallback(
               className={`btn ${mode === 'products' ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setMode('products')}
             >
-              🛍️ {t('Voir tous les produits')}
+              <Logo className="logo-inline" /> {t('Voir tous les produits')}
             </button>
             <button
               type="button"
@@ -433,7 +434,7 @@ const loadProducts = useCallback(
                     )}
                     {cityProducts.length > 0 && (
                       <section aria-label={t('Produits')}>
-                        <h3 className="section-title">🛍️ {t('Produits')}</h3>
+                        <h3 className="section-title"><Logo className="logo-inline" /> {t('Produits')}</h3>
                         <div className="grid">
                           {cityProducts.map((p) => (
                             <ProductCard key={p.id} product={p} />

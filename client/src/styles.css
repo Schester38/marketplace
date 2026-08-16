@@ -78,6 +78,8 @@ main { animation: pageIn 0.35s ease; }
 
 .navbar .brand { font-weight: 800; font-size: 1.2rem; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 8px; }
 .brand-logo { width: 30px; height: 30px; border-radius: 8px; }
+.logo-inline { width: 1.1em; height: 1.1em; border-radius: 0.2em; object-fit: contain; display: inline-block; vertical-align: -0.25em; }
+.hero-float-logo { width: 2.3rem; height: 2.3rem; }
 
 .hamburger {
   display: flex;
@@ -684,7 +686,7 @@ input, select, textarea { font-size: 16px; }
   overflow: hidden;
   white-space: nowrap;
 }
-.recent-sales-icon { font-size: 1.05rem; flex-shrink: 0; }
+.recent-sales-icon { width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0; }
 .recent-sales-text { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
 .recent-sales-ago { color: var(--muted); flex-shrink: 0; }
 
@@ -1651,7 +1653,7 @@ a.step { text-decoration: none; color: inherit; }
   text-align: center;
   animation: pageIn 0.25s ease;
 }
-.route-loader-logo { font-size: 2.6rem; animation: splashBounce 1s ease-in-out infinite; }
+.route-loader-logo { width: 64px; height: 64px; border-radius: 16px; animation: splashBounce 1s ease-in-out infinite; }
 .route-loader-spinner {
   width: 30px;
   height: 30px;
