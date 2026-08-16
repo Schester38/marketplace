@@ -156,8 +156,12 @@ main { animation: pageIn 0.35s ease; }
   padding: 4px 6px;
   gap: 1px;
   overflow-x: hidden;
+  overflow-y: auto;
   min-width: 0;
-  flex: 0 0 auto;
+  min-height: 0;
+  flex: 1 1 auto;
+  overscroll-behavior: contain;
+  align-content: flex-start;
 }
 .drawer-tools {
   display: flex;
