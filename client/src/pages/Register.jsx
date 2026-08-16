@@ -6,7 +6,6 @@ import Seo from '../components/Seo.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
 import { COUNTRIES } from '../config.js';
 import { useLang } from '../i18n.jsx';
-import { getRecaptchaToken } from '../recaptcha.js';
 
 export default function Register() {
   const { t } = useLang();
@@ -55,22 +54,12 @@ export default function Register() {
       return;
     }
     if (!ensureAccepted()) return;
-    const trySubmit = async (remaining) => {
-      try {
-        const recaptchaToken = await getRecaptchaToken('register');
-        await api.register({ ...form, acceptedTerms: true, recaptchaToken, ref: refCode || undefined });
-        setSent(true);
-        return true;
-      } catch (err) {
-        if (remaining > 0 && /recaptcha|anti-robot|vérification/i.test(err.message)) {
-          await new Promise((r) => setTimeout(r, 1200));
-          return trySubmit(remaining - 1);
-        }
-        setError(err.message);
-        return false;
-      }
-    };
-    await trySubmit(2);
+    try {
+      await api.register({ ...form, acceptedTerms: true, ref: refCode || undefined });
+      setSent(true);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   if (sent) {

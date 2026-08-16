@@ -44,29 +44,6 @@ function validEmail(v) {
   return typeof v === 'string' && v.length <= 120 && EMAIL_RE.test(v.trim());
 }
 
-const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY;
-
-async function verifyRecaptcha(token) {
-  if (!RECAPTCHA_SECRET) return true;
-  if (!token) return false;
-  try {
-    const params = new URLSearchParams({ secret: RECAPTCHA_SECRET, response: String(token) });
-    const res = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-      method: 'POST',
-      body: params,
-    });
-    const data = await res.json();
-    if (!(data && data.success === true)) {
-      console.error('reCAPTCHA refusé:', JSON.stringify(data));
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error('reCAPTCHA erreur:', err.message);
-    return false;
-  }
-}
-
 function publicUser(u) {
   return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, city: u.city || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null, email_verified: !!u.email_verified };
 }
@@ -74,10 +51,7 @@ function publicUser(u) {
 const VALID_ROLES = ['shop', 'seller', 'client', 'creator'];
 
 router.post('/register', ah(async (req, res) => {
-  const { name, email, password, role, country, ref, recaptchaToken, acceptedTerms } = req.body || {};
-  if (!(await verifyRecaptcha(recaptchaToken))) {
-    return res.status(400).json({ error: 'Vérification anti-robot échouée, réessayez' });
-  }
+  const { name, email, password, role, country, ref, acceptedTerms } = req.body || {};
   if (acceptedTerms !== true) {
     return res.status(400).json({ error: 'Vous devez accepter les Conditions Générales d\'Utilisation pour vous inscrire' });
   }
@@ -128,10 +102,7 @@ router.post('/register', ah(async (req, res) => {
 }));
 
 router.post('/login', ah(async (req, res) => {
-  const { email, password, recaptchaToken } = req.body || {};
-  if (!(await verifyRecaptcha(recaptchaToken))) {
-    return res.status(400).json({ error: 'Vérification anti-robot échouée, réessayez' });
-  }
+  const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: 'Email et mot de passe sont requis' });
   }
