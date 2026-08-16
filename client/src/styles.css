@@ -252,8 +252,8 @@ main { animation: pageIn 0.35s ease; }
 @media (min-width: 1024px) {
   .drawer { width: 300px; box-shadow: var(--shadow-lg); }
   .drawer-header { padding: 14px 18px; font-size: 1.1rem; }
-  .drawer-nav { padding: 6px 8px; gap: 2px; }
-  .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip { padding: 8px 14px; font-size: 0.95rem; border-radius: 10px; }
+  .drawer-nav { padding: 4px 6px; gap: 1px; }
+  .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip { padding: 5px 12px; font-size: 0.92rem; border-radius: 8px; }
   .drawer-footer { padding: 12px 14px; }
   .install-ios-hint { font-size: 0.8rem; }
 }
@@ -2460,7 +2460,7 @@ a.step { text-decoration: none; color: inherit; }
   .navbar { padding: 14px 32px; }
   .hamburger { width: 46px; height: 46px; }
   .drawer { width: 340px; }
-  .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip { padding: 14px 18px; font-size: 1rem; }
+  .drawer-nav a, .drawer-nav .btn, .drawer-nav .user-chip { padding: 6px 14px; font-size: 0.95rem; }
 }
 
 /* Très grandes TV (4K) : zoom global du contenu */
