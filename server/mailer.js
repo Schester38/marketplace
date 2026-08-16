@@ -86,3 +86,40 @@ export function verificationEmailHtml({ name, link }) {
 </body>
 </html>`;
 }
+
+export function newsletterEmailHtml({ title, body, unsubscribeUrl }) {
+  const safeTitle = String(title || '').replace(/[<>&]/g, '');
+  const safeBody = String(body || '').replace(/[<>&]/g, '');
+  return `<!DOCTYPE html>
+<html lang="fr">
+<body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:26px 28px;text-align:center;">
+              <img src="https://mboppi-mboppi.vercel.app/navbar-logo.png" alt="Mboppi" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
+              <div style="color:#fff;font-size:22px;font-weight:800;">Mboppi</div>
+              <div style="color:#e0e7ff;font-size:13px;">Le marché de votre quartier en ligne</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 28px;">
+              <h1 style="margin:0 0 16px;font-size:19px;color:#0f172a;">${safeTitle}</h1>
+              <div style="margin:0;font-size:14px;line-height:1.7;color:#334155;white-space:pre-wrap;">${safeBody}</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 28px;background:#f8fafc;font-size:11px;color:#94a3b8;text-align:center;">
+              Vous recevez cet email car vous êtes inscrit(e) à la newsletter Mboppi.<br/>
+              <a href="${unsubscribeUrl}" style="color:#6366f1;text-decoration:underline;">Se désabonner</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}

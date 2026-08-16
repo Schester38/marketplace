@@ -37,6 +37,7 @@ router.get('/stats', ah(async (req, res) => {
   const [sales] = await q('SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = \'pending\') AS pending, COUNT(*) FILTER (WHERE status = \'delivered\') AS delivered, COALESCE(SUM(total_price) FILTER (WHERE status = \'delivered\'), 0) AS revenue FROM sales');
   const [reviews] = await q('SELECT COUNT(*) AS total, COALESCE(AVG(rating), 0)::numeric(3, 2) AS avg FROM reviews');
   const [today] = await q("SELECT COUNT(*) AS users_today FROM users WHERE created_at >= CURRENT_DATE");
+  const [newsletter] = await q('SELECT COUNT(*) AS total FROM newsletter_subscribers');
   res.json({
     stats: {
       users: Number(users.total),
@@ -53,6 +54,7 @@ router.get('/stats', ah(async (req, res) => {
       reviews: Number(reviews.total),
       rating_avg: Number(reviews.avg),
       users_today: Number(today.users_today),
+      newsletter_subscribers: Number(newsletter.total),
     },
   });
 }));

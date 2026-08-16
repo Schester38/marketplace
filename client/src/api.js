@@ -137,4 +137,7 @@ export const api = {
   popupMessage: () => request('/messages/popup'),
   ackMessage: (id) => request(`/messages/${id}/ack`, { method: 'POST' }),
   chat: (payload) => request('/chat', { method: 'POST', body: JSON.stringify(payload) }),
+  subscribeNewsletter: (email) => request('/newsletter/subscribe', { method: 'POST', body: JSON.stringify({ email }) }),
+  adminNewsletter: () => adminRequest('/newsletter'),
+  adminSendNewsletter: (payload) => adminRequest('/newsletter/send', { method: 'POST', body: JSON.stringify(payload) }),
 };

@@ -26,6 +26,11 @@ export default function Admin() {
   const [msgBusy, setMsgBusy] = useState(false);
   const [msgOk, setMsgOk] = useState('');
   const [logs, setLogs] = useState(null);
+  const [newsletter, setNewsletter] = useState(null);
+  const [nlSubject, setNlSubject] = useState('');
+  const [nlBody, setNlBody] = useState('');
+  const [nlBusy, setNlBusy] = useState(false);
+  const [nlOk, setNlOk] = useState('');
   const [loading, setLoading] = useState(false);
 
   const load = useCallback((silent) => {
@@ -46,6 +51,7 @@ export default function Admin() {
     api.adminTransactions().then(setTransactions).catch(onErr);
     api.adminMessages().then((d) => setMessages(d.messages)).catch(onErr);
     api.adminLogs(100).then((d) => setLogs(d.logs)).catch(onErr);
+    api.adminNewsletter().then((d) => setNewsletter(d)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -79,6 +85,8 @@ export default function Admin() {
     setTransactions(null);
     setMessages(null);
     setLogs(null);
+    setNewsletter(null);
+    setNlOk('');
   };
 
   const searchUsers = async (e) => {
@@ -140,6 +148,30 @@ export default function Admin() {
       <strong className="stat-value">{value}</strong>
     </div>
   );
+
+  const sendNewsletter = async (e) => {
+    e.preventDefault();
+    setNlOk('');
+    const subject = nlSubject.trim();
+    const body = nlBody.trim();
+    if (!subject || !body) return;
+    setNlBusy(true);
+    try {
+      const d = await api.adminSendNewsletter({ subject, body });
+      setNlSubject('');
+      setNlBody('');
+      setNlOk(
+        d.failed > 0
+          ? t('Newsletter envoyée à {sent} abonnés ({failed} échecs).', { sent: d.sent, failed: d.failed })
+          : t('Newsletter envoyée à {sent} abonnés.', { sent: d.sent })
+      );
+      api.adminNewsletter().then((n) => setNewsletter(n)).catch(() => {});
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setNlBusy(false);
+    }
+  };
 
   const statusInfo = {
     pending: { label: 'En attente', cls: 'badge-pending' },
@@ -217,6 +249,7 @@ export default function Admin() {
         {card(t('Chiffre d\'affaires'), stats ? `${formatMoney(stats.revenue)}` : '…')}
         {card(t('Avis'), stats ? `${stats.reviews} (${stats.rating_avg}/5)` : '…')}
         {card(t('Inscrits aujourd\'hui'), stats ? stats.users_today : '…')}
+        {card(t('Abonnés newsletter'), stats ? stats.newsletter_subscribers : '…')}
       </section>
 
       <h2 className="section-title">✉️ {t('Messages aux utilisateurs')}</h2>
@@ -308,6 +341,43 @@ export default function Admin() {
           </tbody>
         </table>
       </div>
+
+      <h2 className="section-title">✉️ {t("Newsletter")}</h2>
+      <form onSubmit={sendNewsletter} className="card msg-form">
+        <p className="hint">
+          {t('Envoyez une newsletter par email à tous les abonnés. Chaque abonné reçoit le lien de désabonnement automatiquement.')}
+        </p>
+        <input
+          className="msg-textarea"
+          placeholder={t('Sujet de la newsletter')}
+          maxLength="140"
+          value={nlSubject}
+          onChange={(e) => setNlSubject(e.target.value)}
+        />
+        <textarea
+          className="msg-textarea"
+          rows="6"
+          maxLength="5000"
+          placeholder={t('Contenu de la newsletter…')}
+          value={nlBody}
+          onChange={(e) => setNlBody(e.target.value)}
+        />
+        {nlOk && <p className="success" role="status">{nlOk}</p>}
+        <p className="hint">
+          {newsletter
+            ? newsletter.count === 0
+              ? t('Aucun abonné pour le moment.')
+              : t('Envoyer à {count} abonnés', { count: newsletter.count })
+            : t('Chargement…')}
+        </p>
+        <button
+          type="submit"
+          className="btn btn-primary btn-block"
+          disabled={nlBusy || !nlSubject.trim() || !nlBody.trim()}
+        >
+          {nlBusy ? t('Envoi…') : t('Envoyer la newsletter')}
+        </button>
+      </form>
 
       <h2 className="section-title">🛠️ {t('Erreurs signalées par les visiteurs')}</h2>
       <p className="hint">

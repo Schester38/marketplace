@@ -18,6 +18,7 @@ import shopRoutes from './routes/shop.js';
 import pushRoutes from './routes/push.js';
 import activityRoutes from './routes/activity.js';
 import reviewRoutes from './routes/reviews.js';
+import newsletterRoutes from './routes/newsletter.js';
 import adminRoutes from './routes/admin.js';
 import chatRoutes from './routes/chat.js';
 import walletRoutes from './routes/wallet.js';
@@ -60,6 +61,7 @@ const limiter = (windowMs, max) =>
   rateLimit({ windowMs, max, standardHeaders: true, legacyHeaders: false, message: { error: 'Trop de requêtes, réessayez plus tard' } });
 
 app.use('/api/auth/login', limiter(15 * 60 * 1000, 20));
+app.use('/api/newsletter/subscribe', limiter(10 * 60 * 1000, 10));
 app.use('/api/auth/register', limiter(60 * 60 * 1000, 15));
 app.use('/api/auth/verify', limiter(60 * 60 * 1000, 20));
 app.use('/api/auth/resend', limiter(10 * 60 * 1000, 6));
@@ -104,6 +106,7 @@ app.use('/api/shop', shopRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/logs', limiter(60 * 1000, 8));

@@ -113,6 +113,15 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+      id SERIAL PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      unsubscribe_token TEXT NOT NULL UNIQUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      last_sent_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_newsletter_email ON newsletter_subscribers(email);
+
     CREATE INDEX IF NOT EXISTS idx_products_shop ON products(shop_id);
     CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id);
     CREATE INDEX IF NOT EXISTS idx_sales_seller ON sales(seller_id);
