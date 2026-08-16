@@ -36,6 +36,7 @@ export async function sendMail({ to, subject, text, html }) {
     return info;
   } catch (err) {
     console.error('[mailer] Erreur d\'envoi:', err.message);
+    console.error('[mailer] Config:', JSON.stringify({ host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_SECURE, user: SMTP_USER, numPassChars: SMTP_PASS.length }));
     throw err;
   }
 }
