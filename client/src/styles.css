@@ -150,7 +150,18 @@ main { animation: pageIn 0.35s ease; }
   font-size: 0.95rem;
   cursor: pointer;
 }
-.drawer-nav { display: flex; flex-direction: column; padding: 4px 6px; gap: 1px; overflow-x: hidden; min-width: 0; }
+.drawer-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 6px;
+  gap: 1px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overscroll-behavior: contain;
+}
 .drawer-tools {
   display: flex;
   align-items: center;
