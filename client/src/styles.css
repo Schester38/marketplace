@@ -1478,7 +1478,7 @@ input, select, textarea { font-size: 16px; }
 
 .steps {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 14px;
   margin: -14px 0 8px;
 }
@@ -2435,7 +2435,7 @@ a.step { text-decoration: none; color: inherit; }
   .hero { padding: 44px 24px; }
   .hero h1 { font-size: 1.75rem; }
   .hero-search { max-width: 480px; }
-  .steps { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .steps { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
 }
 
 /* Responsive telephone : cartes produits compactes verticales (style Amazon) */

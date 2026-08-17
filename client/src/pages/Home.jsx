@@ -245,6 +245,12 @@ const loadProducts = useCallback(
             <h3>{t('Client')}</h3>
             <p>{t('Commandez en un clic et recevez chez vous avec un livreur.')}</p>
           </div>
+          <div className="step">
+            <div className="step-icon">🛵</div>
+            <div className="step-num">5</div>
+            <h3>{t('Livreur')}</h3>
+            <p>{t('Livrez les articles commandés et confirmez l\'achat.')}</p>
+          </div>
         </div>
       </section>
 
