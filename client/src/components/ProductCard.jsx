@@ -124,11 +124,9 @@ function ShareIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="26"
-      height="26"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="2.5"
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
