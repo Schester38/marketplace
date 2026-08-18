@@ -2242,8 +2242,8 @@ a.step { text-decoration: none; color: inherit; }
   top: 10px;
   right: 54px;
   z-index: 2;
-  width: 56px;
-  height: 56px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: #25d366;
@@ -2492,7 +2492,7 @@ a.step { text-decoration: none; color: inherit; }
   .card-actions { padding: 4px 10px 10px; gap: 5px; }
   .card-actions .btn { padding: 7px 8px; font-size: 0.8rem; }
   .fav-btn { top: 6px; right: 6px; width: 28px; height: 28px; font-size: 0.8rem; }
-  .share-btn { top: 6px; right: 40px; width: 48px; height: 48px; }
+  .share-btn { top: 6px; right: 40px; width: 28px; height: 28px; }
   .badge-sold { top: 6px; left: 6px; }
   .badge-promo { top: 6px; left: 6px; }
   .product-card:has(.badge-promo) .badge-sold { top: 34px; }
