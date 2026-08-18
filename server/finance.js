@@ -34,17 +34,30 @@ async function payoutTargetFor(user, kind) {
   }
 
   const walletList = Array.isArray(wallets) ? wallets : [];
-  const wallet = walletList.find((w) => w && String(w.name || '').toLowerCase().includes('orange'))
-    || walletList[0];
-  if (!wallet) return null;
-
-  const operator = operatorFor(wallet.name);
   const country = user.country;
-  const prefix = countryInfo(country) ? countryInfo(country).prefix : '';
-  const rawPhone = String(wallet.value || '').replace(/[^\d]/g, '');
-  const phone = rawPhone.startsWith(prefix) ? rawPhone : prefix ? prefix + rawPhone : rawPhone;
-  if (!operator || !phone) return null;
-  return { operator, phone };
+  const info = countryInfo(country);
+  const prefix = info ? info.prefix : '';
+
+  const toTarget = (w) => {
+    if (!w) return null;
+    const operator = operatorFor(w.name);
+    const rawPhone = String(w.value || '').replace(/[^\d]/g, '');
+    const phone = rawPhone.startsWith(prefix) ? rawPhone : prefix ? prefix + rawPhone : rawPhone;
+    if (!operator || !phone) return null;
+    return { operator, phone };
+  };
+
+  const orangeFirst = (a, b) => {
+    const aO = a && String(a.name).toLowerCase().includes('orange') ? 0 : 1;
+    const bO = b && String(b.name).toLowerCase().includes('orange') ? 0 : 1;
+    return aO - bO;
+  };
+
+  for (const w of [...walletList].sort(orangeFirst)) {
+    const target = toTarget(w);
+    if (target) return target;
+  }
+  return null;
 }
 
 export async function sendSalePayouts(sale, { kind }) {
@@ -67,25 +80,43 @@ export async function sendSalePayouts(sale, { kind }) {
     : null;
 
   const payouts = [];
+  const noTarget = [];
 
   if (redistribution.shopAmount > 0 && shop) {
     const target = await payoutTargetFor(shop, 'shop');
     if (target) payouts.push({ target, amount: redistribution.shopAmount, label: 'boutique', saleId: sale.id, user: shop, txn: 'online_collect' });
+    else noTarget.push({ label: 'boutique', amount: redistribution.shopAmount, user: shop });
   }
   if (redistribution.sellerAmount > 0 && seller) {
     const target = await payoutTargetFor(seller, 'seller');
     if (target) payouts.push({ target, amount: redistribution.sellerAmount, label: 'vendeur', saleId: sale.id, user: seller, txn: 'commission_credit' });
+    else noTarget.push({ label: 'vendeur', amount: redistribution.sellerAmount, user: seller });
   }
   if (redistribution.referrerAmount > 0 && referrer) {
     const target = await payoutTargetFor(referrer, 'seller');
     if (target) payouts.push({ target, amount: redistribution.referrerAmount, label: 'parrain', saleId: sale.id, user: referrer, txn: 'referral_credit' });
+    else noTarget.push({ label: 'parrain', amount: redistribution.referrerAmount, user: referrer });
   }
   if (redistribution.livreurAmount > 0 && livreur) {
     const target = await payoutTargetFor(livreur, 'livreur');
     if (target) payouts.push({ target, amount: redistribution.livreurAmount, label: 'livreur', saleId: sale.id, user: livreur, txn: 'online_payout' });
+    else noTarget.push({ label: 'livreur', amount: redistribution.livreurAmount, user: livreur });
   }
 
   const results = { requested: [], failed: [] };
+  for (const nt of noTarget) {
+    const label = nt.label;
+    const error = `${label} sans portefeuille électronique valide (numéro ou opérateur manquant/incompatible) — reverse non envoyé`;
+    results.failed.push({ label, amount: nt.amount, error });
+    if (nt.user) {
+      await q(
+        `INSERT INTO notifications (user_id, type, sale_id)
+         SELECT $1, 'payment_need_wallet', $2
+         WHERE NOT EXISTS (SELECT 1 FROM notifications WHERE user_id = $1 AND type = 'payment_need_wallet' AND sale_id = $2)`,
+        [nt.user.id, sale.id]
+      );
+    }
+  }
   for (const p of payouts) {
     const external = externalReference(`PAYOUT_${p.txn}`, sale.id);
     const ref = `${p.label}_${p.txn}`;

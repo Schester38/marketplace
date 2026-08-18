@@ -250,6 +250,9 @@ function NotifBell() {
     if (n.type === 'sale_paid') {
       return t('Votre commission pour « {product} » a été payée par {shop}.', { product: n.product_name, shop: n.shop_name });
     }
+    if (n.type === 'payment_need_wallet') {
+      return t('Vous avez une somme à recevoir (vente #{sale}) mais aucun portefeuille valide n\'est enregistré. Ajoutez un numéro sur votre page « Mes moyens de paiement ».', { sale: n.sale_id });
+    }
     if (n.type === 'referral_earned') {
       return t('Votre filleul {buyer} a commandé « {product} » chez {shop} — 2% ({amount} {symbol}) à recevoir après livraison.', {
         buyer: n.buyer_name || t('un client'),
@@ -365,7 +368,16 @@ function NotifBell() {
     });
   };
 
-  const linkFor = (n) => (user.id === n.seller_id ? '/seller' : '/shop');
+  const linkFor = (n) => {
+    if (n.type === 'payment_need_wallet') {
+      if (user.role === 'shop') return '/shop/paiements';
+      if (user.role === 'livreur') return '/livreur/paiements';
+      return '/seller/paiements';
+    }
+    if (user.id === n.seller_id) return '/seller';
+    if (user.role === 'shop') return '/shop';
+    return '/seller';
+  };
 
   return (
     <div className="notif-wrap" ref={boxRef}>
