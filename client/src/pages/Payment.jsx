@@ -192,7 +192,7 @@ export default function Payment() {
 
       <div className="card form-card">
         <div className="card page-center" style={{ marginBottom: 16, padding: 24 }}>
-          <p className="hint" style={{ marginTop: 0 }}>{t('Frais d\'activation mensuel')}</p>
+          <p className="hint" style={{ marginTop: 0 }}>{t('Frais d\'activation Mensuelle')}</p>
           <p className="price-line" style={{ fontSize: 34, fontWeight: 800 }}>
             {amount.toLocaleString('fr-FR')} {symbol}
           </p>
