@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
@@ -12,22 +12,27 @@ export default function LivreursList() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const search = useCallback(
-    async (e) => {
-      if (e) e.preventDefault();
-      setError('');
-      setLoading(true);
-      try {
-        const d = await api.listLivreurs({ city: city.trim(), quartier: quartier.trim() });
-        setList(d.livreurs || []);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [city, quartier]
-  );
+  const runSearch = useCallback(async (cityV, quartierV) => {
+    setError('');
+    setLoading(true);
+    try {
+      const d = await api.listLivreurs({ city: cityV.trim(), quartier: quartierV.trim() });
+      setList(d.livreurs || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    runSearch('', '');
+  }, [runSearch]);
+
+  const submit = (e) => {
+    if (e) e.preventDefault();
+    runSearch(city, quartier);
+  };
 
   return (
     <main className="container">
@@ -40,7 +45,7 @@ export default function LivreursList() {
       </section>
 
       <div className="card form-card">
-        <form onSubmit={search}>
+        <form onSubmit={submit}>
           <div className="search-bar">
             <label className="field" style={{ marginTop: 0 }}>
               <span>{t('Ville')}</span>
