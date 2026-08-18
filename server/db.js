@@ -200,6 +200,16 @@ export async function initDb() {
     ALTER TABLE sales ALTER COLUMN referral_commission TYPE NUMERIC(14,2) USING round(referral_commission::numeric, 2);
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS stock_reserved BOOLEAN NOT NULL DEFAULT FALSE;
 
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS online_payment BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_status TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_provider TEXT NOT NULL DEFAULT 'manual';
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS provider_transaction_id TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS provider_order_id TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS provider_payload JSONB;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_received_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payout_initiated BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payout_initiated_at TIMESTAMPTZ;
+
     ALTER TABLE products ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
@@ -314,7 +324,7 @@ export async function initDb() {
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
       amount NUMERIC(14,2) NOT NULL CHECK (amount <> 0),
       currency TEXT NOT NULL DEFAULT 'XAF',
-      transaction_type TEXT NOT NULL CHECK (transaction_type IN ('commission_credit','referral_credit','payout_debit','adjustment')),
+      transaction_type TEXT NOT NULL CHECK (transaction_type IN ('commission_credit','referral_credit','payout_debit','adjustment','online_collect','online_payout')),
       reference_type TEXT,
       reference_id INTEGER,
       description TEXT,
@@ -323,6 +333,25 @@ export async function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created ON wallet_transactions(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_wallet_transactions_reference ON wallet_transactions(reference_type, reference_id);
+
+    CREATE TABLE IF NOT EXISTS payment_webhook_logs (
+      id BIGSERIAL PRIMARY KEY,
+      provider TEXT NOT NULL DEFAULT 'ikeepay',
+      provider_transaction_id TEXT,
+      provider_order_id TEXT,
+      event TEXT,
+      payload JSONB,
+      status TEXT,
+      sale_id INTEGER REFERENCES sales(id) ON DELETE SET NULL,
+      handled BOOLEAN NOT NULL DEFAULT FALSE,
+      error TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_provider ON payment_webhook_logs(provider, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_order ON payment_webhook_logs(provider_order_id);
+
+    ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_transaction_type_check;
+    ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_transaction_type_check CHECK (transaction_type IN ('commission_credit','referral_credit','payout_debit','adjustment','online_collect','online_payout'));
   `);
 
   await pool.query(`

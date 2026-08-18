@@ -533,10 +533,11 @@ router.post('/:id/deliver', ah(async (req, res) => {
   if (!Number.isFinite(fee) || fee < 0) {
     return res.status(400).json({ error: 'Frais de livraison invalides' });
   }
-  if (!['espèce', 'mobile', 'espece', 'mobile_money'].includes(String(payment_method || '').toLowerCase())) {
-    return res.status(400).json({ error: 'Type de paiement invalide (espèce ou mobile)' });
+  if (!['espèce', 'mobile', 'espece', 'mobile_money', 'en ligne', 'online', 'en_ligne', 'ikeepay'].includes(String(payment_method || '').toLowerCase())) {
+    return res.status(400).json({ error: 'Type de paiement invalide (espèce, mobile ou en ligne)' });
   }
-  const cleanMethod = String(payment_method).toLowerCase().startsWith('m') ? 'mobile' : 'espèce';
+  const lowerMethod = String(payment_method).toLowerCase();
+  const cleanMethod = /en ligne|online|ikeepay|h2h/.test(lowerMethod) ? 'en ligne' : lowerMethod.startsWith('m') ? 'mobile' : 'espèce';
 
   const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
   if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
@@ -565,9 +566,13 @@ router.post('/:id/deliver', ah(async (req, res) => {
     // Le livreur doit avoir présenté le code de la boutique ; l'accès est limité à cette boutique.
     const shopByCode = (await tx.query('SELECT id FROM users WHERE shop_code = $1', [shopCode]))[0];
     if (!shopByCode || Number(shopByCode.id) !== Number(product.shop_id)) { const error = new Error('Code boutique non autorisé pour cette commande'); error.statusCode = 403; throw error; }
-    const updated = (await tx.query(
-      `UPDATE sales SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3 WHERE id = $4 RETURNING id`,
-      [fee, cleanMethod, req.user ? req.user.id : null, lockedSale.id]
+    const isOnline = cleanMethod === 'en ligne';
+const updated = (await tx.query(
+      `UPDATE sales SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3,
+        online_payment = CASE WHEN $4 THEN TRUE ELSE online_payment END,
+        payment_provider = CASE WHEN $4 THEN COALESCE(payment_provider, 'ikeepay') ELSE payment_provider END
+       WHERE id = $5 RETURNING id`,
+      [fee, cleanMethod, req.user ? req.user.id : null, isOnline, lockedSale.id]
     ))[0];
     // Les nouvelles ventes ont déjà réservé leur stock. Pour les anciennes ventes,
     // on décrémente encore la quantité disponible afin de préserver la compatibilité.
