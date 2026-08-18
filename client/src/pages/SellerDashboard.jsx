@@ -177,19 +177,6 @@ export default function SellerDashboard() {
     }
   };
 
-  const claimReferral = async (s) => {
-    if (!window.confirm(t('Réclamer le paiement de votre commission de parrainage pour « {name} » à la boutique ?', { name: s.product_name }))) return;
-    setError('');
-    setSuccess('');
-    try {
-      await api.claimReferral(s.id);
-      setSuccess(t('Paiement réclamé ! La boutique a été notifiée.'));
-      load();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
   const claimGrouped = async (kind, group) => {
     const isSale = kind === 'sale';
     const msg = isSale
@@ -545,7 +532,7 @@ export default function SellerDashboard() {
           <h2>🎁 {t('Mes filleuls — commissions de parrainage (2%)')}</h2>
         </div>
         <p className="hint" style={{ marginTop: 0 }}>
-          {t('Chaque commande passée par un client inscrit avec votre lien vous rapporte 2% du montant, payés par la boutique après livraison.')}
+          {t('Chaque commande passée par un client inscrit avec votre lien vous rapporte 2% du montant. Le versement est automatique : vos commissions s\'accumulent et sont payées sur votre portefeuille dès qu\'elles atteignent 1500 F.')}
         </p>
         {referred.length === 0 ? (
           <p className="empty">{t('Aucune commande de filleul pour le moment.')}</p>
@@ -582,12 +569,8 @@ export default function SellerDashboard() {
                         <td>{g.shop_name}</td>
                         <td>{g.items.length}</td>
                         <td>{formatMoney(g.pending)} {countrySymbol(g.items[0]?.shop_country)}</td>
-                        <td>{g.anyClaimed && <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>}</td>
-                        <td>
-                          <button className="btn btn-small btn-primary" onClick={() => claimGrouped('referral', g)}>
-                            💰 {t('Réclamer')} ({formatMoney(g.pending)})
-                          </button>
-                        </td>
+                        <td><span className="badge badge-warn">{t('En attente — versement auto dès 1500 F')}</span></td>
+                        <td></td>
                       </tr>
                     ))}
                   </tbody>
@@ -618,21 +601,13 @@ export default function SellerDashboard() {
                   <td>{formatMoney(s.referral_commission)} {countrySymbol(s.shop_country)}</td>
                   <td>
                     {s.status !== 'delivered' && <span className="badge badge-pending">{t('En attente de livraison')}</span>}
-                    {s.status === 'delivered' && s.referral_claimed_at && !s.referral_paid && (
-                      <span className="badge badge-confirmed">{t('Paiement réclamé')}</span>
-                    )}
-                    {s.status === 'delivered' && !s.referral_claimed_at && !s.referral_paid && (
-                      <span className="badge badge-warn">{t('Commission en attente')}</span>
+                    {s.status === 'delivered' && !s.referral_paid && (
+                      <span className="badge badge-warn">{t('Commission en attente de cumul')}</span>
                     )}
                     {s.referral_paid && <span className="badge badge-paid">{t('Commission payée')}</span>}
                   </td>
                   <td>
                     <div className="row2" style={{ justifyContent: 'flex-end', gap: 6 }}>
-                      {s.referral_paid && (
-                        <button className="btn btn-small" disabled={proofLoading} onClick={() => openProof(s, 'referral')}>
-                          📷 {t('Preuve')}
-                        </button>
-                      )}
                       {s.referral_paid && (
                         <button className="btn btn-small btn-danger" onClick={() => removeReferral(s)}>
                           🗑️ {t('Supprimer')}

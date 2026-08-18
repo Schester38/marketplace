@@ -428,6 +428,31 @@ export async function initDb() {
     /* best effort : la grand-parentalité ne doit pas bloquer le démarrage */
   }
 
+  // Historique : avant le passage au paiement automatique, la commission de parrainage des
+  // ventes en ligne était reversée à chaque vente (wallet 'parrain_referral_credit') sans
+  // marquer referral_paid. On marque ces ventes comme payées pour éviter un double versement.
+  try {
+    const migrated = await q(
+      `INSERT INTO app_migrations (id) VALUES ('referral_auto_pay_grandfather')
+       ON CONFLICT (id) DO NOTHING RETURNING id`
+    );
+    if (migrated.length) {
+      await q(
+        `UPDATE sales s SET referral_paid = TRUE, referral_paid_at = COALESCE(s.referral_paid_at, s.paid_at, s.delivered_at, s.created_at)
+          WHERE s.status = 'delivered' AND NOT s.referral_paid
+            AND EXISTS (
+              SELECT 1 FROM wallet_transactions w
+              WHERE w.user_id = s.referred_by
+                AND w.transaction_type = 'referral_credit'
+                AND w.reference_type = 'parrain_referral_credit'
+                AND w.reference_id = s.id
+            )`
+      );
+    }
+  } catch {
+    /* best effort : cette migration ne doit pas bloquer le démarrage */
+  }
+
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_sales_buyer ON sales(buyer_id) WHERE buyer_id IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_sales_referred_by ON sales(referred_by) WHERE referred_by IS NOT NULL;

@@ -1,5 +1,9 @@
 import { q } from './db.js';
 import { ikeepayPayout, countryInfo, operatorFor, normalizePhone } from './ikeepay.js';
+import { defaultCurrencyFor } from './currency.js';
+import { sendPush } from './push.js';
+
+export const REFERRAL_AUTO_PAY_MIN = Number(process.env.REFERRAL_AUTO_PAY_MIN || 1500);
 
 export function computeRedistribution(sale) {
   const totalPrice = Number(sale.total_price || 0);
@@ -72,9 +76,6 @@ export async function sendSalePayouts(sale, { kind }) {
   const seller = sale.seller_id
     ? (await q('SELECT id, name, country, phone FROM users WHERE id = $1', [sale.seller_id]))[0]
     : null;
-  const referrer = sale.referred_by
-    ? (await q('SELECT id, name, country, phone FROM users WHERE id = $1', [sale.referred_by]))[0]
-    : null;
   const livreur = sale.delivered_by
     ? (await q('SELECT id, name, country, phone FROM users WHERE id = $1', [sale.delivered_by]))[0]
     : null;
@@ -92,11 +93,8 @@ export async function sendSalePayouts(sale, { kind }) {
     if (target) payouts.push({ target, amount: redistribution.sellerAmount, label: 'vendeur', saleId: sale.id, user: seller, txn: 'commission_credit' });
     else noTarget.push({ label: 'vendeur', amount: redistribution.sellerAmount, user: seller });
   }
-  if (redistribution.referrerAmount > 0 && referrer) {
-    const target = await payoutTargetFor(referrer, 'seller');
-    if (target) payouts.push({ target, amount: redistribution.referrerAmount, label: 'parrain', saleId: sale.id, user: referrer, txn: 'referral_credit' });
-    else noTarget.push({ label: 'parrain', amount: redistribution.referrerAmount, user: referrer });
-  }
+  // La commission de parrainage (2%) n'est plus versée à chaque vente :
+  // elle s'accumule et est payée automatiquement au vendeur parrain dès le seuil REFERRAL_AUTO_PAY_MIN atteint.
   if (redistribution.livreurAmount > 0 && livreur) {
     const target = await payoutTargetFor(livreur, 'livreur');
     if (target) payouts.push({ target, amount: redistribution.livreurAmount, label: 'livreur', saleId: sale.id, user: livreur, txn: 'online_payout' });
@@ -151,6 +149,86 @@ export async function sendSalePayouts(sale, { kind }) {
   }
 
   return results;
+}
+
+export async function maybeAutoPayReferrals(referrerId) {
+  if (!referrerId) return null;
+  try {
+    const referrer = (await q('SELECT id, country, name, role FROM users WHERE id = $1', [referrerId]))[0];
+    if (!referrer || referrer.role !== 'seller') return null;
+
+    const pending = await q(
+      `SELECT s.id, s.referral_commission
+         FROM sales s
+        WHERE s.referred_by = $1 AND s.status = 'delivered' AND NOT s.referral_paid
+        ORDER BY s.delivered_at ASC, s.id ASC`,
+      [referrerId]
+    );
+    if (!pending.length) return null;
+
+    const total = Math.round(pending.reduce((a, r) => a + Number(r.referral_commission || 0), 0) * 100) / 100;
+    if (total < REFERRAL_AUTO_PAY_MIN) {
+      return { paid: false, pending: true, total, threshold: REFERRAL_AUTO_PAY_MIN };
+    }
+
+    const target = await payoutTargetFor(referrer, 'seller');
+    if (!target) {
+      await q(
+        `INSERT INTO notifications (user_id, type)
+         SELECT $1, 'payment_need_wallet'
+         WHERE NOT EXISTS (SELECT 1 FROM notifications WHERE user_id = $1 AND type = 'payment_need_wallet')`,
+        [referrerId]
+      );
+      return { paid: false, pending: true, total, threshold: REFERRAL_AUTO_PAY_MIN, reason: 'no_wallet' };
+    }
+
+    const info = countryInfo(referrer.country);
+    if (!info) {
+      return { paid: false, pending: true, total, reason: `Pays non pris en charge : ${referrer.country}`, error: true };
+    }
+    const currency = defaultCurrencyFor(referrer.country);
+
+    const provider = await ikeepayPayout({
+      amount: total,
+      currency,
+      country: info.code,
+      phoneNumber: target.phone,
+      operator: target.operator,
+      external_reference: `PAYOUT_REFERRAL:${referrerId}:${Date.now()}`,
+    });
+
+    const marked = await q(
+      `UPDATE sales SET referral_paid = TRUE, referral_paid_at = COALESCE(referral_paid_at, now())
+        WHERE id = ANY($1) AND status = 'delivered' AND NOT referral_paid
+        RETURNING id, referral_commission`,
+      [pending.map((r) => r.id)]
+    );
+    for (const row of marked) {
+      await q(
+        `INSERT INTO wallet_transactions (user_id, amount, currency, transaction_type, reference_type, reference_id, description)
+         VALUES ($1, $2, $3, 'referral_credit', 'sale', $4, $5)
+         ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
+        [referrerId, Number(row.referral_commission), currency, Number(row.id), 'Commission de parrainage (versement automatique)']
+      );
+    }
+
+    const actualPaid = Math.round(marked.reduce((a, r) => a + Number(r.referral_commission || 0), 0) * 100) / 100;
+    if (actualPaid > 0) {
+      await q(
+        `INSERT INTO notifications (user_id, type, amount) VALUES ($1, 'referral_paid', $2)`,
+        [referrerId, actualPaid]
+      );
+      await sendPush(referrerId, {
+        title: 'Parrainage versé',
+        body: `Votre commission de parrainage (${actualPaid} F) a été versée automatiquement sur votre portefeuille.`,
+        url: '/seller',
+      });
+    }
+    return { paid: true, total: actualPaid, provider, count: marked.length };
+  } catch (err) {
+    console.error('Auto-pay parrainage échoué:', err && err.message ? err.message : err);
+    return { paid: false, error: String(err && err.message ? err.message : err) };
+  }
 }
 
 export async function markSalePaid(saleId, { transactionId, payload, receivedBy }) {

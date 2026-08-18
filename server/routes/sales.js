@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { q, withTransaction } from '../db.js';
 import { authRequired, roleRequired } from '../auth.js';
 import { sendPush } from '../push.js';
+import { maybeAutoPayReferrals } from '../finance.js';
 
 const router = Router();
 
@@ -594,6 +595,14 @@ const updated = (await tx.query(
   const updated = [{ id: result.id }];
   const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
 
+  if (sale.referred_by) {
+    try {
+      await maybeAutoPayReferrals(Number(sale.referred_by));
+    } catch (err) {
+      console.error('Auto-pay parrainage échoué:', err && err.message ? err.message : err);
+    }
+  }
+
   const notifyIds = [];
   if (sale.seller_id) notifyIds.push(sale.seller_id);
   notifyIds.push(product.shop_id);
@@ -769,100 +778,15 @@ router.post('/:id/claim', authRequired, roleRequired('seller'), ah(async (req, r
 }));
 
 router.post('/:id/claim-referral', authRequired, roleRequired('seller'), ah(async (req, res) => {
-  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
-  if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
-  if (!sale.referred_by || Number(sale.referred_by) !== Number(req.user.id)) {
-    return res.status(403).json({ error: 'Cette commission de parrainage ne vous appartient pas' });
-  }
-  if (sale.status !== 'delivered') {
-    return res.status(409).json({ error: 'Le produit doit être livré avant de réclamer le paiement' });
-  }
-  if (sale.referral_paid) {
-    return res.status(409).json({ error: 'Cette commission a déjà été payée' });
-  }
-  if (sale.referral_claimed_at) {
-    return res.status(409).json({ error: 'Paiement déjà réclamé, la boutique a été notifiée' });
-  }
-  await q('UPDATE sales SET referral_claimed_at = now() WHERE id = $1', [sale.id]);
-  const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
-  await q(
-    `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'referral_claimed', $2)`,
-    [product.shop_id, sale.id]
-  );
-  const info = (await q('SELECT name FROM products WHERE id = $1', [sale.product_id]))[0];
-  await sendPush(product.shop_id, {
-    title: 'Parrainage réclamé 💰',
-    body: `${info ? info.name : 'Vente'} — le parrain ${req.user.name} réclame ${Number(sale.referral_commission || 0)} F de commission.`,
-    url: '/shop',
+  return res.status(409).json({
+    error: 'Le paiement des commissions de parrainage est automatique : il est versé dès que le cumul atteint 1500 F.',
   });
-  res.json({ ok: true });
 }));
 
 router.post('/:id/pay-referral', authRequired, roleRequired('shop'), ah(async (req, res) => {
-  const { proof } = req.body || {};
-  const sale = (await q('SELECT * FROM sales WHERE id = $1', [Number(req.params.id)]))[0];
-  if (!sale) return res.status(404).json({ error: 'Vente introuvable' });
-  if (!sale.referred_by) {
-    return res.status(409).json({ error: 'Cette vente n\'a pas de parrain à payer' });
-  }
-  const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
-  if (product.shop_id !== req.user.id) {
-    return res.status(403).json({ error: 'Cette vente ne concerne pas votre boutique' });
-  }
-  if (sale.status !== 'delivered') {
-    return res.status(409).json({ error: 'Le produit doit être livré avant de payer le parrain' });
-  }
-  if (sale.referral_paid) {
-    return res.status(409).json({ error: 'Le parrain a déjà été payé pour cette vente' });
-  }
-  if (!proof || !String(proof).startsWith('data:')) {
-    return res.status(400).json({ error: 'Joignez une photo ou une vidéo de preuve du paiement' });
-  }
-  await withTransaction(async (tx) => {
-    const changed = await tx.query(
-      `UPDATE sales SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1
-       WHERE id = $2 AND referral_paid = FALSE RETURNING id, referral_commission`,
-      [String(proof).slice(0, 12000000), sale.id]
-    );
-    if (!changed.length) {
-      const error = new Error('Le parrain a déjà été payé pour cette vente');
-      error.statusCode = 409;
-      throw error;
-    }
-    await tx.query(
-      `INSERT INTO wallet_accounts (user_id) VALUES ($1) ON CONFLICT (user_id) DO UPDATE SET updated_at = now()`,
-      [sale.referred_by]
-    );
-    await tx.query(
-      `INSERT INTO wallet_transactions (user_id, amount, transaction_type, reference_type, reference_id, description)
-       VALUES ($1, $2, 'referral_credit', 'sale', $3, $4)
-       ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
-      [sale.referred_by, Number(changed[0].referral_commission), sale.id, 'Commission de parrainage payée par la boutique']
-    );
+  return res.status(409).json({
+    error: 'Le paiement des commissions de parrainage est automatique : il est versé dès que le cumul du parrain atteint 1500 F.',
   });
-  await q(
-    `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'referral_paid', $2)`,
-    [sale.referred_by, sale.id]
-  );
-  const paidProduct = (await q('SELECT name FROM products WHERE id = $1', [sale.product_id]))[0];
-  await sendPush(sale.referred_by, {
-    title: 'Parrainage payé 💰',
-    body: `${paidProduct ? paidProduct.name : 'Votre filleul'} — votre commission de parrainage (${Number(sale.referral_commission || 0)} F) a été versée par la boutique.`,
-    url: '/seller',
-  });
-  const full = (
-    await q(
-      `SELECT s.*, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
-              shop.name AS shop_name, shop.country AS shop_country
-       FROM sales s
-       JOIN products p ON p.id = s.product_id
-       LEFT JOIN users u ON u.id = s.seller_id
-       JOIN users shop ON shop.id = p.shop_id
-       WHERE s.id = $1`,
-      [sale.id]
-    )
-  )[0];
-  res.json({ sale: saleRow(full), ok: true });
 }));
 
 router.post('/grouped-claim', authRequired, roleRequired('seller'), ah(async (req, res) => {
@@ -875,6 +799,9 @@ router.post('/grouped-claim', authRequired, roleRequired('seller'), ah(async (re
     return res.status(400).json({ error: 'Boutique invalide' });
   }
   const isSale = kind === 'sale';
+  if (!isSale) {
+    return res.status(409).json({ error: 'Le paiement des commissions de parrainage est automatique : il est versé dès que le cumul atteint 1500 F.' });
+  }
   const target = isSale ? 's.seller_id' : 's.referred_by';
   const col = isSale ? 'commission_claimed_at' : 'referral_claimed_at';
   const sold = isSale ? 'NOT s.paid' : 'NOT s.referral_paid';
@@ -924,6 +851,9 @@ router.post('/grouped-pay', authRequired, roleRequired('shop'), ah(async (req, r
     return res.status(400).json({ error: 'Joignez une photo ou une vidéo de preuve du paiement' });
   }
   const isSeller = kind === 'seller';
+  if (!isSeller) {
+    return res.status(409).json({ error: 'Le paiement des commissions de parrainage est automatique : il est versé dès que le cumul du parrain atteint 1500 F.' });
+  }
   const target = isSeller ? 's.seller_id' : 's.referred_by';
   const sold = isSeller ? 'NOT s.paid' : 'NOT s.referral_paid';
   const amountCol = isSeller ? 's.commission' : 's.referral_commission';
@@ -1013,13 +943,14 @@ router.get('/export', authRequired, roleRequired('seller', 'shop', 'creator'), a
   const sales = await q(
     `SELECT s.id, s.created_at, s.status, s.buyer_name, s.buyer_city, s.quantity,
             s.total_price, s.commission, s.purchase_price, s.delivery_fee, s.paid_at, s.delivered_at,
+            s.referral_commission, s.referral_paid, s.referral_paid_at,
             p.name AS product_name, shop.name AS shop_name, shop.country AS shop_country,
             COALESCE(u.name, '—') AS seller_name
      FROM sales s
      JOIN products p ON p.id = s.product_id
      JOIN users shop ON shop.id = p.shop_id
      LEFT JOIN users u ON u.id = s.seller_id
-     WHERE ${isSeller ? 's.seller_id = $1' : 'p.shop_id = $1'}
+     WHERE ${isSeller ? '(s.seller_id = $1 OR s.referred_by = $1)' : 'p.shop_id = $1'}
      ORDER BY s.created_at DESC`,
     [req.user.id]
   );
