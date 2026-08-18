@@ -11,6 +11,20 @@ export default function LivreursList() {
   const [list, setList] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [options, setOptions] = useState({ cities: [], quartiers: [] });
+
+  const loadOptions = useCallback(async () => {
+    try {
+      const d = await api.livreurOptions();
+      setOptions({ cities: d.cities || [], quartiers: d.quartiers || [] });
+    } catch (err) {
+      // suggestions non bloquantes
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOptions();
+  }, [loadOptions]);
 
   const runSearch = useCallback(async (cityV, quartierV) => {
     setError('');
@@ -55,8 +69,13 @@ export default function LivreursList() {
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder={t('Ex : Douala, Yaoundé…')}
-                list="mboppi-shop-cities"
+                list="rider-cities"
               />
+              <datalist id="rider-cities">
+                {options.cities.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
             </label>
             <label className="field" style={{ marginTop: 0 }}>
               <span>{t('Quartier')}</span>
@@ -66,7 +85,13 @@ export default function LivreursList() {
                 value={quartier}
                 onChange={(e) => setQuartier(e.target.value)}
                 placeholder={t('Ex : Bonamoussadi, Mvog-Mbi…')}
+                list="rider-quartiers"
               />
+              <datalist id="rider-quartiers">
+                {options.quartiers.map((q) => (
+                  <option key={q} value={q} />
+                ))}
+              </datalist>
             </label>
             <button className="btn btn-primary" style={{ alignSelf: 'flex-end' }} disabled={loading}>
               {loading ? t('Chargement…') : t('Rechercher')}

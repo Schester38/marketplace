@@ -108,6 +108,7 @@ export const api = {
     const qs = new URLSearchParams(params).toString();
     return request('/livreurs' + (qs ? `?${qs}` : ''));
   },
+  livreurOptions: () => request('/livreurs/options'),
   purchaseCreate: (payload) => request('/purchases', { method: 'POST', body: JSON.stringify(payload) }),
   purchasesMy: () => request('/purchases/my'),
   createDonation: (payload) => request('/donations', { method: 'POST', body: JSON.stringify(payload) }),

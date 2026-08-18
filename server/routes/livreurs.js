@@ -9,6 +9,20 @@ const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 const NORMALIZE_TEXT = (col) =>
   `regexp_replace(translate(lower(${col}), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn'), '[^a-z0-9]', '', 'g')`;
 
+router.get('/options', authRequired, roleRequired('shop'), ah(async (req, res) => {
+  const scope = "role = 'livreur' AND NULLIF(phone, '') IS NOT NULL";
+  const cities = await q(
+    `SELECT DISTINCT city FROM users WHERE ${scope} AND NULLIF(city, '') IS NOT NULL ORDER BY city ASC`
+  );
+  const quartiers = await q(
+    `SELECT DISTINCT quartier FROM users WHERE ${scope} AND NULLIF(quartier, '') IS NOT NULL ORDER BY quartier ASC`
+  );
+  res.json({
+    cities: cities.map((r) => r.city),
+    quartiers: quartiers.map((r) => r.quartier),
+  });
+}));
+
 router.get('/', authRequired, roleRequired('shop'), ah(async (req, res) => {
   const { city, quartier } = req.query;
   const where = ["role = 'livreur'", "NULLIF(phone, '') IS NOT NULL"];
