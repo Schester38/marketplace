@@ -60,9 +60,6 @@ router.post('/register', ah(async (req, res) => {
   }
   let referredBy = null;
   let finalRole = role;
-  if (!(ref && String(ref).trim()) && !(ref_seller && String(ref_seller).trim())) {
-    return res.status(400).json({ error: 'L\'inscription nécessite un lien de parrainage (client ou vendeur)' });
-  }
   if (ref && String(ref).trim()) {
     const referrer = (
       await q('SELECT id, role FROM users WHERE seller_code = $1', [String(ref).trim().toUpperCase()])
@@ -244,10 +241,6 @@ router.get('/google/callback', ah(async (req, res) => {
       let referredBy = null;
       const cleanRef = ref ? String(ref).trim().toUpperCase() : '';
       const cleanRefSeller = refSeller ? String(refSeller).trim().toUpperCase() : '';
-      if (!cleanRef && !cleanRefSeller) {
-        const msg = encodeURIComponent('L\'inscription nécessite un lien de parrainage (client ou vendeur)');
-        return res.redirect(`/auth-google?error=${msg}`);
-      }
       if (cleanRef) {
         const referrer = (
           await q('SELECT id, seller_code FROM users WHERE role = \'seller\' AND seller_code = $1', [cleanRef])
