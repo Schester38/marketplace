@@ -196,6 +196,7 @@ export default function MyAccount() {
   const [phone, setPhone] = useState(user?.phone || '');
   const [location, setLocation] = useState(user?.location || '');
   const [city, setCity] = useState(user?.city || '');
+  const [quartier, setQuartier] = useState(user?.quartier || '');
   const [country, setCountry] = useState(user?.country || '');
   const [profileMsg, setProfileMsg] = useState('');
   const [profileError, setProfileError] = useState('');
@@ -218,7 +219,7 @@ export default function MyAccount() {
     setProfileMsg('');
     setProfileError('');
     try {
-      const { user: updated } = await api.updateProfile({ name, email, phone, location, city, country });
+      const { user: updated } = await api.updateProfile({ name, email, phone, location, quartier, city, country });
       login(updated, localStorage.getItem('token'));
       setProfileMsg(t('Profil mis à jour avec succès.'));
     } catch (err) {
@@ -294,6 +295,7 @@ export default function MyAccount() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder={t('ex : +237 6 00 00 00 00')}
+                required={user?.role === 'livreur'}
               />
               {['shop', 'seller', 'livreur', 'creator'].includes(user?.role) && (
                 <small className="hint">{t('C\'est ce numéro que vos clients utilisent pour vous contacter sur WhatsApp depuis votre vitrine. Utilisez le format international (ex : +237 6 00 00 00 00).')}</small>
@@ -333,6 +335,45 @@ export default function MyAccount() {
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="Ex : Yaoundé, Mvog-Mbi, rue 1.123"
+                />
+              </label>
+              </>
+            )}
+            {user?.role === 'livreur' && (
+              <>
+              <label className="field">
+                <span>{t('📍 Ville de livraison')}</span>
+                <input
+                  type="text"
+                  list="mboppi-shop-cities"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Ex : Douala, Yaoundé…"
+                  required
+                />
+              </label>
+              <datalist id="mboppi-shop-cities">
+                {CITIES.map((c) => (
+                  <option key={c.name} value={c.name} />
+                ))}
+              </datalist>
+              <label className="field">
+                <span>{t('📍 Quartier de livraison')}</span>
+                <input
+                  type="text"
+                  value={quartier}
+                  onChange={(e) => setQuartier(e.target.value)}
+                  placeholder={t('Ex : Bonamoussadi, Mvog-Mbi…')}
+                  required
+                />
+              </label>
+              <label className="field">
+                <span>{t('📍 Détails de livraison')}</span>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Ex : Rue 1.123, en face de la station…"
                 />
               </label>
               </>

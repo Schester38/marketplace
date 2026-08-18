@@ -135,6 +135,7 @@ export async function initDb() {
     ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS location TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS city TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS quartier TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;

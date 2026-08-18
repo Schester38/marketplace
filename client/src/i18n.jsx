@@ -1251,6 +1251,26 @@ const EN = {
   // MyAccount
   'Numéro de téléphone / WhatsApp': 'Phone / WhatsApp number',
   'C\'est ce numéro que vos clients utilisent pour vous contacter sur WhatsApp depuis votre vitrine. Utilisez le format international (ex : +237 6 00 00 00 00).': 'This is the number your clients use to contact you on WhatsApp from your showcase. Use the international format (e.g. +237 6 00 00 00 00).',
+
+  // Contacter un livreur
+  'Contacter un livreur': 'Contact a rider',
+  'Trouvez les livreurs Mboppi disponibles pour vos livraisons et contactez-les directement.': 'Find the Mboppi riders available for your deliveries and contact them directly.',
+  'Quartier': 'Neighbourhood',
+  'Ex : Douala, Yaoundé…': 'e.g. Douala, Yaoundé…',
+  'Ex : Bonamoussadi, Mvog-Mbi…': 'e.g. Bonamoussadi, Mvog-Mbi…',
+  'Laissez les champs vides pour afficher tous les livreurs disponibles.': 'Leave the fields empty to show all available riders.',
+  'Recherchez par ville et quartier pour trouver des livreurs.': 'Search by city and neighbourhood to find riders.',
+  'Aucun livreur trouvé pour ces critères.': 'No rider found for these criteria.',
+  'Essayez une autre ville ou un autre quartier.': 'Try another city or neighbourhood.',
+  'Livreurs disponibles': 'Available riders',
+  '{n} livreur(s) trouvé(s).': '{n} rider(s) found.',
+  'Livreur vérifié': 'Verified rider',
+  'Vérifié': 'Verified',
+  'WhatsApp': 'WhatsApp',
+  'Bonjour {name}, je vous contacte depuis Mboppi.': 'Hello {name}, I\'m contacting you from Mboppi.',
+  '📍 Ville de livraison': '📍 Delivery city',
+  '📍 Quartier de livraison': '📍 Delivery neighbourhood',
+  '📍 Détails de livraison': '📍 Delivery details',
 };
 
 const AR = {
@@ -2472,6 +2492,26 @@ const AR = {
   'Numéro de téléphone / WhatsApp': 'رقم الهاتف / واتساب',
   'C\'est ce numéro que vos clients utilisent pour vous contacter sur WhatsApp depuis votre vitrine. Utilisez le format international (ex : +237 6 00 00 00 00).': 'هذا هو الرقم الذي يستخدمه عملاؤك للتواصل معك على واتساب من واجهتك. استخدم الصيغة الدولية (مثال: +237 6 00 00 00 00).',
 
+  // Contacter un livreur
+  'Contacter un livreur': 'تواصل مع موصّل',
+  'Trouvez les livreurs Mboppi disponibles pour vos livraisons et contactez-les directement.': 'اعثر على موصّلي Mboppi المتاحين لتوصيلاتك وتواصل معهم مباشرة.',
+  'Quartier': 'الحي',
+  'Ex : Douala, Yaoundé…': 'مثال: دوالا، ياوندي…',
+  'Ex : Bonamoussadi, Mvog-Mbi…': 'مثال: بوناموسادي، مفوغ-مبي…',
+  'Laissez les champs vides pour afficher tous les livreurs disponibles.': 'اترك الحقول فارغة لعرض جميع الموصّلين المتاحين.',
+  'Recherchez par ville et quartier pour trouver des livreurs.': 'ابحث بالمدينة والحي للعثور على موصّلين.',
+  'Aucun livreur trouvé pour ces critères.': 'لم يتم العثور على أي موصّل وفق هذه المعايير.',
+  'Essayez une autre ville ou un autre quartier.': 'جرّب مدينة أو حياً آخر.',
+  'Livreurs disponibles': 'الموصّلون المتاحون',
+  '{n} livreur(s) trouvé(s).': 'تم العثور على {n} موصّل.',
+  'Livreur vérifié': 'موصّل موثّق',
+  'Vérifié': 'موثّق',
+  'WhatsApp': 'WhatsApp',
+  'Bonjour {name}, je vous contacte depuis Mboppi.': 'مرحباً {name}، أنا أتواصل معك من Mboppi.',
+  '📍 Ville de livraison': '📍 مدينة التوصيل',
+  '📍 Quartier de livraison': '📍 حي التوصيل',
+  '📍 Détails de livraison': '📍 تفاصيل التوصيل',
+
 };
 
 const ES = {
@@ -3642,9 +3682,29 @@ const ES = {
   'Comment soutenir Mboppi ?': '¿Cómo apoyo a Mboppi?',
   'Rendez-vous sur la page « Soutenir Mboppi ». Les dons par Orange Money et MTN Mobile Money sont traités automatiquement en ligne ; les dons par PayPal ou par virement UBA se font manuellement.': 'Ve a la página «Apoyar a Mboppi». Las donaciones por Orange Money y MTN Mobile Money se procesan automáticamente en línea; las donaciones por PayPal o transferencia UBA se hacen manualmente.',
 
-  // MyAccount
+// MyAccount
   'Numéro de téléphone / WhatsApp': 'Número de teléfono / WhatsApp',
   'C\'est ce numéro que vos clients utilisent pour vous contacter sur WhatsApp depuis votre vitrine. Utilisez le format international (ex : +237 6 00 00 00 00).': 'Este es el número que tus clientes usan para contactarte por WhatsApp desde tu vitrina. Usa el formato internacional (p. ej.: +237 6 00 00 00 00).',
+
+  // Contacter un livreur
+  'Contacter un livreur': 'Contactar a un repartidor',
+  'Trouvez les livreurs Mboppi disponibles pour vos livraisons et contactez-les directement.': 'Encuentra los repartidores de Mboppi disponibles para tus entregas y contáctalos directamente.',
+  'Quartier': 'Barrio',
+  'Ex : Douala, Yaoundé…': 'p. ej.: Duala, Yaundé…',
+  'Ex : Bonamoussadi, Mvog-Mbi…': 'p. ej.: Bonamoussadi, Mvog-Mbi…',
+  'Laissez les champs vides pour afficher tous les livreurs disponibles.': 'Deja los campos vacíos para mostrar todos los repartidores disponibles.',
+  'Recherchez par ville et quartier pour trouver des livreurs.': 'Busca por ciudad y barrio para encontrar repartidores.',
+  'Aucun livreur trouvé pour ces critères.': 'No se encontró ningún repartidor para estos criterios.',
+  'Essayez une autre ville ou un autre quartier.': 'Prueba otra ciudad o barrio.',
+  'Livreurs disponibles': 'Repartidores disponibles',
+  '{n} livreur(s) trouvé(s).': '{n} repartidor(es) encontrado(s).',
+  'Livreur vérifié': 'Repartidor verificado',
+  'Vérifié': 'Verificado',
+  'WhatsApp': 'WhatsApp',
+  'Bonjour {name}, je vous contacte depuis Mboppi.': 'Hola {name}, te contacto desde Mboppi.',
+  '📍 Ville de livraison': '📍 Ciudad de reparto',
+  '📍 Quartier de livraison': '📍 Barrio de reparto',
+  '📍 Détails de livraison': '📍 Detalles de entrega',
 
 };
 

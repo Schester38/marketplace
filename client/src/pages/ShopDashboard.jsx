@@ -370,6 +370,9 @@ export default function ShopDashboard() {
           <Link className="btn btn-outline btn-sm" to="/shop/paiements" style={{ flexShrink: 0 }}>
             💳 {t('Moyens de paiement')}
           </Link>
+          <Link className="btn btn-outline btn-sm" to="/shop/livreurs" style={{ flexShrink: 0 }}>
+            🛵 {t('Contacter un livreur')}
+          </Link>
           <button
             className={`btn ${showDelivered ? 'btn-primary' : 'btn-outline'}`}
             onClick={() => setShowDelivered(!showDelivered)}

@@ -45,7 +45,7 @@ function validEmail(v) {
 }
 
 function publicUser(u) {
-  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, city: u.city || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null, email_verified: !!u.email_verified };
+  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, city: u.city || null, quartier: u.quartier || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null, email_verified: !!u.email_verified };
 }
 
 const VALID_ROLES = ['shop', 'seller', 'client', 'creator', 'livreur'];
@@ -240,7 +240,7 @@ router.get('/me', authRequired, ah(async (req, res) => {
 }));
 
 router.put('/me', authRequired, ah(async (req, res) => {
-  const { name, email, location, city, country, phone } = req.body || {};
+  const { name, email, location, quartier, city, country, phone } = req.body || {};
   if (!name || !String(name).trim()) {
     return res.status(400).json({ error: 'Le nom ne peut pas être vide' });
   }
@@ -250,7 +250,7 @@ router.put('/me', authRequired, ah(async (req, res) => {
   if (!validEmail(email)) {
     return res.status(400).json({ error: 'Adresse email invalide' });
   }
-  if (String(name).trim().length > 100 || String(location || '').length > 150 || String(city || '').length > 60 || String(country || '').length > 60 || String(phone || '').length > 30) {
+  if (String(name).trim().length > 100 || String(location || '').length > 150 || String(quartier || '').length > 60 || String(city || '').length > 60 || String(country || '').length > 60 || String(phone || '').length > 30) {
     return res.status(400).json({ error: 'Des champs sont trop longs' });
   }
   const emailNorm = String(email).trim().toLowerCase();
@@ -262,8 +262,8 @@ router.put('/me', authRequired, ah(async (req, res) => {
   const prev = (await q('SELECT email, email_verified FROM users WHERE id = $1', [req.user.id]))[0];
   const emailChanged = prev && prev.email !== emailNorm;
   const updated = await q(
-    'UPDATE users SET name = $1, email = $2, location = $3, city = $4, country = $5, phone = $6' + (emailChanged ? ', email_verified = FALSE' : '') + ' WHERE id = $7 RETURNING *',
-    [String(name).trim(), emailNorm, location ? String(location).trim() : null, city ? String(city).trim() : null, country ? String(country).trim() : null, phoneClean || null, req.user.id]
+    'UPDATE users SET name = $1, email = $2, location = $3, quartier = $4, city = $5, country = $6, phone = $7' + (emailChanged ? ', email_verified = FALSE' : '') + ' WHERE id = $8 RETURNING *',
+    [String(name).trim(), emailNorm, location ? String(location).trim() : null, quartier ? String(quartier).trim() : null, city ? String(city).trim() : null, country ? String(country).trim() : null, phoneClean || null, req.user.id]
   );
   if (!updated.length) return res.status(404).json({ error: 'Compte introuvable' });
   if (emailChanged) {
