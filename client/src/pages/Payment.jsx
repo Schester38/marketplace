@@ -193,9 +193,6 @@ export default function Payment() {
           <p className="price-line" style={{ fontSize: 34, fontWeight: 800 }}>
             {amount.toLocaleString('fr-FR')} {symbol}
           </p>
-          <p className="hint">
-            {t('Après confirmation, ce montant est reversé automatiquement aux portefeuilles de soutien Mboppi (Orange Money / MTN).')}
-          </p>
         </div>
 
         {!hasWallet || showWalletForm ? (
