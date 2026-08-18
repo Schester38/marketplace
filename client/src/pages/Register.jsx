@@ -56,7 +56,8 @@ export default function Register() {
     }
     if (!ensureAccepted()) return;
     try {
-      await api.register({ ...form, acceptedTerms: true, ref: refCode || undefined });
+      const role = form.role === 'creator' ? 'seller' : form.role;
+      await api.register({ ...form, role, acceptedTerms: true, ref: refCode || undefined });
       setSent(true);
     } catch (err) {
       setError(err.message);
@@ -159,15 +160,16 @@ export default function Register() {
                   <span><Logo className="logo-inline" /> {t('Client')}</span>
                   <small>{t('Je consulte les offres et les produits, je commande facilement')}</small>
                 </label>
-                <label className={`role-option ${form.role === 'creator' ? 'selected' : ''}`}>
+                <label className={`role-option ${form.role === 'creator' ? 'selected' : ''} ${'role-disabled'}`}>
                   <input
                     type="radio"
                     name="role"
                     value="creator"
+                    disabled
                     checked={form.role === 'creator'}
                     onChange={(e) => setForm({ ...form, role: e.target.value })}
                   />
-                  <span>🎨 {t('Créateur')}</span>
+                  <span>🎨 {t('Créateur')} <span className="badge badge-warn" style={{ marginLeft: 4 }}>{t('Bientôt disponible')}</span></span>
                   <small>{t('Je présente et vends mes créations au marché Mboppi')}</small>
                 </label>
                 <label className={`role-option ${form.role === 'livreur' ? 'selected' : ''}`}>

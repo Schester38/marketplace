@@ -201,6 +201,11 @@ export default function CreatorDashboard() {
         </div>
       </section>
 
+      <div className="info-banner">
+        <strong>🚧 {t('Bientôt disponible')}</strong>
+        <p>{t("Le rôle Créateur est en cours de préparation : nous travaillons dessus et il sera bientôt disponible avec la gestion des paiements, la livraison et le suivi complet de vos ventes. En attendant, vos créations publiées restent visibles sur votre vitrine.")}</p>
+      </div>
+
       {showForm && (
         <div className="card form-card">
           <h2>{editingId ? t('Modifier la création') : t('Nouvelle création')}</h2>

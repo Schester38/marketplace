@@ -305,6 +305,8 @@ const EN = {
   // CreatorDashboard
   'Bienvenue {name} ! Faites rayonner vos créations sur le marché Mboppi.': 'Welcome {name}! Showcase your creations on the Mboppi marketplace.',
   'Bientôt disponible : une vitrine dédiée à vos créations.': 'Coming soon: a dedicated showcase for your creations.',
+  'Bientôt disponible': 'Coming soon',
+  'Le rôle Créateur est en cours de préparation : nous travaillons dessus et il sera bientôt disponible avec la gestion des paiements, la livraison et le suivi complet de vos ventes. En attendant, vos créations publiées restent visibles sur votre vitrine.': 'The Creator role is being prepared: we are working on it and it will soon be available with payment management, delivery and full sales tracking. In the meantime, your published creations remain visible on your showcase.',
 
   // ProductDetail
   'Retour aux produits': 'Back to products',
@@ -1548,6 +1550,8 @@ const AR = {
   // CreatorDashboard
   'Bienvenue {name} ! Faites rayonner vos créations sur le marché Mboppi.': 'مرحباً {name}! أبرز إبداعاتك في سوق مبوبي.',
   'Bientôt disponible : une vitrine dédiée à vos créations.': 'قريباً: واجهة مخصصة لإبداعاتك.',
+  'Bientôt disponible': 'قريباً',
+  'Le rôle Créateur est en cours de préparation : nous travaillons dessus et il sera bientôt disponible avec la gestion des paiements, la livraison et le suivi complet de vos ventes. En attendant, vos créations publiées restent visibles sur votre vitrine.': 'دور المُبدِع قيد التحضير: نحن نعمل عليه وسيكون متاحاً قريباً، مع إدارة المدفوعات والتوصيل والمتابعة الكاملة لمبيعاتك. في هذه الأثناء، تبقى إبداعاتك المنشورة مرئية على واجهتك.',
 
   // ProductDetail
   'Retour aux produits': 'العودة إلى المنتجات',
@@ -2757,7 +2761,9 @@ const ES = {
   'Derniers produits': 'Últimos productos',
   'Mes informations': 'Mi información',
   'Bienvenue {name} ! Faites rayonner vos créations sur le marché Mboppi.': '¡Bienvenido {name}! Haz brillar tus creaciones en el mercado Mboppi.',
-  'Bientôt disponible : une vitrine dédiée à vos créations.': 'Próximamente: un escaparate dedicado a tus creaciones.',
+'Bientôt disponible : une vitrine dédiée à vos créations.': 'Próximamente: un escaparate dedicado a tus creaciones.',
+  'Bientôt disponible': 'Próximamente',
+  'Le rôle Créateur est en cours de préparation : nous travaillons dessus et il sera bientôt disponible avec la gestion des paiements, la livraison et le suivi complet de vos ventes. En attendant, vos créations publiées restent visibles sur votre vitrine.': 'El rol de Creador está en preparación: estamos trabajando en ello y pronto estará disponible con la gestión de pagos, la entrega y el seguimiento completo de tus ventas. Mientras tanto, tus creaciones publicadas siguen visibles en tu vitrina.',
   'Retour aux produits': 'Volver a los productos',
   'Boutique': 'Tienda',
   'Quantité disponible : {n}': 'Cantidad disponible: {n}',
