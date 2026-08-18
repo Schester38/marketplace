@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { GoogleIcon } from '../components/icons.jsx';
 import Seo from '../components/Seo.jsx';
@@ -12,7 +12,6 @@ const SELLER_WALLETS = ['Orange Money', 'MTN Mobile Money', 'Moov Money', 'Wave'
 
 export default function Register() {
   const { t } = useLang();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refCode = (searchParams.get('ref') || '').trim().toUpperCase();
   const refSeller = (searchParams.get('refs') || '').trim().toUpperCase();
@@ -102,6 +101,24 @@ export default function Register() {
     );
   }
 
+  if (!refCode && !refSeller) {
+    return (
+      <main className="container narrow">
+        <Seo
+          title={t('Créer un compte') + ' — Mboppi'}
+          description={t('Inscription via un lien de parrainage vendeur.')} noindex/>
+        <div className="card form-card" style={{ textAlign: 'center' }}>
+          <div className="auth-brand"><Logo className="logo-inline" /></div>
+          <h2>{t('Créer un compte')}</h2>
+          <p className="hint" style={{ textAlign: 'center' }}>
+            {t('L\'inscription se fait via le lien de parrainage d\'un vendeur Mboppi (client ou vendeur).')}
+          </p>
+          <Link to="/" className="btn btn-primary btn-block">{t('Retour à l\'accueil')}</Link>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="container narrow">
       <Seo
@@ -120,100 +137,6 @@ export default function Register() {
             placeholder={t('Choisir votre pays…')}
             emptyLabel={t('Aucun résultat')}
           />
-
-          {refCode && (
-            <div className="card referral-banner">
-              <p className="hint" style={{ margin: 0 }}>
-                🎁 {t('Vous vous inscrivez via le lien d\'un vendeur Mboppi : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.')}
-              </p>
-              <label style={{ marginTop: 10 }}>{t('Code du vendeur (parrainage)')}</label>
-              <input
-                className="input code-input"
-                value={refCode}
-                onChange={(e) => navigate(`/register${e.target.value ? `?ref=${encodeURIComponent(e.target.value.toUpperCase())}` : ''}`, { replace: true })}
-                maxLength="6"
-              />
-            </div>
-          )}
-
-          {refSeller && (
-            <div className="card referral-banner">
-              <p className="hint" style={{ margin: 0 }}>
-                🤝 {t('Vous vous inscrivez via le lien de parrainage vendeur d\'un vendeur Mboppi : le rôle « Vendeur » est sélectionné pour vous. Vous paierez les frais d\'activation, et le vendeur qui vous a parrainé recevra 1000 F versés directement sur son portefeuille Mobile Money.')}
-              </p>
-              <label style={{ marginTop: 10 }}>{t('Code du vendeur (parrainage)')}</label>
-              <input
-                className="input code-input"
-                value={refSeller}
-                onChange={(e) => navigate(`/register${e.target.value ? `?refs=${encodeURIComponent(e.target.value.toUpperCase())}` : ''}`, { replace: true })}
-                maxLength="6"
-              />
-            </div>
-          )}
-
-          {!refCode && !refSeller && (
-            <>
-              <label>{t('Je veux m\'inscrire en tant que :')}</label>
-              <div className="role-picker">
-                <label className={`role-option ${form.role === 'shop' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="role"
-                    value="shop"
-                    checked={form.role === 'shop'}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  />
-                  <span>🏪 {t('Boutique')}</span>
-                  <small>{t('Je publie mes produits (max 5) et je fixe les commissions')}</small>
-                </label>
-                <label className={`role-option ${form.role === 'seller' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="role"
-                    value="seller"
-                    checked={form.role === 'seller'}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  />
-                  <span>🛒 {t('Vendeur')}</span>
-                  <small>{t('Je vends les produits des boutiques et je gagne des commissions')}</small>
-                </label>
-                <label className={`role-option ${form.role === 'client' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="role"
-                    value="client"
-                    checked={form.role === 'client'}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  />
-                  <span><Logo className="logo-inline" /> {t('Client')}</span>
-                  <small>{t('Je consulte les offres et les produits, je commande facilement')}</small>
-                </label>
-                <label className={`role-option ${form.role === 'creator' ? 'selected' : ''} ${'role-disabled'}`}>
-                  <input
-                    type="radio"
-                    name="role"
-                    value="creator"
-                    disabled
-                    checked={form.role === 'creator'}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  />
-                  <span>🎨 {t('Créateur')} <span className="badge badge-warn" style={{ marginLeft: 4 }}>{t('Bientôt disponible')}</span></span>
-                  <small>{t('Je présente et vends mes créations au marché Mboppi')}</small>
-                </label>
-                <label className={`role-option ${form.role === 'livreur' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="role"
-                    value="livreur"
-                    checked={form.role === 'livreur'}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  />
-                  <span>🛵 {t('Livreur')}</span>
-                  <small>{t('Je livre les commandes et je reçois mes frais de livraison directement')}</small>
-                </label>
-              </div>
-            </>
-          )}
 
           {!refCode && form.role === 'seller' && (
             <div className="card wallet-card">

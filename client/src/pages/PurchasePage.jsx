@@ -14,11 +14,12 @@ export default function PurchasePage() {
   const [params] = useSearchParams();
   const { user } = useAuth();
   const { t } = useLang();
+  const linkCode = (params.get('code') || '').trim().toUpperCase();
   const [product, setProduct] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [shopWallets, setShopWallets] = useState(null);
   const [form, setForm] = useState({
-    seller_code: params.get('code') || '',
+    seller_code: linkCode,
     buyer_name: '',
     buyer_city: '',
     buyer_address: '',
@@ -193,6 +194,7 @@ export default function PurchasePage() {
               className="input code-input"
               required
               maxLength="6"
+              readOnly={!!linkCode}
               value={form.seller_code}
               onChange={(e) => setForm({ ...form, seller_code: e.target.value.toUpperCase() })}
               placeholder="ABC123"
