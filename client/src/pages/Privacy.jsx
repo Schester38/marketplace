@@ -22,7 +22,7 @@ export default function Privacy() {
         <div className="card">
           <h2>{t('📦 Quelles données sont collectées ?')}</h2>
           <p>
-            {t('Lors de votre inscription : votre nom, votre e-mail et votre rôle (boutique, vendeur, client ou créateur). Si vous vous connectez avec Google, seul votre e-mail Google est utilisé. Selon votre rôle, vous pouvez publier des produits, des offres avec photos, et vos ventes sont enregistrées dans votre espace.')}
+            {t('Lors de votre inscription : votre nom, votre e-mail et votre rôle (boutique, vendeur, client, livreur ou créateur). Si vous vous connectez avec Google, seul votre e-mail Google est utilisé. Selon votre rôle, vous pouvez publier des produits, des offres avec photos, et vos ventes sont enregistrées dans votre espace. Pour les paiements en ligne, nous n\'utilisons que votre numéro de mobile money et votre opérateur, le temps du règlement.')}
           </p>
         </div>
 
@@ -43,14 +43,14 @@ export default function Privacy() {
         <div className="card">
           <h2>{t('👀 Qui peut les voir ?')}</h2>
           <p>
-            {t('Seule la personne concernée accède à son espace : une boutique voit ses produits, un vendeur ses ventes et commissions. Les offres de la vitrine sont publiquement visibles par les visiteurs, mais sans vos informations de compte.')}
+            {t('Seule la personne concernée accède à son espace : une boutique voit ses produits, un vendeur ses ventes et commissions. Les montants de vos paiements et versements ne sont visibles que dans votre espace. Les offres de la vitrine sont publiquement visibles par les visiteurs, mais sans vos informations de compte.')}
           </p>
         </div>
 
         <div className="card">
-          <h2>{t('💳 Aucun paiement en ligne')}</h2>
+          <h2>{t('🔒 Paiement en ligne et données bancaires')}</h2>
           <p>
-            {t('Mboppi ne demande jamais de numéro de carte bancaire. Les commandes passent par téléphone ou WhatsApp, et le paiement se fait directement avec le vendeur.')}
+            {t('Mboppi ne demande jamais de numéro de carte bancaire. Les paiements en ligne se font uniquement par mobile money via notre prestataire iKeePay : votre numéro de téléphone et votre opérateur sont transmis à ce prestataire le temps du règlement, et Mboppi ne conserve que le montant et la référence du paiement. Les gains perçus sont reversés automatiquement sur le portefeuille mobile enregistré par chaque acteur. Pour un don, seul votre numéro de mobile money est utilisé pour le règlement.')}
           </p>
         </div>
 

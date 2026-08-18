@@ -25,6 +25,10 @@ export default function MentionsLegales() {
           <p>{t('Les contenus publiés par les boutiques et vendeurs (produits, photos, descriptions) leur appartiennent. La marque et le nom Mboppi appartiennent à leurs propriétaires.')}</p>
         </div>
         <div className="card">
+          <h2>{t('Prestataire de paiement')}</h2>
+          <p>{t('Les paiements en ligne sont traités par iKeePay, prestataire de paiement mobile money. Ses conditions d\'utilisation et sa politique de confidentialité s\'appliquent au traitement des paiements effectués sur Mboppi.')}</p>
+        </div>
+        <div className="card">
           <h2>{t('Contact')}</h2>
           <p>{t('Vous pouvez nous joindre via la page Contact ou WhatsApp.')}</p>
           <Link to="/contact" className="btn btn-outline">{t('Contact')}</Link>

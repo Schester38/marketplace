@@ -76,6 +76,11 @@ export default function About() {
             <h3>{t('La rapidité')}</h3>
             <p>{t('Une plateforme légère, qui s\'affiche vite, même en 3G.')}</p>
           </div>
+          <div className="step">
+            <div className="step-icon">💸</div>
+            <h3>{t('L\'argent, en toute transparence')}</h3>
+            <p>{t('Le paiement en ligne par mobile money est traité via notre prestataire iKeePay et reversé automatiquement à chaque acteur.')}</p>
+          </div>
         </div>
       </section>
 

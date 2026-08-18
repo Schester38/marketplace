@@ -10,7 +10,7 @@ export default function Cgu() {
       <section className="hero vitrine-hero">
         <span className="hero-badge">📜 {t('Conditions générales')}</span>
         <h1>{t('Conditions générales d\'utilisation')}</h1>
-        <p>{t('Les règles pour utiliser Mboppi en tant que boutique, vendeur, client ou créateur.')}</p>
+        <p>{t('Les règles pour utiliser Mboppi en tant que boutique, vendeur, client, livreur ou créateur.')}</p>
       </section>
 
       <section className="privacy-list">
@@ -24,39 +24,47 @@ export default function Cgu() {
         </div>
         <div className="card">
           <h2>{t('3. Les rôles sur Mboppi')}</h2>
-          <p>{t('Mboppi met en relation des boutiques, des vendeurs, des clients et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander ou créer.')}</p>
+          <p>{t('Mboppi met en relation des boutiques, des vendeurs, des clients, des livreurs et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander, livrer ou créer.')}</p>
         </div>
         <div className="card">
           <h2>{t('4. Commandes et paiement')}</h2>
-          <p>{t('Les commandes sont passées directement avec la boutique ou le vendeur. Aucun paiement n\'est effectué en ligne sur Mboppi : le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money.')}</p>
+          <p>{t('Le paiement s\'effectue à la livraison (espèces ou mobile money) ou en ligne par mobile money (Orange Money, MTN Mobile Money, etc.). Le paiement en ligne est traité par notre prestataire iKeePay : Mboppi perçoit l\'argent pour le compte de la boutique et du vendeur puis reverse automatiquement à chacun le montant qui lui revient.')}</p>
         </div>
         <div className="card">
-          <h2>{t('5. Commissions et parrainage')}</h2>
-          <p>{t('Les boutiques rémunèrent les vendeurs et les parrains par des commissions enregistrées sur la plateforme. Les montants et les modalités de réclamation et de paiement sont affichés dans les espaces vendeur, boutique et client.')}</p>
+          <h2>{t('5. Paiement en ligne, reversements et délais')}</h2>
+          <p>{t('Pour recevoir un paiement en ligne, chaque acteur doit enregistrer un numéro de mobile money valide depuis son espace. Après confirmation du paiement par iKeePay, Mboppi reverse automatiquement la part de chacun : la boutique reçoit le prix, le vendeur sa commission, le parrain son pourcentage et le livreur ses frais de livraison. Les montants et l\'état des versements sont visibles dans chaque espace.')}</p>
         </div>
         <div className="card">
-          <h2>{t('6. Contenu publié')}</h2>
+          <h2>{t('6. Commissions et parrainage')}</h2>
+          <p>{t('Les boutiques rémunèrent les vendeurs et les parrains par des commissions enregistrées sur la plateforme. Ces commissions sont reversées automatiquement sur le portefeuille mobile enregistré par chaque acteur. Les montants et les modalités de réclamation sont affichés dans les espaces vendeur, boutique et client.')}</p>
+        </div>
+        <div className="card">
+          <h2>{t('7. Contenu publié')}</h2>
           <p>{t('Les boutiques, vendeurs et créateurs publient leurs propres produits, offres et créations. Ils sont seuls responsables de l\'exactitude et de la légalité de leur contenu. Mboppi peut retirer tout contenu illicite ou inapproprié.')}</p>
         </div>
         <div className="card">
-          <h2>{t('7. Livraison')}</h2>
-          <p>{t('La livraison est assurée par les boutiques ou des livreurs partenaires. Les délais et les frais sont indiqués sur chaque produit et convenus avec le vendeur ou la boutique lors de la commande.')}</p>
+          <h2>{t('8. Livraison')}</h2>
+          <p>{t('La livraison est assurée par la boutique ou par un livreur Mboppi. Les délais et les frais sont indiqués sur chaque produit et convenus lors de la commande. Si le paiement est effectué à la livraison, la boutique ou le livreur encaisse directement ; pour une commande payée en ligne, les frais de livraison sont reversés au livreur sur son portefeuille mobile.')}</p>
         </div>
         <div className="card">
-          <h2>{t('8. Comportement interdit')}</h2>
+          <h2>{t('9. Dons et soutien')}</h2>
+          <p>{t('La page « Soutenir Mboppi » permet de faire un don à la plateforme. Les dons par Orange Money et MTN Mobile Money sont traités automatiquement en ligne. Les dons par PayPal ou par virement UBA se font manuellement, en suivant les instructions de la page. Aucun don n\'est obligatoire pour utiliser Mboppi.')}</p>
+        </div>
+        <div className="card">
+          <h2>{t('10. Comportement interdit')}</h2>
           <p>{t('Il est interdit d\'utiliser la plateforme de manière frauduleuse : créer de fausses commandes, usurper une identité, publier des informations fausses ou trompeuses, ou tenter de contourner les règles de la plateforme.')}</p>
         </div>
         <div className="card">
-          <h2>{t('9. Suspension et résiliation')}</h2>
+          <h2>{t('11. Suspension et résiliation')}</h2>
           <p>{t('Mboppi peut suspendre ou supprimer un compte en cas de non-respect des présentes conditions. Vous pouvez supprimer votre compte à tout moment depuis votre espace « Mon compte ».')}</p>
         </div>
         <div className="card">
-          <h2>{t('10. Données personnelles')}</h2>
+          <h2>{t('12. Données personnelles')}</h2>
           <p>{t('Vos données personnelles sont traitées conformément à notre politique de confidentialité, consultable sur la page Données personnelles.')}</p>
           <Link to="/donnees" className="btn btn-outline">{t('Données personnelles')}</Link>
         </div>
         <div className="card">
-          <h2>{t('11. Acceptation des conditions')}</h2>
+          <h2>{t('13. Acceptation des conditions')}</h2>
           <p>{t('En cochant la case lors de votre inscription, vous confirmez avoir lu et accepté ces Conditions générales d\'utilisation. Pour toute question, contactez-nous via la page Contact.')}</p>
           <Link to="/contact" className="btn btn-outline">{t('Contact')}</Link>
         </div>

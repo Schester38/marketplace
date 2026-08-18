@@ -16,23 +16,23 @@ export default function Cgv() {
       <section className="privacy-list">
         <div className="card">
           <h2>{t('1. Rôle de la plateforme')}</h2>
-          <p>{t('Mboppi met en relation des boutiques, des créateurs, des vendeurs et des clients. Les ventes sont conclues directement entre l\'acheteur et le vendeur ou la boutique. Mboppi ne perçoit aucun paiement en ligne.')}</p>
+          <p>{t('Mboppi met en relation des boutiques, des créateurs, des vendeurs, des livreurs et des clients. Les ventes sont conclues directement entre l\'acheteur et le vendeur ou la boutique. Mboppi n\'est pas propriétaire des produits ; pour les paiements en ligne, la plateforme perçoit l\'argent pour le compte des vendeurs et le reverse automatiquement.')}</p>
         </div>
         <div className="card">
           <h2>{t('2. Commandes')}</h2>
-          <p>{t('Une commande est enregistrée avec le nom et le code de l\'acheteur. L\'état de la commande (en attente, confirmée, livrée) peut être suivi sur la page de suivi. Une commande annulée ne donne lieu à aucun paiement.')}</p>
+          <p>{t('Une commande est enregistrée avec le nom et le code de l\'acheteur. L\'état de la commande (en attente, confirmée, livrée) peut être suivi sur la page de suivi. Une commande annulée avant paiement ne donne lieu à aucun paiement ; une commande payée en ligne puis annulée est remboursée automatiquement sur le portefeuille mobile de l\'acheteur.')}</p>
         </div>
         <div className="card">
           <h2>{t('3. Paiement et livraison')}</h2>
-          <p>{t('Le paiement s\'effectue directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Les frais de livraison sont indiqués sur chaque produit. Mboppi ne stocke aucun moyen de paiement.')}</p>
+          <p>{t('Le paiement s\'effectue à la livraison ou en ligne par mobile money via notre prestataire iKeePay (Orange Money, MTN Mobile Money, etc.). Mboppi ne collecte jamais de numéro de carte bancaire et reverse automatiquement à chaque acteur le montant qui lui revient. Les frais de livraison sont indiqués sur chaque produit.')}</p>
         </div>
         <div className="card">
           <h2>{t('4. Garanties et retours')}</h2>
-          <p>{t('Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, Mboppi peut servir d\'intermédiaire de médiation.')}</p>
+          <p>{t('Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige portant sur un paiement en ligne, Mboppi reverse le montant au vendeur ou rembourse l\'acheteur selon la résolution. Mboppi peut servir d\'intermédiaire de médiation.')}</p>
         </div>
         <div className="card">
           <h2>{t('5. Responsabilité')}</h2>
-          <p>{t('Mboppi ne peut être tenu responsable des produits vendus par les boutiques et vendeurs, ni des retards de livraison imputables aux livreurs. Les informations publiées le sont par les vendeurs eux-mêmes.')}</p>
+          <p>{t('Mboppi ne peut être tenu responsable des produits vendus par les boutiques et vendeurs, ni des retards de livraison imputables aux livreurs. Les paiements en ligne sont exécutés par iKeePay, prestataire de paiement indépendant. Les informations publiées le sont par les vendeurs eux-mêmes.')}</p>
         </div>
         <div className="card">
           <h2>{t('6. Contact')}</h2>
