@@ -15,6 +15,7 @@ export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refCode = (searchParams.get('ref') || '').trim().toUpperCase();
+  const refSeller = (searchParams.get('refs') || '').trim().toUpperCase();
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -68,6 +69,7 @@ export default function Register() {
         phone: form.wallet_phone,
         acceptedTerms: true,
         ref: refCode || undefined,
+        ref_seller: refSeller || undefined,
       });
       setSent(true);
     } catch (err) {
@@ -134,7 +136,22 @@ export default function Register() {
             </div>
           )}
 
-          {!refCode && (
+          {refSeller && (
+            <div className="card referral-banner">
+              <p className="hint" style={{ margin: 0 }}>
+                🤝 {t('Vous vous inscrivez via le lien de parrainage vendeur d\'un vendeur Mboppi : le rôle « Vendeur » est sélectionné pour vous. Vous paierez les frais d\'activation, et le vendeur qui vous a parrainé recevra 1000 F versés directement sur son portefeuille Mobile Money.')}
+              </p>
+              <label style={{ marginTop: 10 }}>{t('Code du vendeur (parrainage)')}</label>
+              <input
+                className="input code-input"
+                value={refSeller}
+                onChange={(e) => navigate(`/register${e.target.value ? `?refs=${encodeURIComponent(e.target.value.toUpperCase())}` : ''}`, { replace: true })}
+                maxLength="6"
+              />
+            </div>
+          )}
+
+          {!refCode && !refSeller && (
             <>
               <label>{t('Je veux m\'inscrire en tant que :')}</label>
               <div className="role-picker">
@@ -278,6 +295,7 @@ export default function Register() {
               if (!ensureAccepted()) return;
               const params = new URLSearchParams({ role: refCode ? 'client' : form.role, country: form.country || '' });
               if (refCode) params.set('ref', refCode);
+              if (refSeller) params.set('ref_seller', refSeller);
               window.location.href = `/api/auth/google?${params.toString()}&accepted=1`;
             }}
           >

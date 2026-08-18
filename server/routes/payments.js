@@ -3,7 +3,7 @@ import { q } from '../db.js';
 import { authRequired, roleRequired, sellerActivationActive, sellerActivationExpiresAt, SELLER_ACTIVATION_DAYS } from '../auth.js';
 import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone, operatorFor } from '../ikeepay.js';
 import { defaultCurrencyFor } from '../currency.js';
-import { markSalePaid } from '../finance.js';
+import { markSalePaid, payoutTargetFor } from '../finance.js';
 import { handleDonationPaid, donationTarget } from './donations.js';
 
 const router = Router();
@@ -165,8 +165,8 @@ router.post('/seller-fee', authRequired, roleRequired('seller'), ah(async (req, 
   if (!provider) return res.status(502).json({ error: 'Aucune réponse du fournisseur de paiement' });
 
   await q(
-    `INSERT INTO seller_activation_payments (seller_id, amount, currency, operator, phone_number, status, external_reference, provider_payload)
-     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7)
+    `INSERT INTO seller_activation_payments (seller_id, amount, currency, operator, phone_number, status, external_reference, provider_payload, referrer_id)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, (SELECT referred_by FROM users WHERE id = $1))
      ON CONFLICT (external_reference) DO UPDATE SET status = 'pending', provider_payload = EXCLUDED.provider_payload, paid_at = NULL, created_at = now()`,
     [user.id, amount, currency, operator, normalized, external_reference, provider]
   );
@@ -238,22 +238,99 @@ export async function handleSellerActivationPaid(sellerId, { reference, transact
 
   const pay = (await q('SELECT * FROM seller_activation_payments WHERE external_reference = $1 LIMIT 1', [reference]))[0];
   if (!pay) return { ok: true, payout: { initiated: false, reason: 'no_attempt' } };
-  if (pay.payout_status === 'done') return { ok: true, already: true, payout: { initiated: false } };
+  if (pay.payout_status === 'done' && pay.referral_payout_status === 'done') {
+    return { ok: true, already: true, payout: { initiated: false } };
+  }
 
+  const feeAmount = Number(pay.amount);
+  const referralAmount = Math.min(feeAmount, Number(process.env.SELLER_ACTIVATION_REFERRAL_AMOUNT || 1000));
+  const supportAmount = Math.max(0, feeAmount - referralAmount);
+
+  const results = { support: { initiated: false }, referrer: { initiated: false } };
+
+  if (pay.referrer_id && pay.referral_payout_status !== 'done') {
+    results.referrer = await payoutActivationReferrer(pay, referralAmount);
+  } else if (pay.referrer_id) {
+    results.referrer = { initiated: true, already: true };
+  }
+
+  if (supportAmount > 0 && pay.payout_status !== 'done') {
+    results.support = await payoutActivationSupport(pay, supportAmount);
+  } else if (pay.payout_status === 'done') {
+    results.support = { initiated: true, already: true };
+  }
+
+  return { ok: true, payout: results };
+}
+
+async function payoutActivationReferrer(pay, referralAmount) {
+  const referrer = (await q('SELECT id, country, name, role FROM users WHERE id = $1', [pay.referrer_id]))[0];
+  if (!referrer || referrer.role !== 'seller') {
+    await q(
+      `UPDATE seller_activation_payments SET referral_payout_status = 'failed', referral_payout_error = 'Parrain introuvable ou plus vendeur' WHERE id = $1`,
+      [pay.id]
+    );
+    return { initiated: false, error: 'Parrain introuvable ou plus vendeur' };
+  }
+
+  const target = await payoutTargetFor(referrer, 'seller');
+  if (!target) {
+    await q(
+      `UPDATE seller_activation_payments SET referral_payout_status = 'failed', referral_payout_error = 'Portefeuille du parrain non configuré (seller_payment_methods)' WHERE id = $1`,
+      [pay.id]
+    );
+    return { initiated: false, error: 'Portefeuille du parrain non configuré' };
+  }
+
+  await q(`UPDATE seller_activation_payments SET referral_payout_status = 'processing' WHERE id = $1`, [pay.id]);
+  try {
+    const info = countryInfo(referrer.country);
+    if (!info) throw new Error(`Pays du parrain non pris en charge : ${referrer.country}`);
+    const currency = defaultCurrencyFor(referrer.country);
+    const provider = await ikeepayPayout({
+      amount: referralAmount,
+      currency,
+      country: info.code,
+      phoneNumber: target.phone,
+      operator: target.operator,
+      external_reference: `PAYOUT_REFSELLER:${pay.id}`,
+    });
+    const ref = 'activation_referral';
+    await q(
+      `INSERT INTO wallet_transactions (user_id, amount, currency, transaction_type, reference_type, reference_id, description)
+       VALUES ($1, $2, $3, 'referral_credit', $4, $5, $6)
+       ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
+      [pay.referrer_id, referralAmount, currency, ref, pay.id, `Commission parrainage vendeur — activation #${pay.id}`]
+    );
+    await q(
+      `UPDATE seller_activation_payments SET referral_payout_status = 'done', referral_amount = $1, referral_payout_provider_transaction_id = COALESCE(referral_payout_provider_transaction_id, $2) WHERE id = $3`,
+      [referralAmount, provider.provider_reference || provider.transaction_id || null, pay.id]
+    );
+    return { initiated: true, provider };
+  } catch (err) {
+    await q(
+      `UPDATE seller_activation_payments SET referral_payout_status = 'failed', referral_payout_error = $1 WHERE id = $2`,
+      [String(err.message || err).slice(0, 1000), pay.id]
+    );
+    return { initiated: false, error: String(err.message || err) };
+  }
+}
+
+async function payoutActivationSupport(pay, supportAmount) {
   const target = donationTarget(pay.operator);
   if (!target) {
     await q(
       `UPDATE seller_activation_payments SET payout_status = 'failed', payout_error = 'Portefeuille Mboppi non configuré (MBO_DONATION_ORANGE/MTN)' WHERE id = $1`,
       [pay.id]
     );
-    return { ok: true, payout: { initiated: false, error: 'Portefeuille Mboppi non configuré' } };
+    return { initiated: false, error: 'Portefeuille Mboppi non configuré' };
   }
 
   await q(`UPDATE seller_activation_payments SET payout_status = 'processing' WHERE id = $1`, [pay.id]);
   try {
     const info = countryInfo('Cameroun');
     const provider = await ikeepayPayout({
-      amount: Number(pay.amount),
+      amount: supportAmount,
       currency: defaultCurrencyFor('Cameroun'),
       country: info ? info.code : 'CM',
       phoneNumber: target.phone,
@@ -264,13 +341,13 @@ export async function handleSellerActivationPaid(sellerId, { reference, transact
       `UPDATE seller_activation_payments SET payout_status = 'done', payout_provider_transaction_id = COALESCE(payout_provider_transaction_id, $1) WHERE id = $2`,
       [provider.provider_reference || provider.transaction_id || null, pay.id]
     );
-    return { ok: true, payout: { initiated: true, provider } };
+    return { initiated: true, provider };
   } catch (err) {
     await q(
       `UPDATE seller_activation_payments SET payout_status = 'failed', payout_error = $1 WHERE id = $2`,
       [String(err.message || err).slice(0, 1000), pay.id]
     );
-    return { ok: true, payout: { initiated: false, error: err.message } };
+    return { initiated: false, error: err.message };
   }
 }
 

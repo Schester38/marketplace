@@ -19,7 +19,7 @@ export function externalReference(kind, saleId) {
   return `${kind}:${saleId}`;
 }
 
-async function payoutTargetFor(user, kind) {
+export async function payoutTargetFor(user, kind) {
   if (!user) return null;
   let wallets = null;
   if (kind === 'shop') {

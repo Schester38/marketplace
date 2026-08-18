@@ -208,10 +208,17 @@ export default function SellerDashboard() {
   };
 
   const referralLink = sellerCode ? `${BASE_URL}/register?ref=${encodeURIComponent(sellerCode)}` : null;
+  const sellerReferralLink = sellerCode ? `${BASE_URL}/register?refs=${encodeURIComponent(sellerCode)}` : null;
 
   const shareReferralWhatsApp = () => {
     if (!referralLink) return;
     const msg = t('Rejoins Mboppi et parraine tes amis ! Gagne 2% de leurs achats. Inscris-toi avec mon lien : {link}', { link: referralLink });
+    window.open(whatsappLink(msg), '_blank', 'noopener,noreferrer');
+  };
+
+  const shareSellerReferralWhatsApp = () => {
+    if (!sellerReferralLink) return;
+    const msg = t('Deviens vendeur sur Mboppi avec mon lien et gagne le 1000 F offerts à chaque vendeur qui s\'inscrit et active son compte via mon lien. Inscris-toi : {link}', { link: sellerReferralLink });
     window.open(whatsappLink(msg), '_blank', 'noopener,noreferrer');
   };
 
@@ -285,7 +292,7 @@ export default function SellerDashboard() {
 
       <section className="card seller-code-card">
         <div>
-          <h2>🎁 {t('Mon lien de parrainage')}</h2>
+          <h2>🎁 {t('Mon lien de parrainage client')}</h2>
           <p className="hint" style={{ marginTop: 0 }}>
             {t('Partagez ce lien : chaque personne qui s\'inscrit via ce lien devient votre filleul. Vous gagnez 2% du prix de chacun de ses achats (commission payée par la boutique).')}
           </p>
@@ -299,6 +306,34 @@ export default function SellerDashboard() {
               </button>
               {referralLink && (
                 <button className="btn btn-whatsapp btn-sm" onClick={shareReferralWhatsApp}>
+                  📲 {t('Partager sur WhatsApp')}
+                </button>
+              )}
+            </>
+          ) : (
+            <p className="hint" style={{ margin: 0 }}>
+              {t('Générez d\'abord votre code vendeur ci-dessus pour obtenir votre lien.')}
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section className="card seller-code-card">
+        <div>
+          <h2>🤝 {t('Mon lien de parrainage vendeur')}</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            {t('Partagez ce lien : chaque vendeur qui s\'inscrit via ce lien et active son compte (frais de 1500 F) vous fait gagner 1000 F, versés directement sur votre portefeuille Mobile Money. Les 500 F restants reviennent au support Mboppi.')}
+          </p>
+        </div>
+        <div className="seller-code-actions">
+          {sellerCode ? (
+            <>
+              <code className="seller-code referral-link">{sellerReferralLink}</code>
+              <button className="btn btn-outline btn-sm" onClick={() => copy('refseller', sellerReferralLink)}>
+                {copied === 'refseller' ? t('Lien copié !') : t('Copier le lien')}
+              </button>
+              {sellerReferralLink && (
+                <button className="btn btn-whatsapp btn-sm" onClick={shareSellerReferralWhatsApp}>
                   📲 {t('Partager sur WhatsApp')}
                 </button>
               )}

@@ -408,6 +408,12 @@ export async function initDb() {
     ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS payout_status TEXT DEFAULT 'pending';
     ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS payout_error TEXT;
     ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS payout_provider_transaction_id TEXT;
+
+    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS referrer_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS referral_amount NUMERIC(14,2);
+    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS referral_payout_status TEXT DEFAULT 'pending';
+    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS referral_payout_error TEXT;
+    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS referral_payout_provider_transaction_id TEXT;
   `);
 
   try {

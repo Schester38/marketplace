@@ -51,7 +51,7 @@ function publicUser(u) {
 const VALID_ROLES = ['shop', 'seller', 'client', 'creator', 'livreur'];
 
 router.post('/register', ah(async (req, res) => {
-  const { name, email, password, role, country, ref, acceptedTerms, operator, phone } = req.body || {};
+  const { name, email, password, role, country, ref, ref_seller, acceptedTerms, operator, phone } = req.body || {};
   if (acceptedTerms !== true) {
     return res.status(400).json({ error: 'Vous devez accepter les Conditions Générales d\'Utilisation pour vous inscrire' });
   }
@@ -69,6 +69,16 @@ router.post('/register', ah(async (req, res) => {
     }
     referredBy = referrer.id;
     finalRole = 'client';
+  }
+  if (!referredBy && ref_seller && String(ref_seller).trim()) {
+    const referrer = (
+      await q('SELECT id, role FROM users WHERE seller_code = $1', [String(ref_seller).trim().toUpperCase()])
+    )[0];
+    if (!referrer || referrer.role !== 'seller') {
+      return res.status(400).json({ error: 'Code de vendeur (parrainage vendeur) invalide' });
+    }
+    referredBy = referrer.id;
+    finalRole = 'seller';
   }
   if (!VALID_ROLES.includes(finalRole)) {
     return res.status(400).json({ error: 'Le rôle doit être "shop" (boutique), "seller" (vendeur), "client", "livreur" ou "creator" (créateur)' });
@@ -206,9 +216,10 @@ router.get('/google', (req, res) => {
     return res.redirect(`/auth-google?error=${msg}`);
   }
   const ref = String(req.query.ref || '').trim().toUpperCase();
-  const role = VALID_ROLES.includes(req.query.role) ? req.query.role : ref ? 'client' : 'seller';
+  const refSeller = String(req.query.ref_seller || '').trim().toUpperCase();
+  const role = ref ? 'client' : refSeller ? 'seller' : VALID_ROLES.includes(req.query.role) ? req.query.role : 'seller';
   const accepted = req.query.accepted === '1' ? '1' : '';
-  res.redirect(googleAuthUrl(ref ? 'client' : role, req.query.country, ref, accepted, req));
+  res.redirect(googleAuthUrl(role, req.query.country, ref, refSeller, accepted, req));
 });
 
 router.get('/google/callback', ah(async (req, res) => {
@@ -220,7 +231,7 @@ router.get('/google/callback', ah(async (req, res) => {
     const profile = await getGoogleProfile(code, req);
     let user = (await q('SELECT * FROM users WHERE email = $1', [profile.email]))[0];
     if (!user) {
-      const [role, country, ref, accepted] = String(state || '').split('|');
+      const [role, country, ref, accepted, refSeller] = String(state || '').split('|');
       if (accepted !== '1') {
         const msg = encodeURIComponent('Vous devez accepter les Conditions Générales d\'Utilisation pour vous inscrire');
         return res.redirect(`/auth-google?error=${msg}`);
@@ -229,6 +240,7 @@ router.get('/google/callback', ah(async (req, res) => {
       const cleanCountry = country && country.length <= 60 ? country : null;
       let referredBy = null;
       const cleanRef = ref ? String(ref).trim().toUpperCase() : '';
+      const cleanRefSeller = refSeller ? String(refSeller).trim().toUpperCase() : '';
       if (cleanRef) {
         const referrer = (
           await q('SELECT id, seller_code FROM users WHERE role = \'seller\' AND seller_code = $1', [cleanRef])
@@ -236,6 +248,14 @@ router.get('/google/callback', ah(async (req, res) => {
         if (referrer) {
           referredBy = referrer.id;
           cleanRole = 'client';
+        }
+      } else if (cleanRefSeller) {
+        const referrer = (
+          await q('SELECT id, seller_code FROM users WHERE role = \'seller\' AND seller_code = $1', [cleanRefSeller])
+        )[0];
+        if (referrer) {
+          referredBy = referrer.id;
+          cleanRole = 'seller';
         }
       }
       const created = await q(
