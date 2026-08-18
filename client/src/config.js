@@ -139,8 +139,12 @@ export function offerUrl(id) {
 }
 
 export function waLink(number, message) {
-  const digits = String(number || '').replace(/[^\d]/g, '');
-  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+  let digits = String(number || '').replace(/[^\d]/g, '');
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('0')) digits = '237' + digits.slice(1);
+  else if (digits.length > 0 && digits.length <= 9) digits = '237' + digits;
+  const target = digits ? `https://wa.me/${digits}` : 'https://wa.me/';
+  return `${target}?text=${encodeURIComponent(message)}`;
 }
 
 export function whatsappLink(message) {

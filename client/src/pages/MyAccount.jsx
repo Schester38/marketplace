@@ -288,13 +288,16 @@ export default function MyAccount() {
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </label>
             <label className="field">
-              <span>{t('Numéro de téléphone')}</span>
+              <span>{t('Numéro de téléphone / WhatsApp')}</span>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder={t('ex : +237 6 00 00 00 00')}
               />
+              {['shop', 'seller', 'livreur', 'creator'].includes(user?.role) && (
+                <small className="hint">{t('C\'est ce numéro que vos clients utilisent pour vous contacter sur WhatsApp depuis votre vitrine. Utilisez le format international (ex : +237 6 00 00 00 00).')}</small>
+              )}
             </label>
             <label className="field">
               <span>{t('Pays')}</span>

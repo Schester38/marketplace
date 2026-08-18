@@ -5,7 +5,7 @@ import ProductCard from '../components/ProductCard.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
-import { waLink, countryPhone } from '../config.js';
+import { waLink } from '../config.js';
 
 export default function CreatorShowcase() {
   const { id } = useParams();
@@ -50,7 +50,7 @@ export default function CreatorShowcase() {
     );
   }
 
-  const phone = creator.phone || countryPhone(creator.country).replace('+', '');
+  const phone = creator.phone;
 
   return (
     <main className="container">

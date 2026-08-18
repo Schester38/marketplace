@@ -1247,6 +1247,10 @@ const EN = {
   'Enregistrez votre numéro de mobile money dans votre espace, page « Paiements » (boutique, vendeur ou livreur). Après chaque paiement confirmé, Mboppi reverse automatiquement votre part : le prix pour la boutique, la commission pour le vendeur, 2% pour le parrain et les frais pour le livreur.': 'Register your mobile money number in your space, on the “Payments” page (shop, seller or rider). After each confirmed payment, Mboppi automatically transfers your share: the price for the shop, the commission for the seller, 2% for the sponsor and the fees for the rider.',
   'Comment soutenir Mboppi ?': 'How do I support Mboppi?',
   'Rendez-vous sur la page « Soutenir Mboppi ». Les dons par Orange Money et MTN Mobile Money sont traités automatiquement en ligne ; les dons par PayPal ou par virement UBA se font manuellement.': 'Go to the “Support Mboppi” page. Donations by Orange Money and MTN Mobile Money are processed automatically online; donations by PayPal or UBA transfer are done manually.',
+
+  // MyAccount
+  'Numéro de téléphone / WhatsApp': 'Phone / WhatsApp number',
+  'C\'est ce numéro que vos clients utilisent pour vous contacter sur WhatsApp depuis votre vitrine. Utilisez le format international (ex : +237 6 00 00 00 00).': 'This is the number your clients use to contact you on WhatsApp from your showcase. Use the international format (e.g. +237 6 00 00 00 00).',
 };
 
 const AR = {
@@ -2464,6 +2468,10 @@ const AR = {
   'Comment soutenir Mboppi ?': 'كيف أدعم Mboppi؟',
   'Rendez-vous sur la page « Soutenir Mboppi ». Les dons par Orange Money et MTN Mobile Money sont traités automatiquement en ligne ; les dons par PayPal ou par virement UBA se font manuellement.': 'افتح صفحة «ادعم Mboppi». تُعالج التبرعات عبر Orange Money وMTN Mobile Money تلقائياً عبر الإنترنت؛ التبرعات عبر PayPal أو تحويل UBA تتم يدوياً.',
 
+  // MyAccount
+  'Numéro de téléphone / WhatsApp': 'رقم الهاتف / واتساب',
+  'C\'est ce numéro que vos clients utilisent pour vous contacter sur WhatsApp depuis votre vitrine. Utilisez le format international (ex : +237 6 00 00 00 00).': 'هذا هو الرقم الذي يستخدمه عملاؤك للتواصل معك على واتساب من واجهتك. استخدم الصيغة الدولية (مثال: +237 6 00 00 00 00).',
+
 };
 
 const ES = {
@@ -3633,6 +3641,10 @@ const ES = {
   'Enregistrez votre numéro de mobile money dans votre espace, page « Paiements » (boutique, vendeur ou livreur). Après chaque paiement confirmé, Mboppi reverse automatiquement votre part : le prix pour la boutique, la commission pour le vendeur, 2% pour le parrain et les frais pour le livreur.': 'Registra tu número de dinero móvil en tu espacio, página «Pagos» (tienda, vendedor o repartidor). Tras cada pago confirmado, Mboppi transfiere automáticamente tu parte: el precio para la tienda, la comisión para el vendedor, el 2% para el padrino y los gastos para el repartidor.',
   'Comment soutenir Mboppi ?': '¿Cómo apoyo a Mboppi?',
   'Rendez-vous sur la page « Soutenir Mboppi ». Les dons par Orange Money et MTN Mobile Money sont traités automatiquement en ligne ; les dons par PayPal ou par virement UBA se font manuellement.': 'Ve a la página «Apoyar a Mboppi». Las donaciones por Orange Money y MTN Mobile Money se procesan automáticamente en línea; las donaciones por PayPal o transferencia UBA se hacen manualmente.',
+
+  // MyAccount
+  'Numéro de téléphone / WhatsApp': 'Número de teléfono / WhatsApp',
+  'C\'est ce numéro que vos clients utilisent pour vous contacter sur WhatsApp depuis votre vitrine. Utilisez le format international (ex : +237 6 00 00 00 00).': 'Este es el número que tus clientes usan para contactarte por WhatsApp desde tu vitrina. Usa el formato internacional (p. ej.: +237 6 00 00 00 00).',
 
 };
 

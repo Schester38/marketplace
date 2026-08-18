@@ -6,7 +6,7 @@ import Logo from '../components/Logo.jsx';
 import { api } from '../api.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
-import { waLink, countryPhone } from '../config.js';
+import { waLink } from '../config.js';
 
 export default function ShopPage() {
   const { id } = useParams();
@@ -51,7 +51,7 @@ export default function ShopPage() {
     );
   }
 
-  const phone = shop.phone || countryPhone(shop.country).replace('+', '');
+  const phone = shop.phone;
 
   return (
     <main className="container">
