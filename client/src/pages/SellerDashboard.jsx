@@ -322,7 +322,7 @@ export default function SellerDashboard() {
         <div>
           <h2>🤝 {t('Mon lien de parrainage vendeur')}</h2>
           <p className="hint" style={{ marginTop: 0 }}>
-            {t('Partagez ce lien : chaque vendeur qui s\'inscrit via ce lien et active son compte (frais de 1500 F) vous fait gagner 1000 F, versés directement sur votre portefeuille Mobile Money. Les 500 F restants reviennent au support Mboppi.')}
+            {t('Partagez ce lien : chaque vendeur qui s\'inscrit via ce lien et active son compte (frais de 1500 F) vous fait gagner 1000 F, versés directement sur votre portefeuille Mobile Money.')}
           </p>
         </div>
         <div className="seller-code-actions">
