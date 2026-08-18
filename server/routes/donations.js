@@ -7,8 +7,15 @@ const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 function donationTarget(operator) {
-  const orange = String(process.env.MBO_DONATION_ORANGE || '').replace(/[^\d]/g, '');
-  const mtn = String(process.env.MBO_DONATION_MTN || '').replace(/[^\d]/g, '');
+  const info = countryInfo('Cameroun');
+  const prefix = info ? info.prefix : '237';
+  const withPrefix = (raw) => {
+    const digits = String(raw || '').replace(/[^\d]/g, '');
+    if (!digits) return '';
+    return digits.startsWith(prefix) ? digits : prefix + digits;
+  };
+  const orange = withPrefix(process.env.MBO_DONATION_ORANGE);
+  const mtn = withPrefix(process.env.MBO_DONATION_MTN);
   const op = String(operator || '').toUpperCase();
   if (/^MTN/.test(op) && mtn) return { operator: 'MTN', phone: mtn };
   if (orange) return { operator: 'ORANGE', phone: orange };
