@@ -150,6 +150,8 @@ export async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verify_expires TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
     UPDATE users SET email_verified = TRUE WHERE email_verified IS NULL;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS activation_fee_paid BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS activation_fee_paid_at TIMESTAMPTZ;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS photos TEXT NOT NULL DEFAULT '[]';
     UPDATE products SET photos = json_build_array(image)::text WHERE image IS NOT NULL AND photos = '[]';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;
@@ -381,7 +383,44 @@ export async function initDb() {
 
     ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_transaction_type_check;
     ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_transaction_type_check CHECK (transaction_type IN ('commission_credit','referral_credit','payout_debit','adjustment','online_collect','online_payout'));
+
+    CREATE TABLE IF NOT EXISTS app_migrations (
+      id TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS seller_activation_payments (
+      id SERIAL PRIMARY KEY,
+      seller_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount NUMERIC(14,2) NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      operator TEXT,
+      phone_number TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      external_reference TEXT UNIQUE,
+      provider_transaction_id TEXT,
+      provider_payload JSONB,
+      paid_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_seller_activation_seller ON seller_activation_payments(seller_id);
+
+    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS payout_status TEXT DEFAULT 'pending';
+    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS payout_error TEXT;
+    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS payout_provider_transaction_id TEXT;
   `);
+
+  try {
+    const migrated = await q(
+      `INSERT INTO app_migrations (id) VALUES ('seller_activation_fee_grandfather')
+       ON CONFLICT (id) DO NOTHING RETURNING id`
+    );
+    if (migrated.length) {
+      await q(`UPDATE users SET activation_fee_paid = TRUE WHERE role = 'seller' AND activation_fee_paid = FALSE`);
+    }
+  } catch {
+    /* best effort : la grand-parentalité ne doit pas bloquer le démarrage */
+  }
 
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_sales_buyer ON sales(buyer_id) WHERE buyer_id IS NOT NULL;

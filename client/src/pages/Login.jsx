@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
-import { useAuth, dashboardPath } from '../App.jsx';
+import { useAuth, postLoginPath } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
 import Seo from '../components/Seo.jsx';
 import Logo from '../components/Logo.jsx';
@@ -24,7 +24,7 @@ export default function Login() {
       const data = await api.login(form);
       login(data.user, data.token);
       localStorage.setItem('mboppi_welcome', 'login');
-      navigate(dashboardPath(data.user.role));
+      navigate(postLoginPath(data.user));
     } catch (err) {
       if (err.code === 'EMAIL_NOT_VERIFIED') {
         setUnverified(err.email || form.email);

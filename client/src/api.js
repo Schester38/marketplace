@@ -151,4 +151,6 @@ export const api = {
   paymentConfig: () => request('/payments/config'),
   paymentOperators: (country) => request('/payments/operators?country=' + encodeURIComponent(country || '')),
   payin: (payload) => request('/payments/payin', { method: 'POST', body: JSON.stringify(payload) }),
+  paySellerFee: () => request('/payments/seller-fee', { method: 'POST' }),
+  sellerFeeStatus: () => request('/payments/seller-fee/status'),
 };

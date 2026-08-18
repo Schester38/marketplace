@@ -8,6 +8,8 @@ import Logo from '../components/Logo.jsx';
 import { COUNTRIES } from '../config.js';
 import { useLang } from '../i18n.jsx';
 
+const SELLER_WALLETS = ['Orange Money', 'MTN Mobile Money', 'Moov Money', 'Wave', 'Airtel Money', 'M-Pesa', 'T-Money'];
+
 export default function Register() {
   const { t } = useLang();
   const navigate = useNavigate();
@@ -19,6 +21,8 @@ export default function Register() {
     password: '',
     role: refCode ? 'client' : 'seller',
     country: '',
+    wallet_name: '',
+    wallet_phone: '',
   });
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
@@ -57,7 +61,14 @@ export default function Register() {
     if (!ensureAccepted()) return;
     try {
       const role = form.role === 'creator' ? 'seller' : form.role;
-      await api.register({ ...form, role, acceptedTerms: true, ref: refCode || undefined });
+      await api.register({
+        ...form,
+        role,
+        operator: form.wallet_name,
+        phone: form.wallet_phone,
+        acceptedTerms: true,
+        ref: refCode || undefined,
+      });
       setSent(true);
     } catch (err) {
       setError(err.message);
@@ -185,6 +196,34 @@ export default function Register() {
                 </label>
               </div>
             </>
+          )}
+
+          {!refCode && form.role === 'seller' && (
+            <div className="card wallet-card">
+              <label>{t('Votre portefeuille Mobile Money')}</label>
+              <select
+                className="input"
+                value={form.wallet_name}
+                onChange={(e) => setForm({ ...form, wallet_name: e.target.value })}
+              >
+                <option value="">{t('Choisir un opérateur…')}</option>
+                {SELLER_WALLETS.map((w) => (
+                  <option key={w} value={w}>{w}</option>
+                ))}
+              </select>
+              <label style={{ marginTop: 10 }}>{t('Numéro du portefeuille')}</label>
+              <input
+                className="input"
+                type="tel"
+                inputMode="tel"
+                value={form.wallet_phone}
+                onChange={(e) => setForm({ ...form, wallet_phone: e.target.value })}
+                placeholder="ex : 6XXXXXXXX"
+              />
+              <p className="hint" style={{ marginBottom: 0 }}>
+                {t('Ce portefeuille servira à régler vos frais d\'activation et à recevoir vos commissions.')}
+              </p>
+            </div>
           )}
 
           <label>{t('Nom complet / Nom de la boutique')}</label>

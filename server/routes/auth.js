@@ -45,13 +45,13 @@ function validEmail(v) {
 }
 
 function publicUser(u) {
-  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, city: u.city || null, quartier: u.quartier || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null, email_verified: !!u.email_verified };
+  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, city: u.city || null, quartier: u.quartier || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null, email_verified: !!u.email_verified, activation_fee_paid: !!u.activation_fee_paid };
 }
 
 const VALID_ROLES = ['shop', 'seller', 'client', 'creator', 'livreur'];
 
 router.post('/register', ah(async (req, res) => {
-  const { name, email, password, role, country, ref, acceptedTerms } = req.body || {};
+  const { name, email, password, role, country, ref, acceptedTerms, operator, phone } = req.body || {};
   if (acceptedTerms !== true) {
     return res.status(400).json({ error: 'Vous devez accepter les Conditions Générales d\'Utilisation pour vous inscrire' });
   }
@@ -93,6 +93,23 @@ router.post('/register', ah(async (req, res) => {
     [String(name).trim(), emailNorm, hash, finalRole, country ? String(country).trim() : null, referredBy]
   );
   const user = (await q('SELECT * FROM users WHERE id = $1', [created[0].id]))[0];
+
+  const walletName = operator ? String(operator).trim() : '';
+  const walletValue = phone ? String(phone).trim() : '';
+  if (finalRole === 'seller' && walletName && walletValue) {
+    try {
+      await q(
+        `INSERT INTO seller_payment_methods (seller_id, wallets, updated_at)
+         VALUES ($1, $2::jsonb, now())
+         ON CONFLICT (seller_id)
+         DO UPDATE SET wallets = EXCLUDED.wallets, updated_at = now()`,
+        [user.id, JSON.stringify([{ name: walletName, value: walletValue }])]
+      );
+    } catch (err) {
+      console.error('Enregistrement du portefeuille vendeur échoué:', err.message);
+    }
+  }
+
   try {
     await sendVerification(user);
   } catch (err) {

@@ -41,6 +41,7 @@ const Verone = lazyRetry(() => import('./pages/Verone.jsx'));
 const OfferDetail = lazyRetry(() => import('./pages/OfferDetail.jsx'));
 const ProductDetail = lazyRetry(() => import('./pages/ProductDetail.jsx'));
 const PurchasePage = lazyRetry(() => import('./pages/PurchasePage.jsx'));
+const Payment = lazyRetry(() => import('./pages/Payment.jsx'));
 const AuthGoogle = lazyRetry(() => import('./pages/AuthGoogle.jsx'));
 const About = lazyRetry(() => import('./pages/About.jsx'));
 const Contact = lazyRetry(() => import('./pages/Contact.jsx'));
@@ -70,6 +71,11 @@ export function dashboardPath(role) {
   if (role === 'livreur') return '/livreur';
   if (role === 'admin') return '/admin';
   return '/creator';
+}
+
+export function postLoginPath(user) {
+  if (user && user.role === 'seller' && !user.activation_fee_paid) return '/paiement';
+  return dashboardPath(user && user.role);
 }
 
 const WELCOME_PATHS = ['/', '/shop', '/seller', '/client', '/creator', '/livreur', '/admin'];
@@ -116,6 +122,14 @@ function RoleOnly({ role, children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== role) return <Navigate to="/" replace />;
+  return children;
+}
+
+function SellerActive({ children }) {
+  const { user } = useAuth();
+  if (user && user.role === 'seller' && !user.activation_fee_paid) {
+    return <Navigate to="/paiement" replace />;
+  }
   return children;
 }
 
@@ -249,7 +263,9 @@ export default function App() {
             path="/seller"
             element={
               <RoleOnly role="seller">
-                <SellerDashboard />
+                <SellerActive>
+                  <SellerDashboard />
+                </SellerActive>
               </RoleOnly>
             }
           />
@@ -257,7 +273,17 @@ export default function App() {
             path="/seller/paiements"
             element={
               <RoleOnly role="seller">
-                <SellerPayments />
+                <SellerActive>
+                  <SellerPayments />
+                </SellerActive>
+              </RoleOnly>
+            }
+          />
+          <Route
+            path="/paiement"
+            element={
+              <RoleOnly role="seller">
+                <Payment />
               </RoleOnly>
             }
           />

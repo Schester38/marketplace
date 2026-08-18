@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { useAuth, dashboardPath } from '../App.jsx';
+import { useAuth, postLoginPath } from '../App.jsx';
 import Seo from '../components/Seo.jsx';
 import Logo from '../components/Logo.jsx';
 import { useLang } from '../i18n.jsx';
@@ -35,7 +35,7 @@ export default function AuthGoogle() {
       .then((data) => {
         login(data.user, token);
         localStorage.setItem('mboppi_welcome', 'login');
-        navigate(dashboardPath(data.user.role), { replace: true });
+        navigate(postLoginPath(data.user), { replace: true });
       })
       .catch((e) => {
         localStorage.removeItem('token');

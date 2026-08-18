@@ -1,11 +1,16 @@
 import { Router } from 'express';
 import { q } from '../db.js';
-import { ikeepayPayin, ikeepayEnabled, countryInfo, normalizePhone } from '../ikeepay.js';
+import { authRequired, roleRequired } from '../auth.js';
+import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone, operatorFor } from '../ikeepay.js';
+import { defaultCurrencyFor } from '../currency.js';
 import { markSalePaid } from '../finance.js';
-import { handleDonationPaid } from './donations.js';
+import { handleDonationPaid, donationTarget } from './donations.js';
 
 const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+const SELLER_ACTIVATION_FEE = Number(process.env.SELLER_ACTIVATION_FEE || 1500);
+const SELLER_FEE_FAILED_STATUSES = ['failed', 'cancelled', 'expired', 'declined', 'rejected', 'refused'];
 
 function ikeepayConfig() {
   return {
@@ -119,6 +124,153 @@ router.post('/payin', ah(async (req, res) => {
   });
 }));
 
+router.post('/seller-fee', authRequired, roleRequired('seller'), ah(async (req, res) => {
+  if (!ikeepayEnabled()) return res.status(503).json({ error: 'Paiement iKeePay non configuré' });
+
+  const user = (await q('SELECT id, name, country, activation_fee_paid FROM users WHERE id = $1', [req.user.id]))[0];
+  if (!user) return res.status(404).json({ error: 'Compte introuvable' });
+  if (user.activation_fee_paid) {
+    return res.status(409).json({ error: 'Votre espace vendeur est déjà activé' });
+  }
+
+  const info = countryInfo(user.country);
+  if (!info) return res.status(422).json({ error: `Pays non pris en charge pour le paiement en ligne : ${user.country || '—'}` });
+
+  const m = (await q('SELECT wallets FROM seller_payment_methods WHERE seller_id = $1', [user.id]))[0];
+  const wallets = Array.isArray(m && m.wallets) ? m.wallets : [];
+  const wallet = wallets.find((w) => w && operatorFor(w.name) && String(w.value || '').replace(/\D/g, ''));
+  if (!wallet) {
+    return res.status(422).json({ error: 'Configurez d\'abord votre portefeuille Mobile Money (opérateur + numéro) avant de payer.' });
+  }
+
+  const normalized = info.prefix + normalizePhone(wallet.value, user.country);
+  if (!normalized || normalized === info.prefix) {
+    return res.status(422).json({ error: 'Numéro de portefeuille invalide. Mettez à jour vos moyens de paiement.' });
+  }
+
+  const operator = operatorFor(wallet.name);
+  const amount = SELLER_ACTIVATION_FEE;
+  const currency = defaultCurrencyFor(user.country);
+  const external_reference = `FEE:${user.id}`;
+
+  const provider = await ikeepayPayin({
+    amount,
+    currency,
+    country: info.code,
+    phoneNumber: normalized,
+    operator,
+    external_reference,
+    customer_email: user.email || undefined,
+  });
+  if (!provider) return res.status(502).json({ error: 'Aucune réponse du fournisseur de paiement' });
+
+  await q(
+    `INSERT INTO seller_activation_payments (seller_id, amount, currency, operator, phone_number, status, external_reference, provider_payload)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7)
+     ON CONFLICT (external_reference) DO UPDATE SET status = 'pending', provider_payload = EXCLUDED.provider_payload, paid_at = NULL, created_at = now()`,
+    [user.id, amount, currency, operator, normalized, external_reference, provider]
+  );
+
+  const queued = await q(
+    `INSERT INTO payment_webhook_logs (provider, provider_order_id, event, payload, status, handled)
+     VALUES ('ikeepay', $1, 'payin_initiated', $2, 'sent', FALSE) RETURNING id`,
+    [external_reference, provider]
+  );
+
+  res.json({
+    ok: true,
+    amount,
+    currency,
+    payment_link: provider.payment_link || provider.payment_url || null,
+    external_reference,
+    provider_transaction: provider.provider_reference || provider.transaction_id || null,
+    log_id: queued[0].id,
+  });
+}));
+
+router.get('/seller-fee/status', authRequired, roleRequired('seller'), ah(async (req, res) => {
+  const user = (await q('SELECT * FROM users WHERE id = $1', [req.user.id]))[0];
+  if (!user) return res.status(404).json({ error: 'Compte introuvable' });
+  const currency = defaultCurrencyFor(user.country);
+  const attempt = (await q(
+    `SELECT status, amount, currency AS attempt_currency, operator, paid_at, created_at, payout_status
+     FROM seller_activation_payments WHERE seller_id = $1
+     ORDER BY created_at DESC LIMIT 1`,
+    [user.id]
+  ))[0] || null;
+  res.json({
+    paid: Boolean(user.activation_fee_paid),
+    amount: SELLER_ACTIVATION_FEE,
+    currency,
+    attempt: attempt ? {
+      status: attempt.status,
+      amount: Number(attempt.amount),
+      currency: attempt.attempt_currency,
+      operator: attempt.operator,
+      paid_at: attempt.paid_at,
+      created_at: attempt.created_at,
+      payout_status: attempt.payout_status,
+    } : null,
+    user: {
+      id: user.id,
+      role: user.role,
+      name: user.name,
+      email: user.email,
+      country: user.country || null,
+      activation_fee_paid: Boolean(user.activation_fee_paid),
+    },
+  });
+}));
+
+export async function handleSellerActivationPaid(sellerId, { reference, transactionId, payload }) {
+  await q(
+    `UPDATE seller_activation_payments SET status = 'completed', provider_transaction_id = COALESCE(provider_transaction_id, $1), paid_at = COALESCE(paid_at, now())
+     WHERE external_reference = $2`,
+    [transactionId || null, reference]
+  );
+  await q(
+    `UPDATE users SET activation_fee_paid = TRUE, activation_fee_paid_at = COALESCE(activation_fee_paid_at, now()) WHERE id = $1`,
+    [sellerId]
+  );
+
+  const pay = (await q('SELECT * FROM seller_activation_payments WHERE external_reference = $1 LIMIT 1', [reference]))[0];
+  if (!pay) return { ok: true, payout: { initiated: false, reason: 'no_attempt' } };
+  if (pay.payout_status === 'done') return { ok: true, already: true, payout: { initiated: false } };
+
+  const target = donationTarget(pay.operator);
+  if (!target) {
+    await q(
+      `UPDATE seller_activation_payments SET payout_status = 'failed', payout_error = 'Portefeuille Mboppi non configuré (MBO_DONATION_ORANGE/MTN)' WHERE id = $1`,
+      [pay.id]
+    );
+    return { ok: true, payout: { initiated: false, error: 'Portefeuille Mboppi non configuré' } };
+  }
+
+  await q(`UPDATE seller_activation_payments SET payout_status = 'processing' WHERE id = $1`, [pay.id]);
+  try {
+    const info = countryInfo('Cameroun');
+    const provider = await ikeepayPayout({
+      amount: Number(pay.amount),
+      currency: defaultCurrencyFor('Cameroun'),
+      country: info ? info.code : 'CM',
+      phoneNumber: target.phone,
+      operator: target.operator,
+      external_reference: `PAYOUT_FEE:${pay.id}`,
+    });
+    await q(
+      `UPDATE seller_activation_payments SET payout_status = 'done', payout_provider_transaction_id = COALESCE(payout_provider_transaction_id, $1) WHERE id = $2`,
+      [provider.provider_reference || provider.transaction_id || null, pay.id]
+    );
+    return { ok: true, payout: { initiated: true, provider } };
+  } catch (err) {
+    await q(
+      `UPDATE seller_activation_payments SET payout_status = 'failed', payout_error = $1 WHERE id = $2`,
+      [String(err.message || err).slice(0, 1000), pay.id]
+    );
+    return { ok: true, payout: { initiated: false, error: err.message } };
+  }
+}
+
 router.post('/webhook/ikeepay', ah(async (req, res) => {
   const sentKey = String(req.headers['x-api-key'] || '');
   const secretKey = process.env.IKE_SECRET_KEY || '';
@@ -171,6 +323,34 @@ router.post('/webhook/ikeepay', ah(async (req, res) => {
         throw err;
       }
     }
+  }
+
+  if (kind === 'payin' && status === 'completed' && reference && reference.startsWith('FEE:')) {
+    const sellerId = Number(reference.split(':')[1]);
+    if (Number.isInteger(sellerId)) {
+      try {
+        const result = await handleSellerActivationPaid(sellerId, {
+          reference,
+          transactionId: data.provider_reference || null,
+          payload,
+        });
+        await q('UPDATE payment_webhook_logs SET handled = TRUE, status = $1 WHERE id = $2', ['seller_fee_paid', logId]);
+        return res.json({ received: true, log_id: logId, payment: 'seller_fee', result });
+      } catch (err) {
+        await q('UPDATE payment_webhook_logs SET status = $1, error = $2 WHERE id = $3', ['error', String(err.message || err).slice(0, 1000), logId]);
+        throw err;
+      }
+    }
+  }
+
+  if (kind === 'payin' && reference && reference.startsWith('FEE:') && SELLER_FEE_FAILED_STATUSES.includes(status)) {
+    await q(
+      `UPDATE seller_activation_payments SET status = 'failed', provider_payload = COALESCE(provider_payload, $1)
+       WHERE external_reference = $2`,
+      [payload, reference]
+    );
+    await q('UPDATE payment_webhook_logs SET handled = TRUE, status = $1 WHERE id = $2', ['seller_fee_failed', logId]);
+    return res.json({ received: true, log_id: logId, payment: 'seller_fee', status: 'failed' });
   }
 
   if (kind === 'payout') {

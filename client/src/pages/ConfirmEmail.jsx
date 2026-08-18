@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { useAuth } from '../App.jsx';
+import { useAuth, postLoginPath } from '../App.jsx';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
 
 export default function ConfirmEmail() {
   const { login } = useAuth();
   const { t } = useLang();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
   const emailParam = searchParams.get('email') || '';
@@ -29,7 +30,10 @@ export default function ConfirmEmail() {
       try {
         const data = await api.verifyEmail(token);
         setState('ok');
-        if (data.user && data.token) login(data.user, data.token);
+        if (data.user && data.token) {
+          login(data.user, data.token);
+          navigate(postLoginPath(data.user), { replace: true });
+        }
       } catch (err) {
         setState('error');
         setMessage(err.message);

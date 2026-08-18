@@ -1273,6 +1273,29 @@ const EN = {
   '📍 Ville de livraison': '📍 Delivery city',
   '📍 Quartier de livraison': '📍 Delivery neighbourhood',
   '📍 Détails de livraison': '📍 Delivery details',
+
+  // Activation vendeur
+  'Votre portefeuille Mobile Money': 'Your Mobile Money wallet',
+  'Choisir un opérateur…': 'Choose an operator…',
+  'Numéro du portefeuille': 'Wallet number',
+  'Ce portefeuille servira à régler vos frais d\'activation et à recevoir vos commissions.': 'This wallet will be used to pay your activation fee and to receive your commissions.',
+  'Activation': 'Activation',
+  'Activation de mon espace vendeur': 'Activating my seller space',
+  'Réglez vos frais d\'activation pour commencer à vendre sur Mboppi.': 'Pay your activation fee to start selling on Mboppi.',
+  'Pour vendre sur Mboppi, réglez vos frais d\'activation de {amount} {symbol}.': 'To sell on Mboppi, pay your {amount} {symbol} activation fee.',
+  'Frais d\'activation': 'Activation fee',
+  'Après confirmation, ce montant est reversé automatiquement aux portefeuilles de soutien Mboppi (Orange Money / MTN).': 'After confirmation, this amount is automatically reversed to Mboppi support wallets (Orange Money / MTN).',
+  'Choisissez votre opérateur de paiement.': 'Choose your payment operator.',
+  'Renseignez le numéro de votre portefeuille.': 'Enter your wallet number.',
+  'Enregistrer mon portefeuille': 'Save my wallet',
+  'Paiement depuis votre portefeuille': 'Payment from your wallet',
+  'Changer de portefeuille': 'Change wallet',
+  'Payer {amount} {symbol}': 'Pay {amount} {symbol}',
+  'Confirmez sur votre téléphone. Nous vous redirigeons vers votre espace dès que le paiement est détecté.': 'Confirm on your phone. We will redirect you to your space as soon as the payment is detected.',
+  'En attente du paiement…': 'Waiting for payment…',
+  'Demande de paiement en cours d\'envoi…': 'Sending the payment request…',
+  'Le paiement n\'a pas été effectué. Veuillez essayer à nouveau.': 'The payment was not completed. Please try again.',
+  'Réessayer le paiement': 'Retry payment',
 };
 
 const AR = {
@@ -2516,6 +2539,29 @@ const AR = {
   '📍 Quartier de livraison': '📍 حي التوصيل',
   '📍 Détails de livraison': '📍 تفاصيل التوصيل',
 
+  // Activation vendeur
+  'Votre portefeuille Mobile Money': 'محفظتك للدفع عبر الهاتف',
+  'Choisir un opérateur…': 'اختر مشغلاً…',
+  'Numéro du portefeuille': 'رقم المحفظة',
+  'Ce portefeuille servira à régler vos frais d\'activation et à recevoir vos commissions.': 'ستُستخدم هذه المحفظة لدفع رسوم التفعيل ولتلقي عمولاتك.',
+  'Activation': 'التفعيل',
+  'Activation de mon espace vendeur': 'تفعيل مساحة البائع الخاصة بي',
+  'Réglez vos frais d\'activation pour commencer à vendre sur Mboppi.': 'ادفع رسوم التفعيل لبدء البيع على Mboppi.',
+  'Pour vendre sur Mboppi, réglez vos frais d\'activation de {amount} {symbol}.': 'للبيع على Mboppi، سدد رسوم التفعيل البالغة {amount} {symbol}.',
+  'Frais d\'activation': 'رسوم التفعيل',
+  'Après confirmation, ce montant est reversé automatiquement aux portefeuilles de soutien Mboppi (Orange Money / MTN).': 'بعد التأكيد، يُحوَّل هذا المبلغ تلقائياً إلى محافظ دعم Mboppi (Orange Money / MTN).',
+  'Choisissez votre opérateur de paiement.': 'اختر مشغل الدفع.',
+  'Renseignez le numéro de votre portefeuille.': 'أدخل رقم محفظتك.',
+  'Enregistrer mon portefeuille': 'حفظ محفظتي',
+  'Paiement depuis votre portefeuille': 'الدفع من محفظتك',
+  'Changer de portefeuille': 'تغيير المحفظة',
+  'Payer {amount} {symbol}': 'ادفع {amount} {symbol}',
+  'Confirmez sur votre téléphone. Nous vous redirigeons vers votre espace dès que le paiement est détecté.': 'أكّد على هاتفك. سنعيد توجيهك إلى مساحتك بمجرد اكتشاف الدفع.',
+  'En attente du paiement…': 'بانتظار الدفع…',
+  'Demande de paiement en cours d\'envoi…': 'جارٍ إرسال طلب الدفع…',
+  'Le paiement n\'a pas été effectué. Veuillez essayer à nouveau.': 'لم يتم إتمام الدفع. يرجى المحاولة مرة أخرى.',
+  'Réessayer le paiement': 'إعادة محاولة الدفع',
+
 };
 
 const ES = {
@@ -3711,6 +3757,29 @@ const ES = {
   '📍 Ville de livraison': '📍 Ciudad de reparto',
   '📍 Quartier de livraison': '📍 Barrio de reparto',
   '📍 Détails de livraison': '📍 Detalles de entrega',
+
+  // Activation vendedor
+  'Votre portefeuille Mobile Money': 'Tu monedero de dinero móvil',
+  'Choisir un opérateur…': 'Elegir un operador…',
+  'Numéro du portefeuille': 'Número del monedero',
+  'Ce portefeuille servira à régler vos frais d\'activation et à recevoir vos commissions.': 'Este monedero se usará para pagar tu tarifa de activación y para recibir tus comisiones.',
+  'Activation': 'Activación',
+  'Activation de mon espace vendeur': 'Activación de mi espacio de vendedor',
+  'Réglez vos frais d\'activation pour commencer à vendre sur Mboppi.': 'Paga tu tarifa de activación para empezar a vender en Mboppi.',
+  'Pour vendre sur Mboppi, réglez vos frais d\'activation de {amount} {symbol}.': 'Para vender en Mboppi, paga tu tarifa de activación de {amount} {symbol}.',
+  'Frais d\'activation': 'Tarifa de activación',
+  'Après confirmation, ce montant est reversé automatiquement aux portefeuilles de soutien Mboppi (Orange Money / MTN).': 'Tras la confirmación, este importe se revierte automáticamente a los monederos de apoyo de Mboppi (Orange Money / MTN).',
+  'Choisissez votre opérateur de paiement.': 'Elige tu operador de pago.',
+  'Renseignez le numéro de votre portefeuille.': 'Introduce el número de tu monedero.',
+  'Enregistrer mon portefeuille': 'Guardar mi monedero',
+  'Paiement depuis votre portefeuille': 'Pago desde tu monedero',
+  'Changer de portefeuille': 'Cambiar de monedero',
+  'Payer {amount} {symbol}': 'Pagar {amount} {symbol}',
+  'Confirmez sur votre téléphone. Nous vous redirigeons vers votre espace dès que le paiement est détecté.': 'Confirma en tu teléfono. Te redirigimos a tu espacio en cuanto se detecte el pago.',
+  'En attente du paiement…': 'Esperando el pago…',
+  'Demande de paiement en cours d\'envoi…': 'Enviando la solicitud de pago…',
+  'Le paiement n\'a pas été effectué. Veuillez essayer à nouveau.': 'El pago no se completó. Inténtalo de nuevo.',
+  'Réessayer le paiement': 'Reintentar el pago',
 
 };
 

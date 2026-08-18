@@ -6,7 +6,7 @@ const router = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
-function donationTarget(operator) {
+export function donationTarget(operator) {
   const info = countryInfo('Cameroun');
   const prefix = info ? info.prefix : '237';
   const withPrefix = (raw) => {
