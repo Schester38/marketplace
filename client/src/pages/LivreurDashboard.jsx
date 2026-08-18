@@ -362,7 +362,7 @@ export default function LivreurDashboard() {
                       checked={deliverForm.payment_method === 'en ligne'}
                       onChange={(e) => setDeliverForm({ ...deliverForm, payment_method: e.target.value })}
                     />
-                    <span>🌐 {t('En ligne (auto)')}</span>
+                    <span>🌐 {t('En ligne (auto)')} <img src="/ikeepay-logo.png" alt="iKeePay" style={{ width: 18, height: 18, verticalAlign: -2, marginLeft: 4 }} /></span>
                   </label>
                 </div>
               )}
@@ -393,7 +393,8 @@ export default function LivreurDashboard() {
               {deliverForm.payment_method === 'en ligne' && (
                 <div className="wallet-card" style={{ marginTop: 10 }}>
                   <p className="hint" style={{ marginTop: 0 }}>
-                    {t('Le client recevra une demande de paiement mobile money sur son téléphone. Confirmez l\'opérateur et son numéro.')}
+                    <img src="/ikeepay-logo.png" alt="iKeePay" style={{ width: 16, height: 16, verticalAlign: -3, marginRight: 4 }} />
+                    {t('Paiement sécurisé par iKeePay. Le client recevra une demande de paiement mobile money sur son téléphone. Confirmez l\'opérateur et son numéro.')}
                   </p>
                   <label style={{ marginTop: 8 }}>{t('Opérateur')}</label>
                   <select
