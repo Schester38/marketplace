@@ -210,7 +210,7 @@ export default function MyAccount() {
   const [busy, setBusy] = useState(false);
 
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
-  const roleLabel = user?.role === 'shop' ? t('boutique') : user?.role === 'seller' ? t('vendeur') : user?.role === 'client' ? t('client') : t('créateur');
+  const roleLabel = user?.role === 'shop' ? t('boutique') : user?.role === 'seller' ? t('vendeur') : user?.role === 'client' ? t('client') : user?.role === 'livreur' ? t('livreur') : t('créateur');
 
   const saveProfile = async (e) => {
     e.preventDefault();

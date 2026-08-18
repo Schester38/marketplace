@@ -28,6 +28,9 @@ async function payoutTargetFor(user, kind) {
   } else if (kind === 'seller') {
     const m = (await q('SELECT wallets FROM seller_payment_methods WHERE seller_id = $1', [user.id]))[0];
     wallets = m && m.wallets;
+  } else if (kind === 'livreur') {
+    const m = (await q('SELECT wallets FROM livreur_payment_methods WHERE livreur_id = $1', [user.id]))[0];
+    wallets = m && m.wallets;
   }
 
   const walletList = Array.isArray(wallets) ? wallets : [];
@@ -78,7 +81,7 @@ export async function sendSalePayouts(sale, { kind }) {
     if (target) payouts.push({ target, amount: redistribution.referrerAmount, label: 'parrain', saleId: sale.id, user: referrer, txn: 'referral_credit' });
   }
   if (redistribution.livreurAmount > 0 && livreur) {
-    const target = await payoutTargetFor(livreur, 'seller');
+    const target = await payoutTargetFor(livreur, 'livreur');
     if (target) payouts.push({ target, amount: redistribution.livreurAmount, label: 'livreur', saleId: sale.id, user: livreur, txn: 'online_payout' });
   }
 

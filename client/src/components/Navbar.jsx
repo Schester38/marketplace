@@ -553,6 +553,7 @@ export default function Navbar({ onLogout }) {
       {user && user.role === 'client' && <Link to="/client" onClick={close}>{t('Mon espace client')}</Link>}
       {user && user.role === 'creator' && <Link to="/creator" onClick={close}>{t('Mon espace créateur')}</Link>}
       {user && user.role === 'livreur' && <Link to="/livreur" onClick={close}>🛵 {t('Mes livraisons')}</Link>}
+      {user && user.role === 'livreur' && <Link to="/livreur/paiements" onClick={close}>{t('Mes moyens de paiement')}</Link>}
       {user && user.role === 'admin' && <Link to="/admin" onClick={close}>🛡️ {t('Administration')}</Link>}
       {user && (
         <>

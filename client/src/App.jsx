@@ -32,6 +32,7 @@ const SellerDashboard = lazyRetry(() => import('./pages/SellerDashboard.jsx'));
 const SellerPayments = lazyRetry(() => import('./pages/SellerPayments.jsx'));
 const ShopPayments = lazyRetry(() => import('./pages/ShopPayments.jsx'));
 const LivreurDashboard = lazyRetry(() => import('./pages/LivreurDashboard.jsx'));
+const LivreurPayments = lazyRetry(() => import('./pages/LivreurPayments.jsx'));
 const ClientDashboard = lazyRetry(() => import('./pages/ClientDashboard.jsx'));
 const CreatorDashboard = lazyRetry(() => import('./pages/CreatorDashboard.jsx'));
 const VitrineOffre = lazyRetry(() => import('./pages/VitrineOffre.jsx'));
@@ -284,6 +285,14 @@ export default function App() {
             }
           />
           <Route path="/livreur" element={<LivreurDashboard />} />
+          <Route
+            path="/livreur/paiements"
+            element={
+              <RoleOnly role="livreur">
+                <LivreurPayments />
+              </RoleOnly>
+            }
+          />
           <Route path="/boutique/:id" element={<ShopPage />} />
           <Route path="/suivi/:id" element={<Suivi />} />
           <Route path="/cgv" element={<Cgv />} />

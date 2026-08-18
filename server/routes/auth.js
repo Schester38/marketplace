@@ -48,7 +48,7 @@ function publicUser(u) {
   return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, city: u.city || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null, email_verified: !!u.email_verified };
 }
 
-const VALID_ROLES = ['shop', 'seller', 'client', 'creator'];
+const VALID_ROLES = ['shop', 'seller', 'client', 'creator', 'livreur'];
 
 router.post('/register', ah(async (req, res) => {
   const { name, email, password, role, country, ref, acceptedTerms } = req.body || {};
@@ -71,7 +71,7 @@ router.post('/register', ah(async (req, res) => {
     finalRole = 'client';
   }
   if (!VALID_ROLES.includes(finalRole)) {
-    return res.status(400).json({ error: 'Le rôle doit être "shop" (boutique), "seller" (vendeur), "client" ou "creator" (créateur)' });
+    return res.status(400).json({ error: 'Le rôle doit être "shop" (boutique), "seller" (vendeur), "client", "livreur" ou "creator" (créateur)' });
   }
   if (String(password).length < MIN_PASSWORD) {
     return res.status(400).json({ error: 'Le mot de passe doit contenir au moins ' + MIN_PASSWORD + ' caractères' });

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import Seo from '../components/Seo.jsx';
 import PwaInstallButton from '../components/PwaInstallButton.jsx';
@@ -6,12 +7,14 @@ import { formatMoney } from '../components/ProductCard.jsx';
 import { downloadInvoice } from '../components/Invoice.jsx';
 import { countrySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
+import { useAuth } from '../App.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 
 const CODE_KEY = 'livreur_shop_code';
 
 export default function LivreurDashboard() {
   const { t } = useLang();
+  const { user } = useAuth();
   const [codeInput, setCodeInput] = useState('');
   const [code, setCode] = useState(() => localStorage.getItem(CODE_KEY) || '');
   const [shopName, setShopName] = useState(null);
@@ -163,7 +166,14 @@ export default function LivreurDashboard() {
           <h1>🛵 {t('Livraison')}</h1>
           <p>{t('Saisissez le code de votre boutique pour voir ses livraisons (en attente et effectuées).')}</p>
         </div>
-        <PwaInstallButton />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+          {user && user.role === 'livreur' && (
+            <Link to="/livreur/paiements" className="btn btn-outline btn-sm">
+              💳 {t('Mes moyens de paiement')}
+            </Link>
+          )}
+          <PwaInstallButton />
+        </div>
       </section>
 
       {!code ? (
