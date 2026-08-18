@@ -1283,7 +1283,8 @@ const EN = {
   'Activation de mon espace vendeur': 'Activating my seller space',
   'Réglez vos frais d\'activation pour commencer à vendre sur Mboppi.': 'Pay your activation fee to start selling on Mboppi.',
   'Pour vendre sur Mboppi, réglez vos frais d\'activation de {amount} {symbol}.': 'To sell on Mboppi, pay your {amount} {symbol} activation fee.',
-  'Frais d\'activation': 'Activation fee',
+  'Frais d\'activation mensuel': 'Monthly activation fee',
+  'Votre espace vendeur est activé pendant {days} jours à compter du paiement.': 'Your seller space is activated for {days} days from the payment.',
   'Choisissez votre opérateur de paiement.': 'Choose your payment operator.',
   'Renseignez le numéro de votre portefeuille.': 'Enter your wallet number.',
   'Enregistrer mon portefeuille': 'Save my wallet',
@@ -1295,6 +1296,10 @@ const EN = {
   'Demande de paiement en cours d\'envoi…': 'Sending the payment request…',
   'Le paiement n\'a pas été effectué. Veuillez essayer à nouveau.': 'The payment was not completed. Please try again.',
   'Réessayer le paiement': 'Retry payment',
+  'Votre abonnement expire dans {days} jours.': 'Your subscription expires in {days} days.',
+  'Votre abonnement expire demain.': 'Your subscription expires tomorrow.',
+  'Votre abonnement expire aujourd\'hui. Pensez à le renouveler.': 'Your subscription expires today. Remember to renew it.',
+  'Abonnement à vie : aucun renouvellement requis.': 'Lifetime subscription: no renewal required.',
 };
 
 const AR = {
@@ -2547,7 +2552,8 @@ const AR = {
   'Activation de mon espace vendeur': 'تفعيل مساحة البائع الخاصة بي',
   'Réglez vos frais d\'activation pour commencer à vendre sur Mboppi.': 'ادفع رسوم التفعيل لبدء البيع على Mboppi.',
   'Pour vendre sur Mboppi, réglez vos frais d\'activation de {amount} {symbol}.': 'للبيع على Mboppi، سدد رسوم التفعيل البالغة {amount} {symbol}.',
-  'Frais d\'activation': 'رسوم التفعيل',
+  'Frais d\'activation mensuel': 'رسوم التفعيل الشهرية',
+  'Votre espace vendeur est activé pendant {days} jours à compter du paiement.': 'يتم تفعيل مساحة البائع لمدة {days} يوماً ابتداءً من الدفع.',
   'Choisissez votre opérateur de paiement.': 'اختر مشغل الدفع.',
   'Renseignez le numéro de votre portefeuille.': 'أدخل رقم محفظتك.',
   'Enregistrer mon portefeuille': 'حفظ محفظتي',
@@ -2559,6 +2565,10 @@ const AR = {
   'Demande de paiement en cours d\'envoi…': 'جارٍ إرسال طلب الدفع…',
   'Le paiement n\'a pas été effectué. Veuillez essayer à nouveau.': 'لم يتم إتمام الدفع. يرجى المحاولة مرة أخرى.',
   'Réessayer le paiement': 'إعادة محاولة الدفع',
+  'Votre abonnement expire dans {days} jours.': 'ينتهي اشتراكك خلال {days} يوماً.',
+  'Votre abonnement expire demain.': 'ينتهي اشتراكك غداً.',
+  'Votre abonnement expire aujourd\'hui. Pensez à le renouveler.': 'ينتهي اشتراكك اليوم. تذكّر تجديده.',
+  'Abonnement à vie : aucun renouvellement requis.': 'اشتراك مدى الحياة: لا حاجة للتجديد.',
 
 };
 
@@ -3765,7 +3775,8 @@ const ES = {
   'Activation de mon espace vendeur': 'Activación de mi espacio de vendedor',
   'Réglez vos frais d\'activation pour commencer à vendre sur Mboppi.': 'Paga tu tarifa de activación para empezar a vender en Mboppi.',
   'Pour vendre sur Mboppi, réglez vos frais d\'activation de {amount} {symbol}.': 'Para vender en Mboppi, paga tu tarifa de activación de {amount} {symbol}.',
-  'Frais d\'activation': 'Tarifa de activación',
+  'Frais d\'activation mensuel': 'Tarifa de activación mensual',
+  'Votre espace vendeur est activé pendant {days} jours à compter du paiement.': 'Tu espacio de vendedor se activa durante {days} días a partir del pago.',
   'Choisissez votre opérateur de paiement.': 'Elige tu operador de pago.',
   'Renseignez le numéro de votre portefeuille.': 'Introduce el número de tu monedero.',
   'Enregistrer mon portefeuille': 'Guardar mi monedero',
@@ -3777,6 +3788,10 @@ const ES = {
   'Demande de paiement en cours d\'envoi…': 'Enviando la solicitud de pago…',
   'Le paiement n\'a pas été effectué. Veuillez essayer à nouveau.': 'El pago no se completó. Inténtalo de nuevo.',
   'Réessayer le paiement': 'Reintentar el pago',
+  'Votre abonnement expire dans {days} jours.': 'Tu suscripción caduca en {days} días.',
+  'Votre abonnement expire demain.': 'Tu suscripción caduca mañana.',
+  'Votre abonnement expire aujourd\'hui. Pensez à le renouveler.': 'Tu suscripción caduca hoy. Recuerda renovarla.',
+  'Abonnement à vie : aucun renouvellement requis.': 'Suscripción de por vida: no se requiere renovación.',
 
 };
 

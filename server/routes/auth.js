@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { q } from '../db.js';
-import { signToken, authRequired, roleRequired } from '../auth.js';
+import { signToken, authRequired, roleRequired, sellerActivationActive, sellerActivationExpiresAt } from '../auth.js';
 import { googleConfigured, googleAuthUrl, getGoogleProfile } from '../google.js';
 import { logAudit } from '../security.js';
 import { sendMail, verificationEmailHtml } from '../mailer.js';
@@ -45,7 +45,7 @@ function validEmail(v) {
 }
 
 function publicUser(u) {
-  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, city: u.city || null, quartier: u.quartier || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null, email_verified: !!u.email_verified, activation_fee_paid: !!u.activation_fee_paid };
+  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, city: u.city || null, quartier: u.quartier || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null, email_verified: !!u.email_verified, activation_fee_paid: sellerActivationActive(u), activation_expires_at: sellerActivationExpiresAt(u) };
 }
 
 const VALID_ROLES = ['shop', 'seller', 'client', 'creator', 'livreur'];

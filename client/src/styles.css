@@ -782,6 +782,20 @@ input, select, textarea { font-size: 16px; }
 .info-banner strong { white-space: nowrap; color: var(--warn); }
 .info-banner p { margin: 0; color: #78450e; font-size: 0.92rem; }
 
+.activation-countdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  background: #f8fafc;
+  border: 1px dashed currentColor;
+  text-align: center;
+}
+
 .dash-header {
   display: flex;
   justify-content: space-between;

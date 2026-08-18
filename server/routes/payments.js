@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { q } from '../db.js';
-import { authRequired, roleRequired } from '../auth.js';
+import { authRequired, roleRequired, sellerActivationActive, sellerActivationExpiresAt, SELLER_ACTIVATION_DAYS } from '../auth.js';
 import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone, operatorFor } from '../ikeepay.js';
 import { defaultCurrencyFor } from '../currency.js';
 import { markSalePaid } from '../finance.js';
@@ -127,9 +127,9 @@ router.post('/payin', ah(async (req, res) => {
 router.post('/seller-fee', authRequired, roleRequired('seller'), ah(async (req, res) => {
   if (!ikeepayEnabled()) return res.status(503).json({ error: 'Paiement iKeePay non configuré' });
 
-  const user = (await q('SELECT id, name, country, activation_fee_paid FROM users WHERE id = $1', [req.user.id]))[0];
+  const user = (await q('SELECT id, name, country, activation_fee_paid, activation_fee_paid_at FROM users WHERE id = $1', [req.user.id]))[0];
   if (!user) return res.status(404).json({ error: 'Compte introuvable' });
-  if (user.activation_fee_paid) {
+  if (sellerActivationActive(user)) {
     return res.status(409).json({ error: 'Votre espace vendeur est déjà activé' });
   }
 
@@ -199,9 +199,11 @@ router.get('/seller-fee/status', authRequired, roleRequired('seller'), ah(async 
     [user.id]
   ))[0] || null;
   res.json({
-    paid: Boolean(user.activation_fee_paid),
+    paid: sellerActivationActive(user),
     amount: SELLER_ACTIVATION_FEE,
     currency,
+    activation_period_days: SELLER_ACTIVATION_DAYS,
+    activation_expires_at: sellerActivationExpiresAt(user),
     attempt: attempt ? {
       status: attempt.status,
       amount: Number(attempt.amount),
@@ -217,7 +219,8 @@ router.get('/seller-fee/status', authRequired, roleRequired('seller'), ah(async 
       name: user.name,
       email: user.email,
       country: user.country || null,
-      activation_fee_paid: Boolean(user.activation_fee_paid),
+      activation_fee_paid: sellerActivationActive(user),
+      activation_expires_at: sellerActivationExpiresAt(user),
     },
   });
 }));
@@ -229,7 +232,7 @@ export async function handleSellerActivationPaid(sellerId, { reference, transact
     [transactionId || null, reference]
   );
   await q(
-    `UPDATE users SET activation_fee_paid = TRUE, activation_fee_paid_at = COALESCE(activation_fee_paid_at, now()) WHERE id = $1`,
+    `UPDATE users SET activation_fee_paid = TRUE, activation_fee_paid_at = now() WHERE id = $1`,
     [sellerId]
   );
 

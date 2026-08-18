@@ -35,3 +35,22 @@ export function roleRequired(...roles) {
     next();
   };
 }
+
+export const SELLER_ACTIVATION_DAYS = Number(process.env.SELLER_ACTIVATION_DAYS || 31);
+
+export function sellerActivationActive(u) {
+  if (!u) return false;
+  if (!u.activation_fee_paid) return false;
+  if (!u.activation_fee_paid_at) return true; // payé avant le système de durée : actif sans expiration
+  const start = new Date(u.activation_fee_paid_at).getTime();
+  if (Number.isNaN(start)) return true;
+  const periodMs = SELLER_ACTIVATION_DAYS * 24 * 60 * 60 * 1000;
+  return Date.now() - start < periodMs;
+}
+
+export function sellerActivationExpiresAt(u) {
+  if (!u || !u.activation_fee_paid || !u.activation_fee_paid_at) return null;
+  const start = new Date(u.activation_fee_paid_at).getTime();
+  if (Number.isNaN(start)) return null;
+  return new Date(start + SELLER_ACTIVATION_DAYS * 24 * 60 * 60 * 1000);
+}

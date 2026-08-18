@@ -35,6 +35,32 @@ async function copyText(text) {
   }
 }
 
+function ActivationCountdown({ expiresAt }) {
+  const { t } = useLang();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, []);
+  const end = new Date(expiresAt).getTime();
+  if (Number.isNaN(end)) return null;
+  const days = Math.ceil((end - now) / 86400000);
+  const color = days > 3 ? '#16a34a' : days > 1 ? 'var(--warn)' : 'var(--danger)';
+  let text;
+  if (days >= 2) {
+    text = t('Votre abonnement expire dans {days} jours.', { days });
+  } else if (days === 1) {
+    text = t('Votre abonnement expire demain.');
+  } else {
+    text = t('Votre abonnement expire aujourd\'hui. Pensez à le renouveler.');
+  }
+  return (
+    <p className="activation-countdown" style={{ color, borderColor: color }}>
+      ⏳ {text}
+    </p>
+  );
+}
+
 export default function SellerDashboard() {
   const { user } = useAuth();
   const { t } = useLang();
@@ -224,6 +250,12 @@ export default function SellerDashboard() {
           <p>{t('Sélectionnez un produit des boutiques et enregistrez une vente.')}</p>
         </div>
       </section>
+
+      {user && user.activation_expires_at ? (
+        <ActivationCountdown expiresAt={user.activation_expires_at} />
+      ) : (
+        <p className="hint" style={{ marginBottom: 20 }}>{t('Abonnement à vie : aucun renouvellement requis.')}</p>
+      )}
 
       <section className="card seller-code-card">
         <div>

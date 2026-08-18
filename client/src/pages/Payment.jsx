@@ -30,6 +30,7 @@ export default function Payment() {
   const [paid, setPaid] = useState(Boolean(user && user.activation_fee_paid));
   const [amount, setAmount] = useState(1500);
   const [currency, setCurrency] = useState('XAF');
+  const [activationDays, setActivationDays] = useState(31);
   const [walletName, setWalletName] = useState('');
   const [walletPhone, setWalletPhone] = useState('');
   const [hasWallet, setHasWallet] = useState(false);
@@ -66,6 +67,7 @@ export default function Payment() {
       const s = await api.sellerFeeStatus();
       setAmount(s.amount || amount);
       setCurrency(s.currency || 'XAF');
+      if (s.activation_period_days) setActivationDays(s.activation_period_days);
       if (s.paid) {
         setPaid(true);
         const fresh = await refreshMe();
@@ -91,6 +93,7 @@ export default function Payment() {
         const [status, methods] = await Promise.all([api.sellerFeeStatus(), api.getPaymentMethods()]);
         setAmount(status.amount || 1500);
         setCurrency(status.currency || 'XAF');
+        if (status.activation_period_days) setActivationDays(status.activation_period_days);
         if (status.paid) {
           setPaid(true);
           const fresh = await refreshMe();
@@ -189,9 +192,12 @@ export default function Payment() {
 
       <div className="card form-card">
         <div className="card page-center" style={{ marginBottom: 16, padding: 24 }}>
-          <p className="hint" style={{ marginTop: 0 }}>{t('Frais d\'activation')}</p>
+          <p className="hint" style={{ marginTop: 0 }}>{t('Frais d\'activation mensuel')}</p>
           <p className="price-line" style={{ fontSize: 34, fontWeight: 800 }}>
             {amount.toLocaleString('fr-FR')} {symbol}
+          </p>
+          <p className="hint">
+            {t('Votre espace vendeur est activé pendant {days} jours à compter du paiement.', { days: activationDays })}
           </p>
         </div>
 
