@@ -127,6 +127,7 @@ export default function Support() {
     {
       logo: <PaypalLogo />,
       name: t('PayPal'),
+      manual: true,
       rows: [
         { label: t('E-mail'), value: 'ndjoumjeanarthur@gmail.com', copyable: 'ndjoumjeanarthur@gmail.com' },
       ],
@@ -134,6 +135,7 @@ export default function Support() {
     {
       logo: <UbaLogo />,
       name: t('Virement bancaire (UBA)'),
+      manual: true,
       rows: [
         { label: 'SWIFT', value: 'UNAFCMCX', copyable: 'UNAFCMCX' },
         { label: 'IBAN', value: 'CM21 10033 05207 07002026857 58', copyable: 'CM2110033052070700202685758' },
@@ -220,6 +222,7 @@ export default function Support() {
             <div className="card support-card" key={m.name}>
               <div className="support-card-head">{m.logo}</div>
               <h3>{m.name}</h3>
+              {m.manual && <span className="badge badge-muted">{t('Manuel')}</span>}
               {m.rows.map((r) => (
                 <InfoRow
                   key={r.label}
