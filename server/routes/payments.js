@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { q } from '../db.js';
 import { ikeepayPayin, ikeepayEnabled, countryInfo, normalizePhone } from '../ikeepay.js';
 import { markSalePaid } from '../finance.js';
+import { handleDonationPaid } from './donations.js';
 
 const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -148,6 +149,23 @@ router.post('/webhook/ikeepay', ah(async (req, res) => {
         });
         await q('UPDATE payment_webhook_logs SET handled = TRUE, sale_id = $1, status = $2 WHERE id = $3', [saleId, 'completed', logId]);
         return res.json({ received: true, log_id: logId, payment: 'paid', result });
+      } catch (err) {
+        await q('UPDATE payment_webhook_logs SET status = $1, error = $2 WHERE id = $3', ['error', String(err.message || err).slice(0, 1000), logId]);
+        throw err;
+      }
+    }
+  }
+
+  if (kind === 'payin' && status === 'completed' && reference && reference.startsWith('DON:')) {
+    const donationId = Number(reference.split(':')[1]);
+    if (Number.isInteger(donationId)) {
+      try {
+        const result = await handleDonationPaid(donationId, {
+          transactionId: data.provider_reference || null,
+          payload,
+        });
+        await q('UPDATE payment_webhook_logs SET handled = TRUE, status = $1 WHERE id = $2', ['donation_paid', logId]);
+        return res.json({ received: true, log_id: logId, payment: 'donation', result });
       } catch (err) {
         await q('UPDATE payment_webhook_logs SET status = $1, error = $2 WHERE id = $3', ['error', String(err.message || err).slice(0, 1000), logId]);
         throw err;

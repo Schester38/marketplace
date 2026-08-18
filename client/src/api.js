@@ -106,6 +106,7 @@ export const api = {
   updateLivreurPaymentMethods: (payload) => request('/livreur/payment-methods', { method: 'PUT', body: JSON.stringify(payload) }),
   purchaseCreate: (payload) => request('/purchases', { method: 'POST', body: JSON.stringify(payload) }),
   purchasesMy: () => request('/purchases/my'),
+  createDonation: (payload) => request('/donations', { method: 'POST', body: JSON.stringify(payload) }),
   notifications: () => request('/notifications'),
   notificationsRead: () => request('/notifications/read', { method: 'POST' }),
   deleteNotification: (id) => request(`/notifications/${id}`, { method: 'DELETE' }),

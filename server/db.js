@@ -240,6 +240,26 @@ export async function initDb() {
       wallets JSONB NOT NULL DEFAULT '[]',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+
+    CREATE TABLE IF NOT EXISTS donations (
+      id SERIAL PRIMARY KEY,
+      amount NUMERIC(14,2) NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      country TEXT,
+      donor_name TEXT,
+      donor_phone TEXT,
+      operator TEXT,
+      donor_email TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      external_reference TEXT UNIQUE,
+      provider_transaction_id TEXT,
+      provider_payload JSONB,
+      payout_status TEXT NOT NULL DEFAULT 'none',
+      payout_provider_transaction_id TEXT,
+      payout_error TEXT,
+      paid_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
   `);
 
   await pool.query(`

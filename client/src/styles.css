@@ -3100,6 +3100,9 @@ a.step { text-decoration: none; color: inherit; }
   word-break: break-word;
 }
 .support-copy { flex-shrink: 0; }
+.support-donate { max-width: 520px; margin: 0 auto 26px; }
+.support-donate h3 { margin: 0 0 6px; }
+.support-donate .hint { margin-top: 0; }
 @media (max-width: 640px) {
   .support-grid { grid-template-columns: 1fr; }
 }
