@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { q } from '../db.js';
-import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone } from '../ikeepay.js';
+import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone, ikePayFeeNet } from '../ikeepay.js';
 
 const router = Router();
 
@@ -109,7 +109,7 @@ export async function handleDonationPaid(donationId, { transactionId, payload })
   try {
     const info = countryInfo('Cameroun');
     const provider = await ikeepayPayout({
-      amount: Number(donation.amount),
+      amount: ikePayFeeNet(donation.amount),
       currency: donation.currency || 'XAF',
       country: info ? info.code : 'CM',
       phoneNumber: target.phone,

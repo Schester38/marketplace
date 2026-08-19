@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { countrySymbol, categoryEmoji } from '../config.js';
+import { countrySymbol, categoryEmoji, IKE_FEE_PERCENT } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import Logo from '../components/Logo.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
+import IkeFeeNotice from '../components/IkeFeeNotice.jsx';
 import CopyCode from '../components/CopyCode.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
@@ -248,6 +249,13 @@ export default function PurchasePage() {
               </div>
             )}
             {error && <p className="error">{error}</p>}
+            {paymentMethod === 'mobile' && product && (
+              <IkeFeeNotice
+                amount={Number(product.price)}
+                currency={product.currency}
+                title={t('Frais iKeePay {percent} % sur les paiements en ligne', { percent: IKE_FEE_PERCENT })}
+              />
+            )}
             <button className="btn btn-primary btn-block" disabled={submitting}>
               {submitting ? '…' : `✅ ${t('Confirmer la Commande')}`}
             </button>

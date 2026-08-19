@@ -4,7 +4,8 @@ import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
-import { getCountry } from '../config.js';
+import { getCountry, IKE_FEE_PERCENT } from '../config.js';
+import IkeFeeNotice from '../components/IkeFeeNotice.jsx';
 
 export const WALLETS_BY_COUNTRY = {
   Cameroun: ['Orange Money', 'MTN Mobile Money', 'Yoomee', 'Virement bancaire'],
@@ -108,6 +109,8 @@ export default function SellerPayments() {
           <p>{t('Ces informations seront visibles par les boutiques pour vous payer vos commissions.')}</p>
         </div>
       </section>
+
+      <IkeFeeNotice title={t('Frais iKeePay {percent} % sur vos commissions', { percent: IKE_FEE_PERCENT })} />
 
       {loading ? (
         <div className="card page-center">

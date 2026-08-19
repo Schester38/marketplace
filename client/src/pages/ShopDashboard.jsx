@@ -7,10 +7,11 @@ import { downloadInvoice } from '../components/Invoice.jsx';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { compressImage, thumbFromDataUrl } from '../utils.js';
-import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from '../config.js';
+import { PRODUCT_CATEGORIES, countryPhone, countrySymbol, IKE_FEE_PERCENT } from '../config.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import ExportSalesButton from '../components/ExportSalesButton.jsx';
+import IkeFeeNotice from '../components/IkeFeeNotice.jsx';
 
 const EMPTY_FORM = {
   name: '',
@@ -707,6 +708,7 @@ export default function ShopDashboard() {
           <h2>{t('Statistiques des ventes')}</h2>
           <ExportSalesButton />
         </div>
+        <IkeFeeNotice title={t('Frais iKeePay {percent} % sur vos versements', { percent: IKE_FEE_PERCENT })} />
         {stats ? (
           <div className="stats-row">
             <div><span className="label">{t('Ventes enregistrées')}</span><strong>{stats.total_sales}</strong></div>

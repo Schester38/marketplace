@@ -1,5 +1,16 @@
 const API_BASE = process.env.IKE_API_BASE || 'https://api.ikeepay.com';
 
+export const IKE_FEE_PERCENT = 6;
+export function ikePayFee(amount) {
+  return Math.round((Number(amount) || 0) * IKE_FEE_PERCENT / 100);
+}
+export function ikePayFeeNet(amount) {
+  return Math.round((Number(amount) || 0) * (100 - IKE_FEE_PERCENT) / 100);
+}
+export function ikePayGrossUp(amount) {
+  return Math.round(((Number(amount) || 0) * 100) / (100 - IKE_FEE_PERCENT));
+}
+
 const COUNTRIES = {
   'Cameroun': { code: 'CM', prefix: '237' },
   "Côte d'Ivoire": { code: 'CI', prefix: '225' },

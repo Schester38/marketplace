@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
 import { downloadInvoice } from '../components/Invoice.jsx';
-import { BASE_URL, countrySymbol, whatsappLink } from '../config.js';
+import { BASE_URL, countrySymbol, whatsappLink, IKE_FEE_PERCENT } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import ExportSalesButton from '../components/ExportSalesButton.jsx';
+import IkeFeeNotice from '../components/IkeFeeNotice.jsx';
 
 const SALE_STATUS = {
   pending: { key: 'En attente de vente', cls: 'badge-pending' },
@@ -384,6 +385,7 @@ export default function SellerDashboard() {
             💳 {t('Modifier mon moyen de paiement')}
           </Link>
         </div>
+        <IkeFeeNotice title={t('Frais iKeePay {percent} % sur vos commissions', { percent: IKE_FEE_PERCENT })} />
         {(() => {
           const groups = new Map();
           for (const s of sales) {

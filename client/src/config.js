@@ -129,6 +129,20 @@ export function currencySymbol(code) {
   return CURRENCY_SYMBOLS[c] || c || 'XAF';
 }
 
+export const IKE_FEE_PERCENT = 6;
+
+export function ikePayFee(amount) {
+  return Math.round((Number(amount) || 0) * IKE_FEE_PERCENT / 100);
+}
+
+export function ikePayFeeNet(amount) {
+  return Math.round((Number(amount) || 0) * (100 - IKE_FEE_PERCENT) / 100);
+}
+
+export function ikePayGrossUp(amount) {
+  return Math.round(((Number(amount) || 0) * 100) / (100 - IKE_FEE_PERCENT));
+}
+
 export function countryPhone(countryName) {
   const c = getCountry(countryName);
   return c ? c.phone : '+237';

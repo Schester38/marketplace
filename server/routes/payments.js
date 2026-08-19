@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired, roleRequired, sellerActivationActive, sellerActivationExpiresAt, SELLER_ACTIVATION_DAYS } from '../auth.js';
-import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone, operatorFor } from '../ikeepay.js';
+import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone, operatorFor, ikePayFee, ikePayGrossUp, ikePayFeeNet } from '../ikeepay.js';
 import { defaultCurrencyFor } from '../currency.js';
 import { markSalePaid, payoutTargetFor } from '../finance.js';
 import { handleDonationPaid, donationTarget } from './donations.js';
@@ -76,6 +76,11 @@ router.post('/payin', ah(async (req, res) => {
     return res.status(422).json({ error: 'Montant invalide pour le paiement' });
   }
 
+  // Le client paie le total majoré des frais iKeePay (total ÷ 0,94) :
+  // iKeePay prélève 6 % de la demande, le solde marchand reçoit exactement le total.
+  const amount = ikePayGrossUp(total);
+  const fee = ikePayFee(amount);
+
   const phone = phone_number
     ? phone_number
     : sale.buyer_phone
@@ -87,7 +92,6 @@ router.post('/payin', ah(async (req, res) => {
   }
 
   const external_reference = `SALE:${sale.id}`;
-  const amount = Number(total);
 
   const provider = await ikeepayPayin({
     amount,
@@ -116,6 +120,9 @@ router.post('/payin', ah(async (req, res) => {
 
   res.json({
     ok: true,
+    base_total: total,
+    amount,
+    fee,
     payment_link: provider.payment_link || provider.payment_url || null,
     requires_otp: Boolean(provider.requires_otp || provider.otp_required),
     external_reference,
@@ -287,8 +294,9 @@ async function payoutActivationReferrer(pay, referralAmount) {
     const info = countryInfo(referrer.country);
     if (!info) throw new Error(`Pays du parrain non pris en charge : ${referrer.country}`);
     const currency = defaultCurrencyFor(referrer.country);
+    const netAmount = ikePayFeeNet(referralAmount);
     const provider = await ikeepayPayout({
-      amount: referralAmount,
+      amount: netAmount,
       currency,
       country: info.code,
       phoneNumber: target.phone,
@@ -300,11 +308,11 @@ async function payoutActivationReferrer(pay, referralAmount) {
       `INSERT INTO wallet_transactions (user_id, amount, currency, transaction_type, reference_type, reference_id, description)
        VALUES ($1, $2, $3, 'referral_credit', $4, $5, $6)
        ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
-      [pay.referrer_id, referralAmount, currency, ref, pay.id, `Commission parrainage vendeur — activation #${pay.id}`]
+      [pay.referrer_id, netAmount, currency, ref, pay.id, `Commission parrainage vendeur — activation #${pay.id} (frais iKeePay déduits)`]
     );
     await q(
       `UPDATE seller_activation_payments SET referral_payout_status = 'done', referral_amount = $1, referral_payout_provider_transaction_id = COALESCE(referral_payout_provider_transaction_id, $2) WHERE id = $3`,
-      [referralAmount, provider.provider_reference || provider.transaction_id || null, pay.id]
+      [netAmount, provider.provider_reference || provider.transaction_id || null, pay.id]
     );
     return { initiated: true, provider };
   } catch (err) {
@@ -330,7 +338,7 @@ async function payoutActivationSupport(pay, supportAmount) {
   try {
     const info = countryInfo('Cameroun');
     const provider = await ikeepayPayout({
-      amount: supportAmount,
+      amount: ikePayFeeNet(supportAmount),
       currency: defaultCurrencyFor('Cameroun'),
       country: info ? info.code : 'CM',
       phoneNumber: target.phone,

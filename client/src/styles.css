@@ -482,6 +482,19 @@ button.payment-option {
 }
 button.payment-option.active { border-color: var(--primary); box-shadow: var(--ring); background: color-mix(in srgb, var(--primary) 8%, var(--soft)); }
 .wallet-card { margin: 0 0 18px; }
+.ike-fee-notice {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid #ddd6fe;
+  background: #f5f3ff;
+  border-radius: 12px;
+  color: #4c1d95;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.ike-fee-notice-title { margin: 0 0 4px; font-weight: 700; }
+.ike-fee-notice-text { margin: 0; }
+.ike-fee-notice-amount { margin: 6px 0 0; font-weight: 600; }
 .wallet-name { font-weight: 600; min-width: 130px; flex-shrink: 0; }
 @media (max-width: 600px) {
   .livreur-item { flex-direction: column; align-items: stretch; }

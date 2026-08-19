@@ -5,10 +5,11 @@ import Seo from '../components/Seo.jsx';
 import PwaInstallButton from '../components/PwaInstallButton.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { downloadInvoice } from '../components/Invoice.jsx';
-import { countrySymbol } from '../config.js';
+import { countrySymbol, IKE_FEE_PERCENT, ikePayGrossUp } from '../config.js';
 import { useLang } from '../i18n.jsx';
 import { useAuth } from '../App.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
+import IkeFeeNotice from '../components/IkeFeeNotice.jsx';
 
 const CODE_KEY = 'livreur_shop_code';
 
@@ -175,6 +176,8 @@ export default function LivreurDashboard() {
           <PwaInstallButton />
         </div>
       </section>
+
+      <IkeFeeNotice title={t('Frais iKeePay {percent} % sur vos frais de livraison', { percent: IKE_FEE_PERCENT })} />
 
       {!code ? (
         <section className="card form-card" style={{ maxWidth: 480, margin: '24px auto' }}>
@@ -392,6 +395,20 @@ export default function LivreurDashboard() {
               )}
               {deliverForm.payment_method === 'en ligne' && (
                 <div className="wallet-card" style={{ marginTop: 10 }}>
+                  {(() => {
+                    const total = Math.round((Number(deliverForm.sale.total_price || 0) + Number(deliverForm.delivery_fee || 0)) * 100) / 100;
+                    const charged = ikePayGrossUp(total);
+                    return (
+                      <p className="hint" style={{ marginTop: 0, fontWeight: 600 }}>
+                        {t('Le client paiera : {charged} ({total} + {fee} de frais iKeePay {percent} %)', {
+                          charged: formatMoney(charged),
+                          total: formatMoney(total),
+                          fee: formatMoney(charged - total),
+                          percent: IKE_FEE_PERCENT,
+                        })}
+                      </p>
+                    );
+                  })()}
                   <p className="hint" style={{ marginTop: 0 }}>
                     <img src="/ikeepay-logo.png" alt="iKeePay" style={{ width: 16, height: 16, verticalAlign: -3, marginRight: 4 }} />
                     {t('Paiement sécurisé par iKeePay. Le client recevra une demande de paiement mobile money sur son téléphone. Confirmez l\'opérateur et son numéro.')}

@@ -1,5 +1,5 @@
 import { q } from './db.js';
-import { ikeepayPayout, countryInfo, operatorFor, normalizePhone } from './ikeepay.js';
+import { ikeepayPayout, countryInfo, operatorFor, normalizePhone, ikePayFeeNet } from './ikeepay.js';
 import { defaultCurrencyFor } from './currency.js';
 import { sendPush } from './push.js';
 
@@ -85,19 +85,19 @@ export async function sendSalePayouts(sale, { kind }) {
 
   if (redistribution.shopAmount > 0 && shop) {
     const target = await payoutTargetFor(shop, 'shop');
-    if (target) payouts.push({ target, amount: redistribution.shopAmount, label: 'boutique', saleId: sale.id, user: shop, txn: 'online_collect' });
+    if (target) payouts.push({ target, amount: ikePayFeeNet(redistribution.shopAmount), label: 'boutique', saleId: sale.id, user: shop, txn: 'online_collect' });
     else noTarget.push({ label: 'boutique', amount: redistribution.shopAmount, user: shop });
   }
   if (redistribution.sellerAmount > 0 && seller) {
     const target = await payoutTargetFor(seller, 'seller');
-    if (target) payouts.push({ target, amount: redistribution.sellerAmount, label: 'vendeur', saleId: sale.id, user: seller, txn: 'commission_credit' });
+    if (target) payouts.push({ target, amount: ikePayFeeNet(redistribution.sellerAmount), label: 'vendeur', saleId: sale.id, user: seller, txn: 'commission_credit' });
     else noTarget.push({ label: 'vendeur', amount: redistribution.sellerAmount, user: seller });
   }
   // La commission de parrainage (2%) n'est plus versée à chaque vente :
   // elle s'accumule et est payée automatiquement au vendeur parrain dès le seuil REFERRAL_AUTO_PAY_MIN atteint.
   if (redistribution.livreurAmount > 0 && livreur) {
     const target = await payoutTargetFor(livreur, 'livreur');
-    if (target) payouts.push({ target, amount: redistribution.livreurAmount, label: 'livreur', saleId: sale.id, user: livreur, txn: 'online_payout' });
+    if (target) payouts.push({ target, amount: ikePayFeeNet(redistribution.livreurAmount), label: 'livreur', saleId: sale.id, user: livreur, txn: 'online_payout' });
     else noTarget.push({ label: 'livreur', amount: redistribution.livreurAmount, user: livreur });
   }
 
@@ -189,7 +189,7 @@ export async function maybeAutoPayReferrals(referrerId) {
     const currency = defaultCurrencyFor(referrer.country);
 
     const provider = await ikeepayPayout({
-      amount: total,
+      amount: ikePayFeeNet(total),
       currency,
       country: info.code,
       phoneNumber: target.phone,
@@ -208,11 +208,11 @@ export async function maybeAutoPayReferrals(referrerId) {
         `INSERT INTO wallet_transactions (user_id, amount, currency, transaction_type, reference_type, reference_id, description)
          VALUES ($1, $2, $3, 'referral_credit', 'sale', $4, $5)
          ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
-        [referrerId, Number(row.referral_commission), currency, Number(row.id), 'Commission de parrainage (versement automatique)']
+        [referrerId, ikePayFeeNet(Number(row.referral_commission)), currency, Number(row.id), 'Commission de parrainage (versement automatique, frais iKeePay déduits)']
       );
     }
 
-    const actualPaid = Math.round(marked.reduce((a, r) => a + Number(r.referral_commission || 0), 0) * 100) / 100;
+    const actualPaid = Math.round(marked.reduce((a, r) => a + ikePayFeeNet(Number(r.referral_commission || 0)), 0) * 100) / 100;
     if (actualPaid > 0) {
       await q(
         `INSERT INTO notifications (user_id, type, amount) VALUES ($1, 'referral_paid', $2)`,

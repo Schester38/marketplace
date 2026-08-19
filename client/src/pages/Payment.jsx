@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../App.jsx';
-import { currencySymbol } from '../config.js';
+import { currencySymbol, IKE_FEE_PERCENT } from '../config.js';
 import Seo from '../components/Seo.jsx';
+import IkeFeeNotice from '../components/IkeFeeNotice.jsx';
 import { useLang } from '../i18n.jsx';
 
 const WALLET_OPTIONS = ['Orange Money', 'MTN Mobile Money', 'Moov Money', 'Wave', 'Airtel Money', 'M-Pesa', 'T-Money'];
@@ -200,6 +201,12 @@ export default function Payment() {
             {t('Votre espace vendeur est activé pendant {days} jours à compter du paiement.', { days: activationDays })}
           </p>
         </div>
+
+        <IkeFeeNotice
+          amount={amount}
+          currency={currency}
+          title={t('Frais iKeePay {percent} % sur vos frais d\'activation', { percent: IKE_FEE_PERCENT })}
+        />
 
         {!hasWallet || showWalletForm ? (
           <form onSubmit={saveWallet}>
