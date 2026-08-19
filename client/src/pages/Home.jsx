@@ -63,6 +63,8 @@ export default function Home() {
   const produitsRef = useRef(null);
   const [trending, setTrending] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
+  const [popular, setPopular] = useState([]);
+  const [activeRail, setActiveRail] = useState('');
   const [recent, setRecent] = useState(() => {
     try {
       const list = JSON.parse(localStorage.getItem('mboppi_recent') || '[]');
@@ -115,8 +117,12 @@ export default function Home() {
       .then((d) => ok && setTrending(d.products || []))
       .catch(() => {});
     api
-      .listProducts({ sort: 'popular', limit: 10 })
+      .listProducts({ sort: 'sales', limit: 10 })
       .then((d) => ok && setBestSellers(d.products || []))
+      .catch(() => {});
+    api
+      .listProducts({ sort: 'popular', limit: 10 })
+      .then((d) => ok && setPopular(d.products || []))
       .catch(() => {});
     return () => {
       ok = false;
@@ -368,7 +374,47 @@ const loadProducts = useCallback(
           </div>
           {mode === 'products' && !category && !minPrice && !maxPrice && !search.trim() && scope === 'product' && (
             <>
-              {recent.length > 0 && (
+              {(recent.length > 0 || trending.length > 0 || bestSellers.length > 0 || popular.length > 0) && (
+                <div className="home-tabs">
+                  {recent.length > 0 && (
+                    <button
+                      type="button"
+                      className={`home-tab ${activeRail === 'recent' ? 'active' : ''}`}
+                      onClick={() => setActiveRail(activeRail === 'recent' ? '' : 'recent')}
+                    >
+                      👀 {t('Vus récemment')}
+                    </button>
+                  )}
+                  {trending.length > 0 && (
+                    <button
+                      type="button"
+                      className={`home-tab ${activeRail === 'trending' ? 'active' : ''}`}
+                      onClick={() => setActiveRail(activeRail === 'trending' ? '' : 'trending')}
+                    >
+                      ⚡ {t('Tendances de la semaine')}
+                    </button>
+                  )}
+                  {bestSellers.length > 0 && (
+                    <button
+                      type="button"
+                      className={`home-tab ${activeRail === 'best' ? 'active' : ''}`}
+                      onClick={() => setActiveRail(activeRail === 'best' ? '' : 'best')}
+                    >
+                      🔥 {t('Meilleures ventes')}
+                    </button>
+                  )}
+                  {popular.length > 0 && (
+                    <button
+                      type="button"
+                      className={`home-tab ${activeRail === 'popular' ? 'active' : ''}`}
+                      onClick={() => setActiveRail(activeRail === 'popular' ? '' : 'popular')}
+                    >
+                      🔥 {t('Plus populaires')}
+                    </button>
+                  )}
+                </div>
+              )}
+              {activeRail === 'recent' && recent.length > 0 && (
                 <ProductRail
                   title={t('Vus récemment')}
                   hint={t('Reprenez là où vous vous étiez arrêté.')}
@@ -376,7 +422,7 @@ const loadProducts = useCallback(
                   products={recent}
                 />
               )}
-              {trending.length > 0 && (
+              {activeRail === 'trending' && trending.length > 0 && (
                 <ProductRail
                   title={t('Tendances de la semaine')}
                   hint={t('Les produits les plus consultés ces 7 derniers jours.')}
@@ -385,12 +431,20 @@ const loadProducts = useCallback(
                   badge={{ cls: 'badge-hot', text: t('⭐ Populaire') }}
                 />
               )}
-              {bestSellers.length > 0 && (
+              {activeRail === 'best' && bestSellers.length > 0 && (
                 <ProductRail
                   title={t('Meilleures ventes')}
                   hint={t('Les produits les plus commandés.')}
                   emoji="🔥"
                   products={bestSellers}
+                />
+              )}
+              {activeRail === 'popular' && popular.length > 0 && (
+                <ProductRail
+                  title={t('Plus populaires')}
+                  hint={t('Les produits les plus consultés et commandés.')}
+                  emoji="🔥"
+                  products={popular}
                 />
               )}
             </>

@@ -72,6 +72,7 @@ const NORMALIZE_TEXT = (col) =>
 const SORTS = {
   recent: 'p.created_at DESC',
   popular: '(COALESCE(s.n, 0) * 3 + COALESCE(v.w1_views, 0)) DESC, p.created_at DESC',
+  sales: 'COALESCE(s.n, 0) DESC, p.created_at DESC',
   price_asc: 'p.price ASC, p.created_at DESC',
   price_desc: 'p.price DESC, p.created_at DESC',
   rating: 'COALESCE(r.rating_avg, 0) DESC, p.created_at DESC',
