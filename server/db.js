@@ -134,7 +134,6 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id);
     CREATE INDEX IF NOT EXISTS idx_sales_seller ON sales(seller_id);
     CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(status);
-    CREATE INDEX IF NOT EXISTS idx_sales_confirm_code ON sales(confirm_code) WHERE confirm_code IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
   `);
 
@@ -491,6 +490,7 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id) WHERE read = FALSE;
     CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_users_city ON users(city);
+    CREATE INDEX IF NOT EXISTS idx_sales_confirm_code ON sales(confirm_code) WHERE confirm_code IS NOT NULL;
   `);
 
   try {
