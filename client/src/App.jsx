@@ -259,7 +259,7 @@ export default function App() {
               <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/panier" element={<Cart />} />
-            <Route path="/favoris" element={<Favorites />} />
+            <Route path="/favoris" element={<Protected><Favorites /></Protected>} />
             <Route path="/a-propos" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/donnees" element={<Privacy />} />

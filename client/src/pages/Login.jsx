@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth, postLoginPath } from '../App.jsx';
 import { GoogleIcon } from '../components/icons.jsx';
@@ -11,6 +11,7 @@ export default function Login() {
   const { login } = useAuth();
   const { t } = useLang();
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [unverified, setUnverified] = useState('');
@@ -24,7 +25,8 @@ export default function Login() {
       const data = await api.login(form);
       login(data.user, data.token);
       localStorage.setItem('mboppi_welcome', 'login');
-      navigate(postLoginPath(data.user));
+      const from = location.state?.from;
+      navigate(typeof from === 'string' && from ? from : postLoginPath(data.user));
     } catch (err) {
       if (err.code === 'EMAIL_NOT_VERIFIED') {
         setUnverified(err.email || form.email);

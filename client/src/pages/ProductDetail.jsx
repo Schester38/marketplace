@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
@@ -18,6 +18,7 @@ export default function ProductDetail() {
   const [params] = useSearchParams();
   const sellerCode = params.get('code');
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { t } = useLang();
   const { addToCart } = useCart();
@@ -312,7 +313,13 @@ export default function ProductDetail() {
             <button
               type="button"
               className={`btn btn-outline ${isFav(product.id) ? 'fav-on' : ''}`}
-              onClick={() => toggleFav(product.id)}
+              onClick={() => {
+                if (!user) {
+                  navigate('/login', { state: { from: location.pathname } });
+                  return;
+                }
+                toggleFav(product.id);
+              }}
             >
               {isFav(product.id) ? '❤️ ' + t('Retirer des favoris') : '🤍 ' + t('Ajouter aux favoris')}
             </button>

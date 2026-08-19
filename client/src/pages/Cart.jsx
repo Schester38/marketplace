@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
 import { formatMoney } from '../components/ProductCard.jsx';
@@ -12,6 +12,7 @@ import CopyCode from '../components/CopyCode.jsx';
 export default function Cart() {
   const { user } = useAuth();
   const { t } = useLang();
+  const navigate = useNavigate();
   const { cart, setQty, removeFromCart, clearCart, cartCount, cartTotal } = useCart();
   const [buyerName, setBuyerName] = useState(user ? user.name : '');
   const [phone, setPhone] = useState('');
@@ -24,6 +25,10 @@ export default function Cart() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!user) {
+      navigate('/login', { state: { from: '/panier' } });
+      return;
+    }
     if (!buyerName.trim() || !phone.trim() || !city.trim() || !address.trim()) {
       setError(t('Veuillez remplir tous les champs.'));
       return;

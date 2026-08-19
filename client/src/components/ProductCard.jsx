@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { countrySymbol, waLink } from '../config.js';
+import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
 import { useCart, useFavs } from '../store.jsx';
 
@@ -10,6 +11,9 @@ export function formatMoney(n) {
 
 export default function ProductCard({ product, action, onAction, secondaryAction, onSecondaryAction, showCommission, badge, extraAction }) {
   const { t } = useLang();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { addToCart } = useCart();
   const { isFav, toggleFav } = useFavs();
   const [added, setAdded] = useState(false);
@@ -48,7 +52,13 @@ export default function ProductCard({ product, action, onAction, secondaryAction
         className={`fav-btn ${fav ? 'active' : ''}`}
         aria-label={fav ? t('Retirer des favoris') : t('Ajouter aux favoris')}
         title={fav ? t('Retirer des favoris') : t('Ajouter aux favoris')}
-        onClick={() => toggleFav(product.id)}
+        onClick={() => {
+          if (!user) {
+            navigate('/login', { state: { from: location.pathname } });
+            return;
+          }
+          toggleFav(product.id);
+        }}
       >
         {fav ? '❤️' : '🤍'}
       </button>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { countrySymbol, categoryEmoji, IKE_FEE_PERCENT } from '../config.js';
 import Seo from '../components/Seo.jsx';
@@ -15,6 +15,8 @@ export default function PurchasePage() {
   const [params] = useSearchParams();
   const { user } = useAuth();
   const { t } = useLang();
+  const navigate = useNavigate();
+  const location = useLocation();
   const linkCode = (params.get('code') || '').trim().toUpperCase();
   const [product, setProduct] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -59,6 +61,10 @@ export default function PurchasePage() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!user) {
+      navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
     setSubmitting(true);
     try {
       const d = await api.purchaseCreate({
