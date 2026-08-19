@@ -3,7 +3,8 @@ import { q } from '../db.js';
 import { authRequired, roleRequired, signToken } from '../auth.js';
 import { logAudit } from '../security.js';
 import { migrateImages } from '../migrate-images.js';
-import { cleanupOutOfStock } from '../cleanup.js';
+import { cleanupOutOfStock, cleanupOldStats, dbUsageReport } from '../cleanup.js';
+import { storageUsage } from '../storage.js';
 
 const router = Router();
 
@@ -295,8 +296,23 @@ router.post('/migrate-images', ah(async (req, res) => {
 router.post('/cleanup-stockout', ah(async (req, res) => {
   const dryRun = req.query.dry_run === '1' || req.body?.dry_run === true;
   const summary = await cleanupOutOfStock({ dryRun });
+  const stats = dryRun ? [] : await cleanupOldStats();
   await logAudit(req.user.id, 'admin.cleanup_stockout', JSON.stringify(summary), req.ip);
-  res.json({ ok: true, ...summary });
+  res.json({ ok: true, ...summary, purge_statistiques: stats });
+}));
+
+router.get('/usage', ah(async (req, res) => {
+  const [base, storage] = await Promise.allSettled([
+    dbUsageReport(),
+    storageUsage(),
+  ]);
+  await logAudit(req.user.id, 'admin.usage', 'Rapport d’usage consulté', req.ip);
+  res.json({
+    ok: true,
+    date: new Date().toISOString(),
+    base: base.status === 'fulfilled' ? base.value : { erreur: base.reason?.message },
+    storage: storage.status === 'fulfilled' ? storage.value : { erreur: storage.reason?.message },
+  });
 }));
 
 export default router;

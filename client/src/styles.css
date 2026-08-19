@@ -3233,15 +3233,22 @@ a.step { text-decoration: none; color: inherit; }
 .cat-strip {
   order: 4;
   flex-basis: 100%;
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
+  overflow: hidden;
   margin-top: 8px;
   padding-bottom: 2px;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
 }
-.cat-strip::-webkit-scrollbar { display: none; }
+.cat-strip-track {
+  display: flex;
+  width: max-content;
+  animation: cat-scroll 40s linear infinite;
+  will-change: transform;
+}
+.cat-strip:hover .cat-strip-track,
+.cat-strip:focus-within .cat-strip-track { animation-play-state: paused; }
+.cat-strip-set { display: flex; gap: 6px; }
+.cat-strip-set a:last-child { margin-right: 6px; }
 .cat-strip a {
   flex: 0 0 auto;
   white-space: nowrap;
@@ -3254,6 +3261,14 @@ a.step { text-decoration: none; color: inherit; }
   background: var(--card);
 }
 .cat-strip a:hover, .cat-strip a:focus-visible { border-color: var(--primary); color: var(--primary); }
+@keyframes cat-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cat-strip { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .cat-strip-track { animation: none; width: auto; flex-wrap: nowrap; }
+}
 
 /* ---------- Rails de recommandations ---------- */
 .product-rail { margin: 4px 0 24px; }

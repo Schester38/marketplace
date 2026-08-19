@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v29';
+const CACHE_NAME = 'mboppi-v30';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/og-image.svg', '/og-image.png', '/robots.txt', '/sitemap.xml', '/splash.js'];
 
 self.addEventListener('install', (event) => {
@@ -68,8 +68,32 @@ self.addEventListener('notificationclick', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (url.origin !== location.origin) return;
   if (event.request.method !== 'GET') return;
+
+  // Images produits (origin Supabase Storage) : cache-first pour que les photos
+  // déjà vues restent visibles hors connexion. Les URLs sont uniques par upload
+  // (timestamp + uuid), donc pas de risque de servir une version périmée.
+  if (/storage\.supabase\.co/.test(url.hostname)) {
+    event.respondWith(
+      (async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        try {
+          const resp = await fetch(event.request);
+          if (resp && (resp.ok || resp.type === 'opaque')) {
+            const clone = resp.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return resp;
+        } catch (err) {
+          return cached || new Response('Image indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
+        }
+      })()
+    );
+    return;
+  }
+
+  if (url.origin !== location.origin) return;
 
   if (url.pathname.startsWith('/api/')) {
     if (url.pathname === '/api/offers' || url.pathname === '/api/products' || url.pathname === '/api/offers/mine') {

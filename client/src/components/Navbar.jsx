@@ -632,12 +632,18 @@ export default function Navbar({ onLogout }) {
       </form>
 
       <nav className="cat-strip" aria-label={t('Catégories')}>
-        <Link to="/" onClick={close}>{t('Tous les produits')}</Link>
-        {PRODUCT_CATEGORIES.map((c) => (
-          <Link key={c} to={`/?cat=${encodeURIComponent(c)}`} onClick={close}>
-            {categoryEmoji(c)} {t(c)}
-          </Link>
-        ))}
+        <div className="cat-strip-track">
+          {[0, 1].map((copy) => (
+            <div className="cat-strip-set" key={copy} aria-hidden={copy === 1 || undefined}>
+              <Link to="/" onClick={close}>{t('Tous les produits')}</Link>
+              {PRODUCT_CATEGORIES.map((c) => (
+                <Link key={c} to={`/?cat=${encodeURIComponent(c)}`} onClick={close}>
+                  {categoryEmoji(c)} {t(c)}
+                </Link>
+              ))}
+            </div>
+          ))}
+        </div>
       </nav>
 
       {open && <div className="drawer-overlay" onClick={close}></div>}

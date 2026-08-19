@@ -175,3 +175,35 @@ export async function deleteStorageKeys(keys) {
   }
   return deleted;
 }
+
+// Estime l'occupation du bucket (nb de fichiers + taille totale) en listant les
+// objets par pages de 1000. Utile pour surveiller le quota gratuit du Storage.
+export async function storageUsage() {
+  if (!SUPABASE_URL || !SERVICE_KEY) return null;
+  const token = apiToken();
+  let count = 0;
+  let bytes = 0;
+  let offset = 0;
+  for (;;) {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${BUCKET}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, apikey: token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix: '', limit: 1000, offset }),
+    });
+    if (!res.ok) {
+      throw new Error(`Liste du bucket ${BUCKET} échouée (${res.status})`);
+    }
+    const items = await res.json();
+    if (!Array.isArray(items) || items.length === 0) break;
+    for (const it of items) {
+      if (it && it.id) {
+        count += 1;
+        const m = it.metadata || {};
+        bytes += Number(m.size || m.contentLength || 0) || 0;
+      }
+    }
+    offset += items.length;
+    if (items.length < 1000) break;
+  }
+  return { count, bytes };
+}
