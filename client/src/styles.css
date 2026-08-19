@@ -298,6 +298,7 @@ main { animation: pageIn 0.35s ease; }
   padding: 6px 6px 6px 18px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
   gap: 8px;
+  position: relative;
 }
 .hero-search .emoji { font-size: 1.1rem; }
 .hero-search input {
@@ -313,6 +314,63 @@ main { animation: pageIn 0.35s ease; }
 .hero-search input:focus { outline: none; }
 .hero-search input::placeholder { color: var(--muted); opacity: 1; }
 .hero-search .btn { margin: 0; white-space: nowrap; }
+
+.search-suggest {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+  padding: 6px;
+  max-height: min(60vh, 380px);
+  overflow-y: auto;
+}
+.search-suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+}
+.search-suggest-item:hover,
+.search-suggest-item.active { background: var(--border); }
+.search-suggest-item img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.search-suggest-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.search-suggest-title { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-suggest-sub { font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search-suggest-price { font-weight: 700; font-size: 0.9rem; white-space: nowrap; }
+.search-suggest-empty { padding: 10px 12px; color: var(--muted); font-size: 0.9rem; }
+.search-suggest-all {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px;
+  text-align: center;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.search-suggest-all:hover { text-decoration: underline; }
+@media (max-width: 600px) {
+  .search-suggest { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; max-height: 50vh; }
+}
 
 .card {
   background: var(--card);
@@ -1318,7 +1376,7 @@ input, select, textarea { font-size: 16px; }
 
 .vitrine-hero {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   background: linear-gradient(120deg, #4f46e5, #7c3aed, #db2777, #7c3aed, #4f46e5);
   background-size: 300% 300%;
   animation: gradientShift 14s ease infinite;

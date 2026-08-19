@@ -69,6 +69,9 @@ const SELECT_PRODUCT = `
 const NORMALIZE_TEXT = (col) =>
   `regexp_replace(translate(lower(${col}), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn'), '[^a-z0-9]', '', 'g')`;
 
+const FOLD_TEXT = (col) =>
+  `translate(lower(${col}), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn')`;
+
 const SORTS = {
   recent: 'p.created_at DESC',
   popular: '(COALESCE(s.n, 0) * 3 + COALESCE(v.w1_views, 0)) DESC, p.created_at DESC',
@@ -96,24 +99,22 @@ router.get('/', async (req, res) => {
       .filter(Boolean);
     if (tokens.length) {
       if (scope === 'shop') {
-        where.push(
-          tokens
-            .map(() => `NORMALIZE_TEXT(u.name) LIKE '%' || $${params.length + 1} || '%'`)
-            .join(' AND ')
-        );
-        tokens.forEach((tk) => params.push(tk));
+        const conds = [];
+        for (const tk of tokens) {
+          conds.push(`${FOLD_TEXT(`u.name`)} LIKE '%' || $${params.length + 1} || '%'`);
+          params.push(tk);
+        }
+        where.push(`(${conds.join(' AND ')})`);
       } else {
-        where.push(
-          tokens
-            .map(
-              () =>
-                `(NORMALIZE_TEXT(p.name) LIKE '%' || $${params.length + 1} || '%' OR ` +
-                `NORMALIZE_TEXT(p.description) LIKE '%' || $${params.length + 2} || '%' OR ` +
-                `NORMALIZE_TEXT(u.name) LIKE '%' || $${params.length + 3} || '%')`
-            )
-            .join(' AND ')
-        );
-        tokens.forEach((tk) => params.push(tk, tk, tk));
+        const conds = [];
+        for (const tk of tokens) {
+          conds.push(
+            `(${FOLD_TEXT(`p.name`)} LIKE '%' || $${params.length + 1} || '%' OR ` +
+              `${FOLD_TEXT(`u.name`)} LIKE '%' || $${params.length + 2} || '%')`
+          );
+          params.push(tk, tk);
+        }
+        where.push(`(${conds.join(' AND ')})`);
         if (scope === 'creation') {
           where.push("p.category = 'Arts & Artisanat'");
         }

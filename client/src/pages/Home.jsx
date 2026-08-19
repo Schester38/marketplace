@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import ProductCard from '../components/ProductCard.jsx';
+import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
 import ProductRail from '../components/ProductRail.jsx';
 import Seo from '../components/Seo.jsx';
 import RecentSales from '../components/RecentSales.jsx';
 import Logo from '../components/Logo.jsx';
 import { useLang } from '../i18n.jsx';
-import { PRODUCT_CATEGORIES } from '../config.js';
+import { PRODUCT_CATEGORIES, currencySymbol } from '../config.js';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { useAuth } from '../App.jsx';
 
@@ -138,6 +138,63 @@ export default function Home() {
     return () => clearTimeout(id);
   }, [search]);
 
+  const [sugItems, setSugItems] = useState([]);
+  const [sugLoading, setSugLoading] = useState(false);
+  const [sugOpen, setSugOpen] = useState(false);
+  const [sugActive, setSugActive] = useState(-1);
+  const sugTimer = useRef(null);
+  const sugRefs = useRef([]);
+
+  useEffect(() => {
+    const query = search.trim();
+    clearTimeout(sugTimer.current);
+    if (query.length < 2) {
+      setSugItems([]);
+      setSugOpen(false);
+      setSugActive(-1);
+      setSugLoading(false);
+      return;
+    }
+    setSugLoading(true);
+    sugTimer.current = setTimeout(() => {
+      let ok = true;
+      Promise.all([api.listProducts({ search: query, limit: 6 }), api.listShops({ search: query, limit: 4 })])
+        .then(([pr, sr]) => {
+          if (!ok) return;
+          const items = [
+            ...(pr.products || []).map((p) => ({
+              kind: 'product',
+              id: p.id,
+              title: p.name,
+              sub: p.shop_name || t('Produit'),
+              price: p.price,
+              currency: p.currency,
+              image: p.image,
+              url: `/produit/${p.id}`,
+            })),
+            ...(sr.shops || []).map((s) => ({
+              kind: 'shop',
+              id: s.id,
+              title: s.name,
+              sub: s.role === 'creator' ? t('Créateur·rice') : t('Boutique'),
+              image: s.sample_image,
+              url: s.role === 'creator' ? `/createur/${s.id}` : `/boutique/${s.id}`,
+            })),
+          ];
+          setSugItems(items);
+          setSugOpen(items.length > 0);
+          setSugActive(-1);
+        })
+        .catch(() => {})
+        .finally(() => ok && setSugLoading(false));
+      return () => {
+        ok = false;
+      };
+    }, 250);
+    return () => clearTimeout(sugTimer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+
 const loadProducts = useCallback(
     (silent, append) => {
       if (!silent && !hasLoaded.current) setLoading(true);
@@ -247,7 +304,29 @@ const loadProducts = useCallback(
 
   const submitSearch = (e) => {
     e.preventDefault();
+    setSugOpen(false);
+    setSugActive(-1);
     goToProducts();
+  };
+
+  const onSugKeyDown = (e) => {
+    if (!sugOpen || sugItems.length === 0 || e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Escape') return;
+    e.preventDefault();
+    if (e.key === 'Escape') {
+      setSugOpen(false);
+      setSugActive(-1);
+      return;
+    }
+    const next =
+      e.key === 'ArrowDown'
+        ? sugActive < sugItems.length - 1
+          ? sugActive + 1
+          : 0
+        : sugActive > 0
+          ? sugActive - 1
+          : sugItems.length - 1;
+    setSugActive(next);
+    sugRefs.current[next]?.focus();
   };
 
   const loadMore = () => {
@@ -474,7 +553,18 @@ const loadProducts = useCallback(
               )}
             </>
           )}
-          <form className="hero-search" onSubmit={submitSearch} role="search">
+          <form
+              className="hero-search"
+              onSubmit={submitSearch}
+              role="search"
+              onKeyDown={onSugKeyDown}
+              onBlur={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                  setSugOpen(false);
+                  setSugActive(-1);
+                }
+              }}
+            >
             <span className="emoji" aria-hidden="true">🔍</span>
             <input
               type="search"
@@ -482,8 +572,47 @@ const loadProducts = useCallback(
               aria-label={t('Rechercher un produit, une boutique…')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={onSugKeyDown}
             />
             <button type="submit" className="btn btn-primary">{t('Rechercher')}</button>
+            {sugOpen && (
+              <div className="search-suggest" role="listbox" aria-label={t('Suggestions')}>
+                {sugLoading && <div className="search-suggest-empty">{t('Recherche…')}</div>}
+                {sugItems.map((it, i) => (
+                  <Link
+                    key={`${it.kind}-${it.id}`}
+                    ref={(el) => {
+                      sugRefs.current[i] = el;
+                    }}
+                    role="option"
+                    aria-selected={sugActive === i}
+                    className={`search-suggest-item${sugActive === i ? ' active' : ''}`}
+                    to={it.url}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setSugOpen(false);
+                      setSugActive(-1);
+                    }}
+                  >
+                    {it.image && <img src={it.image} alt="" loading="lazy" />}
+                    <span className="search-suggest-body">
+                      <span className="search-suggest-title">{it.title}</span>
+                      <span className="search-suggest-sub">
+                        {it.kind === 'shop' ? <>🏪 {it.sub}</> : it.sub}
+                      </span>
+                    </span>
+                    {it.kind === 'product' && (
+                      <span className="search-suggest-price">
+                        {formatMoney(it.price)} {currencySymbol(it.currency)}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+                <button type="submit" className="search-suggest-all" onClick={() => setSugOpen(false)}>
+                  {t('Voir tous les résultats')} →
+                </button>
+              </div>
+            )}
           </form>
           <div className="view-switch">
             <button
