@@ -2703,7 +2703,19 @@ a.step { text-decoration: none; color: inherit; }
   padding: 12px 16px;
   border-radius: 14px;
   font-weight: 600;
+  text-align: center;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  animation: welcome-blink 0.8s step-end infinite;
+}
+.welcome-banner.leaving {
+  animation: welcome-hide 0.45s ease forwards;
+}
+@keyframes welcome-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+@keyframes welcome-hide {
+  to { opacity: 0; }
 }
 .welcome-register { background: #dcfce7; color: #14532d; border: 1px solid #86efac; }
 .welcome-login { background: #e0e7ff; color: #1e1b4b; border: 1px solid #a5b4fc; }
@@ -2722,6 +2734,18 @@ a.step { text-decoration: none; color: inherit; }
   flex-shrink: 0;
 }
 .welcome-close:hover { opacity: 1; }
+
+/* Salutation espace client : centrée, clignote 5 s puis disparaît (l'espace se comprime) */
+.dash-header.client-greeting {
+  text-align: center;
+}
+.welcome-flash {
+  animation: welcome-blink 0.8s step-end infinite;
+  margin: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-banner, .welcome-flash { animation: none; }
+}
 
 /* Journal d'activité */
 .activity-filters {

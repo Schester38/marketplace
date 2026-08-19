@@ -67,13 +67,21 @@ export default function ClientDashboard() {
   const activePurchases = (purchases || []).filter((p) => p.status !== 'delivered');
   const deliveredPurchases = (purchases || []).filter((p) => p.status === 'delivered');
 
+  const [showGreeting, setShowGreeting] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setShowGreeting(false), 5050);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <main className="container">
       <Seo title={t('Mon espace client') + ' — Mboppi'} description={t('Découvrez les produits et offres des boutiques.')} noindex/>
-      <section className="dash-header">
+      <section className="dash-header client-greeting">
         <div>
           <h1>{t('Mon espace client')}</h1>
-          <p>{t('Bienvenue {name} !', { name: user.name })} {t('Découvrez les produits et offres des boutiques.')}</p>
+          {showGreeting && (
+            <p className="welcome-flash">{t('Bienvenue {name} !', { name: user.name })} {t('Découvrez les produits et offres des boutiques.')}</p>
+          )}
         </div>
       </section>
 

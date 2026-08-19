@@ -1,4 +1,4 @@
-import React, { Suspense, createContext, useContext, useEffect, useState } from 'react';
+import React, { Suspense, createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api.js';
 import Navbar from './components/Navbar.jsx';
@@ -173,17 +173,27 @@ function WelcomeBanner() {
   const { user } = useAuth();
   const { t } = useLang();
   const [kind, setKind] = useState(() => localStorage.getItem('mboppi_welcome'));
+  const [leaving, setLeaving] = useState(false);
+  const dismiss = useCallback(() => {
+    localStorage.removeItem('mboppi_welcome');
+    setKind(null);
+  }, []);
+  useEffect(() => {
+    if (!user || !kind) return;
+    const t1 = setTimeout(() => setLeaving(true), 5000);
+    const t2 = setTimeout(dismiss, 5450);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [user, kind, dismiss]);
   if (!user || !kind) return null;
   const isRegister = kind === 'register';
   const text = isRegister
     ? t('Merci {name} ! Mboppi est ravi de vous accueillir. Découvrez ci-dessous les produits et créations.', { name: user.name })
     : t('{name}, Mboppi est heureux de vous revoir !', { name: user.name });
-  const dismiss = () => {
-    localStorage.removeItem('mboppi_welcome');
-    setKind(null);
-  };
   return (
-    <div className={`welcome-banner ${isRegister ? 'welcome-register' : 'welcome-login'}`}>
+    <div className={`welcome-banner ${isRegister ? 'welcome-register' : 'welcome-login'}${leaving ? ' leaving' : ''}`}>
       <span className="welcome-text">👋 {text}</span>
       <button type="button" className="welcome-close" aria-label={t('Fermer')} onClick={dismiss}>✕</button>
     </div>
