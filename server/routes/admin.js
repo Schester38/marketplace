@@ -3,6 +3,7 @@ import { q } from '../db.js';
 import { authRequired, roleRequired, signToken } from '../auth.js';
 import { logAudit } from '../security.js';
 import { migrateImages } from '../migrate-images.js';
+import { cleanupOutOfStock } from '../cleanup.js';
 
 const router = Router();
 
@@ -288,6 +289,13 @@ router.get('/messages', ah(async (req, res) => {
 router.post('/migrate-images', ah(async (req, res) => {
   const summary = await migrateImages();
   await logAudit(req.user.id, 'admin.migrate_images', JSON.stringify(summary), req.ip);
+  res.json({ ok: true, ...summary });
+}));
+
+router.post('/cleanup-stockout', ah(async (req, res) => {
+  const dryRun = req.query.dry_run === '1' || req.body?.dry_run === true;
+  const summary = await cleanupOutOfStock({ dryRun });
+  await logAudit(req.user.id, 'admin.cleanup_stockout', JSON.stringify(summary), req.ip);
   res.json({ ok: true, ...summary });
 }));
 

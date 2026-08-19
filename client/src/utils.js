@@ -21,7 +21,14 @@ export function urlBase64ToUint8Array(base64String) {
   return output;
 }
 
-export function thumbFromDataUrl(dataUrl, maxDim = 260, quality = 0.55) {
+// Encodage WebP quand le navigateur le supporte (Chrome, Firefox, Edge, Safari 17+).
+// Sinon repli silencieux sur JPEG (canvas.toDataURL renvoie du PNG si le format n'est pas pris en charge).
+function canvasDataUrl(canvas, type, quality) {
+  const out = canvas.toDataURL(type, quality);
+  return out.startsWith('data:' + type) ? out : canvas.toDataURL('image/jpeg', quality);
+}
+
+export function thumbFromDataUrl(dataUrl, maxDim = 320, quality = 0.62) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -32,14 +39,14 @@ export function thumbFromDataUrl(dataUrl, maxDim = 260, quality = 0.55) {
       canvas.width = w;
       canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      resolve(canvas.toDataURL('image/jpeg', quality));
+      resolve(canvasDataUrl(canvas, 'image/webp', quality));
     };
     img.onerror = reject;
     img.src = dataUrl;
   });
 }
 
-export function compressImage(file, maxDim = 640, quality = 0.65) {
+export function compressImage(file, maxDim = 800, quality = 0.72) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -52,7 +59,7 @@ export function compressImage(file, maxDim = 640, quality = 0.65) {
         canvas.width = w;
         canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', quality));
+        resolve(canvasDataUrl(canvas, 'image/webp', quality));
       };
       img.onerror = reject;
       img.src = reader.result;
