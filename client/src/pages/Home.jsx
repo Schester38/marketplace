@@ -379,37 +379,37 @@ const loadProducts = useCallback(
                   {recent.length > 0 && (
                     <button
                       type="button"
-                      className={`home-tab ${activeRail === 'recent' ? 'active' : ''}`}
+                      className={`home-tab t-recent ${activeRail === 'recent' ? 'active' : ''}`}
                       onClick={() => setActiveRail(activeRail === 'recent' ? '' : 'recent')}
                     >
-                      👀 {t('Vus récemment')}
+                      <span className="tab-emoji">👀</span> <span>{t('Vus récemment')}</span>
                     </button>
                   )}
                   {trending.length > 0 && (
                     <button
                       type="button"
-                      className={`home-tab ${activeRail === 'trending' ? 'active' : ''}`}
+                      className={`home-tab t-trending ${activeRail === 'trending' ? 'active' : ''}`}
                       onClick={() => setActiveRail(activeRail === 'trending' ? '' : 'trending')}
                     >
-                      ⚡ {t('Tendances de la semaine')}
+                      <span className="tab-emoji">⚡</span> <span>{t('Tendances de la semaine')}</span>
                     </button>
                   )}
                   {bestSellers.length > 0 && (
                     <button
                       type="button"
-                      className={`home-tab ${activeRail === 'best' ? 'active' : ''}`}
+                      className={`home-tab t-best ${activeRail === 'best' ? 'active' : ''}`}
                       onClick={() => setActiveRail(activeRail === 'best' ? '' : 'best')}
                     >
-                      🔥 {t('Meilleures ventes')}
+                      <span className="tab-emoji">🔥</span> <span>{t('Meilleures ventes')}</span>
                     </button>
                   )}
                   {popular.length > 0 && (
                     <button
                       type="button"
-                      className={`home-tab ${activeRail === 'popular' ? 'active' : ''}`}
+                      className={`home-tab t-popular ${activeRail === 'popular' ? 'active' : ''}`}
                       onClick={() => setActiveRail(activeRail === 'popular' ? '' : 'popular')}
                     >
-                      🔥 {t('Plus populaires')}
+                      <span className="tab-emoji">🔥</span> <span>{t('Plus populaires')}</span>
                     </button>
                   )}
                 </div>
