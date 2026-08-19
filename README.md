@@ -14,9 +14,9 @@ Site de vente en ligne avec deux types de comptes :
 
 ## Technologies
 
-- **Backend** : Node.js + Express, base **PostgreSQL** (Neon, cloud), JWT + bcrypt
+- **Backend** : Node.js + Express, base **PostgreSQL** (Supabase, cloud), JWT + bcrypt
 - **Frontend** : React 18 + Vite + React Router
-- **Déploiement** : Render (web service), base de données Neon, redéploiement automatique à chaque `git push`
+- **Déploiement** : Vercel (frontend + API serverless), base de données et stockage des images sur Supabase, redéploiement automatique à chaque `git push`
 
 ## Démarrage en local
 
@@ -24,8 +24,8 @@ Prérequis : Node.js 22.5+ (testé avec Node 24)
 
 ```bash
 # 1. Configurer la base (fichier server/.env, NON commité)
-#    Copier le fichier .env.example vers .env et coller votre clé Neon :
-#    DATABASE_URL=postgresql://user:password@host/neondb?sslmode=require
+#    Copier le fichier .env.example vers .env et coller votre clé de connexion Supabase :
+#    DATABASE_URL=postgresql://user:password@host.supabase.co:5432/postgres?sslmode=require
 #    JWT_SECRET=une-longue-chaine-secrete
 
 # 2. Terminal 1 — API (http://localhost:4000)
@@ -48,22 +48,23 @@ Ouvrir **http://localhost:5173**.
 3. **Add New → Project** → importer le dépôt `marketplace`.
 4. Vercel détecte automatiquement `vercel.json` (build du frontend + API serverless).
 5. Dans **Settings → Environment Variables**, ajouter :
-   - `DATABASE_URL` → la clé de connexion de la base Neon
+   - `DATABASE_URL` → la clé de connexion de la base Supabase
+   - `SUPABASE_URL` → l'URL du projet Supabase (https://<ref>.supabase.co)
+   - `SUPABASE_SERVICE_KEY` → la clé `service_role` (ou `sb_secret_...`) de Supabase
+   - `SUPABASE_JWT_SECRET` → le JWT Secret (Settings → API → JWT Settings) pour signer les jetons Storage
    - `JWT_SECRET` → une longue chaîne aléatoire
    - ⚠️ **Ne pas définir `NODE_ENV`** : Vercel le gère lui-même, et `NODE_ENV=production` empêche l'installation de Vite (devDependency) → build en échec
 6. **Deploy** — le site est disponible sur `https://marketplace-<votre-compte>.vercel.app`
 
 Le frontend buildé est servi par Vercel, l'API Express fonctionne en fonction serverless (`api/index.js`).
-Les données sont conservées dans la base **Neon**, et chaque `git push` redéploie le site automatiquement.
-
-> Note : la plateforme Render est bloquée sur certains réseaux (FAI/firewall), c'est pourquoi Vercel est utilisé.
+Les données (base PostgreSQL) et les images sont hébergées sur Supabase, et chaque `git push` redéploie le site automatiquement.
 
 ## Structure
 
 ```
 server/
   index.js          # API Express + service statique du frontend
-  db.js             # Connexion PostgreSQL (Neon) + schéma
+  db.js             # Connexion PostgreSQL (Supabase) + schéma
   auth.js           # JWT + middlewares
   routes/
     auth.js         # inscription / connexion

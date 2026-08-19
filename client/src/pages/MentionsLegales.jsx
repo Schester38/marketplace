@@ -18,7 +18,7 @@ export default function MentionsLegales() {
         </div>
         <div className="card">
           <h2>{t('Hébergement')}</h2>
-          <p>{t('Le site est hébergé par Vercel Inc., 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis. Les données sont stockées dans une base PostgreSQL hébergée par Neon.')}</p>
+          <p>{t('Le site est hébergé par Vercel Inc. (340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis). La base de données PostgreSQL et le stockage des images sont assurés par Supabase Inc., 1111 Broadway, Suite 1355, Oakland, CA 94607, États-Unis.')}</p>
         </div>
         <div className="card">
           <h2>{t('Propriété intellectuelle')}</h2>

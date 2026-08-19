@@ -1,4 +1,4 @@
-// Migration des images base64 (Neon) vers Supabase Storage.
+// Migration des images base64 (stockées en base) vers Supabase Storage.
 // Utilise le même code que l'endpoint /api/admin/migrate-images.
 // Exécution : node server/scripts/migrate-images.mjs
 // Variables requises : DATABASE_URL (ou DIRECT_URL), SUPABASE_URL,
