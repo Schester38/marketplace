@@ -3242,7 +3242,7 @@ a.step { text-decoration: none; color: inherit; }
 .cat-strip-track {
   display: flex;
   width: max-content;
-  animation: cat-scroll 40s linear infinite;
+  animation: cat-scroll 90s linear infinite;
   will-change: transform;
 }
 .cat-strip:hover .cat-strip-track,
