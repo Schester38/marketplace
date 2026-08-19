@@ -3219,17 +3219,8 @@ a.step { text-decoration: none; color: inherit; }
 .rider-phone { margin: 4px 0 0; font-weight: 700; color: var(--primary); }
 .rider-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* ---------- Recherche + catégories en tête (style Amazon) ---------- */
+/* ---------- Catégories en tête (style Amazon) ---------- */
 .navbar { flex-wrap: wrap; }
-.navbar-search {
-  order: 3;
-  flex-basis: 100%;
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
-.navbar-search input { flex: 1; min-width: 0; }
-.navbar-search .btn { white-space: nowrap; }
 .cat-strip {
   order: 4;
   flex-basis: 100%;

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { LANGS, useLang } from '../i18n.jsx';
 import { useCart, useFavs } from '../store.jsx';
@@ -447,9 +447,6 @@ export default function Navbar({ onLogout }) {
   const [isIOS, setIsIOS] = useState(false);
   const [showIosHint, setShowIosHint] = useState(false);
   const [showGenericHint, setShowGenericHint] = useState(false);
-  const [search, setSearch] = useState('');
-  const navigate = useNavigate();
-  const location = useLocation();
   const [standalone] = useState(() => {
     try {
       return (
@@ -465,10 +462,6 @@ export default function Navbar({ onLogout }) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
-
-  useEffect(() => {
-    setSearch(new URLSearchParams(location.search).get('q') || '');
-  }, [location.search]);
 
   useEffect(() => {
     const onBeforeInstall = (e) => {
@@ -490,11 +483,6 @@ export default function Navbar({ onLogout }) {
   const canInstall = !standalone;
 
   const close = () => setOpen(false);
-  const submitSearch = (e) => {
-    e.preventDefault();
-    close();
-    navigate('/?q=' + encodeURIComponent(search.trim()));
-  };
   const logout = async () => {
     close();
     try {
@@ -624,17 +612,6 @@ export default function Navbar({ onLogout }) {
           <span className="hamburger-line"></span>
         </button>
       </div>
-
-      <form className="navbar-search" role="search" onSubmit={submitSearch}>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('Rechercher un produit, une catégorie…')}
-          aria-label={t('Rechercher un produit, une catégorie…')}
-        />
-        <button type="submit" className="btn btn-primary" aria-label={t('Rechercher')}>🔍</button>
-      </form>
 
       <nav className="cat-strip" aria-label={t('Catégories')}>
         <div className="cat-strip-track">

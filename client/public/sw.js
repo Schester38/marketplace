@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v37';
+const CACHE_NAME = 'mboppi-v38';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/og-image.svg', '/og-image.png', '/robots.txt', '/sitemap.xml', '/splash.js'];
 
 self.addEventListener('install', (event) => {
