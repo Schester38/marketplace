@@ -180,8 +180,8 @@ function WelcomeBanner() {
   }, []);
   useEffect(() => {
     if (!user || !kind) return;
-    const t1 = setTimeout(() => setLeaving(true), 5000);
-    const t2 = setTimeout(dismiss, 5450);
+    const t1 = setTimeout(() => setLeaving(true), 10000);
+    const t2 = setTimeout(dismiss, 10450);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);

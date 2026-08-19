@@ -69,7 +69,7 @@ export default function ClientDashboard() {
 
   const [showGreeting, setShowGreeting] = useState(true);
   useEffect(() => {
-    const t = setTimeout(() => setShowGreeting(false), 5050);
+    const t = setTimeout(() => setShowGreeting(false), 10050);
     return () => clearTimeout(t);
   }, []);
 
