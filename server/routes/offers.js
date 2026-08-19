@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { defaultCurrencyFor, validCurrency } from '../currency.js';
-import { storePhotoStrings } from '../storage.js';
+import { storePhotoStrings, collectStorageKeys, deleteStorageKeys } from '../storage.js';
 
 const router = Router();
 const MAX_PHOTOS = 3;
@@ -115,7 +115,14 @@ router.post('/', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const offer = (await q('SELECT * FROM offers WHERE id = $1', [Number(req.params.id)]))[0];
   if (!offer) return res.status(404).json({ error: 'Offre introuvable' });
+  const storageKeys = collectStorageKeys(offer.photos);
   await q('DELETE FROM offers WHERE id = $1', [offer.id]);
+  try {
+    const removed = await deleteStorageKeys(storageKeys);
+    if (removed) console.log(`[storage] ${removed} fichier(s) supprimé(s) pour l'offre ${offer.id}`);
+  } catch (err) {
+    console.error('[storage] nettoyage offre échoué :', err.message);
+  }
   res.json({ ok: true });
 });
 

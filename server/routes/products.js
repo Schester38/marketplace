@@ -3,7 +3,7 @@ import { q } from '../db.js';
 import { authRequired, roleRequired } from '../auth.js';
 import { listPhotos, fullPhotos, normalizeUploadPhotos } from '../photo.js';
 import { defaultCurrencyFor, validCurrency } from '../currency.js';
-import { storePhotos } from '../storage.js';
+import { storePhotos, collectStorageKeys, deleteStorageKeys } from '../storage.js';
 
 const router = Router();
 
@@ -262,7 +262,14 @@ router.delete('/:id', authRequired, roleRequired(...OWNER_ROLES), async (req, re
   if (product.shop_id !== req.user.id) {
     return res.status(403).json({ error: 'Ce produit ne vous appartient pas' });
   }
+  const storageKeys = collectStorageKeys(product.photos);
   await q('DELETE FROM products WHERE id = $1', [product.id]);
+  try {
+    const removed = await deleteStorageKeys(storageKeys);
+    if (removed) console.log(`[storage] ${removed} fichier(s) supprimé(s) pour le produit ${product.id}`);
+  } catch (err) {
+    console.error('[storage] nettoyage produit échoué :', err.message);
+  }
   res.json({ ok: true });
 });
 

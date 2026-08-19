@@ -129,3 +129,49 @@ export async function storePhotoStrings(photos, folder = 'offers') {
   }
   return out.slice(0, 3);
 }
+
+const OBJECT_PREFIX = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/`;
+
+function storageKeyOf(value) {
+  if (typeof value !== 'string' || !OBJECT_PREFIX || !value.startsWith(OBJECT_PREFIX)) return null;
+  return decodeURIComponent(value.slice(OBJECT_PREFIX.length));
+}
+
+// Extrait les clés Storage d'un photos JSON : [{thumb, full}] ou tableau de strings.
+export function collectStorageKeys(photosJson) {
+  let entries = [];
+  try {
+    entries = JSON.parse(photosJson || '[]');
+  } catch {
+    entries = [];
+  }
+  const keys = [];
+  for (const e of Array.isArray(entries) ? entries : []) {
+    if (typeof e === 'string') {
+      const k = storageKeyOf(e);
+      if (k) keys.push(k);
+    } else if (e && typeof e === 'object') {
+      for (const field of ['thumb', 'full']) {
+        const k = storageKeyOf(e[field]);
+        if (k) keys.push(k);
+      }
+    }
+  }
+  return [...new Set(keys)];
+}
+
+// Supprime les fichiers du bucket (best-effort). Ne touche que les objets de CE projet.
+export async function deleteStorageKeys(keys) {
+  if (!keys || !keys.length) return 0;
+  const token = apiToken();
+  let deleted = 0;
+  for (const key of keys) {
+    if (typeof key !== 'string') continue;
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${key}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}`, apikey: token },
+    });
+    if (res.ok || res.status === 404) deleted += 1;
+  }
+  return deleted;
+}
