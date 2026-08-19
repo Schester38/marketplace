@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { LANGS, useLang } from '../i18n.jsx';
 import { useCart, useFavs } from '../store.jsx';
@@ -185,6 +185,10 @@ function NotifBell() {
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    setSearch(new URLSearchParams(location.search).get('q') || '');
+  }, [location.search]);
 
   useRefreshOnFocus(loadNotifs);
 
@@ -449,6 +453,7 @@ export default function Navbar({ onLogout }) {
   const [showGenericHint, setShowGenericHint] = useState(false);
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
   const [standalone] = useState(() => {
     try {
       return (

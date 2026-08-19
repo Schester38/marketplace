@@ -85,14 +85,38 @@ router.get('/', async (req, res) => {
   const params = [];
   const where = [];
   if (search) {
-    if (scope === 'shop') {
-      where.push('u.name ILIKE $' + (params.length + 1));
-      params.push(`%${search}%`);
-    } else {
-      where.push('(p.name ILIKE $' + (params.length + 1) + ' OR p.description ILIKE $' + (params.length + 2) + ')');
-      params.push(`%${search}%`, `%${search}%`);
-      if (scope === 'creation') {
-        where.push("p.category = 'Arts & Artisanat'");
+    const tokens = String(search)
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w.replace(/[^a-z0-9]/g, ''))
+      .filter(Boolean);
+    if (tokens.length) {
+      if (scope === 'shop') {
+        where.push(
+          tokens
+            .map(() => `NORMALIZE_TEXT(u.name) LIKE '%' || $${params.length + 1} || '%'`)
+            .join(' AND ')
+        );
+        tokens.forEach((tk) => params.push(tk));
+      } else {
+        where.push(
+          tokens
+            .map(
+              () =>
+                `(NORMALIZE_TEXT(p.name) LIKE '%' || $${params.length + 1} || '%' OR ` +
+                `NORMALIZE_TEXT(p.description) LIKE '%' || $${params.length + 2} || '%' OR ` +
+                `NORMALIZE_TEXT(u.name) LIKE '%' || $${params.length + 3} || '%')`
+            )
+            .join(' AND ')
+        );
+        tokens.forEach((tk) => params.push(tk, tk, tk));
+        if (scope === 'creation') {
+          where.push("p.category = 'Arts & Artisanat'");
+        }
       }
     }
   }
@@ -105,7 +129,12 @@ router.get('/', async (req, res) => {
     params.push(String(category).trim());
   }
   if (city) {
-    const norm = String(city).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const norm = String(city)
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
     const match = NORMALIZE_TEXT(`COALESCE(u.city, '') || ' ' || COALESCE(u.location, '')`);
     where.push(match + ` ILIKE '%' || $${params.length + 1} || '%'`);
     params.push(norm);

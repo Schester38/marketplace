@@ -28,12 +28,22 @@ router.get('/', authRequired, roleRequired('shop'), ah(async (req, res) => {
   const where = ["role = 'livreur'", "NULLIF(phone, '') IS NOT NULL"];
   const params = [];
   if (city) {
-    const norm = String(city).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const norm = String(city)
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
     where.push(NORMALIZE_TEXT('COALESCE(city, \'\')') + ` ILIKE '%' || $${params.length + 1} || '%'`);
     params.push(norm);
   }
   if (quartier) {
-    const norm = String(quartier).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const norm = String(quartier)
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
     where.push(NORMALIZE_TEXT(`COALESCE(quartier, '') || ' ' || COALESCE(location, '')`) + ` ILIKE '%' || $${params.length + 1} || '%'`);
     params.push(norm);
   }

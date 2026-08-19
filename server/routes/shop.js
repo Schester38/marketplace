@@ -104,7 +104,12 @@ router.get('/', ah(async (req, res) => {
     params.push(role);
   }
   if (city) {
-    const norm = String(city).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const norm = String(city)
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
     where.push(NORMALIZE_TEXT(`COALESCE(u.city, '') || ' ' || COALESCE(u.location, '')`) + ` ILIKE '%' || $${params.length + 1} || '%'`);
     params.push(norm);
   }
