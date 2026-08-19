@@ -62,14 +62,61 @@ if (pathname.startsWith('/verone')) {
 }
 
 if ('serviceWorker' in navigator) {
+  const reloadScheduler = (() => {
+    const IDLE_MS = 45000;
+    const POKE_MS = 5000;
+    const CAP_MS = 180000;
+    let enabled = false;
+    let applied = false;
+    let lastActivity = Date.now();
+    let startTime = 0;
+    const mark = () => {
+      lastActivity = Date.now();
+    };
+    const attempt = () => {
+      if (applied) return;
+      if (
+        document.visibilityState === 'hidden' ||
+        Date.now() - lastActivity >= IDLE_MS ||
+        Date.now() - startTime >= CAP_MS
+      ) {
+        applied = true;
+        window.location.reload();
+        return;
+      }
+      window.setTimeout(attempt, POKE_MS);
+    };
+    return {
+      request() {
+        if (enabled || applied) return;
+        enabled = true;
+        startTime = Date.now();
+        lastActivity = Date.now();
+        ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach((ev) =>
+          window.addEventListener(ev, mark, { passive: true })
+        );
+        document.addEventListener('visibilitychange', attempt);
+        attempt();
+      },
+    };
+  })();
+
+  let registered = false;
+  const hadController = Boolean(navigator.serviceWorker.controller);
   navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'APP_UPDATED') {
-      window.location.reload();
-    }
+    if (event.data && event.data.type === 'APP_UPDATED') reloadScheduler.request();
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (registered && hadController) reloadScheduler.request();
   });
   if (import.meta.env.PROD) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js').catch((err) => console.error('SW error:', err));
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then(() => {
+          registered = true;
+        })
+        .catch((err) => console.error('SW error:', err));
     });
   }
 }
