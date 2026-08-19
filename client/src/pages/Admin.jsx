@@ -32,6 +32,7 @@ export default function Admin() {
   const [nlBody, setNlBody] = useState('');
   const [nlBusy, setNlBusy] = useState(false);
   const [nlOk, setNlOk] = useState('');
+  const [visits, setVisits] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback((silent) => {
@@ -53,6 +54,7 @@ export default function Admin() {
     api.adminMessages().then((d) => setMessages(d.messages)).catch(onErr);
     api.adminLogs(100).then((d) => setLogs(d.logs)).catch(onErr);
     api.adminNewsletter().then((d) => setNewsletter(d)).catch(() => {});
+    api.adminVisits().then((d) => setVisits(d.visits)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -87,6 +89,7 @@ export default function Admin() {
     setMessages(null);
     setLogs(null);
     setNewsletter(null);
+    setVisits(null);
     setNlOk('');
   };
 
@@ -252,6 +255,62 @@ export default function Admin() {
         {card(t('Inscrits aujourd\'hui'), stats ? stats.users_today : '…')}
         {card(t('Abonnés newsletter'), stats ? stats.newsletter_subscribers : '…')}
       </section>
+
+      {visits && (
+        <section aria-label={t('Analyse des visites')} className="visits-panel">
+          <h2 className="section-title">📈 {t('Analyse des visites (30 jours)')}</h2>
+          <div className="stats-grid">
+            {card(t('Pages vues'), formatMoney(visits.page_views))}
+            {card(t('Visiteurs uniques'), formatMoney(visits.unique_visitors))}
+            {card(t('Jours actifs'), visits.active_days)}
+          </div>
+          {visits.daily && visits.daily.length > 0 && (
+            <div className="card table-card">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('Date')}</th>
+                    <th>{t('Visiteurs uniques')}</th>
+                    <th>{t('Pages vues')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visits.daily.map((d) => (
+                    <tr key={d.date}>
+                      <td>{d.date}</td>
+                      <td>{d.visitors}</td>
+                      <td>{d.views}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {visits.top_pages && visits.top_pages.length > 0 && (
+            <div className="card table-card">
+              <h3 className="section-title">{t('Pages les plus vues (7 jours)')}</h3>
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t('Page')}</th>
+                    <th>{t('Vues')}</th>
+                    <th>{t('Visiteurs')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visits.top_pages.map((p) => (
+                    <tr key={p.path}>
+                      <td><code>{p.path}</code></td>
+                      <td>{p.views}</td>
+                      <td>{p.visitors}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
 
       <h2 className="section-title">✉️ {t('Messages aux utilisateurs')}</h2>
       <form onSubmit={sendMessage} className="card msg-form">

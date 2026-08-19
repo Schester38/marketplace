@@ -2289,6 +2289,20 @@ a.step { text-decoration: none; color: inherit; }
 .product-card:has(.badge-promo):not(:has(.badge-sold)) .badge-pending { top: 38px; }
 .product-card:has(.badge-promo):has(.badge-sold) .badge-pending { top: 66px; }
 
+.badge-hot {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  background: #7c3aed;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.product-card:has(.badge-hot) .badge-sold { top: 38px; }
+.product-card:has(.badge-hot):not(:has(.badge-sold)) .badge-pending { top: 38px; }
+.product-card:has(.badge-hot):has(.badge-sold) .badge-pending { top: 66px; }
+.trending-strip { margin-bottom: 24px; }
+
 .qty-stepper {
   display: inline-flex;
   align-items: center;

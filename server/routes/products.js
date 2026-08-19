@@ -34,7 +34,7 @@ function productRow(p, mode = 'list') {
 const SELECT_PRODUCT = `
   SELECT p.*, u.name AS shop_name, u.role AS shop_role, u.location AS shop_location, u.city AS shop_city, u.country AS shop_country,
          u.verified AS shop_verified, u.phone AS shop_phone,
-         s.n, s.n_month, s.pending_n, r.review_count, r.rating_avg
+         s.n, s.n_month, s.pending_n, r.review_count, r.rating_avg, v.w1_views
   FROM products p
   JOIN users u ON u.id = p.shop_id
   LEFT JOIN (SELECT product_id,
@@ -44,6 +44,10 @@ const SELECT_PRODUCT = `
              FROM sales GROUP BY product_id) s ON s.product_id = p.id
   LEFT JOIN (SELECT product_id, COUNT(*) AS review_count, COALESCE(AVG(rating), 0)::numeric(3, 2) AS rating_avg
              FROM reviews GROUP BY product_id) r ON r.product_id = p.id
+  LEFT JOIN (SELECT item_id, SUM(count) AS w1_views
+             FROM item_views
+             WHERE item_type = 'product' AND seen_on >= CURRENT_DATE - 6
+             GROUP BY item_id) v ON v.item_id = p.id
 `;
 
 const NORMALIZE_TEXT = (col) =>
@@ -51,7 +55,7 @@ const NORMALIZE_TEXT = (col) =>
 
 const SORTS = {
   recent: 'p.created_at DESC',
-  popular: 'COALESCE(s.n, 0) DESC, p.created_at DESC',
+  popular: '(COALESCE(s.n, 0) * 3 + COALESCE(v.w1_views, 0)) DESC, p.created_at DESC',
   price_asc: 'p.price ASC, p.created_at DESC',
   price_desc: 'p.price DESC, p.created_at DESC',
   rating: 'COALESCE(r.rating_avg, 0) DESC, p.created_at DESC',

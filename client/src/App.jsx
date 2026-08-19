@@ -1,5 +1,6 @@
 import React, { Suspense, createContext, useContext, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { api } from './api.js';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
 import BottomNav from './components/BottomNav.jsx';
@@ -208,6 +209,37 @@ export default function App() {
       window.removeEventListener('app-offline', off);
     };
   }, []);
+
+  const pathKey = location.pathname + location.search;
+  useEffect(() => {
+    if (!online || !pathKey) return;
+    let visitorId = localStorage.getItem('mboppi_visitor_id');
+    if (!visitorId) {
+      const id =
+        (typeof crypto !== 'undefined' && crypto.randomUUID && crypto.randomUUID()) ||
+        'v-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+      localStorage.setItem('mboppi_visitor_id', id);
+      visitorId = id;
+    }
+    let timer;
+    try {
+      const key = 'mboppi_visited_' + pathKey;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        fetch('/api/metrics/visit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Visitor-Id': visitorId },
+          body: JSON.stringify({ path: pathKey }),
+          keepalive: true,
+        }).catch(() => {});
+      }, 700);
+    } catch {
+      api.trackVisit(pathKey).catch(() => {});
+    }
+    return () => clearTimeout(timer);
+  }, [pathKey, online]);
 
   if (!online) {
     return (

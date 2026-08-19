@@ -19,7 +19,15 @@ export default function OfferDetail() {
   useEffect(() => {
     api
       .getOffer(id)
-      .then((d) => setOffer(d.offer))
+      .then((d) => {
+        setOffer(d.offer);
+        const key = 'mboppi_view_offer_' + id;
+        try {
+          if (sessionStorage.getItem(key)) return;
+          sessionStorage.setItem(key, '1');
+        } catch {}
+        api.trackViews([{ type: 'offer', id: Number(id) }]).catch(() => {});
+      })
       .catch((e) => setError(e.message));
   }, [id]);
 

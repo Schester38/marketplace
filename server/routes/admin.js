@@ -59,6 +59,60 @@ router.get('/stats', ah(async (req, res) => {
   });
 }));
 
+router.get('/visits', ah(async (req, res) => {
+  const [window] = await q(
+    `SELECT COUNT(*) AS days,
+            COUNT(DISTINCT seen_on) AS active_days,
+            SUM(total) AS page_views,
+            COUNT(DISTINCT visitor_id) AS unique_visitors
+       FROM (SELECT seen_on, visitor_id, COUNT(*) AS total
+             FROM daily_visits
+             WHERE seen_on >= CURRENT_DATE - 29
+             GROUP BY seen_on, visitor_id) w`
+  );
+  const daily = (
+    await q(
+      `SELECT seen_on,
+              COUNT(DISTINCT visitor_id) AS visitors,
+              COUNT(*) AS views
+       FROM daily_visits
+       WHERE seen_on >= CURRENT_DATE - 29
+       GROUP BY seen_on
+       ORDER BY seen_on DESC`
+    )
+  ).map((r) => ({ date: r.seen_on, visitors: Number(r.visitors), views: Number(r.views) }));
+  const topPages = (
+    await q(
+      `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS visitors
+       FROM daily_visits
+       WHERE seen_on >= CURRENT_DATE - 6
+       GROUP BY path
+       ORDER BY views DESC
+       LIMIT 10`
+    )
+  ).map((r) => ({ path: r.path, views: Number(r.views), visitors: Number(r.visitors) }));
+  const topItems = (
+    await q(
+      `SELECT item_type, item_id, SUM(count) AS views
+       FROM item_views
+       WHERE seen_on >= CURRENT_DATE - 6
+       GROUP BY item_type, item_id
+       ORDER BY views DESC
+       LIMIT 10`
+    )
+  ).map((r) => ({ type: r.item_type, id: Number(r.item_id), views: Number(r.views) }));
+  res.json({
+    visits: {
+      page_views: Number(window.page_views),
+      unique_visitors: Number(window.unique_visitors),
+      active_days: Number(window.active_days),
+      daily,
+      top_pages: topPages,
+      top_items: topItems,
+    },
+  });
+}));
+
 router.get('/backup', ah(async (req, res) => {
   const tables = [
     'users', 'products', 'sales', 'offers', 'orders',

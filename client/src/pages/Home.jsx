@@ -59,6 +59,18 @@ export default function Home() {
   const [loadingMore, setLoadingMore] = useState(false);
   const appendRef = useRef(false);
   const produitsRef = useRef(null);
+  const [trending, setTrending] = useState([]);
+
+  useEffect(() => {
+    let ok = true;
+    api
+      .trending()
+      .then((d) => ok && setTrending(d.products || []))
+      .catch(() => {});
+    return () => {
+      ok = false;
+    };
+  }, []);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -303,6 +315,19 @@ const loadProducts = useCallback(
               </button>
             ) : null}
           </div>
+          {trending.length > 0 && mode === 'products' && !category && !minPrice && !maxPrice && !search && scope === 'product' && (
+            <section aria-label={t('Tendances de la semaine')} className="trending-strip">
+              <div className="section-head">
+                <h2 className="section-title">⚡ {t('Tendances de la semaine')}</h2>
+                <p className="hint">{t('Les produits les plus consultés ces 7 derniers jours.')}</p>
+              </div>
+              <div className="grid">
+                {trending.map((p) => (
+                  <ProductCard key={p.id} product={p} badge={{ cls: 'badge-hot', text: t('⭐ Populaire') }} />
+                ))}
+              </div>
+            </section>
+          )}
           <form className="hero-search" onSubmit={submitSearch} role="search">
             <span className="emoji" aria-hidden="true">🔍</span>
             <input

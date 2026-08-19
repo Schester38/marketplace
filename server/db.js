@@ -454,6 +454,27 @@ export async function initDb() {
   }
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS item_views (
+      item_type TEXT NOT NULL CHECK (item_type IN ('product', 'offer')),
+      item_id INTEGER NOT NULL,
+      seen_on DATE NOT NULL DEFAULT CURRENT_DATE,
+      count INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY (item_type, item_id, seen_on)
+    );
+    CREATE INDEX IF NOT EXISTS idx_item_views_type_date ON item_views(item_type, seen_on DESC);
+
+    CREATE TABLE IF NOT EXISTS daily_visits (
+      id BIGSERIAL PRIMARY KEY,
+      seen_on DATE NOT NULL DEFAULT CURRENT_DATE,
+      visitor_id TEXT NOT NULL,
+      path TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_visits_unique ON daily_visits(seen_on, visitor_id, path);
+    CREATE INDEX IF NOT EXISTS idx_daily_visits_date ON daily_visits(seen_on DESC);
+  `);
+
+  await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_sales_buyer ON sales(buyer_id) WHERE buyer_id IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_sales_referred_by ON sales(referred_by) WHERE referred_by IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_sales_paid_at ON sales(paid_at) WHERE paid_at IS NOT NULL;

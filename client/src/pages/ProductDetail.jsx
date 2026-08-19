@@ -42,6 +42,12 @@ export default function ProductDetail() {
       .then((d) => {
         setProduct(d.product);
         setQty(1);
+        const key = 'mboppi_view_product_' + id;
+        try {
+          if (sessionStorage.getItem(key)) return;
+          sessionStorage.setItem(key, '1');
+        } catch {}
+        api.trackViews([{ type: 'product', id: Number(id) }]).catch(() => {});
       })
       .catch((e) => setError(e.message));
   }, [id]);

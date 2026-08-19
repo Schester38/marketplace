@@ -106,10 +106,17 @@ function parsePhotos(raw, fallback) {
 
 const OG_DEFAULT = `${BASE_URL}/og-image.png`;
 
-function absImageOf(image) {
+function originOf(req) {
+  const proto = req.get('x-forwarded-proto');
+  const host = req.get('host');
+  if (proto && host) return `${proto}://${host}`;
+  return BASE_URL;
+}
+
+function absImageOf(image, origin = BASE_URL) {
   if (!image || /^data:/.test(image)) return OG_DEFAULT;
   if (/^https?:/.test(image)) return image;
-  return `${BASE_URL}${image}`;
+  return `${origin}${image}`;
 }
 
 router.get('/', async (req, res) => {
@@ -126,11 +133,11 @@ router.get('/', async (req, res) => {
        LIMIT 12`
     )) || [];
     const title = 'Mboppi — Boutiques, vendeurs et offres du moment';
-    const canonical = `${BASE_URL}/`;
+    const canonical = `${originOf(req)}/`;
     const descText =
       'Mboppi, le marché de votre quartier en ligne : produits des boutiques, créations des créateurs, vente avec commissions, commande avec livraison et paiement mobile.';
     const image = products[0]?.image || '';
-    const absImage = absImageOf(image);
+    const absImage = absImageOf(image, originOf(req));
 
     const jsonLd = {
       '@context': 'https://schema.org',
@@ -193,7 +200,7 @@ router.get('/produit/:id', async (req, res) => {
     if (!p) return res.status(404).type('html').send(notFoundHtml);
     const images = parsePhotos(p.photos, p.image);
     const image = images[0] || '';
-    const absImage = absImageOf(image);
+    const absImage = absImageOf(image, originOf(req));
     const description = (p.description || '')
       .replace(/<[^>]*>/g, ' ')
       .replace(/\s+/g, ' ')
@@ -202,7 +209,7 @@ router.get('/produit/:id', async (req, res) => {
     const shopLine = p.shop_name ? ` chez ${p.shop_name}` : '';
     const price = Number(p.price);
     const title = `${p.name}${shopLine} — Mboppi`;
-    const canonical = `${BASE_URL}/produit/${id}`;
+    const canonical = `${originOf(req)}/produit/${id}`;
     const descText = description || `${p.name} disponible sur Mboppi. Commandez en ligne ou par WhatsApp.`;
 
     const jsonLd = {
@@ -263,11 +270,11 @@ router.get('/boutique/:id', async (req, res) => {
     );
     if (!shop) return res.status(404).type('html').send(notFoundHtml);
     const title = `${shop.name}${shop.location ? ` — Boutique à ${shop.location}` : ''} | Mboppi`;
-    const canonical = `${BASE_URL}/boutique/${id}`;
+    const canonical = `${originOf(req)}/boutique/${id}`;
     const count = Number(shop.product_count || 0);
     const descText = `${shop.name} est une boutique sur Mboppi${shop.location ? `, située à ${shop.location}${shop.country ? ` (${shop.country})` : ''}` : ''}. ${count} produit${count > 1 ? 's' : ''} disponible${count > 1 ? 's' : ''}. Commandez en ligne ou par WhatsApp.`.slice(0, 155);
     const image = shop.sample_image || '';
-    const absImage = absImageOf(image);
+    const absImage = absImageOf(image, originOf(req));
 
     const jsonLd = {
       '@context': 'https://schema.org',
@@ -306,11 +313,11 @@ router.get('/createur/:id', async (req, res) => {
     );
     if (!shop) return res.status(404).type('html').send(notFoundHtml);
     const title = `${shop.name}${shop.location ? ` — Créateur à ${shop.location}` : ''} | Mboppi`;
-    const canonical = `${BASE_URL}/createur/${id}`;
+    const canonical = `${originOf(req)}/createur/${id}`;
     const count = Number(shop.product_count || 0);
     const descText = `${shop.name} est un créateur sur Mboppi${shop.location ? `, situé à ${shop.location}${shop.country ? ` (${shop.country})` : ''}` : ''}. ${count} création${count > 1 ? 's' : ''} exposée${count > 1 ? 's' : ''}. Découvrez et commandez ses créations en ligne ou par WhatsApp.`.slice(0, 155);
     const image = shop.sample_image || '';
-    const absImage = absImageOf(image);
+    const absImage = absImageOf(image, originOf(req));
 
     const jsonLd = {
       '@context': 'https://schema.org',
@@ -349,11 +356,12 @@ router.get('/sitemap.xml', async (req, res) => {
       ['/cgu', 'yearly', '0.4'],
       ['/mentions-legales', 'yearly', '0.4'],
       ['/donnees', 'monthly', '0.5'],
+      ['/verone', 'yearly', '0.4'],
     ];
     const [products, users, offers] = await Promise.all([
       q('SELECT id, created_at FROM products WHERE quantity > 0 ORDER BY created_at DESC'),
       q("SELECT id, role FROM users WHERE role IN ('shop', 'creator') ORDER BY id DESC"),
-      q('SELECT id, created_at FROM offers ORDER BY id DESC'),
+      q('SELECT id, created_at FROM offers WHERE quantity > 0 ORDER BY id DESC'),
     ]);
     const entries = [
       ...staticUrls.map(([loc, freq, prio]) => ({ loc: BASE_URL + loc, freq, prio })),
@@ -415,7 +423,7 @@ router.get('/ville/:slug', async (req, res) => {
     );
     const count = Number(stats?.products || 0);
     const title = `Acheter à ${name} — Boutiques et produits | Mboppi`;
-    const canonical = `${BASE_URL}/ville/${slug}`;
+    const canonical = `${originOf(req)}/ville/${slug}`;
     const descText = count
       ? `Commandez ${count} produit${count > 1 ? 's' : ''} des boutiques de ${name} en ligne : téléphones, mode, alimentation, artisanat. Livraison rapide avec Mboppi.`
       : `Achetez et vendez à ${name} avec Mboppi : le marché de votre quartier en ligne. Boutiques, créations et livraison.`;
@@ -451,9 +459,9 @@ router.get('/offre/:id', async (req, res) => {
     if (!o) return res.status(404).type('html').send(notFoundHtml);
     const photos = parsePhotos(o.photos, null);
     const image = photos[0] || '';
-    const absImage = absImageOf(image);
+    const absImage = absImageOf(image, originOf(req));
     const title = `${o.name}${o.owner_name ? ` — Offre de ${o.owner_name}` : ''} | Mboppi`;
-    const canonical = `${BASE_URL}/offre/${id}`;
+    const canonical = `${originOf(req)}/offre/${id}`;
     const promo = Number(o.promo_price);
     const descText = (o.description || `${o.name} en promotion sur Mboppi.`).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 155);
 
@@ -478,6 +486,48 @@ router.get('/offre/:id', async (req, res) => {
     html = injectHead(html, { title, description: descText, canonical, ogImage: absImage, ogType: 'product' });
     html = injectJsonLd(html, jsonLd);
     if (!html) return res.status(200).type('html').send(`<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title><meta name="description" content="${descText}"/></head><body><h1>${title}</h1></body></html>`);
+    res.type('html').send(html);
+  } catch {
+    const html = await loadIndexHtml();
+    if (html) return res.type('html').send(html);
+    res.status(500).send('Erreur serveur');
+  }
+});
+
+const STATIC_PAGES = {
+  '/a-propos': { title: 'À propos de Mboppi — Le marché de votre quartier en ligne', description: 'Découvrez Mboppi, la plateforme qui connecte boutiques, créateurs, vendeurs, livreurs et clients de votre quartier, en ligne et en toute simplicité.' },
+  '/contact': { title: 'Contact — Mboppi', description: 'Contactez l\'équipe Mboppi : besoin d\'aide, question ou suggestion ? Nous sommes à votre écoute.' },
+  '/faq': { title: 'Questions fréquentes (FAQ) — Mboppi', description: 'Les réponses aux questions les plus fréquentes sur Mboppi : vendre, acheter, commandes, livraison et paiement.' },
+  '/cgv': { title: 'Conditions générales de vente — Mboppi', description: 'Consultez les conditions générales de vente applicables sur la plateforme Mboppi.' },
+  '/cgu': { title: 'Conditions générales d\'utilisation — Mboppi', description: 'Consultez les conditions générales d\'utilisation de la plateforme Mboppi.' },
+  '/mentions-legales': { title: 'Mentions légales — Mboppi', description: 'Mentions légales du site Mboppi : éditeur, hébergement et informations légales.' },
+  '/donnees': { title: 'Protection des données — Mboppi', description: 'Découvrez comment Mboppi protège vos données personnelles et votre vie privée.' },
+  '/soutien': { title: 'Soutenir Mboppi — Faire un don', description: 'Soutenez Mboppi par un don pour aider le marché de votre quartier à grandir.' },
+  '/vitrine-offre': { title: 'Vitrine des offres et promotions — Mboppi', description: 'Toutes les offres et promotions du moment sur Mboppi, avec remises exclusives.' },
+  '/createurs': { title: 'Les créateurs de Mboppi — Artisanat et créations', description: 'Découvrez les créateurs Mboppi et leurs créations : artisanat, mode, décoration et plus encore.' },
+  '/verone': { title: 'Vérone — Mboppi', description: 'La page Vérone de Mboppi : découvrez tout ce qu\'elle propose.' },
+};
+
+router.get(Object.keys(STATIC_PAGES), async (req, res) => {
+  try {
+    const page = STATIC_PAGES[req.path];
+    if (!page) return res.status(404).type('html').send(notFoundHtml);
+    const canonical = originOf(req) + req.path;
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'WebPage',
+      name: page.title,
+      url: canonical,
+      description: page.description,
+    };
+    let html = await loadIndexHtml();
+    html = injectHead(html, { title: page.title, description: page.description, canonical, ogImage: OG_DEFAULT });
+    html = injectJsonLd(html, jsonLd);
+    if (!html) {
+      return res.status(200).type('html').send(
+        `<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${page.title}</title><meta name="description" content="${page.description}"/><link rel="canonical" href="${canonical}"/></head><body><h1>${page.title}</h1><p><a href="${BASE_URL}/">Retour à Mboppi</a></p></body></html>`
+      );
+    }
     res.type('html').send(html);
   } catch {
     const html = await loadIndexHtml();
