@@ -2,10 +2,10 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-// DATABASE_URL_POOLED (recommandé sur Neon) : endpoint poolé via PgBouncer
-// (`?pgbouncer=true` ou hôte en `-pooler`). Réduit les connexions/TLS sur
-// les environnements serverless (Vercel) et donc la consommation du quota
-// réseau Neon. S'il est absent, on retombe sur DATABASE_URL.
+// DATABASE_URL_POOLED (recommandé sur Supabase) : endpoint poolé via PgBouncer
+// (hôte en `-pooler`). Réduit les connexions/TLS sur les environnements
+// serverless (Vercel) et donc la consommation du quota réseau. S'il est absent,
+// on retombe sur DATABASE_URL (connexion directe Supabase).
 const connectionString =
   process.env.DATABASE_URL_POOLED ||
   process.env.DATABASE_URL ||
