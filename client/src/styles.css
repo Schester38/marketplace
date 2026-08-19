@@ -3218,3 +3218,60 @@ a.step { text-decoration: none; color: inherit; }
 .rider-main .hint { margin: 0; }
 .rider-phone { margin: 4px 0 0; font-weight: 700; color: var(--primary); }
 .rider-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- Recherche + catégories en tête (style Amazon) ---------- */
+.navbar { flex-wrap: wrap; }
+.navbar-search {
+  order: 3;
+  flex-basis: 100%;
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.navbar-search input { flex: 1; min-width: 0; }
+.navbar-search .btn { white-space: nowrap; }
+.cat-strip {
+  order: 4;
+  flex-basis: 100%;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin-top: 8px;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.cat-strip::-webkit-scrollbar { display: none; }
+.cat-strip a {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  text-decoration: none;
+  background: var(--card);
+}
+.cat-strip a:hover, .cat-strip a:focus-visible { border-color: var(--primary); color: var(--primary); }
+
+/* ---------- Rails de recommandations ---------- */
+.product-rail { margin: 4px 0 24px; }
+.rail-scroll {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 4px 2px 12px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.rail-scroll::-webkit-scrollbar { display: none; }
+.rail-scroll .product-card {
+  flex: 0 0 170px;
+  min-width: 170px;
+  scroll-snap-align: start;
+}
+@media (max-width: 480px) {
+  .rail-scroll .product-card { flex-basis: 152px; min-width: 152px; }
+}

@@ -42,6 +42,30 @@ export default function ProductDetail() {
       .then((d) => {
         setProduct(d.product);
         setQty(1);
+        try {
+          const p = d.product;
+          const prev = JSON.parse(localStorage.getItem('mboppi_recent') || '[]');
+          const entry = {
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            currency: p.currency,
+            old_price: p.old_price,
+            photos: p.photos,
+            image: p.image,
+            shop_name: p.shop_name,
+            shop_role: p.shop_role,
+            shop_id: p.shop_id,
+            shop_verified: p.shop_verified,
+            shop_country: p.shop_country,
+            rating_avg: p.rating_avg,
+            review_count: p.review_count,
+            quantity: p.quantity,
+            category: p.category,
+          };
+          const updated = [entry, ...(Array.isArray(prev) ? prev : []).filter((x) => Number(x.id) !== Number(p.id))].slice(0, 12);
+          localStorage.setItem('mboppi_recent', JSON.stringify(updated));
+        } catch {}
         const key = 'mboppi_view_product_' + id;
         try {
           if (sessionStorage.getItem(key)) return;

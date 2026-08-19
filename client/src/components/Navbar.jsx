@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { LANGS, useLang } from '../i18n.jsx';
 import { useCart, useFavs } from '../store.jsx';
@@ -7,7 +7,7 @@ import { api } from '../api.js';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { urlBase64ToUint8Array } from '../utils.js';
 import { formatMoney } from './ProductCard.jsx';
-import { countrySymbol } from '../config.js';
+import { countrySymbol, PRODUCT_CATEGORIES, categoryEmoji } from '../config.js';
 import SuggestionButton from './SuggestionButton.jsx';
 
 function LangSwitcher() {
@@ -447,6 +447,8 @@ export default function Navbar({ onLogout }) {
   const [isIOS, setIsIOS] = useState(false);
   const [showIosHint, setShowIosHint] = useState(false);
   const [showGenericHint, setShowGenericHint] = useState(false);
+  const [search, setSearch] = useState('');
+  const navigate = useNavigate();
   const [standalone] = useState(() => {
     try {
       return (
@@ -483,6 +485,11 @@ export default function Navbar({ onLogout }) {
   const canInstall = !standalone;
 
   const close = () => setOpen(false);
+  const submitSearch = (e) => {
+    e.preventDefault();
+    close();
+    navigate('/?q=' + encodeURIComponent(search.trim()));
+  };
   const logout = async () => {
     close();
     try {
@@ -612,6 +619,26 @@ export default function Navbar({ onLogout }) {
           <span className="hamburger-line"></span>
         </button>
       </div>
+
+      <form className="navbar-search" role="search" onSubmit={submitSearch}>
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t('Rechercher un produit, une catégorie…')}
+          aria-label={t('Rechercher un produit, une catégorie…')}
+        />
+        <button type="submit" className="btn btn-primary" aria-label={t('Rechercher')}>🔍</button>
+      </form>
+
+      <nav className="cat-strip" aria-label={t('Catégories')}>
+        <Link to="/" onClick={close}>{t('Tous les produits')}</Link>
+        {PRODUCT_CATEGORIES.map((c) => (
+          <Link key={c} to={`/?cat=${encodeURIComponent(c)}`} onClick={close}>
+            {categoryEmoji(c)} {t(c)}
+          </Link>
+        ))}
+      </nav>
 
       {open && <div className="drawer-overlay" onClick={close}></div>}
       <aside className={`drawer ${open ? 'open' : ''}`} aria-hidden={!open}>

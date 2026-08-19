@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
+import ProductRail from '../components/ProductRail.jsx';
 import Seo from '../components/Seo.jsx';
 import RecentSales from '../components/RecentSales.jsx';
 import Logo from '../components/Logo.jsx';
@@ -19,6 +20,7 @@ function mergeUnique(prev, next) {
 export default function Home() {
   const { t } = useLang();
   const { user } = useAuth();
+  const [params, setSearchParams] = useSearchParams();
   const mounted = useRef(true);
   const hasLoaded = useRef(false);
   const hasData = useRef(false);
@@ -39,9 +41,9 @@ export default function Home() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [category, setCategory] = useState('');
+  const [search, setSearch] = useState(() => params.get('q') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(() => params.get('q') || '');
+  const [category, setCategory] = useState(() => params.get('cat') || '');
   const [sort, setSort] = useState('popular');
   const [scope, setScope] = useState('product');
   const [minPrice, setMinPrice] = useState('');
@@ -60,12 +62,61 @@ export default function Home() {
   const appendRef = useRef(false);
   const produitsRef = useRef(null);
   const [trending, setTrending] = useState([]);
+  const [bestSellers, setBestSellers] = useState([]);
+  const [recent, setRecent] = useState(() => {
+    try {
+      const list = JSON.parse(localStorage.getItem('mboppi_recent') || '[]');
+      return Array.isArray(list) ? list.filter((p) => Number(p.quantity || 0) > 0) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Synchronisation recherche/catégorie avec l'URL (?q= / ?cat=) : les liens de la
+  // barre de recherche et du bandeau catégories (navbar) s'appliquent partout.
+  useEffect(() => {
+    setSearch(params.get('q') || '');
+    setDebouncedSearch(params.get('q') || '');
+    setOffset(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.get('q')]);
+
+  useEffect(() => {
+    setCategory(params.get('cat') || '');
+    setOffset(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.get('cat')]);
+
+  useEffect(() => {
+    const next = new URLSearchParams(params);
+    const q = debouncedSearch.trim();
+    if ((next.get('q') || '') !== q) {
+      if (q) next.set('q', q);
+      else next.delete('q');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
+
+  useEffect(() => {
+    const next = new URLSearchParams(params);
+    if ((next.get('cat') || '') !== category) {
+      if (category) next.set('cat', category);
+      else next.delete('cat');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [category]);
 
   useEffect(() => {
     let ok = true;
     api
       .trending()
       .then((d) => ok && setTrending(d.products || []))
+      .catch(() => {});
+    api
+      .listProducts({ sort: 'popular', limit: 10 })
+      .then((d) => ok && setBestSellers(d.products || []))
       .catch(() => {});
     return () => {
       ok = false;
@@ -315,18 +366,34 @@ const loadProducts = useCallback(
               </button>
             ) : null}
           </div>
-          {trending.length > 0 && mode === 'products' && !category && !minPrice && !maxPrice && !search && scope === 'product' && (
-            <section aria-label={t('Tendances de la semaine')} className="trending-strip">
-              <div className="section-head">
-                <h2 className="section-title">⚡ {t('Tendances de la semaine')}</h2>
-                <p className="hint">{t('Les produits les plus consultés ces 7 derniers jours.')}</p>
-              </div>
-              <div className="grid">
-                {trending.map((p) => (
-                  <ProductCard key={p.id} product={p} badge={{ cls: 'badge-hot', text: t('⭐ Populaire') }} />
-                ))}
-              </div>
-            </section>
+          {mode === 'products' && !category && !minPrice && !maxPrice && !search.trim() && scope === 'product' && (
+            <>
+              {recent.length > 0 && (
+                <ProductRail
+                  title={t('Vus récemment')}
+                  hint={t('Reprenez là où vous vous étiez arrêté.')}
+                  emoji="👀"
+                  products={recent}
+                />
+              )}
+              {trending.length > 0 && (
+                <ProductRail
+                  title={t('Tendances de la semaine')}
+                  hint={t('Les produits les plus consultés ces 7 derniers jours.')}
+                  emoji="⚡"
+                  products={trending}
+                  badge={{ cls: 'badge-hot', text: t('⭐ Populaire') }}
+                />
+              )}
+              {bestSellers.length > 0 && (
+                <ProductRail
+                  title={t('Meilleures ventes')}
+                  hint={t('Les produits les plus commandés.')}
+                  emoji="🔥"
+                  products={bestSellers}
+                />
+              )}
+            </>
           )}
           <form className="hero-search" onSubmit={submitSearch} role="search">
             <span className="emoji" aria-hidden="true">🔍</span>
