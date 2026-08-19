@@ -2,12 +2,20 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
+// DATABASE_URL_POOLED (recommandé sur Neon) : endpoint poolé via PgBouncer
+// (`?pgbouncer=true` ou hôte en `-pooler`). Réduit les connexions/TLS sur
+// les environnements serverless (Vercel) et donc la consommation du quota
+// réseau Neon. S'il est absent, on retombe sur DATABASE_URL.
 const connectionString =
-  process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/marketplace';
+  process.env.DATABASE_URL_POOLED ||
+  process.env.DATABASE_URL ||
+  'postgres://postgres:postgres@localhost:5432/marketplace';
 
 export const pool = new Pool({
   connectionString,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+  ssl: process.env.DATABASE_URL_POOLED || process.env.DATABASE_URL
+    ? { rejectUnauthorized: false }
+    : undefined,
 });
 
 pool.on('connect', (client) => {
