@@ -3276,13 +3276,20 @@ a.step { text-decoration: none; color: inherit; }
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
-  margin: -8px 0 18px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  margin: -8px -16px 18px;
+  padding: 0 16px 4px;
 }
+.home-tabs::-webkit-scrollbar { display: none; }
 .home-tab {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex: 0 0 auto;
   padding: 9px 18px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -3294,6 +3301,8 @@ a.step { text-decoration: none; color: inherit; }
   white-space: nowrap;
   transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
+.home-tab:first-child { margin-left: 0; }
+.home-tab:last-child { margin-right: 0; }
 .home-tab:hover {
   border-color: var(--primary);
   color: var(--primary);

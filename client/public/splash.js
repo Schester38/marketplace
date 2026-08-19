@@ -37,9 +37,4 @@
       loaderSince = null;
     }
   }, 3000);
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', function () {
-      reloadOnce('mboppi_sw_retried');
-    });
-  }
 })();

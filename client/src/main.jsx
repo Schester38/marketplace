@@ -63,40 +63,23 @@ if (pathname.startsWith('/verone')) {
 
 if ('serviceWorker' in navigator) {
   const reloadScheduler = (() => {
-    const IDLE_MS = 45000;
-    const POKE_MS = 5000;
-    const CAP_MS = 180000;
-    let enabled = false;
     let applied = false;
-    let lastActivity = Date.now();
-    let startTime = 0;
-    const mark = () => {
-      lastActivity = Date.now();
-    };
-    const attempt = () => {
+    const go = () => {
       if (applied) return;
-      if (
-        document.visibilityState === 'hidden' ||
-        Date.now() - lastActivity >= IDLE_MS ||
-        Date.now() - startTime >= CAP_MS
-      ) {
-        applied = true;
-        window.location.reload();
-        return;
-      }
-      window.setTimeout(attempt, POKE_MS);
+      applied = true;
+      window.location.reload();
     };
     return {
       request() {
-        if (enabled || applied) return;
-        enabled = true;
-        startTime = Date.now();
-        lastActivity = Date.now();
-        ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach((ev) =>
-          window.addEventListener(ev, mark, { passive: true })
-        );
-        document.addEventListener('visibilitychange', attempt);
-        attempt();
+        if (applied) return;
+        fetch('/', { cache: 'no-store' }).catch(() => {});
+        if (document.visibilityState === 'hidden') {
+          go();
+          return;
+        }
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') go();
+        });
       },
     };
   })();
