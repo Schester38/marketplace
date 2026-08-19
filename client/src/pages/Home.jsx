@@ -630,7 +630,7 @@ const loadProducts = useCallback(
               📍 {t('Voir par ville')}
             </button>
           </div>
-          <div className="toolbar">
+          <div className="toolbar filter-toolbar">
             <select
               className="input filter-select"
               value={category}

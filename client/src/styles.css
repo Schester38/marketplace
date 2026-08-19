@@ -2588,11 +2588,55 @@ a.step { text-decoration: none; color: inherit; }
   .skeleton-photo { width: 100%; border-radius: 0; }
 }
 
+/* Mobile : lignes de filtres fixes (accueil) — rien ne deborde */
+@media (max-width: 640px) {
+  .view-switch {
+    flex-wrap: nowrap;
+  }
+  .view-switch .btn {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 6px;
+    font-size: 0.74rem;
+    white-space: nowrap;
+    text-align: center;
+    overflow: hidden;
+  }
+  .view-switch .logo-inline {
+    width: 16px;
+    height: 16px;
+    vertical-align: -3px;
+  }
+
+  .filter-toolbar { gap: 8px; }
+  .filter-toolbar .filter-select,
+  .filter-toolbar .filter-price { max-width: none; }
+  .filter-toolbar > .filter-select:nth-child(1),
+  .filter-toolbar > .filter-select:nth-child(2) {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
+  .filter-toolbar > .filter-price,
+  .filter-toolbar > .filter-select:nth-child(5) {
+    flex: 1 1 calc(33.333% - 6px);
+    min-width: 0;
+  }
+  .filter-toolbar .filter-price,
+  .filter-toolbar select.filter-select {
+    padding: 8px 6px;
+  }
+  .filter-toolbar select.filter-select { font-size: 0.78rem; }
+}
+
 /* Tres petits ecrans */
 @media (max-width: 360px) {
   .grid { gap: 8px; }
   .product-body h3 { font-size: 0.75rem; }
   .price-box .price { font-size: 0.88rem; }
+  .view-switch .btn { font-size: 0.68rem; padding: 8px 4px; }
+  .filter-toolbar > .filter-price,
+  .filter-toolbar > .filter-select:nth-child(5) { flex-basis: calc(33.333% - 6px); }
+  .filter-toolbar select.filter-select { font-size: 0.72rem; }
 }
 
 /* Mouvement reduit : etendre aux nouvelles animations */
