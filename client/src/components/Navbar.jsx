@@ -186,10 +186,6 @@ function NotifBell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  useEffect(() => {
-    setSearch(new URLSearchParams(location.search).get('q') || '');
-  }, [location.search]);
-
   useRefreshOnFocus(loadNotifs);
 
   useEffect(() => {
@@ -469,6 +465,10 @@ export default function Navbar({ onLogout }) {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    setSearch(new URLSearchParams(location.search).get('q') || '');
+  }, [location.search]);
 
   useEffect(() => {
     const onBeforeInstall = (e) => {
