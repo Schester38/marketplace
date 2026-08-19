@@ -771,16 +771,16 @@ input, select, textarea { font-size: 16px; }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.4rem;
+  font-size: 2rem;
   color: var(--primary);
   overflow: hidden;
 }
 .product-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.35s ease; }
 .product-card:hover .product-thumb img { transform: scale(1.05); }
-.product-body { display: flex; flex-direction: column; gap: 5px; padding: 10px 12px 4px; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
+.product-body { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px 3px; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
 .product-body:hover h3 { color: var(--primary); }
-.product-body h3 { font-size: 0.9rem; line-height: 1.35; overflow-wrap: break-word; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.45em; }
-.stock-line { font-size: 0.78rem; color: var(--success); font-weight: 700; }
+.product-body h3 { font-size: 0.85rem; line-height: 1.3; overflow-wrap: break-word; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.3em; }
+.stock-line { font-size: 0.72rem; color: var(--success); font-weight: 700; }
 .stock-line.out { color: var(--danger); }
 
 .price-box {
@@ -791,11 +791,11 @@ input, select, textarea { font-size: 16px; }
   margin-top: auto;
 }
 .price-box .price-line { display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
-.price-box .price { font-size: 1.02rem; font-weight: 800; }
-.price-box .old-price { font-size: 0.78rem; color: var(--muted); text-decoration: line-through; }
-.price-box .commission { font-size: 0.82rem; font-weight: 800; color: var(--success); white-space: nowrap; }
-.card-actions { padding: 6px 12px 12px; display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
-.card-actions .btn { padding: 8px 10px; font-size: 0.85rem; }
+.price-box .price { font-size: 0.95rem; font-weight: 800; }
+.price-box .old-price { font-size: 0.74rem; color: var(--muted); text-decoration: line-through; }
+.price-box .commission { font-size: 0.78rem; font-weight: 800; color: var(--success); white-space: nowrap; }
+.card-actions { padding: 4px 10px 10px; display: flex; flex-direction: column; gap: 5px; margin-top: auto; }
+.card-actions .btn { padding: 7px 8px; font-size: 0.8rem; }
 .product-cat { color: var(--primary); font-weight: 600; font-size: 0.8rem; }
 .product-desc { color: var(--muted); font-size: 0.88rem; overflow-wrap: break-word; word-break: break-word; }
 .product-shop { font-size: 0.82rem; color: var(--primary); font-weight: 600; overflow-wrap: break-word; word-break: break-word; }
@@ -2806,7 +2806,7 @@ a.step { text-decoration: none; color: inherit; }
 }
 .shop-wa { margin-left: auto; }
 .badge-verified { background: #dcfce7; color: #15803d; }
-.card-shop { margin: 4px 0; font-size: 0.8rem; color: var(--muted); }
+.card-shop { margin: 2px 0; font-size: 0.74rem; color: var(--muted); }
 .card-shop a { color: inherit; }
 .card-shop a:hover { text-decoration: underline; }
 .card-shop span { color: #15803d; font-weight: 700; }
@@ -3491,12 +3491,12 @@ a.step { text-decoration: none; color: inherit; }
 }
 .rail-scroll::-webkit-scrollbar { display: none; }
 .rail-scroll .product-card {
-  flex: 0 0 170px;
-  min-width: 170px;
+  flex: 0 0 158px;
+  min-width: 158px;
   scroll-snap-align: start;
 }
 @media (max-width: 480px) {
-  .rail-scroll .product-card { flex-basis: 152px; min-width: 152px; }
+  .rail-scroll .product-card { flex-basis: 140px; min-width: 140px; }
 }
 
 /* ---------- Finitions Amazon (cartes produit) : note en étoiles, prix, bouton panier ---------- */
@@ -3511,7 +3511,7 @@ a.step { text-decoration: none; color: inherit; }
 }
 .card-rating .stars { color: #f59e0b; }
 .rating-count { font-weight: 700; color: var(--text); white-space: nowrap; }
-.product-card .price-box .price { font-size: 1.1rem; font-weight: 900; }
+.product-card .price-box .price { font-size: 1rem; font-weight: 900; }
 .product-card .price-box .old-price { font-size: 0.78rem; }
 .btn-cart {
   background: #f5b301;
