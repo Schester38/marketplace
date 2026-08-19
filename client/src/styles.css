@@ -2646,8 +2646,9 @@ a.step { text-decoration: none; color: inherit; }
   .grid > *, .nav-badge, .fav-btn.active, .hero-search { animation: none !important; transition: none !important; }
 }
 
-/* Accueil desktop : titres de rails et barre de filtres centrés */
-@media (min-width: 641px) {
+/* Accueil desktop : onglets produits, titres de rails et barre de filtres centrés */
+@media (min-width: 769px) {
+  .home-page .home-tabs { justify-content: center; }
   .home-page .product-rail .section-head {
     justify-content: center;
     text-align: center;
