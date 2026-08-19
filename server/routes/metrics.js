@@ -43,6 +43,7 @@ router.post('/visit', async (req, res) => {
 });
 
 router.get('/trending', async (req, res) => {
+  res.set('Cache-Control', 'public, s-maxage=120, max-age=60, stale-while-revalidate=30');
   const rows = await q(
     `SELECT p.id, p.name, p.price, p.commission_percent, p.currency, p.quantity, p.shop_id, u.name AS shop_name,
             u.country AS shop_country,

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired, roleRequired, signToken } from '../auth.js';
 import { logAudit } from '../security.js';
+import { migrateImages } from '../migrate-images.js';
 
 const router = Router();
 
@@ -277,11 +278,17 @@ router.post('/messages', ah(async (req, res) => {
 router.get('/messages', ah(async (req, res) => {
   const rows = await q(
     `SELECT m.id, m.message, m.target, m.user_id, u.name AS user_name, m.created_at
-     FROM admin_messages m
-     LEFT JOIN users u ON u.id = m.user_id
-     ORDER BY m.id DESC LIMIT 50`
+      FROM admin_messages m
+      LEFT JOIN users u ON u.id = m.user_id
+      ORDER BY m.id DESC LIMIT 50`
   );
   res.json({ messages: rows });
+}));
+
+router.post('/migrate-images', ah(async (req, res) => {
+  const summary = await migrateImages();
+  await logAudit(req.user.id, 'admin.migrate_images', JSON.stringify(summary), req.ip);
+  res.json({ ok: true, ...summary });
 }));
 
 export default router;

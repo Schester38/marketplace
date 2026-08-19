@@ -1,10 +1,15 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { defaultCurrencyFor, validCurrency } from '../currency.js';
+import { storePhotoStrings } from '../storage.js';
 
 const router = Router();
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_SIZE = 1500000;
+
+function cachePublic(res, sMaxAge = 60) {
+  res.set('Cache-Control', `public, s-maxage=${sMaxAge}, max-age=${Math.floor(sMaxAge / 2)}, stale-while-revalidate=30`);
+}
 
 function offerRow(o) {
   let photos = [];
@@ -23,6 +28,7 @@ function offerRow(o) {
 }
 
 router.get('/', async (req, res) => {
+  cachePublic(res);
   const offers = (
     await q('SELECT * FROM offers ORDER BY created_at DESC')
   ).map(offerRow);
@@ -35,6 +41,7 @@ router.get('/mine', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
+  cachePublic(res, 120);
   const offer = (await q('SELECT * FROM offers WHERE id = $1', [Number(req.params.id)]))[0];
   if (!offer) return res.status(404).json({ error: 'Offre introuvable' });
   res.json({ offer: offerRow(offer) });
@@ -65,10 +72,20 @@ router.post('/', async (req, res) => {
   if (!Array.isArray(photos) || photos.length > MAX_PHOTOS) {
     return res.status(400).json({ error: `Maximum ${MAX_PHOTOS} photos par offre` });
   }
+  const isAllowedPhoto = (p) =>
+    typeof p === 'string' &&
+    (p.startsWith('data:image/') ? p.length <= MAX_PHOTO_SIZE : /^https?:\/\//.test(p));
   for (const photo of photos) {
-    if (typeof photo !== 'string' || !photo.startsWith('data:image/') || photo.length > MAX_PHOTO_SIZE) {
+    if (!isAllowedPhoto(photo)) {
       return res.status(400).json({ error: 'Photo invalide ou trop volumineuse' });
     }
+  }
+  let storedPhotos;
+  try {
+    storedPhotos = await storePhotoStrings(photos);
+  } catch (err) {
+    console.error('[storage] upload offres échoué, fallback base64 :', err.message);
+    storedPhotos = photos;
   }
 
   const currencyCode = validCurrency(currency) ? String(currency).trim().toUpperCase() : defaultCurrencyFor(req.user?.country);
@@ -86,7 +103,7 @@ router.post('/', async (req, res) => {
       promoNum,
       phone ? String(phone).trim() : null,
       qtyNum,
-      JSON.stringify(photos),
+      JSON.stringify(storedPhotos),
       currencyCode,
     ]
   );

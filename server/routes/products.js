@@ -3,11 +3,27 @@ import { q } from '../db.js';
 import { authRequired, roleRequired } from '../auth.js';
 import { listPhotos, fullPhotos, normalizeUploadPhotos } from '../photo.js';
 import { defaultCurrencyFor, validCurrency } from '../currency.js';
+import { storePhotos } from '../storage.js';
 
 const router = Router();
 
 const MAX_PRODUCTS_PER_SHOP = 5;
 const OWNER_ROLES = ['shop', 'creator'];
+
+async function preparePhotos(photos, folder) {
+  const photoList = normalizeUploadPhotos(photos);
+  try {
+    const stored = await storePhotos(photoList, folder);
+    return stored.length ? stored : photoList;
+  } catch (err) {
+    console.error('[storage] upload échoué, fallback base64 :', err.message);
+    return photoList;
+  }
+}
+
+function cachePublic(res, sMaxAge = 60) {
+  res.set('Cache-Control', `public, s-maxage=${sMaxAge}, max-age=${Math.floor(sMaxAge / 2)}, stale-while-revalidate=30`);
+}
 
 function productRow(p, mode = 'list') {
   const photos = mode === 'detail' ? fullPhotos(p.photos) : listPhotos(p.photos);
@@ -62,6 +78,7 @@ const SORTS = {
 };
 
 router.get('/', async (req, res) => {
+  cachePublic(res);
   const { search, shop, category, sort, scope, min_price, max_price, city, limit, offset } = req.query;
   let sql = SELECT_PRODUCT;
   const params = [];
@@ -167,6 +184,7 @@ router.get('/cities', async (req, res) => {
 });
 
 router.get('/:id', async (req, res) => {
+  cachePublic(res, 120);
   const product = productRow(
     (await q(SELECT_PRODUCT + ' WHERE p.id = $1', [Number(req.params.id)]))[0],
     'detail'
@@ -204,7 +222,7 @@ router.post('/', authRequired, roleRequired(...OWNER_ROLES), async (req, res) =>
     return res.status(400).json({ error: 'La quantité doit être un nombre entier positif' });
   }
   const warrantyText = warranty === '' || warranty === null || warranty === undefined ? null : String(warranty).trim().slice(0, 60);
-  const photoList = normalizeUploadPhotos(photos);
+  const photoList = await preparePhotos(photos, `products/${req.user.id}`);
   const count = (await q('SELECT COUNT(*) AS n FROM products WHERE shop_id = $1', [req.user.id]))[0];
   if (Number(count.n) >= MAX_PRODUCTS_PER_SHOP) {
     return res.status(400).json({
@@ -320,7 +338,7 @@ router.put('/:id', authRequired, roleRequired(...OWNER_ROLES), async (req, res) 
     return res.status(400).json({ error: 'La quantité doit être un nombre entier positif' });
   }
   const warrantyText = warranty === '' || warranty === null || warranty === undefined ? null : String(warranty).trim().slice(0, 60);
-  const photoList = normalizeUploadPhotos(photos);
+  const photoList = await preparePhotos(photos, `products/${req.user.id}`);
   const cleanCategory = req.user.role === 'creator' ? 'Arts & Artisanat' : category ? String(category).trim() : null;
   const currencyCode = validCurrency(currency) ? String(currency).trim().toUpperCase() : (product.currency || defaultCurrencyFor(req.user.country));
   const updated = await q(

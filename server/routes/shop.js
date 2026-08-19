@@ -95,6 +95,7 @@ const NORMALIZE_TEXT = (col) =>
   `regexp_replace(translate(lower(${col}), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn'), '[^a-z0-9]', '', 'g')`;
 
 router.get('/', ah(async (req, res) => {
+  res.set('Cache-Control', 'public, s-maxage=60, max-age=30, stale-while-revalidate=30');
   const { city, role } = req.query;
   const where = ["u.role IN ('shop', 'creator')"];
   const params = [];
@@ -121,6 +122,7 @@ router.get('/', ah(async (req, res) => {
 }));
 
 router.get('/:id', ah(async (req, res) => {
+  res.set('Cache-Control', 'public, s-maxage=120, max-age=60, stale-while-revalidate=30');
   const shop = (
     await q(
       `SELECT id, name, role, location, country, phone, verified, shop_code, created_at
