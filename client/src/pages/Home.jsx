@@ -341,7 +341,7 @@ const loadProducts = useCallback(
   };
 
   return (
-    <main className="container">
+    <main className="container home-page">
       <Seo
         title="Mboppi — Boutiques, vendeurs et offres du moment"
         description="Le marché de votre quartier en ligne : produits des boutiques, créations des créateurs, vente avec commissions, commande avec livraison."

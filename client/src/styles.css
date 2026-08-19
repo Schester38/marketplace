@@ -2646,6 +2646,20 @@ a.step { text-decoration: none; color: inherit; }
   .grid > *, .nav-badge, .fav-btn.active, .hero-search { animation: none !important; transition: none !important; }
 }
 
+/* Accueil desktop : titres de rails et barre de filtres centrés */
+@media (min-width: 641px) {
+  .home-page .product-rail .section-head {
+    justify-content: center;
+    text-align: center;
+  }
+  .home-page .product-rail .section-head .section-title::after {
+    margin: 8px auto 0;
+  }
+  .home-page .product-rail .hint { text-align: center; }
+  .home-page .view-switch,
+  .home-page .filter-toolbar { justify-content: center; }
+}
+
 /* Grands écrans / TV (Android TV, TV connectées, moniteurs) : lisibilité à distance */
 @media (min-width: 1600px) {
   html { font-size: 17px; }
