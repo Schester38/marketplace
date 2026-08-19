@@ -61,6 +61,7 @@ export default function Home() {
   const [loadingMore, setLoadingMore] = useState(false);
   const appendRef = useRef(false);
   const produitsRef = useRef(null);
+  const tabsRef = useRef(null);
   const [trending, setTrending] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
   const [popular, setPopular] = useState([]);
@@ -238,6 +239,12 @@ const loadProducts = useCallback(
     produitsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const scrollTabs = (dir) => {
+    const el = tabsRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.6, behavior: 'smooth' });
+  };
+
   const submitSearch = (e) => {
     e.preventDefault();
     goToProducts();
@@ -374,17 +381,23 @@ const loadProducts = useCallback(
           </div>
           {mode === 'products' && !category && !minPrice && !maxPrice && !search.trim() && scope === 'product' && (
             <>
-              {(recent.length > 0 || trending.length > 0 || bestSellers.length > 0 || popular.length > 0) && (
-                <div className="home-tabs">
-                  {recent.length > 0 && (
-                    <button
-                      type="button"
-                      className={`home-tab t-recent ${activeRail === 'recent' ? 'active' : ''}`}
-                      onClick={() => setActiveRail(activeRail === 'recent' ? '' : 'recent')}
-                    >
-                      <span className="tab-emoji">👀</span> <span>{t('Vus récemment')}</span>
-                    </button>
-                  )}
+              <div className="home-tabs-wrap">
+                <button
+                  type="button"
+                  className="tabs-arrow tabs-arrow-left"
+                  onClick={() => scrollTabs(-1)}
+                  aria-label={t('Défiler vers la gauche')}
+                >
+                  ‹
+                </button>
+                <div className="home-tabs" ref={tabsRef}>
+                  <button
+                    type="button"
+                    className={`home-tab t-recent ${activeRail === 'recent' ? 'active' : ''}`}
+                    onClick={() => setActiveRail(activeRail === 'recent' ? '' : 'recent')}
+                  >
+                    <span className="tab-emoji">👀</span> <span>{t('Vus récemment')}</span>
+                  </button>
                   {trending.length > 0 && (
                     <button
                       type="button"
@@ -413,14 +426,26 @@ const loadProducts = useCallback(
                     </button>
                   )}
                 </div>
-              )}
-              {activeRail === 'recent' && recent.length > 0 && (
-                <ProductRail
-                  title={t('Vus récemment')}
-                  hint={t('Reprenez là où vous vous étiez arrêté.')}
-                  emoji="👀"
-                  products={recent}
-                />
+                <button
+                  type="button"
+                  className="tabs-arrow tabs-arrow-right"
+                  onClick={() => scrollTabs(1)}
+                  aria-label={t('Défiler vers la droite')}
+                >
+                  ›
+                </button>
+              </div>
+              {activeRail === 'recent' && (
+                recent.length > 0 ? (
+                  <ProductRail
+                    title={t('Vus récemment')}
+                    hint={t('Reprenez là où vous vous étiez arrêté.')}
+                    emoji="👀"
+                    products={recent}
+                  />
+                ) : (
+                  <p className="hint home-tabs-empty">{t('Vous n\'avez pas encore consulté de produit.')}</p>
+                )
               )}
               {activeRail === 'trending' && trending.length > 0 && (
                 <ProductRail
