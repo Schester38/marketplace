@@ -66,12 +66,20 @@ export default function ProductCard({ product, action, onAction, secondaryAction
       {hasPromo && <span className="badge badge-promo">-{promoPct}%</span>}
       {pendingCount > 0 && <span className="badge badge-pending">⏳ {pendingCount} {t('en attente')}</span>}
       {sold > 0 && <span className="badge badge-sold">🔥 {sold} {t('vendus')}</span>}
-      {product.review_count > 0 && (
-        <span className="badge badge-review">⭐ {product.rating_avg} ({product.review_count})</span>
-      )}
       {badge && <span className={`badge ${badge.cls}`}>{badge.text}</span>}
       <Link to={`/produit/${product.id}`} className="product-body">
         <h3>{product.name}</h3>
+        {product.review_count > 0 && (
+          <p className="card-rating">
+            <span className="stars stars-12">
+              {'★'.repeat(Math.round(Number(product.rating_avg) || 0))}
+              {'☆'.repeat(5 - Math.round(Number(product.rating_avg) || 0))}
+            </span>
+            <span className="rating-count">
+              {Number(product.rating_avg).toFixed(1)} ({product.review_count})
+            </span>
+          </p>
+        )}
         {product.shop_name && (
           <p className="card-shop">
             <Link
@@ -108,7 +116,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
           </>
         ) : (
           <button
-            className={`btn btn-block ${qty > 0 ? 'btn-primary' : ''}`}
+            className={`btn btn-block ${qty > 0 ? 'btn-cart' : ''}`}
             disabled={qty <= 0}
             onClick={add}
           >

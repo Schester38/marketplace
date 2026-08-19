@@ -3275,3 +3275,32 @@ a.step { text-decoration: none; color: inherit; }
 @media (max-width: 480px) {
   .rail-scroll .product-card { flex-basis: 152px; min-width: 152px; }
 }
+
+/* ---------- Finitions Amazon (cartes produit) : note en étoiles, prix, bouton panier ---------- */
+.stars-12 { font-size: 13px; letter-spacing: 1px; }
+.card-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  margin: 0;
+  color: var(--muted);
+}
+.card-rating .stars { color: #f59e0b; }
+.rating-count { font-weight: 700; color: var(--text); white-space: nowrap; }
+.product-card .price-box .price { font-size: 1.1rem; font-weight: 900; }
+.product-card .price-box .old-price { font-size: 0.78rem; }
+.btn-cart {
+  background: #f5b301;
+  color: #1f2937;
+  border: 1px solid #e0a800;
+  font-weight: 800;
+}
+.btn-cart:hover {
+  background: #ffc61a;
+  color: #111;
+  filter: none;
+  box-shadow: 0 4px 14px rgba(245, 179, 1, 0.35);
+}
+.btn-cart:disabled { background: var(--soft); color: var(--muted); border-color: var(--border); }
+[data-theme='dark'] .btn-cart { color: #0f1111; }
