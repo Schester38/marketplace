@@ -158,7 +158,7 @@ export const api = {
   subscribeNewsletter: (email) => request('/newsletter/subscribe', { method: 'POST', body: JSON.stringify({ email }) }),
   adminNewsletter: () => adminRequest('/newsletter'),
   adminSendNewsletter: (payload) => adminRequest('/newsletter/send', { method: 'POST', body: JSON.stringify(payload) }),
-  adminVisits: () => adminRequest('/admin/visits'),
+  adminVisits: (days) => adminRequest('/admin/visits' + (days ? `?days=${days}` : '')),
   paymentConfig: () => request('/payments/config'),
   paymentOperators: (country) => request('/payments/operators?country=' + encodeURIComponent(country || '')),
   payin: (payload) => request('/payments/payin', { method: 'POST', body: JSON.stringify(payload) }),

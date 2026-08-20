@@ -8,6 +8,13 @@ import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { formatMoney } from '../components/ProductCard.jsx';
 import { countrySymbol } from '../config.js';
 
+const VISIT_RANGES = [
+  { days: 1, label: '1 jour' },
+  { days: 7, label: '7 jours' },
+  { days: 30, label: '1 mois' },
+];
+const VISIT_RANGE_LABELS = { 1: '1 jour', 7: '7 jours', 30: '1 mois' };
+
 export default function Admin() {
   const { t } = useLang();
   const [gate, setGate] = useState(() => !localStorage.getItem('admin_token'));
@@ -33,6 +40,7 @@ export default function Admin() {
   const [nlBusy, setNlBusy] = useState(false);
   const [nlOk, setNlOk] = useState('');
   const [visits, setVisits] = useState(null);
+  const [visitDays, setVisitDays] = useState(30);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback((silent) => {
@@ -54,8 +62,12 @@ export default function Admin() {
     api.adminMessages().then((d) => setMessages(d.messages)).catch(onErr);
     api.adminLogs(100).then((d) => setLogs(d.logs)).catch(onErr);
     api.adminNewsletter().then((d) => setNewsletter(d)).catch(() => {});
-    api.adminVisits().then((d) => setVisits(d.visits)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!gate) return;
+    api.adminVisits(visitDays).then((d) => setVisits(d.visits)).catch(() => {});
+  }, [gate, visitDays]);
 
   useEffect(() => {
     if (!gate) load();
@@ -258,7 +270,21 @@ export default function Admin() {
 
       {visits && (
         <section aria-label={t('Analyse des visites')} className="visits-panel">
-          <h2 className="section-title">📈 {t('Analyse des visites (30 jours)')}</h2>
+          <div className="visits-head">
+            <h2 className="section-title">📈 {t('Analyse des visites')}</h2>
+            <div className="visits-range" role="group" aria-label={t('Période')}>
+              {VISIT_RANGES.map((r) => (
+                <button
+                  key={r.days}
+                  type="button"
+                  className={`btn btn-small ${visitDays === r.days ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => setVisitDays(r.days)}
+                >
+                  {t(r.label)}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="stats-grid">
             {card(t('Pages vues'), formatMoney(visits.page_views))}
             {card(t('Visiteurs uniques'), formatMoney(visits.unique_visitors))}
@@ -266,47 +292,51 @@ export default function Admin() {
           </div>
           {visits.daily && visits.daily.length > 0 && (
             <div className="card table-card">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t('Date')}</th>
-                    <th>{t('Visiteurs uniques')}</th>
-                    <th>{t('Pages vues')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visits.daily.map((d) => (
-                    <tr key={d.date}>
-                      <td>{d.date}</td>
-                      <td>{d.visitors}</td>
-                      <td>{d.views}</td>
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t('Date')}</th>
+                      <th>{t('Visiteurs uniques')}</th>
+                      <th>{t('Pages vues')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {visits.daily.map((d) => (
+                      <tr key={d.date}>
+                        <td>{d.date}</td>
+                        <td>{d.visitors}</td>
+                        <td>{d.views}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
           {visits.top_pages && visits.top_pages.length > 0 && (
             <div className="card table-card">
-              <h3 className="section-title">{t('Pages les plus vues (7 jours)')}</h3>
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t('Page')}</th>
-                    <th>{t('Vues')}</th>
-                    <th>{t('Visiteurs')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visits.top_pages.map((p) => (
-                    <tr key={p.path}>
-                      <td><code>{p.path}</code></td>
-                      <td>{p.views}</td>
-                      <td>{p.visitors}</td>
+              <h3 className="section-title">{t('Pages les plus vues')} ({t(VISIT_RANGE_LABELS[visitDays])})</h3>
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t('Page')}</th>
+                      <th>{t('Vues')}</th>
+                      <th>{t('Visiteurs')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {visits.top_pages.map((p) => (
+                      <tr key={p.path}>
+                        <td><code>{p.path}</code></td>
+                        <td>{p.views}</td>
+                        <td>{p.visitors}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>

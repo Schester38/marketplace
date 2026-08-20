@@ -63,6 +63,7 @@ router.get('/stats', ah(async (req, res) => {
 }));
 
 router.get('/visits', ah(async (req, res) => {
+  const days = [1, 7, 30].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
   const [window] = await q(
     `SELECT COUNT(*) AS days,
             COUNT(DISTINCT seen_on) AS active_days,
@@ -70,7 +71,7 @@ router.get('/visits', ah(async (req, res) => {
             COUNT(DISTINCT visitor_id) AS unique_visitors
        FROM (SELECT seen_on, visitor_id, COUNT(*) AS total
              FROM daily_visits
-             WHERE seen_on >= CURRENT_DATE - 29
+             WHERE seen_on >= CURRENT_DATE - ${days - 1}
              GROUP BY seen_on, visitor_id) w`
   );
   const daily = (
@@ -79,7 +80,7 @@ router.get('/visits', ah(async (req, res) => {
               COUNT(DISTINCT visitor_id) AS visitors,
               COUNT(*) AS views
        FROM daily_visits
-       WHERE seen_on >= CURRENT_DATE - 29
+       WHERE seen_on >= CURRENT_DATE - ${days - 1}
        GROUP BY seen_on
        ORDER BY seen_on DESC`
     )
@@ -88,7 +89,7 @@ router.get('/visits', ah(async (req, res) => {
     await q(
       `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS visitors
        FROM daily_visits
-       WHERE seen_on >= CURRENT_DATE - 6
+       WHERE seen_on >= CURRENT_DATE - ${days - 1}
        GROUP BY path
        ORDER BY views DESC
        LIMIT 10`
@@ -98,7 +99,7 @@ router.get('/visits', ah(async (req, res) => {
     await q(
       `SELECT item_type, item_id, SUM(count) AS views
        FROM item_views
-       WHERE seen_on >= CURRENT_DATE - 6
+       WHERE seen_on >= CURRENT_DATE - ${days - 1}
        GROUP BY item_type, item_id
        ORDER BY views DESC
        LIMIT 10`
