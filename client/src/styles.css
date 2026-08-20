@@ -3597,7 +3597,8 @@ a.step { text-decoration: none; color: inherit; }
 /* ---------- Promotions éclair ---------- */
 .flash-promo-form { display: grid; grid-template-columns: 1fr 140px 140px auto; gap: 10px; margin: 12px 0 18px; }
 @media (max-width: 720px) { .flash-promo-form { grid-template-columns: 1fr; } }
-.flash-delete { position: absolute; right: 8px; top: 54px; z-index: 3; padding: 4px 8px; font-size: 0.75rem; }
+.flash-delete { position: absolute; right: 8px; top: 88px; z-index: 3; padding: 4px 8px; font-size: 0.75rem; }
+.flash-share { position: absolute; right: 8px; top: 54px; z-index: 3; padding: 4px 8px; font-size: 0.75rem; }
 .badge-flash {
   position: absolute;
   top: 10px;

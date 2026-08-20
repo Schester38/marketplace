@@ -7,9 +7,10 @@ const router = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
-const MAX_ACTIVE_PER_SHOP = 3;
+const MAX_WEEKLY_PER_SHOP = 1;
+const MIN_WEEK_GAP_DAYS = 7;
 const DEFAULT_MINUTES = 180;
-const MAX_MINUTES = 720;
+const MAX_MINUTES = 1440; // 24 h
 
 async function purgeExpired() {
   await q('DELETE FROM flash_promotions WHERE ends_at <= now()');
@@ -32,8 +33,7 @@ function promoRow(row) {
     price: Number(row.price),
     promo_price: Number(row.promo_price),
     discount_percent: row.price > 0 ? Math.round((1 - Number(row.promo_price) / Number(row.price)) * 100) : 0,
-    commission_percent: Number(row.commission_percent),
-    commission: Math.round(Number(row.promo_price) * (Number(row.commission_percent) / 100) * 100) / 100,
+    commission_percent: 0,
     currency: row.currency || 'XAF',
     duration_minutes: Number(row.duration_minutes),
     starts_at: row.starts_at,
@@ -61,7 +61,7 @@ router.get('/', ah(async (req, res) => {
 
 // Création par une boutique (le produit doit lui appartenir).
 router.post('/', authRequired, roleRequired('shop'), ah(async (req, res) => {
-  const { product_id, promo_price, commission_percent, duration_minutes } = req.body || {};
+  const { product_id, promo_price, duration_minutes } = req.body || {};
   const product = (
     await q('SELECT id, price, quantity, name, currency FROM products WHERE id = $1 AND shop_id = $2', [
       Number(product_id || 0),
@@ -81,10 +81,6 @@ router.post('/', authRequired, roleRequired('shop'), ah(async (req, res) => {
   if (price >= Number(product.price)) {
     return res.status(400).json({ error: 'Le prix promotionnel doit être inférieur au prix normal.' });
   }
-  const percent = Number(commission_percent ?? 0);
-  if (!Number.isFinite(percent) || percent < 0 || percent > 100) {
-    return res.status(400).json({ error: 'La commission de la promotion doit être entre 0 et 100 %.' });
-  }
   const minutes = Math.max(1, Math.min(MAX_MINUTES, Math.round(Number(duration_minutes) || DEFAULT_MINUTES)));
   const conflict = (
     await q(
@@ -97,22 +93,22 @@ router.post('/', authRequired, roleRequired('shop'), ah(async (req, res) => {
   if (conflict) {
     return res.status(400).json({ error: 'Ce produit a déjà une promotion en cours.' });
   }
-  const activeCount = (
+  const recent = (
     await q(
       `SELECT COUNT(*)::int AS cnt FROM flash_promotions
-       WHERE shop_id = $1 AND ends_at > now()`,
-      [req.user.id]
+       WHERE shop_id = $1 AND starts_at > now() - make_interval(days => $2::int)`,
+      [req.user.id, MIN_WEEK_GAP_DAYS]
     )
   )[0].cnt;
-  if (activeCount >= MAX_ACTIVE_PER_SHOP) {
-    return res.status(400).json({ error: `Maximum ${MAX_ACTIVE_PER_SHOP} promotions en même temps.` });
+  if (recent >= MAX_WEEKLY_PER_SHOP) {
+    return res.status(400).json({ error: 'Vous ne pouvez publier qu\'une seule promotion par semaine.' });
   }
   const created = (
     await q(
       `INSERT INTO flash_promotions (shop_id, product_id, promo_price, commission_percent, duration_minutes, starts_at, ends_at)
-       VALUES ($1, $2, $3, $4, $5, now(), now() + make_interval(mins => $5::int))
+       VALUES ($1, $2, $3, 0, $4, now(), now() + make_interval(mins => $4::int))
        RETURNING *`,
-      [req.user.id, product.id, price, percent, minutes]
+      [req.user.id, product.id, price, minutes]
     )
   )[0];
   const row = await q(

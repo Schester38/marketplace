@@ -171,6 +171,8 @@ router.get('/', async (req, res) => {
     params.push(maxP);
   }
   where.push('p.quantity > 0');
+  // Un produit en promotion éclair disparaît du catalogue : seul l'accès direct (via la promotion) reste possible.
+  where.push("NOT EXISTS (SELECT 1 FROM flash_promotions fp2 WHERE fp2.product_id = p.id AND fp2.ends_at > now())");
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
   sql += ' ORDER BY ' + (SORTS[sort] || SORTS.recent);
   const rawLimit = Number(limit);
@@ -203,7 +205,13 @@ router.get('/', async (req, res) => {
 
 router.get('/mine', authRequired, roleRequired(...OWNER_ROLES), async (req, res) => {
   const products = (
-    await q(SELECT_PRODUCT + ' WHERE p.shop_id = $1 ORDER BY p.created_at DESC', [req.user.id])
+    await q(
+      SELECT_PRODUCT +
+        ` WHERE p.shop_id = $1
+            AND NOT EXISTS (SELECT 1 FROM flash_promotions fp2 WHERE fp2.product_id = p.id AND fp2.ends_at > now())
+          ORDER BY p.created_at DESC`,
+      [req.user.id]
+    )
   ).map(productRow);
   res.json({ products, limit: MAX_PRODUCTS_PER_SHOP });
 });

@@ -32,7 +32,7 @@ export function FlashCountdown({ endsAt, render }) {
   return <span className="flash-countdown">⏰ {formatFlashTime(remains)}</span>;
 }
 
-export default function FlashPromoCard({ promo, onDelete, showShop = true }) {
+export default function FlashPromoCard({ promo, onDelete, onShare, showShop = true }) {
   const { t } = useLang();
   const symbol = countrySymbol(promo.shop_country);
   const image = promo.image;
@@ -44,6 +44,17 @@ export default function FlashPromoCard({ promo, onDelete, showShop = true }) {
         </div>
       </Link>
       <span className="badge badge-flash">⚡ -{promo.discount_percent || 0}%</span>
+      {onShare && (
+        <button
+          type="button"
+          className="btn btn-small btn-primary flash-share"
+          onClick={() => onShare(promo)}
+          aria-label={t('Partager la promotion')}
+          title={t('Partager la promotion')}
+        >
+          🔗 {t('Partager')}
+        </button>
+      )}
       {onDelete && (
         <button type="button" className="btn btn-small btn-danger flash-delete" onClick={() => onDelete(promo)}>
           {t('Annuler')}
@@ -67,9 +78,6 @@ export default function FlashPromoCard({ promo, onDelete, showShop = true }) {
             <span className="old-price">{formatMoney(promo.price)} {symbol}</span>
             <span className="price price-flash">{formatMoney(promo.promo_price)} {symbol}</span>
           </span>
-          {Number(promo.commission || 0) > 0 && (
-            <span className="commission">+{formatMoney(promo.commission)} {symbol}</span>
-          )}
         </div>
       </Link>
     </div>

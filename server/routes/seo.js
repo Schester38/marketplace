@@ -123,13 +123,13 @@ router.get('/', async (req, res) => {
   try {
     const products = (await q(
       `SELECT p.id, p.name, p.price, p.currency, p.image, u.name AS shop_name,
-              COALESCE(s.n, 0) AS sold, fp.promo_price AS flash_price
+              COALESCE(s.n, 0) AS sold
        FROM products p
        JOIN users u ON u.id = p.shop_id
        LEFT JOIN (SELECT product_id, SUM(quantity) FILTER (WHERE status = 'delivered') AS n
                   FROM sales GROUP BY product_id) s ON s.product_id = p.id
-       LEFT JOIN flash_promotions fp ON fp.product_id = p.id AND fp.ends_at > now()
        WHERE p.quantity > 0
+         AND NOT EXISTS (SELECT 1 FROM flash_promotions fp WHERE fp.product_id = p.id AND fp.ends_at > now())
        ORDER BY COALESCE(s.n, 0) DESC, p.created_at DESC
        LIMIT 12`
     )) || [];
@@ -161,7 +161,7 @@ router.get('/', async (req, res) => {
           name: p.name,
           url: `${BASE_URL}/produit/${p.id}`,
           image: p.image && /^https?:/.test(p.image) ? p.image : p.image ? `${BASE_URL}${p.image}` : undefined,
-          offers: { '@type': 'Offer', price: String(p.flash_price != null ? Number(p.flash_price) : Number(p.price || 0)), priceCurrency: (p.currency || 'XAF').toUpperCase() },
+          offers: { '@type': 'Offer', price: String(Number(p.price || 0)), priceCurrency: (p.currency || 'XAF').toUpperCase() },
         })),
       };
     }
@@ -267,8 +267,11 @@ router.get('/boutique/:id', async (req, res) => {
     if (!Number.isInteger(id) || id <= 0) return res.status(404).type('html').send(notFoundHtml);
     const [shop] = await q(
       `SELECT id, name, location, country, verified,
-              (SELECT COUNT(*) FROM products p WHERE p.shop_id = users.id) AS product_count,
-              (SELECT image FROM products p WHERE p.shop_id = users.id AND image IS NOT NULL ORDER BY p.created_at DESC LIMIT 1) AS sample_image
+              (SELECT COUNT(*) FROM products p WHERE p.shop_id = users.id
+                      AND NOT EXISTS (SELECT 1 FROM flash_promotions fp WHERE fp.product_id = p.id AND fp.ends_at > now())) AS product_count,
+              (SELECT image FROM products p WHERE p.shop_id = users.id AND image IS NOT NULL
+                      AND NOT EXISTS (SELECT 1 FROM flash_promotions fp WHERE fp.product_id = p.id AND fp.ends_at > now())
+               ORDER BY p.created_at DESC LIMIT 1) AS sample_image
        FROM users WHERE id = $1 AND role IN ('shop', 'creator')`,
       [id]
     );
@@ -310,8 +313,11 @@ router.get('/createur/:id', async (req, res) => {
     if (!Number.isInteger(id) || id <= 0) return res.status(404).type('html').send(notFoundHtml);
     const [shop] = await q(
       `SELECT id, name, location, country, verified,
-              (SELECT COUNT(*) FROM products p WHERE p.shop_id = users.id AND p.quantity > 0) AS product_count,
-              (SELECT image FROM products p WHERE p.shop_id = users.id AND p.quantity > 0 AND image IS NOT NULL ORDER BY p.created_at DESC LIMIT 1) AS sample_image
+              (SELECT COUNT(*) FROM products p WHERE p.shop_id = users.id AND p.quantity > 0
+                      AND NOT EXISTS (SELECT 1 FROM flash_promotions fp WHERE fp.product_id = p.id AND fp.ends_at > now())) AS product_count,
+              (SELECT image FROM products p WHERE p.shop_id = users.id AND p.quantity > 0 AND image IS NOT NULL
+                      AND NOT EXISTS (SELECT 1 FROM flash_promotions fp WHERE fp.product_id = p.id AND fp.ends_at > now())
+               ORDER BY p.created_at DESC LIMIT 1) AS sample_image
        FROM users WHERE id = $1 AND role = 'creator'`,
       [id]
     );

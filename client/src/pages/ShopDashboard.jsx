@@ -58,7 +58,7 @@ export default function ShopDashboard() {
   const [codeLoading, setCodeLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [flashPromos, setFlashPromos] = useState([]);
-  const [flashForm, setFlashForm] = useState({ productId: '', promoPrice: '', commission: '', minutes: '180' });
+  const [flashForm, setFlashForm] = useState({ productId: '', promoPrice: '', minutes: '180' });
   const [flashLoading, setFlashLoading] = useState(false);
   const symbol = countrySymbol(user?.country);
   const prefix = countryPhone(user?.country);
@@ -251,11 +251,10 @@ export default function ShopDashboard() {
       await api.createFlashPromotion({
         product_id: Number(flashForm.productId),
         promo_price: Number(flashForm.promoPrice),
-        commission_percent: flashForm.commission === '' ? undefined : Number(flashForm.commission),
         duration_minutes: Number(flashForm.minutes),
       });
       setSuccess(t('Promotion éclair lancée !'));
-      setFlashForm({ productId: '', promoPrice: '', commission: '', minutes: '180' });
+      setFlashForm({ productId: '', promoPrice: '', minutes: '180' });
       load();
     } catch (err) {
       setError(err.message);
@@ -275,6 +274,26 @@ export default function ShopDashboard() {
     } catch (err) {
       setError(err.message);
     }
+  };
+
+  const shareFlashPromo = async (pr) => {
+    const url = `${window.location.origin}/produit/${pr.product_id}`;
+    const text = t('⚡ Offre éclair chez {shop} : {name} à {price} {symbol} au lieu de {old} {symbol} (-{pct}%) sur Mboppi.', {
+      shop: pr.shop_name,
+      name: pr.product_name,
+      price: formatMoney(pr.promo_price),
+      old: formatMoney(pr.price),
+      pct: pr.discount_percent || 0,
+      symbol: countrySymbol(pr.shop_country),
+    });
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: pr.product_name, text, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setSuccess(t('Lien de la promotion copié !'));
+    } catch {}
   };
 
   const removeDelivered = async (s) => {
@@ -460,7 +479,7 @@ export default function ShopDashboard() {
       <section className="card stats">
         <h2>⚡ {t('Promotions éclair')}</h2>
         <p className="hint" style={{ marginTop: 0 }}>
-          {t('Proposez un produit à durée limitée : il s\'affiche avec un compte à rebours sur la page d\'accueil et dans l\'espace de tous les utilisateurs. À la fin du temps, la promotion disparaît automatiquement.')}
+          {t('Proposez un produit à durée limitée (24 h maximum, une promotion par semaine). Pendant la promotion, le produit disparaît du catalogue : seul l\'accès à la promotion reste possible. À la fin du temps, la promotion disparaît et le produit réapparaît s\'il reste en stock.')}
         </p>
         <form className="flash-promo-form" onSubmit={submitFlash}>
           <select
@@ -486,16 +505,6 @@ export default function ShopDashboard() {
             value={flashForm.promoPrice}
             onChange={(e) => setFlashForm({ ...flashForm, promoPrice: e.target.value })}
           />
-          <input
-            className="input"
-            type="number"
-            min="0"
-            max="100"
-            step="any"
-            placeholder={t('Commission promo (%)')}
-            value={flashForm.commission}
-            onChange={(e) => setFlashForm({ ...flashForm, commission: e.target.value })}
-          />
           <select
             className="input"
             value={flashForm.minutes}
@@ -507,6 +516,7 @@ export default function ShopDashboard() {
             <option value="180">{t('3 heures')}</option>
             <option value="360">{t('6 heures')}</option>
             <option value="720">{t('12 heures')}</option>
+            <option value="1440">{t('24 heures')}</option>
           </select>
           <button className="btn btn-primary" disabled={flashLoading}>
             {flashLoading ? '…' : t('⚡ Lancer la promotion')}
@@ -515,7 +525,7 @@ export default function ShopDashboard() {
         {flashPromos.length > 0 ? (
           <div className="grid">
             {flashPromos.map((pr) => (
-              <FlashPromoCard key={pr.id} promo={pr} onDelete={removeFlash} showShop={false} />
+              <FlashPromoCard key={pr.id} promo={pr} onDelete={removeFlash} onShare={shareFlashPromo} showShop={false} />
             ))}
           </div>
         ) : (

@@ -115,8 +115,10 @@ router.get('/', ah(async (req, res) => {
   }
   const sql = `
     SELECT u.id, u.role, u.name, u.city, u.location, u.country, u.phone, u.verified,
-           COUNT(p.id) FILTER (WHERE p.quantity > 0)::int AS product_count,
-           (SELECT image FROM products p2 WHERE p2.shop_id = u.id AND p2.quantity > 0 ORDER BY p2.created_at DESC LIMIT 1) AS sample_image
+           COUNT(p.id) FILTER (WHERE p.quantity > 0 AND NOT EXISTS (SELECT 1 FROM flash_promotions fp WHERE fp.product_id = p.id AND fp.ends_at > now()))::int AS product_count,
+           (SELECT image FROM products p2 WHERE p2.shop_id = u.id AND p2.quantity > 0
+                  AND NOT EXISTS (SELECT 1 FROM flash_promotions fp WHERE fp.product_id = p2.id AND fp.ends_at > now())
+            ORDER BY p2.created_at DESC LIMIT 1) AS sample_image
     FROM users u
     LEFT JOIN products p ON p.shop_id = u.id
     WHERE ${where.join(' AND ')}
@@ -145,7 +147,9 @@ router.get('/:id', ah(async (req, res) => {
        LEFT JOIN (SELECT product_id, SUM(quantity) AS n,
                          SUM(quantity) FILTER (WHERE status IN ('pending', 'bought', 'confirmed')) AS pending_n
                   FROM sales GROUP BY product_id) s ON s.product_id = p.id
-       WHERE p.shop_id = $1 AND p.quantity > 0 ORDER BY p.created_at DESC LIMIT 24`,
+       WHERE p.shop_id = $1 AND p.quantity > 0
+         AND NOT EXISTS (SELECT 1 FROM flash_promotions fp WHERE fp.product_id = p.id AND fp.ends_at > now())
+       ORDER BY p.created_at DESC LIMIT 24`,
       [shop.id]
     )
   ).map((p) => ({

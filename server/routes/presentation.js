@@ -80,8 +80,9 @@ ${bodyHtml}
 router.get('/:id', async (req, res) => {
   const p = (
     await q(
-      `SELECT p.*, u.name AS shop_name, u.country AS shop_country
+      `SELECT p.*, u.name AS shop_name, u.country AS shop_country, fp.promo_price AS flash_price
        FROM products p JOIN users u ON u.id = p.shop_id
+       LEFT JOIN flash_promotions fp ON fp.product_id = p.id AND fp.ends_at > now()
        WHERE p.id = $1`,
       [Number(req.params.id)]
     )
@@ -89,7 +90,7 @@ router.get('/:id', async (req, res) => {
   if (!p) return res.status(404).send('Produit introuvable');
 
   const photo = firstPhoto(p);
-  const price = Number(p.price || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 });
+  const price = Number(p.flash_price != null ? p.flash_price : p.price || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 });
   const old = Number(p.old_price || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 });
   const symbol = p.shop_country === 'Kenya' ? 'KSh' : p.shop_country === 'Nigeria' ? '₦' : 'F';
   const origin = `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}`;
