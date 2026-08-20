@@ -1279,4 +1279,5 @@ export default {
   'Abonnement à vie : aucun renouvellement requis.': 'Lifetime subscription: no renewal required.',
   'Avis clients': 'Customer reviews',
   'Partagez votre expérience avec nous sur Trustpilot': 'Share your experience with us on Trustpilot',
+  'Évaluez-nous sur Trustpilot': 'Rate us on Trustpilot',
 };

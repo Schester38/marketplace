@@ -1207,5 +1207,6 @@ export default {
   'Abonnement à vie : aucun renouvellement requis.': 'Suscripción de por vida: no se requiere renovación.',
   'Avis clients': 'Opiniones de clientes',
   'Partagez votre expérience avec nous sur Trustpilot': 'Comparte tu experiencia con nosotros en Trustpilot',
+  'Évaluez-nous sur Trustpilot': 'Valóranos en Trustpilot',
 
 };

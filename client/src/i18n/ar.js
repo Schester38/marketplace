@@ -1255,5 +1255,6 @@ export default {
   'Abonnement à vie : aucun renouvellement requis.': 'اشتراك مدى الحياة: لا حاجة للتجديد.',
   'Avis clients': 'آراء العملاء',
   'Partagez votre expérience avec nous sur Trustpilot': 'شارك تجربتك معنا على تراست بايلوت',
+  'Évaluez-nous sur Trustpilot': 'قيّمنا على تراست بايلوت',
 
 };

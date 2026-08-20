@@ -1953,6 +1953,31 @@ a.step { text-decoration: none; color: inherit; }
 .tp-sub { margin: 0 0 10px; font-size: 0.85rem; color: #cfd6dc; }
 .tp-block .trustpilot-widget { margin: 0 auto; width: 100%; }
 
+.tp-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #00b67a, #00966a);
+  color: #fff;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.tp-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 182, 122, 0.35);
+}
+.tp-btn-stars { letter-spacing: 1px; color: #d9f9ec; }
+@media (max-width: 520px) {
+  .tp-block .trustpilot-widget { display: none; }
+  .tp-btn { display: inline-flex; }
+}
+
 .newsletter {
   max-width: 420px;
   width: 100%;
