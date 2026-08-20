@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { LANGS, useLang } from '../i18n.jsx';
 import { useCart, useFavs } from '../store.jsx';
@@ -418,7 +418,29 @@ function NotifBell() {
               {notifs.map((n) => (
                 <li key={n.id} className={`notif-item ${n.read ? '' : 'unread'}`}>
                   <Link to={linkFor(n)} onClick={() => setOpen(false)}>
-                    <span className="notif-text">{message(n)}</span>
+                    <span className="notif-text">
+                      {n.type === 'product_deleted' ? (
+                        <>
+                          {t('Votre produit « {product} » a été supprimé : il ne respectait pas les', {
+                            product: n.product_name || t('produit'),
+                          })}{' '}
+                          <a
+                            href="/cgu"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setOpen(false);
+                              navigate('/cgu');
+                            }}
+                          >
+                            CGU
+                          </a>
+                          .
+                        </>
+                      ) : (
+                        message(n)
+                      )}
+                    </span>
                     <span className="notif-date">
                       {new Date(n.created_at).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })}
                     </span>
@@ -444,6 +466,7 @@ function NotifBell() {
 }
 
 export default function Navbar({ onLogout }) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLang();
   const { cartCount } = useCart();

@@ -391,6 +391,30 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_provider ON payment_webhook_logs(provider, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_order ON payment_webhook_logs(provider_order_id);
 
+    CREATE TABLE IF NOT EXISTS admin_hidden_sales (
+      sale_id INTEGER PRIMARY KEY REFERENCES sales(id) ON DELETE CASCADE,
+      hidden_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      hidden_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_hidden_statuses (
+      status TEXT PRIMARY KEY,
+      hidden_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      hidden_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_hidden_shops (
+      shop_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      hidden_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      hidden_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_hidden_sellers (
+      seller_id INTEGER PRIMARY KEY,
+      hidden_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      hidden_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    );
+
     ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_transaction_type_check;
     ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_transaction_type_check CHECK (transaction_type IN ('commission_credit','referral_credit','payout_debit','adjustment','online_collect','online_payout'));
 

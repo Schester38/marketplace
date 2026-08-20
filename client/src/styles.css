@@ -2187,6 +2187,9 @@ a.step { text-decoration: none; color: inherit; }
 .visits-head .section-title { margin: 0; }
 .visits-range { display: flex; gap: 6px; flex-wrap: wrap; }
 .visits-country { width: auto; min-width: 200px; max-width: 100%; }
+.transactions-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.transactions-head .section-title { margin: 0; }
+tr.tr-hidden td { opacity: 0.55; }
 .visits-panel .table-card { overflow-x: auto; }
 .msg-textarea {
   width: 100%;
