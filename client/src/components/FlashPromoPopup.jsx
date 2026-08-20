@@ -97,7 +97,6 @@ export default function FlashPromoPopup() {
 
   return (
     <div className="flash-popup-stack" role="dialog" aria-label={t('Promotions du jour')}>
-      <button type="button" className="flash-popup-close" aria-label={t('Fermer')} onClick={close}>✕</button>
       {shown.map((p, i) => {
         const depth = (i - Math.min(index, shown.length - 1) + shown.length) % shown.length;
         const symbol = countrySymbol(p.shop_country);
@@ -109,6 +108,9 @@ export default function FlashPromoPopup() {
             aria-hidden={depth > 0}
             tabIndex={depth > 0 ? -1 : undefined}
           >
+            {depth === 0 && (
+              <button type="button" className="flash-popup-close" aria-label={t('Fermer')} onClick={close}>✕</button>
+            )}
             <span className="flash-popup-title">⚡ {t('PROMOTION DU JOUR')}</span>
             <Link to={`/produit/${p.product_id}`} className="flash-popup-body" tabIndex={depth > 0 ? -1 : undefined}>
               {p.image && <img src={p.image} alt={p.product_name} loading="lazy" decoding="async" />}

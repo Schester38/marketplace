@@ -3640,7 +3640,7 @@ a.step { text-decoration: none; color: inherit; }
 }
 .flash-popup {
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
   background: var(--card);
@@ -3649,7 +3649,7 @@ a.step { text-decoration: none; color: inherit; }
   box-shadow: 0 18px 50px rgba(220, 38, 38, 0.35);
   overflow: hidden;
   opacity: 0.55;
-  transform: translateY(8px) scale(0.97);
+  transform: translateY(-8px) scale(0.97);
   transition: opacity 0.4s ease, transform 0.4s ease;
   pointer-events: none;
 }
@@ -3679,9 +3679,9 @@ a.step { text-decoration: none; color: inherit; }
 }
 .flash-popup-close {
   position: absolute;
-  top: 40px;
+  top: 8px;
   right: 8px;
-  z-index: 1100;
+  z-index: 5;
   width: 28px;
   height: 28px;
   padding: 0;
