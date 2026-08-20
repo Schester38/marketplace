@@ -41,24 +41,20 @@ try {
   /* stockage indisponible */
 }
 
+const themeCol = document.querySelector('meta[name="theme-color"]');
+if (themeCol) themeCol.content = '#131a22';
 if (pathname.startsWith('/verone')) {
   const link = document.querySelector('link[rel="manifest"]');
   if (link) link.href = '/manifest-verone.webmanifest';
   document.title = 'Verone';
-  const theme = document.querySelector('meta[name="theme-color"]');
-  if (theme) theme.content = '#4f46e5';
 } else if (pathname.startsWith('/livreur')) {
   const link = document.querySelector('link[rel="manifest"]');
   if (link) link.href = '/manifest-livreur.webmanifest';
   document.title = 'Mboppi Livreur';
-  const theme = document.querySelector('meta[name="theme-color"]');
-  if (theme) theme.content = '#4f46e5';
 } else if (pathname.startsWith('/admin')) {
   const link = document.querySelector('link[rel="manifest"]');
   if (link) link.href = '/manifest-admin.webmanifest';
   document.title = 'Mboppi Admin';
-  const theme = document.querySelector('meta[name="theme-color"]');
-  if (theme) theme.content = '#4f46e5';
 }
 
 if ('serviceWorker' in navigator) {

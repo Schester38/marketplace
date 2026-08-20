@@ -481,6 +481,8 @@ export default function Navbar({ onLogout }) {
   const [isIOS, setIsIOS] = useState(false);
   const [showIosHint, setShowIosHint] = useState(false);
   const [showGenericHint, setShowGenericHint] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
+  const [searchCat, setSearchCat] = useState('');
   const [standalone] = useState(() => {
     try {
       return (
@@ -517,6 +519,17 @@ export default function Navbar({ onLogout }) {
   const canInstall = !standalone;
 
   const close = () => setOpen(false);
+  const submitSearch = (e) => {
+    e.preventDefault();
+    const q = searchQ.trim();
+    const cat = searchCat;
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (cat) params.set('cat', cat);
+    const qs = params.toString();
+    navigate(qs ? `/?${qs}` : '/');
+    close();
+  };
   const logout = async () => {
     close();
     try {
@@ -592,6 +605,31 @@ export default function Navbar({ onLogout }) {
     </div>
   );
 
+  const searchBox = (
+    <form className="nav-search" role="search" onSubmit={submitSearch}>
+      <select
+        value={searchCat}
+        onChange={(e) => setSearchCat(e.target.value)}
+        aria-label={t('Catégorie')}
+      >
+        <option value="">{t('Toutes')}</option>
+        {PRODUCT_CATEGORIES.map((c) => (
+          <option key={c} value={c}>{t(c)}</option>
+        ))}
+      </select>
+      <input
+        value={searchQ}
+        onChange={(e) => setSearchQ(e.target.value)}
+        placeholder={t('Rechercher un produit…')}
+        aria-label={t('Rechercher un produit')}
+        enterKeyHint="search"
+      />
+      <button type="submit" className="search-btn" aria-label={t('Rechercher')}>
+        🔍
+      </button>
+    </form>
+  );
+
   const navLinks = (
     <>
       <FollowUs />
@@ -639,6 +677,8 @@ export default function Navbar({ onLogout }) {
         <span>Mboppi</span>
       </Link>
 
+      {searchBox}
+
       <nav className="desktop-nav">{links}</nav>
 
       <div className="navbar-right">
@@ -646,6 +686,7 @@ export default function Navbar({ onLogout }) {
           <Link to="/login" className="nav-user-btn" onClick={close}>{t('Connexion')}</Link>
         )}
         <NotifBell />
+        <span className="nav-cart-desktop">{cartLink}</span>
 
         <button
           className="hamburger"

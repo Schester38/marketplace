@@ -326,7 +326,7 @@ export default function ProductDetail() {
                 <button type="button" onClick={() => setQty((q) => Math.min(Number(product.quantity) || 99, q + 1))} aria-label="+">+</button>
               </div>
               <button
-                className="btn btn-primary"
+                className="btn btn-cart"
                 onClick={() => {
                   addToCart(product, qty);
                   setAdded(true);

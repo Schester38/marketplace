@@ -190,7 +190,7 @@ export default function Cart() {
                 placeholder={t('Quartier, ville…')}
               />
               {error && <p className="error">{error}</p>}
-              <button className="btn btn-primary btn-block" disabled={placing}>
+              <button className="btn btn-checkout btn-block" disabled={placing}>
                 {placing ? t('Commande en cours…') : `✅ ${t('Passer la commande')}`}
               </button>
             </form>
