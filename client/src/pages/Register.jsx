@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { GoogleIcon } from '../components/icons.jsx';
 import Seo from '../components/Seo.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
 import Logo from '../components/Logo.jsx';
-import { COUNTRIES } from '../config.js';
+import { COUNTRIES, IKEEPAY_OPERATOR_NAMES } from '../config.js';
 import { useLang } from '../i18n.jsx';
-
-const SELLER_WALLETS = ['Orange Money', 'MTN Mobile Money', 'Moov Money', 'Wave', 'Airtel Money', 'M-Pesa', 'T-Money'];
 
 export default function Register() {
   const { t } = useLang();
@@ -28,6 +26,31 @@ export default function Register() {
   const [accepted, setAccepted] = useState(false);
   const [sent, setSent] = useState(false);
   const [resending, setResending] = useState(false);
+  const [walletOptions, setWalletOptions] = useState([]);
+
+  useEffect(() => {
+    if (!form.country || form.role !== 'seller') {
+      setWalletOptions([]);
+      setForm((f) => (f.wallet_name ? { ...f, wallet_name: '' } : f));
+      return;
+    }
+    let active = true;
+    api
+      .paymentOperators(form.country)
+      .then((r) => {
+        if (!active) return;
+        const names = (Array.isArray(r.operators) ? r.operators : [])
+          .map((code) => IKEEPAY_OPERATOR_NAMES[code] || code);
+        setWalletOptions(names);
+        setForm((f) => (names.includes(f.wallet_name) ? f : { ...f, wallet_name: '' }));
+      })
+      .catch(() => {
+        if (active) setWalletOptions([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [form.country, form.role]);
 
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
 
@@ -191,9 +214,14 @@ export default function Register() {
                 className="input"
                 value={form.wallet_name}
                 onChange={(e) => setForm({ ...form, wallet_name: e.target.value })}
+                disabled={walletOptions.length === 0}
               >
-                <option value="">{t('Choisir un opérateur…')}</option>
-                {SELLER_WALLETS.map((w) => (
+                <option value="">
+                  {walletOptions.length === 0
+                    ? t('Aucun opérateur iKeePay disponible pour ce pays')
+                    : t('Choisir un opérateur…')}
+                </option>
+                {walletOptions.map((w) => (
                   <option key={w} value={w}>{w}</option>
                 ))}
               </select>

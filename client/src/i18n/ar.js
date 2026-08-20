@@ -1229,6 +1229,7 @@ export default {
   // Activation vendeur
   'Votre portefeuille Mobile Money': 'محفظتك للدفع عبر الهاتف',
   'Choisir un opérateur…': 'اختر مشغلاً…',
+  'Aucun opérateur iKeePay disponible pour ce pays': 'لا يتوفر مشغل iKeePay لهذا البلد',
   'Numéro du portefeuille': 'رقم المحفظة',
   'Ce portefeuille servira à régler vos frais d\'activation et à recevoir vos commissions.': 'ستُستخدم هذه المحفظة لدفع رسوم التفعيل ولتلقي عمولاتك.',
   'Activation': 'التفعيل',

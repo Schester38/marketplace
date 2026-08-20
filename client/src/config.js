@@ -131,6 +131,25 @@ export function currencySymbol(code) {
 
 export const IKE_FEE_PERCENT = 6;
 
+export const IKEEPAY_OPERATOR_NAMES = {
+  ORANGE: 'Orange Money',
+  MTN: 'MTN Mobile Money',
+  MOOV: 'Moov Money',
+  WAVE: 'Wave',
+  AIRTEL: 'Airtel Money',
+  MPESA: 'M-Pesa',
+  VODAFONE: 'Vodafone',
+  VODACOM: 'Vodacom',
+  MOBICASH: 'Mobicash',
+  TIGO: 'Tigo Pesa',
+  HALOPESA: 'Halo Pesa',
+  OPAY: 'OPay',
+  MONIEPOINT: 'Moniepoint',
+  FREE: 'Free Money',
+  EMONEY: 'e-Money',
+  ZAMTEL: 'Zamtel',
+};
+
 export function ikePayFee(amount) {
   return Math.round((Number(amount) || 0) * IKE_FEE_PERCENT / 100);
 }

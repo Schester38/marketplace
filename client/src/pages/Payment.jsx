@@ -2,12 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { useAuth } from '../App.jsx';
-import { currencySymbol, IKE_FEE_PERCENT } from '../config.js';
+import { currencySymbol, IKE_FEE_PERCENT, IKEEPAY_OPERATOR_NAMES } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import IkeFeeNotice from '../components/IkeFeeNotice.jsx';
 import { useLang } from '../i18n.jsx';
-
-const WALLET_OPTIONS = ['Orange Money', 'MTN Mobile Money', 'Moov Money', 'Wave', 'Airtel Money', 'M-Pesa', 'T-Money'];
 
 function mobileWalletName(name) {
   const n = String(name || '').toLowerCase();
@@ -33,6 +31,7 @@ export default function Payment() {
   const [currency, setCurrency] = useState('XAF');
   const [activationDays, setActivationDays] = useState(31);
   const [walletName, setWalletName] = useState('');
+  const [walletOptions, setWalletOptions] = useState([]);
   const [walletPhone, setWalletPhone] = useState('');
   const [hasWallet, setHasWallet] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -117,6 +116,29 @@ export default function Payment() {
       }
     })();
   }, [refreshMe, finish]);
+
+  useEffect(() => {
+    if (!user || !user.country) {
+      setWalletOptions([]);
+      return;
+    }
+    let active = true;
+    api
+      .paymentOperators(user.country)
+      .then((r) => {
+        if (!active) return;
+        setWalletOptions(
+          (Array.isArray(r.operators) ? r.operators : [])
+            .map((code) => IKEEPAY_OPERATOR_NAMES[code] || code)
+        );
+      })
+      .catch(() => {
+        if (active) setWalletOptions([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     if (paying && !polling.current) {
@@ -215,9 +237,14 @@ export default function Payment() {
               className="input"
               value={walletName}
               onChange={(e) => setWalletName(e.target.value)}
+              disabled={walletOptions.length === 0}
             >
-              <option value="">{t('Choisir un opérateur…')}</option>
-              {WALLET_OPTIONS.map((w) => (
+              <option value="">
+                {walletOptions.length === 0
+                  ? t('Aucun opérateur iKeePay disponible pour ce pays')
+                  : t('Choisir un opérateur…')}
+              </option>
+              {walletOptions.map((w) => (
                 <option key={w} value={w}>{w}</option>
               ))}
             </select>

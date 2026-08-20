@@ -62,6 +62,7 @@ const OPERATOR_MAP = {
   'tigo pesa': 'TIGO',
   'tigo': 'TIGO',
   't-money': 'MOBICASH',
+  'mobicash': 'MOBICASH',
   'flooz': 'MOOV',
   'free money': 'FREE',
   'free': 'FREE',

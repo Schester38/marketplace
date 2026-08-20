@@ -1253,6 +1253,7 @@ export default {
   // Activation vendeur
   'Votre portefeuille Mobile Money': 'Your Mobile Money wallet',
   'Choisir un opérateur…': 'Choose an operator…',
+  'Aucun opérateur iKeePay disponible pour ce pays': 'No iKeePay operator available for this country',
   'Numéro du portefeuille': 'Wallet number',
   'Ce portefeuille servira à régler vos frais d\'activation et à recevoir vos commissions.': 'This wallet will be used to pay your activation fee and to receive your commissions.',
   'Activation': 'Activation',

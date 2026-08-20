@@ -1181,6 +1181,7 @@ export default {
   // Activation vendedor
   'Votre portefeuille Mobile Money': 'Tu monedero de dinero móvil',
   'Choisir un opérateur…': 'Elegir un operador…',
+  'Aucun opérateur iKeePay disponible pour ce pays': 'Ningún operador de iKeePay disponible para este país',
   'Numéro du portefeuille': 'Número del monedero',
   'Ce portefeuille servira à régler vos frais d\'activation et à recevoir vos commissions.': 'Este monedero se usará para pagar tu tarifa de activación y para recibir tus comisiones.',
   'Activation': 'Activación',
