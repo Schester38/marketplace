@@ -13,6 +13,10 @@ import IkeFeeNotice from '../components/IkeFeeNotice.jsx';
 
 const CODE_KEY = 'livreur_shop_code';
 
+// Autres moyens de paiement (espèces, transfert wallet) temporairement masqués :
+// passer à true pour les réactiver.
+const SHOW_OTHER_PAYMENTS = false;
+
 export default function LivreurDashboard() {
   const { t } = useLang();
   const { user } = useAuth();
@@ -100,7 +104,7 @@ export default function LivreurDashboard() {
     setDeliverForm({
       sale: s,
       delivery_fee: '',
-      payment_method: s.payment_method === 'mobile' ? 'mobile' : 'espece',
+      payment_method: SHOW_OTHER_PAYMENTS ? (s.payment_method === 'mobile' ? 'mobile' : 'espece') : 'en ligne',
       client_code: '',
     });
   };
@@ -333,41 +337,50 @@ export default function LivreurDashboard() {
               />
               <p className="hint">{t('Demandez ce code au client. Il l\'a reçu à la commande et sur le suivi de commande.')}</p>
               <label style={{ marginTop: 12 }}>{t('Paiement *')}</label>
-              <div className="row2">
-                <label className={`payment-option ${deliverForm.payment_method === 'espece' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="espece"
-                    checked={deliverForm.payment_method === 'espece'}
-                    onChange={(e) => setDeliverForm({ ...deliverForm, payment_method: e.target.value })}
-                  />
-                  <span>💵 {t('En Espèce')}</span>
-                </label>
-                <label className={`payment-option ${deliverForm.payment_method === 'mobile' ? 'selected' : ''}`}>
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="mobile"
-                    checked={deliverForm.payment_method === 'mobile'}
-                    onChange={(e) => setDeliverForm({ ...deliverForm, payment_method: e.target.value })}
-                  />
-                  <span>📱 {t('Par Mobile')}</span>
-                </label>
-              </div>
-              {paymentEnabled && (deliverForm.payment_method === 'espece' || deliverForm.payment_method === 'mobile') && (
-                <div className="row2" style={{ marginTop: 10 }}>
-                  <label className={`payment-option ${deliverForm.payment_method === 'en ligne' ? 'selected' : ''}`}>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="en ligne"
-                      checked={deliverForm.payment_method === 'en ligne'}
-                      onChange={(e) => setDeliverForm({ ...deliverForm, payment_method: e.target.value })}
-                    />
-                    <span>🌐 {t('En ligne (auto)')} <img src="/ikeepay-logo.png" alt="iKeePay" style={{ width: 18, height: 18, verticalAlign: -2, marginLeft: 4 }} /></span>
-                  </label>
-                </div>
+              {SHOW_OTHER_PAYMENTS ? (
+                <>
+                  <div className="row2">
+                    <label className={`payment-option ${deliverForm.payment_method === 'espece' ? 'selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="payment"
+                        value="espece"
+                        checked={deliverForm.payment_method === 'espece'}
+                        onChange={(e) => setDeliverForm({ ...deliverForm, payment_method: e.target.value })}
+                      />
+                      <span>💵 {t('En Espèce')}</span>
+                    </label>
+                    <label className={`payment-option ${deliverForm.payment_method === 'mobile' ? 'selected' : ''}`}>
+                      <input
+                        type="radio"
+                        name="payment"
+                        value="mobile"
+                        checked={deliverForm.payment_method === 'mobile'}
+                        onChange={(e) => setDeliverForm({ ...deliverForm, payment_method: e.target.value })}
+                      />
+                      <span>📱 {t('Par Mobile')}</span>
+                    </label>
+                  </div>
+                  {paymentEnabled && (deliverForm.payment_method === 'espece' || deliverForm.payment_method === 'mobile') && (
+                    <div className="row2" style={{ marginTop: 10 }}>
+                      <label className={`payment-option ${deliverForm.payment_method === 'en ligne' ? 'selected' : ''}`}>
+                        <input
+                          type="radio"
+                          name="payment"
+                          value="en ligne"
+                          checked={deliverForm.payment_method === 'en ligne'}
+                          onChange={(e) => setDeliverForm({ ...deliverForm, payment_method: e.target.value })}
+                        />
+                        <span>🌐 {t('En ligne (auto)')} <img src="/ikeepay-logo.png" alt="iKeePay" style={{ width: 18, height: 18, verticalAlign: -2, marginLeft: 4 }} /></span>
+                      </label>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="hint" style={{ marginTop: 4 }}>
+                  <img src="/ikeepay-logo.png" alt="iKeePay" style={{ width: 16, height: 16, verticalAlign: -3, marginRight: 4 }} />
+                  {t('Paiement à la livraison via iKeePay (Mobile Money)')}
+                </p>
               )}
               {deliverForm.payment_method === 'mobile' && (
                 <div className="wallet-card" style={{ marginTop: 10 }}>
@@ -395,6 +408,11 @@ export default function LivreurDashboard() {
               )}
               {deliverForm.payment_method === 'en ligne' && (
                 <div className="wallet-card" style={{ marginTop: 10 }}>
+                  {!paymentEnabled && (
+                    <p className="error" style={{ marginTop: 0 }}>
+                      {t('Paiement en ligne iKeePay indisponible actuellement. Contactez l\'administration.')}
+                    </p>
+                  )}
                   {(() => {
                     const total = Math.round((Number(deliverForm.sale.total_price || 0) + Number(deliverForm.delivery_fee || 0)) * 100) / 100;
                     const charged = ikePayGrossUp(total);
@@ -454,7 +472,7 @@ export default function LivreurDashboard() {
                 </div>
               )}
               <div className="row2" style={{ marginTop: 14 }}>
-                <button className="btn btn-primary" disabled={submitting}>
+                <button className="btn btn-primary" disabled={submitting || (deliverForm.payment_method === 'en ligne' && !paymentEnabled)}>
                   {submitting ? '…' : `✅ ${t('Confirmer l\'Achat')}`}
                 </button>
                 <button type="button" className="btn btn-outline" onClick={() => setDeliverForm(null)}>{t('Annuler')}</button>

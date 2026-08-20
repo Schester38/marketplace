@@ -89,7 +89,7 @@ router.post('/', optionalAuth, async (req, res, next) => {
         const code = await uniqueConfirmCodeTx(tx);
         const created = (await tx.query(
           `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, currency, buyer_id, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
-           VALUES ($1, NULL, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'espece', TRUE) RETURNING id`,
+           VALUES ($1, NULL, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'en ligne', TRUE) RETURNING id`,
           [pid, qty, total, commission, price, p.currency || 'XAF', req.user?.id || null, String(buyer_name).trim(), String(buyer_phone).trim(), String(buyer_city).trim(), String(buyer_address).trim(), code, referralCommission, referredBy]
         ))[0];
         orderTotal += total;

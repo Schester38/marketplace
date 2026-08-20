@@ -175,7 +175,7 @@ export async function downloadInvoice(sale, t, symbol = 'XAF') {
     y + 1,
     { bold: true, color: BLUE }
   );
-  y = row(doc, t('Paiement'), sale.payment_method === 'mobile' ? t('Par Mobile') : t('En Espèce'), y);
+  y = row(doc, t('Paiement'), sale.payment_method === 'mobile' ? t('Par Mobile') : sale.payment_method === 'en ligne' ? t('En ligne (iKeePay)') : t('En Espèce'), y);
 
   if (sale.confirm_code) {
     doc.setFillColor(255, 249, 231);

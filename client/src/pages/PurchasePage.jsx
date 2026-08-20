@@ -10,6 +10,10 @@ import CopyCode from '../components/CopyCode.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
 
+// Autres moyens de paiement (espèces, transfert wallet) temporairement masqués :
+// passer à true pour les réactiver.
+const SHOW_OTHER_PAYMENTS = false;
+
 export default function PurchasePage() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -28,7 +32,7 @@ export default function PurchasePage() {
     buyer_address: '',
     buyer_phone: '',
   });
-  const [paymentMethod, setPaymentMethod] = useState('espece');
+  const [paymentMethod, setPaymentMethod] = useState('en ligne');
   const [copiedWallet, setCopiedWallet] = useState(null);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -40,7 +44,7 @@ export default function PurchasePage() {
       .getProduct(id)
       .then((d) => {
         setProduct(d.product);
-        if (d.product && d.product.shop_id) {
+        if (SHOW_OTHER_PAYMENTS && d.product && d.product.shop_id) {
           api
             .shopPaymentMethods(d.product.shop_id)
             .then((r) => setShopWallets(r.methods))
@@ -74,7 +78,7 @@ export default function PurchasePage() {
         buyer_city: form.buyer_city,
         buyer_address: form.buyer_address,
         buyer_phone: form.buyer_phone,
-        payment_method: paymentMethod,
+        payment_method: SHOW_OTHER_PAYMENTS ? paymentMethod : 'en ligne',
       });
       setPurchase(d.sale || null);
       setDone(true);
@@ -210,60 +214,92 @@ export default function PurchasePage() {
               placeholder="ABC123"
             />
 
-            <div className="payment-options">
-              <button
-                type="button"
-                className={`payment-option ${paymentMethod === 'espece' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('espece')}
-              >
-                💵 {t('En espèces (à la livraison)')}
-              </button>
-              <button
-                type="button"
-                className={`payment-option ${paymentMethod === 'mobile' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('mobile')}
-              >
-                📱 {t('Portefeuille (Mobile Money)')}
-              </button>
-            </div>
+            {SHOW_OTHER_PAYMENTS ? (
+              <>
+                <div className="payment-options">
+                  <button
+                    type="button"
+                    className={`payment-option ${paymentMethod === 'espece' ? 'active' : ''}`}
+                    onClick={() => setPaymentMethod('espece')}
+                  >
+                    💵 {t('En espèces (à la livraison)')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`payment-option ${paymentMethod === 'mobile' ? 'active' : ''}`}
+                    onClick={() => setPaymentMethod('mobile')}
+                  >
+                    📱 {t('Portefeuille (Mobile Money)')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`payment-option ${paymentMethod === 'en ligne' ? 'active' : ''}`}
+                    onClick={() => setPaymentMethod('en ligne')}
+                  >
+                    <img src="/ikeepay-logo.png" alt="iKeePay" style={{ width: 18, height: 18, verticalAlign: -3, marginRight: 6 }} />
+                    {t('Paiement à la livraison via iKeePay (Mobile Money)')}
+                  </button>
+                </div>
 
-            {paymentMethod === 'mobile' && (
-              <div className="card wallet-card">
-                {shopWallets && shopWallets.wallets.length > 0 ? (
-                  <>
-                    <p className="hint" style={{ marginTop: 0 }}>
-                      {t('Envoyez le paiement à la boutique sur l\'un de ces portefeuilles :')}
-                    </p>
-                    {shopWallets.full_name && <p className="hint">{t('Titulaire : {name}', { name: shopWallets.full_name })}</p>}
-                    <div className="wallet-list">
-                      {shopWallets.wallets.map((w) => (
-                        <div className="wallet-row" key={w.name}>
-                          <span className="wallet-name">{w.name}</span>
-                          <span className="wallet-value">{w.value}</span>
-                          <button type="button" className="btn btn-outline btn-sm" onClick={() => copyWallet(w.value)}>
-                            {copiedWallet === w.value ? t('Copié !') : t('Copier')}
-                          </button>
+                {paymentMethod === 'mobile' && (
+                  <div className="card wallet-card">
+                    {shopWallets && shopWallets.wallets.length > 0 ? (
+                      <>
+                        <p className="hint" style={{ marginTop: 0 }}>
+                          {t('Envoyez le paiement à la boutique sur l\'un de ces portefeuilles :')}
+                        </p>
+                        {shopWallets.full_name && <p className="hint">{t('Titulaire : {name}', { name: shopWallets.full_name })}</p>}
+                        <div className="wallet-list">
+                          {shopWallets.wallets.map((w) => (
+                            <div className="wallet-row" key={w.name}>
+                              <span className="wallet-name">{w.name}</span>
+                              <span className="wallet-value">{w.value}</span>
+                              <button type="button" className="btn btn-outline btn-sm" onClick={() => copyWallet(w.value)}>
+                                {copiedWallet === w.value ? t('Copié !') : t('Copier')}
+                              </button>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <p className="hint">
-                      {t('Indiquez votre nom et votre numéro lors du transfert pour faciliter la livraison.')}
-                    </p>
-                  </>
-                ) : (
-                  <p className="hint" style={{ marginTop: 0 }}>
-                    {t('La boutique n\'a pas encore configuré ses portefeuilles de paiement. Paiement à la livraison recommandé.')}
-                  </p>
+                        <p className="hint">
+                          {t('Indiquez votre nom et votre numéro lors du transfert pour faciliter la livraison.')}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="hint" style={{ marginTop: 0 }}>
+                        {t('La boutique n\'a pas encore configuré ses portefeuilles de paiement. Paiement à la livraison recommandé.')}
+                      </p>
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
-            {error && <p className="error">{error}</p>}
-            {paymentMethod === 'mobile' && product && (
-              <IkeFeeNotice
-                amount={Number(displayPrice)}
-                currency={product.currency}
-                title={t('Frais iKeePay {percent} % sur les paiements en ligne', { percent: IKE_FEE_PERCENT })}
-              />
+                {error && <p className="error">{error}</p>}
+                {paymentMethod === 'en ligne' && product && (
+                  <IkeFeeNotice
+                    amount={Number(displayPrice)}
+                    currency={product.currency}
+                    title={t('Frais iKeePay {percent} % sur les paiements en ligne', { percent: IKE_FEE_PERCENT })}
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                <div className="payment-options">
+                  <div className="payment-option active">
+                    <img src="/ikeepay-logo.png" alt="iKeePay" style={{ width: 20, height: 20, verticalAlign: -3, marginRight: 6 }} />
+                    {t('Paiement à la livraison via iKeePay (Mobile Money)')}
+                  </div>
+                </div>
+                <p className="hint" style={{ marginTop: 8 }}>
+                  {t('Le livreur enverra une demande de paiement sur votre numéro mobile money à la livraison. Aucune carte bancaire n\'est nécessaire.')}
+                </p>
+                {product && (
+                  <IkeFeeNotice
+                    amount={Number(displayPrice)}
+                    currency={product.currency}
+                    title={t('Frais iKeePay {percent} % sur les paiements en ligne', { percent: IKE_FEE_PERCENT })}
+                  />
+                )}
+                {error && <p className="error">{error}</p>}
+              </>
             )}
             <button className="btn btn-primary btn-block" disabled={submitting}>
               {submitting ? '…' : `✅ ${t('Confirmer la Commande')}`}

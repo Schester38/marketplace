@@ -47,7 +47,12 @@ router.post('/', optionalAuth, ah(async (req, res) => {
     return res.status(400).json({ error: 'Produit et code vendeur sont requis' });
   }
 
-  const method = payment_method === 'mobile' ? 'mobile' : 'espece';
+  const rawMethod = String(payment_method || '').trim().toLowerCase();
+  const method = rawMethod === 'mobile' || rawMethod === 'mobile_money'
+    ? 'mobile'
+    : rawMethod === 'en ligne' || rawMethod === 'online' || rawMethod === 'en_ligne' || rawMethod === 'ikeepay' || rawMethod === 'h2h'
+      ? 'en ligne'
+      : 'espece';
 
   const code = String(seller_code).trim().toUpperCase();
   const seller = (await q('SELECT id, name, seller_code FROM users WHERE seller_code = $1', [code]))[0];
