@@ -12,7 +12,7 @@ export default function ChatWidget() {
   const [typing, setTyping] = useState(false);
   const [unread, setUnread] = useState(0);
   const listRef = useRef(null);
-  const firstRef = useRef(true);
+  const openRef = useRef(false);
 
   const langKey = lang === 'en' ? 'en' : lang === 'ar' ? 'ar' : 'fr';
 
@@ -20,7 +20,6 @@ export default function ChatWidget() {
 
   useEffect(() => {
     setMessages([{ role: 'bot', text: greeting }]);
-    firstRef.current = true;
   }, [langKey]);
 
   useEffect(() => {
@@ -34,7 +33,6 @@ export default function ChatWidget() {
     setInput('');
     setMessages((prev) => [...prev, { role: 'user', text }]);
     setTyping(true);
-    setUnread(0);
     try {
       const history = messages
         .slice(-MAX_CONTEXT)
@@ -49,6 +47,7 @@ export default function ChatWidget() {
             : d.reply,
         },
       ]);
+      if (!openRef.current) setUnread((u) => u + 1);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -62,13 +61,8 @@ export default function ChatWidget() {
   const toggle = () => {
     const next = !open;
     setOpen(next);
-    if (next && firstRef.current) {
-      firstRef.current = false;
-      setUnread(0);
-    }
-    if (!next) {
-      setUnread((u) => u + (typing ? 0 : 1));
-    }
+    openRef.current = next;
+    if (next) setUnread(0);
   };
 
   const suggestions = [
