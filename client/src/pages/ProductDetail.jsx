@@ -12,6 +12,7 @@ import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import Reviews from '../components/Reviews.jsx';
 import Logo from '../components/Logo.jsx';
 import ReviewQuote from '../components/ReviewQuote.jsx';
+import { useLite, isLite } from '../liteMode.js';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -21,6 +22,7 @@ export default function ProductDetail() {
   const location = useLocation();
   const { user } = useAuth();
   const { t } = useLang();
+  const { lite } = useLite();
   const { addToCart } = useCart();
   const { isFav, toggleFav } = useFavs();
   const [product, setProduct] = useState(null);
@@ -28,6 +30,11 @@ export default function ProductDetail() {
   const [deleting, setDeleting] = useState(false);
   const [lightbox, setLightbox] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [photoShown, setPhotoShown] = useState(() => !isLite());
+
+  useEffect(() => {
+    if (lite) setPhotoShown(false);
+  }, [lite]);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [shared, setShared] = useState(false);
@@ -226,20 +233,33 @@ export default function ProductDetail() {
       <div className="card offer-detail">
         <div
           className="offer-photo"
-          style={{ height: 260, cursor: photos.length > 0 ? 'zoom-in' : undefined }}
-          onClick={() => photos.length > 0 && setLightbox(true)}
+          style={{ height: 260, cursor: photos.length > 0 && photoShown ? 'zoom-in' : undefined }}
+          onClick={() => photos.length > 0 && photoShown && setLightbox(true)}
         >
           {photos.length > 0 ? (
-            <img src={photos[lightboxIndex]} alt={product.name} />
+            photoShown ? (
+              <img src={photos[lightboxIndex]} alt={product.name} />
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary lite-photo-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPhotoShown(true);
+                }}
+              >
+                🖼️ {t('Charger la photo')}
+              </button>
+            )
           ) : (
             <span>📦</span>
           )}
-          {photos.length > 1 && (
+          {photos.length > 1 && photoShown && (
             <span className="offer-photo-count">{t('{n} photos — cliquez pour agrandir', { n: photos.length })}</span>
           )}
         </div>
 
-        {photos.length > 1 && (
+        {photos.length > 1 && photoShown && (
           <div className="thumb-row">
             {photos.map((photo, i) => (
               <button

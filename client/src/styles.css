@@ -2222,6 +2222,27 @@ tr.tr-hidden td { opacity: 0.55; }
 .suggest-modal form { display: flex; flex-direction: column; gap: 12px; }
 .success { color: var(--success); font-size: 0.9rem; }
 
+.lite-banner {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 76px;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  max-width: min(92vw, 560px);
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  font-size: 0.9rem;
+}
+.lite-toggle.active { background: var(--primary); color: #fff; }
+.lite-photo-btn { position: absolute; inset: 0; margin: auto; width: fit-content; height: fit-content; }
+
 /* ===== SearchSelect (pays filtrable) ===== */
 
 .search-select { position: relative; }

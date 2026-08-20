@@ -1,5 +1,24 @@
-const CACHE_NAME = 'mboppi-v64';
+const CACHE_NAME = 'mboppi-v65';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/og-image.svg', '/og-image.png', '/robots.txt', '/sitemap.xml', '/splash.js'];
+
+// Endpoints GET publics : servis depuis le cache quand le reseau est lent ou coupe,
+// puis rafraichis en arriere-plan (stale-while-revalidate).
+const API_SWR = [
+  '/api/products',
+  '/api/flash-promotions',
+  '/api/offers',
+  '/api/metrics/trending',
+  '/api/sales/recent',
+  '/api/messages/popup',
+  '/api/shop/',
+  '/api/livreurs',
+  '/api/reviews/product/',
+];
+const API_TIMEOUT = 6000;
+
+function isApiSwr(pathname) {
+  return API_SWR.some((p) => pathname === p || pathname.startsWith(p));
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -95,8 +114,12 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin !== location.origin) return;
 
+  // Donnees API : JSON publics servis depuis le cache (stale-while-revalidate avec timeout)
+  // pour que la page s'ouvre meme en reseau tres lent ; le reste est en reseau pur.
   if (url.pathname.startsWith('/api/')) {
-    if (url.pathname === '/api/offers' || url.pathname === '/api/products' || url.pathname === '/api/offers/mine') {
+    if (isApiSwr(url.pathname)) {
+      event.respondWith(apiSwr(event.request));
+    } else {
       event.respondWith(
         fetch(event.request).catch(
           () => new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' })
@@ -106,44 +129,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Bundles JS/CSS (contenus avec hash) : reseau d'abord pour ne JAMAIS servir une ancienne version
-  // quand on est en ligne ; le cache ne sert que hors connexion ou en cas de panne.
+  // Bundles JS/CSS (contenus avec hash) : stale-while-revalidate. Le cache sert
+  // immédiatement, le reseau rafraichit en arriere-plan. Les fichiers ont un hash,
+  // donc deux versions ne se melangent jamais.
   if (url.pathname.startsWith('/assets/')) {
-    event.respondWith(
-      (async () => {
-        const cached = await caches.match(event.request);
-        try {
-          const network = await fetch(event.request, { cache: 'no-store' });
-          if (network.ok) {
-            const clone = network.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return network;
-        } catch (err) {
-          return cached || new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
-        }
-      })()
-    );
+    event.respondWith(assetSwr(event.request));
     return;
   }
 
   if (event.request.mode === 'navigate' || url.pathname === '/') {
-    // Navigation : reseau d'abord, sinon le shell index.html en cache pour naviguer hors ligne.
-    event.respondWith(
-      (async () => {
-        try {
-          const network = await fetch(event.request, { cache: 'no-store' });
-          if (network.ok) {
-            const clone = network.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('/', clone));
-          }
-          return network;
-        } catch (err) {
-          const shell = await caches.match('/');
-          return shell || new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
-        }
-      })()
-    );
+    // Navigation : servir le shell index.html en cache immediatement (s'ouvre meme
+    // en faible connexion), puis rafraichir le shell en arriere-plan quand c'est possible.
+    event.respondWith(navSwr(event.request));
     return;
   }
 
@@ -162,3 +159,52 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+async function apiSwr(request) {
+  const cached = await caches.match(request);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), API_TIMEOUT);
+  try {
+    const resp = await fetch(request, { signal: controller.signal });
+    clearTimeout(timer);
+    if (resp && resp.ok && /application\/json/.test(resp.headers.get('content-type') || '')) {
+      const clone = resp.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+    }
+    return resp;
+  } catch (err) {
+    clearTimeout(timer);
+    if (cached) return cached;
+    return new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
+  }
+}
+
+async function assetSwr(request) {
+  const cached = await caches.match(request);
+  const net = fetch(request, { cache: 'no-store' })
+    .then((resp) => {
+      if (resp.ok) {
+        const clone = resp.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+      }
+      return resp;
+    })
+    .catch(() => null);
+  if (cached) return cached;
+  return net.then((resp) => resp || new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' }));
+}
+
+async function navSwr(request) {
+  const cached = await caches.match('/');
+  const net = fetch(request, { cache: 'no-store' })
+    .then((resp) => {
+      if (resp.ok) {
+        const clone = resp.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put('/', clone));
+      }
+      return resp;
+    })
+    .catch(() => null);
+  if (cached) return cached;
+  return net.then((resp) => resp || new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' }));
+}

@@ -8,6 +8,7 @@ import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { urlBase64ToUint8Array } from '../utils.js';
 import { formatMoney } from './ProductCard.jsx';
 import { countrySymbol, PRODUCT_CATEGORIES, categoryEmoji } from '../config.js';
+import { useLite } from '../liteMode.js';
 import SuggestionButton from './SuggestionButton.jsx';
 
 function LangSwitcher() {
@@ -469,6 +470,7 @@ export default function Navbar({ onLogout }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useLang();
+  const { lite, toggle: toggleLite } = useLite();
   const { cartCount } = useCart();
   const { favs } = useFavs();
   const [open, setOpen] = useState(false);
@@ -568,10 +570,22 @@ export default function Navbar({ onLogout }) {
     </Link>
   );
 
+  const liteToggle = (
+    <button
+      className={`theme-toggle lite-toggle ${lite ? 'active' : ''}`}
+      onClick={toggleLite}
+      aria-label={t('Mode faible connexion (économie de données)')}
+      title={lite ? t('Mode économie actif — cliquer pour désactiver') : t('Activer le mode faible connexion (économie de données)')}
+    >
+      {lite ? '🐢' : '📶'}
+    </button>
+  );
+
   const tools = (
     <div className="drawer-tools">
       <LangSwitcher />
       {themeToggle}
+      {liteToggle}
       {favLink}
       {cartLink}
       {userIcon}
