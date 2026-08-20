@@ -12,6 +12,9 @@ async function request(path, options = {}, retries = 1) {
       const err = new Error(data.error || `Erreur ${res.status}`);
       err.status = res.status;
       err.code = data.code;
+      if (res.status === 401 && token && /session/i.test(data.error || '')) {
+        window.dispatchEvent(new CustomEvent('auth-expired', { detail: { path } }));
+      }
       throw err;
     }
     return data;

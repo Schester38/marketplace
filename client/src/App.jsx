@@ -1,4 +1,4 @@
-import React, { Suspense, createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { Suspense, createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api.js';
 import Navbar from './components/Navbar.jsx';
@@ -106,6 +106,19 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('user');
     setUser(null);
   };
+
+  const logoutRef = useRef(logout);
+  useEffect(() => {
+    logoutRef.current = logout;
+  }, [logout]);
+
+  useEffect(() => {
+    const onAuthExpired = () => {
+      if (logoutRef.current) logoutRef.current();
+    };
+    window.addEventListener('auth-expired', onAuthExpired);
+    return () => window.removeEventListener('auth-expired', onAuthExpired);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
