@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { q } from '../db.js';
-import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone, ikePayFeeNet } from '../ikeepay.js';
+import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone, operatorsForCountry, ikePayFeeNet } from '../ikeepay.js';
 
 const router = Router();
 
@@ -33,6 +33,11 @@ router.post('/', ah(async (req, res) => {
   const countryName = String(country || 'Cameroun');
   const info = countryInfo(countryName);
   if (!info) return res.status(422).json({ error: `Pays non pris en charge : ${countryName}` });
+  const operatorCode = String(operator).trim().toUpperCase();
+  const allowedOperators = operatorsForCountry(countryName);
+  if (!allowedOperators.includes(operatorCode)) {
+    return res.status(422).json({ error: `Opérateur non disponible pour ${countryName} (iKeePay : ${allowedOperators.join(', ')} ou aucun)` });
+  }
 
   const rawPhone = String(phone_number || '').replace(/[^\d]/g, '');
   const normalized = info.prefix + normalizePhone(rawPhone, countryName);
@@ -43,7 +48,7 @@ router.post('/', ah(async (req, res) => {
   const created = (await q(
     `INSERT INTO donations (amount, currency, country, donor_phone, operator, status)
      VALUES ($1, $2, $3, $4, $5, 'pending') RETURNING id`,
-    [amt, 'XAF', countryName, normalized, String(operator).trim().toUpperCase()]
+    [amt, 'XAF', countryName, normalized, operatorCode]
   ))[0];
 
   const external_reference = `DON:${created.id}`;
@@ -55,7 +60,7 @@ router.post('/', ah(async (req, res) => {
       currency: 'XAF',
       country: info.code,
       phoneNumber: normalized,
-      operator: String(operator).trim().toUpperCase(),
+      operator: operatorCode,
       external_reference,
     });
   } catch (err) {

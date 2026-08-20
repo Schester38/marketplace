@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired, roleRequired, sellerActivationActive, sellerActivationExpiresAt, SELLER_ACTIVATION_DAYS } from '../auth.js';
-import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone, operatorFor, ikePayFee, ikePayGrossUp, ikePayFeeNet } from '../ikeepay.js';
+import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone, operatorFor, operatorsForCountry, ikePayFee, ikePayGrossUp, ikePayFeeNet } from '../ikeepay.js';
 import { defaultCurrencyFor } from '../currency.js';
 import { markSalePaid, payoutTargetFor } from '../finance.js';
 import { handleDonationPaid, donationTarget } from './donations.js';
@@ -33,9 +33,8 @@ router.get('/config', ah(async (req, res) => {
 router.get('/operators', ah(async (req, res) => {
   const countryName = String(req.query.country || 'Cameroun');
   const info = countryInfo(countryName);
-  return res.json({ country: countryName, code: info ? info.code : null, operators: [
-    'ORANGE', 'MTN', 'WAVE', 'MOOV', 'MOBICASH', 'AIRTEL', 'VODACOM',
-  ] });
+  const operators = operatorsForCountry(countryName);
+  return res.json({ country: countryName, code: info ? info.code : null, operators });
 }));
 
 router.post('/payin', ah(async (req, res) => {
@@ -70,6 +69,11 @@ router.post('/payin', ah(async (req, res) => {
   const countryName = sale.shop_country || 'Cameroun';
   const info = countryInfo(countryName);
   if (!info) return res.status(422).json({ error: `Pays de la boutique non pris en charge pour le paiement en ligne : ${countryName}` });
+  const operatorCode = String(operator).trim().toUpperCase();
+  const allowedOperators = operatorsForCountry(countryName);
+  if (!allowedOperators.includes(operatorCode)) {
+    return res.status(422).json({ error: `Opérateur non disponible pour ${countryName} (iKeePay : ${allowedOperators.join(', ')} ou aucun)` });
+  }
 
   const total = Math.round((Number(sale.total_price) + Number(sale.delivery_fee || 0)) * 100) / 100;
   if (!Number.isFinite(total) || total <= 0) {
@@ -98,7 +102,7 @@ router.post('/payin', ah(async (req, res) => {
     currency,
     country: info.code,
     phoneNumber: normalized,
-    operator: String(operator).trim().toUpperCase(),
+    operator: operatorCode,
     external_reference,
     customer_email: req.user && req.user.email ? req.user.email : undefined,
   });

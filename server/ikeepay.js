@@ -56,14 +56,51 @@ const OPERATOR_MAP = {
   'wave': 'WAVE',
   'airtel money': 'AIRTEL',
   'airtel': 'AIRTEL',
-  'm-pesa': 'VODACOM',
-  'm-pesa tigo': 'VODACOM',
-  'tigo pesa': 'VODACOM',
+  'm-pesa': 'MPESA',
+  'mpesa': 'MPESA',
+  'm-pesa tigo': 'TIGO',
+  'tigo pesa': 'TIGO',
+  'tigo': 'TIGO',
   't-money': 'MOBICASH',
   'flooz': 'MOOV',
-  'free money': 'ORANGE',
+  'free money': 'FREE',
+  'free': 'FREE',
+  'emoney': 'EMONEY',
   'yoomee': 'ORANGE',
+  'vodafone money': 'VODAFONE',
+  'vodafone': 'VODAFONE',
+  'vodacom money': 'VODACOM',
+  'vodacom': 'VODACOM',
+  'opay': 'OPAY',
+  'o-pay': 'OPAY',
+  'moniepoint': 'MONIEPOINT',
+  'halopesa': 'HALOPESA',
+  'zamtel': 'ZAMTEL',
 };
+
+const OPERATORS_BY_COUNTRY = {
+  'Bénin': ['MOOV', 'MTN'],
+  'Burkina Faso': ['ORANGE', 'MOBICASH'],
+  'Cameroun': ['ORANGE', 'MTN'],
+  'Gabon': ['AIRTEL'],
+  'Ghana': ['AIRTEL', 'MTN', 'VODAFONE'],
+  'Kenya': ['MPESA', 'AIRTEL'],
+  'Nigeria': ['OPAY', 'MONIEPOINT', 'MTN', 'AIRTEL'],
+  'Ouganda': ['MTN'],
+  "Côte d'Ivoire": ['ORANGE', 'WAVE', 'MTN'],
+  'République Démocratique du Congo': ['AIRTEL', 'ORANGE', 'VODACOM'],
+  'Sénégal': ['ORANGE', 'FREE', 'EMONEY', 'WAVE'],
+  'République du Congo': ['AIRTEL', 'MTN'],
+  'Rwanda': ['MTN'],
+  'Sierra Leone': ['ORANGE'],
+  'Tanzanie': ['AIRTEL', 'HALOPESA', 'TIGO'],
+  'Zambie': ['AIRTEL', 'MTN', 'ZAMTEL'],
+};
+
+export function operatorsForCountry(country) {
+  if (!country) return [];
+  return OPERATORS_BY_COUNTRY[country] || [];
+}
 
 export function countryInfo(country) {
   return COUNTRIES[country] || null;

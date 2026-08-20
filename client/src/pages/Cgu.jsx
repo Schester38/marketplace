@@ -28,7 +28,7 @@ export default function Cgu() {
         </div>
         <div className="card">
           <h2>{t('4. Commandes et paiement')}</h2>
-          <p>{t('Le paiement s\'effectue à la livraison (espèces ou mobile money) ou en ligne par mobile money (Orange Money, MTN Mobile Money, etc.). Le paiement en ligne est traité par notre prestataire iKeePay : Mboppi perçoit l\'argent pour le compte de la boutique et du vendeur puis reverse automatiquement à chacun le montant qui lui revient.')}</p>
+          <p>{t('Le paiement s\'effectue uniquement à la livraison du colis, par mobile money (Orange Money, MTN Mobile Money, etc.), via notre prestataire iKeePay. Le paiement est encaissé par iKeePay pour le compte de la boutique et du vendeur, puis Mboppi reverse automatiquement à chacun le montant qui lui revient.')}</p>
         </div>
         <div className="card">
           <h2>{t('5. Paiement en ligne, reversements et délais')}</h2>
@@ -44,7 +44,7 @@ export default function Cgu() {
         </div>
         <div className="card">
           <h2>{t('8. Livraison')}</h2>
-          <p>{t('La livraison est assurée par la boutique ou par un livreur Mboppi. Les délais et les frais sont indiqués sur chaque produit et convenus lors de la commande. Si le paiement est effectué à la livraison, la boutique ou le livreur encaisse directement ; pour une commande payée en ligne, les frais de livraison sont reversés au livreur sur son portefeuille mobile.')}</p>
+          <p>{t('La livraison est assurée par la boutique ou par un livreur Mboppi. Les délais et les frais sont indiqués sur chaque produit et convenus lors de la commande. Le client paie à la livraison via iKeePay, et chaque acteur reçoit instantanément sa part sur son portefeuille mobile : la boutique le prix, le vendeur sa commission, le parrain son pourcentage et le livreur ses frais de livraison.')}</p>
         </div>
         <div className="card">
           <h2>{t('9. Dons et soutien')}</h2>

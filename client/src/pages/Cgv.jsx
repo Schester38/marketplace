@@ -24,7 +24,7 @@ export default function Cgv() {
         </div>
         <div className="card">
           <h2>{t('3. Paiement et livraison')}</h2>
-          <p>{t('Le paiement s\'effectue à la livraison ou en ligne par mobile money via notre prestataire iKeePay (Orange Money, MTN Mobile Money, etc.). Mboppi ne collecte jamais de numéro de carte bancaire et reverse automatiquement à chaque acteur le montant qui lui revient. Les frais de livraison sont indiqués sur chaque produit.')}</p>
+          <p>{t('Le paiement s\'effectue uniquement à la livraison du colis, par mobile money via notre prestataire iKeePay (Orange Money, MTN Mobile Money, etc.). Mboppi ne collecte jamais de numéro de carte bancaire et reverse automatiquement et instantanément à chaque acteur le montant qui lui revient. Les frais de livraison sont indiqués sur chaque produit.')}</p>
         </div>
         <div className="card">
           <h2>{t('4. Garanties et retours')}</h2>

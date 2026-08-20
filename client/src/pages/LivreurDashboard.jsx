@@ -33,6 +33,7 @@ export default function LivreurDashboard() {
   const [shopWallets, setShopWallets] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [payOnline, setPayOnline] = useState({ operator: 'ORANGE', phone: '', loading: false, result: null, error: '' });
+  const [operatorOptions, setOperatorOptions] = useState([]);
   const [paymentEnabled, setPaymentEnabled] = useState(false);
 
   useEffect(() => {
@@ -97,7 +98,16 @@ export default function LivreurDashboard() {
 
   const openDeliver = (s) => {
     setShopWallets(null);
-    setPayOnline({ operator: 'ORANGE', phone: s.buyer_phone || '', loading: false, result: null, error: '' });
+    setOperatorOptions([]);
+    setPayOnline({ operator: '', phone: s.buyer_phone || '', loading: false, result: null, error: '' });
+    api
+      .paymentOperators(s.shop_country || 'Cameroun')
+      .then((r) => {
+        const ops = Array.isArray(r.operators) ? r.operators : [];
+        setOperatorOptions(ops);
+        setPayOnline((p) => ({ ...p, operator: ops[0] || '' }));
+      })
+      .catch(() => {});
     if (s.shop_id) {
       api.shopPaymentMethods(s.shop_id).then((r) => setShopWallets(r.methods)).catch(() => {});
     }
@@ -437,7 +447,10 @@ export default function LivreurDashboard() {
                     value={payOnline.operator}
                     onChange={(e) => setPayOnline({ ...payOnline, operator: e.target.value, result: null })}
                   >
-                    {['ORANGE', 'MTN', 'WAVE', 'MOOV', 'MOBICASH', 'AIRTEL', 'VODACOM'].map((op) => (
+                    {operatorOptions.length === 0 && (
+                      <option value="">{t('Aucun opérateur disponible pour ce pays')}</option>
+                    )}
+                    {operatorOptions.map((op) => (
                       <option key={op} value={op}>{op}</option>
                     ))}
                   </select>

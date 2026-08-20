@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
 import { api } from '../api.js';
@@ -92,6 +92,15 @@ function InfoRow({ label, value, copyable }) {
 export default function Support() {
   const { t } = useLang();
   const [don, setDon] = useState({ amount: '', operator: 'ORANGE', phone: '', loading: false, result: null, error: '' });
+  const [operatorOptions, setOperatorOptions] = useState([]);
+
+  useEffect(() => {
+    api.paymentOperators('Cameroun').then((r) => {
+      const ops = Array.isArray(r.operators) ? r.operators : [];
+      setOperatorOptions(ops);
+      setDon((d) => ({ ...d, operator: d.operator || ops[0] || 'ORANGE' }));
+    }).catch(() => {});
+  }, []);
 
   const submitDon = async (e) => {
     e.preventDefault();
@@ -186,7 +195,7 @@ export default function Support() {
                 value={don.operator}
                 onChange={(e) => setDon({ ...don, operator: e.target.value, result: null })}
               >
-                {['ORANGE', 'MTN', 'WAVE', 'MOOV', 'MOBICASH', 'AIRTEL', 'VODACOM'].map((op) => (
+                {operatorOptions.map((op) => (
                   <option key={op} value={op}>{op}</option>
                 ))}
               </select>
