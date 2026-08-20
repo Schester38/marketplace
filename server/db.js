@@ -493,6 +493,22 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_sales_confirm_code ON sales(confirm_code) WHERE confirm_code IS NOT NULL;
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS flash_promotions (
+      id SERIAL PRIMARY KEY,
+      shop_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      promo_price NUMERIC(14,2) NOT NULL CHECK (promo_price >= 0),
+      duration_minutes INTEGER NOT NULL DEFAULT 180 CHECK (duration_minutes >= 1 AND duration_minutes <= 720),
+      starts_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      ends_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_flash_promotions_ends ON flash_promotions(ends_at);
+    CREATE INDEX IF NOT EXISTS idx_flash_promotions_shop ON flash_promotions(shop_id);
+    CREATE INDEX IF NOT EXISTS idx_flash_promotions_product ON flash_promotions(product_id);
+  `);
+
   try {
     await purgeOldTransactions();
   } catch {

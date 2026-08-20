@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard from '../components/ProductCard.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
+import FlashPromoCard from '../components/FlashPromo.jsx';
 import { downloadInvoice } from '../components/Invoice.jsx';
 import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
@@ -56,6 +57,9 @@ export default function ShopDashboard() {
   const [shopCode, setShopCode] = useState(null);
   const [codeLoading, setCodeLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [flashPromos, setFlashPromos] = useState([]);
+  const [flashForm, setFlashForm] = useState({ productId: '', promoPrice: '', minutes: '180' });
+  const [flashLoading, setFlashLoading] = useState(false);
   const symbol = countrySymbol(user?.country);
   const prefix = countryPhone(user?.country);
 
@@ -111,15 +115,17 @@ export default function ShopDashboard() {
 
   const load = async () => {
     try {
-      const [prodData, saleData] = await Promise.all([
+      const [prodData, saleData, flashData] = await Promise.all([
         api.myProducts(),
         api.shopSales(user.id),
+        api.myFlashPromotions(),
       ]);
       setProducts(prodData.products);
       setSales(saleData.sales);
       setStats(saleData.stats);
       setSeries(saleData.series || []);
       setTopProducts(saleData.topProducts || []);
+      setFlashPromos(flashData.promotions || []);
     } catch (e) {
       setError(e.message);
     }
@@ -230,6 +236,40 @@ export default function ShopDashboard() {
   const changeStatus = async (id, status) => {
     try {
       await api.updateSaleStatus(id, status);
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const submitFlash = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setFlashLoading(true);
+    try {
+      await api.createFlashPromotion({
+        product_id: Number(flashForm.productId),
+        promo_price: Number(flashForm.promoPrice),
+        duration_minutes: Number(flashForm.minutes),
+      });
+      setSuccess(t('Promotion éclair lancée !'));
+      setFlashForm({ productId: '', promoPrice: '', minutes: '180' });
+      load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setFlashLoading(false);
+    }
+  };
+
+  const removeFlash = async (pr) => {
+    if (!window.confirm(t('Rétirer cette promotion éclair ?'))) return;
+    setError('');
+    setSuccess('');
+    try {
+      await api.deleteFlashPromotion(pr.id);
+      setSuccess(t('Promotion rétirée.'));
       load();
     } catch (err) {
       setError(err.message);
@@ -414,6 +454,62 @@ export default function ShopDashboard() {
             </button>
           )}
         </div>
+      </section>
+
+      <section className="card stats">
+        <h2>⚡ {t('Promotions éclair')}</h2>
+        <p className="hint" style={{ marginTop: 0 }}>
+          {t('Proposez un produit à durée limitée : il s\'affiche avec un compte à rebours sur la page d\'accueil et dans l\'espace de tous les utilisateurs. À la fin du temps, la promotion disparaît automatiquement.')}
+        </p>
+        <form className="flash-promo-form" onSubmit={submitFlash}>
+          <select
+            className="input"
+            required
+            value={flashForm.productId}
+            onChange={(e) => { setFlashForm({ ...flashForm, productId: e.target.value }); setError(''); setSuccess(''); }}
+          >
+            <option value="" disabled>{t('Choisir un produit…')}</option>
+            {products.filter((p) => Number(p.quantity) > 0).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} — {formatMoney(p.price)} {symbol}
+              </option>
+            ))}
+          </select>
+          <input
+            className="input"
+            type="number"
+            min="0"
+            step="0.01"
+            required
+            placeholder={t('Prix promo ({symbol})', { symbol })}
+            value={flashForm.promoPrice}
+            onChange={(e) => setFlashForm({ ...flashForm, promoPrice: e.target.value })}
+          />
+          <select
+            className="input"
+            value={flashForm.minutes}
+            onChange={(e) => setFlashForm({ ...flashForm, minutes: e.target.value })}
+          >
+            <option value="30">{t('30 minutes')}</option>
+            <option value="60">{t('1 heure')}</option>
+            <option value="120">{t('2 heures')}</option>
+            <option value="180">{t('3 heures')}</option>
+            <option value="360">{t('6 heures')}</option>
+            <option value="720">{t('12 heures')}</option>
+          </select>
+          <button className="btn btn-primary" disabled={flashLoading}>
+            {flashLoading ? '…' : t('⚡ Lancer la promotion')}
+          </button>
+        </form>
+        {flashPromos.length > 0 ? (
+          <div className="grid">
+            {flashPromos.map((pr) => (
+              <FlashPromoCard key={pr.id} promo={pr} onDelete={removeFlash} showShop={false} />
+            ))}
+          </div>
+        ) : (
+          <p className="hint">{t('Aucune promotion éclair pour le moment.')}</p>
+        )}
       </section>
 
       {showDelivered && (

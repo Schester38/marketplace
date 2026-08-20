@@ -62,6 +62,7 @@ const Support = lazyRetry(() => import('./pages/Support.jsx'));
 const CookiesBanner = lazyRetry(() => import('./components/CookiesBanner.jsx'));
 import OfflinePage from './pages/OfflinePage.jsx';
 import AdminMessagePopup from './components/AdminMessagePopup.jsx';
+import FlashPromoPopup from './components/FlashPromoPopup.jsx';
 
 const AuthContext = createContext(null);
 
@@ -263,6 +264,7 @@ export default function App() {
     <div className="app">
       <Navbar onLogout={() => { logout(); navigate('/'); }} />
       <AdminMessagePopup />
+      <FlashPromoPopup />
           {WELCOME_PATHS.includes(location.pathname) && <WelcomeBanner />}
           <ErrorBoundary t={t}>
             <Suspense fallback={<LoadingScreen />}>

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
 import ProductRail from '../components/ProductRail.jsx';
+import FlashPromoCard from '../components/FlashPromo.jsx';
 import Seo from '../components/Seo.jsx';
 import RecentSales from '../components/RecentSales.jsx';
 import Logo from '../components/Logo.jsx';
@@ -65,6 +66,7 @@ export default function Home() {
   const [trending, setTrending] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
   const [popular, setPopular] = useState([]);
+  const [flashPromos, setFlashPromos] = useState([]);
   const [activeRail, setActiveRail] = useState('');
   const [recent, setRecent] = useState(() => {
     try {
@@ -124,6 +126,10 @@ export default function Home() {
     api
       .listProducts({ sort: 'popular', limit: 10 })
       .then((d) => ok && setPopular(d.products || []))
+      .catch(() => {});
+    api
+      .flashPromotions()
+      .then((d) => ok && setFlashPromos(d.promotions || []))
       .catch(() => {});
     return () => {
       ok = false;
@@ -504,6 +510,15 @@ const loadProducts = useCallback(
                       <span className="tab-emoji">🔥</span> <span>{t('Plus populaires')}</span>
                     </button>
                   )}
+                  {flashPromos.length >= 0 && (
+                    <button
+                      type="button"
+                      className={`home-tab t-flash ${activeRail === 'promos' ? 'active' : ''}`}
+                      onClick={() => setActiveRail(activeRail === 'promos' ? '' : 'promos')}
+                    >
+                      <span className="tab-emoji">⚡</span> <span>{t('Promotions du jour')}</span>
+                    </button>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -550,6 +565,23 @@ const loadProducts = useCallback(
                   emoji="🔥"
                   products={popular}
                 />
+              )}
+              {activeRail === 'promos' && (
+                flashPromos.length > 0 ? (
+                <section aria-label={t('Promotions du jour')} className="product-rail">
+                  <div className="section-head">
+                    <h2 className="section-title">⚡ {t('Promotions du jour')}</h2>
+                    <p className="hint">{t('Des offres à durée limitée : dépêchez-vous !')}</p>
+                  </div>
+                  <div className="rail-scroll">
+                    {flashPromos.map((pr) => (
+                      <FlashPromoCard key={pr.id} promo={pr} />
+                    ))}
+                  </div>
+                </section>
+                ) : (
+                  <p className="hint home-tabs-empty">{t('Aucune promotion du jour pour le moment. Les boutiques peuvent en lancer une depuis leur espace.')}</p>
+                )
               )}
             </>
           )}
