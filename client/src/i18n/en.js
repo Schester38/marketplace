@@ -1277,4 +1277,6 @@ export default {
   'Votre abonnement expire demain.': 'Your subscription expires tomorrow.',
   'Votre abonnement expire aujourd\'hui. Pensez à le renouveler.': 'Your subscription expires today. Remember to renew it.',
   'Abonnement à vie : aucun renouvellement requis.': 'Lifetime subscription: no renewal required.',
+  'Avis clients': 'Customer reviews',
+  'Partagez votre expérience avec nous sur Trustpilot': 'Share your experience with us on Trustpilot',
 };

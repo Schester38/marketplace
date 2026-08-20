@@ -1938,6 +1938,21 @@ a.step { text-decoration: none; color: inherit; }
 .footer-cities .footer-city-link { font-size: 0.82rem; color: #8f98a0; }
 .footer-cities .footer-city-link:hover { color: var(--primary-light); }
 
+.tp-block {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  padding: 16px 20px 14px;
+  text-align: center;
+}
+.tp-head { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px; }
+.tp-stars { color: #00b67a; font-size: 1.06rem; letter-spacing: 2.5px; }
+.tp-title { margin: 0; font-size: 1rem; color: #fff; }
+.tp-sub { margin: 0 0 10px; font-size: 0.85rem; color: #cfd6dc; }
+.tp-block .trustpilot-widget { margin: 0 auto; width: 100%; }
+
 .newsletter {
   max-width: 420px;
   width: 100%;

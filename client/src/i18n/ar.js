@@ -1253,5 +1253,7 @@ export default {
   'Votre abonnement expire demain.': 'ينتهي اشتراكك غداً.',
   'Votre abonnement expire aujourd\'hui. Pensez à le renouveler.': 'ينتهي اشتراكك اليوم. تذكّر تجديده.',
   'Abonnement à vie : aucun renouvellement requis.': 'اشتراك مدى الحياة: لا حاجة للتجديد.',
+  'Avis clients': 'آراء العملاء',
+  'Partagez votre expérience avec nous sur Trustpilot': 'شارك تجربتك معنا على تراست بايلوت',
 
 };

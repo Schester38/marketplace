@@ -1205,5 +1205,7 @@ export default {
   'Votre abonnement expire demain.': 'Tu suscripción caduca mañana.',
   'Votre abonnement expire aujourd\'hui. Pensez à le renouveler.': 'Tu suscripción caduca hoy. Recuerda renovarla.',
   'Abonnement à vie : aucun renouvellement requis.': 'Suscripción de por vida: no se requiere renovación.',
+  'Avis clients': 'Opiniones de clientes',
+  'Partagez votre expérience avec nous sur Trustpilot': 'Comparte tu experiencia con nosotros en Trustpilot',
 
 };
