@@ -8,7 +8,7 @@ import { FlashCountdown, formatFlashTime } from './FlashPromo.jsx';
 
 const ALLOWED_PATHS = ['/', '/shop', '/seller', '/client', '/creator', '/livreur'];
 const MAX_DISPLAY = 4;
-const ROTATE_MS = 6000;
+const ROTATE_MS = 5000;
 const REFRESH_MS = 30000;
 
 function isDismissed(id) {
@@ -36,7 +36,6 @@ export default function FlashPromoPopup() {
   const [promos, setPromos] = useState([]);
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState(true);
-  const [spin, setSpin] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
   const allowed = ALLOWED_PATHS.includes(location.pathname);
@@ -53,7 +52,6 @@ export default function FlashPromoPopup() {
             .filter((p) => !isDismissed(p.id))
             .slice(0, MAX_DISPLAY);
           setPromos(list);
-          setIndex((i) => Math.min(i, Math.max(0, list.length - 1)));
         })
         .catch(() => {});
     };
@@ -70,70 +68,74 @@ export default function FlashPromoPopup() {
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    if (promos.length <= 1) return;
-    const id = setInterval(() => {
-      setIndex((i) => (i + 1) % promos.length);
-      setSpin((s) => s + 1);
-    }, ROTATE_MS);
-    return () => clearInterval(id);
-  }, [promos.length]);
-
   const shown = useMemo(
     () => promos.filter((p) => new Date(p.ends_at).getTime() > now),
     [promos, now]
   );
 
+  useEffect(() => {
+    if (shown.length > 1) setIndex(0);
+  }, [shown.length]);
+
+  useEffect(() => {
+    if (shown.length <= 1) return;
+    const id = setInterval(() => {
+      setIndex((i) => (i + 1) % shown.length);
+    }, ROTATE_MS);
+    return () => clearInterval(id);
+  }, [shown.length]);
+
   if (!allowed || !visible || shown.length === 0) return null;
-  const promo = shown[Math.min(index, shown.length - 1)];
-  if (!promo) return null;
-  const symbol = countrySymbol(promo.shop_country);
+
+  const active = shown[Math.min(index, shown.length - 1)];
+  if (!active) return null;
 
   const close = () => {
     setVisible(false);
-    markDismissed(promo.id);
+    shown.forEach((p) => markDismissed(p.id));
   };
 
   return (
-    <div className="flash-popup" key={spin} role="dialog" aria-label={t('Offre du jour')}>
+    <div className="flash-popup-stack" role="dialog" aria-label={t('Promotions du jour')}>
       <button type="button" className="flash-popup-close" aria-label={t('Fermer')} onClick={close}>✕</button>
-      <span className="flash-popup-badge">⚡ {t('OFFRE DU JOUR')}</span>
-      <Link to={`/produit/${promo.product_id}`} className="flash-popup-body">
-        {promo.image && <img src={promo.image} alt={promo.product_name} loading="lazy" decoding="async" />}
-        <div className="flash-popup-info">
-          <h3>{promo.product_name}</h3>
-          <p className="flash-popup-shop">{promo.shop_name}</p>
-          <p className="flash-popup-price">
-            <span className="old-price">{formatMoney(promo.price)} {symbol}</span>
-            <span className="price price-flash">{formatMoney(promo.promo_price)} {symbol}</span>
-            <span className="badge badge-flash">-{promo.discount_percent || 0}%</span>
-          </p>
-          <FlashCountdown
-            endsAt={promo.ends_at}
-            render={({ remains, ended }) =>
-              ended ? (
-                <span className="flash-countdown ended">⏰ {t('Terminée')}</span>
-              ) : (
-                <span className="flash-countdown flash-countdown-big">⏰ {formatFlashTime(remains)}</span>
-              )
-            }
-          />
-          <span className="flash-popup-cta">{t("Voir l'offre")} →</span>
-        </div>
-      </Link>
-      {shown.length > 1 && (
-        <div className="flash-popup-dots">
-          {shown.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`dot${p.id === promo.id ? ' active' : ''}`}
-              onClick={() => setIndex(shown.findIndex((x) => x.id === p.id))}
-              aria-label={t("Voir l'offre")}
-            />
-          ))}
-        </div>
-      )}
+      {shown.map((p, i) => {
+        const depth = (i - Math.min(index, shown.length - 1) + shown.length) % shown.length;
+        const symbol = countrySymbol(p.shop_country);
+        return (
+          <div
+            key={p.id}
+            className={`flash-popup${depth === 0 ? ' flash-popup-active' : ''}`}
+            style={{ zIndex: 1000 + (shown.length - depth) }}
+            aria-hidden={depth > 0}
+            tabIndex={depth > 0 ? -1 : undefined}
+          >
+            <span className="flash-popup-title">⚡ {t('PROMOTION DU JOUR')}</span>
+            <Link to={`/produit/${p.product_id}`} className="flash-popup-body" tabIndex={depth > 0 ? -1 : undefined}>
+              {p.image && <img src={p.image} alt={p.product_name} loading="lazy" decoding="async" />}
+              <div className="flash-popup-info">
+                <h3>{p.product_name}</h3>
+                <p className="flash-popup-shop">{p.shop_name}</p>
+                <p className="flash-popup-price">
+                  <span className="old-price">{formatMoney(p.price)} {symbol}</span>
+                  <span className="price price-flash">{formatMoney(p.promo_price)} {symbol}</span>
+                  <span className="badge badge-flash">-{p.discount_percent || 0}%</span>
+                </p>
+                <FlashCountdown
+                  endsAt={p.ends_at}
+                  render={({ remains, ended }) =>
+                    ended ? (
+                      <span className="flash-countdown ended">⏰ {t('Terminée')}</span>
+                    ) : (
+                      <span className="flash-countdown flash-countdown-big">⏰ {formatFlashTime(remains)}</span>
+                    )
+                  }
+                />
+                <span className="flash-popup-cta">{t("Voir l'offre")} →</span>
+              </div>
+            </Link>
+          </div>
+        );
+      })}
     </div>
   );
 }
