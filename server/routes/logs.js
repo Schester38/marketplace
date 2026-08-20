@@ -39,4 +39,9 @@ router.delete('/:id', authRequired, roleRequired('admin'), ah(async (req, res) =
   res.json({ ok: true });
 }));
 
+router.delete('/all', authRequired, roleRequired('admin'), ah(async (req, res) => {
+  await q('DELETE FROM client_logs');
+  res.json({ ok: true });
+}));
+
 export default router;

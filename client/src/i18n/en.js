@@ -1280,4 +1280,6 @@ export default {
   'Avis clients': 'Customer reviews',
   'Partagez votre expérience avec nous sur Trustpilot': 'Share your experience with us on Trustpilot',
   'Évaluez-nous sur Trustpilot': 'Rate us on Trustpilot',
+  'Supprimer tout': 'Delete all',
+  'Supprimer TOUTES les erreurs signalées ? Cette action est irréversible.': 'Delete ALL reported errors? This action is irreversible.',
 };

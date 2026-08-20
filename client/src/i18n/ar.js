@@ -1256,5 +1256,7 @@ export default {
   'Avis clients': 'آراء العملاء',
   'Partagez votre expérience avec nous sur Trustpilot': 'شارك تجربتك معنا على تراست بايلوت',
   'Évaluez-nous sur Trustpilot': 'قيّمنا على تراست بايلوت',
+  'Supprimer tout': 'حذف الكل',
+  'Supprimer TOUTES les erreurs signalées ? Cette action est irréversible.': 'حذف جميع الأخطاء المبلغ عنها؟ هذا الإجراء لا رجعة فيه.',
 
 };

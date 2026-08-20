@@ -210,6 +210,16 @@ export default function Admin() {
     }
   };
 
+  const deleteAllLogs = async () => {
+    if (!window.confirm(t('Supprimer TOUTES les erreurs signalées ? Cette action est irréversible.'))) return;
+    try {
+      await api.adminDeleteAllLogs();
+      setLogs([]);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const hideSale = async (s) => {
     if (!window.confirm(t('Masquer cette transaction de la vue admin ? Les utilisateurs ne sont pas affectés.'))) return;
     try {
@@ -622,7 +632,17 @@ export default function Admin() {
         </button>
       </form>
 
-      <h2 className="section-title">🛠️ {t('Erreurs signalées par les visiteurs')}</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
+        <h2 className="section-title" style={{ margin: 0 }}>🛠️ {t('Erreurs signalées par les visiteurs')}</h2>
+        <button
+          type="button"
+          className="btn btn-danger btn-small"
+          onClick={deleteAllLogs}
+          disabled={logs === null || logs.length === 0}
+        >
+          {t('Supprimer tout')}
+        </button>
+      </div>
       <p className="hint">
         {t('Erreurs JavaScript remontées automatiquement par le navigateur des clients (une toutes les 5 s maximum par client).')}
       </p>

@@ -1208,5 +1208,7 @@ export default {
   'Avis clients': 'Opiniones de clientes',
   'Partagez votre expérience avec nous sur Trustpilot': 'Comparte tu experiencia con nosotros en Trustpilot',
   'Évaluez-nous sur Trustpilot': 'Valóranos en Trustpilot',
+  'Supprimer tout': 'Eliminar todo',
+  'Supprimer TOUTES les erreurs signalées ? Cette action est irréversible.': '¿Eliminar TODOS los errores reportados? Esta acción es irreversible.',
 
 };

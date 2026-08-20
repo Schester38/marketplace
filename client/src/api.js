@@ -166,6 +166,7 @@ export const api = {
     ),
   adminVisitsReset: () => adminRequest('/admin/visits/reset', { method: 'POST' }),
   adminDeleteLog: (id) => adminRequest(`/logs/${id}`, { method: 'DELETE' }),
+  adminDeleteAllLogs: () => adminRequest('/logs/all', { method: 'DELETE' }),
   adminDeleteMessage: (id) => adminRequest(`/admin/messages/${id}`, { method: 'DELETE' }),
   adminResendMessage: (id) => adminRequest(`/admin/messages/${id}/resend`, { method: 'POST' }),
   adminHideSale: (id) => adminRequest(`/admin/sales/${id}`, { method: 'DELETE' }),
