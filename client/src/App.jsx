@@ -120,6 +120,30 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('auth-expired', onAuthExpired);
   }, []);
 
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) return undefined;
+    if (window.location.pathname.startsWith('/admin')) return undefined;
+    const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+    const IDLE_EVENTS = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'];
+    let timer = null;
+    const expire = () => {
+      if (logoutRef.current) logoutRef.current();
+      navigate('/login', { replace: true });
+    };
+    const reset = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(expire, IDLE_TIMEOUT_MS);
+    };
+    IDLE_EVENTS.forEach((evt) => window.addEventListener(evt, reset, { passive: true }));
+    reset();
+    return () => {
+      IDLE_EVENTS.forEach((evt) => window.removeEventListener(evt, reset));
+      if (timer) clearTimeout(timer);
+    };
+  }, [user, navigate]);
+
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
       {children}
