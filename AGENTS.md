@@ -22,18 +22,52 @@ Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiqu
 
 ## Commission et argent
 
-- **IKE FEE** : **6 %** (`IKE_FEE_PERCENT`, client `config.js:132` et `server/ikeepay.js:3`). Helpers : `ikePayFee`, `ikePayFeeNet` (×0.94), `ikePayGrossUp` (×100/94).
-- **Vente seller** (`server/routes/sales.js`) : role seller requis, ligne produit verrouillée `FOR UPDATE`, répartition `server/finance.js` `computeRedistribution` : `shopAmount = total − commission − referralCommission`, `sellerAmount = commission`, `referrerAmount = referralCommission` (parrainage), `livreurAmount = deliveryFee`. Auto-paiement parrainage si ≥ `REFERRAL_AUTO_PAY_MIN` (1500).
-- **Commission promo = 0 %** (vendeur exclu du produit pendant la promo).
+### IKE FEE — 6 % des deux côtés (PAIEMENTS et REVERSEMENTS)
+
+`IKE_FEE_PERCENT = 6` (client `config.js:132` ET serveur `ikeepay.js:3` — toujours garder ces deux valeurs synchronisées). Helpers serveur+client : `ikePayFee(x)` = 6 % de x, `ikePayFeeNet(x)` = x × 0,94 (net après 6 %), `ikePayGrossUp(x)` = x × 100/94 (brut pour payer un montant net).
+
+Le 6 % s'applique **dans les deux sens** :
+
+1. **Côté paiement (payin, le client paie)** — `payments.js:81` : le client ne paie pas juste le total ; iKeePay prélève 6 % de la demande, donc le serveur demande `amount = ikePayGrossUp(total)` (= total ÷ 0,94, arrondi) et le marchand reçoit exactement le total. `fee` retourné = `ikePayFee(amount)`.
+2. **Côté reversement (payout, on reverse au bénéficiaire)** — chaque reverse est envoyé **net de 6 %** : `ikePayFeeNet(montant)`. Concerne le reversement à la **boutique** (`finance.js:88`, txn `online_collect`), au **vendeur** (`finance.js:93`, txn `commission_credit`), au **livreur** (`finance.js:100`, txn `online_payout`), au **parrain** (`finance.js:192,211`), au parrain d'activation vendeur (`payments.js:297`) et au support (`payments.js:341`) ainsi qu'aux dons (`donations.js:112`).
+
+Autrement dit : **Mboppi retient 6 % sur chaque paiement** et **réverse 94 % de chaque montant dû** (les 6 % sont les frais iKeePay assumés par Mboppi, déduits reversement par reversement).
+
+- Payout : `server/ikeepay.js` `ikeepayPayout` → `POST /h2h-payout` (API `https://api.ikeepay.com`, clé `IKE_SECRET_KEY` dans le header `x-api-key`, timeout 20 s). Payin : `ikeepayPayin` → `/h2h-payin`. `ikeepayEnabled()` exige `IKE_SECRET_KEY` ET `IKE_PUBLIC_KEY`.
+- Payin de commande `payments.js:41` : body `{sale_id, operator, phone_number, shop_code?}`, verrou `FOR UPDATE`, la vente doit être `pending|confirmed|delivered` et non payée ; si `shop_code` fourni, il doit correspondre à la boutique du produit. Montant = `total_price + delivery_fee` grossé par 6 %. `external_reference = 'SALE:{id}'`. Idempotence par `wallet_transactions` (`ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`) et par `payment_webhook_logs`.
+
+### Répartition d'une vente — `server/finance.js` `computeRedistribution`
+
+`totalPrice = prix × quantité` (le prix de référence : erreur de sécurité si le client fournit un prix inférieur). Champs d'une vente : `commission` (commission vendeur), `referral_commission` (commission de parrainage 2 %), `delivery_fee` (frais de livraison, saisis par le livreur à la livraison, valeur par défaut 0).
+
+- `shopAmount = totalPrice − commission − referralCommission` (ce que touche la boutique)
+- `sellerAmount = commission` (le vendeur)
+- `referrerAmount = referralCommission` (le parrain)
+- `livreurAmount = deliveryFee` (le livreur)
+
+Reverse automatique `sendSalePayouts` (après paiement en ligne, `markSalePaid`) : chaque montant > 0 est envoyé **net de 6 %** vers le portefeuille **Mobile Money** du bénéficiaire (`payoutTargetFor` : lit `wallets` jsonb de `*_payment_methods`, priorité au wallet dont le nom contient « orange », numéro normalisé avec le préfixe pays). Sans wallet valide → pas de reverse + notification `payment_need_wallet`. Tous les pays sont dans `COUNTRIES` de `ikeepay.js` (34 pays, code ISO + préfixe tel).
+
+### Commission vendeur (2 % — PARRAINAGE DE CLIENTS AFFILIÉS)
+
+**Ne pas confondre** : le **2 % est lié à un CLIENT affilié**, pas à un « vendeur affilié ». Le flux :
+
+1. Un **client** s'inscrit avec le code vendeur d'un vendeur (`ref` = `seller_code`, `auth.js:63-72`) → son compte est marqué `referred_by = id_du_vendeur` et son rôle est forcé à `client`. Ce client est maintenant **client affilié** du vendeur.
+2. Quand ce **client affilié** (identifié par `req.user`, donc auth obligatoire pour déclencher le 2 %) achète un produit — `purchases.js:101-107` ou `orders.js:75-80` — alors `referralCommission = prix × quantité × 2 %` et `referred_by` est enregistré sur la vente. Le **vendeur parrain** (le référent) reçoit ces 2 %.
+3. Le 2 % **n'est pas payé vente par vente** : il s'accumule (`referral_commission` non payée, `referral_paid = false`) et est versé automatiquement quand le cumul du parrain atteint `REFERRAL_AUTO_PAY_MIN = 1500` (`finance.js:154` `maybeAutoPayReferrals`, déclenché à la livraison `sales.js:609-615`), **net de 6 %** (`ikePayFeeNet`), vers le wallet seller du parrain, avec notification + push « Parrainage versé ».
+
+Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau vendeur s'inscrit avec le `seller_code` d'un autre vendeur (`ref_seller`, `auth.js:73-82`) ; à son activation payante (1500 F), son parrain reçoit `SELLER_ACTIVATION_REFERRAL_AMOUNT` (défaut **1000 F**) `payments.js:252-270`, net de 6 %, et le reste (500 F) va au support de Mboppi.
+
+### Commission de vente d'un produit
+
+- `products.commission_percent` est choisi par la **boutique à la création du produit** (0-100, `products.js:261,273,384,396`). Commission vente seller = `prix × commission_percent % × qty`.
+- Pendant une **promo éclair, commission = 0 %** : le vendeur est exclu du produit (le produit est masqué de son catalogue et `sales.js:41-50` bloque la vente pendant la promo).
+- Activation seller : `SELLER_ACTIVATION_FEE` (défaut 1500 F), durée `SELLER_ACTIVATION_DAYS` (31 j) depuis `activation_fee_paid_at` (`sellerActivationActive`), `SELLER_FEE_FAILED_STATUSES = ['failed','cancelled','expired','declined','rejected','refused']` font échouer. Paiement via `POST /api/payments/seller-fee` puis webhook.
+
+### Wallet et moyens de paiement
+
 - **Wallet** (`server/routes/wallet.js`) : `GET /api/wallet/me` pour seller/creator, `wallet_transactions`, `balance = SUM(amount)` (montants signés), devise XAF.
-- Moyens de paiement des gains : `shop_payment_methods` / `seller_payment_methods` / `livreur_payment_methods` (PK = `*_id`, `full_name`, `wallets` jsonb, upsert `ON CONFLICT`).
-
-## iKeePay / paiements
-
-- `server/routes/payments.js` : `IKE_PUBLIC_KEY`, checkout `https://ikeepay.com/checkout/v1/inline`, webhook `IKE_WEBHOOK_URL`; `GET /operators` (ORANGE, MTN, WAVE, MOOV, MOBICASH, AIRTEL, VODACOM).
-- Statuts d'échec : `SELLER_FEE_FAILED_STATUSES = ['failed','cancelled','expired','declined','rejected','refused']`.
-- Client : `Payment.jsx` (activation seller, mapping noms de wallets type « free money » → Orange Money), `SellerPayments.jsx` (`WALLETS_BY_COUNTRY`).
-- Dons (`server/routes/donations.js`, page `/soutien`) : Cameroun, Orange/MTN (`MBO_DONATION_*`), PayPal, virement UBA.
+- Moyens de paiement des gains : `shop_payment_methods` / `seller_payment_methods` / `livreur_payment_methods` (PK = `*_id`, `full_name`, `wallets` jsonb — liste `{name, value}`, upsert `ON CONFLICT`).
+- Pays/pays africains : `COUNTRIES` dans `ikeepay.js` (ex. Cameroun CM/237). Mapping noms de wallets → opérateur dans `OPERATOR_MAP` (« free money »/« yoomee » → ORANGE, « m-pesa » → VODACOM, « t-money » → MOBICASH…).
 
 ## Promotions éclair (flash promotions)
 
@@ -53,9 +87,12 @@ Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiqu
 ## Ventes / commandes
 
 - `sales` : status `pending → bought → confirmed → delivered`; `confirm_code` 6 chars (`ABCDEFGHJKMNPQRSTUVWXYZ23456789`), unique aussi contre `orders`.
-- `purchases.js` : `POST /` avec `product_id, seller_code (uppercasé), purchase_price, quantity, buyer_*, payment_method ('mobile'|'espece')`; auth optionnelle.
+- `purchases.js` : `POST /` avec `product_id, seller_code (uppercasé), purchase_price, quantity, buyer_*, payment_method ('mobile'|'espece')`; auth optionnelle. Le **prix de référence** est celui du catalogue OU de la promo active (`purchases.js:75`), jamais le prix client.
 - `orders.js` : panier multi-articles (code 6 chars).
-- Facture PDF : `client/src/components/Invoice.jsx` — jspdf **v4.2.1** importé dynamiquement, `doc.save('facture-{id}.pdf')`, logo `/navbar-logo.png`, boutons dans Shop/Seller/Livreur dashboards.
+- **Livraison** (`sales.js:540` `/:id/deliver`) : le livreur saisit `delivery_fee` + `payment_method` (`espèce`/`mobile`/`en ligne`), doit fournir le `shop_code` de la boutique et le `confirm_code` du client ; décrémente le stock (ou `reserved_quantity` si `stock_reserved`). À la livraison : déclenche `maybeAutoPayReferrals` pour le parrain (`sales.js:609-615`).
+- **Paiement en ligne d'une vente** : `POST /api/payments/payin` (`payments.js:41`) → iKeePay envoie une demande de paiement au numéro Mobile Money du client → webhook → `markSalePaid` (`finance.js:234`) marque `paid`, `online_payment`, `payout_initiated` puis déclenche `sendSalePayouts` (reversements nets de 6 %).
+- **Suppression de livraison** : bloquée si commission vendeur (`paid`) ou parrainage (`referral_paid`) non payés (`sales.js:436-444`). Paiement groupé des commissions par la boutique : `/:id/claim` et `/:id/pay-referral` (`sales.js:782-917`).
+- **Facture PDF** : `client/src/components/Invoice.jsx` — jspdf **v4.2.1** importé dynamiquement, `doc.save('facture-{id}.pdf')`, logo `/navbar-logo.png`, boutons dans Shop/Seller/Livreur dashboards.
 
 ## Tableaux principaux (créés dans `server/db.js` initDb)
 
