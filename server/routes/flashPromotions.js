@@ -104,7 +104,7 @@ router.post('/', authRequired, roleRequired('shop'), ah(async (req, res) => {
   const created = (
     await q(
       `INSERT INTO flash_promotions (shop_id, product_id, promo_price, duration_minutes, starts_at, ends_at)
-       VALUES ($1, $2, $3, $4, now(), now() + ($4 || ' minutes')::interval)
+       VALUES ($1, $2, $3, $4, now(), now() + make_interval(mins => $4::int))
        RETURNING *`,
       [req.user.id, product.id, price, minutes]
     )
