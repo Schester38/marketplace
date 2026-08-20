@@ -107,6 +107,9 @@ export default function FlashPromoPopup() {
             <span className="old-price">{formatMoney(promo.price)} {symbol}</span>
             <span className="price price-flash">{formatMoney(promo.promo_price)} {symbol}</span>
             <span className="badge badge-flash">-{promo.discount_percent || 0}%</span>
+            {Number(promo.commission || 0) > 0 && (
+              <span className="commission">+{formatMoney(promo.commission)} {symbol}</span>
+            )}
           </p>
           <FlashCountdown
             endsAt={promo.ends_at}

@@ -67,6 +67,9 @@ export default function FlashPromoCard({ promo, onDelete, showShop = true }) {
             <span className="old-price">{formatMoney(promo.price)} {symbol}</span>
             <span className="price price-flash">{formatMoney(promo.promo_price)} {symbol}</span>
           </span>
+          {Number(promo.commission || 0) > 0 && (
+            <span className="commission">+{formatMoney(promo.commission)} {symbol}</span>
+          )}
         </div>
       </Link>
     </div>

@@ -105,6 +105,8 @@ export default function ProductDetail() {
   useEffect(() => {
     if (!product) return;
     const inStock = Number(product.quantity || 0) > 0;
+    const fp = product.flash_promo || null;
+    const fPrice = fp ? Number(fp.price) : Number(product.price);
     const jsonLd = {
       '@context': 'https://schema.org',
       '@type': 'Product',
@@ -116,10 +118,10 @@ export default function ProductDetail() {
       offers: {
         '@type': 'Offer',
         url: `${BASE_URL}/produit/${product.id}`,
-        price: Number(product.price).toFixed(2),
+        price: Number(fPrice).toFixed(2),
         priceCurrency: (product.currency || 'XAF').toUpperCase(),
         availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-        priceValidUntil: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+        priceValidUntil: fp ? String(fp.ends_at).slice(0, 10) : new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().slice(0, 10),
       },
       ...(Number(product.review_count) > 0
         ? {
@@ -138,7 +140,7 @@ export default function ProductDetail() {
     if (prev) prev.remove();
     document.head.appendChild(el);
     return () => el.remove();
-  }, [product && product.id]);
+  }, [product && product.id, product && product.flash_promo && product.flash_promo.ends_at]);
 
   const photos = product ? product.photos || [] : [];
   useEffect(() => {
@@ -175,8 +177,10 @@ export default function ProductDetail() {
   const deliveryFee = Number(product.delivery_fee || 0);
   const symbol = countrySymbol(product?.shop_country);
   const inStock = Number(product.quantity || 0);
-  const oldPrice = product.old_price === null || product.old_price === undefined ? null : Number(product.old_price);
-  const hasPromo = oldPrice !== null && oldPrice > Number(product.price);
+  const flash = product.flash_promo || null;
+  const displayPrice = flash ? Number(flash.price) : Number(product.price);
+  const oldPrice = Number(flash ? Number(product.price) : product.old_price === null || product.old_price === undefined ? null : Number(product.old_price));
+  const hasPromo = oldPrice > 0 && oldPrice > displayPrice;
 
   const removeProduct = async () => {
     if (!window.confirm(t('Retirer « {name} » définitivement ?', { name: product.name }))) return;
@@ -196,7 +200,7 @@ export default function ProductDetail() {
         title={`${product.name} — Mboppi`}
         description={t('Découvrez « {name} » à {price} {symbol} chez {shop} sur Mboppi.', {
           name: product.name,
-          price: formatMoney(product.price),
+          price: formatMoney(flash ? flash.price : product.price),
           symbol,
           shop: product.shop_name,
         })}
@@ -283,8 +287,13 @@ export default function ProductDetail() {
           </div>
           <div className="offer-prices">
             {hasPromo && <span className="old-price">{formatMoney(oldPrice)} {symbol}</span>}
-            <span className="promo-price">{formatMoney(product.price)} {symbol}</span>
+            <span className={`promo-price ${flash ? 'price-flash' : ''}`}>{formatMoney(displayPrice)} {symbol}</span>
           </div>
+          {flash && (
+            <p className="flash-detail-hint">
+              ⚡ {t('Offre éclair')} — {t('{n}% de réduction', { n: flash.discount_percent })} · {t('se termine le {date}', { date: new Date(flash.ends_at).toLocaleString() })}
+            </p>
+          )}
           <p className={`offer-qty ${inStock > 0 ? '' : 'out'}`}>
             {inStock > 0 ? t('Disponibilité : {n} en stock', { n: inStock }) : t('Rupture de stock')}
           </p>
@@ -330,7 +339,7 @@ export default function ProductDetail() {
                 const url = `${BASE_URL}/produit/${product.id}`;
                 const text = t('Découvrez « {name} » à {price} {symbol} sur Mboppi.', {
                   name: product.name,
-                  price: formatMoney(product.price),
+                  price: formatMoney(displayPrice),
                   symbol,
                 });
                 try {

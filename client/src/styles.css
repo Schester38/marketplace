@@ -3610,6 +3610,7 @@ a.step { text-decoration: none; color: inherit; }
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
 }
 .price-flash { color: var(--danger); }
+.flash-detail-hint { margin-top: 8px; font-size: 0.85rem; font-weight: 700; color: var(--danger); }
 .flash-promo-card .old-price { color: var(--muted); text-decoration: line-through; font-size: 0.82rem; }
 .flash-countdown {
   display: inline-block;

@@ -38,6 +38,14 @@ router.post('/', authRequired, roleRequired('seller'), ah(async (req, res) => {
       throw error;
     }
 
+    // Si une promotion éclair est active, la vente se fait au prix et à la commission de la promo.
+    const promo = (await tx.query(
+      'SELECT promo_price, commission_percent FROM flash_promotions WHERE product_id = $1 AND ends_at > now()',
+      [product.id]
+    ))[0];
+    const effectivePrice = promo ? Number(promo.promo_price) : Number(product.price);
+    const commissionPercent = promo ? Number(promo.commission_percent) : Number(product.commission_percent);
+
     const pending = (await tx.query(
       'SELECT id FROM sales WHERE product_id = $1 AND seller_id = $2 AND status = $3',
       [product.id, req.user.id, 'pending']
@@ -59,12 +67,13 @@ router.post('/', authRequired, roleRequired('seller'), ah(async (req, res) => {
       throw error;
     }
 
-    const total = Math.round(Number(product.price) * qty * 100) / 100;
-    const commission = Math.round(Number(product.price) * (Number(product.commission_percent) / 100) * qty * 100) / 100;
+    const total = Math.round(effectivePrice * qty * 100) / 100;
+    const commission = Math.round(effectivePrice * (commissionPercent / 100) * qty * 100) / 100;
     const created = (await tx.query(
-      `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, stock_reserved)
-       VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
-      [product.id, req.user.id, qty, total, commission]
+      `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, stock_reserved, purchase_price)
+       VALUES ($1, $2, $3, $4, $5, TRUE, $6)
+       RETURNING id`,
+      [product.id, req.user.id, qty, total, commission, effectivePrice]
     ))[0];
     return { id: created.id };
   });

@@ -64,9 +64,14 @@ router.post('/', optionalAuth, async (req, res, next) => {
         if (!p) { const e = new Error('Produit introuvable'); e.statusCode = 400; throw e; }
         if (Number(p.quantity) < qty) { const e = new Error(`Stock insuffisant pour « ${p.name} »`); e.statusCode = 409; throw e; }
 
-        const price = Number(p.price);
+        const promo = (await tx.query(
+          'SELECT promo_price, commission_percent FROM flash_promotions WHERE product_id = $1 AND ends_at > now()',
+          [pid]
+        ))[0];
+        const price = promo ? Number(promo.promo_price) : Number(p.price);
+        const commissionPercent = promo ? Number(promo.commission_percent) : Number(p.commission_percent);
         const total = Math.round(price * qty * 100) / 100;
-        const commission = Math.round(price * (Number(p.commission_percent) / 100) * qty * 100) / 100;
+        const commission = Math.round(price * (commissionPercent / 100) * qty * 100) / 100;
         let referralCommission = 0;
         let referredBy = null;
         if (req.user) {

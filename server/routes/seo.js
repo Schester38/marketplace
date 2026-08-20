@@ -123,11 +123,12 @@ router.get('/', async (req, res) => {
   try {
     const products = (await q(
       `SELECT p.id, p.name, p.price, p.currency, p.image, u.name AS shop_name,
-              COALESCE(s.n, 0) AS sold
+              COALESCE(s.n, 0) AS sold, fp.promo_price AS flash_price
        FROM products p
        JOIN users u ON u.id = p.shop_id
        LEFT JOIN (SELECT product_id, SUM(quantity) FILTER (WHERE status = 'delivered') AS n
                   FROM sales GROUP BY product_id) s ON s.product_id = p.id
+       LEFT JOIN flash_promotions fp ON fp.product_id = p.id AND fp.ends_at > now()
        WHERE p.quantity > 0
        ORDER BY COALESCE(s.n, 0) DESC, p.created_at DESC
        LIMIT 12`
@@ -160,7 +161,7 @@ router.get('/', async (req, res) => {
           name: p.name,
           url: `${BASE_URL}/produit/${p.id}`,
           image: p.image && /^https?:/.test(p.image) ? p.image : p.image ? `${BASE_URL}${p.image}` : undefined,
-          offers: { '@type': 'Offer', price: String(Number(p.price || 0)), priceCurrency: (p.currency || 'XAF').toUpperCase() },
+          offers: { '@type': 'Offer', price: String(p.flash_price != null ? Number(p.flash_price) : Number(p.price || 0)), priceCurrency: (p.currency || 'XAF').toUpperCase() },
         })),
       };
     }
@@ -192,8 +193,10 @@ router.get('/produit/:id', async (req, res) => {
     if (!Number.isInteger(id) || id <= 0) return res.status(404).type('html').send(notFoundHtml);
     const [p] = await q(
       `SELECT p.name, p.description, p.price, p.currency, p.image, p.photos,
-              u.name AS shop_name, u.location AS shop_location, u.country AS shop_country, u.verified AS shop_verified
+              u.name AS shop_name, u.location AS shop_location, u.country AS shop_country, u.verified AS shop_verified,
+              fp.promo_price AS flash_price, fp.ends_at AS flash_ends_at
        FROM products p JOIN users u ON u.id = p.shop_id
+       LEFT JOIN flash_promotions fp ON fp.product_id = p.id AND fp.ends_at > now()
        WHERE p.id = $1`,
       [id]
     );
@@ -207,7 +210,7 @@ router.get('/produit/:id', async (req, res) => {
       .trim()
       .slice(0, 155);
     const shopLine = p.shop_name ? ` chez ${p.shop_name}` : '';
-    const price = Number(p.price);
+    const price = p.flash_price != null ? Number(p.flash_price) : Number(p.price);
     const title = `${p.name}${shopLine} — Mboppi`;
     const canonical = `${originOf(req)}/produit/${id}`;
     const descText = description || `${p.name} disponible sur Mboppi. Commandez en ligne ou par WhatsApp.`;
@@ -225,6 +228,7 @@ router.get('/produit/:id', async (req, res) => {
         priceCurrency: (p.currency || 'XAF').toUpperCase(),
         availability: 'https://schema.org/InStock',
         url: canonical,
+        ...(p.flash_ends_at ? { priceValidUntil: String(p.flash_ends_at).slice(0, 10) } : {}),
       },
       seller: p.shop_name ? { '@type': 'Organization', name: p.shop_name } : undefined,
     };

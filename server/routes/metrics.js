@@ -47,7 +47,9 @@ router.get('/trending', async (req, res) => {
   const rows = await q(
     `SELECT p.id, p.name, p.price, p.commission_percent, p.currency, p.quantity, p.shop_id, u.name AS shop_name,
             u.country AS shop_country,
-            COALESCE(v.w1_views, 0) AS w1_views, COALESCE(s.n, 0) AS sold
+            COALESCE(v.w1_views, 0) AS w1_views, COALESCE(s.n, 0) AS sold,
+            fp.id AS flash_promo_id, fp.promo_price AS flash_price, fp.commission_percent AS flash_commission_percent,
+            fp.ends_at AS flash_ends_at
      FROM products p
      JOIN users u ON u.id = p.shop_id
      LEFT JOIN (SELECT item_id, SUM(count) AS w1_views
@@ -56,6 +58,7 @@ router.get('/trending', async (req, res) => {
                 GROUP BY item_id) v ON v.item_id = p.id
      LEFT JOIN (SELECT product_id, SUM(quantity) AS n
                 FROM sales WHERE status = 'delivered' GROUP BY product_id) s ON s.product_id = p.id
+     LEFT JOIN flash_promotions fp ON fp.product_id = p.id AND fp.ends_at > now()
      WHERE p.quantity > 0
        AND (COALESCE(v.w1_views, 0) > 0 OR COALESCE(s.n, 0) > 0)
      ORDER BY (COALESCE(v.w1_views, 0) + COALESCE(s.n, 0) * 3) DESC, p.created_at DESC
@@ -75,6 +78,16 @@ router.get('/trending', async (req, res) => {
     image: null,
     w1_views: Number(p.w1_views),
     sold: Number(p.sold),
+    flash_promo: p.flash_promo_id
+      ? {
+          id: Number(p.flash_promo_id),
+          price: Number(p.flash_price),
+          discount_percent: p.price > 0 ? Math.round((1 - Number(p.flash_price) / Number(p.price)) * 100) : 0,
+          commission_percent: Number(p.flash_commission_percent),
+          commission: Math.round(Number(p.flash_price) * (Number(p.flash_commission_percent) / 100) * 100) / 100,
+          ends_at: p.flash_ends_at,
+        }
+      : null,
   }));
   if (products.length) {
     const ids = products.map((p) => p.id);

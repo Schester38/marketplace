@@ -28,29 +28,48 @@ function cachePublic(res, sMaxAge = 60) {
 function productRow(p, mode = 'list') {
   const photos = mode === 'detail' ? fullPhotos(p.photos) : listPhotos(p.photos);
   const image = (mode === 'detail' ? fullPhotos(p.photos) : listPhotos(p.photos))[0] || p.image || null;
-  const { n, n_month, pending_n, rating_avg, review_count, ...rest } = p;
+  const {
+    n, n_month, pending_n, rating_avg, review_count,
+    flash_promo_id, flash_price, flash_commission_percent, flash_ends_at, flash_starts_at, flash_duration_minutes,
+    ...rest
+  } = p;
+  const price = Number(p.price);
   return {
     ...rest,
     photos,
     image,
     rating_avg: Number(rating_avg || 0),
     review_count: Number(review_count || 0),
-    price: Number(p.price),
+    price,
     old_price: p.old_price === null || p.old_price === undefined ? null : Number(p.old_price),
     commission_percent: Number(p.commission_percent),
-    commission: Math.round(Number(p.price) * (Number(p.commission_percent) / 100) * 100) / 100,
+    commission: Math.round(price * (Number(p.commission_percent) / 100) * 100) / 100,
     delivery_fee: Number(p.delivery_fee || 0),
     quantity: Number(p.quantity || 1),
     sold: Number(n || 0),
     sold_month: Number(n_month || 0),
     pending_count: Number(pending_n || 0),
+    flash_promo: flash_promo_id
+      ? {
+          id: Number(flash_promo_id),
+          price: Number(flash_price),
+          discount_percent: price > 0 ? Math.round((1 - Number(flash_price) / price) * 100) : 0,
+          commission_percent: Number(flash_commission_percent),
+          commission: Math.round(Number(flash_price) * (Number(flash_commission_percent) / 100) * 100) / 100,
+          starts_at: flash_starts_at,
+          ends_at: flash_ends_at,
+          duration_minutes: Number(flash_duration_minutes || 0),
+        }
+      : null,
   };
 }
 
 const SELECT_PRODUCT = `
   SELECT p.*, u.name AS shop_name, u.role AS shop_role, u.location AS shop_location, u.city AS shop_city, u.country AS shop_country,
          u.verified AS shop_verified, u.phone AS shop_phone,
-         s.n, s.n_month, s.pending_n, r.review_count, r.rating_avg, v.w1_views
+         s.n, s.n_month, s.pending_n, r.review_count, r.rating_avg, v.w1_views,
+         fp.id AS flash_promo_id, fp.promo_price AS flash_price, fp.commission_percent AS flash_commission_percent,
+         fp.starts_at AS flash_starts_at, fp.ends_at AS flash_ends_at, fp.duration_minutes AS flash_duration_minutes
   FROM products p
   JOIN users u ON u.id = p.shop_id
   LEFT JOIN (SELECT product_id,
@@ -64,6 +83,7 @@ const SELECT_PRODUCT = `
              FROM item_views
              WHERE item_type = 'product' AND seen_on >= CURRENT_DATE - 6
              GROUP BY item_id) v ON v.item_id = p.id
+  LEFT JOIN flash_promotions fp ON fp.product_id = p.id AND fp.ends_at > now()
 `;
 
 const NORMALIZE_TEXT = (col) =>

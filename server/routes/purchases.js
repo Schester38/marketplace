@@ -66,8 +66,13 @@ router.post('/', optionalAuth, ah(async (req, res) => {
     return res.status(400).json({ error: 'Quantité invalide' });
   }
 
-  // Le prix catalogue est la source de vérité. Un prix client arbitraire ne doit pas modifier le calcul financier.
-  const price = Number(product.price);
+  // Le prix catalogue (ou le prix de la promotion éclair active) est la source de vérité.
+  // Un prix client arbitraire ne doit pas modifier le calcul financier.
+  const promo = (await q(
+    'SELECT promo_price, commission_percent FROM flash_promotions WHERE product_id = $1 AND ends_at > now()',
+    [product.id]
+  ))[0];
+  const price = promo ? Number(promo.promo_price) : Number(product.price);
   if (!Number.isFinite(price) || price < 0) return res.status(500).json({ error: 'Prix produit invalide' });
 
   const buyer = req.user || null;
@@ -88,7 +93,8 @@ router.post('/', optionalAuth, ah(async (req, res) => {
     return res.status(400).json({ error: 'L\'adresse de livraison est requise' });
   }
   const total = Math.round(price * qty * 100) / 100;
-  const commission = Math.round(Number(product.price) * (Number(product.commission_percent) / 100) * qty * 100) / 100;
+  const commissionPercent = promo ? Number(promo.commission_percent) : Number(product.commission_percent);
+  const commission = Math.round(price * (commissionPercent / 100) * qty * 100) / 100;
 
   let referralCommission = 0;
   let referredBy = null;

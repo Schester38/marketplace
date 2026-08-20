@@ -108,6 +108,8 @@ export default function PurchasePage() {
 
   const photo = (product.photos && product.photos[0]) || product.image;
   const symbol = countrySymbol(product.shop_country);
+  const flash = product.flash_promo || null;
+  const displayPrice = flash ? Number(flash.price) : Number(product.price);
 
   return (
     <main className="container narrow">
@@ -130,7 +132,8 @@ export default function PurchasePage() {
             {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
           </div>
           <p className="price-line" style={{ marginTop: 10 }}>
-            <span className="price">{formatMoney(product.price)} {symbol}</span>
+            {flash && <span className="old-price">{formatMoney(product.price)} {symbol}</span>}
+            <span className={`price ${flash ? 'price-flash' : ''}`}>{formatMoney(displayPrice)} {symbol}</span>
           </p>
           <p className="product-shop" style={{ marginTop: 6 }}>
             {t('Boutique : {shop}', { shop: product.shop_name })}
@@ -257,7 +260,7 @@ export default function PurchasePage() {
             {error && <p className="error">{error}</p>}
             {paymentMethod === 'mobile' && product && (
               <IkeFeeNotice
-                amount={Number(product.price)}
+                amount={Number(displayPrice)}
                 currency={product.currency}
                 title={t('Frais iKeePay {percent} % sur les paiements en ligne', { percent: IKE_FEE_PERCENT })}
               />

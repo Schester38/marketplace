@@ -40,7 +40,8 @@ export function StoreProvider({ children }) {
         {
           id: Number(product.id),
           name: product.name,
-          price: Number(product.price),
+          price: Number(product.flash_promo ? product.flash_promo.price : product.price),
+          old_price: product.flash_promo ? Number(product.price) : null,
           photo: (product.photos && product.photos[0]) || product.image || null,
           country: product.shop_country || null,
           stock: max,

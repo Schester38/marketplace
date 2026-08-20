@@ -17,16 +17,19 @@ export default function ProductCard({ product, action, onAction, secondaryAction
   const { addToCart } = useCart();
   const { isFav, toggleFav } = useFavs();
   const [added, setAdded] = useState(false);
-  const commission = Number(product.commission || 0);
   const photo = (product.photos && product.photos[0]) || product.image;
   const qty = Number(product.quantity || 0);
   const symbol = countrySymbol(product?.shop_country);
   const fav = isFav(product.id);
   const sold = Number(product.sold || 0);
   const pendingCount = Number(product.pending_count || 0);
-  const oldPrice = product.old_price === null || product.old_price === undefined ? null : Number(product.old_price);
-  const hasPromo = oldPrice !== null && oldPrice > Number(product.price);
-  const promoPct = hasPromo ? Math.round((1 - Number(product.price) / oldPrice) * 100) : 0;
+  const flash = product.flash_promo || null;
+  const commission = Number(flash ? flash.commission : product.commission || 0);
+  const flashOld = flash ? Number(product.price) : null;
+  const oldPrice = Number(flashOld ?? (product.old_price === null || product.old_price === undefined ? null : product.old_price));
+  const displayPrice = flash ? Number(flash.price) : Number(product.price);
+  const hasPromo = oldPrice > 0 && oldPrice > displayPrice;
+  const promoPct = hasPromo ? Math.round((1 - displayPrice / oldPrice) * 100) : 0;
 
   const add = (e) => {
     e.preventDefault();
@@ -64,7 +67,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
       </button>
       <a
         className="share-btn"
-        href={waLink('', `${product.name} — ${product.price} ${symbol} sur Mboppi → https://${window.location.host}/produit/${product.id}`)}
+        href={waLink('', `${product.name} — ${displayPrice} ${symbol} sur Mboppi → https://${window.location.host}/produit/${product.id}`)}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={t('Partager')}
@@ -73,7 +76,8 @@ export default function ProductCard({ product, action, onAction, secondaryAction
       >
         <ShareIcon />
       </a>
-      {hasPromo && <span className="badge badge-promo">-{promoPct}%</span>}
+      {flash && <span className="badge badge-promo">-{flash.discount_percent}%</span>}
+      {hasPromo && !flash && <span className="badge badge-promo">-{promoPct}%</span>}
       {pendingCount > 0 && <span className="badge badge-pending">⏳ {pendingCount} {t('en attente')}</span>}
       {sold > 0 && <span className="badge badge-sold">🔥 {sold} {t('vendus')}</span>}
       {badge && <span className={`badge ${badge.cls}`}>{badge.text}</span>}
@@ -103,7 +107,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
         <div className="price-box">
           <span className="price-line">
             {hasPromo && <span className="old-price">{formatMoney(oldPrice)} {symbol}</span>}
-            <span className="price">{formatMoney(product.price)} {symbol}</span>
+            <span className={`price ${flash ? 'price-flash' : ''}`}>{formatMoney(displayPrice)} {symbol}</span>
           </span>
           {showCommission && (
             <span className="commission">+{formatMoney(commission)} {symbol}</span>

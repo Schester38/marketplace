@@ -58,7 +58,7 @@ export default function ShopDashboard() {
   const [codeLoading, setCodeLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [flashPromos, setFlashPromos] = useState([]);
-  const [flashForm, setFlashForm] = useState({ productId: '', promoPrice: '', minutes: '180' });
+  const [flashForm, setFlashForm] = useState({ productId: '', promoPrice: '', commission: '', minutes: '180' });
   const [flashLoading, setFlashLoading] = useState(false);
   const symbol = countrySymbol(user?.country);
   const prefix = countryPhone(user?.country);
@@ -251,10 +251,11 @@ export default function ShopDashboard() {
       await api.createFlashPromotion({
         product_id: Number(flashForm.productId),
         promo_price: Number(flashForm.promoPrice),
+        commission_percent: flashForm.commission === '' ? undefined : Number(flashForm.commission),
         duration_minutes: Number(flashForm.minutes),
       });
       setSuccess(t('Promotion éclair lancée !'));
-      setFlashForm({ productId: '', promoPrice: '', minutes: '180' });
+      setFlashForm({ productId: '', promoPrice: '', commission: '', minutes: '180' });
       load();
     } catch (err) {
       setError(err.message);
@@ -484,6 +485,16 @@ export default function ShopDashboard() {
             placeholder={t('Prix promo ({symbol})', { symbol })}
             value={flashForm.promoPrice}
             onChange={(e) => setFlashForm({ ...flashForm, promoPrice: e.target.value })}
+          />
+          <input
+            className="input"
+            type="number"
+            min="0"
+            max="100"
+            step="any"
+            placeholder={t('Commission promo (%)')}
+            value={flashForm.commission}
+            onChange={(e) => setFlashForm({ ...flashForm, commission: e.target.value })}
           />
           <select
             className="input"
