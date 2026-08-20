@@ -65,7 +65,7 @@ export default function Admin() {
   }, []);
 
   useEffect(() => {
-    if (!gate) return;
+    if (gate) return;
     api.adminVisits(visitDays).then((d) => setVisits(d.visits)).catch(() => {});
   }, [gate, visitDays]);
 
