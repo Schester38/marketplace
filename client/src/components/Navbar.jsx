@@ -334,6 +334,11 @@ function NotifBell() {
         buyer,
       });
     }
+    if (n.type === 'product_deleted') {
+      return t('Votre produit « {product} » a été supprimé : il ne respectait pas les CGU.', {
+        product: n.product_name || t('produit'),
+      });
+    }
     if (n.type === 'sale_cancelled_client') {
       if (user.id === n.buyer_id) {
         return t('Votre commande « {product} » a été annulée comme demandé.', { product: n.product_name });
@@ -369,6 +374,10 @@ function NotifBell() {
   };
 
   const linkFor = (n) => {
+    if (n.type === 'product_deleted') {
+      if (user.role === 'shop') return '/shop';
+      return '/seller';
+    }
     if (n.type === 'payment_need_wallet') {
       if (user.role === 'shop') return '/shop/paiements';
       if (user.role === 'livreur') return '/livreur/paiements';

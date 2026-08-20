@@ -64,47 +64,51 @@ router.get('/stats', ah(async (req, res) => {
 
 router.get('/visits', ah(async (req, res) => {
   const days = [1, 7, 30].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
-  const [window] = await q(
-    `SELECT COUNT(*) AS days,
-            COUNT(DISTINCT seen_on) AS active_days,
-            SUM(total) AS page_views,
-            COUNT(DISTINCT visitor_id) AS unique_visitors
-       FROM (SELECT seen_on, visitor_id, COUNT(*) AS total
-             FROM daily_visits
-             WHERE seen_on >= CURRENT_DATE - ${days - 1}
-             GROUP BY seen_on, visitor_id) w`
-  );
-  const daily = (
-    await q(
-      `SELECT seen_on,
-              COUNT(DISTINCT visitor_id) AS visitors,
-              COUNT(*) AS views
-       FROM daily_visits
-       WHERE seen_on >= CURRENT_DATE - ${days - 1}
-       GROUP BY seen_on
-       ORDER BY seen_on DESC`
-    )
-  ).map((r) => ({ date: r.seen_on, visitors: Number(r.visitors), views: Number(r.views) }));
-  const topPages = (
-    await q(
-      `SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS visitors
-       FROM daily_visits
-       WHERE seen_on >= CURRENT_DATE - ${days - 1}
-       GROUP BY path
-       ORDER BY views DESC
-       LIMIT 10`
-    )
-  ).map((r) => ({ path: r.path, views: Number(r.views), visitors: Number(r.visitors) }));
-  const topItems = (
-    await q(
-      `SELECT item_type, item_id, SUM(count) AS views
-       FROM item_views
-       WHERE seen_on >= CURRENT_DATE - ${days - 1}
-       GROUP BY item_type, item_id
-       ORDER BY views DESC
-       LIMIT 10`
-    )
-  ).map((r) => ({ type: r.item_type, id: Number(r.item_id), views: Number(r.views) }));
+  const country = String(req.query.country || '').trim().slice(0, 40);
+  const countryClause = country ? ' AND country = $1' : '';
+  const paramsFor = () => (country ? [country] : []);
+  const windowQ = `
+    SELECT COUNT(*) AS days,
+           COUNT(DISTINCT seen_on) AS active_days,
+           SUM(total) AS page_views,
+           COUNT(DISTINCT visitor_id) AS unique_visitors
+      FROM (SELECT seen_on, visitor_id, COUNT(*) AS total
+            FROM daily_visits
+            WHERE seen_on >= CURRENT_DATE - ${days - 1}${countryClause}
+            GROUP BY seen_on, visitor_id) w`;
+  const dailyQ = `
+    SELECT seen_on,
+           COUNT(DISTINCT visitor_id) AS visitors,
+           COUNT(*) AS views
+    FROM daily_visits
+    WHERE seen_on >= CURRENT_DATE - ${days - 1}${countryClause}
+    GROUP BY seen_on
+    ORDER BY seen_on DESC`;
+  const topPagesQ = `
+    SELECT path, COUNT(*) AS views, COUNT(DISTINCT visitor_id) AS visitors
+    FROM daily_visits
+    WHERE seen_on >= CURRENT_DATE - ${days - 1}${countryClause}
+    GROUP BY path
+    ORDER BY views DESC
+    LIMIT 10`;
+  const topItemsQ = `
+    SELECT item_type, item_id, SUM(count) AS views
+    FROM item_views
+    WHERE seen_on >= CURRENT_DATE - ${days - 1}${countryClause}
+    GROUP BY item_type, item_id
+    ORDER BY views DESC
+    LIMIT 10`;
+  const [window] = await q(windowQ, paramsFor());
+  const daily = (await q(dailyQ, paramsFor())).map((r) => ({ date: r.seen_on, visitors: Number(r.visitors), views: Number(r.views) }));
+  const topPages = (await q(topPagesQ, paramsFor())).map((r) => ({ path: r.path, views: Number(r.views), visitors: Number(r.visitors) }));
+  const topItems = (await q(topItemsQ, paramsFor())).map((r) => ({ type: r.item_type, id: Number(r.item_id), views: Number(r.views) }));
+  const countries = (await q(
+    `SELECT country, COUNT(DISTINCT visitor_id) AS visitor_count, COUNT(*) AS views
+     FROM daily_visits
+     WHERE seen_on >= CURRENT_DATE - 29
+     GROUP BY country
+     ORDER BY views DESC`
+  )).map((r) => ({ country: r.country, visitor_count: Number(r.visitor_count), views: Number(r.views) }));
   res.json({
     visits: {
       page_views: Number(window.page_views),
@@ -113,8 +117,16 @@ router.get('/visits', ah(async (req, res) => {
       daily,
       top_pages: topPages,
       top_items: topItems,
+      countries,
     },
   });
+}));
+
+router.post('/visits/reset', ah(async (req, res) => {
+  await q('DELETE FROM daily_visits');
+  await q('DELETE FROM item_views');
+  await logAudit(req.user.id, 'admin.visits_reset', 'Réinitialisation des compteurs de visites', req.ip);
+  res.json({ ok: true });
 }));
 
 router.get('/backup', ah(async (req, res) => {
@@ -174,10 +186,31 @@ router.get('/products', ah(async (req, res) => {
 router.delete('/products/:id', ah(async (req, res) => {
   const id = Number(req.params.id);
   if (!isId(id)) return res.status(400).json({ error: 'Identifiant invalide' });
-  const product = (await q('SELECT id FROM products WHERE id = $1', [id]))[0];
+  const product = (await q('SELECT id, name, shop_id FROM products WHERE id = $1', [id]))[0];
   if (!product) return res.status(404).json({ error: 'Produit introuvable' });
   await q('DELETE FROM products WHERE id = $1', [product.id]);
-  await logAudit(req.user.id, 'admin.delete_product', `product=${product.id}`, req.ip);
+  if (product.shop_id) {
+    await q(
+      `INSERT INTO notifications (user_id, type, product_name) VALUES ($1, 'product_deleted', $2)`,
+      [product.shop_id, product.name]
+    );
+    const { sendPush } = await import('../push.js');
+    await sendPush(product.shop_id, {
+      title: 'Produit supprimé',
+      body: `Votre produit « ${product.name} » a été supprimé : il ne respectait pas les CGU.`,
+      url: '/shop',
+    });
+  }
+  await logAudit(req.user.id, 'admin.delete_product', `product=${product.id} "${product.name}"`, req.ip);
+  res.json({ ok: true });
+}));
+
+router.delete('/sales/:id', ah(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!isId(id)) return res.status(400).json({ error: 'Identifiant invalide' });
+  const deleted = await q('DELETE FROM sales WHERE id = $1 RETURNING id', [id]);
+  if (!deleted.length) return res.status(404).json({ error: 'Transaction introuvable' });
+  await logAudit(req.user.id, 'admin.delete_sale', `sale=${id}`, req.ip);
   res.json({ ok: true });
 }));
 
@@ -257,11 +290,13 @@ router.get('/activity', ah(async (req, res) => {
   });
 }));
 
+const MSG_TARGETS = ['all', 'user', 'shop', 'seller', 'client'];
+
 router.post('/messages', ah(async (req, res) => {
   const { message, target, userId } = req.body || {};
   const text = String(message || '').trim().slice(0, 2000);
   if (!text) return res.status(400).json({ error: 'Message vide' });
-  const kind = target === 'user' ? 'user' : 'all';
+  const kind = MSG_TARGETS.includes(target) ? target : 'all';
   let uid = null;
   if (kind === 'user') {
     uid = Number(userId);
@@ -286,6 +321,25 @@ router.get('/messages', ah(async (req, res) => {
       ORDER BY m.id DESC LIMIT 50`
   );
   res.json({ messages: rows });
+}));
+
+router.delete('/messages/:id', ah(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!isId(id)) return res.status(400).json({ error: 'Message invalide' });
+  const deleted = await q('DELETE FROM admin_messages WHERE id = $1 RETURNING id', [id]);
+  if (!deleted.length) return res.status(404).json({ error: 'Message introuvable' });
+  await logAudit(req.user.id, 'admin.delete_message', `message=${id}`, req.ip);
+  res.json({ ok: true });
+}));
+
+router.post('/messages/:id/resend', ah(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!isId(id)) return res.status(400).json({ error: 'Message invalide' });
+  const msg = (await q('SELECT id FROM admin_messages WHERE id = $1', [id]))[0];
+  if (!msg) return res.status(404).json({ error: 'Message introuvable' });
+  await q('DELETE FROM admin_message_reads WHERE message_id = $1', [id]);
+  await logAudit(req.user.id, 'admin.resend_message', `message=${id}`, req.ip);
+  res.json({ ok: true });
 }));
 
 router.post('/migrate-images', ah(async (req, res) => {

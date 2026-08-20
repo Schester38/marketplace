@@ -74,7 +74,8 @@ export const api = {
   deleteProduct: (id) => request(`/products/${id}`, { method: 'DELETE' }),
   duplicateProduct: (id) => request(`/products/${id}/duplicate`, { method: 'POST' }),
   recentSales: () => request('/sales/recent'),
-  trackVisit: (path) => request('/metrics/visit', { method: 'POST', body: JSON.stringify({ path }) }),
+  trackVisit: (path, country) =>
+    request('/metrics/visit', { method: 'POST', body: JSON.stringify({ path, country: country || 'CM' }) }),
   trackViews: (views) => request('/metrics/views', { method: 'POST', body: JSON.stringify({ views }) }),
   trending: () => request('/metrics/trending'),
   createSale: (payload) => request('/sales', { method: 'POST', body: JSON.stringify(payload) }),
@@ -158,7 +159,16 @@ export const api = {
   subscribeNewsletter: (email) => request('/newsletter/subscribe', { method: 'POST', body: JSON.stringify({ email }) }),
   adminNewsletter: () => adminRequest('/newsletter'),
   adminSendNewsletter: (payload) => adminRequest('/newsletter/send', { method: 'POST', body: JSON.stringify(payload) }),
-  adminVisits: (days) => adminRequest('/admin/visits' + (days ? `?days=${days}` : '')),
+  adminVisits: (days, country) =>
+    adminRequest(
+      '/admin/visits' +
+        (days || country ? `?${days ? `days=${days}` : ''}${days && country ? '&' : ''}${country ? `country=${encodeURIComponent(country)}` : ''}` : '')
+    ),
+  adminVisitsReset: () => adminRequest('/admin/visits/reset', { method: 'POST' }),
+  adminDeleteLog: (id) => adminRequest(`/logs/${id}`, { method: 'DELETE' }),
+  adminDeleteMessage: (id) => adminRequest(`/admin/messages/${id}`, { method: 'DELETE' }),
+  adminResendMessage: (id) => adminRequest(`/admin/messages/${id}/resend`, { method: 'POST' }),
+  adminDeleteSale: (id) => adminRequest(`/admin/sales/${id}`, { method: 'DELETE' }),
   paymentConfig: () => request('/payments/config'),
   paymentOperators: (country) => request('/payments/operators?country=' + encodeURIComponent(country || '')),
   payin: (payload) => request('/payments/payin', { method: 'POST', body: JSON.stringify(payload) }),

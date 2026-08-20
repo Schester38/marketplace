@@ -294,6 +294,7 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     ALTER TABLE notifications ADD COLUMN IF NOT EXISTS amount REAL;
     ALTER TABLE notifications ALTER COLUMN amount TYPE NUMERIC(14,2) USING CASE WHEN amount IS NULL THEN NULL ELSE round(amount::numeric, 2) END;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS product_name TEXT;
 
     CREATE TABLE IF NOT EXISTS reviews (
       id SERIAL PRIMARY KEY,
@@ -338,6 +339,8 @@ export async function initDb() {
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    ALTER TABLE admin_messages DROP CONSTRAINT IF EXISTS admin_messages_target_check;
+    ALTER TABLE admin_messages ADD CONSTRAINT admin_messages_target_check CHECK (target IN ('all', 'user', 'shop', 'seller', 'client'));
     CREATE INDEX IF NOT EXISTS idx_admin_messages_target ON admin_messages(target);
     CREATE INDEX IF NOT EXISTS idx_admin_messages_user ON admin_messages(user_id);
 
@@ -479,6 +482,8 @@ export async function initDb() {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_visits_unique ON daily_visits(seen_on, visitor_id, path);
     CREATE INDEX IF NOT EXISTS idx_daily_visits_date ON daily_visits(seen_on DESC);
+    ALTER TABLE daily_visits ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'CM';
+    CREATE INDEX IF NOT EXISTS idx_daily_visits_country ON daily_visits(country, seen_on DESC);
   `);
 
   await pool.query(`

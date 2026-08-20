@@ -279,12 +279,12 @@ export default function App() {
         fetch('/api/metrics/visit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Visitor-Id': visitorId },
-          body: JSON.stringify({ path: pathKey }),
+          body: JSON.stringify({ path: pathKey, country: (user && user.country) || 'CM' }),
           keepalive: true,
         }).catch(() => {});
       }, 700);
     } catch {
-      api.trackVisit(pathKey).catch(() => {});
+      api.trackVisit(pathKey, (user && user.country) || 'CM').catch(() => {});
     }
     return () => clearTimeout(timer);
   }, [pathKey, online]);

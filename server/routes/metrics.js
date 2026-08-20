@@ -33,11 +33,12 @@ router.post('/visit', async (req, res) => {
   const path = String((req.body && req.body.path) || req.path || '/').slice(0, MAX_PATH);
   const visitorId = String(req.get('X-Visitor-Id') || '').slice(0, 100);
   if (!visitorId) return res.status(400).json({ error: 'Identifiant visiteur manquant' });
+  const country = String((req.body && req.body.country) || 'CM').trim().slice(0, 40) || 'CM';
   await q(
-    `INSERT INTO daily_visits (visitor_id, path)
-     VALUES ($1, $2)
+    `INSERT INTO daily_visits (visitor_id, path, country)
+     VALUES ($1, $2, $3)
      ON CONFLICT (seen_on, visitor_id, path) DO NOTHING`,
-    [visitorId, path]
+    [visitorId, path, country]
   );
   res.json({ ok: true });
 });

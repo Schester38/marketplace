@@ -31,4 +31,12 @@ router.get('/list', authRequired, roleRequired('admin'), ah(async (req, res) => 
   res.json({ logs: rows, total: Number(total.total) });
 }));
 
+router.delete('/:id', authRequired, roleRequired('admin'), ah(async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Identifiant invalide' });
+  const deleted = await q('DELETE FROM client_logs WHERE id = $1 RETURNING id', [id]);
+  if (!deleted.length) return res.status(404).json({ error: 'Erreur introuvable' });
+  res.json({ ok: true });
+}));
+
 export default router;

@@ -13,7 +13,6 @@ const VISIT_RANGES = [
   { days: 7, label: '7 jours' },
   { days: 30, label: '1 mois' },
 ];
-const VISIT_RANGE_LABELS = { 1: '1 jour', 7: '7 jours', 30: '1 mois' };
 
 export default function Admin() {
   const { t } = useLang();
@@ -41,6 +40,7 @@ export default function Admin() {
   const [nlOk, setNlOk] = useState('');
   const [visits, setVisits] = useState(null);
   const [visitDays, setVisitDays] = useState(30);
+  const [visitCountry, setVisitCountry] = useState('');
   const [loading, setLoading] = useState(false);
 
   const load = useCallback((silent) => {
@@ -66,8 +66,8 @@ export default function Admin() {
 
   useEffect(() => {
     if (gate) return;
-    api.adminVisits(visitDays).then((d) => setVisits(d.visits)).catch(() => {});
-  }, [gate, visitDays]);
+    api.adminVisits(visitDays, visitCountry).then((d) => setVisits(d.visits)).catch(() => {});
+  }, [gate, visitDays, visitCountry]);
 
   useEffect(() => {
     if (!gate) load();
@@ -155,6 +155,64 @@ export default function Admin() {
       setError(err.message);
     } finally {
       setMsgBusy(false);
+    }
+  };
+
+  const targetLabel = (m) => {
+    if (m.target === 'all') return t('Tous les utilisateurs');
+    if (m.target === 'shop') return t('Boutiques');
+    if (m.target === 'seller') return t('Vendeurs');
+    if (m.target === 'client') return t('Clients');
+    if (m.target === 'user') return `${t('Utilisateur')} : ${m.user_name || '—'}`;
+    return m.target;
+  };
+
+  const resetVisits = async () => {
+    if (!window.confirm(t('Réinitialiser tous les compteurs de visites ?'))) return;
+    try {
+      await api.adminVisitsReset();
+      api.adminVisits(visitDays, visitCountry).then((d) => setVisits(d.visits)).catch(() => {});
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const deleteMessage = async (m) => {
+    if (!window.confirm(t('Supprimer ce message ?'))) return;
+    try {
+      await api.adminDeleteMessage(m.id);
+      setMessages((ms) => ms.filter((x) => x.id !== m.id));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const resendMessage = async (m) => {
+    try {
+      await api.adminResendMessage(m.id);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const deleteLog = async (l) => {
+    if (!window.confirm(t('Supprimer cette erreur signalée ?'))) return;
+    try {
+      await api.adminDeleteLog(l.id);
+      setLogs((ls) => ls.filter((x) => x.id !== l.id));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const deleteSale = async (s) => {
+    if (!window.confirm(t('Supprimer cette transaction ?'))) return;
+    try {
+      await api.adminDeleteSale(s.id);
+      api.adminTransactions().then(setTransactions).catch(() => {});
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -284,61 +342,28 @@ export default function Admin() {
                 </button>
               ))}
             </div>
+            <select
+              className="msg-select visits-country"
+              aria-label={t('Filtrer par pays')}
+              value={visitCountry}
+              onChange={(e) => setVisitCountry(e.target.value)}
+            >
+              <option value="">{t('Tous les pays')}</option>
+              {(visits.countries || []).map((c) => (
+                <option key={c.country} value={c.country}>
+                  {c.country === 'CM' ? '🇨🇲 Cameroun' : c.country} — {c.visitor_count} visiteur(s), {c.views} vues
+                </option>
+              ))}
+            </select>
+            <button type="button" className="btn btn-danger btn-small" onClick={resetVisits}>
+              {t('Réinitialiser')}
+            </button>
           </div>
           <div className="stats-grid">
             {card(t('Pages vues'), formatMoney(visits.page_views))}
             {card(t('Visiteurs uniques'), formatMoney(visits.unique_visitors))}
             {card(t('Jours actifs'), visits.active_days)}
           </div>
-          {visits.daily && visits.daily.length > 0 && (
-            <div className="card table-card">
-              <div className="table-wrap">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>{t('Date')}</th>
-                      <th>{t('Visiteurs uniques')}</th>
-                      <th>{t('Pages vues')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visits.daily.map((d) => (
-                      <tr key={d.date}>
-                        <td>{d.date}</td>
-                        <td>{d.visitors}</td>
-                        <td>{d.views}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          {visits.top_pages && visits.top_pages.length > 0 && (
-            <div className="card table-card">
-              <h3 className="section-title">{t('Pages les plus vues')} ({t(VISIT_RANGE_LABELS[visitDays])})</h3>
-              <div className="table-wrap">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>{t('Page')}</th>
-                      <th>{t('Vues')}</th>
-                      <th>{t('Visiteurs')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visits.top_pages.map((p) => (
-                      <tr key={p.path}>
-                        <td><code>{p.path}</code></td>
-                        <td>{p.views}</td>
-                        <td>{p.visitors}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </section>
       )}
 
@@ -374,6 +399,33 @@ export default function Admin() {
             />
             <span>{t('À un utilisateur')}</span>
           </label>
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="msg-target"
+              checked={msgTarget === 'shop'}
+              onChange={() => setMsgTarget('shop')}
+            />
+            <span>{t('Aux boutiques')}</span>
+          </label>
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="msg-target"
+              checked={msgTarget === 'seller'}
+              onChange={() => setMsgTarget('seller')}
+            />
+            <span>{t('Aux vendeurs')}</span>
+          </label>
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="msg-target"
+              checked={msgTarget === 'client'}
+              onChange={() => setMsgTarget('client')}
+            />
+            <span>{t('Aux clients')}</span>
+          </label>
         </div>
         {msgTarget === 'user' && (
           <select
@@ -408,23 +460,28 @@ export default function Admin() {
               <th>{t('Message')}</th>
               <th>{t('Destinataires')}</th>
               <th>{t('Date')}</th>
+              <th>{t('Actions')}</th>
             </tr>
           </thead>
           <tbody>
             {messages === null ? (
-              <tr><td colSpan="3"><div className="skeleton-block" style={{ height: 30 }}></div></td></tr>
+              <tr><td colSpan="4"><div className="skeleton-block" style={{ height: 30 }}></div></td></tr>
             ) : messages.length === 0 ? (
-              <tr><td colSpan="3" className="empty">{t('Aucun message envoyé')}</td></tr>
+              <tr><td colSpan="4" className="empty">{t('Aucun message envoyé')}</td></tr>
             ) : (
               messages.map((m) => (
                 <tr key={m.id}>
                   <td>{m.message}</td>
-                  <td>
-                    {m.target === 'all'
-                      ? t('Tous les utilisateurs')
-                      : `${t('Utilisateur')} : ${m.user_name || '—'}`}
-                  </td>
+                  <td>{targetLabel(m)}</td>
                   <td className="hint">{new Date(m.created_at).toLocaleString()}</td>
+                  <td>
+                    <button type="button" className="btn btn-small btn-outline" onClick={() => resendMessage(m)}>
+                      {t('Renvoyer')}
+                    </button>{' '}
+                    <button type="button" className="btn btn-danger btn-small" onClick={() => deleteMessage(m)}>
+                      {t('Supprimer')}
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -481,13 +538,14 @@ export default function Admin() {
               <th>{t('Utilisateur')}</th>
               <th>{t('Page')}</th>
               <th>{t('Date')}</th>
+              <th>{t('Actions')}</th>
             </tr>
           </thead>
           <tbody>
             {logs === null ? (
-              <tr><td colSpan="4"><div className="skeleton-block" style={{ height: 30 }}></div></td></tr>
+              <tr><td colSpan="5"><div className="skeleton-block" style={{ height: 30 }}></div></td></tr>
             ) : logs.length === 0 ? (
-              <tr><td colSpan="4" className="empty">{t('Aucune erreur signalée 🎉')}</td></tr>
+              <tr><td colSpan="5" className="empty">{t('Aucune erreur signalée 🎉')}</td></tr>
             ) : (
               logs.map((l) => (
                 <tr key={l.id} title={l.stack || ''}>
@@ -495,6 +553,11 @@ export default function Admin() {
                   <td className="hint">{l.username || '—'}</td>
                   <td className="hint">{l.url || '—'}</td>
                   <td className="hint">{new Date(l.created_at).toLocaleString()}</td>
+                  <td>
+                    <button type="button" className="btn btn-danger btn-small" onClick={() => deleteLog(l)}>
+                      {t('Supprimer')}
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -582,6 +645,9 @@ export default function Admin() {
                   <td>{formatMoney(p.price)} {countrySymbol('')}</td>
                   <td className="hint">{new Date(p.created_at).toLocaleDateString()}</td>
                   <td>
+                    <button type="button" className="btn btn-small btn-outline" onClick={() => window.open('/produit/' + p.id)}>
+                      {t('Voir')}
+                    </button>{' '}
                     <button type="button" className="btn btn-danger btn-small" onClick={() => removeProduct(p)}>
                       {t('Supprimer')}
                     </button>
@@ -705,11 +771,12 @@ export default function Admin() {
                   <th>{t('Commission')}</th>
                   <th>{t('Statut')}</th>
                   <th>{t('Date')}</th>
+                  <th>{t('Actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.rows.length === 0 ? (
-                  <tr><td colSpan="9" className="empty">{t('Aucune transaction')}</td></tr>
+                  <tr><td colSpan="10" className="empty">{t('Aucune transaction')}</td></tr>
                 ) : (
                   transactions.rows.map((r) => (
                     <tr key={r.id}>
@@ -722,6 +789,11 @@ export default function Admin() {
                       <td>{formatMoney(r.commission + r.referral_commission)} {countrySymbol(r.shop_country)}</td>
                       <td>{statusBadge(r.status)}</td>
                       <td className="hint">{new Date(r.created_at).toLocaleDateString()}</td>
+                      <td>
+                        <button type="button" className="btn btn-danger btn-small" onClick={() => deleteSale(r)}>
+                          {t('Supprimer')}
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
