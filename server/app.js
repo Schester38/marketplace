@@ -66,6 +66,7 @@ app.use(express.json({
     if (req.path === '/api/payments/webhook/sebpay') {
       req.rawBody = buf;
     }
+    return buf;
   },
 }));
 app.use(originCheck);
