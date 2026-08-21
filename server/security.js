@@ -9,12 +9,12 @@ const ALLOWED_ORIGINS = [
 
 const CSP =
   "default-src 'self' data: blob:; " +
-  "script-src 'self' https://www.google.com https://www.gstatic.com; " +
+  "script-src 'self' https://www.google.com https://www.gstatic.com https://widget.trustpilot.com; " +
   "style-src 'self' 'unsafe-inline'; " +
   "img-src 'self' data: blob: https:; " +
   "font-src 'self' data:; " +
-  "connect-src 'self' https://www.google.com https://www.gstatic.com; " +
-  "frame-src 'self' https://www.google.com https://ikeepay.com https://www.ikeepay.com; " +
+  "connect-src 'self' https://www.google.com https://www.gstatic.com https://widget.trustpilot.com; " +
+  "frame-src 'self' https://www.google.com https://ikeepay.com https://www.ikeepay.com https://widget.trustpilot.com; " +
   "object-src 'none'; " +
   "base-uri 'self'; " +
   "form-action 'self' https://www.google.com";

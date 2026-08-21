@@ -271,6 +271,7 @@ export default function MyAccount() {
           <h1>👤 {t('Mon compte')}</h1>
           <p>
             {t('Connecté en tant que {name} ({role}) — gérez vos informations et votre sécurité.', { name: user?.name, role: roleLabel })}
+            {user?.verified && <span className="verified-badge" style={{marginLeft: 8, color: '#00b67a', fontWeight: 700}}>✓ {t('Vérifié')}</span>}
           </p>
         </div>
       </div>

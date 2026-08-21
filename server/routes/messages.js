@@ -13,14 +13,15 @@ router.get('/popup', authRequired, ah(async (req, res) => {
   const rows = await q(
     `SELECT am.id, am.message, am.created_at
      FROM admin_messages am
+     JOIN users u ON u.id = am.user_id
      WHERE (am.target = 'all'
             OR (am.target = 'user' AND am.user_id = $1)
             OR (am.target IN ('shop', 'seller', 'client')
-                AND am.target = (SELECT role FROM users WHERE id = $1)))
+                AND am.target = u.role))
        AND am.id NOT IN (SELECT message_id FROM admin_message_reads WHERE user_id = $1)
      ORDER BY am.id DESC
      LIMIT 1`,
-    [uid, uid]
+    [uid]
   );
   res.json({ message: rows[0] || null });
 }));
