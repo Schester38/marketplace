@@ -270,24 +270,19 @@ export default function App() {
       localStorage.setItem('mboppi_visitor_id', id);
       visitorId = id;
     }
-    let timer;
     try {
       const key = 'mboppi_visited_' + pathKey;
       if (sessionStorage.getItem(key)) return;
       sessionStorage.setItem(key, '1');
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        fetch('/api/metrics/visit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Visitor-Id': visitorId },
-          body: JSON.stringify({ path: pathKey, country: (user && user.country) || 'CM' }),
-          keepalive: true,
-        }).catch(() => {});
-      }, 700);
+      fetch('/api/metrics/visit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Visitor-Id': visitorId },
+        body: JSON.stringify({ path: pathKey, country: (user && user.country) || 'CM' }),
+        keepalive: true,
+      }).catch(() => {});
     } catch {
       api.trackVisit(pathKey, (user && user.country) || 'CM').catch(() => {});
     }
-    return () => clearTimeout(timer);
   }, [pathKey, online]);
 
   if (!online) {
