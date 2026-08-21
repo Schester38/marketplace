@@ -60,7 +60,15 @@ const ALLOWED_ORIGINS = [
 
 app.use(cors({ origin: ALLOWED_ORIGINS }));
 app.use(securityHeaders);
-app.use(express.json({ limit: '12mb' }));
+app.use(express.json({
+  limit: '12mb',
+  verify: (req, res, buf) => {
+    if (req.path === '/api/payments/webhook/sebpay') {
+      req.rawBody = buf;
+    }
+    return buf;
+  },
+}));
 app.use(originCheck);
 
 const limiter = (windowMs, max) =>
