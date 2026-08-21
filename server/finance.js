@@ -1,6 +1,5 @@
 import { q } from './db.js';
 import { ikeepayPayout, countryInfo, operatorFor, normalizePhone, ikePayFeeNet } from './ikeepay.js';
-import { sebpayPayout, sebpayEnabled, sebpayCalculateFee } from './sebpay.js';
 import { defaultCurrencyFor } from './currency.js';
 import { sendPush } from './push.js';
 
@@ -65,24 +64,6 @@ export async function payoutTargetFor(user, kind) {
   return null;
 }
 
-function choosePayoutProvider(countryName, operatorCode) {
-  const info = countryInfo(countryName);
-  if (!info) return { provider: 'ikeepay', reason: 'pays non supporté' };
-
-  const ikeepayOperators = (info.operators || []).map(op => op.toUpperCase());
-  const ikeepayAvailable = ikeepayEnabled && ikeepayOperators.includes(operatorCode.toUpperCase());
-
-  const sebpayAvailable = sebpayEnabled();
-
-  if (sebpayAvailable && !ikeepayAvailable) return { provider: 'sebpay', reason: 'ikeepay non dispo' };
-  if (ikeepayAvailable && !sebpayAvailable) return { provider: 'ikeepay', reason: 'sebpay non dispo' };
-  if (ikeepayAvailable && sebpayAvailable) {
-    const prefersSebpay = ['CI', 'SN', 'BF', 'BJ', 'TG', 'ML', 'NE', 'ML', 'GW'].includes(info.code);
-    return { provider: prefersSebpay ? 'sebpay' : 'ikeepay', reason: prefersSebpay ? 'priorité SebPay' : 'priorité iKeePay' };
-  }
-  return { provider: 'ikeepay', reason: 'fallback iKeePay' };
-}
-
 export async function sendSalePayouts(sale, { kind }) {
   const redistribution = computeRedistribution(sale);
 
@@ -112,6 +93,8 @@ export async function sendSalePayouts(sale, { kind }) {
     if (target) payouts.push({ target, amount: ikePayFeeNet(redistribution.sellerAmount), label: 'vendeur', saleId: sale.id, user: seller, txn: 'commission_credit' });
     else noTarget.push({ label: 'vendeur', amount: redistribution.sellerAmount, user: seller });
   }
+  // La commission de parrainage (2%) n'est plus versée à chaque vente :
+  // elle s'accumule et est payée automatiquement au vendeur parrain dès le seuil REFERRAL_AUTO_PAY_MIN atteint.
   if (redistribution.livreurAmount > 0 && livreur) {
     const target = await payoutTargetFor(livreur, 'livreur');
     if (target) payouts.push({ target, amount: ikePayFeeNet(redistribution.livreurAmount), label: 'livreur', saleId: sale.id, user: livreur, txn: 'online_payout' });
@@ -145,44 +128,21 @@ export async function sendSalePayouts(sale, { kind }) {
       if (!info) {
         throw new Error(`Pays non pris en charge pour le payout : ${p.user.country}`);
       }
-      const { provider: chosenProvider } = choosePayoutProvider(p.user.country, p.target.operator);
-
-      let providerResult;
-      if (chosenProvider === 'sebpay') {
-        const sebpayFee = await sebpayCalculateFee({
-          amount: p.amount,
-          sourceCountry: info.code.toLowerCase(),
-          destinationCountry: info.code.toLowerCase(),
-          transactionType: 'payout',
-        });
-        const netAmount = Math.max(0, p.amount - sebpayFee);
-        providerResult = await sebpayPayout({
-          amount: netAmount,
-          currency: sale.currency || 'XAF',
-          phone: p.target.phone,
-          operator: p.target.operator.toLowerCase(),
-          country: info.code,
-          externalReference: external,
-          callbackUrl: `${process.env.BASE_URL || 'https://mboppi-mboppi.vercel.app'}/api/payments/webhook/sebpay`,
-          recipientName: p.user.name,
-        });
-      } else {
-        providerResult = await ikeepayPayout({
-          amount: p.amount,
-          currency: sale.currency || 'XAF',
-          country: info.code,
-          phoneNumber: p.target.phone,
-          operator: p.target.operator,
-          external_reference: external,
-        });
-      }
+      const provider = await ikeepayPayout({
+        amount: p.amount,
+        currency: sale.currency || 'XAF',
+        country: info.code,
+        phoneNumber: p.target.phone,
+        operator: p.target.operator,
+        external_reference: external,
+      });
       await q(
         `INSERT INTO wallet_transactions (user_id, amount, currency, transaction_type, reference_type, reference_id, description)
          VALUES ($1, $2, $3, $4, $5, $6, $7)
          ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
-        [p.user.id, p.amount, sale.currency || 'XAF', p.txn, ref, sale.id, `Reverse auto ${p.label} — vente #${sale.id} (${chosenProvider})`]
+        [p.user.id, p.amount, sale.currency || 'XAF', p.txn, ref, sale.id, `Reverse auto ${p.label} — vente #${sale.id}`]
       );
-      results.requested.push({ label: p.label, amount: p.amount, provider: chosenProvider, providerResult });
+      results.requested.push({ label: p.label, amount: p.amount, provider });
     } catch (err) {
       results.failed.push({ label: p.label, amount: p.amount, error: err.message });
     }
@@ -228,37 +188,14 @@ export async function maybeAutoPayReferrals(referrerId) {
     }
     const currency = defaultCurrencyFor(referrer.country);
 
-    const { provider: chosenProvider } = choosePayoutProvider(referrer.country, target.operator);
-
-    let providerResult;
-    if (chosenProvider === 'sebpay') {
-      const sebpayFee = await sebpayCalculateFee({
-        amount: ikePayFeeNet(total),
-        sourceCountry: info.code.toLowerCase(),
-        destinationCountry: info.code.toLowerCase(),
-        transactionType: 'payout',
-      });
-      const netAmount = Math.max(0, ikePayFeeNet(total) - sebpayFee);
-      providerResult = await sebpayPayout({
-        amount: netAmount,
-        currency,
-        phone: target.phone,
-        operator: target.operator.toLowerCase(),
-        country: info.code,
-        externalReference: `PAYOUT_REFERRAL:${referrerId}:${Date.now()}`,
-        callbackUrl: `${process.env.BASE_URL || 'https://mboppi-mboppi.vercel.app'}/api/payments/webhook/sebpay`,
-        recipientName: referrer.name,
-      });
-    } else {
-      providerResult = await ikeepayPayout({
-        amount: ikePayFeeNet(total),
-        currency,
-        country: info.code,
-        phoneNumber: target.phone,
-        operator: target.operator,
-        external_reference: `PAYOUT_REFERRAL:${referrerId}:${Date.now()}`,
-      });
-    }
+    const provider = await ikeepayPayout({
+      amount: ikePayFeeNet(total),
+      currency,
+      country: info.code,
+      phoneNumber: target.phone,
+      operator: target.operator,
+      external_reference: `PAYOUT_REFERRAL:${referrerId}:${Date.now()}`,
+    });
 
     const marked = await q(
       `UPDATE sales SET referral_paid = TRUE, referral_paid_at = COALESCE(referral_paid_at, now())
@@ -271,7 +208,7 @@ export async function maybeAutoPayReferrals(referrerId) {
         `INSERT INTO wallet_transactions (user_id, amount, currency, transaction_type, reference_type, reference_id, description)
          VALUES ($1, $2, $3, 'referral_credit', 'sale', $4, $5)
          ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
-        [referrerId, ikePayFeeNet(Number(row.referral_commission)), currency, Number(row.id), `Commission de parrainage (versement automatique, frais ${chosenProvider} déduits)`]
+        [referrerId, ikePayFeeNet(Number(row.referral_commission)), currency, Number(row.id), 'Commission de parrainage (versement automatique, frais iKeePay déduits)']
       );
     }
 
@@ -287,23 +224,23 @@ export async function maybeAutoPayReferrals(referrerId) {
         url: '/seller',
       });
     }
-    return { paid: true, total: actualPaid, provider: chosenProvider, count: marked.length };
+    return { paid: true, total: actualPaid, provider, count: marked.length };
   } catch (err) {
     console.error('Auto-pay parrainage échoué:', err && err.message ? err.message : err);
     return { paid: false, error: String(err && err.message ? err.message : err) };
   }
 }
 
-export async function markSalePaid(saleId, { transactionId, payload, receivedBy, provider: paymentProvider = 'ikeepay' }) {
+export async function markSalePaid(saleId, { transactionId, payload, receivedBy }) {
   const sale = (await q('SELECT * FROM sales WHERE id = $1', [saleId]))[0];
   if (!sale) return { ok: false, error: 'Vente introuvable' };
 
   await q(
     `UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()), online_payment = TRUE, payment_status = 'paid',
-       payment_provider = $1, provider_transaction_id = COALESCE(provider_transaction_id, $2),
-       provider_payload = COALESCE(provider_payload, $3), payment_received_by = COALESCE(payment_received_by, $4)
-     WHERE id = $5`,
-    [paymentProvider, transactionId || null, payload || null, receivedBy || null, saleId]
+       payment_provider = 'ikeepay', provider_transaction_id = COALESCE(provider_transaction_id, $1),
+       provider_payload = COALESCE(provider_payload, $2), payment_received_by = COALESCE(payment_received_by, $3)
+     WHERE id = $4`,
+    [transactionId || null, payload || null, receivedBy || null, saleId]
   );
 
   if (sale.payout_initiated) return { ok: true, already: true, payouts: { initiated: false } };
