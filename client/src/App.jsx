@@ -242,7 +242,7 @@ function WelcomeBanner() {
 export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { t } = useLang();
 
   const [online, setOnline] = useState(() => (typeof navigator === 'undefined' ? true : navigator.onLine));
