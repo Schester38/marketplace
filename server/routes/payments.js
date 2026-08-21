@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { q } from '../db.js';
 import { authRequired, roleRequired, sellerActivationActive, sellerActivationExpiresAt, SELLER_ACTIVATION_DAYS } from '../auth.js';
 import { ikeepayPayin, ikeepayPayout, ikeepayEnabled, countryInfo, normalizePhone, operatorFor, operatorsForCountry, ikePayFee, ikePayGrossUp, ikePayFeeNet } from '../ikeepay.js';
+import { sebpayPayin, sebpayPayout, sebpayEnabled, sebpayVerifyWebhook, sebpayParseWebhook, sebpayCalculateFee } from '../sebpay.js';
 import { defaultCurrencyFor } from '../currency.js';
 import { markSalePaid, payoutTargetFor } from '../finance.js';
 import { handleDonationPaid, donationTarget } from './donations.js';
@@ -20,13 +21,44 @@ function ikeepayConfig() {
   };
 }
 
+function sebpayConfig() {
+  return {
+    enabled: sebpayEnabled(),
+    baseUrl: process.env.SEBPAY_BASE_URL || 'https://newapi.sebpay.bj/api/v1',
+  };
+}
+
+function choosePaymentProvider(countryName, operatorCode) {
+  const info = countryInfo(countryName);
+  if (!info) return { provider: 'ikeepay', reason: 'pays non supporté' };
+
+  const ikeepayOperators = operatorsForCountry(countryName);
+  const ikeepayAvailable = ikeepayEnabled() && ikeepayOperators.includes(operatorCode.toUpperCase());
+
+  const sebpayAvailable = sebpayEnabled();
+
+  if (sebpayAvailable && !ikeepayAvailable) return { provider: 'sebpay', reason: 'ikeepay non dispo' };
+  if (ikeepayAvailable && !sebpayAvailable) return { provider: 'ikeepay', reason: 'sebpay non dispo' };
+  if (ikeepayAvailable && sebpayAvailable) {
+    const prefersSebpay = ['CI', 'SN', 'BF', 'BJ', 'TG', 'ML', 'NE', 'ML', 'GW'].includes(info.code);
+    return { provider: prefersSebpay ? 'sebpay' : 'ikeepay', reason: prefersSebpay ? 'priorité SebPay' : 'priorité iKeePay' };
+  }
+  return { provider: null, reason: 'aucun provider configuré' };
+}
+
 router.get('/config', ah(async (req, res) => {
   const cfg = ikeepayConfig();
+  const scfg = sebpayConfig();
   return res.json({
-    provider: 'ikeepay',
-    enabled: ikeepayEnabled(),
-    public_key: cfg.publicKey,
-    checkout_url: cfg.checkoutUrl,
+    ikeepay: {
+      enabled: ikeepayEnabled(),
+      public_key: cfg.publicKey,
+      checkout_url: cfg.checkoutUrl,
+    },
+    sebpay: {
+      enabled: scfg.enabled,
+      base_url: scfg.baseUrl,
+    },
   });
 }));
 
@@ -41,7 +73,6 @@ router.post('/payin', ah(async (req, res) => {
   const { sale_id, operator, phone_number, shop_code } = req.body || {};
   if (!sale_id) return res.status(400).json({ error: 'Vente requise' });
   if (!operator) return res.status(400).json({ error: 'Opérateur de paiement requis' });
-  if (!ikeepayEnabled()) return res.status(503).json({ error: 'Paiement iKeePay non configuré' });
 
   const sale = (await q(
     `SELECT s.*, p.shop_id, p.currency AS product_currency, u.country AS shop_country
@@ -70,20 +101,14 @@ router.post('/payin', ah(async (req, res) => {
   const info = countryInfo(countryName);
   if (!info) return res.status(422).json({ error: `Pays de la boutique non pris en charge pour le paiement en ligne : ${countryName}` });
   const operatorCode = String(operator).trim().toUpperCase();
-  const allowedOperators = operatorsForCountry(countryName);
-  if (!allowedOperators.includes(operatorCode)) {
-    return res.status(422).json({ error: `Opérateur non disponible pour ${countryName} (iKeePay : ${allowedOperators.join(', ')} ou aucun)` });
-  }
+
+  const { provider: chosenProvider, reason } = choosePaymentProvider(countryName, operatorCode);
+  if (!chosenProvider) return res.status(503).json({ error: `Aucun provider de paiement disponible : ${reason}` });
 
   const total = Math.round((Number(sale.total_price) + Number(sale.delivery_fee || 0)) * 100) / 100;
   if (!Number.isFinite(total) || total <= 0) {
     return res.status(422).json({ error: 'Montant invalide pour le paiement' });
   }
-
-  // Le client paie le total majoré des frais iKeePay (total ÷ 0,94) :
-  // iKeePay prélève 6 % de la demande, le solde marchand reçoit exactement le total.
-  const amount = ikePayGrossUp(total);
-  const fee = ikePayFee(amount);
 
   const phone = phone_number
     ? phone_number
@@ -96,43 +121,81 @@ router.post('/payin', ah(async (req, res) => {
   }
 
   const external_reference = `SALE:${sale.id}`;
+  const callbackUrl = `${process.env.BASE_URL || 'https://mboppi-mboppi.vercel.app'}/api/payments/webhook/${chosenProvider}`;
 
-  const provider = await ikeepayPayin({
-    amount,
-    currency,
-    country: info.code,
-    phoneNumber: normalized,
-    operator: operatorCode,
-    external_reference,
-    customer_email: req.user && req.user.email ? req.user.email : undefined,
-  });
+  let providerResult;
+  let amount;
+  let fee;
 
-  if (!provider) return res.status(502).json({ error: 'Aucune réponse du fournisseur de paiement' });
+  if (chosenProvider === 'sebpay') {
+    amount = total;
+    const sebpayFee = await sebpayCalculateFee({
+      amount: total,
+      sourceCountry: info.code.toLowerCase(),
+      destinationCountry: info.code.toLowerCase(),
+      transactionType: 'collection',
+    });
+    fee = sebpayFee;
+    providerResult = await sebpayPayin({
+      amount: total,
+      currency,
+      phone: normalized,
+      operator: operatorCode.toLowerCase(),
+      country: info.code,
+      externalReference: external_reference,
+      callbackUrl,
+    });
+  } else {
+    amount = ikePayGrossUp(total);
+    fee = ikePayFee(amount);
+    providerResult = await ikeepayPayin({
+      amount,
+      currency,
+      country: info.code,
+      phoneNumber: normalized,
+      operator: operatorCode,
+      external_reference,
+      customer_email: req.user && req.user.email ? req.user.email : undefined,
+    });
+  }
+
+  if (!providerResult) return res.status(502).json({ error: 'Aucune réponse du fournisseur de paiement' });
 
   await q(
-    `UPDATE sales SET online_payment = TRUE, payment_status = 'pending', payment_provider = 'ikeepay',
-       provider_order_id = $1, provider_payload = $2
-     WHERE id = $3`,
-    [external_reference, provider, sale.id]
+    `UPDATE sales SET online_payment = TRUE, payment_status = 'pending', payment_provider = $1,
+       provider_order_id = $2, provider_payload = $3
+     WHERE id = $4`,
+    [chosenProvider, external_reference, providerResult, sale.id]
   );
 
   const queued = await q(
     `INSERT INTO payment_webhook_logs (provider, provider_order_id, event, payload, status, sale_id, handled)
-     VALUES ('ikeepay', $1, 'payin_initiated', $2, 'sent', $3, FALSE) RETURNING id`,
-    [external_reference, provider, sale.id]
+     VALUES ($1, $2, 'payin_initiated', $3, 'sent', $4, FALSE) RETURNING id`,
+    [chosenProvider, external_reference, providerResult, sale.id]
   );
 
-  res.json({
+  const responseData = {
     ok: true,
     base_total: total,
     amount,
     fee,
-    payment_link: provider.payment_link || provider.payment_url || null,
-    requires_otp: Boolean(provider.requires_otp || provider.otp_required),
+    provider: chosenProvider,
     external_reference,
-    provider_transaction: provider.provider_reference || provider.transaction_id || null,
     log_id: queued[0].id,
-  });
+  };
+
+  if (chosenProvider === 'sebpay') {
+    responseData.transaction_id = providerResult.transactionId;
+    responseData.status = providerResult.status;
+    responseData.otp_required = providerResult.otpRequired;
+    responseData.ussd_code = providerResult.ussdCode;
+  } else {
+    responseData.payment_link = providerResult.payment_link || providerResult.payment_url || null;
+    responseData.requires_otp = Boolean(providerResult.requires_otp || providerResult.otp_required);
+    responseData.provider_transaction = providerResult.provider_reference || providerResult.transaction_id || null;
+  }
+
+  res.json(responseData);
 }));
 
 router.post('/seller-fee', authRequired, roleRequired('seller'), ah(async (req, res) => {
@@ -390,6 +453,7 @@ router.post('/webhook/ikeepay', ah(async (req, res) => {
           transactionId: data.provider_reference || null,
           payload,
           receivedBy: null,
+          provider: 'ikeepay',
         });
         await q('UPDATE payment_webhook_logs SET handled = TRUE, sale_id = $1, status = $2 WHERE id = $3', [saleId, 'completed', logId]);
         return res.json({ received: true, log_id: logId, payment: 'paid', result });
@@ -448,6 +512,82 @@ router.post('/webhook/ikeepay', ah(async (req, res) => {
   if (kind === 'payout') {
     await q('UPDATE payment_webhook_logs SET status = $1, handled = TRUE WHERE id = $2', [status || 'received', logId]);
     return res.json({ received: true, log_id: logId });
+  }
+
+  res.status(200).json({ received: true, log_id: logId });
+}));
+
+router.post('/webhook/sebpay', ah(async (req, res) => {
+  const signature = String(req.headers['x-sebpay-signature'] || '');
+  if (!signature) return res.status(401).json({ error: 'Signature manquante' });
+
+  const rawBody = req.rawBody || JSON.stringify(req.body);
+  if (!sebpayVerifyWebhook(rawBody, signature)) {
+    return res.status(401).json({ error: 'Signature webhook invalide' });
+  }
+
+  const payload = req.body || {};
+  const { transactionId, externalReference, status, amount, currency, customerPhone } = sebpayParseWebhook(payload);
+
+  const log = await q(
+    `INSERT INTO payment_webhook_logs (provider, provider_transaction_id, provider_order_id, event, payload, status)
+     VALUES ('sebpay', $1, $2, $3, $4, $5) RETURNING id`,
+    [transactionId, externalReference, 'webhook', payload, 'received']
+  );
+  const logId = log[0].id;
+
+  if (externalReference && externalReference.startsWith('SALE:') && status === 'approved') {
+    const saleId = Number(externalReference.split(':')[1]);
+    if (Number.isInteger(saleId)) {
+      try {
+        const result = await markSalePaid(saleId, {
+          transactionId,
+          payload,
+          receivedBy: null,
+          provider: 'sebpay',
+        });
+        await q('UPDATE payment_webhook_logs SET handled = TRUE, sale_id = $1, status = $2 WHERE id = $3', [saleId, 'completed', logId]);
+        return res.json({ received: true, log_id: logId, payment: 'paid', result });
+      } catch (err) {
+        await q('UPDATE payment_webhook_logs SET status = $1, error = $2 WHERE id = $3', ['error', String(err.message || err).slice(0, 1000), logId]);
+        throw err;
+      }
+    }
+  }
+
+  if (externalReference && externalReference.startsWith('DON:') && status === 'approved') {
+    const donationId = Number(externalReference.split(':')[1]);
+    if (Number.isInteger(donationId)) {
+      try {
+        const result = await handleDonationPaid(donationId, {
+          transactionId,
+          payload,
+        });
+        await q('UPDATE payment_webhook_logs SET handled = TRUE, status = $1 WHERE id = $2', ['donation_paid', logId]);
+        return res.json({ received: true, log_id: logId, payment: 'donation', result });
+      } catch (err) {
+        await q('UPDATE payment_webhook_logs SET status = $1, error = $2 WHERE id = $3', ['error', String(err.message || err).slice(0, 1000), logId]);
+        throw err;
+      }
+    }
+  }
+
+  if (externalReference && externalReference.startsWith('FEE:') && status === 'approved') {
+    const sellerId = Number(externalReference.split(':')[1]);
+    if (Number.isInteger(sellerId)) {
+      try {
+        const result = await handleSellerActivationPaid(sellerId, {
+          externalReference,
+          transactionId,
+          payload,
+        });
+        await q('UPDATE payment_webhook_logs SET handled = TRUE, status = $1 WHERE id = $2', ['seller_fee_paid', logId]);
+        return res.json({ received: true, log_id: logId, payment: 'seller_fee', result });
+      } catch (err) {
+        await q('UPDATE payment_webhook_logs SET status = $1, error = $2 WHERE id = $3', ['error', String(err.message || err).slice(0, 1000), logId]);
+        throw err;
+      }
+    }
   }
 
   res.status(200).json({ received: true, log_id: logId });
