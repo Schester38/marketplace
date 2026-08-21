@@ -12,9 +12,6 @@ async function request(path, options = {}, retries = 1) {
       const err = new Error(data.error || `Erreur ${res.status}`);
       err.status = res.status;
       err.code = data.code;
-      if (res.status === 401 && token && /session/i.test(data.error || '')) {
-        window.dispatchEvent(new CustomEvent('auth-expired', { detail: { path } }));
-      }
       throw err;
     }
     return data;
@@ -65,19 +62,11 @@ export const api = {
   },
   getProduct: (id) => request(`/products/${id}`),
   myProducts: () => request('/products/mine'),
-  flashPromotions: () => request('/flash-promotions'),
-  myFlashPromotions: () => request('/flash-promotions/mine'),
-  createFlashPromotion: (payload) => request('/flash-promotions', { method: 'POST', body: JSON.stringify(payload) }),
-  deleteFlashPromotion: (id) => request(`/flash-promotions/${id}`, { method: 'DELETE' }),
   createProduct: (payload) => request('/products', { method: 'POST', body: JSON.stringify(payload) }),
   updateProduct: (id, payload) => request(`/products/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteProduct: (id) => request(`/products/${id}`, { method: 'DELETE' }),
   duplicateProduct: (id) => request(`/products/${id}/duplicate`, { method: 'POST' }),
   recentSales: () => request('/sales/recent'),
-  trackVisit: (path, country) =>
-    request('/metrics/visit', { method: 'POST', body: JSON.stringify({ path, country: country || 'CM' }) }),
-  trackViews: (views) => request('/metrics/views', { method: 'POST', body: JSON.stringify({ views }) }),
-  trending: () => request('/metrics/trending'),
   createSale: (payload) => request('/sales', { method: 'POST', body: JSON.stringify(payload) }),
   mySales: () => request('/sales/my'),
   deleteSale: (id) => request(`/sales/${id}`, { method: 'DELETE' }),
@@ -113,16 +102,8 @@ export const api = {
   shopPaymentMethods: (id) => request(`/shop/${id}/payment-methods`),
   getShopPaymentMethods: () => request('/shop/payment-methods'),
   updateShopPaymentMethods: (payload) => request('/shop/payment-methods', { method: 'PUT', body: JSON.stringify(payload) }),
-  getLivreurPaymentMethods: () => request('/livreur/payment-methods'),
-  updateLivreurPaymentMethods: (payload) => request('/livreur/payment-methods', { method: 'PUT', body: JSON.stringify(payload) }),
-  listLivreurs: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
-    return request('/livreurs' + (qs ? `?${qs}` : ''));
-  },
-  livreurOptions: () => request('/livreurs/options'),
   purchaseCreate: (payload) => request('/purchases', { method: 'POST', body: JSON.stringify(payload) }),
   purchasesMy: () => request('/purchases/my'),
-  createDonation: (payload) => request('/donations', { method: 'POST', body: JSON.stringify(payload) }),
   notifications: () => request('/notifications'),
   notificationsRead: () => request('/notifications/read', { method: 'POST' }),
   deleteNotification: (id) => request(`/notifications/${id}`, { method: 'DELETE' }),
@@ -159,27 +140,7 @@ export const api = {
   subscribeNewsletter: (email) => request('/newsletter/subscribe', { method: 'POST', body: JSON.stringify({ email }) }),
   adminNewsletter: () => adminRequest('/newsletter'),
   adminSendNewsletter: (payload) => adminRequest('/newsletter/send', { method: 'POST', body: JSON.stringify(payload) }),
-  adminVisits: (days, country) =>
-    adminRequest(
-      '/admin/visits' +
-        (days || country ? `?${days ? `days=${days}` : ''}${days && country ? '&' : ''}${country ? `country=${encodeURIComponent(country)}` : ''}` : '')
-    ),
-  adminVisitsReset: () => adminRequest('/admin/visits/reset', { method: 'POST' }),
-  adminDeleteLog: (id) => adminRequest(`/logs/${id}`, { method: 'DELETE' }),
-  adminDeleteAllLogs: () => adminRequest('/logs/all', { method: 'DELETE' }),
-  adminDeleteMessage: (id) => adminRequest(`/admin/messages/${id}`, { method: 'DELETE' }),
-  adminResendMessage: (id) => adminRequest(`/admin/messages/${id}/resend`, { method: 'POST' }),
-  adminHideSale: (id) => adminRequest(`/admin/sales/${id}`, { method: 'DELETE' }),
-  adminRestoreSale: (id) => adminRequest(`/admin/sales/${id}/restore`, { method: 'POST' }),
-  adminHideStatus: (status) => adminRequest(`/admin/statuses/${status}`, { method: 'DELETE' }),
-  adminRestoreStatus: (status) => adminRequest(`/admin/statuses/${status}/restore`, { method: 'POST' }),
-  adminHideShop: (id) => adminRequest(`/admin/shops/${id}`, { method: 'DELETE' }),
-  adminRestoreShop: (id) => adminRequest(`/admin/shops/${id}/restore`, { method: 'POST' }),
-  adminHideSeller: (id) => adminRequest(`/admin/sellers/${id}`, { method: 'DELETE' }),
-  adminRestoreSeller: (id) => adminRequest(`/admin/sellers/${id}/restore`, { method: 'POST' }),
   paymentConfig: () => request('/payments/config'),
   paymentOperators: (country) => request('/payments/operators?country=' + encodeURIComponent(country || '')),
   payin: (payload) => request('/payments/payin', { method: 'POST', body: JSON.stringify(payload) }),
-  paySellerFee: () => request('/payments/seller-fee', { method: 'POST' }),
-  sellerFeeStatus: () => request('/payments/seller-fee/status'),
 };

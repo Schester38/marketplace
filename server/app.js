@@ -15,20 +15,15 @@ import notificationRoutes from './routes/notifications.js';
 import messageRoutes from './routes/messages.js';
 import sellerRoutes from './routes/seller.js';
 import shopRoutes from './routes/shop.js';
-import livreurRoutes from './routes/livreur.js';
-import livreursDirectoryRoutes from './routes/livreurs.js';
 import pushRoutes from './routes/push.js';
 import activityRoutes from './routes/activity.js';
 import reviewRoutes from './routes/reviews.js';
-import flashPromoRoutes from './routes/flashPromotions.js';
 import newsletterRoutes from './routes/newsletter.js';
 import adminRoutes from './routes/admin.js';
 import chatRoutes from './routes/chat.js';
 import walletRoutes from './routes/wallet.js';
-import donationRoutes from './routes/donations.js';
 import paymentRoutes from './routes/payments.js';
 import logRoutes from './routes/logs.js';
-import metricsRoutes from './routes/metrics.js';
 import seoRoutes from './routes/seo.js';
 import presentationRoutes, { pageRouter, imageRouter } from './routes/presentation.js';
 import { authRequired } from './auth.js';
@@ -82,6 +77,12 @@ app.use('/api/admin/pass', limiter(60 * 1000, 5));
 app.use('/api/admin', limiter(5 * 60 * 1000, 60));
 app.use('/api', limiter(60 * 1000, 300));
 
+app.get('/', (req, res, next) => {
+  const wantsHtml = /text\/html|application\/xhtml\+xml/i.test(req.headers.accept || '');
+  if (wantsHtml) return next();
+  res.json({ name: 'Mboppi API', version: '1.0.0' });
+});
+
 app.get('/api/health', async (req, res) => {
   res.set('Cache-Control', 'no-store');
   try {
@@ -102,22 +103,16 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/shop', shopRoutes);
-app.use('/api/shops', shopRoutes);
-app.use('/api/livreur', livreurRoutes);
-app.use('/api/livreurs', livreursDirectoryRoutes);
-app.use('/api/flash-promotions', limiter(60 * 1000, 30));
-app.use('/api/flash-promotions', flashPromoRoutes);
+  app.use('/api/shops', shopRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/wallet', walletRoutes);
-app.use('/api/donations', donationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/logs', limiter(60 * 1000, 8));
 app.use('/api/logs', logRoutes);
-app.use('/api/metrics', metricsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/img', imageRouter);
 app.use('/p', pageRouter);

@@ -1,16 +1,5 @@
 const API_BASE = process.env.IKE_API_BASE || 'https://api.ikeepay.com';
 
-export const IKE_FEE_PERCENT = 6;
-export function ikePayFee(amount) {
-  return Math.round((Number(amount) || 0) * IKE_FEE_PERCENT / 100);
-}
-export function ikePayFeeNet(amount) {
-  return Math.round((Number(amount) || 0) * (100 - IKE_FEE_PERCENT) / 100);
-}
-export function ikePayGrossUp(amount) {
-  return Math.round(((Number(amount) || 0) * 100) / (100 - IKE_FEE_PERCENT));
-}
-
 const COUNTRIES = {
   'Cameroun': { code: 'CM', prefix: '237' },
   "Côte d'Ivoire": { code: 'CI', prefix: '225' },
@@ -56,52 +45,14 @@ const OPERATOR_MAP = {
   'wave': 'WAVE',
   'airtel money': 'AIRTEL',
   'airtel': 'AIRTEL',
-  'm-pesa': 'MPESA',
-  'mpesa': 'MPESA',
-  'm-pesa tigo': 'TIGO',
-  'tigo pesa': 'TIGO',
-  'tigo': 'TIGO',
+  'm-pesa': 'VODACOM',
+  'm-pesa tigo': 'VODACOM',
+  'tigo pesa': 'VODACOM',
   't-money': 'MOBICASH',
-  'mobicash': 'MOBICASH',
   'flooz': 'MOOV',
-  'free money': 'FREE',
-  'free': 'FREE',
-  'emoney': 'EMONEY',
+  'free money': 'ORANGE',
   'yoomee': 'ORANGE',
-  'vodafone money': 'VODAFONE',
-  'vodafone': 'VODAFONE',
-  'vodacom money': 'VODACOM',
-  'vodacom': 'VODACOM',
-  'opay': 'OPAY',
-  'o-pay': 'OPAY',
-  'moniepoint': 'MONIEPOINT',
-  'halopesa': 'HALOPESA',
-  'zamtel': 'ZAMTEL',
 };
-
-const OPERATORS_BY_COUNTRY = {
-  'Bénin': ['MOOV', 'MTN'],
-  'Burkina Faso': ['ORANGE', 'MOBICASH'],
-  'Cameroun': ['ORANGE', 'MTN'],
-  'Gabon': ['AIRTEL'],
-  'Ghana': ['AIRTEL', 'MTN', 'VODAFONE'],
-  'Kenya': ['MPESA', 'AIRTEL'],
-  'Nigeria': ['OPAY', 'MONIEPOINT', 'MTN', 'AIRTEL'],
-  'Ouganda': ['MTN'],
-  "Côte d'Ivoire": ['ORANGE', 'WAVE', 'MTN'],
-  'République Démocratique du Congo': ['AIRTEL', 'ORANGE', 'VODACOM'],
-  'Sénégal': ['ORANGE', 'FREE', 'EMONEY', 'WAVE'],
-  'République du Congo': ['AIRTEL', 'MTN'],
-  'Rwanda': ['MTN'],
-  'Sierra Leone': ['ORANGE'],
-  'Tanzanie': ['AIRTEL', 'HALOPESA', 'TIGO'],
-  'Zambie': ['AIRTEL', 'MTN', 'ZAMTEL'],
-};
-
-export function operatorsForCountry(country) {
-  if (!country) return [];
-  return OPERATORS_BY_COUNTRY[country] || [];
-}
 
 export function countryInfo(country) {
   return COUNTRIES[country] || null;

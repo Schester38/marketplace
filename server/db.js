@@ -2,20 +2,12 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-// DATABASE_URL_POOLED (recommandé sur Supabase) : endpoint poolé via PgBouncer
-// (hôte en `-pooler`). Réduit les connexions/TLS sur les environnements
-// serverless (Vercel) et donc la consommation du quota réseau. S'il est absent,
-// on retombe sur DATABASE_URL (connexion directe Supabase).
 const connectionString =
-  process.env.DATABASE_URL_POOLED ||
-  process.env.DATABASE_URL ||
-  'postgres://postgres:postgres@localhost:5432/marketplace';
+  process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/marketplace';
 
 export const pool = new Pool({
   connectionString,
-  ssl: process.env.DATABASE_URL_POOLED || process.env.DATABASE_URL
-    ? { rejectUnauthorized: false }
-    : undefined,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
 });
 
 pool.on('connect', (client) => {
@@ -134,6 +126,7 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id);
     CREATE INDEX IF NOT EXISTS idx_sales_seller ON sales(seller_id);
     CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(status);
+    CREATE INDEX IF NOT EXISTS idx_sales_confirm_code ON sales(confirm_code) WHERE confirm_code IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
   `);
 
@@ -142,7 +135,6 @@ export async function initDb() {
     ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS location TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS city TEXT;
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS quartier TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS country TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;
     ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
@@ -157,8 +149,6 @@ export async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verify_expires TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
     UPDATE users SET email_verified = TRUE WHERE email_verified IS NULL;
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS activation_fee_paid BOOLEAN NOT NULL DEFAULT FALSE;
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS activation_fee_paid_at TIMESTAMPTZ;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS photos TEXT NOT NULL DEFAULT '[]';
     UPDATE products SET photos = json_build_array(image)::text WHERE image IS NOT NULL AND photos = '[]';
     ALTER TABLE products ADD COLUMN IF NOT EXISTS category TEXT;
@@ -242,34 +232,6 @@ export async function initDb() {
       wallets JSONB NOT NULL DEFAULT '[]',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
-
-    CREATE TABLE IF NOT EXISTS livreur_payment_methods (
-      id SERIAL PRIMARY KEY,
-      livreur_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-      full_name TEXT,
-      wallets JSONB NOT NULL DEFAULT '[]',
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-
-    CREATE TABLE IF NOT EXISTS donations (
-      id SERIAL PRIMARY KEY,
-      amount NUMERIC(14,2) NOT NULL,
-      currency TEXT NOT NULL DEFAULT 'XAF',
-      country TEXT,
-      donor_name TEXT,
-      donor_phone TEXT,
-      operator TEXT,
-      donor_email TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      external_reference TEXT UNIQUE,
-      provider_transaction_id TEXT,
-      provider_payload JSONB,
-      payout_status TEXT NOT NULL DEFAULT 'none',
-      payout_provider_transaction_id TEXT,
-      payout_error TEXT,
-      paid_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
   `);
 
   await pool.query(`
@@ -294,7 +256,6 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     ALTER TABLE notifications ADD COLUMN IF NOT EXISTS amount REAL;
     ALTER TABLE notifications ALTER COLUMN amount TYPE NUMERIC(14,2) USING CASE WHEN amount IS NULL THEN NULL ELSE round(amount::numeric, 2) END;
-    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS product_name TEXT;
 
     CREATE TABLE IF NOT EXISTS reviews (
       id SERIAL PRIMARY KEY,
@@ -339,8 +300,6 @@ export async function initDb() {
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
-    ALTER TABLE admin_messages DROP CONSTRAINT IF EXISTS admin_messages_target_check;
-    ALTER TABLE admin_messages ADD CONSTRAINT admin_messages_target_check CHECK (target IN ('all', 'user', 'shop', 'seller', 'client'));
     CREATE INDEX IF NOT EXISTS idx_admin_messages_target ON admin_messages(target);
     CREATE INDEX IF NOT EXISTS idx_admin_messages_user ON admin_messages(user_id);
 
@@ -391,123 +350,8 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_provider ON payment_webhook_logs(provider, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_order ON payment_webhook_logs(provider_order_id);
 
-    CREATE TABLE IF NOT EXISTS admin_hidden_sales (
-      sale_id INTEGER PRIMARY KEY REFERENCES sales(id) ON DELETE CASCADE,
-      hidden_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      hidden_by INTEGER REFERENCES users(id) ON DELETE SET NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS admin_hidden_statuses (
-      status TEXT PRIMARY KEY,
-      hidden_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      hidden_by INTEGER REFERENCES users(id) ON DELETE SET NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS admin_hidden_shops (
-      shop_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-      hidden_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      hidden_by INTEGER REFERENCES users(id) ON DELETE SET NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS admin_hidden_sellers (
-      seller_id INTEGER PRIMARY KEY,
-      hidden_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      hidden_by INTEGER REFERENCES users(id) ON DELETE SET NULL
-    );
-
     ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_transaction_type_check;
     ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_transaction_type_check CHECK (transaction_type IN ('commission_credit','referral_credit','payout_debit','adjustment','online_collect','online_payout'));
-
-    CREATE TABLE IF NOT EXISTS app_migrations (
-      id TEXT PRIMARY KEY,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-
-    CREATE TABLE IF NOT EXISTS seller_activation_payments (
-      id SERIAL PRIMARY KEY,
-      seller_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      amount NUMERIC(14,2) NOT NULL,
-      currency TEXT NOT NULL DEFAULT 'XAF',
-      operator TEXT,
-      phone_number TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      external_reference TEXT UNIQUE,
-      provider_transaction_id TEXT,
-      provider_payload JSONB,
-      paid_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    CREATE INDEX IF NOT EXISTS idx_seller_activation_seller ON seller_activation_payments(seller_id);
-
-    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS payout_status TEXT DEFAULT 'pending';
-    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS payout_error TEXT;
-    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS payout_provider_transaction_id TEXT;
-
-    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS referrer_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
-    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS referral_amount NUMERIC(14,2);
-    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS referral_payout_status TEXT DEFAULT 'pending';
-    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS referral_payout_error TEXT;
-    ALTER TABLE seller_activation_payments ADD COLUMN IF NOT EXISTS referral_payout_provider_transaction_id TEXT;
-  `);
-
-  try {
-    const migrated = await q(
-      `INSERT INTO app_migrations (id) VALUES ('seller_activation_fee_grandfather')
-       ON CONFLICT (id) DO NOTHING RETURNING id`
-    );
-    if (migrated.length) {
-      await q(`UPDATE users SET activation_fee_paid = TRUE WHERE role = 'seller' AND activation_fee_paid = FALSE`);
-    }
-  } catch {
-    /* best effort : la grand-parentalité ne doit pas bloquer le démarrage */
-  }
-
-  // Historique : avant le passage au paiement automatique, la commission de parrainage des
-  // ventes en ligne était reversée à chaque vente (wallet 'parrain_referral_credit') sans
-  // marquer referral_paid. On marque ces ventes comme payées pour éviter un double versement.
-  try {
-    const migrated = await q(
-      `INSERT INTO app_migrations (id) VALUES ('referral_auto_pay_grandfather')
-       ON CONFLICT (id) DO NOTHING RETURNING id`
-    );
-    if (migrated.length) {
-      await q(
-        `UPDATE sales s SET referral_paid = TRUE, referral_paid_at = COALESCE(s.referral_paid_at, s.paid_at, s.delivered_at, s.created_at)
-          WHERE s.status = 'delivered' AND NOT s.referral_paid
-            AND EXISTS (
-              SELECT 1 FROM wallet_transactions w
-              WHERE w.user_id = s.referred_by
-                AND w.transaction_type = 'referral_credit'
-                AND w.reference_type = 'parrain_referral_credit'
-                AND w.reference_id = s.id
-            )`
-      );
-    }
-  } catch {
-    /* best effort : cette migration ne doit pas bloquer le démarrage */
-  }
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS item_views (
-      item_type TEXT NOT NULL CHECK (item_type IN ('product', 'offer')),
-      item_id INTEGER NOT NULL,
-      seen_on DATE NOT NULL DEFAULT CURRENT_DATE,
-      count INTEGER NOT NULL DEFAULT 1,
-      PRIMARY KEY (item_type, item_id, seen_on)
-    );
-    CREATE INDEX IF NOT EXISTS idx_item_views_type_date ON item_views(item_type, seen_on DESC);
-
-    CREATE TABLE IF NOT EXISTS daily_visits (
-      id BIGSERIAL PRIMARY KEY,
-      seen_on DATE NOT NULL DEFAULT CURRENT_DATE,
-      visitor_id TEXT NOT NULL,
-      path TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_visits_unique ON daily_visits(seen_on, visitor_id, path);
-    CREATE INDEX IF NOT EXISTS idx_daily_visits_date ON daily_visits(seen_on DESC);
-    ALTER TABLE daily_visits ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'CM';
-    CREATE INDEX IF NOT EXISTS idx_daily_visits_country ON daily_visits(country, seen_on DESC);
   `);
 
   await pool.query(`
@@ -519,25 +363,6 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_notifications_unread ON notifications(user_id) WHERE read = FALSE;
     CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_users_city ON users(city);
-    CREATE INDEX IF NOT EXISTS idx_sales_confirm_code ON sales(confirm_code) WHERE confirm_code IS NOT NULL;
-  `);
-
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS flash_promotions (
-      id SERIAL PRIMARY KEY,
-      shop_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-      promo_price NUMERIC(14,2) NOT NULL CHECK (promo_price >= 0),
-      commission_percent NUMERIC(6,2) NOT NULL DEFAULT 0 CHECK (commission_percent >= 0 AND commission_percent <= 100),
-      duration_minutes INTEGER NOT NULL DEFAULT 180 CHECK (duration_minutes >= 1 AND duration_minutes <= 720),
-      starts_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      ends_at TIMESTAMPTZ NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    ALTER TABLE flash_promotions ADD COLUMN IF NOT EXISTS commission_percent NUMERIC(6,2) NOT NULL DEFAULT 0 CHECK (commission_percent >= 0 AND commission_percent <= 100);
-    CREATE INDEX IF NOT EXISTS idx_flash_promotions_ends ON flash_promotions(ends_at);
-    CREATE INDEX IF NOT EXISTS idx_flash_promotions_shop ON flash_promotions(shop_id);
-    CREATE INDEX IF NOT EXISTS idx_flash_promotions_product ON flash_promotions(product_id);
   `);
 
   try {
