@@ -3466,7 +3466,14 @@ function tr(str, vars, lang) {
 const LangContext = createContext();
 
 export function LangProvider({ children }) {
-  const [lang, setLang] = useState(() => localStorage.getItem('lang') || 'fr');
+  const [lang, setLang] = useState('fr');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('lang');
+      if (saved) setLang(saved);
+    } catch {}
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('lang', lang);
