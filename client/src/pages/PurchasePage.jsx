@@ -12,7 +12,7 @@ import { useLang } from '../i18n.jsx';
 
 // Autres moyens de paiement (espèces, transfert wallet) temporairement masqués :
 // passer à true pour les réactiver.
-const SHOW_OTHER_PAYMENTS = false;
+const SHOW_OTHER_PAYMENTS = true;
 
 export default function PurchasePage() {
   const { id } = useParams();
