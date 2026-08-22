@@ -36,7 +36,6 @@ export default function Admin() {
   const [msgUserId, setMsgUserId] = useState('');
   const [msgBusy, setMsgBusy] = useState(false);
   const [msgOk, setMsgOk] = useState('');
-  const [logs, setLogs] = useState(null);
   const [newsletter, setNewsletter] = useState(null);
   const [nlSubject, setNlSubject] = useState('');
   const [nlBody, setNlBody] = useState('');
@@ -65,10 +64,8 @@ export default function Admin() {
     };
     api.adminStats().then((d) => { setStats(d.stats); setLoading(false); }).catch(onErr);
     api.adminUsers().then((d) => setUsers(d.users)).catch(onErr);
-    api.adminProducts().then((d) => setProducts(d.products)).catch(onErr);
+api.adminProducts().then((d) => setProducts(d.products)).catch(onErr);
     api.adminTransactions().then(setTransactions).catch(onErr);
-    api.adminMessages().then((d) => setMessages(d.messages)).catch(onErr);
-    api.adminLogs(100).then((d) => setLogs(d.logs)).catch(onErr);
     api.adminNewsletter().then((d) => setNewsletter(d)).catch(() => {});
   }, []);
 
@@ -199,26 +196,6 @@ export default function Admin() {
     try {
       await api.adminResendMessage(m.id);
       setError('');
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const deleteLog = async (l) => {
-    if (!window.confirm(t('Supprimer cette erreur signalée ?'))) return;
-    try {
-      await api.adminDeleteLog(l.id);
-      setLogs((ls) => ls.filter((x) => x.id !== l.id));
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const deleteAllLogs = async () => {
-    if (!window.confirm(t('Supprimer TOUTES les erreurs signalées ? Cette action est irréversible.'))) return;
-    try {
-      await api.adminDeleteAllLogs();
-      setLogs([]);
     } catch (err) {
       setError(err.message);
     }
@@ -635,55 +612,6 @@ export default function Admin() {
           {nlBusy ? t('Envoi…') : t('Envoyer la newsletter')}
         </button>
       </form>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
-        <h2 className="section-title" style={{ margin: 0 }}>🛠️ {t('Erreurs signalées par les visiteurs')}</h2>
-        <button
-          type="button"
-          className="btn btn-danger btn-small"
-          onClick={deleteAllLogs}
-          disabled={logs === null || logs.length === 0}
-        >
-          {t('Supprimer tout')}
-        </button>
-      </div>
-      <p className="hint">
-        {t('Erreurs JavaScript remontées automatiquement par le navigateur des clients (une toutes les 5 s maximum par client).')}
-      </p>
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{t('Message')}</th>
-              <th>{t('Utilisateur')}</th>
-              <th>{t('Page')}</th>
-              <th>{t('Date')}</th>
-              <th>{t('Actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs === null ? (
-              <tr><td colSpan="5"><div className="skeleton-block" style={{ height: 30 }}></div></td></tr>
-            ) : logs.length === 0 ? (
-              <tr><td colSpan="5" className="empty">{t('Aucune erreur signalée 🎉')}</td></tr>
-            ) : (
-              logs.map((l) => (
-                <tr key={l.id} title={l.stack || ''}>
-                  <td>{l.message}</td>
-                  <td className="hint">{l.username || '—'}</td>
-                  <td className="hint">{l.url || '—'}</td>
-                  <td className="hint">{new Date(l.created_at).toLocaleString()}</td>
-                  <td>
-                    <button type="button" className="btn btn-danger btn-small" onClick={() => deleteLog(l)}>
-                      {t('Supprimer')}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
 
       <h2 className="section-title">👥 {t('Utilisateurs')}</h2>
       <form onSubmit={searchUsers} className="hero-search" role="search">
