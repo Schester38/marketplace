@@ -8,25 +8,6 @@ import Logo from '../components/Logo.jsx';
 import { COUNTRIES } from '../config.js';
 import { useLang } from '../i18n.jsx';
 
-const OPERATOR_NAMES = {
-  ORANGE: 'Orange Money',
-  MTN: 'MTN Mobile Money',
-  MOOV: 'Moov Money',
-  WAVE: 'Wave',
-  AIRTEL: 'Airtel Money',
-  MPESA: 'M-Pesa',
-  VODAFONE: 'Vodafone',
-  VODACOM: 'Vodacom',
-  MOBICASH: 'Mobicash',
-  TIGO: 'Tigo Pesa',
-  HALOPESA: 'Halo Pesa',
-  OPAY: 'OPay',
-  MONIEPOINT: 'Moniepoint',
-  FREE: 'Free Money',
-  EMONEY: 'e-Money',
-  ZAMTEL: 'Zamtel',
-};
-
 export default function Register() {
   const { t } = useLang();
   const [searchParams] = useSearchParams();
@@ -38,38 +19,11 @@ export default function Register() {
     password: '',
     role: refCode ? 'client' : 'seller',
     country: '',
-    wallet_name: '',
-    wallet_phone: '',
   });
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [sent, setSent] = useState(false);
   const [resending, setResending] = useState(false);
-  const [walletOptions, setWalletOptions] = useState([]);
-
-  useEffect(() => {
-    if (!form.country || form.role !== 'seller') {
-      setWalletOptions([]);
-      setForm((f) => (f.wallet_name ? { ...f, wallet_name: '' } : f));
-      return;
-    }
-    let active = true;
-    api
-      .paymentOperators(form.country)
-      .then((r) => {
-        if (!active) return;
-        const names = (Array.isArray(r.operators) ? r.operators : [])
-          .map((code) => OPERATOR_NAMES[code] || code);
-        setWalletOptions(names);
-        setForm((f) => (names.includes(f.wallet_name) ? f : { ...f, wallet_name: '' }));
-      })
-      .catch(() => {
-        if (active) setWalletOptions([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, [form.country, form.role]);
 
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
 
@@ -106,8 +60,6 @@ export default function Register() {
       await api.register({
         ...form,
         role,
-        operator: form.wallet_name,
-        phone: form.wallet_phone,
         acceptedTerms: true,
         ref: refCode || undefined,
         ref_seller: refSeller || undefined,
@@ -224,39 +176,6 @@ export default function Register() {
                 </label>
               </div>
             </>
-          )}
-
-          {!refCode && form.role === 'seller' && (
-            <div className="card wallet-card">
-              <label>{t('Votre portefeuille Mobile Money')}</label>
-              <select
-                className="input"
-                value={form.wallet_name}
-                onChange={(e) => setForm({ ...form, wallet_name: e.target.value })}
-                disabled={walletOptions.length === 0}
-              >
-                <option value="">
-                  {walletOptions.length === 0
-                    ? t('Aucun opérateur iKeePay disponible pour ce pays')
-                    : t('Choisir un opérateur…')}
-                </option>
-                {walletOptions.map((w) => (
-                  <option key={w} value={w}>{w}</option>
-                ))}
-              </select>
-              <label style={{ marginTop: 10 }}>{t('Numéro du portefeuille')}</label>
-              <input
-                className="input"
-                type="tel"
-                inputMode="tel"
-                value={form.wallet_phone}
-                onChange={(e) => setForm({ ...form, wallet_phone: e.target.value })}
-                placeholder="ex : 6XXXXXXXX"
-              />
-              <p className="hint" style={{ marginBottom: 0 }}>
-                {t('Ce portefeuille servira à régler vos frais d\'activation et à recevoir vos commissions.')}
-              </p>
-            </div>
           )}
 
           <label>{t('Nom complet / Nom de la boutique')}</label>
