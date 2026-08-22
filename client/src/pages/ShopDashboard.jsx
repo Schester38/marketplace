@@ -118,7 +118,7 @@ export default function ShopDashboard() {
       const [prodData, saleData, flashData] = await Promise.all([
         api.myProducts(),
         api.shopSales(user.id),
-        api.myFlashPromotions(),
+        api.flashPromotions(),
       ]);
       setProducts(prodData.products);
       setSales(saleData.sales);
