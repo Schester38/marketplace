@@ -99,8 +99,9 @@ app.get('/api/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
     res.json({ ok: true, db: 'up', time: new Date().toISOString() });
-  } catch {
-    res.status(503).json({ ok: false, db: 'down', time: new Date().toISOString() });
+  } catch (err) {
+    console.error('Health check failed:', err);
+    res.status(503).json({ ok: false, db: 'down', time: new Date().toISOString(), error: err?.message });
   }
 });
 
