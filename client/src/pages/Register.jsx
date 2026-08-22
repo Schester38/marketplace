@@ -5,8 +5,27 @@ import { GoogleIcon } from '../components/icons.jsx';
 import Seo from '../components/Seo.jsx';
 import SearchSelect from '../components/SearchSelect.jsx';
 import Logo from '../components/Logo.jsx';
-import { COUNTRIES, IKEEPAY_OPERATOR_NAMES } from '../config.js';
+import { COUNTRIES } from '../config.js';
 import { useLang } from '../i18n.jsx';
+
+const OPERATOR_NAMES = {
+  ORANGE: 'Orange Money',
+  MTN: 'MTN Mobile Money',
+  MOOV: 'Moov Money',
+  WAVE: 'Wave',
+  AIRTEL: 'Airtel Money',
+  MPESA: 'M-Pesa',
+  VODAFONE: 'Vodafone',
+  VODACOM: 'Vodacom',
+  MOBICASH: 'Mobicash',
+  TIGO: 'Tigo Pesa',
+  HALOPESA: 'Halo Pesa',
+  OPAY: 'OPay',
+  MONIEPOINT: 'Moniepoint',
+  FREE: 'Free Money',
+  EMONEY: 'e-Money',
+  ZAMTEL: 'Zamtel',
+};
 
 export default function Register() {
   const { t } = useLang();
@@ -40,7 +59,7 @@ export default function Register() {
       .then((r) => {
         if (!active) return;
         const names = (Array.isArray(r.operators) ? r.operators : [])
-          .map((code) => IKEEPAY_OPERATOR_NAMES[code] || code);
+          .map((code) => OPERATOR_NAMES[code] || code);
         setWalletOptions(names);
         setForm((f) => (names.includes(f.wallet_name) ? f : { ...f, wallet_name: '' }));
       })

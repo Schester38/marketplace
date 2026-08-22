@@ -4,9 +4,8 @@ import Seo from '../components/Seo.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
-import { getCountry, IKE_FEE_PERCENT } from '../config.js';
+import { getCountry } from '../config.js';
 import { WALLETS_BY_COUNTRY, DEFAULT_WALLETS } from './SellerPayments.jsx';
-import IkeFeeNotice from '../components/IkeFeeNotice.jsx';
 
 export default function ShopPayments() {
   const { user } = useAuth();
@@ -80,8 +79,6 @@ export default function ShopPayments() {
           <p>{t('Ces informations seront visibles par vos clients sur le formulaire de commande.')}</p>
         </div>
       </section>
-
-      <IkeFeeNotice title={t('Frais iKeePay {percent} % sur vos encaissements', { percent: IKE_FEE_PERCENT })} />
 
       {loading ? (
         <div className="card page-center">

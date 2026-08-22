@@ -129,42 +129,9 @@ export function currencySymbol(code) {
   return CURRENCY_SYMBOLS[c] || c || 'XAF';
 }
 
-export const IKE_FEE_PERCENT = 6;
-
 export const SELLER_ACTIVATION_FEE = 1500;
 export const SELLER_ACTIVATION_CURRENCY = 'XAF';
 export const SELLER_ACTIVATION_DAYS = 31;
-
-export const IKEEPAY_OPERATOR_NAMES = {
-  ORANGE: 'Orange Money',
-  MTN: 'MTN Mobile Money',
-  MOOV: 'Moov Money',
-  WAVE: 'Wave',
-  AIRTEL: 'Airtel Money',
-  MPESA: 'M-Pesa',
-  VODAFONE: 'Vodafone',
-  VODACOM: 'Vodacom',
-  MOBICASH: 'Mobicash',
-  TIGO: 'Tigo Pesa',
-  HALOPESA: 'Halo Pesa',
-  OPAY: 'OPay',
-  MONIEPOINT: 'Moniepoint',
-  FREE: 'Free Money',
-  EMONEY: 'e-Money',
-  ZAMTEL: 'Zamtel',
-};
-
-export function ikePayFee(amount) {
-  return Math.round((Number(amount) || 0) * IKE_FEE_PERCENT / 100);
-}
-
-export function ikePayFeeNet(amount) {
-  return Math.round((Number(amount) || 0) * (100 - IKE_FEE_PERCENT) / 100);
-}
-
-export function ikePayGrossUp(amount) {
-  return Math.round(((Number(amount) || 0) * 100) / (100 - IKE_FEE_PERCENT));
-}
 
 export function countryPhone(countryName) {
   const c = getCountry(countryName);

@@ -50,7 +50,7 @@ router.post('/', optionalAuth, ah(async (req, res) => {
   const rawMethod = String(payment_method || '').trim().toLowerCase();
   const method = rawMethod === 'mobile' || rawMethod === 'mobile_money'
     ? 'mobile'
-    : rawMethod === 'en ligne' || rawMethod === 'online' || rawMethod === 'en_ligne' || rawMethod === 'ikeepay' || rawMethod === 'h2h'
+    : rawMethod === 'en ligne' || rawMethod === 'online' || rawMethod === 'en_ligne' || rawMethod === 'h2h'
       ? 'en ligne'
       : 'espece';
 

@@ -175,7 +175,6 @@ export default function Support() {
           <div className="card form-card support-donate">
             <h3>💛 {t('Donner en ligne')}</h3>
             <p className="hint">
-              <img src="/ikeepay-logo.png" alt="iKeePay" style={{ width: 16, height: 16, verticalAlign: -3, marginRight: 4 }} />
               {t('Le montant est prélevé sur votre mobile money et reversé automatiquement sur les portefeuilles indiqués ci-dessous.')}
             </p>
             <form onSubmit={submitDon}>

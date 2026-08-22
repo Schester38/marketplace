@@ -343,7 +343,7 @@ export async function initDb() {
 
     CREATE TABLE IF NOT EXISTS payment_webhook_logs (
       id BIGSERIAL PRIMARY KEY,
-      provider TEXT NOT NULL DEFAULT 'ikeepay',
+      provider TEXT NOT NULL DEFAULT 'manual',
       provider_transaction_id TEXT,
       provider_order_id TEXT,
       event TEXT,

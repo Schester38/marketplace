@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { countrySymbol, categoryEmoji, IKE_FEE_PERCENT } from '../config.js';
+import { countrySymbol, categoryEmoji } from '../config.js';
 import Seo from '../components/Seo.jsx';
 import Logo from '../components/Logo.jsx';
 import { formatMoney } from '../components/ProductCard.jsx';
-import IkeFeeNotice from '../components/IkeFeeNotice.jsx';
 import CopyCode from '../components/CopyCode.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
+
+const IKE_FEE_PERCENT = 6;
 
 // Autres moyens de paiement (espèces, transfert wallet) temporairement masqués :
 // passer à true pour les réactiver.
@@ -236,8 +237,7 @@ export default function PurchasePage() {
                     className={`payment-option ${paymentMethod === 'en ligne' ? 'active' : ''}`}
                     onClick={() => setPaymentMethod('en ligne')}
                   >
-                    <img src="/ikeepay-logo.png" alt="iKeePay" style={{ width: 18, height: 18, verticalAlign: -3, marginRight: 6 }} />
-                    {t('Paiement à la livraison via iKeePay (Mobile Money)')}
+                    💳 {t('Paiement à la livraison (Mobile Money)')}
                   </button>
                 </div>
 
@@ -284,19 +284,16 @@ export default function PurchasePage() {
               <>
                 <div className="payment-options">
                   <div className="payment-option active">
-                    <img src="/ikeepay-logo.png" alt="iKeePay" style={{ width: 20, height: 20, verticalAlign: -3, marginRight: 6 }} />
-                    {t('Paiement à la livraison via iKeePay (Mobile Money)')}
+                    💳 {t('Paiement à la livraison (Mobile Money)')}
                   </div>
                 </div>
                 <p className="hint" style={{ marginTop: 8 }}>
                   {t('Le livreur enverra une demande de paiement sur votre numéro mobile money à la livraison. Aucune carte bancaire n\'est nécessaire.')}
                 </p>
                 {product && (
-                  <IkeFeeNotice
-                    amount={Number(displayPrice)}
-                    currency={product.currency}
-                    title={t('Frais iKeePay {percent} % sur les paiements en ligne', { percent: IKE_FEE_PERCENT })}
-                  />
+                  <p className="hint">
+                    {t('Frais de service inclus dans le montant affiché.')}
+                  </p>
                 )}
                 {error && <p className="error">{error}</p>}
               </>

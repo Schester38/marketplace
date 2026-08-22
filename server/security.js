@@ -14,7 +14,7 @@ const CSP =
   "img-src 'self' data: blob: https:; " +
   "font-src 'self' data: https://cdn.trustpilot.net; " +
   "connect-src 'self' https://www.google.com https://www.gstatic.com https://widget.trustpilot.com https://cdn.trustpilot.net; " +
-  "frame-src 'self' https://www.google.com https://ikeepay.com https://www.ikeepay.com https://widget.trustpilot.com; " +
+  "frame-src 'self' https://www.google.com https://widget.trustpilot.com; " +
   "object-src 'none'; " +
   "base-uri 'self'; " +
   "form-action 'self' https://www.google.com";
