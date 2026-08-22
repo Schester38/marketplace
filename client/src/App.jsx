@@ -212,6 +212,7 @@ function WelcomeBanner() {
   const { user } = useAuth();
   const { t } = useLang();
   const [kind, setKind] = useState(null);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     try {
