@@ -134,6 +134,8 @@ export const api = {
   adminMessages: () => adminRequest('/admin/messages'),
   adminSendMessage: (payload) => adminRequest('/admin/messages', { method: 'POST', body: JSON.stringify(payload) }),
   adminLogs: (limit = 100) => adminRequest(`/logs/list?limit=${limit}`),
+  adminVisits: (days = 30, country = '') => adminRequest(`/admin/visits?days=${days}${country ? `&country=${encodeURIComponent(country)}` : ''}`),
+  adminVisitsReset: () => adminRequest('/admin/visits/reset', { method: 'POST' }),
   popupMessage: () => request('/messages/popup'),
   ackMessage: (id) => request(`/messages/${id}/ack`, { method: 'POST' }),
   chat: (payload) => request('/chat', { method: 'POST', body: JSON.stringify(payload) }),
