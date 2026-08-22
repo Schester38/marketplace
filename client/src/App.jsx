@@ -339,9 +339,7 @@ export default function App() {
             path="/seller"
             element={
               <RoleOnly role="seller">
-                <SellerActive>
-                  <SellerDashboard />
-                </SellerActive>
+                <SellerDashboard />
               </RoleOnly>
             }
           />
