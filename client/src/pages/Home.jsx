@@ -26,20 +26,7 @@ export default function Home() {
   const hasLoaded = useRef(false);
   const hasData = useRef(false);
   const retryRef = useRef(0);
-  const [products, setProducts] = useState(() => {
-    try {
-      const cached = sessionStorage.getItem('mboppi_products');
-      const arr = cached ? JSON.parse(cached) : null;
-      if (Array.isArray(arr) && arr.length) {
-        hasLoaded.current = true;
-        hasData.current = true;
-        return arr;
-      }
-    } catch {
-      /* cache invalide : on ignore */
-    }
-    return [];
-  });
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState(() => params.get('q') || '');
@@ -68,14 +55,31 @@ export default function Home() {
   const [popular, setPopular] = useState([]);
   const [flashPromos, setFlashPromos] = useState([]);
   const [activeRail, setActiveRail] = useState('');
-  const [recent, setRecent] = useState(() => {
+  const [recent, setRecent] = useState([]);
+
+  useEffect(() => {
+    try {
+      const cached = sessionStorage.getItem('mboppi_products');
+      const arr = cached ? JSON.parse(cached) : null;
+      if (Array.isArray(arr) && arr.length) {
+        hasLoaded.current = true;
+        hasData.current = true;
+        setProducts(arr);
+      }
+    } catch {
+      /* cache invalide : on ignore */
+    }
+  }, []);
+
+  useEffect(() => {
     try {
       const list = JSON.parse(localStorage.getItem('mboppi_recent') || '[]');
-      return Array.isArray(list) ? list.filter((p) => Number(p.quantity || 0) > 0) : [];
+      const filtered = Array.isArray(list) ? list.filter((p) => Number(p.quantity || 0) > 0) : [];
+      setRecent(filtered);
     } catch {
-      return [];
+      /* ignore */
     }
-  });
+  }, []);
 
   // Synchronisation recherche/catégorie avec l'URL (?q= / ?cat=) : les liens de la
   // barre de recherche et du bandeau catégories (navbar) s'appliquent partout.

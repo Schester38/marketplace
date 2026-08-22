@@ -13,7 +13,11 @@ const CODE_KEY = 'livreur_shop_code';
 export default function LivreurDashboard() {
   const { t } = useLang();
   const [codeInput, setCodeInput] = useState('');
-  const [code, setCode] = useState(() => localStorage.getItem(CODE_KEY) || '');
+  const [code, setCode] = useState('');
+
+  useEffect(() => {
+    setCode(localStorage.getItem(CODE_KEY) || '');
+  }, []);
   const [shopName, setShopName] = useState(null);
   const [pending, setPending] = useState([]);
   const [delivered, setDelivered] = useState([]);

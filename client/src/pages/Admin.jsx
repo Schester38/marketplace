@@ -16,7 +16,11 @@ const VISIT_RANGES = [
 
 export default function Admin() {
   const { t } = useLang();
-  const [gate, setGate] = useState(() => !localStorage.getItem('admin_token'));
+  const [gate, setGate] = useState(true);
+
+  useEffect(() => {
+    setGate(!localStorage.getItem('admin_token'));
+  }, []);
   const [password, setPassword] = useState('');
   const [gateError, setGateError] = useState('');
   const [busy, setBusy] = useState(false);
