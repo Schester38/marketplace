@@ -144,4 +144,5 @@ export const api = {
   paymentOperators: (country) => request('/payments/operators?country=' + encodeURIComponent(country || '')),
   payin: (payload) => request('/payments/payin', { method: 'POST', body: JSON.stringify(payload) }),
   flashPromotions: () => request('/flash-promotions'),
+  trending: () => request('/metrics/trending'),
 };
