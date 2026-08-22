@@ -15,7 +15,10 @@ async function ensureDbInitialized() {
   }
 }
 
-// Initialize on cold start
-ensureDbInitialized();
+// Initialize on first request, not at module load
+app.use(async (req, res, next) => {
+  await ensureDbInitialized();
+  next();
+});
 
 export default app;
