@@ -131,6 +131,10 @@ export function currencySymbol(code) {
 
 export const IKE_FEE_PERCENT = 6;
 
+export const SELLER_ACTIVATION_FEE = 1500;
+export const SELLER_ACTIVATION_CURRENCY = 'XAF';
+export const SELLER_ACTIVATION_DAYS = 31;
+
 export const IKEEPAY_OPERATOR_NAMES = {
   ORANGE: 'Orange Money',
   MTN: 'MTN Mobile Money',
