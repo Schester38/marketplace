@@ -18,6 +18,10 @@ export default function Cart() {
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
   const [address, setAddress] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('espece');
+  const [automaticOperator, setAutomaticOperator] = useState('ORANGE');
+  const [paymentLinks, setPaymentLinks] = useState([]);
+   const [paymentError, setPaymentError] = useState('');
   const [error, setError] = useState('');
   const [placing, setPlacing] = useState(false);
   const [sales, setSales] = useState(null);
@@ -41,7 +45,21 @@ export default function Cart() {
         buyer_phone: phone.trim(),
         buyer_city: city.trim(),
         buyer_address: address.trim(),
+        payment_method: paymentMethod,
       });
+      let links = [];
+      if (paymentMethod === 'automatic') {
+          const payments = await Promise.all(data.sales.map(async (sale) => {
+            try {
+              return { ...(await api.ikeepayPayin({ sale_id: sale.id, country: user.country, phone, operator: automaticOperator })), saleId: sale.id };
+            } catch (paymentErr) {
+              setPaymentError(paymentErr.message);
+              return null;
+            }
+          }));
+          links = payments.filter(Boolean);
+      }
+      setPaymentLinks(links);
       setSales(data.sales);
       clearCart();
     } catch (err) {
@@ -63,6 +81,12 @@ export default function Cart() {
               name: sales[0].buyer_name,
             })}
           </p>
+          {paymentLinks.map((payment) => payment.payment_link ? (
+            <a key={payment.saleId} className="btn btn-primary" href={payment.payment_link} target="_blank" rel="noreferrer">
+              🔗 {t('Ouvrir le paiement automatique')} #{payment.saleId}
+            </a>
+          ) : null)}
+          {paymentError && <p className="error">{t('Commande enregistrée, mais le paiement automatique n’a pas pu être lancé : {error}', { error: paymentError })}</p>}
           <p className="hint">
             {t('Chaque article a son code de confirmation : communiquez-le à la boutique ou au livreur, ou suivez votre commande avec celui-ci.')}
           </p>
@@ -160,6 +184,20 @@ export default function Cart() {
               <strong>{formatMoney(cartTotal)} {countrySymbol(cart[0] && cart[0].country)}</strong>
             </div>
             <p className="hint">{t('Les frais de livraison sont confirmés avec la boutique.')}</p>
+
+            <div className="payment-options">
+              <button type="button" className={`payment-option ${paymentMethod === 'espece' ? 'active' : ''}`} onClick={() => setPaymentMethod('espece')}>💵 {t('Paiement manuel (espèces)')}</button>
+              <button type="button" className={`payment-option ${paymentMethod === 'mobile' ? 'active' : ''}`} onClick={() => setPaymentMethod('mobile')}>📱 {t('Mobile Money manuel')}</button>
+              <button type="button" className={`payment-option ${paymentMethod === 'automatic' ? 'active' : ''}`} onClick={() => setPaymentMethod('automatic')}>⚡ {t('Paiement automatique')}</button>
+            </div>
+            {paymentMethod === 'automatic' && (
+              <div className="wallet-card">
+                <label>{t('Opérateur de paiement')}</label>
+                <select className="input" value={automaticOperator} onChange={(e) => setAutomaticOperator(e.target.value)}>
+                  {['ORANGE', 'MTN', 'WAVE', 'MOOV', 'FREE', 'AIRTEL', 'VODACOM', 'MOBICASH'].map((operator) => <option key={operator} value={operator}>{operator}</option>)}
+                </select>
+              </div>
+            )}
 
             <form onSubmit={submit}>
               <label>{t('Votre nom *')}</label>

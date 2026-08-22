@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { q, withTransaction } from '../db.js';
 import { authRequired, roleRequired } from '../auth.js';
 import { sendPush } from '../push.js';
+import { paySaleAutomatically } from '../finance.js';
 
 const router = Router();
 
@@ -525,7 +526,7 @@ router.get('/:id/proof', authRequired, ah(async (req, res) => {
   });
 }));
 
-router.post('/:id/deliver', ah(async (req, res) => {
+router.post('/:id/deliver', authRequired, roleRequired('livreur'), ah(async (req, res) => {
   const { delivery_fee, payment_method, client_code, shop_code } = req.body || {};
   const shopCode = String(shop_code || '').trim().toUpperCase();
   if (!shopCode) return res.status(400).json({ error: 'Code boutique requis' });
@@ -566,9 +567,10 @@ router.post('/:id/deliver', ah(async (req, res) => {
     // Le livreur doit avoir présenté le code de la boutique ; l'accès est limité à cette boutique.
     const shopByCode = (await tx.query('SELECT id FROM users WHERE shop_code = $1', [shopCode]))[0];
     if (!shopByCode || Number(shopByCode.id) !== Number(product.shop_id)) { const error = new Error('Code boutique non autorisé pour cette commande'); error.statusCode = 403; throw error; }
-const updated = (await tx.query(
+  const updated = (await tx.query(
       `UPDATE sales SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3,
-       WHERE id = $4 RETURNING id`,
+        payment_status = CASE WHEN payment_status = 'paid' THEN payment_status ELSE 'pending' END
+        WHERE id = $4 RETURNING id`,
       [fee, cleanMethod, req.user ? req.user.id : null, lockedSale.id]
     ))[0];
     // Les nouvelles ventes ont déjà réservé leur stock. Pour les anciennes ventes,
@@ -636,6 +638,10 @@ const updated = (await tx.query(
       [updated[0].id]
     )
   )[0];
+
+  if (full.payment_status === 'paid') {
+    await paySaleAutomatically(full.id);
+  }
 
   res.json({ sale: saleRow(full), ok: true });
 }));

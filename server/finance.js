@@ -1,4 +1,121 @@
 import { q } from './db.js';
+import { countryCode, currencyForCountry, normalizePhone, payout, providerStatus } from './ikeepay.js';
+
+const REFERRAL_AUTO_PAY_MIN = 5000;
+
+const OPERATOR_MAP = [
+  ['orange', 'ORANGE'], ['mtn', 'MTN'], ['wave', 'WAVE'], ['moov', 'MOOV'],
+  ['free', 'FREE'], ['airtel', 'AIRTEL'], ['vodacom', 'VODACOM'], ['mpesa', 'VODACOM'],
+  ['m-pesa', 'VODACOM'], ['mobicash', 'MOBICASH'], ['tigo', 'TIGO'], ['halopesa', 'HALOPESA'],
+  ['zamtel', 'ZAMTEL'], ['opay', 'OPAY'], ['moniepoint', 'MONIEPOINT'],
+];
+
+function paymentTarget(methods, country) {
+  const wallet = Array.isArray(methods?.wallets) ? methods.wallets.find((item) => item?.value && item?.name) : null;
+  if (!wallet) return null;
+  const name = String(wallet.name).trim().toLowerCase();
+  const found = OPERATOR_MAP.find(([label]) => name.includes(label));
+  if (!found) return null;
+  return { operator: found[1], phoneNumber: normalizePhone(wallet.value, country), country: countryCode(country), currency: currencyForCountry(country) };
+}
+
+async function methodsFor(userId, kind) {
+  const table = kind === 'shop' ? 'shop_payment_methods' : kind === 'livreur' ? 'livreur_payment_methods' : 'seller_payment_methods';
+  const column = kind === 'shop' ? 'shop_id' : kind === 'livreur' ? 'livreur_id' : 'seller_id';
+  return (await q(`SELECT full_name, wallets FROM ${table} WHERE ${column} = $1`, [userId]))[0] || null;
+}
+
+async function providerPayout({ user, methods, amount, saleId, kind, reference }) {
+  const target = paymentTarget(methods, user.country);
+  if (!target || !target.country || !target.phoneNumber) return { ok: false, error: 'Moyen de paiement automatique non configuré' };
+  const existing = (await q('SELECT * FROM automatic_payouts WHERE external_reference = $1', [reference]))[0];
+  if (existing?.status === 'completed') return { ok: true, already: true };
+  if (!existing) {
+    await q(
+      `INSERT INTO automatic_payouts (external_reference, user_id, sale_id, kind, amount, currency)
+       VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (external_reference) DO NOTHING`,
+      [reference, user.id, saleId || null, kind, amount, target.currency]
+    );
+  }
+  try {
+    const result = await payout({ amount, currency: target.currency, country: target.country, phoneNumber: target.phoneNumber, operator: target.operator, external_reference: reference });
+    const status = providerStatus(result);
+    if (status === 'failed') throw new Error('Le prestataire a refusé le retrait');
+    if (status !== 'completed') {
+      await q('UPDATE automatic_payouts SET status = \'pending\', provider_reference = $1, error = NULL WHERE external_reference = $2', [result.provider_reference || result.data?.provider_reference || null, reference]);
+      return { ok: true, pending: true, provider: result };
+    }
+    await completeAutomaticPayout(reference, result.provider_reference || result.data?.provider_reference || null);
+    return { ok: true, provider: result };
+  } catch (error) {
+    await q('UPDATE automatic_payouts SET status = \'failed\', error = $1 WHERE external_reference = $2', [error.message, reference]);
+    return { ok: false, error: error.message };
+  }
+}
+
+export async function completeAutomaticPayout(reference, providerReference) {
+  const completed = (await q('UPDATE automatic_payouts SET status = \'completed\', provider_reference = COALESCE($1, provider_reference), completed_at = COALESCE(completed_at, now()), error = NULL WHERE external_reference = $2 RETURNING *', [providerReference || null, reference]))[0];
+  if (!completed) return { ok: false, error: 'Reversement introuvable' };
+  const transactionType = completed.kind === 'referral' ? 'referral_credit' : completed.kind === 'seller' ? 'commission_credit' : completed.kind === 'livreur' ? 'online_payout' : 'online_collect';
+  await q(
+    `INSERT INTO wallet_transactions (user_id, amount, currency, transaction_type, reference_type, reference_id, description)
+     VALUES ($1, $2, $3, $4, 'ikeepay_payout', $5, $6)
+     ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
+    [completed.user_id, completed.amount, completed.currency, transactionType, completed.id, `Paiement automatique Ikeepay — ${completed.kind}`]
+  );
+  if (completed.kind === 'seller' && completed.sale_id) await q('UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()) WHERE id = $1', [completed.sale_id]);
+  if (completed.kind === 'referral') await q('UPDATE sales SET referral_paid = TRUE, referral_paid_at = now() WHERE referred_by = $1 AND status = \'delivered\' AND payment_status = \'paid\' AND referral_paid = FALSE', [completed.user_id]);
+  return { ok: true, payout: completed };
+}
+
+export async function paySaleAutomatically(saleId) {
+  const sale = (await q('SELECT * FROM sales WHERE id = $1', [saleId]))[0];
+  if (!sale || sale.payment_status !== 'paid') return { ok: false, error: 'Paiement non confirmé' };
+  const product = (await q('SELECT shop_id FROM products WHERE id = $1', [sale.product_id]))[0];
+  if (!product) return { ok: false, error: 'Produit introuvable' };
+  const targets = [];
+  const shop = (await q('SELECT id, name, country FROM users WHERE id = $1', [product.shop_id]))[0];
+  if (shop) targets.push({ user: shop, kind: 'shop', amount: computeRedistribution(sale).shopAmount });
+  if (sale.seller_id) {
+    const seller = (await q('SELECT id, name, country FROM users WHERE id = $1', [sale.seller_id]))[0];
+    if (seller) targets.push({ user: seller, kind: 'seller', amount: computeRedistribution(sale).sellerAmount });
+  }
+  if (sale.delivered_by) {
+    const livreur = (await q('SELECT id, name, country FROM users WHERE id = $1', [sale.delivered_by]))[0];
+    if (livreur) targets.push({ user: livreur, kind: 'livreur', amount: computeRedistribution(sale).livreurAmount });
+  }
+  const results = [];
+  for (const target of targets.filter((item) => item.amount > 0)) {
+    const methods = await methodsFor(target.user.id, target.kind);
+    const result = await providerPayout({ ...target, methods, saleId, reference: `PAYOUT:${target.kind}:${saleId}` });
+    results.push({ kind: target.kind, amount: target.amount, ...result });
+    if (result.ok && target.kind === 'seller') await q('UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()) WHERE id = $1', [saleId]);
+  }
+  if (sale.referred_by && sale.status === 'delivered') results.push(await payReferralAutomatically(sale.referred_by));
+  return { ok: results.every((item) => item.ok), results };
+}
+
+export async function payReferralAutomatically(referrerId) {
+  const pending = await q(
+    `SELECT COALESCE(SUM(referral_commission), 0) AS amount
+     FROM sales WHERE referred_by = $1 AND status = 'delivered' AND payment_status = 'paid' AND referral_paid = FALSE`,
+    [referrerId]
+  );
+  const row = pending[0];
+  const amount = Math.round(Number(row.amount) * 100) / 100;
+  if (amount < REFERRAL_AUTO_PAY_MIN) return { kind: 'referral', ok: true, pending: true, amount, threshold: REFERRAL_AUTO_PAY_MIN };
+  const user = (await q('SELECT id, country FROM users WHERE id = $1 AND role = \'seller\'', [referrerId]))[0];
+  if (!user) return { kind: 'referral', ok: false, error: 'Parrain introuvable' };
+  const methods = await methodsFor(user.id, 'seller');
+  const pendingIds = await q(
+    `SELECT id FROM sales WHERE referred_by = $1 AND status = 'delivered' AND payment_status = 'paid' AND referral_paid = FALSE ORDER BY id`,
+    [user.id]
+  );
+  const reference = `REFERRAL:${user.id}:${pendingIds.map((item) => item.id).join('-')}`;
+  const result = await providerPayout({ user, methods, amount, kind: 'referral', reference });
+  if (result.ok) await q('UPDATE sales SET referral_paid = TRUE, referral_paid_at = now() WHERE referred_by = $1 AND status = \'delivered\' AND payment_status = \'paid\' AND referral_paid = FALSE', [user.id]);
+  return { kind: 'referral', amount, ...result };
+}
 
 export function computeRedistribution(sale) {
   const totalPrice = Number(sale.total_price || 0);

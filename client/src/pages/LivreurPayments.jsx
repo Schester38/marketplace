@@ -72,7 +72,7 @@ export default function LivreurPayments() {
 
   return (
     <main className="container narrow">
-      <Seo title={t('Mes moyens de paiement') + ' — Mboppi'} description={t('Enregistrez vos portefeuilles électroniques pour recevoir vos frais de livraison en ligne.')} noindex/>
+      <Seo title={t('Mes moyens de paiement') + ' — Mboppi'} description={t('Enregistrez vos portefeuilles électroniques pour recevoir vos frais de livraison automatiquement.')} noindex/>
       <section className="dash-header">
         <div>
           <h1>💳 {t('Mes moyens de paiement')}</h1>

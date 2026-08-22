@@ -52,7 +52,7 @@ router.post('/', optionalAuth, async (req, res, next) => {
     if (!buyer_address || !String(buyer_address).trim()) return res.status(400).json({ error: 'L\'adresse de livraison est requise' });
 
     const rawMethod = String(payment_method || '').trim().toLowerCase();
-    const method = rawMethod === 'mobile' || rawMethod === 'mobile_money' ? 'mobile' : 'espece';
+    const method = rawMethod === 'mobile' || rawMethod === 'mobile_money' ? 'mobile' : rawMethod === 'automatic' ? 'automatic' : 'espece';
 
     const result = await withTransaction(async (tx) => {
       const createdSales = [];

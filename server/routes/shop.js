@@ -16,14 +16,14 @@ function rowMethods(m) {
   };
 }
 
-router.get('/payment-methods', authRequired, roleRequired('shop'), ah(async (req, res) => {
+router.get('/payment-methods', authRequired, roleRequired('shop', 'creator'), ah(async (req, res) => {
   const m = (
     await q('SELECT full_name, wallets, updated_at FROM shop_payment_methods WHERE shop_id = $1', [req.user.id])
   )[0];
   res.json({ methods: rowMethods(m) });
 }));
 
-router.put('/payment-methods', authRequired, roleRequired('shop'), ah(async (req, res) => {
+router.put('/payment-methods', authRequired, roleRequired('shop', 'creator'), ah(async (req, res) => {
   const { full_name, wallets } = req.body || {};
   const name = full_name ? String(full_name).trim() : null;
   const list = Array.isArray(wallets)

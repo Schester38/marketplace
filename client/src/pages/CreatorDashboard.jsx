@@ -189,6 +189,9 @@ export default function CreatorDashboard() {
           <Link to={`/createur/${user.id}`} className="btn btn-outline">
             🔗 {t('Voir ma vitrine')}
           </Link>
+          <Link to="/creator/paiements" className="btn btn-outline">
+            💳 {t('Mes moyens de paiement')}
+          </Link>
           <button
             className="btn btn-primary"
             onClick={() => {
@@ -202,8 +205,8 @@ export default function CreatorDashboard() {
       </section>
 
       <div className="info-banner">
-        <strong>🚧 {t('Bientôt disponible')}</strong>
-        <p>{t("Le rôle Créateur est en cours de préparation : nous travaillons dessus et il sera bientôt disponible avec la gestion des paiements, la livraison et le suivi complet de vos ventes. En attendant, vos créations publiées restent visibles sur votre vitrine.")}</p>
+        <strong>💳 {t('Paiements automatiques disponibles')}</strong>
+        <p>{t('Configurez votre moyen de paiement pour recevoir automatiquement les montants qui vous reviennent après confirmation du paiement client.')}</p>
       </div>
 
       {showForm && (

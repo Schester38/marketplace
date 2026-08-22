@@ -28,6 +28,9 @@ export default function PurchasePage() {
     buyer_phone: '',
   });
   const [paymentMethod, setPaymentMethod] = useState('mobile');
+  const [automaticOperator, setAutomaticOperator] = useState('ORANGE');
+  const [paymentLink, setPaymentLink] = useState(null);
+   const [paymentError, setPaymentError] = useState('');
   const [copiedWallet, setCopiedWallet] = useState(null);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -72,6 +75,20 @@ export default function PurchasePage() {
         payment_method: paymentMethod,
       });
       setPurchase(d.sale || null);
+      if (paymentMethod === 'automatic' && d.sale) {
+          try {
+            const payment = await api.ikeepayPayin({
+              sale_id: d.sale.id,
+              confirm_code: d.sale.confirm_code,
+              country: user?.country || d.sale.shop_country || product.shop_country,
+              phone: form.buyer_phone,
+              operator: automaticOperator,
+            });
+            setPaymentLink(payment.payment_link || null);
+          } catch (paymentErr) {
+            setPaymentError(paymentErr.message);
+          }
+      }
       setDone(true);
     } catch (err) {
       setError(err.message);
@@ -148,6 +165,12 @@ export default function PurchasePage() {
               <CopyCode code={purchase.confirm_code || purchase.buyer_code} />
             </div>
           )}
+          {paymentLink && (
+            <a className="btn btn-primary" href={paymentLink} target="_blank" rel="noreferrer">
+              🔗 {t('Ouvrir le paiement automatique')}
+            </a>
+          )}
+            {paymentError && <p className="error">{t('Commande enregistrée, mais le paiement automatique n’a pas pu être lancé : {error}', { error: paymentError })}</p>}
           {purchase && purchase.id && (
             <Link className="btn btn-primary" to={`/suivi/${purchase.id}?code=${encodeURIComponent(purchase.confirm_code || purchase.buyer_code || '')}`}>
               📦 {t('Suivre ma commande')}
@@ -221,7 +244,26 @@ export default function PurchasePage() {
                   >
                     📱 {t('Virement Mobile Money direct')}
                   </button>
+                  <button
+                    type="button"
+                    className={`payment-option ${paymentMethod === 'automatic' ? 'active' : ''}`}
+                    onClick={() => setPaymentMethod('automatic')}
+                  >
+                    ⚡ {t('Paiement automatique')}
+                  </button>
                 </div>
+
+                {paymentMethod === 'automatic' && (
+                  <div className="wallet-card">
+                    <label>{t('Opérateur de paiement')}</label>
+                    <select className="input" value={automaticOperator} onChange={(e) => setAutomaticOperator(e.target.value)}>
+                      {['ORANGE', 'MTN', 'WAVE', 'MOOV', 'FREE', 'AIRTEL', 'VODACOM', 'MOBICASH'].map((operator) => (
+                        <option key={operator} value={operator}>{operator}</option>
+                      ))}
+                    </select>
+                    <p className="hint">{t('Le paiement est encaissé par l’agrégateur. Selon l’opérateur, un lien de paiement peut être ouvert.')}</p>
+                  </div>
+                )}
 
                 {paymentMethod === 'mobile' && (
                   <div className="card wallet-card">

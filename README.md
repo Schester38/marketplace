@@ -56,7 +56,9 @@ JWT_SECRET=une-chaine-aleatoire-d-au-moins-32-caracteres
 ADMIN_PASSWORD=mot-de-passe-admin
 ```
 
-Variables optionnelles : `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, `SITE_URL`, `PUBLIC_URL`, `ALLOWED_ORIGIN`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `SENTRY_DSN`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` et les variables SMTP.
+Variables optionnelles : `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, `SITE_URL`, `PUBLIC_URL`, `ALLOWED_ORIGIN`, `IKEEPAY_API_KEY` (ou `IKE_SECRET_KEY`), `IKEEPAY_API_URL`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `SENTRY_DSN`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` et les variables SMTP. `IKEEPAY_API_URL` vaut par défaut `https://api.ikeepay.com`.
+
+Pour activer les paiements automatiques, renseigner `IKEEPAY_API_KEY` dans Vercel puis configurer chez Ikeepay l’URL webhook `https://<domaine>/api/payments/ikeepay/webhook`. Le fournisseur doit envoyer les événements `transaction.created` et `transaction.updated`. Les clés ne doivent jamais être placées dans le frontend ou dans Git.
 
 ```powershell
 cd server

@@ -237,17 +237,33 @@ export async function initDb() {
       wallets JSONB NOT NULL DEFAULT '[]',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+
+    CREATE TABLE IF NOT EXISTS livreur_payment_methods (
+      id SERIAL PRIMARY KEY,
+      livreur_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      full_name TEXT,
+      wallets JSONB NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
   `);
 
   await pool.query(`
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL;\n    ALTER TABLE offers ALTER COLUMN original_price TYPE NUMERIC(14,2) USING round(original_price::numeric, 2);
     ALTER TABLE offers ALTER COLUMN promo_price TYPE NUMERIC(14,2) USING round(promo_price::numeric, 2);
     ALTER TABLE orders ALTER COLUMN total TYPE NUMERIC(14,2) USING round(total::numeric, 2);
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_external_reference TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_provider_reference TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_link TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_error TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_country TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_operator TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_external_reference TEXT;
   `);
 
   await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_seller_code ON users(seller_code) WHERE seller_code IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_shop_code ON users(shop_code) WHERE shop_code IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_payment_external_reference ON sales(payment_external_reference) WHERE payment_external_reference IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS notifications (
       id SERIAL PRIMARY KEY,
@@ -338,6 +354,22 @@ export async function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created ON wallet_transactions(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_wallet_transactions_reference ON wallet_transactions(reference_type, reference_id);
+
+    CREATE TABLE IF NOT EXISTS automatic_payouts (
+      id BIGSERIAL PRIMARY KEY,
+      external_reference TEXT NOT NULL UNIQUE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+      sale_id INTEGER REFERENCES sales(id) ON DELETE SET NULL,
+      kind TEXT NOT NULL,
+      amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+      provider_reference TEXT,
+      error TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_automatic_payouts_user ON automatic_payouts(user_id, created_at DESC);
 
     CREATE TABLE IF NOT EXISTS payment_webhook_logs (
       id BIGSERIAL PRIMARY KEY,

@@ -102,6 +102,8 @@ export const api = {
   shopPaymentMethods: (id) => request(`/shop/${id}/payment-methods`),
   getShopPaymentMethods: () => request('/shop/payment-methods'),
   updateShopPaymentMethods: (payload) => request('/shop/payment-methods', { method: 'PUT', body: JSON.stringify(payload) }),
+  getLivreurPaymentMethods: () => request('/livreur/payment-methods'),
+  updateLivreurPaymentMethods: (payload) => request('/livreur/payment-methods', { method: 'PUT', body: JSON.stringify(payload) }),
   purchaseCreate: (payload) => request('/purchases', { method: 'POST', body: JSON.stringify(payload) }),
   purchasesMy: () => request('/purchases/my'),
   notifications: () => request('/notifications'),
@@ -146,5 +148,6 @@ export const api = {
   createFlashPromotion: (payload) => request('/flash-promotions', { method: 'POST', body: JSON.stringify(payload) }),
   trending: () => request('/metrics/trending'),
   createDonation: (payload) => request('/donations', { method: 'POST', body: JSON.stringify(payload) }),
+  ikeepayPayin: (payload) => request('/payments/ikeepay/payin', { method: 'POST', body: JSON.stringify(payload) }),
   trackViews: (items) => request('/views', { method: 'POST', body: JSON.stringify({ items }) }),
 };

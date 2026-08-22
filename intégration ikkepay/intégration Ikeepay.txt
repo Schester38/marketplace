@@ -1,0 +1,188 @@
+Intégration H2H (Payin, Payout & Webhooks)
+Endpoint Live :
+https://api.ikeepay.com
+Header d'authentification :
+x-api-key: SECRET_KEY
+1. Encaissement (Payin)
+POST /h2h-payin
+Payload de la requête
+{
+  "amount": 500,
+  "currency": "XOF",
+  "country": "CI",
+  "phoneNumber": "2250700000000",
+  "operator": "ORANGE", // OU MTN, WAVE, MOOV, MOBICASH, AIRTEL, VODACOM...
+  "external_reference": "REF_1700000000",
+  "customer_email": "client@example.com",
+  "otp": "123456" // si requis EX: ORANGE BF 
+  //  Vous recevrez un lien de redirection payment_link en reponse pour le cas de wave et orange si neccesaire
+}
+2. Retrait (Payout)
+POST /h2h-payout
+Payload de la requête
+{
+  "amount": 200,
+  "currency": "XOF",
+  "country": "CI",
+  "phoneNumber": "2250700000000",
+  "operator": "ORANGE",
+  "external_reference": "PAYOUT_1700000000"
+}
+3. Webhooks (Notifications Async)
+POST
+Notre serveur envoie automatiquement un payload JSON à votre URL de notification dès qu'une transaction est créée ou mise à jour.
+
+Structure du JSON reçu
+{
+  "event": "transaction.updated", // ou "transaction.created"
+  "data": {
+    "type": "payin", // ou payout
+    "external_reference": "REF_1700000000",
+    "provider_reference": "IKP-H2H-B5C9EC0E",
+    "amount": 500,
+    "currency": "XOF",
+    "country": "CI",
+    "phone_number": "2250700000000",
+    "operator": "ORANGE",
+    "status": "completed", // ou pending, failed
+    "site": "Production",
+    "created_at": "2026-08-08T18:00:00Z",
+    "updated_at": "2026-08-08T18:00:05Z"
+  }
+}
+
+
+
+
+GlobalInternational
+Actif
+Visa
+Mastercard
+Bank
+USDT
+Disponible partout dans le monde
+
+Bénin
+Bénin
+Actif
+MOOV
+MTN
+Canaux de paiement sécurisés et monitorés 24/7
+
+Burkina Faso
+Burkina Faso
+Actif
+ORANGE
+MOBICASH
+Canaux de paiement sécurisés et monitorés 24/7
+
+Gabon
+Gabon
+Actif
+AIRTEL
+Canaux de paiement sécurisés et monitorés 24/7
+
+Nigeria
+Nigeria
+Actif
+OPAY
+MONIEPOINT
+MTN
+AIRTEL
+Canaux de paiement sécurisés et monitorés 24/7
+
+République Démocratique du Congo
+République Démocratique du Congo
+Actif
+AIRTEL
+ORANGE
+VODACOM
+Canaux de paiement sécurisés et monitorés 24/7
+
+République Démocratique du Congo (USD)
+République Démocratique du Congo (USD)
+Actif
+AIRTEL
+ORANGE
+VODACOM
+Canaux de paiement sécurisés et monitorés 24/7
+
+République du Congo
+République du Congo
+Actif
+AIRTEL
+MTN
+Canaux de paiement sécurisés et monitorés 24/7
+
+Sénégal
+Sénégal
+Actif
+ORANGE
+WAVE
+FREE
+MTN
+Canaux de paiement sécurisés et monitorés 24/7
+
+Sierra Leone
+Sierra Leone
+Actif
+ORANGE
+Canaux de paiement sécurisés et monitorés 24/7
+
+Kenya
+Kenya
+Actif
+Mpesa
+Canaux de paiement sécurisés et monitorés 24/7
+
+Tanzanie
+Tanzanie
+Actif
+AIRTEL
+HALOPESA
+TIGO
+Canaux de paiement sécurisés et monitorés 24/7
+
+Rwanda
+Rwanda
+Actif
+Airtel
+MTN MOMO
+Canaux de paiement sécurisés et monitorés 24/7
+
+Ouganda
+Ouganda
+Actif
+Airtel
+MTN MOMO
+Canaux de paiement sécurisés et monitorés 24/7
+
+Zambie
+Zambie
+Actif
+AIRTEL
+MTN
+ZAMTEL
+Canaux de paiement sécurisés et monitorés 24/7
+
+Côte d'Ivoire
+Côte d'Ivoire
+Actif
+Orange Money
+MTN
+Canaux de paiement sécurisés et monitorés 24/7
+
+Ghana
+Ghana
+Actif
+Airtel
+MTN
+TELECEL
+Canaux de paiement sécurisés et monitorés 24/7
+
+Cameroun
+Cameroun
+Actif
+ORANGE
+MTN
+Canaux de paiement sécurisés et monitorés 24/7
