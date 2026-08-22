@@ -1,5 +1,5 @@
 import app from '../server/app.js';
-import { initDb } from '../server/db.js';
+import { initDb, getPool } from '../server/db.js';
 
 let dbInitialized = false;
 
@@ -10,12 +10,14 @@ async function ensureDbInitialized() {
       dbInitialized = true;
     } catch (err) {
       console.error('Database initialization failed:', err);
-      // Don't throw - let the request handler handle it
     }
   }
 }
 
-// Initialize on first request, not at module load
+// Pre-warm pool on module load (helps with cold starts)
+getPool().query('SELECT 1').catch(() => {});
+
+// Initialize on first request
 app.use(async (req, res, next) => {
   await ensureDbInitialized();
   next();

@@ -15,6 +15,7 @@ import notificationRoutes from './routes/notifications.js';
 import messageRoutes from './routes/messages.js';
 import sellerRoutes from './routes/seller.js';
 import shopRoutes from './routes/shop.js';
+import livreurRoutes from './routes/livreur.js';
 import pushRoutes from './routes/push.js';
 import activityRoutes from './routes/activity.js';
 import reviewRoutes from './routes/reviews.js';
@@ -59,12 +60,6 @@ app.use(cors({ origin: ALLOWED_ORIGINS }));
 app.use(securityHeaders);
 app.use(express.json({
   limit: '12mb',
-  verify: (req, res, buf) => {
-    if (req.path === '/api/payments/webhook/sebpay') {
-      req.rawBody = buf;
-    }
-    return buf;
-  },
 }));
 app.use(originCheck);
 
@@ -115,6 +110,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/seller', sellerRoutes);
 app.use('/api/shop', shopRoutes);
 app.use('/api/shops', shopRoutes);
+app.use('/api/livreur', livreurRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/reviews', reviewRoutes);

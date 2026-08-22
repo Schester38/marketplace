@@ -22,21 +22,21 @@ export default function Privacy() {
         <div className="card">
           <h2>{t('📦 Quelles données sont collectées ?')}</h2>
           <p>
-            {t('Lors de votre inscription : votre nom, votre e-mail et votre rôle (boutique, vendeur, client, livreur ou créateur). Si vous vous connectez avec Google, seul votre e-mail Google est utilisé. Selon votre rôle, vous pouvez publier des produits, des offres avec photos, et vos ventes sont enregistrées dans votre espace. Pour les paiements en ligne, nous n\'utilisons que votre numéro de mobile money et votre opérateur, le temps du règlement.')}
+            {t('Lors de votre inscription, nous collectons votre nom, e-mail, rôle, pays et, selon les cas, téléphone, ville et quartier. Les commandes ajoutent les informations nécessaires à la livraison. Les boutiques, vendeurs et créateurs fournissent aussi les données de leurs produits, offres, photos et coordonnées professionnelles.')}
           </p>
         </div>
 
         <div className="card">
           <h2>{t('🔐 Comment sont-elles stockées ?')}</h2>
           <p>
-            {t('Toutes les données sont enregistrées dans une base de données PostgreSQL hébergée et sécurisée. Les mots de passe sont hachés (chiffrés de façon irréversible) : personne, même l\'équipe Mboppi, ne peut lire votre mot de passe. Toutes les connexions passent par un protocole sécurisé (HTTPS).')}
+            {t('Les données sont stockées dans PostgreSQL, avec des contrôles d’accès côté serveur. Les mots de passe sont hachés avec bcrypt et ne sont jamais lisibles. Les sessions utilisent des jetons temporaires et les échanges avec le site sont protégés par HTTPS.')}
           </p>
         </div>
 
         <div className="card">
           <h2>{t('⏳ Combien de temps sont-elles conservées ?')}</h2>
           <p>
-            {t('Vos données restent enregistrées aussi longtemps que votre compte existe. Les offres et produits que vous retirez sont supprimés définitivement, avec leurs photos. Aucune donnée n\'est vendue ni transmise à des tiers.')}
+            {t('Les données de compte sont conservées pendant la durée d’utilisation du compte et aussi longtemps que nécessaire pour l’historique des commandes, la sécurité et les obligations applicables. Les produits, offres et photos retirés sont supprimés lorsque le traitement le permet. Les données ne sont ni vendues ni utilisées pour de la publicité ciblée.')}
           </p>
         </div>
 
@@ -48,10 +48,30 @@ export default function Privacy() {
         </div>
 
         <div className="card">
-          <h2>{t('🔒 Paiement en ligne et données bancaires')}</h2>
+          <h2>{t('🔒 Paiements directs')}</h2>
           <p>
-            {t('Mboppi ne demande jamais de numéro de carte bancaire. Les paiements en ligne se font uniquement par mobile money via notre prestataire iKeePay : votre numéro de téléphone et votre opérateur sont transmis à ce prestataire le temps du règlement, et Mboppi ne conserve que le montant et la référence du paiement. Les gains perçus sont reversés automatiquement sur le portefeuille mobile enregistré par chaque acteur. Pour un don, seul votre numéro de mobile money est utilisé pour le règlement.')}
+            {t('Mboppi ne demande jamais de numéro de carte bancaire et ne collecte aucun paiement. Les paiements sont réalisés directement entre les parties par espèces, Mobile Money ou virement bancaire. Les moyens de paiement enregistrés par les bénéficiaires servent uniquement à recevoir les règlements manuels.')}
           </p>
+        </div>
+
+        <div className="card">
+          <h2>{t('📊 Mesures d’audience')}</h2>
+          <p>{t('Mboppi mesure les visites de pages et les consultations de produits ou d’offres afin de comprendre l’utilisation du site et d’améliorer le service. Un identifiant technique peut être conservé dans votre navigateur ; il ne constitue pas un profil public et n’est pas vendu.')}</p>
+        </div>
+
+        <div className="card">
+          <h2>{t('🍪 Cookies et stockage local')}</h2>
+          <p>{t('Le site utilise le stockage local du navigateur pour conserver votre session, votre panier, vos favoris, vos préférences de langue et certains choix d’affichage. Vous pouvez effacer ces données dans les réglages de votre navigateur ; cela peut supprimer votre panier ou vous déconnecter.')}</p>
+        </div>
+
+        <div className="card">
+          <h2>{t('🤝 Qui traite les données ?')}</h2>
+          <p>{t('L’application est hébergée par Vercel, tandis que PostgreSQL et le stockage des photos peuvent être fournis par Supabase. Des services optionnels peuvent intervenir pour l’e-mail, les notifications push, la supervision des erreurs ou l’assistance conversationnelle, uniquement pour faire fonctionner les fonctionnalités correspondantes.')}</p>
+        </div>
+
+        <div className="card">
+          <h2>{t('✉️ Vos droits')}</h2>
+          <p>{t('Vous pouvez demander l’accès, la correction ou la suppression de vos données, ainsi que des précisions sur leur utilisation. Écrivez-nous depuis la page Contact en indiquant l’adresse e-mail associée à votre compte afin que nous puissions vérifier votre demande.')}</p>
         </div>
 
         <div className="card">

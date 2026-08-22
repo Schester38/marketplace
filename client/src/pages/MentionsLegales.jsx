@@ -22,11 +22,19 @@ export default function MentionsLegales() {
         </div>
         <div className="card">
           <h2>{t('Propriété intellectuelle')}</h2>
-          <p>{t('Les contenus publiés par les boutiques et vendeurs (produits, photos, descriptions) leur appartiennent. La marque et le nom Mboppi appartiennent à leurs propriétaires.')}</p>
+          <p>{t('Les contenus publiés par les boutiques, vendeurs et créateurs (produits, photos, descriptions et créations) restent sous leur responsabilité et leur appartenance. Ils autorisent Mboppi à les afficher pour le fonctionnement de la marketplace. La marque et le nom Mboppi appartiennent à leurs propriétaires.')}</p>
         </div>
         <div className="card">
           <h2>{t('Prestataire de paiement')}</h2>
-          <p>{t('Les paiements en ligne sont traités par iKeePay, prestataire de paiement mobile money. Ses conditions d\'utilisation et sa politique de confidentialité s\'appliquent au traitement des paiements effectués sur Mboppi.')}</p>
+          <p>{t('Mboppi ne fournit pas de service de paiement en ligne. Les paiements sont réalisés directement entre les parties par espèces, Mobile Money ou virement bancaire.')}</p>
+        </div>
+        <div className="card">
+          <h2>{t('Rôle de l’éditeur')}</h2>
+          <p>{t('Mboppi fournit un outil de présentation, de mise en relation, de suivi des commandes et de coordination de livraison. Les contrats de vente, paiements directs, garanties, retours et litiges relèvent d’abord des parties concernées.')}</p>
+        </div>
+        <div className="card">
+          <h2>{t('Disponibilité du service')}</h2>
+          <p>{t('L’équipe Mboppi peut faire évoluer, suspendre ou interrompre une fonctionnalité pour maintenance, sécurité ou amélioration. Les informations publiées peuvent être modifiées par leur auteur et doivent être vérifiées avant toute transaction.')}</p>
         </div>
         <div className="card">
           <h2>{t('Contact')}</h2>

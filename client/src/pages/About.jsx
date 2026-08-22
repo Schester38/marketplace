@@ -57,6 +57,27 @@ export default function About() {
 
       <section className="section">
         <div className="section-head">
+          <h2>{t('Une marketplace pensée pour le terrain')}</h2>
+          <p>{t('Mboppi rapproche la découverte en ligne de la relation commerciale locale.')}</p>
+        </div>
+        <div className="privacy-list">
+          <div className="card">
+            <h3>{t('Des vitrines simples à partager')}</h3>
+            <p>{t('Chaque produit dispose d’une fiche publique avec son prix, sa disponibilité, ses photos, sa catégorie, sa garantie éventuelle et les informations de la boutique. Les liens peuvent être partagés par WhatsApp ou sur les réseaux sociaux.')}</p>
+          </div>
+          <div className="card">
+            <h3>{t('Une vente suivie de bout en bout')}</h3>
+            <p>{t('La commande reçoit un code de confirmation. La boutique la traite, le livreur vérifie le code de la boutique et le client confirme la remise avec son propre code. Chaque étape reste compréhensible pour les personnes concernées.')}</p>
+          </div>
+          <div className="card">
+            <h3>{t('Une rémunération lisible')}</h3>
+            <p>{t('La commission vendeur est affichée avant la vente. Le parrainage client représente 2 % pour le vendeur référent, et les frais de livraison sont saisis au moment de la livraison. Aucun frais de plateforme n’est ajouté aux montants reversés.')}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-head">
           <h2>{t('Nos valeurs')}</h2>
           <p>{t('Ce qui nous pousse chaque jour.')}</p>
         </div>
@@ -79,7 +100,7 @@ export default function About() {
           <div className="step">
             <div className="step-icon">💸</div>
             <h3>{t('L\'argent, en toute transparence')}</h3>
-            <p>{t('Le paiement en ligne par mobile money est traité via notre prestataire iKeePay et reversé automatiquement à chaque acteur.')}</p>
+            <p>{t('Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire. Mboppi ne prélève aucun frais de plateforme.')}</p>
           </div>
         </div>
       </section>

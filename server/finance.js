@@ -82,11 +82,10 @@ export async function markSalePaid(saleId, { transactionId, payload, receivedBy 
   if (!sale) return { ok: false, error: 'Vente introuvable' };
 
   await q(
-    `UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()), online_payment = FALSE, payment_status = 'paid',
-       payment_provider = 'manual', provider_transaction_id = COALESCE(provider_transaction_id, $1),
-       provider_payload = COALESCE(provider_payload, $2), payment_received_by = COALESCE(payment_received_by, $3)
-     WHERE id = $4`,
-    [transactionId || null, payload || null, receivedBy || null, saleId]
+     `UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()), payment_status = 'paid',
+       payment_received_by = COALESCE(payment_received_by, $1)
+       WHERE id = $2`,
+     [receivedBy || null, saleId]
   );
 
   if (sale.payout_initiated) return { ok: true, already: true, payouts: { initiated: false } };

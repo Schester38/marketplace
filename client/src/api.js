@@ -142,10 +142,9 @@ export const api = {
   subscribeNewsletter: (email) => request('/newsletter/subscribe', { method: 'POST', body: JSON.stringify({ email }) }),
   adminNewsletter: () => adminRequest('/newsletter'),
   adminSendNewsletter: (payload) => adminRequest('/newsletter/send', { method: 'POST', body: JSON.stringify(payload) }),
-  paymentConfig: () => request('/payments/config'),
-  paymentOperators: (country) => request('/payments/operators?country=' + encodeURIComponent(country || '')),
-  payin: (payload) => request('/payments/payin', { method: 'POST', body: JSON.stringify(payload) }),
   flashPromotions: () => request('/flash-promotions'),
+  createFlashPromotion: (payload) => request('/flash-promotions', { method: 'POST', body: JSON.stringify(payload) }),
   trending: () => request('/metrics/trending'),
   createDonation: (payload) => request('/donations', { method: 'POST', body: JSON.stringify(payload) }),
+  trackViews: (items) => request('/views', { method: 'POST', body: JSON.stringify({ items }) }),
 };

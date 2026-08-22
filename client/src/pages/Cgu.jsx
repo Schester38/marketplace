@@ -23,20 +23,24 @@ export default function Cgu() {
           <p>{t('Vous vous engagez à fournir des informations exactes et à jour lors de votre inscription. Vous êtes responsable de la confidentialité de votre mot de passe et de toutes les actions réalisées avec votre compte.')}</p>
         </div>
         <div className="card">
+          <h2>{t('2.1. Accès gratuit et sécurité')}</h2>
+          <p>{t('La création d’un compte et l’espace vendeur sont gratuits. Vous devez protéger vos identifiants, ne pas partager votre session et signaler rapidement toute utilisation non autorisée. Un compte peut être limité ou suspendu en cas de risque pour les utilisateurs ou la plateforme.')}</p>
+        </div>
+        <div className="card">
           <h2>{t('3. Les rôles sur Mboppi')}</h2>
           <p>{t('Mboppi met en relation des boutiques, des vendeurs, des clients, des livreurs et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander, livrer ou créer.')}</p>
         </div>
         <div className="card">
           <h2>{t('4. Commandes et paiement')}</h2>
-          <p>{t('Le paiement s\'effectue uniquement à la livraison du colis, par mobile money (Orange Money, MTN Mobile Money, etc.), via notre prestataire iKeePay. Le paiement est encaissé par iKeePay pour le compte de la boutique et du vendeur, puis Mboppi reverse automatiquement à chacun le montant qui lui revient.')}</p>
+          <p>{t('Le paiement est manuel et direct : espèces à la livraison, virement Mobile Money ou virement bancaire. Mboppi ne collecte aucun paiement et ne prélève aucun frais de plateforme.')}</p>
         </div>
         <div className="card">
-          <h2>{t('5. Paiement en ligne, reversements et délais')}</h2>
-          <p>{t('Pour recevoir un paiement en ligne, chaque acteur doit enregistrer un numéro de mobile money valide depuis son espace. Après confirmation du paiement par iKeePay, Mboppi reverse automatiquement la part de chacun : la boutique reçoit le prix, le vendeur sa commission, le parrain son pourcentage et le livreur ses frais de livraison. Les montants et l\'état des versements sont visibles dans chaque espace.')}</p>
+          <h2>{t('5. Paiements directs et commissions')}</h2>
+          <p>{t('Les paiements sont convenus directement entre le client et la boutique, le vendeur ou le livreur. Les commissions sont enregistrées sur la plateforme et réglées manuellement par la boutique, sans frais de plateforme.')}</p>
         </div>
         <div className="card">
           <h2>{t('6. Commissions et parrainage')}</h2>
-          <p>{t('Les boutiques rémunèrent les vendeurs et les parrains par des commissions enregistrées sur la plateforme. Ces commissions sont reversées automatiquement sur le portefeuille mobile enregistré par chaque acteur. Les montants et les modalités de réclamation sont affichés dans les espaces vendeur, boutique et client.')}</p>
+          <p>{t('La boutique définit la commission affichée sur chaque produit. Le vendeur reçoit la commission liée à une vente réalisée avec son code. Le parrainage concerne un client affilié et représente 2 % du montant de ses achats livrés ; le cumul est versé à partir de 1 500 XAF. Les paiements aux bénéficiaires sont effectués manuellement par la boutique, sans frais de plateforme.')}</p>
         </div>
         <div className="card">
           <h2>{t('7. Contenu publié')}</h2>
@@ -44,11 +48,15 @@ export default function Cgu() {
         </div>
         <div className="card">
           <h2>{t('8. Livraison')}</h2>
-          <p>{t('La livraison est assurée par la boutique ou par un livreur Mboppi. Les délais et les frais sont indiqués sur chaque produit et convenus lors de la commande. Le client paie à la livraison via iKeePay, et chaque acteur reçoit instantanément sa part sur son portefeuille mobile : la boutique le prix, le vendeur sa commission, le parrain son pourcentage et le livreur ses frais de livraison.')}</p>
+          <p>{t('La livraison est assurée par la boutique ou par un livreur Mboppi. Les délais et les frais sont indiqués sur chaque produit et convenus lors de la commande. Le client paie directement à la livraison ou par transfert convenu avec le bénéficiaire.')}</p>
+        </div>
+        <div className="card">
+          <h2>{t('8.1. Promotions éclair')}</h2>
+          <p>{t('Une boutique peut lancer une promotion éclair dans les limites affichées par la plateforme : une promotion par semaine et une durée maximale de 24 heures. Le produit peut être masqué des catalogues pendant la promotion et la commission vendeur est alors fixée à 0 %.')}</p>
         </div>
         <div className="card">
           <h2>{t('9. Dons et soutien')}</h2>
-          <p>{t('La page « Soutenir Mboppi » permet de faire un don à la plateforme. Les dons par Orange Money et MTN Mobile Money sont traités automatiquement en ligne. Les dons par PayPal ou par virement UBA se font manuellement, en suivant les instructions de la page. Aucun don n\'est obligatoire pour utiliser Mboppi.')}</p>
+          <p>{t('La page « Soutenir Mboppi » permet, lorsque cette option est disponible, de contribuer volontairement au projet. Les modalités indiquées sur la page de soutien s’appliquent au don. Aucun don n’est obligatoire pour utiliser Mboppi.')}</p>
         </div>
         <div className="card">
           <h2>{t('10. Comportement interdit')}</h2>

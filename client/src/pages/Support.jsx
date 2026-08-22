@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
-import { api } from '../api.js';
 
 function OrangeLogo() {
   return (
@@ -91,32 +90,6 @@ function InfoRow({ label, value, copyable }) {
 
 export default function Support() {
   const { t } = useLang();
-  const [don, setDon] = useState({ amount: '', operator: 'ORANGE', phone: '', loading: false, result: null, error: '' });
-  const [operatorOptions, setOperatorOptions] = useState([]);
-
-  useEffect(() => {
-    api.paymentOperators('Cameroun').then((r) => {
-      const ops = Array.isArray(r.operators) ? r.operators : [];
-      setOperatorOptions(ops);
-      setDon((d) => ({ ...d, operator: d.operator || ops[0] || 'ORANGE' }));
-    }).catch(() => {});
-  }, []);
-
-  const submitDon = async (e) => {
-    e.preventDefault();
-    setDon({ ...don, loading: true, error: '', result: null });
-    try {
-      const r = await api.createDonation({
-        amount: Number(don.amount),
-        operator: don.operator,
-        phone_number: don.phone,
-        country: 'Cameroun',
-      });
-      setDon({ ...don, loading: false, result: r });
-    } catch (err) {
-      setDon({ ...don, loading: false, error: err.message });
-    }
-  };
 
   const methods = [
     {
@@ -177,51 +150,6 @@ export default function Support() {
             <p className="hint">
               {t('Le montant est prélevé sur votre mobile money et reversé automatiquement sur les portefeuilles indiqués ci-dessous.')}
             </p>
-            <form onSubmit={submitDon}>
-              <label>{t('Montant')} (FCFA)</label>
-              <input
-                className="input"
-                type="number"
-                min="1"
-                required
-                value={don.amount}
-                onChange={(e) => setDon({ ...don, amount: e.target.value, result: null })}
-                placeholder="ex : 1000"
-              />
-              <label style={{ marginTop: 10 }}>{t('Votre opérateur')}</label>
-              <select
-                className="input"
-                value={don.operator}
-                onChange={(e) => setDon({ ...don, operator: e.target.value, result: null })}
-              >
-                {operatorOptions.map((op) => (
-                  <option key={op} value={op}>{op}</option>
-                ))}
-              </select>
-              <label style={{ marginTop: 10 }}>{t('Votre numéro')} <small>({t('vous recevrez la demande de paiement')})</small></label>
-              <input
-                className="input"
-                value={don.phone}
-                onChange={(e) => setDon({ ...don, phone: e.target.value, result: null })}
-                placeholder="ex : 6XXXXXXXX"
-                inputMode="tel"
-                required
-              />
-              {don.error && <p className="error">{don.error}</p>}
-              {don.result && (
-                <div className="success" style={{ marginTop: 8 }}>
-                  <p>✅ {t('Demande de don envoyée !')}</p>
-                  {don.result.payment_link && (
-                    <a className="btn btn-primary btn-block" style={{ marginTop: 8 }} href={don.result.payment_link} target="_blank" rel="noreferrer">
-                      🔗 {t('Ouvrir le lien de paiement')}
-                    </a>
-                  )}
-                </div>
-              )}
-              <button className="btn btn-primary btn-block" style={{ marginTop: 12 }} disabled={don.loading}>
-                {don.loading ? '…' : `📲 ${t('Donner')}`}
-              </button>
-            </form>
           </div>
         </section>
 

@@ -2,21 +2,19 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-let pool = null;
+const connectionString =
+  process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/marketplace';
 
-function getPool() {
-  if (!pool) {
-    const connectionString =
-      process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/marketplace';
-    pool = new Pool({
-      connectionString,
-      ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
-    });
+const pool = new Pool({
+  connectionString,
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+});
 
-    pool.on('connect', (client) => {
-      client.query('SET search_path TO public').catch(() => {});
-    });
-  }
+pool.on('connect', (client) => {
+  client.query('SET search_path TO public').catch(() => {});
+});
+
+export function getPool() {
   return pool;
 }
 
@@ -133,7 +131,6 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_sales_product ON sales(product_id);
     CREATE INDEX IF NOT EXISTS idx_sales_seller ON sales(seller_id);
     CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(status);
-    CREATE INDEX IF NOT EXISTS idx_sales_confirm_code ON sales(confirm_code) WHERE confirm_code IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
   `);
 
@@ -206,6 +203,7 @@ export async function initDb() {
     ALTER TABLE sales ALTER COLUMN delivery_fee TYPE NUMERIC(14,2) USING round(delivery_fee::numeric, 2);
     ALTER TABLE sales ALTER COLUMN referral_commission TYPE NUMERIC(14,2) USING round(referral_commission::numeric, 2);
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS stock_reserved BOOLEAN NOT NULL DEFAULT FALSE;
+    CREATE INDEX IF NOT EXISTS idx_sales_confirm_code ON sales(confirm_code) WHERE confirm_code IS NOT NULL;
 
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS online_payment BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_status TEXT;

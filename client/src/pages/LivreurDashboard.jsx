@@ -26,14 +26,7 @@ export default function LivreurDashboard() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [deliverForm, setDeliverForm] = useState(null);
-  const [shopWallets, setShopWallets] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [payOnline, setPayOnline] = useState({ operator: 'ORANGE', phone: '', loading: false, result: null, error: '' });
-  const [paymentEnabled, setPaymentEnabled] = useState(false);
-
-  useEffect(() => {
-    api.paymentConfig().then((c) => setPaymentEnabled(Boolean(c && c.enabled))).catch(() => {});
-  }, []);
 
   const load = async (silent) => {
     if (!code) {
@@ -88,36 +81,15 @@ export default function LivreurDashboard() {
     setPending([]);
     setDelivered([]);
     setShopName(null);
-    setShopWallets(null);
   };
 
   const openDeliver = (s) => {
-    setShopWallets(null);
-    setPayOnline({ operator: 'ORANGE', phone: s.buyer_phone || '', loading: false, result: null, error: '' });
-    if (s.shop_id) {
-      api.shopPaymentMethods(s.shop_id).then((r) => setShopWallets(r.methods)).catch(() => {});
-    }
     setDeliverForm({
       sale: s,
       delivery_fee: '',
       payment_method: s.payment_method === 'mobile' ? 'mobile' : 'espece',
       client_code: '',
     });
-  };
-
-  const startPayOnline = async () => {
-    setPayOnline((p) => ({ ...p, loading: true, error: '', result: null }));
-    try {
-      const r = await api.payin({
-        sale_id: deliverForm.sale.id,
-        operator: payOnline.operator,
-        phone_number: payOnline.phone,
-        shop_code: code,
-      });
-      setPayOnline({ ...payOnline, loading: false, result: r });
-    } catch (err) {
-      setPayOnline({ ...payOnline, loading: false, error: err.message });
-    }
   };
 
   const removeDelivered = async (s) => {
@@ -346,89 +318,6 @@ export default function LivreurDashboard() {
                   <span>📱 {t('Par Mobile')}</span>
                 </label>
               </div>
-              {paymentEnabled && (deliverForm.payment_method === 'espece' || deliverForm.payment_method === 'mobile') && (
-                <div className="row2" style={{ marginTop: 10 }}>
-                  <label className={`payment-option ${deliverForm.payment_method === 'en ligne' ? 'selected' : ''}`}>
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="en ligne"
-                      checked={deliverForm.payment_method === 'en ligne'}
-                      onChange={(e) => setDeliverForm({ ...deliverForm, payment_method: e.target.value })}
-                    />
-                    <span>🌐 {t('En ligne (auto)')}</span>
-                  </label>
-                </div>
-              )}
-              {deliverForm.payment_method === 'mobile' && (
-                <div className="wallet-card" style={{ marginTop: 10 }}>
-                  {shopWallets && shopWallets.wallets.length > 0 ? (
-                    <>
-                      <p className="hint" style={{ marginTop: 0 }}>
-                        {t('Envoyez le paiement à la boutique sur l\'un de ces portefeuilles :')}
-                      </p>
-                      {shopWallets.full_name && <p className="hint">{t('Titulaire : {name}', { name: shopWallets.full_name })}</p>}
-                      <div className="wallet-list" style={{ marginBottom: 0 }}>
-                        {shopWallets.wallets.map((w) => (
-                          <div className="wallet-row" key={w.name}>
-                            <span className="wallet-name">{w.name}</span>
-                            <span className="wallet-value">{w.value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <p className="hint" style={{ marginTop: 0 }}>
-                      {t('La boutique n\'a pas configuré de portefeuille.')}
-                    </p>
-                  )}
-                </div>
-              )}
-              {deliverForm.payment_method === 'en ligne' && (
-                <div className="wallet-card" style={{ marginTop: 10 }}>
-                  <p className="hint" style={{ marginTop: 0 }}>
-                    {t('Le client recevra une demande de paiement mobile money sur son téléphone. Confirmez l\'opérateur et son numéro.')}
-                  </p>
-                  <label style={{ marginTop: 8 }}>{t('Opérateur')}</label>
-                  <select
-                    className="input"
-                    value={payOnline.operator}
-                    onChange={(e) => setPayOnline({ ...payOnline, operator: e.target.value, result: null })}
-                  >
-                    {['ORANGE', 'MTN', 'WAVE', 'MOOV', 'MOBICASH', 'AIRTEL', 'VODACOM'].map((op) => (
-                      <option key={op} value={op}>{op}</option>
-                    ))}
-                  </select>
-                  <label style={{ marginTop: 8 }}>{t('Numéro du client')}</label>
-                  <input
-                    className="input"
-                    value={payOnline.phone}
-                    onChange={(e) => setPayOnline({ ...payOnline, phone: e.target.value, result: null })}
-                    placeholder="ex : 6XXXXXXXX"
-                    inputMode="tel"
-                  />
-                  {payOnline.error && <p className="error">{payOnline.error}</p>}
-                  {payOnline.result && (
-                    <div className="success" style={{ marginTop: 8 }}>
-                      <p>{t('Demande de paiement envoyée !')}</p>
-                      {payOnline.result.payment_link && (
-                        <a className="btn btn-primary btn-block" style={{ marginTop: 8 }} href={payOnline.result.payment_link} target="_blank" rel="noreferrer">
-                          🔗 {t('Ouvrir le lien de paiement')}
-                        </a>
-                      )}
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-block"
-                    style={{ marginTop: 10 }}
-                    disabled={payOnline.loading}
-                    onClick={startPayOnline}
-                  >
-                    {payOnline.loading ? '…' : `📲 ${t('Envoyer la demande de paiement')}`}
-                  </button>
-                </div>
-              )}
               <div className="row2" style={{ marginTop: 14 }}>
                 <button className="btn btn-primary" disabled={submitting}>
                   {submitting ? '…' : `✅ ${t('Confirmer l\'Achat')}`}

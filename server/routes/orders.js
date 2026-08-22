@@ -44,12 +44,15 @@ async function uniqueConfirmCode() {
 
 router.post('/', optionalAuth, async (req, res, next) => {
   try {
-    const { items, buyer_name, buyer_phone, buyer_address, buyer_city } = req.body || {};
+    const { items, buyer_name, buyer_phone, buyer_address, buyer_city, payment_method } = req.body || {};
     if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'Le panier est vide' });
     if (!buyer_name || !String(buyer_name).trim()) return res.status(400).json({ error: 'Le nom est requis' });
     if (!buyer_phone || !String(buyer_phone).trim()) return res.status(400).json({ error: 'Le numéro de téléphone est requis' });
     if (!buyer_city || !String(buyer_city).trim()) return res.status(400).json({ error: 'La ville est requise' });
     if (!buyer_address || !String(buyer_address).trim()) return res.status(400).json({ error: 'L\'adresse de livraison est requise' });
+
+    const rawMethod = String(payment_method || '').trim().toLowerCase();
+    const method = rawMethod === 'mobile' || rawMethod === 'mobile_money' ? 'mobile' : 'espece';
 
     const result = await withTransaction(async (tx) => {
       const createdSales = [];
@@ -89,8 +92,8 @@ router.post('/', optionalAuth, async (req, res, next) => {
         const code = await uniqueConfirmCodeTx(tx);
         const created = (await tx.query(
           `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, currency, buyer_id, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
-           VALUES ($1, NULL, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'en ligne', TRUE) RETURNING id`,
-          [pid, qty, total, commission, price, p.currency || 'XAF', req.user?.id || null, String(buyer_name).trim(), String(buyer_phone).trim(), String(buyer_city).trim(), String(buyer_address).trim(), code, referralCommission, referredBy]
+           VALUES ($1, NULL, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, TRUE) RETURNING id`,
+          [pid, qty, total, commission, price, p.currency || 'XAF', req.user?.id || null, String(buyer_name).trim(), String(buyer_phone).trim(), String(buyer_city).trim(), String(buyer_address).trim(), code, referralCommission, referredBy, method]
         ))[0];
         orderTotal += total;
         createdSales.push({ id: created.id, product_id: pid, shop_id: p.shop_id, referred_by: referredBy, referralCommission, name: p.name, quantity: qty, total });

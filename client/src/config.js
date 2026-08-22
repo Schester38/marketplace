@@ -129,10 +129,6 @@ export function currencySymbol(code) {
   return CURRENCY_SYMBOLS[c] || c || 'XAF';
 }
 
-export const SELLER_ACTIVATION_FEE = 1500;
-export const SELLER_ACTIVATION_CURRENCY = 'XAF';
-export const SELLER_ACTIVATION_DAYS = 31;
-
 export function countryPhone(countryName) {
   const c = getCountry(countryName);
   return c ? c.phone : '+237';

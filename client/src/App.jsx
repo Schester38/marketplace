@@ -125,7 +125,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!user) return undefined;
     if (window.location.pathname.startsWith('/admin')) return undefined;
-    const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+    const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
     const IDLE_EVENTS = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll'];
     let timer = null;
     const expire = () => {

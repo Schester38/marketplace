@@ -9,12 +9,6 @@ import CopyCode from '../components/CopyCode.jsx';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
 
-const IKE_FEE_PERCENT = 6;
-
-// Autres moyens de paiement (espèces, transfert wallet) temporairement masqués :
-// passer à true pour les réactiver.
-const SHOW_OTHER_PAYMENTS = true;
-
 export default function PurchasePage() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -33,7 +27,7 @@ export default function PurchasePage() {
     buyer_address: '',
     buyer_phone: '',
   });
-  const [paymentMethod, setPaymentMethod] = useState('en ligne');
+  const [paymentMethod, setPaymentMethod] = useState('mobile');
   const [copiedWallet, setCopiedWallet] = useState(null);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -45,7 +39,7 @@ export default function PurchasePage() {
       .getProduct(id)
       .then((d) => {
         setProduct(d.product);
-        if (SHOW_OTHER_PAYMENTS && d.product && d.product.shop_id) {
+        if (d.product && d.product.shop_id) {
           api
             .shopPaymentMethods(d.product.shop_id)
             .then((r) => setShopWallets(r.methods))
@@ -66,10 +60,6 @@ export default function PurchasePage() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!user) {
-      navigate('/login', { state: { from: location.pathname } });
-      return;
-    }
     setSubmitting(true);
     try {
       const d = await api.purchaseCreate({
@@ -79,7 +69,7 @@ export default function PurchasePage() {
         buyer_city: form.buyer_city,
         buyer_address: form.buyer_address,
         buyer_phone: form.buyer_phone,
-        payment_method: SHOW_OTHER_PAYMENTS ? paymentMethod : 'en ligne',
+        payment_method: paymentMethod,
       });
       setPurchase(d.sale || null);
       setDone(true);
@@ -215,8 +205,7 @@ export default function PurchasePage() {
               placeholder="ABC123"
             />
 
-            {SHOW_OTHER_PAYMENTS ? (
-              <>
+            <>
                 <div className="payment-options">
                   <button
                     type="button"
@@ -230,14 +219,7 @@ export default function PurchasePage() {
                     className={`payment-option ${paymentMethod === 'mobile' ? 'active' : ''}`}
                     onClick={() => setPaymentMethod('mobile')}
                   >
-                    📱 {t('Portefeuille (Mobile Money)')}
-                  </button>
-                  <button
-                    type="button"
-                    className={`payment-option ${paymentMethod === 'en ligne' ? 'active' : ''}`}
-                    onClick={() => setPaymentMethod('en ligne')}
-                  >
-                    💳 {t('Paiement à la livraison (Mobile Money)')}
+                    📱 {t('Virement Mobile Money direct')}
                   </button>
                 </div>
 
@@ -272,32 +254,12 @@ export default function PurchasePage() {
                   </div>
                 )}
                 {error && <p className="error">{error}</p>}
-                {paymentMethod === 'en ligne' && product && (
-                  <IkeFeeNotice
-                    amount={Number(displayPrice)}
-                    currency={product.currency}
-                    title={t('Frais iKeePay {percent} % sur les paiements en ligne', { percent: IKE_FEE_PERCENT })}
-                  />
-                )}
-              </>
-            ) : (
-              <>
-                <div className="payment-options">
-                  <div className="payment-option active">
-                    💳 {t('Paiement à la livraison (Mobile Money)')}
-                  </div>
-                </div>
-                <p className="hint" style={{ marginTop: 8 }}>
-                  {t('Le livreur enverra une demande de paiement sur votre numéro mobile money à la livraison. Aucune carte bancaire n\'est nécessaire.')}
-                </p>
-                {product && (
-                  <p className="hint">
-                    {t('Frais de service inclus dans le montant affiché.')}
-                  </p>
-                )}
-                {error && <p className="error">{error}</p>}
-              </>
-            )}
+                  {paymentMethod === 'mobile' && product && (
+                    <p className="hint" style={{ marginTop: 8 }}>
+                      {t('Paiement manuel : espèces ou virement Mobile Money direct. Aucun frais de plateforme.')}
+                    </p>
+                  )}
+            </>
             <button className="btn btn-primary btn-block" disabled={submitting}>
               {submitting ? '…' : `✅ ${t('Confirmer la Commande')}`}
             </button>

@@ -57,7 +57,7 @@ Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau v
 
 - **Wallet** (`server/routes/wallet.js`) : `GET /api/wallet/me` pour seller/creator, `wallet_transactions`, `balance = SUM(amount)` (montants signés), devise XAF.
 - Moyens de paiement des gains : `shop_payment_methods` / `seller_payment_methods` / `livreur_payment_methods` (PK = `*_id`, `full_name`, `wallets` jsonb — liste `{name, value}`, upsert `ON CONFLICT`).
-- Pays/pays africains : liste statique dans `ikeepay.js` (ex. Cameroun CM/237). Mapping noms de wallets → opérateur dans `OPERATOR_MAP` (« free money »/« yoomee » → ORANGE, « m-pesa » → VODACOM, « t-money » → MOBICASH…).
+- Pays et moyens de paiement : liste statique des pays et des wallets dans le frontend et les routes de moyens de paiement. Les coordonnées servent aux transferts directs entre parties ; Mboppi ne collecte pas les paiements.
 
 ## Promotions éclair (flash promotions)
 
@@ -115,5 +115,5 @@ Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau v
 - **1.10.0 / v51** : refonte promotion éclair (masquage catalogue, règles serveur, UI shop).
 - **1.11.0 / v52** : masquage SEO complet, blocage sellers côté serveur, commission promo 0, partage promo, offres Verone dans l'accueil (rail), suppression commission duo.
 - **1.12.0 / v53** : popup promos superposées sur un même cadre avec rotation 5 s et titre « PROMOTION DU JOUR » centré (X ferme tout) ; correctif ancrage `bottom: 0` des cartes (popup cachée hors écran) ; retrait des emojis 🎨/🎓 du menu.
-- **1.13.0** : suppression complète d'iKeePay (paiements 100% manuels, plus de frais 6 %, plus de webhook, plus de payout automatique).
+- **1.13.0** : paiements 100 % manuels, sans frais de plateforme, sans webhook et sans payout automatique.
 - Facture PDF : parfaitement fonctionnelle (vérifié — téléchargement jsPDF OK).

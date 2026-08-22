@@ -1,100 +1,109 @@
-# Mboppi — Boutiques & Vendeurs
+# Mboppi
 
-Site de vente en ligne avec deux types de comptes :
+Mboppi est une marketplace pour le Cameroun et l'Afrique. Elle met en relation des boutiques, des vendeurs indépendants, des clients, des créateurs et des livreurs.
 
-- **Compte boutique** : le propriétaire publie jusqu'à **5 produits** maximum. Chaque produit affiche le **prix de vente** et la **commission** que gagnera le vendeur.
-- **Compte vendeur** : toute personne peut s'inscrire, vendre les produits postés par les boutiques et gagner une commission sur chaque vente.
+## Fonctionnalités
 
-## Fonctionnement
+- **Boutique** : publie jusqu'à 5 produits, définit les prix, le stock et la commission du vendeur, confirme les commandes et règle les commissions.
+- **Vendeur** : s'inscrit gratuitement, génère un code vendeur, partage les produits et reçoit la commission prévue pour chaque vente.
+- **Client** : commande avec ou sans compte, reçoit un code de confirmation et suit sa commande.
+- **Créateur** : publie des créations et gère son espace.
+- **Livreur** : utilise le code de la boutique, saisit les frais de livraison et confirme la remise avec le code client.
+- **Administrateur** : consulte les statistiques, utilisateurs, ventes, messages, journaux et sauvegardes.
+- **Promotions éclair** : une promotion par semaine et par boutique, pendant 24 heures maximum. Le produit est masqué des catalogues et sa commission vendeur devient 0 %.
+- **SEO et partage** : pages publiques optimisées, sitemap, Open Graph, JSON-LD et liens de partage de produits, boutiques et offres.
 
-1. Une boutique s'inscrit, publie ses produits (nom, prix, % de commission, image optionnelle). La commission en FCFA est calculée automatiquement.
-2. Un vendeur s'inscrit, choisit un produit, enregistre une vente (acheteur, quantité).
-3. La boutique confirme ou annule les ventes.
-4. Le vendeur suit ses commissions dans son espace, la boutique suit son chiffre d'affaires et les commissions versées.
+## Paiements et commissions
 
-## Technologies
+Mboppi ne collecte aucun paiement en ligne et ne prélève aucun frais de plateforme. Les paiements sont directs et manuels :
 
-- **Backend** : Node.js + Express, base **PostgreSQL** (Supabase, cloud), JWT + bcrypt
-- **Frontend** : React 18 + Vite + React Router
-- **Déploiement** : Vercel (frontend + API serverless), base de données et stockage des images sur Supabase, redéploiement automatique à chaque `git push`
+- espèces à la livraison ;
+- virement Mobile Money direct ;
+- virement bancaire.
 
-## Démarrage en local
+Le moyen choisi est enregistré sur la vente. Après livraison, la boutique règle manuellement le vendeur et le parrain et ajoute une preuve de paiement. Les montants sont suivis dans les wallets internes, sans frais de plateforme.
 
-Prérequis : Node.js 22.5+ (testé avec Node 24)
+La commission du vendeur est définie par la boutique sur chaque produit. Le parrainage client rapporte 2 % au vendeur référent, lorsque le client s'est inscrit avec son code ; le versement automatique du cumul intervient à partir de 1 500 XAF.
 
-```bash
-# 1. Configurer la base (fichier server/.env, NON commité)
-#    Copier le fichier .env.example vers .env et coller votre clé de connexion Supabase :
-#    DATABASE_URL=postgresql://user:password@host.supabase.co:5432/postgres?sslmode=require
-#    JWT_SECRET=une-longue-chaine-secrete
+## Architecture
 
-# 2. Terminal 1 — API (http://localhost:4000)
+```text
+client/       React 18 + Vite + React Router
+server/       Express 4 + PostgreSQL
+api/index.js  Entrée Vercel serverless
+```
+
+- [client/src/App.jsx](client/src/App.jsx) contient le routage, l'authentification et les espaces par rôle.
+- [client/src/api.js](client/src/api.js) centralise les appels HTTP.
+- [client/src/store.jsx](client/src/store.jsx) persiste panier et favoris dans le navigateur.
+- [server/app.js](server/app.js) monte les routes API et sert le frontend compilé en local.
+- [server/db.js](server/db.js) configure PostgreSQL et initialise le schéma.
+- [server/routes/products.js](server/routes/products.js) gère produits, stock et photos.
+- [server/routes/orders.js](server/routes/orders.js) crée les commandes multi-produits.
+- [server/routes/purchases.js](server/routes/purchases.js) crée les achats directs.
+- [server/routes/sales.js](server/routes/sales.js) gère statuts, livraison, commissions et preuves de paiement.
+- [server/finance.js](server/finance.js) calcule la répartition des montants et les écritures wallet.
+
+## Démarrage local
+
+Prérequis : Node.js 22.5 ou supérieur et une base PostgreSQL.
+
+Configurer `server/.env` (ne jamais committer ce fichier) :
+
+```env
+DATABASE_URL=postgresql://user:password@host:5432/database?sslmode=require
+JWT_SECRET=une-chaine-aleatoire-d-au-moins-32-caracteres
+ADMIN_PASSWORD=mot-de-passe-admin
+```
+
+Variables optionnelles : `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, `SITE_URL`, `PUBLIC_URL`, `ALLOWED_ORIGIN`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `SENTRY_DSN`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` et les variables SMTP.
+
+```powershell
 cd server
 npm install
 npm run dev
+```
 
-# 3. Terminal 2 — Frontend (http://localhost:5173)
+Dans un second terminal :
+
+```powershell
 cd client
 npm install
 npm run dev
 ```
 
-Ouvrir **http://localhost:5173**.
-
-## Déploiement sur Vercel (gratuit)
-
-1. Pousser le code sur GitHub (dépôt : `github.com/Schester38/marketplace`).
-2. Créer un compte sur **https://vercel.com** (connexion avec GitHub, sans carte bancaire).
-3. **Add New → Project** → importer le dépôt `marketplace`.
-4. Vercel détecte automatiquement `vercel.json` (build du frontend + API serverless).
-5. Dans **Settings → Environment Variables**, ajouter :
-   - `DATABASE_URL` → la clé de connexion de la base Supabase
-   - `SUPABASE_URL` → l'URL du projet Supabase (https://<ref>.supabase.co)
-   - `SUPABASE_SERVICE_KEY` → la clé `service_role` (ou `sb_secret_...`) de Supabase
-   - `SUPABASE_JWT_SECRET` → le JWT Secret (Settings → API → JWT Settings) pour signer les jetons Storage
-   - `JWT_SECRET` → une longue chaîne aléatoire
-   - ⚠️ **Ne pas définir `NODE_ENV`** : Vercel le gère lui-même, et `NODE_ENV=production` empêche l'installation de Vite (devDependency) → build en échec
-6. **Deploy** — le site est disponible sur `https://marketplace-<votre-compte>.vercel.app`
-
-Le frontend buildé est servi par Vercel, l'API Express fonctionne en fonction serverless (`api/index.js`).
-Les données (base PostgreSQL) et les images sont hébergées sur Supabase, et chaque `git push` redéploie le site automatiquement.
-
-## Structure
-
-```
-server/
-  index.js          # API Express + service statique du frontend
-  db.js             # Connexion PostgreSQL (Supabase) + schéma
-  auth.js           # JWT + middlewares
-  routes/
-    auth.js         # inscription / connexion
-    products.js     # produits (max 5 par boutique)
-    sales.js        # ventes + commissions + statuts
-client/
-  src/
-    api.js          # client HTTP
-    App.jsx         # routage + contexte d'auth
-    components/     # Navbar, ProductCard
-    pages/          # Home, Login, Register, ShopDashboard, SellerDashboard
-```
+Le frontend est disponible sur http://localhost:5173 et l'API sur http://localhost:4000.
 
 ## API principale
 
-| Méthode | Route | Rôle | Description |
+| Méthode | Route | Accès | Fonction |
 |---|---|---|---|
-| POST | /api/auth/register | public | Inscription (`role`: `shop` ou `seller`) |
-| POST | /api/auth/login | public | Connexion |
-| GET | /api/products | public | Liste des produits (prix + commission calculée) |
-| GET | /api/products/mine | shop | Produits de ma boutique + limite |
-| POST | /api/products | shop | Publier un produit (max 5) |
-| DELETE | /api/products/:id | shop | Supprimer un produit |
-| POST | /api/sales | seller | Enregistrer une vente (commission calculée) |
-| GET | /api/sales/my | seller | Mes ventes + statistiques |
-| GET | /api/sales/shop/:id | shop | Ventes de ma boutique + statistiques |
-| PATCH | /api/sales/:id/status | shop | Confirmer / annuler une vente |
+| POST | `/api/auth/register` | public | Inscription et parrainage |
+| POST | `/api/auth/login` | public | Connexion JWT |
+| GET | `/api/products` | public | Catalogue |
+| POST | `/api/products` | shop, creator | Publier un produit |
+| POST | `/api/purchases` | public | Achat direct avec code vendeur |
+| POST | `/api/orders` | public | Commande du panier |
+| PATCH | `/api/sales/:id/status` | shop | Confirmer ou annuler |
+| POST | `/api/sales/:id/deliver` | livreur | Confirmer la livraison |
+| POST | `/api/sales/:id/pay` | shop | Enregistrer le paiement du vendeur |
+| POST | `/api/sales/:id/pay-referral` | shop | Enregistrer le paiement du parrain |
+| GET | `/api/wallet/me` | seller, creator | Consulter le wallet |
+| GET/POST | `/api/flash-promotions` | public / shop | Consulter ou créer une promotion |
+| POST | `/api/admin/pass` | public | Ouvrir la session admin |
 
-## Personnalisation
+## Build et déploiement
 
-- Le nombre max de produits par boutique est défini par `MAX_PRODUCTS_PER_SHOP` dans `server/routes/products.js` (5 par défaut).
-- La commission est un pourcentage du prix défini par la boutique, calculée côté serveur.
-- Le secret JWT est modifiable via la variable d'environnement `JWT_SECRET`.
+Le build frontend est lancé depuis la racine :
+
+```powershell
+npm run build
+```
+
+Vercel utilise [vercel.json](vercel.json), construit `client/dist` et route `/api/*` vers [api/index.js](api/index.js). Les variables d'environnement de production doivent contenir au minimum `DATABASE_URL` et `JWT_SECRET`.
+
+Les scripts de maintenance se trouvent dans [server/scripts](server/scripts) : sauvegarde NDJSON, restauration, migration des images, nettoyage du stock et rapport d'utilisation Supabase.
+
+## Sécurité et données
+
+Les mots de passe sont hachés avec bcrypt, les sessions utilisent JWT, les routes sensibles appliquent des rôles et des limites de débit, et les actions d'administration sont auditées. Les données métier sont conservées dans PostgreSQL ; les photos peuvent être stockées dans Supabase Storage.
