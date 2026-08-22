@@ -211,8 +211,15 @@ class ErrorBoundary extends React.Component {
 function WelcomeBanner() {
   const { user } = useAuth();
   const { t } = useLang();
-  const [kind, setKind] = useState(() => localStorage.getItem('mboppi_welcome'));
-  const [leaving, setLeaving] = useState(false);
+  const [kind, setKind] = useState(null);
+
+  useEffect(() => {
+    try {
+      setKind(localStorage.getItem('mboppi_welcome'));
+    } catch {
+      setKind(null);
+    }
+  }, []);
   const dismiss = useCallback(() => {
     localStorage.removeItem('mboppi_welcome');
     setKind(null);
