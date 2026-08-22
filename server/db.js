@@ -2,25 +2,32 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-const connectionString =
-  process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/marketplace';
+let pool = null;
 
-export const pool = new Pool({
-  connectionString,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
-});
+function getPool() {
+  if (!pool) {
+    const connectionString =
+      process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/marketplace';
+    pool = new Pool({
+      connectionString,
+      ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+    });
 
-pool.on('connect', (client) => {
-  client.query('SET search_path TO public').catch(() => {});
-});
+    pool.on('connect', (client) => {
+      client.query('SET search_path TO public').catch(() => {});
+    });
+  }
+  return pool;
+}
 
 export async function q(text, params = []) {
-  const res = await pool.query(text, params);
+  const p = getPool();
+  const res = await p.query(text, params);
   return res.rows;
 }
 
 export async function withTransaction(fn) {
-  const client = await pool.connect();
+  const client = await getPool().connect();
   try {
     await client.query('BEGIN');
     const tx = {
@@ -38,7 +45,7 @@ export async function withTransaction(fn) {
 }
 
 export async function initDb() {
-  await pool.query(`
+  await getPool().query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
@@ -378,7 +385,7 @@ const NOTIFICATION_RETENTION_DAYS = Number(process.env.NOTIFICATION_RETENTION_DA
 export async function purgeOldTransactions() {
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
   // Les données financières sont conservées par défaut ~7 ans.
-  await pool.query('DELETE FROM notifications WHERE created_at < $1', [new Date(Date.now() - NOTIFICATION_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString()]);
+  await getPool().query('DELETE FROM notifications WHERE created_at < $1', [new Date(Date.now() - NOTIFICATION_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString()]);
   // Ne jamais supprimer automatiquement les ventes/commandes : elles constituent l'historique financier.
   void cutoff;
 }

@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { rateLimit } from 'express-rate-limit';
-import { pool } from './db.js';
+import { q } from './db.js';
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
 import saleRoutes from './routes/sales.js';
@@ -97,7 +97,7 @@ app.get('/', (req, res, next) => {
 app.get('/api/health', async (req, res) => {
   res.set('Cache-Control', 'no-store');
   try {
-    await pool.query('SELECT 1');
+    await q('SELECT 1');
     res.json({ ok: true, db: 'up', time: new Date().toISOString() });
   } catch (err) {
     console.error('Health check failed:', err);
