@@ -147,4 +147,5 @@ export const api = {
   payin: (payload) => request('/payments/payin', { method: 'POST', body: JSON.stringify(payload) }),
   flashPromotions: () => request('/flash-promotions'),
   trending: () => request('/metrics/trending'),
+  createDonation: (payload) => request('/donations', { method: 'POST', body: JSON.stringify(payload) }),
 };
