@@ -155,7 +155,7 @@ export default function Register() {
         <form onSubmit={submit}>
           <label>{t('Pays *')}</label>
           <SearchSelect
-            options={countryOptions}
+            options={COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }))}
             value={form.country}
             onChange={(v) => setForm({ ...form, country: v })}
             placeholder={t('Choisir votre pays…')}
@@ -199,7 +199,7 @@ export default function Register() {
                   <span><Logo className="logo-inline" /> {t('Client')}</span>
                   <small>{t('Je consulte les offres et les produits, je commande facilement')}</small>
                 </label>
-                <label className={`role-option ${form.role === 'creator' ? 'selected' : ''} ${'role-disabled'}`}>
+                <label className={`role-option ${form.role === 'creator' ? 'selected' : ''} role-disabled`}>
                   <input
                     type="radio"
                     name="role"
