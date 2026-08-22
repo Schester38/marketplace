@@ -154,4 +154,10 @@ export function ikeepayEnabled() {
   return Boolean(process.env.IKE_SECRET_KEY && process.env.IKE_PUBLIC_KEY);
 }
 
+export function operatorsForCountry(countryName) {
+  return [
+    'ORANGE', 'MTN', 'WAVE', 'MOOV', 'MOBICASH', 'AIRTEL', 'VODACOM',
+  ];
+}
+
 export default ikeepayFetch;
