@@ -2,6 +2,7 @@ import { Router } from "express";
 import { q } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { updatePaymentMethodsSchema } from "../validators.js";
+import { validate } from "../middlewares/validate.js";
 
 const router = Router();
 

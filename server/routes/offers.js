@@ -3,6 +3,7 @@ import { q } from "../db.js";
 import { defaultCurrencyFor, validCurrency } from "../currency.js";
 import { storePhotoStrings, collectStorageKeys, deleteStorageKeys } from "../storage.js";
 import { offerSchema } from "../validators.js";
+import { validate } from "../middlewares/validate.js";
 
 const router = Router();
 const MAX_PHOTOS = 3;

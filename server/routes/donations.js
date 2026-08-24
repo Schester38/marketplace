@@ -7,6 +7,7 @@ import {
   payin,
 } from "../ikeepay.js";
 import { donationSchema, donationIkeepaySchema } from "../validators.js";
+import { validate } from "../middlewares/validate.js";
 
 const router = Router();
 
