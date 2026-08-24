@@ -692,13 +692,13 @@ export default function Navbar({ onLogout }) {
     </Link>
   );
 
-  const userIcon = user ? null : (
+  const accountLink = (
     <Link
-      to="/login"
+      to={user ? '/compte' : '/login'}
       className="nav-icon-link"
       onClick={close}
-      aria-label={t('Connexion')}
-      title={t('Connexion')}
+      aria-label={user ? t('Mon compte') : t('Connexion')}
+      title={user ? t('Mon compte') : t('Connexion')}
     >
       <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
     </Link>
@@ -721,6 +721,7 @@ export default function Navbar({ onLogout }) {
         <LangSwitcher />
         {themeToggle}
         {liteToggle}
+        {user && <NotifBell />}
       </div>
       <FollowUs />
       <SuggestionButton onOpened={close} />
@@ -809,30 +810,9 @@ export default function Navbar({ onLogout }) {
         </div>
 
         <div className="navbar-top-right">
-          <div className="top-nav-actions">
-            <LangSwitcher />
-            {themeToggle}
-            <button
-              className={`theme-toggle lite-toggle ${lite ? 'active' : ''}`}
-              onClick={toggleLite}
-              aria-label={t('Mode faible connexion (économie de données)')}
-              title={lite ? t('Mode économie actif — cliquer pour désactiver') : t('Activer le mode faible connexion (économie de données)')}
-            >
-              {lite ? '🐢' : '📶'}
-            </button>
-            {favLink}
-            {cartLink}
-            {userIcon}
-          </div>
-
-          <div className="top-user-area">
-            {!user && (
-              <Link to="/login" className="nav-user-btn" onClick={close}>{t('Connexion')}</Link>
-            )}
-            <NotifBell />
-            <span className="nav-cart-desktop">{cartLink}</span>
-          </div>
-
+          {favLink}
+          {cartLink}
+          {accountLink}
           <button
             className="hamburger"
             aria-label={t('Ouvrir le menu')}
@@ -886,11 +866,7 @@ export default function Navbar({ onLogout }) {
         <>
           {open && <div className="drawer-overlay" onClick={close} aria-hidden="true"></div>}
           <aside className={`drawer ${open ? 'open' : ''}`} aria-hidden={!open} role="dialog" aria-modal="true" aria-label={t('Menu principal')}>
-        <div className="drawer-header">
-          <img src="/navbar-logo.png" alt="Mboppi" className="brand-logo" />
-          <span>Mboppi</span>
-          <button className="drawer-close" aria-label={t('Fermer le menu')} onClick={close}>✕</button>
-        </div>
+        <button type="button" className="drawer-float-close" aria-label={t('Fermer le menu')} onClick={close}>✕</button>
         {tools}
         <nav className="drawer-nav">{navLinks}</nav>
         {canInstall && (

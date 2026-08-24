@@ -57,6 +57,20 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
   const triggerRef = useRef(null);
   const [pos, setPos] = useState(null);
   const isOpen = megaMenuOpen === cat.label;
+  const leaveTimer = useRef(null);
+
+  // Petite grâce avant fermeture : laisse descendre le curseur vers le panneau
+  const cancelLeave = () => {
+    if (leaveTimer.current) {
+      clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+    }
+  };
+  const delayedLeave = () => {
+    cancelLeave();
+    leaveTimer.current = setTimeout(() => handleMegaMenuLeave(), 220);
+  };
+  useEffect(() => () => cancelLeave(), []);
 
   // Panneau PORTALÉ vers <body> en fixed : l'overflow-x du conteneur de la
   // barre rognerait sinon le panneau verticalement (clip Y forcé).
@@ -74,7 +88,7 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
       const rtl = document.documentElement.getAttribute('dir') === 'rtl';
       let left = rtl ? r.right - width : r.left;
       left = Math.max(12, Math.min(left, vw - width - 12));
-      setPos({ top: Math.round(r.bottom + 6), left: Math.round(left), width });
+      setPos({ top: Math.round(r.bottom - 1), left: Math.round(left), width });
     };
     update();
     const closeOnMove = () => handleMegaMenuLeave();
@@ -93,8 +107,8 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
       <div
         key={cat.label}
         className="mega-menu-trigger"
-        onMouseEnter={() => handleMegaMenuEnter(cat.label)}
-        onMouseLeave={handleMegaMenuLeave}
+        onMouseEnter={() => { cancelLeave(); handleMegaMenuEnter(cat.label); }}
+        onMouseLeave={delayedLeave}
       >
         <Link
           ref={triggerRef}
@@ -106,8 +120,8 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
           aria-selected={false}
           aria-haspopup="true"
           aria-expanded={isOpen}
-          onFocus={() => handleMegaMenuEnter(cat.label)}
-          onBlur={() => setTimeout(() => handleMegaMenuLeave(), 100)}
+          onFocus={() => { cancelLeave(); handleMegaMenuEnter(cat.label); }}
+          onBlur={delayedLeave}
         >
           <span className="cat-icon" aria-hidden="true">{cat.icon}</span>
           <span className="cat-label">{cat.label}</span>
@@ -125,9 +139,12 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
             left: pos.left,
             width: pos.width,
             borderRadius: 14,
+            maxHeight: 'min(70vh, 520px)',
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
           }}
-          onMouseEnter={() => handleMegaMenuEnter(cat.label)}
-          onMouseLeave={handleMegaMenuLeave}
+          onMouseEnter={() => { cancelLeave(); handleMegaMenuEnter(cat.label); }}
+          onMouseLeave={delayedLeave}
         >
           <MegaMenuContent cat={cat} t={t} closeMegaMenu={closeMegaMenu} />
         </div>,
