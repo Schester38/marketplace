@@ -55,9 +55,20 @@ function MegaMenuContent({ cat, t, closeMegaMenu }) {
 
 function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMenuLeave, close, t, closeMegaMenu, activeCat }) {
   const triggerRef = useRef(null);
+  const panelRef = useRef(null);
   const [pos, setPos] = useState(null);
   const isOpen = megaMenuOpen === cat.label;
   const leaveTimer = useRef(null);
+  const lastTouchAt = useRef(0);
+  // Appareils SANS survol (téléphone/tablette) : piloter le panneau au
+  // toucher, pas au mouseenter (événements souris synthétiques sur tactile).
+  const [touchMode] = useState(() => {
+    try {
+      return typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+    } catch {
+      return false;
+    }
+  });
 
   // Petite grâce avant fermeture : laisse descendre le curseur vers le panneau
   const cancelLeave = () => {
@@ -91,6 +102,24 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
       setPos({ top: Math.round(r.bottom - 1), left: Math.round(left), width });
     };
     update();
+    if (touchMode) {
+      // Tactile : PAS de fermeture sur scroll (le scrollIntoView automatique
+      // de la catégorie active et les swipes de la barre fermaient le panneau
+      // aussitôt ouvert). À la place : fermeture au tap à l'extérieur,
+      // et simple repositionnement au redimensionnement/rotation.
+      const onDocDown = (e) => {
+        const tgt = e.target;
+        if (panelRef.current && panelRef.current.contains(tgt)) return;
+        if (triggerRef.current && triggerRef.current.contains(tgt)) return;
+        handleMegaMenuLeave();
+      };
+      window.addEventListener('resize', update);
+      document.addEventListener('pointerdown', onDocDown);
+      return () => {
+        window.removeEventListener('resize', update);
+        document.removeEventListener('pointerdown', onDocDown);
+      };
+    }
     const closeOnMove = () => handleMegaMenuLeave();
     window.addEventListener('resize', closeOnMove);
     window.addEventListener('scroll', closeOnMove, true);
@@ -98,7 +127,7 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
       window.removeEventListener('resize', closeOnMove);
       window.removeEventListener('scroll', closeOnMove, true);
     };
-  }, [isOpen, handleMegaMenuLeave]);
+  }, [isOpen, touchMode, handleMegaMenuLeave]);
 
   const mainTarget = cat.main || cat.label;
 
@@ -107,19 +136,37 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
       <div
         key={cat.label}
         className="mega-menu-trigger"
-        onMouseEnter={() => { cancelLeave(); handleMegaMenuEnter(cat.label); }}
+        onTouchStart={() => { lastTouchAt.current = Date.now(); }}
+        onMouseEnter={() => {
+          // Ignorer les événements souris SYNTHÉTIQUES qui suivent un tap tactile
+          if (Date.now() - lastTouchAt.current < 800) return;
+          cancelLeave();
+          handleMegaMenuEnter(cat.label);
+        }}
         onMouseLeave={delayedLeave}
       >
         <Link
           ref={triggerRef}
           to={`/?cat=${encodeURIComponent(mainTarget)}`}
-          onClick={close}
           data-cat={mainTarget}
           className={`cat-link mega-link${activeCat === mainTarget ? ' cat-active' : ''}`}
           role="tab"
           aria-selected={false}
           aria-haspopup="true"
           aria-expanded={isOpen}
+          onClick={(e) => {
+            if (!touchMode) { close(); return; } // Desktop : navigation directe
+            // Tactile : 1ᵉʳ appui = OUVRIR le panneau (sans naviguer),
+            // 2ᵉ appui = refermer. La navigation passe par les sous-catégories
+            // ou le lien « Voir tout » du panneau.
+            e.preventDefault();
+            if (isOpen) {
+              handleMegaMenuLeave();
+            } else {
+              cancelLeave();
+              handleMegaMenuEnter(cat.label);
+            }
+          }}
           onFocus={() => { cancelLeave(); handleMegaMenuEnter(cat.label); }}
           onBlur={delayedLeave}
         >
@@ -130,6 +177,7 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
       </div>
       {isOpen && pos && createPortal(
         <div
+          ref={panelRef}
           className="mega-menu open"
           role="menu"
           aria-label={cat.label}
@@ -143,7 +191,11 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
             overflowY: 'auto',
             overscrollBehavior: 'contain',
           }}
-          onMouseEnter={() => { cancelLeave(); handleMegaMenuEnter(cat.label); }}
+          onMouseEnter={() => {
+            if (Date.now() - lastTouchAt.current < 800) return;
+            cancelLeave();
+            handleMegaMenuEnter(cat.label);
+          }}
           onMouseLeave={delayedLeave}
         >
           <MegaMenuContent cat={cat} t={t} closeMegaMenu={closeMegaMenu} />

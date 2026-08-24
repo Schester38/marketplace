@@ -5193,3 +5193,23 @@ tr.tr-hidden td { opacity: 0.55; }
     margin-inline: auto;
   }
 }
+
+/* ============================================================
+   v107 — Méga-menu tactile + quick-links sans débordement
+   ============================================================ */
+
+/* Téléphones étroits : libellés des 3 boutons rapides sur 2 lignes
+   (min-width:0 autorise le rétrécissement, nowrap supprimé) au lieu
+   de pousser la rangée hors de l'écran */
+@media (max-width: 480px) {
+  .cat-quick { gap: 6px; }
+  .cat-quick .quick-link {
+    min-width: 0;
+    white-space: normal;
+    text-align: center;
+    font-size: 0.68rem;
+    line-height: 1.25;
+    padding: 8px 4px;
+  }
+}
+
