@@ -8,22 +8,39 @@ import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { urlBase64ToUint8Array } from '../utils.js';
 import { formatMoney } from './ProductCard.jsx';
 import { countrySymbol, PRODUCT_CATEGORIES, categoryEmoji, categoryIcon } from '../config.js';
+import { MegaMenu } from './MegaMenu.jsx';
 import { useLite } from '../liteMode.js';
 import SuggestionButton from './SuggestionButton.jsx';
+import {
+  IconGrid, IconStore, IconPackage, IconBolt,
+  IconSmartphone, IconShirt, IconSofa, IconBrush, IconDumbbell,
+  IconCar, IconUtensils, IconBook, IconLeaf, IconWrench,
+} from './icons.jsx';
 
-const CATEGORY_SUBCATEGORIES = {
-  'Électronique': ['Téléphones', 'Ordinateurs', 'Accessoires', 'Audio', 'Gaming', 'Montres connectées'],
-  'Mode': ["Vêtements Homme", "Vêtements Femme", "Chaussures", "Sacs", "Accessoires", "Montres & Bijoux"],
-  'Maison & Déco': ['Meubles', 'Literie', 'Cuisine', 'Déco', 'Rangement', 'Jardin'],
-  'Beauté & Santé': ['Soins visage', 'Maquillage', 'Parfums', 'Cheveux', 'Hygiène', 'Santé'],
-  'Sport & Loisirs': ['Fitness', 'Sports collectifs', 'Extérieur', 'Vélo', 'Natation', 'Jeux'],
-  'Auto & Moto': ['Pièces auto', 'Accessoires moto', 'Entretien', 'Électronique embarquée', 'Sécurité'],
-  'Alimentation': ['Épicerie', 'Boissons', 'Frais', 'Bio', 'Spécialités', 'Bébé'],
-  'Bricolage': ['Outillage', 'Quincaillerie', 'Peinture', 'Électricité', 'Plomberie', 'Matériaux'],
-  'Jouets & Enfants': ['Éveil', 'Jeux de société', 'Poupées', 'Véhicules', 'Construction', 'Extérieur'],
-  'Livres & Culture': ['Romans', 'BD & Mangas', 'Jeunesse', 'Scolaire', 'Loisirs créatifs', 'Musique'],
-  'Services': ['Réparation', 'Cours', 'Livraison', 'Installation', 'Nettoyage', 'Autres'],
-};
+// Groupes de la barre de catégories statique : chaque groupe ouvre un
+// méga-menu listant de vraies catégories de PRODUCT_CATEGORIES (liens /?cat=…).
+const NAV_GROUPS = [
+  { label: 'Électronique', main: 'Téléphones & Tablettes', Icon: IconSmartphone,
+    subs: ['Téléphones & Tablettes', 'Ordinateurs & Accessoires', 'TV, Audio & Vidéo', 'Consoles & Jeux vidéo'] },
+  { label: 'Mode', main: 'Mode & Vêtements', Icon: IconShirt,
+    subs: ['Mode & Vêtements', 'Chaussures', 'Sacs & Accessoires', 'Bijoux & Montres'] },
+  { label: 'Maison & Déco', main: 'Maison & Déco', Icon: IconSofa,
+    subs: ['Maison & Déco', 'Meubles', 'Cuisine & Ustensiles', 'Linge de maison', 'Électroménager'] },
+  { label: 'Beauté & Santé', main: 'Beauté & Cosmétiques', Icon: IconBrush,
+    subs: ['Beauté & Cosmétiques', 'Parfums', 'Soins capillaires', 'Santé & Bien-être'] },
+  { label: 'Sport & Loisirs', main: 'Sport & Fitness', Icon: IconDumbbell,
+    subs: ['Sport & Fitness', 'Jouets & Jeux', 'Bébé & Enfants'] },
+  { label: 'Auto & Moto', main: 'Auto & Moto', Icon: IconCar,
+    subs: ['Auto & Moto'] },
+  { label: 'Alimentation', main: 'Alimentation & Épicerie', Icon: IconUtensils,
+    subs: ['Alimentation & Épicerie', 'Produits frais & Marché', 'Boissons'] },
+  { label: 'Arts & Culture', main: 'Livres & Formation', Icon: IconBook,
+    subs: ['Livres & Formation', 'Papeterie & Bureau', 'Arts & Artisanat'] },
+  { label: 'Jardin & Ext.', main: 'Jardin & Extérieur', Icon: IconLeaf,
+    subs: ['Jardin & Extérieur', 'Animaux & Accessoires'] },
+  { label: 'Services', main: 'Services & Prestations', Icon: IconWrench,
+    subs: ['Services & Prestations', 'Immobilier'] },
+];
 
 function LangSwitcher() {
   const { lang, setLang, t } = useLang();
@@ -614,14 +631,14 @@ export default function Navbar({ onLogout }) {
   const favLink = (
     <Link to="/favoris" className="nav-icon-link" onClick={close} aria-label={t('Mes favoris')} title={t('Mes favoris')}>
       <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-      {favs.length > 0 && <span className="nav-badge">{favs.length}</span>}
+      {favs.length > 0 && <span className="nav-badge bump" key={`f${favs.length}`}>{favs.length}</span>}
     </Link>
   );
 
   const cartLink = (
     <Link to="/panier" className="nav-icon-link" onClick={close} aria-label={t('Mon panier')} title={t('Mon panier')}>
       <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-      {cartCount > 0 && <span className="nav-badge">{cartCount > 99 ? '99+' : cartCount}</span>}
+      {cartCount > 0 && <span className="nav-badge bump" key={`c${cartCount}`}>{cartCount > 99 ? '99+' : cartCount}</span>}
     </Link>
   );
 
@@ -684,10 +701,11 @@ export default function Navbar({ onLogout }) {
     </form>
   );
 
-  const megaMenuItems = PRODUCT_CATEGORIES.map((cat) => ({
-    label: cat,
-    icon: categoryIcon(cat),
-    subcategories: CATEGORY_SUBCATEGORIES[cat] || [],
+  const megaMenuItems = NAV_GROUPS.map((g) => ({
+    label: t(g.label),
+    main: g.main,
+    icon: <g.Icon size={15} />,
+    subcategories: g.subs,
   }));
 
   const navLinks = (
@@ -722,15 +740,6 @@ export default function Navbar({ onLogout }) {
       {!user && <Link to="/login" onClick={close}>{t('Connexion')}</Link>}
     </>
 );
-
-  const categoryItems = [
-    { id: 'all', label: t('Tous'), icon: <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg> },
-    ...PRODUCT_CATEGORIES.slice(0, 12).map((c) => ({
-      id: c,
-      label: t(c),
-      icon: <span className="cat-emoji" aria-hidden="true">{categoryEmoji(c)}</span>,
-    })),
-  ];
 
   const handleMegaMenuEnter = (catId) => setMegaMenuOpen(catId);
   const handleMegaMenuLeave = () => setMegaMenuOpen(null);
@@ -788,95 +797,37 @@ export default function Navbar({ onLogout }) {
         </div>
       </div>
 
-      {/* Category bar - Line 2 */}
+      {/* Category bar - Line 2 : barre statique cliquable + méga-menu + liens rapides */}
       <nav className="cat-bar" aria-label={t('Catégories')} role="navigation">
         <div className="cat-bar-inner">
-          <div className="cat-strips" role="tablist" aria-label={t('Catégories')}>
-            {[0, 1].map((copy) => (
-              <div className="cat-strip" key={copy} role="presentation" aria-hidden={copy === 1 || undefined}>
-                <div className="cat-strip-track">
-                  <div className="cat-strip-set" role="presentation">
-                    {categoryItems.map((cat) => (
-                      <Link
-                        key={cat.id}
-                        to={cat.id === 'all' ? '/' : `/?cat=${encodeURIComponent(cat.label === t('Tous') ? 'Tous' : cat.id)}`}
-                        onClick={close}
-                        className="cat-link"
-                        role="tab"
-                        aria-selected={false}
-                      >
-                        <span className="cat-icon" aria-hidden="true">{cat.icon}</span>
-                        <span className="cat-label">{cat.label}</span>
-                      </Link>
-                    ))}
-                    {megaMenuItems.map((cat) => (
-                      <div key={cat.label} className="mega-menu-trigger">
-                        <Link
-                          to={`/?cat=${encodeURIComponent(cat.label)}`}
-                          onClick={close}
-                          className="cat-link mega-link"
-                          role="tab"
-                          aria-selected={false}
-                          aria-haspopup="true"
-                          aria-expanded={megaMenuOpen === cat.label}
-                          onMouseEnter={() => handleMegaMenuEnter(cat.label)}
-                          onMouseLeave={handleMegaMenuLeave}
-                          onFocus={() => handleMegaMenuEnter(cat.label)}
-                          onBlur={() => setTimeout(() => handleMegaMenuLeave(), 100)}
-                        >
-                          <span className="cat-icon" aria-hidden="true">{cat.icon}</span>
-                          <span className="cat-label">{cat.label}</span>
-                          <svg className="mega-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                        </Link>
-                        <div
-                          className={`mega-menu${megaMenuOpen === cat.label ? ' open' : ''}`}
-                          role="menu"
-                          aria-label={cat.label}
-                          onMouseEnter={() => handleMegaMenuEnter(cat.label)}
-                          onMouseLeave={handleMegaMenuLeave}
-                        >
-                          <div className="mega-menu-content">
-                            <div className="mega-menu-header">
-                              <span className="mega-menu-title">{cat.icon} {cat.label}</span>
-                            </div>
-                            <div className="mega-menu-grid">
-                              {cat.subcategories.map((sub) => (
-                                <Link
-                                  key={sub}
-                                  to={`/?cat=${encodeURIComponent(cat.label)}&sub=${encodeURIComponent(sub)}`}
-                                  onClick={closeMegaMenu}
-                                  className="mega-menu-item"
-                                  role="menuitem"
-                                >
-                                  <span className="mega-item-icon">{categoryIcon(sub)}</span>
-                                  <span className="mega-item-label">{t(sub)}</span>
-                                </Link>
-                              ))}
-                            </div>
-                            {'}'}
-                          </div>
-                          {'}'}
-                        </div>
-                        {'}'}
-                      ))}
-                      {'}'}
-                      {'}'}
-                      {'}'}
-                      {'}'}
-                      {'}'}
-                      {'}'}
-                      {'}'}
-                      {'}'}
-                      {'}'}
-                      {'}'}
-                      {'}'}
-                      {'}'}
-                      {'}'}
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="cat-links" aria-label={t('Parcourir les catégories')}>
+            <Link to="/" onClick={close} className="cat-link cat-link-all" role="tab" aria-selected={false}>
+              <span className="cat-icon" aria-hidden="true"><IconGrid size={14} /></span>
+              <span className="cat-label">{t('Tous')}</span>
+            </Link>
+            <MegaMenu
+              megaMenuItems={megaMenuItems}
+              megaMenuOpen={megaMenuOpen}
+              handleMegaMenuEnter={handleMegaMenuEnter}
+              handleMegaMenuLeave={handleMegaMenuLeave}
+              close={close}
+              closeMegaMenu={closeMegaMenu}
+              t={t}
+            />
+          </div>
+          <div className="cat-quick" aria-label={t('Liens rapides')}>
+            <Link to="/register" onClick={close} className="quick-link quick-accent">
+              <IconStore size={14} />
+              <span>{t('Vendre sur Mboppi')}</span>
+            </Link>
+            <Link to={user ? '/compte' : '/login'} onClick={close} className="quick-link">
+              <IconPackage size={14} />
+              <span>{t('Suivi de commande')}</span>
+            </Link>
+            <Link to="/?rail=promos" onClick={close} className="quick-link quick-flash">
+              <IconBolt size={14} />
+              <span>{t('Promotions')}</span>
+            </Link>
           </div>
         </div>
       </nav>

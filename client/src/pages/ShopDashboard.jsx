@@ -12,6 +12,9 @@ import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from '../config.js';
 import { useLang } from '../i18n.jsx';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import ExportSalesButton from '../components/ExportSalesButton.jsx';
+import {
+  IconCart, IconChartBar, IconTruck, IconBanknote, IconAward, IconStore,
+} from '../components/icons.jsx';
 
 const EMPTY_FORM = {
   name: '',
@@ -452,7 +455,46 @@ export default function ShopDashboard() {
         </div>
       </section>
 
-      <section className="card seller-code-card">
+      <div className="dash-shell">
+        <nav className="dash-nav" aria-label={t('Navigation du tableau de bord')}>
+          <a href="#dash-code">🔑 {t('Code livreur')}</a>
+          <a href="#dash-promos">⚡ {t('Promotions éclair')}</a>
+          <a href="#dash-produits">{t('Mes produits')}</a>
+          <a href="#dash-stats">📊 {t('Statistiques')}</a>
+          <Link to="/shop/paiements">{t('Paiements')}</Link>
+          <Link to="/shop/livreurs">{t('Livreurs')}</Link>
+        </nav>
+        <div className="dash-main">
+          {stats && (
+            <section className="kpi-grid" aria-label={t('Indicateurs clés')}>
+              <div className="kpi-card">
+                <span className="kpi-icon ki-blue" aria-hidden="true"><IconCart size={20} /></span>
+                <span className="kpi-body"><span className="kpi-value">{stats.total_sales}</span><span className="kpi-label">{t('Ventes enregistrées')}</span></span>
+              </div>
+              <div className="kpi-card">
+                <span className="kpi-icon ki-green" aria-hidden="true"><IconChartBar size={20} /></span>
+                <span className="kpi-body"><span className="kpi-value">{formatMoney(stats.revenue)} {symbol}</span><span className="kpi-label">{t("Chiffre d'affaires")}</span></span>
+              </div>
+              <div className="kpi-card">
+                <span className="kpi-icon ki-violet" aria-hidden="true"><IconTruck size={20} /></span>
+                <span className="kpi-body"><span className="kpi-value">{formatMoney(stats.delivery_revenue)} {symbol}</span><span className="kpi-label">{t('Livraisons')}</span></span>
+              </div>
+              <div className={`kpi-card${Number(stats.owed_commission) > 0 ? ' kpi-danger' : ''}`}>
+                <span className="kpi-icon ki-orange" aria-hidden="true"><IconBanknote size={20} /></span>
+                <span className="kpi-body"><span className="kpi-value">{formatMoney(stats.owed_commission)} {symbol}</span><span className="kpi-label">{t('Commissions à verser')}</span></span>
+              </div>
+              <div className="kpi-card">
+                <span className="kpi-icon ki-green" aria-hidden="true"><IconAward size={20} /></span>
+                <span className="kpi-body"><span className="kpi-value">{formatMoney(stats.paid_commission)} {symbol}</span><span className="kpi-label">{t('Commissions versées')}</span></span>
+              </div>
+              <div className={`kpi-card${products.length >= 5 ? ' kpi-warn' : ''}`}>
+                <span className="kpi-icon ki-blue" aria-hidden="true"><IconStore size={20} /></span>
+                <span className="kpi-body"><span className="kpi-value">{products.length} / 5</span><span className="kpi-label">{t('Produits en ligne')}</span></span>
+              </div>
+            </section>
+          )}
+
+      <section className="card seller-code-card" id="dash-code">
         <div>
           <h2>🔑 {t('Code livreur')}</h2>
           <p className="hint" style={{ marginTop: 0 }}>
@@ -475,7 +517,7 @@ export default function ShopDashboard() {
         </div>
       </section>
 
-      <section className="card stats">
+      <section className="card stats" id="dash-promos">
         <h2>⚡ {t('Promotions éclair')}</h2>
         <p className="hint" style={{ marginTop: 0 }}>
           {t('Proposez un produit à durée limitée (24 h maximum, une promotion par semaine). Pendant la promotion, le produit disparaît du catalogue : seul l\'accès à la promotion reste possible. À la fin du temps, la promotion disparaît et le produit réapparaît s\'il reste en stock.')}
@@ -804,7 +846,7 @@ export default function ShopDashboard() {
       {products.length === 0 ? (
         <p className="empty">{t('Aucun produit pour le moment. Ajoutez votre premier produit (max 5).')}</p>
       ) : (
-        <div className="grid">
+        <div className="grid" id="dash-produits">
           {products.map((p) => (
             <ProductCard
               key={p.id}
@@ -820,7 +862,7 @@ export default function ShopDashboard() {
       )}
 
       <section className="card stats">
-        <div className="stats-head">
+        <div className="stats-head" id="dash-stats">
           <h2>{t('Statistiques des ventes')}</h2>
           <ExportSalesButton />
         </div>
@@ -1048,6 +1090,8 @@ export default function ShopDashboard() {
           </div>
         </div>
       )}
+        </div>
+      </div>
     </main>
   );
 }

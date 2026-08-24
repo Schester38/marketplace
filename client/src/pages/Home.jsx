@@ -2,11 +2,15 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
-import ProductRail from '../components/ProductRail.jsx';
+import ProductRail, { RailShell } from '../components/ProductRail.jsx';
 import FlashPromoCard from '../components/FlashPromo.jsx';
 import Seo from '../components/Seo.jsx';
 import RecentSales from '../components/RecentSales.jsx';
 import Logo from '../components/Logo.jsx';
+import HeroCarousel from '../components/HeroCarousel.jsx';
+import CategoryGrid from '../components/CategoryGrid.jsx';
+import TrustBadges from '../components/TrustBadges.jsx';
+import Reveal from '../components/Reveal.jsx';
 import { useLang } from '../i18n.jsx';
 import { PRODUCT_CATEGORIES, currencySymbol } from '../config.js';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
@@ -54,7 +58,13 @@ export default function Home() {
   const [bestSellers, setBestSellers] = useState([]);
   const [popular, setPopular] = useState([]);
   const [flashPromos, setFlashPromos] = useState([]);
-  const [activeRail, setActiveRail] = useState('');
+  const [activeRail, setActiveRail] = useState(() => params.get('rail') || '');
+
+  // Lien « Promotions » du header : /?rail=promos ouvre directement le rail.
+  useEffect(() => {
+    const r = params.get('rail');
+    if (r) setActiveRail(r);
+  }, [params]);
   const [recent, setRecent] = useState([]);
 
   useEffect(() => {
@@ -359,6 +369,17 @@ const loadProducts = useCallback(
 
       <RecentSales />
 
+      {/* Refonte 2026 : carrousel promo, grille de catégories illustrée et badges de confiance */}
+      <Reveal>
+        <HeroCarousel onExplore={goToProducts} />
+      </Reveal>
+      <Reveal delay={70}>
+        <CategoryGrid />
+      </Reveal>
+      <Reveal delay={140}>
+        <TrustBadges />
+      </Reveal>
+
       {!user && (
         <>
       <section className="hero vitrine-hero">
@@ -572,17 +593,16 @@ const loadProducts = useCallback(
               )}
               {activeRail === 'promos' && (
                 flashPromos.length > 0 ? (
-                <section aria-label={t('Promotions du jour')} className="product-rail">
-                  <div className="section-head">
-                    <h2 className="section-title">⚡ {t('Promotions du jour')}</h2>
-                    <p className="hint">{t('Des offres à durée limitée : dépêchez-vous !')}</p>
-                  </div>
-                  <div className="rail-scroll">
-                    {flashPromos.map((pr) => (
-                      <FlashPromoCard key={pr.id} promo={pr} />
-                    ))}
-                  </div>
-                </section>
+                <RailShell
+                  title={t('Promotions du jour')}
+                  hint={t('Des offres à durée limitée : dépêchez-vous !')}
+                  emoji="⚡"
+                  ariaLabel={t('Promotions du jour')}
+                >
+                  {flashPromos.map((pr) => (
+                    <FlashPromoCard key={pr.id} promo={pr} />
+                  ))}
+                </RailShell>
                 ) : (
                   <p className="hint home-tabs-empty">{t('Aucune promotion du jour pour le moment. Les boutiques peuvent en lancer une depuis leur espace.')}</p>
                 )

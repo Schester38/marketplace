@@ -4,9 +4,27 @@ import { countrySymbol, waLink } from '../config.js';
 import { useAuth } from '../App.jsx';
 import { useLang } from '../i18n.jsx';
 import { useCart, useFavs } from '../store.jsx';
+import {
+  IconHeart, IconHeartFilled, IconWhatsApp, IconPackage,
+  IconClock, IconFire, IconCart, IconStar, IconStarFilled, IconShieldCheck, IconCheck
+} from './icons.jsx';
 
 export function formatMoney(n) {
   return new Intl.NumberFormat('fr-FR').format(Number(n || 0));
+}
+
+function Stars({ value, size = 14 }) {
+  const v = Math.max(0, Math.min(5, Number(value) || 0));
+  const full = Math.round(v);
+  return (
+    <span className="stars-inline" style={{ display: 'inline-flex', gap: 1, alignItems: 'center' }}>
+      {[0, 1, 2, 3, 4].map((i) => (
+        i < full
+          ? <IconStarFilled key={i} size={size} style={{ color: '#f59e0b' }} />
+          : <IconStar key={i} size={size} style={{ color: '#d1d5db' }} />
+      ))}
+    </span>
+  );
 }
 
 export default function ProductCard({ product, action, onAction, secondaryAction, onSecondaryAction, showCommission, badge, extraAction }) {
@@ -36,7 +54,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
     e.stopPropagation();
     addToCart(product, 1);
     setAdded(true);
-    setTimeout(() => setAdded(false), 1200);
+    setTimeout(() => setAdded(false), 1500);
   };
 
   return (
@@ -46,7 +64,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
           {photo ? (
             <img src={photo} alt={product.name} loading="lazy" decoding="async" />
           ) : (
-            <span>📦</span>
+            <span className="product-thumb-fallback"><IconPackage size={40} /></span>
           )}
         </div>
       </Link>
@@ -63,7 +81,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
           toggleFav(product.id);
         }}
       >
-        {fav ? '❤️' : '🤍'}
+        {fav ? <IconHeartFilled size={18} /> : <IconHeart size={18} />}
       </button>
       <a
         className="share-btn"
@@ -74,21 +92,18 @@ export default function ProductCard({ product, action, onAction, secondaryAction
         title={t('Partager')}
         onClick={(e) => e.stopPropagation()}
       >
-        <ShareIcon />
+        <IconWhatsApp size={18} />
       </a>
       {flash && <span className="badge badge-promo">-{flash.discount_percent}%</span>}
       {hasPromo && !flash && <span className="badge badge-promo">-{promoPct}%</span>}
-      {pendingCount > 0 && <span className="badge badge-pending">⏳ {pendingCount} {t('en attente')}</span>}
-      {sold > 0 && <span className="badge badge-sold">🔥 {sold} {t('vendus')}</span>}
+      {pendingCount > 0 && <span className="badge badge-pending"><IconClock size={12} /> {pendingCount} {t('en attente')}</span>}
+      {sold > 0 && <span className="badge badge-sold"><IconFire size={12} /> {sold} {t('vendus')}</span>}
       {badge && <span className={`badge ${badge.cls}`}>{badge.text}</span>}
       <Link to={`/produit/${product.id}`} className="product-body">
         <h3>{product.name}</h3>
         {product.review_count > 0 && (
           <p className="card-rating">
-            <span className="stars stars-12">
-              {'★'.repeat(Math.round(Number(product.rating_avg) || 0))}
-              {'☆'.repeat(5 - Math.round(Number(product.rating_avg) || 0))}
-            </span>
+            <Stars value={product.rating_avg} size={13} />
             <span className="rating-count">
               {Number(product.rating_avg).toFixed(1)} ({product.review_count})
             </span>
@@ -100,7 +115,7 @@ export default function ProductCard({ product, action, onAction, secondaryAction
               to={product.shop_role === 'creator' ? `/createur/${product.shop_id}` : `/boutique/${product.shop_id}`}
               onClick={(e) => e.stopPropagation()}
             >
-              {product.shop_name} {product.shop_verified && <span title={t('Boutique vérifiée')}>✓</span>}
+              {product.shop_name} {product.shop_verified && <IconShieldCheck size={12} style={{ color: '#2563eb', verticalAlign: '-2px', display: 'inline-block' }} title={t('Boutique vérifiée')} />}
             </Link>
           </p>
         )}
@@ -130,32 +145,18 @@ export default function ProductCard({ product, action, onAction, secondaryAction
           </>
         ) : (
           <button
-            className={`btn btn-block ${qty > 0 ? 'btn-cart' : ''}`}
+            className={`btn btn-block ${qty > 0 ? 'btn-cart' : ''} ${added ? 'bump' : ''}`}
             disabled={qty <= 0}
             onClick={add}
           >
-            {added ? t('Ajouté au panier ✓') : qty > 0 ? `🛒 ${t('Ajouter au panier')}` : t('Rupture de stock')}
+            {added
+              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconCheck size={14} />{t('Ajouté au panier')}</span>
+              : qty > 0
+                ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconCart size={14} />{t('Ajouter au panier')}</span>
+                : t('Rupture de stock')}
           </button>
         )}
       </div>
     </div>
-  );
-}
-
-function ShareIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
   );
 }

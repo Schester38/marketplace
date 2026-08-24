@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Seo from '../components/Seo.jsx';
 import { api } from '../api.js';
@@ -13,6 +13,7 @@ import Reviews from '../components/Reviews.jsx';
 import Logo from '../components/Logo.jsx';
 import ReviewQuote from '../components/ReviewQuote.jsx';
 import { useLite, isLite } from '../liteMode.js';
+import { IconTruck, IconBanknote, IconShieldCheck, IconPackage, IconLayers } from '../components/icons.jsx';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -161,9 +162,39 @@ export default function ProductDetail() {
     return () => window.removeEventListener('keydown', onKey);
   }, [lightbox, photos.length]);
 
+  // Galerie façon Amazon : zoom au survol (origine suivant le curseur) + swipe mobile.
+  const pdMainRef = useRef(null);
+  const pdTouchX = useRef(null);
+  const pdRtl = (() => {
+    try {
+      return document.documentElement.getAttribute('dir') === 'rtl' ? -1 : 1;
+    } catch {
+      return 1;
+    }
+  })();
+  const onPdMouseMove = (e) => {
+    const el = pdMainRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    el.style.setProperty('--zx', `${(((e.clientX - r.left) / r.width) * 100).toFixed(2)}%`);
+    el.style.setProperty('--zy', `${(((e.clientY - r.top) / r.height) * 100).toFixed(2)}%`);
+  };
+  const onPdTouchStart = (e) => {
+    pdTouchX.current = e.touches && e.touches[0] ? e.touches[0].clientX : null;
+  };
+  const onPdTouchEnd = (e) => {
+    if (pdTouchX.current == null || photos.length < 2) return;
+    const dx = e.changedTouches[0].clientX - pdTouchX.current;
+    if (Math.abs(dx) > 42) {
+      setLightboxIndex((i) => (i + (dx < 0 ? 1 : -1) + photos.length) % photos.length);
+    }
+    pdTouchX.current = null;
+  };
+
   if (error) {
     return (
-      <main className="container narrow">
+      <main className="container pd-page">
         <p className="error">{error}</p>
         <Link to="/" className="btn btn-outline">← {t('Retour aux produits')}</Link>
       </main>
@@ -172,7 +203,7 @@ export default function ProductDetail() {
 
   if (!product || Number(product.id) !== Number(id)) {
     return (
-      <main className="container narrow">
+      <main className="container pd-page">
         <div className="card page-center">
           <div className="skeleton-block" style={{ height: 260 }}></div>
         </div>
@@ -202,7 +233,7 @@ export default function ProductDetail() {
   };
 
   return (
-    <main className="container narrow">
+    <main className="container pd-page">
       <Seo
         title={`${product.name} — Mboppi`}
         description={t('Découvrez « {name} » à {price} {symbol} chez {shop} sur Mboppi.', {
@@ -230,51 +261,79 @@ export default function ProductDetail() {
         </div>
       )}
 
-      <div className="card offer-detail">
-        <div
-          className="offer-photo"
-          style={{ height: 260, cursor: photos.length > 0 && photoShown ? 'zoom-in' : undefined }}
-          onClick={() => photos.length > 0 && photoShown && setLightbox(true)}
-        >
-          {photos.length > 0 ? (
-            photoShown ? (
-              <img src={photos[lightboxIndex]} alt={product.name} />
-            ) : (
-              <button
-                type="button"
-                className="btn btn-primary lite-photo-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPhotoShown(true);
-                }}
-              >
-                🖼️ {t('Charger la photo')}
-              </button>
-            )
-          ) : (
-            <span>📦</span>
-          )}
+      <div className="pd-layout">
+        {/* Galerie façon Amazon : vignettes verticales (desktop), swipe + points (mobile) */}
+        <div className="pd-gallery">
           {photos.length > 1 && photoShown && (
-            <span className="offer-photo-count">{t('{n} photos — cliquez pour agrandir', { n: photos.length })}</span>
+            <div className="pd-thumbs" aria-label={t('Photos du produit')}>
+              {photos.map((photo, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className={`pd-thumb ${i === lightboxIndex ? 'active' : ''}`}
+                  onClick={() => setLightboxIndex(i)}
+                  aria-label={`${t('Photo')} ${i + 1}`}
+                  aria-current={i === lightboxIndex}
+                >
+                  <img src={photo} alt="" loading="lazy" decoding="async" />
+                </button>
+              ))}
+            </div>
           )}
+          <div
+            ref={pdMainRef}
+            className={`pd-main${photos.length > 0 && photoShown ? ' zoomable' : ''}`}
+            onClick={() => photos.length > 0 && photoShown && setLightbox(true)}
+            onMouseMove={photos.length > 0 && photoShown ? onPdMouseMove : undefined}
+            onTouchStart={onPdTouchStart}
+            onTouchEnd={onPdTouchEnd}
+          >
+            {photos.length > 0 ? (
+              photoShown ? (
+                <div
+                  className="pd-track"
+                  style={{ transform: `translateX(${pdRtl * -lightboxIndex * 100}%)` }}
+                >
+                  {photos.map((photo, i) => (
+                    <div className="pd-slide" key={i}>
+                      <img
+                        src={photo}
+                        alt={i === lightboxIndex ? product.name : ''}
+                        loading={i === 0 ? 'eager' : 'lazy'}
+                        decoding="async"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-primary lite-photo-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPhotoShown(true);
+                  }}
+                >
+                  🖼️ {t('Charger la photo')}
+                </button>
+              )
+            ) : (
+              <span className="pd-empty"><IconPackage size={44} /></span>
+            )}
+            {photos.length > 1 && photoShown && (
+              <>
+                <span className="offer-photo-count">{t('{n} photos — cliquez pour agrandir', { n: photos.length })}</span>
+                <div className="pd-dots" aria-hidden="true">
+                  {photos.map((_, i) => (
+                    <span key={i} className={`pd-dot ${i === lightboxIndex ? 'active' : ''}`} />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        {photos.length > 1 && photoShown && (
-          <div className="thumb-row">
-            {photos.map((photo, i) => (
-              <button
-                key={i}
-                type="button"
-                className={`thumb-btn ${i === lightboxIndex ? 'active' : ''}`}
-                onClick={() => setLightboxIndex(i)}
-              >
-                <img src={photo} alt={`${t('Photo')} ${i + 1}`} />
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="offer-body">
+        <div className="pd-info offer-body">
           <div className="offer-tags">
             {product.category && <span className="badge badge-cat">{categoryEmoji(product.category)} {t(product.category)}</span>}
           </div>
@@ -300,43 +359,51 @@ export default function ProductDetail() {
             {Number(product.sold) > 0 && <span className="meta-chip">🔥 {t('{n} vendus', { n: product.sold })}</span>}
             {Number(product.pending_count) > 0 && <span className="meta-chip">⏳ {t('{n} en attente', { n: product.pending_count })}</span>}
             {product.warranty && <span className="meta-chip">🛡️ {t('Garantie : {warranty}', { warranty: product.warranty })}</span>}
-            <span className="meta-chip">🚚 {deliveryFee > 0 ? t('Livraison {price} {symbol}', { price: formatMoney(deliveryFee), symbol }) : t('Livraison gratuite')}</span>
-            <span className="meta-chip">⏱️ {t('Livraison Rapide')}</span>
-            <span className="meta-chip">🛡️ {t('Satisfait ou remboursé')}</span>
             {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
           </div>
-          <div className="offer-prices">
-            {hasPromo && <span className="old-price">{formatMoney(oldPrice)} {symbol}</span>}
-            <span className={`promo-price ${flash ? 'price-flash' : ''}`}>{formatMoney(displayPrice)} {symbol}</span>
-          </div>
-          {flash && (
-            <p className="flash-detail-hint">
-              ⚡ {t('Offre éclair')} — {t('{n}% de réduction', { n: flash.discount_percent })} · {t('se termine le {date}', { date: new Date(flash.ends_at).toLocaleString() })}
-            </p>
-          )}
-          <p className={`offer-qty ${inStock > 0 ? '' : 'out'}`}>
-            {inStock > 0 ? t('Disponibilité : {n} en stock', { n: inStock }) : t('Rupture de stock')}
-          </p>
+        </div>
 
-          {inStock > 0 && !isOwner && (
-            <div className="buy-row">
-              <div className="qty-stepper">
-                <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="-">−</button>
-                <span>{qty}</span>
-                <button type="button" onClick={() => setQty((q) => Math.min(Number(product.quantity) || 99, q + 1))} aria-label="+">+</button>
-              </div>
-              <button
-                className="btn btn-cart"
-                onClick={() => {
-                  addToCart(product, qty);
-                  setAdded(true);
-                  setTimeout(() => setAdded(false), 1500);
-                }}
-              >
-                {added ? t('Ajouté au panier ✓') : `🛒 ${t('Ajouter au panier')}`}
-              </button>
+        {/* Bloc d'achat collant sur desktop (sticky) */}
+        <aside className="pd-buybox" aria-label={t('Achat')}>
+          <div className="pd-buybox-inner">
+            <div className="offer-prices">
+              {hasPromo && <span className="old-price">{formatMoney(oldPrice)} {symbol}</span>}
+              <span className={`promo-price ${flash ? 'price-flash' : ''}`}>{formatMoney(displayPrice)} {symbol}</span>
             </div>
-          )}
+            {flash && (
+              <p className="flash-detail-hint">
+                ⚡ {t('Offre éclair')} — {t('{n}% de réduction', { n: flash.discount_percent })} · {t('se termine le {date}', { date: new Date(flash.ends_at).toLocaleString() })}
+              </p>
+            )}
+            <p className={`offer-qty ${inStock > 0 ? '' : 'out'}`}>
+              {inStock > 0 ? t('Disponibilité : {n} en stock', { n: inStock }) : t('Rupture de stock')}
+            </p>
+
+            <ul className="pd-assurance">
+              <li><IconTruck size={15} /> {deliveryFee > 0 ? t('Livraison {price} {symbol}', { price: formatMoney(deliveryFee), symbol }) : t('Livraison gratuite')}</li>
+              <li><IconBanknote size={15} /> {t('Paiement à la livraison')}</li>
+              <li><IconShieldCheck size={15} /> {t('Satisfait ou remboursé')}</li>
+            </ul>
+
+            {inStock > 0 && !isOwner && (
+              <div className="buy-row">
+                <div className="qty-stepper">
+                  <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="-">−</button>
+                  <span>{qty}</span>
+                  <button type="button" onClick={() => setQty((q) => Math.min(Number(product.quantity) || 99, q + 1))} aria-label="+">+</button>
+                </div>
+                <button
+                  className="btn btn-cart"
+                  onClick={() => {
+                    addToCart(product, qty);
+                    setAdded(true);
+                    setTimeout(() => setAdded(false), 1500);
+                  }}
+                >
+                  {added ? t('Ajouté au panier ✓') : `${t('Ajouter au panier')}`}
+                </button>
+              </div>
+            )}
 
           <div className="detail-actions">
             <button
@@ -379,19 +446,23 @@ export default function ProductDetail() {
             </button>
           </div>
 
-          {isOwner && (
-            <button className="btn btn-danger btn-block" onClick={removeProduct} disabled={deleting}>
-              {deleting ? t('Retrait…') : t('🗑️ Rétirer ce produit')}
-            </button>
-          )}
-        </div>
+            {isOwner && (
+              <button className="btn btn-danger btn-block" onClick={removeProduct} disabled={deleting}>
+                {deleting ? t('Retrait…') : t('Rétirer ce produit')}
+              </button>
+            )}
+          </div>
+        </aside>
       </div>
 
       <Reviews product={product} />
 
       {related.length > 0 && (
         <section>
-          <h2 className="section-title">{t('✨ Produits similaires')}</h2>
+          <h2 className="section-title">
+            <IconLayers size={18} style={{ verticalAlign: '-3px', marginRight: 6 }} />
+            {t('Produits similaires')}
+          </h2>
           <div className="grid">
             {related.map((p) => (
               <ProductCard key={p.id} product={p} />
