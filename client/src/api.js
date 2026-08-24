@@ -57,13 +57,21 @@ export const api = {
   deleteAccount: (payload) =>
     request("/auth/me", { method: "DELETE", body: JSON.stringify(payload) }),
   listProducts: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
+    const qs = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+      )
+    ).toString();
     return request("/products" + (qs ? `?${qs}` : ""));
   },
   listCities: (search = "") =>
     request("/products/cities" + (search ? `?q=${encodeURIComponent(search)}` : "")),
   listShops: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
+    const qs = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+      )
+    ).toString();
     return request("/shop" + (qs ? `?${qs}` : ""));
   },
   getProduct: (id) => request(`/products/${id}`),
@@ -79,11 +87,19 @@ export const api = {
   mySales: () => request("/sales/my"),
   deleteSale: (id) => request(`/sales/${id}`, { method: "DELETE" }),
   activity: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
+    const qs = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+      )
+    ).toString();
     return request("/activity" + (qs ? `?${qs}` : ""));
   },
   activityEvents: (params = {}) => {
-    const qs = new URLSearchParams(params).toString();
+    const qs = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+      )
+    ).toString();
     return request("/activity/events" + (qs ? `?${qs}` : ""));
   },
   shopSales: (shopId) => request(`/sales/shop/${shopId}`),
