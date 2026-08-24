@@ -4929,7 +4929,34 @@ tr.tr-hidden td { opacity: 0.55; }
   z-index: 2100;
   animation: drawerFade 0.2s ease;
 }
-.drawer { z-index: 2110; }
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: 0;
+  z-index: 2110;
+  width: min(86vw, 340px);
+  background: var(--card);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: env(safe-area-inset-top);
+  box-shadow: var(--shadow-xl);
+  transform: translateX(-105%);
+  transition: transform 0.28s cubic-bezier(0.33, 1, 0.68, 1);
+}
+[dir='rtl'] .drawer { transform: translateX(105%); }
+.drawer.open { transform: translateX(0); }
+.drawer-header { flex-shrink: 0; }
+.drawer-nav { flex-shrink: 0; }
+.drawer-tools { flex-shrink: 0; }
+.drawer-footer { margin-top: auto; }
+.drawer-account { flex-shrink: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+@media (min-width: 1024px) {
+  .drawer { width: 300px; }
+}
 @keyframes drawerFade {
   from { opacity: 0; }
   to { opacity: 1; }

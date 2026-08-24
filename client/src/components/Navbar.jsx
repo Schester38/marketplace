@@ -564,6 +564,26 @@ export default function Navbar({ onLogout }) {
   const [megaMenuOpen, setMegaMenuOpen] = useState(null);
   const megaMenuRef = useRef(null);
 
+  // Drawer ouvert : fige le déroulé de la page derrière l'overlay
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = open ? 'hidden' : (previous === 'hidden' ? '' : previous);
+    return () => {
+      document.body.style.overflow = previous === 'hidden' ? '' : previous;
+    };
+  }, [open]);
+
+  // Échap ferme le drawer
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
