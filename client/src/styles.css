@@ -2503,15 +2503,10 @@ a.step { text-decoration: none; color: inherit; }
 .lang-menu li button.selected { background: var(--select-active-bg); font-weight: 700; }
 .lang-menu .ss-flag { font-size: 1.05rem; line-height: 1; }
 [dir='rtl'] .lang-menu { right: auto; left: 0; }
-.drawer-tools .lang-wrap { position: static; }
-.drawer-tools .lang-menu {
-  left: 12px;
-  right: 12px;
-  width: auto;
-  min-width: 0;
-  top: calc(100% + 8px);
-}
-[dir='rtl'] .drawer-tools .lang-menu { left: 12px; right: 12px; }
+/* Le wrap REDEVIENT l'ancre (containing block) du menu flottant :
+   l'absolute se cale désormais sur le bouton, plus sur le drawer fixé */
+.drawer-tools .lang-wrap { position: relative; }
+[dir='rtl'] .drawer-tools .lang-wrap { position: relative; }
 
 /* ===== Suivez-nous (FollowUs) ===== */
 
@@ -2563,15 +2558,9 @@ a.step { text-decoration: none; color: inherit; }
 .follow-menu li a:hover { background: var(--soft); }
 .follow-menu .ss-icon { font-size: 1.05rem; line-height: 1; }
 [dir='rtl'] .follow-menu { right: auto; left: 0; }
-.drawer-tools .follow-wrap { position: static; }
-.drawer-tools .follow-menu {
-  left: 12px;
-  right: 12px;
-  width: auto;
-  min-width: 0;
-  top: calc(100% + 8px);
-}
-[dir='rtl'] .drawer-tools .follow-menu { left: 12px; right: 12px; }
+/* Idem Suivez-nous : le wrap est l'ancre du menu flottant */
+.drawer-tools .follow-wrap { position: relative; }
+[dir='rtl'] .drawer-tools .follow-wrap { position: relative; }
 
 .suggest-toggle {
   border: 1px solid var(--border);
@@ -4850,14 +4839,23 @@ tr.tr-hidden td { opacity: 0.55; }
   font-weight: 600;
 }
 
-/* Menus langue/réseaux EN FLUX sous leur bouton
-   (l'ancien absolute se calait sur le drawer fixe → panneau égaré) */
+/* Menus 🌐/👥 : VRAIES fenêtres flottantes ancrées SOUS leur bouton.
+   (.lang-wrap/.follow-wrap sont repositionnés en relative = ancre fiable.)
+   Superposées au reste du drawer : plus de contenu poussé vers le bas ni de
+   panneau égaré/débordant, contrairement aux anciennes versions static. */
 .drawer-tools .lang-menu,
 .drawer-tools .follow-menu {
-  position: static;
-  box-shadow: none;
-  border-style: dashed;
-  margin-top: 8px;
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+  width: max-content;
+  min-width: 210px;
+  max-width: min(280px, calc(100vw - 48px));
+  z-index: 40;
+  margin-top: 0;
+  border-style: solid;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
 }
 
 /* --- Liens : lignes nettes, cibles tactiles ≥48px, chevron --- */
@@ -5168,14 +5166,30 @@ tr.tr-hidden td { opacity: 0.55; }
   border-radius: 10px;
 }
 
-/* Menus 🌐 langue et 👥 réseaux : contenu CENTRÉ, aucune fuite latérale */
+/* Menus 🌐 langue et 👥 réseaux : contenu CENTRÉ (largeur naturelle bornée ;
+   plus de max-width:100% qui écrasait le panneau dans sa cellule de grille) */
 .drawer-tools .lang-menu,
 .drawer-tools .follow-menu {
-  max-width: 100%;
   box-sizing: border-box;
 }
 .drawer-tools .lang-menu li button,
 .drawer-tools .follow-menu li a {
   justify-content: center;
   text-align: center;
+}
+
+
+/* ============================================================
+   v106 — Recherche CENTRÉE sur téléphone (<900px)
+   ============================================================ */
+
+/* La recherche occupe sa propre rangée sous logo/actions, CENTRÉE */
+@media (max-width: 899px) {
+  .nav-search-wrapper {
+    order: 3;
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: min(600px, 100%);
+    margin-inline: auto;
+  }
 }

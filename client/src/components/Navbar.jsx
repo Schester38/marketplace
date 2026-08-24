@@ -179,6 +179,7 @@ function FollowUs() {
 function NotifBell() {
   const { t, locale } = useLang();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [notifs, setNotifs] = useState([]);
   const [unread, setUnread] = useState(0);
@@ -570,6 +571,7 @@ export default function Navbar({ onLogout }) {
   });
   const [megaMenuOpen, setMegaMenuOpen] = useState(null);
   const megaMenuRef = useRef(null);
+  const catLinksRef = useRef(null);
 
   // Drawer ouvert : fige le déroulé de la page derrière l'overlay
   useEffect(() => {
@@ -612,6 +614,26 @@ export default function Navbar({ onLogout }) {
     }
     return undefined;
   }, [activeCat]);
+
+  // Barre de catégories : la molette de la souris fait défiler la liste
+  // horizontalement (desktop — le tactile garde son swipe natif)
+  useEffect(() => {
+    const el = catLinksRef.current;
+    if (!el || typeof el.addEventListener !== 'function') return undefined;
+    const onWheel = (e) => {
+      if (e.ctrlKey) return; // pinch-zoom : ne pas intercepter
+      if (el.scrollWidth <= el.clientWidth) return; // rien à faire défiler
+      const factor = e.deltaMode === 1 ? 16 : 1; // lignes → pixels
+      const dy = e.deltaY * factor;
+      const dx = e.deltaX * factor;
+      const delta = Math.abs(dy) >= Math.abs(dx) ? dy : dx;
+      if (!delta) return;
+      e.preventDefault();
+      el.scrollLeft += delta;
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -829,7 +851,7 @@ export default function Navbar({ onLogout }) {
       {/* Category bar - Line 2 : barre statique cliquable + méga-menu + liens rapides */}
       <nav className="cat-bar" aria-label={t('Catégories')} role="navigation">
         <div className="cat-bar-inner">
-          <div className="cat-links" aria-label={t('Parcourir les catégories')}>
+          <div className="cat-links" ref={catLinksRef} aria-label={t('Parcourir les catégories')}>
             <Link to="/" onClick={close} className={`cat-link cat-link-all${onAllCategories ? ' cat-active' : ''}`} role="tab" aria-selected={false}>
               <span className="cat-icon" aria-hidden="true"><IconGrid size={14} /></span>
               <span className="cat-label">{t('Tous')}</span>
