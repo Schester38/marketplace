@@ -7,7 +7,7 @@ import { api } from '../api.js';
 import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
 import { urlBase64ToUint8Array } from '../utils.js';
 import { formatMoney } from './ProductCard.jsx';
-import { countrySymbol, PRODUCT_CATEGORIES, categoryEmoji, categoryIcon } from '../config.js';
+import { countrySymbol, PRODUCT_CATEGORIES } from '../config.js';
 import { MegaMenu } from './MegaMenu.jsx';
 import { useLite } from '../liteMode.js';
 import SuggestionButton from './SuggestionButton.jsx';

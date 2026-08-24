@@ -1,15 +1,39 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import ProductCard from './ProductCard.jsx';
 import { useLang } from '../i18n.jsx';
 import { IconChevronLeft, IconChevronRight } from './icons.jsx';
 
 /**
- * Enveloppe de rail horizontal avec flèches visibles au survol (desktop).
+ * Enveloppe de rail horizontal avec flèches visibles au survol (desktop)
+ * et apparition progressive au scroll (IntersectionObserver).
  * Réutilisée par ProductRail et le rail des promotions éclair.
  */
 export function RailShell({ title, hint, emoji, children, ariaLabel }) {
   const { t } = useLang();
   const scroller = useRef(null);
+  const sectionRef = useRef(null);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return undefined;
+    if (typeof IntersectionObserver === 'undefined') {
+      el.classList.add('revealed');
+      return undefined;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed');
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { rootMargin: '0px 0px -6% 0px', threshold: 0.04 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   const scrollByDir = (dir) => {
     const el = scroller.current;
@@ -24,7 +48,11 @@ export function RailShell({ title, hint, emoji, children, ariaLabel }) {
   };
 
   return (
-    <section aria-label={ariaLabel || title} className="product-rail rail-shell">
+    <section
+      ref={sectionRef}
+      aria-label={ariaLabel || title}
+      className="product-rail rail-shell reveal"
+    >
       <div className="section-head">
         <h2 className="section-title">{emoji ? `${emoji} ` : ''}{title}</h2>
         {hint && <p className="hint">{hint}</p>}
