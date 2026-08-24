@@ -536,6 +536,13 @@ function NotifBell() {
 
 export default function Navbar({ onLogout }) {
   const navigate = useNavigate();
+
+  // Catégorie active (URL /?cat=…) pour surligner la barre
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const activeCat = searchParams.get('cat') || '';
+  const onAllCategories = location.pathname === '/' && !activeCat;
+
   const { user } = useAuth();
   const { t } = useLang();
   const { lite, toggle: toggleLite } = useLite();
@@ -659,12 +666,6 @@ export default function Navbar({ onLogout }) {
   const roleLabel = user
     ? user.role === 'shop' ? t('boutique') : user.role === 'seller' ? t('vendeur') : user.role === 'client' ? t('client') : user.role === 'creator' ? t('créateur') : user.role === 'admin' ? t('admin') : t('livreur')
     : '';
-
-  // Catégorie active (URL /?cat=…) pour surligner la barre
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const activeCat = searchParams.get('cat') || '';
-  const onAllCategories = location.pathname === '/' && !activeCat;
 
   const themeToggle = (
     <button
