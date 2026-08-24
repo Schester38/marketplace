@@ -4961,3 +4961,75 @@ tr.tr-hidden td { opacity: 0.55; }
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ============================================================
+   BARRE DE CATÉGORIES — lisibilité sur tous les appareils (v102)
+   ============================================================ */
+
+/* Séparation douce d'avec la page */
+.cat-bar { box-shadow: 0 10px 22px rgba(0, 0, 0, 0.16); }
+
+/* Fondus d'extrémités = indice de défilement (sans masque : ils ne
+   rognent ni le focus ni les panneaux portalés) */
+.cat-bar-inner { position: relative; }
+.cat-bar-inner::before,
+.cat-bar-inner::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30px;
+  z-index: 2;
+  pointer-events: none;
+}
+.cat-bar-inner::before {
+  inset-inline-start: -4px;
+  background: linear-gradient(to right, #232f3e, rgba(35, 47, 62, 0));
+}
+.cat-bar-inner::after {
+  inset-inline-end: -4px;
+  background: linear-gradient(to left, #232f3e, rgba(35, 47, 62, 0));
+}
+
+/* Défilement confortable */
+.cat-links {
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  padding-block: 4px;
+}
+
+/* Lisibilité des libellés */
+.cat-link { font-size: 0.86rem; letter-spacing: 0.01em; }
+.cat-icon { opacity: 0.9; }
+
+/* Catégorie active (URL /?cat=…) : liseré orange + teinte */
+.cat-link.cat-active,
+.cat-link.cat-active:hover,
+.cat-link.cat-active:focus-visible {
+  color: #fff;
+  background: linear-gradient(180deg, rgba(238, 125, 0, 0.05), rgba(238, 125, 0, 0.32));
+  box-shadow: inset 0 -3px 0 var(--primary);
+}
+
+/* Mobile : compact mais tactile */
+@media (max-width: 767px) {
+  .cat-link { font-size: 0.8rem; padding: 12px 11px; gap: 5px; }
+  .mega-arrow { display: none; }
+  .cat-bar-inner::before, .cat-bar-inner::after { width: 20px; }
+}
+@media (max-width: 380px) {
+  .cat-link { padding: 12px 9px; }
+}
+
+/* Tablette/desktop : plus aéré */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .cat-link { font-size: 0.84rem; padding: 12px 13px; }
+}
+@media (min-width: 1024px) {
+  .cat-link { padding: 13px 15px; font-size: 0.88rem; }
+  .cat-bar-inner { gap: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cat-links { scroll-behavior: auto; }
+}

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { LANGS, useLang } from '../i18n.jsx';
 import { useCart, useFavs } from '../store.jsx';
@@ -638,6 +638,12 @@ export default function Navbar({ onLogout }) {
     ? user.role === 'shop' ? t('boutique') : user.role === 'seller' ? t('vendeur') : user.role === 'client' ? t('client') : user.role === 'creator' ? t('créateur') : user.role === 'admin' ? t('admin') : t('livreur')
     : '';
 
+  // Catégorie active (URL /?cat=…) pour surligner la barre
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const activeCat = searchParams.get('cat') || '';
+  const onAllCategories = location.pathname === '/' && !activeCat;
+
   const themeToggle = (
     <button
       className="theme-toggle"
@@ -821,7 +827,7 @@ export default function Navbar({ onLogout }) {
       <nav className="cat-bar" aria-label={t('Catégories')} role="navigation">
         <div className="cat-bar-inner">
           <div className="cat-links" aria-label={t('Parcourir les catégories')}>
-            <Link to="/" onClick={close} className="cat-link cat-link-all" role="tab" aria-selected={false}>
+            <Link to="/" onClick={close} className={`cat-link cat-link-all${onAllCategories ? ' cat-active' : ''}`} role="tab" aria-selected={false}>
               <span className="cat-icon" aria-hidden="true"><IconGrid size={14} /></span>
               <span className="cat-label">{t('Tous')}</span>
             </Link>
@@ -833,6 +839,7 @@ export default function Navbar({ onLogout }) {
               close={close}
               closeMegaMenu={closeMegaMenu}
               t={t}
+              activeCat={activeCat}
             />
           </div>
           <div className="cat-quick" aria-label={t('Liens rapides')}>

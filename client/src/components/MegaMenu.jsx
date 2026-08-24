@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { useLang } from '../i18n.jsx';
 import { getCategoryIcon } from './icons.jsx';
@@ -52,38 +53,86 @@ function MegaMenuContent({ cat, t, closeMegaMenu }) {
   );
 }
 
-function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMenuLeave, close, t, closeMegaMenu }) {
+function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMenuLeave, close, t, closeMegaMenu, activeCat }) {
+  const triggerRef = useRef(null);
+  const [pos, setPos] = useState(null);
+  const isOpen = megaMenuOpen === cat.label;
+
+  // Panneau PORTALÉ vers <body> en fixed : l'overflow-x du conteneur de la
+  // barre rognerait sinon le panneau verticalement (clip Y forcé).
+  useEffect(() => {
+    if (!isOpen) {
+      setPos(null);
+      return undefined;
+    }
+    const update = () => {
+      const el = triggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const vw = window.innerWidth || 360;
+      const width = Math.min(380, vw - 24);
+      const rtl = document.documentElement.getAttribute('dir') === 'rtl';
+      let left = rtl ? r.right - width : r.left;
+      left = Math.max(12, Math.min(left, vw - width - 12));
+      setPos({ top: Math.round(r.bottom + 6), left: Math.round(left), width });
+    };
+    update();
+    const closeOnMove = () => handleMegaMenuLeave();
+    window.addEventListener('resize', closeOnMove);
+    window.addEventListener('scroll', closeOnMove, true);
+    return () => {
+      window.removeEventListener('resize', closeOnMove);
+      window.removeEventListener('scroll', closeOnMove, true);
+    };
+  }, [isOpen, handleMegaMenuLeave]);
+
+  const mainTarget = cat.main || cat.label;
+
   return (
-    <div key={cat.label} className="mega-menu-trigger">
-      <Link
-        to={`/?cat=${encodeURIComponent(cat.main || cat.label)}`}
-        onClick={close}
-        className="cat-link mega-link"
-        role="tab"
-        aria-selected={false}
-        aria-haspopup="true"
-        aria-expanded={megaMenuOpen === cat.label}
-        onMouseEnter={() => handleMegaMenuEnter(cat.label)}
-        onMouseLeave={handleMegaMenuLeave}
-        onFocus={() => handleMegaMenuEnter(cat.label)}
-        onBlur={() => setTimeout(() => handleMegaMenuLeave(), 100)}
-      >
-        <span className="cat-icon" aria-hidden="true">{cat.icon}</span>
-        <span className="cat-label">{cat.label}</span>
-        <svg className="mega-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
-      </Link>
+    <>
       <div
-        className={`mega-menu${megaMenuOpen === cat.label ? ' open' : ''}`}
-        role="menu"
-        aria-label={cat.label}
+        key={cat.label}
+        className="mega-menu-trigger"
         onMouseEnter={() => handleMegaMenuEnter(cat.label)}
         onMouseLeave={handleMegaMenuLeave}
       >
-        {cat.subcategories && cat.subcategories.length > 0 ? (
-          <MegaMenuContent cat={cat} t={t} closeMegaMenu={closeMegaMenu} />
-        ) : null}
+        <Link
+          ref={triggerRef}
+          to={`/?cat=${encodeURIComponent(mainTarget)}`}
+          onClick={close}
+          className={`cat-link mega-link${activeCat === mainTarget ? ' cat-active' : ''}`}
+          role="tab"
+          aria-selected={false}
+          aria-haspopup="true"
+          aria-expanded={isOpen}
+          onFocus={() => handleMegaMenuEnter(cat.label)}
+          onBlur={() => setTimeout(() => handleMegaMenuLeave(), 100)}
+        >
+          <span className="cat-icon" aria-hidden="true">{cat.icon}</span>
+          <span className="cat-label">{cat.label}</span>
+          <svg className="mega-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </Link>
       </div>
-    </div>
+      {isOpen && pos && createPortal(
+        <div
+          className="mega-menu open"
+          role="menu"
+          aria-label={cat.label}
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            left: pos.left,
+            width: pos.width,
+            borderRadius: 14,
+          }}
+          onMouseEnter={() => handleMegaMenuEnter(cat.label)}
+          onMouseLeave={handleMegaMenuLeave}
+        >
+          <MegaMenuContent cat={cat} t={t} closeMegaMenu={closeMegaMenu} />
+        </div>,
+        document.body
+      )}
+    </>
   );
 }
 
@@ -95,6 +144,7 @@ export function MegaMenu({
   close,
   closeMegaMenu,
   t,
+  activeCat,
 }) {
   return (
     <>
@@ -108,6 +158,7 @@ export function MegaMenu({
           close={close}
           closeMegaMenu={closeMegaMenu}
           t={t}
+          activeCat={activeCat}
         />
       ))}
     </>
