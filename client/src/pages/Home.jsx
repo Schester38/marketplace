@@ -223,12 +223,12 @@ export default function Home() {
       if (!silent && !hasLoaded.current) setLoading(true);
       api
         .listProducts({
-          search: debouncedSearch,
-          category,
-          sort,
-          scope,
-          min_price: minPrice === "" ? undefined : minPrice,
-          max_price: maxPrice === "" ? undefined : maxPrice,
+          search: debouncedSearch || undefined,
+          category: category || undefined,
+          sort: sort || undefined,
+          ...(scope && scope !== "product" ? { scope } : {}),
+          ...(minPrice ? { min_price: Number(minPrice) } : {}),
+          ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
           limit: PER_PAGE,
           offset,
         })

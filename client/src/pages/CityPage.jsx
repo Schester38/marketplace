@@ -20,7 +20,7 @@ export default function CityPage() {
     setProducts(null);
     setError("");
     api
-      .listProducts({ scope: "product", city: slug })
+      .listProducts({ city: slug })
       .then((d) => {
         if (!mounted.current) return;
         setProducts(d.products);
