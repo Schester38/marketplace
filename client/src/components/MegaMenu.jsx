@@ -100,6 +100,7 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
           ref={triggerRef}
           to={`/?cat=${encodeURIComponent(mainTarget)}`}
           onClick={close}
+          data-cat={mainTarget}
           className={`cat-link mega-link${activeCat === mainTarget ? ' cat-active' : ''}`}
           role="tab"
           aria-selected={false}

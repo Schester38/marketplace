@@ -5033,3 +5033,36 @@ tr.tr-hidden td { opacity: 0.55; }
 @media (prefers-reduced-motion: reduce) {
   .cat-links { scroll-behavior: auto; }
 }
+
+/* ============================================================
+   BARRE DE CATÉGORIES v103 — zéro débordement, scroll fiable
+   ============================================================ */
+
+/* La barre ne peut plus fuir vers la page : tout est contenu dedans */
+.cat-bar {
+  overflow: hidden;
+  width: 100%;
+}
+.cat-bar-inner {
+  width: 100%;
+  flex-wrap: nowrap;
+  padding-inline: 6px;
+}
+
+/* Fondus DANS les limites de la barre (plus aucun inset négatif) */
+.cat-bar-inner::before { inset-inline-start: 0; }
+.cat-bar-inner::after { inset-inline-end: 0; }
+
+/* Scroll fiable partout : momentum iOS + snap discret par élément */
+.cat-links {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+.cat-links > * { scroll-snap-align: start; }
+
+/* Desktop : la rangée reste sur une seule ligne quel que soit le contenu */
+@media (min-width: 768px) {
+  .cat-links { flex-wrap: nowrap; }
+}

@@ -584,6 +584,28 @@ export default function Navbar({ onLogout }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
+  // Barre de catégories : amène la catégorie active dans le champ de vision
+  useEffect(() => {
+    if (!activeCat) return;
+    let el = null;
+    try {
+      el = document.querySelector(`.cat-links [data-cat="${CSS.escape(activeCat)}"]`);
+    } catch {
+      el = null;
+    }
+    if (el && typeof el.scrollIntoView === 'function') {
+      const t = setTimeout(() => {
+        try {
+          el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        } catch {
+          /* anciens navigateurs */
+        }
+      }, 250);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [activeCat]);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
