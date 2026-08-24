@@ -1,9 +1,9 @@
-import crypto from 'crypto';
+import crypto from "crypto";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
-const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'photos';
+const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "photos";
 
 // Le Storage valide l'Authorization Bearer comme JWT.
 // - Clé legacy (eyJ...) : utilisée telle quelle.
@@ -13,13 +13,16 @@ let cachedToken = null;
 function apiToken() {
   if (cachedToken) return cachedToken;
   if (!SERVICE_KEY) return null;
-  if (SERVICE_KEY.startsWith('eyJ')) {
+  if (SERVICE_KEY.startsWith("eyJ")) {
     cachedToken = SERVICE_KEY;
   } else if (JWT_SECRET) {
-    const b64url = (b) => Buffer.from(b).toString('base64url');
-    const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-    const payload = b64url(JSON.stringify({ iss: 'supabase', role: 'service_role' }));
-    const signature = crypto.createHmac('sha256', JWT_SECRET).update(`${header}.${payload}`).digest('base64url');
+    const b64url = (b) => Buffer.from(b).toString("base64url");
+    const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+    const payload = b64url(JSON.stringify({ iss: "supabase", role: "service_role" }));
+    const signature = crypto
+      .createHmac("sha256", JWT_SECRET)
+      .update(`${header}.${payload}`)
+      .digest("base64url");
     cachedToken = `${header}.${payload}.${signature}`;
   } else {
     cachedToken = SERVICE_KEY;
@@ -28,24 +31,28 @@ function apiToken() {
 }
 
 export function isStoredUrl(s) {
-  return typeof s === 'string' && /^https?:\/\//.test(s) && !s.startsWith('data:');
+  return typeof s === "string" && /^https?:\/\//.test(s) && !s.startsWith("data:");
 }
 
 export function isBase64Photo(s) {
-  return typeof s === 'string' && /^data:image\//.test(s);
+  return typeof s === "string" && /^data:image\//.test(s);
 }
 
 const EXT_BY_TYPE = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
 };
 
 export function dataUriParts(uri) {
-  const m = /^data:(image\/[a-z+]+);base64,(.+)$/.exec(String(uri || ''));
+  const m = /^data:(image\/[a-z+]+);base64,(.+)$/.exec(String(uri || ""));
   if (!m) return null;
-  return { type: m[1], ext: EXT_BY_TYPE[m[1]] || m[1].split('/')[1] || 'bin', buffer: Buffer.from(m[2], 'base64') };
+  return {
+    type: m[1],
+    ext: EXT_BY_TYPE[m[1]] || m[1].split("/")[1] || "bin",
+    buffer: Buffer.from(m[2], "base64"),
+  };
 }
 
 export function publicUrl(path) {
@@ -54,7 +61,9 @@ export function publicUrl(path) {
 
 async function request(path, options = {}) {
   if (!SUPABASE_URL || !SERVICE_KEY) {
-    throw new Error('Supabase Storage non configuré : variables SUPABASE_URL / SUPABASE_SERVICE_KEY absentes');
+    throw new Error(
+      "Supabase Storage non configuré : variables SUPABASE_URL / SUPABASE_SERVICE_KEY absentes"
+    );
   }
   const token = apiToken();
   const res = await fetch(`${SUPABASE_URL}/storage/v1/${path}`, {
@@ -69,33 +78,33 @@ async function request(path, options = {}) {
 }
 
 export async function ensureBucket() {
-  const res = await request('bucket', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  const res = await request("bucket", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id: BUCKET, name: BUCKET, public: true }),
   });
   if (res.ok || res.status === 409) return;
-  const text = await res.text().catch(() => '');
+  const text = await res.text().catch(() => "");
   if (/BucketAlreadyExists/i.test(text)) return;
   throw new Error(`Création du bucket ${BUCKET} échouée (${res.status}) : ${text.slice(0, 160)}`);
 }
 
-export async function uploadBuffer(buffer, type, folder = 'products') {
-  const ext = EXT_BY_TYPE[type] || 'bin';
+export async function uploadBuffer(buffer, type, folder = "products") {
+  const ext = EXT_BY_TYPE[type] || "bin";
   const path = `${folder}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
   const res = await request(`object/${BUCKET}/${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': type },
+    method: "POST",
+    headers: { "Content-Type": type },
     body: buffer,
   });
   if (!res.ok) {
-    const text = await res.text().catch(() => '');
+    const text = await res.text().catch(() => "");
     throw new Error(`Upload Storage échoué (${res.status}) : ${text.slice(0, 160)}`);
   }
   return publicUrl(path);
 }
 
-export async function uploadPhoto(dataUri, folder = 'products') {
+export async function uploadPhoto(dataUri, folder = "products") {
   const parts = dataUriParts(dataUri);
   if (!parts) return null;
   return uploadBuffer(parts.buffer, parts.type, folder);
@@ -103,7 +112,7 @@ export async function uploadPhoto(dataUri, folder = 'products') {
 
 // photoList : [{thumb, full}] avec des data URIs et/ou des URLs déjà stockées.
 // Les URLs existantes sont conservées telles quelles (édition sans re-upload).
-export async function storePhotos(photoList, folder = 'products') {
+export async function storePhotos(photoList, folder = "products") {
   const out = [];
   for (const ph of photoList || []) {
     if (!ph) continue;
@@ -118,7 +127,7 @@ export async function storePhotos(photoList, folder = 'products') {
 }
 
 // photos : tableau de strings (offres) — data URI à uploader, URLs conservées.
-export async function storePhotoStrings(photos, folder = 'offers') {
+export async function storePhotoStrings(photos, folder = "offers") {
   const out = [];
   for (const ph of photos || []) {
     if (isStoredUrl(ph)) out.push(ph);
@@ -133,7 +142,7 @@ export async function storePhotoStrings(photos, folder = 'offers') {
 const OBJECT_PREFIX = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/`;
 
 function storageKeyOf(value) {
-  if (typeof value !== 'string' || !OBJECT_PREFIX || !value.startsWith(OBJECT_PREFIX)) return null;
+  if (typeof value !== "string" || !OBJECT_PREFIX || !value.startsWith(OBJECT_PREFIX)) return null;
   return decodeURIComponent(value.slice(OBJECT_PREFIX.length));
 }
 
@@ -141,17 +150,17 @@ function storageKeyOf(value) {
 export function collectStorageKeys(photosJson) {
   let entries = [];
   try {
-    entries = JSON.parse(photosJson || '[]');
+    entries = JSON.parse(photosJson || "[]");
   } catch {
     entries = [];
   }
   const keys = [];
   for (const e of Array.isArray(entries) ? entries : []) {
-    if (typeof e === 'string') {
+    if (typeof e === "string") {
       const k = storageKeyOf(e);
       if (k) keys.push(k);
-    } else if (e && typeof e === 'object') {
-      for (const field of ['thumb', 'full']) {
+    } else if (e && typeof e === "object") {
+      for (const field of ["thumb", "full"]) {
         const k = storageKeyOf(e[field]);
         if (k) keys.push(k);
       }
@@ -166,9 +175,9 @@ export async function deleteStorageKeys(keys) {
   const token = apiToken();
   let deleted = 0;
   for (const key of keys) {
-    if (typeof key !== 'string') continue;
+    if (typeof key !== "string") continue;
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${key}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: { Authorization: `Bearer ${token}`, apikey: token },
     });
     if (res.ok || res.status === 404) deleted += 1;
@@ -186,9 +195,13 @@ export async function storageUsage() {
   let offset = 0;
   for (;;) {
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${BUCKET}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, apikey: token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prefix: '', limit: 1000, offset }),
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: token,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prefix: "", limit: 1000, offset }),
     });
     if (!res.ok) {
       throw new Error(`Liste du bucket ${BUCKET} échouée (${res.status})`);

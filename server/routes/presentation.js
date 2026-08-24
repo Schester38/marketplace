@@ -1,6 +1,6 @@
-import { Router } from 'express';
-import { q } from '../db.js';
-import { fullPhotos } from '../photo.js';
+import { Router } from "express";
+import { q } from "../db.js";
+import { fullPhotos } from "../photo.js";
 
 const router = Router();
 const imageRouter = Router();
@@ -10,31 +10,35 @@ function firstPhoto(p) {
 }
 
 function dataUriParts(uri) {
-  const m = /^data:([^;]+);base64,(.+)$/.exec(String(uri || ''));
+  const m = /^data:([^;]+);base64,(.+)$/.exec(String(uri || ""));
   if (!m) return null;
-  return { type: m[1], buffer: Buffer.from(m[2], 'base64') };
+  return { type: m[1], buffer: Buffer.from(m[2], "base64") };
 }
 
-imageRouter.get('/:id', async (req, res) => {
+imageRouter.get("/:id", async (req, res) => {
   const product = (
-    await q('SELECT photos, image FROM products WHERE id = $1', [Number(req.params.id)])
+    await q("SELECT photos, image FROM products WHERE id = $1", [Number(req.params.id)])
   )[0];
-  if (!product) return res.status(404).json({ error: 'Image introuvable' });
+  if (!product) return res.status(404).json({ error: "Image introuvable" });
   const photo = firstPhoto(product);
   const parts = dataUriParts(photo);
   if (parts) {
-    res.set('Content-Type', parts.type);
-    res.set('Cache-Control', 'public, max-age=86400');
+    res.set("Content-Type", parts.type);
+    res.set("Cache-Control", "public, max-age=86400");
     return res.send(parts.buffer);
   }
-  if (String(photo || '').startsWith('http')) {
+  if (String(photo || "").startsWith("http")) {
     return res.redirect(photo);
   }
-  return res.status(404).json({ error: 'Image introuvable' });
+  return res.status(404).json({ error: "Image introuvable" });
 });
 
 function esc(s) {
-  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function page(title, desc, imgUrl, appUrl, buyUrl, bodyHtml) {
@@ -77,7 +81,7 @@ ${bodyHtml}
 </html>`;
 }
 
-router.get('/:id', async (req, res) => {
+router.get("/:id", async (req, res) => {
   const p = (
     await q(
       `SELECT p.*, u.name AS shop_name, u.country AS shop_country, fp.promo_price AS flash_price
@@ -87,28 +91,31 @@ router.get('/:id', async (req, res) => {
       [Number(req.params.id)]
     )
   )[0];
-  if (!p) return res.status(404).send('Produit introuvable');
+  if (!p) return res.status(404).send("Produit introuvable");
 
   const photo = firstPhoto(p);
-  const price = Number(p.flash_price != null ? p.flash_price : p.price || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 });
-  const old = Number(p.old_price || 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 });
-  const symbol = p.shop_country === 'Kenya' ? 'KSh' : p.shop_country === 'Nigeria' ? '₦' : 'F';
-  const origin = `${req.get('x-forwarded-proto') || req.protocol}://${req.get('host')}`;
+  const price = Number(p.flash_price != null ? p.flash_price : p.price || 0).toLocaleString(
+    "fr-FR",
+    { maximumFractionDigits: 0 }
+  );
+  const old = Number(p.old_price || 0).toLocaleString("fr-FR", { maximumFractionDigits: 0 });
+  const symbol = p.shop_country === "Kenya" ? "KSh" : p.shop_country === "Nigeria" ? "₦" : "F";
+  const origin = `${req.get("x-forwarded-proto") || req.protocol}://${req.get("host")}`;
   const title = `${p.name} — Mboppi`;
-  const desc = String(p.description || 'Découvrez cet article sur Mboppi.').slice(0, 200);
-  const imgUrl = photo && photo.startsWith('http') ? photo : `${origin}/api/img/${p.id}`;
+  const desc = String(p.description || "Découvrez cet article sur Mboppi.").slice(0, 200);
+  const imgUrl = photo && photo.startsWith("http") ? photo : `${origin}/api/img/${p.id}`;
   const appUrl = `${origin}/produit/${p.id}`;
   const buyUrl = `${origin}/acheter/${p.id}`;
 
   const body = `
   <div class="card">
-    ${photo ? `<img class="photo" src="${photo}" alt="${esc(p.name)}"/>` : ''}
+    ${photo ? `<img class="photo" src="${photo}" alt="${esc(p.name)}"/>` : ""}
     <div class="body">
       <div class="brand"><span>M</span>Mboppi</div>
       <h1>${esc(p.name)}</h1>
-      <div class="shop">${esc(p.shop_name)}${p.shop_location ? ' &middot; ' + esc(p.shop_location) : ''}</div>
+      <div class="shop">${esc(p.shop_name)}${p.shop_location ? " &middot; " + esc(p.shop_location) : ""}</div>
       <div class="price">${price} ${symbol}</div>
-      ${p.old_price ? `<div class="old">${old} ${symbol}</div>` : ''}
+      ${p.old_price ? `<div class="old">${old} ${symbol}</div>` : ""}
       <p class="desc">${esc(desc)}</p>
       <a class="btn outline" href="${appUrl}">Voir la fiche complète</a>
     </div>

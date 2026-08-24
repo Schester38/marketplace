@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useLang } from '../i18n.jsx';
+import React, { useEffect, useState } from "react";
+import { useLang } from "../i18n.jsx";
 
 export default function PwaInstallButton() {
   const { t } = useLang();
@@ -9,15 +9,15 @@ export default function PwaInstallButton() {
 
   useEffect(() => {
     const standalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia("(display-mode: standalone)").matches ||
       window.navigator.standalone === true;
     setInstalled(standalone);
     const onPrompt = (e) => {
       e.preventDefault();
       setDeferred(e);
     };
-    window.addEventListener('beforeinstallprompt', onPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    return () => window.removeEventListener("beforeinstallprompt", onPrompt);
   }, []);
 
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
@@ -29,7 +29,7 @@ export default function PwaInstallButton() {
     if (deferred) {
       deferred.prompt();
       const { outcome } = await deferred.userChoice;
-      if (outcome === 'accepted') setInstalled(true);
+      if (outcome === "accepted") setInstalled(true);
       setDeferred(null);
     } else if (isIOS) {
       setShowIos(true);
@@ -39,16 +39,20 @@ export default function PwaInstallButton() {
   return (
     <>
       <button className="btn btn-install" onClick={install}>
-        📲 {t('Installer')}
+        📲 {t("Installer")}
       </button>
       {showIos && (
         <div className="modal-overlay" onClick={() => setShowIos(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>📲 {t("Installer l'application")}</h3>
-              <button className="drawer-close" onClick={() => setShowIos(false)}>✕</button>
+              <button className="drawer-close" onClick={() => setShowIos(false)}>
+                ✕
+              </button>
             </div>
-            <p className="hint">{t("Sur iPhone ou iPad : touchez Partager puis « Ajouter à l'écran d'accueil ».")}</p>
+            <p className="hint">
+              {t("Sur iPhone ou iPad : touchez Partager puis « Ajouter à l'écran d'accueil ».")}
+            </p>
           </div>
         </div>
       )}

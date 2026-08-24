@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 const CartContext = createContext(null);
 const FavContext = createContext(null);
@@ -23,8 +23,8 @@ function useLocalState(key, initial) {
 }
 
 export function StoreProvider({ children }) {
-  const [cart, setCart] = useLocalState('mboppi-cart', []);
-  const [favs, setFavs] = useLocalState('mboppi-favs', []);
+  const [cart, setCart] = useLocalState("mboppi-cart", []);
+  const [favs, setFavs] = useLocalState("mboppi-favs", []);
 
   const addToCart = (product, qty = 1) => {
     const max = Math.max(1, Number(product.quantity) || 99);

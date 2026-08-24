@@ -1,14 +1,14 @@
-import { q } from './db.js';
-import { collectStorageKeys, deleteStorageKeys } from './storage.js';
+import { q } from "./db.js";
+import { collectStorageKeys, deleteStorageKeys } from "./storage.js";
 
 // Purge des statistiques datant de plus de 6 mois : daily_visits, item_views,
 // client_logs et audit_log. Ces tables grossissent chaque jour sans servir au-delà
 // de quelques mois (les tendances/vues affichées sont calculées sur 7 jours).
 const STATS_TABLES = [
-  { table: 'daily_visits', col: 'seen_on' },
-  { table: 'item_views', col: 'seen_on' },
-  { table: 'client_logs', col: 'created_at' },
-  { table: 'audit_log', col: 'created_at' },
+  { table: "daily_visits", col: "seen_on" },
+  { table: "item_views", col: "seen_on" },
+  { table: "client_logs", col: "created_at" },
+  { table: "audit_log", col: "created_at" },
 ];
 
 export async function cleanupOldStats() {
@@ -29,18 +29,18 @@ export async function cleanupOldStats() {
 // Rapport d'usage de la base : taille et lignes estimées des tables principales.
 // Permet de surveiller le quota gratuit (500 Mo) sans requête coûteuse.
 const USAGE_TABLES = [
-  'users',
-  'products',
-  'sales',
-  'offers',
-  'orders',
-  'notifications',
-  'reviews',
-  'item_views',
-  'daily_visits',
-  'audit_log',
-  'client_logs',
-  'wallet_transactions',
+  "users",
+  "products",
+  "sales",
+  "offers",
+  "orders",
+  "notifications",
+  "reviews",
+  "item_views",
+  "daily_visits",
+  "audit_log",
+  "client_logs",
+  "wallet_transactions",
 ];
 
 export async function dbUsageReport() {
@@ -95,7 +95,7 @@ export async function cleanupOutOfStock({ dryRun = false } = {}) {
       try {
         deletedFiles += await deleteStorageKeys(keys);
       } catch (err) {
-        console.error('[cleanup] suppression des images produits échouée :', err.message);
+        console.error("[cleanup] suppression des images produits échouée :", err.message);
       }
     }
   } else if (dryRun) {
@@ -111,7 +111,7 @@ export async function cleanupOutOfStock({ dryRun = false } = {}) {
       try {
         deletedFiles += await deleteStorageKeys(keys);
       } catch (err) {
-        console.error('[cleanup] suppression des images offres échouée :', err.message);
+        console.error("[cleanup] suppression des images offres échouée :", err.message);
       }
     }
   } else if (dryRun) {
@@ -119,7 +119,7 @@ export async function cleanupOutOfStock({ dryRun = false } = {}) {
   }
 
   return {
-    mode: dryRun ? 'dry-run' : 'effectif',
+    mode: dryRun ? "dry-run" : "effectif",
     stockage_configure: canStorage,
     produits_supprimes: removedProducts,
     offres_supprimees: removedOffers,

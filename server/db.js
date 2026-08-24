@@ -1,17 +1,17 @@
-import pg from 'pg';
+import pg from "pg";
 
 const { Pool } = pg;
 
 const connectionString =
-  process.env.DATABASE_URL || 'postgres://postgres:postgres@localhost:5432/marketplace';
+  process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/marketplace";
 
 const pool = new Pool({
   connectionString,
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
 });
 
-pool.on('connect', (client) => {
-  client.query('SET search_path TO public').catch(() => {});
+pool.on("connect", (client) => {
+  client.query("SET search_path TO public").catch(() => {});
 });
 
 export function getPool() {
@@ -27,15 +27,17 @@ export async function q(text, params = []) {
 export async function withTransaction(fn) {
   const client = await getPool().connect();
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
     const tx = {
       query: async (text, params = []) => (await client.query(text, params)).rows,
     };
     const result = await fn(tx);
-    await client.query('COMMIT');
+    await client.query("COMMIT");
     return result;
   } catch (error) {
-    try { await client.query('ROLLBACK'); } catch {}
+    try {
+      await client.query("ROLLBACK");
+    } catch {}
     throw error;
   } finally {
     client.release();
@@ -460,7 +462,9 @@ const NOTIFICATION_RETENTION_DAYS = Number(process.env.NOTIFICATION_RETENTION_DA
 export async function purgeOldTransactions() {
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
   // Les données financières sont conservées par défaut ~7 ans.
-  await getPool().query('DELETE FROM notifications WHERE created_at < $1', [new Date(Date.now() - NOTIFICATION_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString()]);
+  await getPool().query("DELETE FROM notifications WHERE created_at < $1", [
+    new Date(Date.now() - NOTIFICATION_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+  ]);
   // Ne jamais supprimer automatiquement les ventes/commandes : elles constituent l'historique financier.
   void cutoff;
 }

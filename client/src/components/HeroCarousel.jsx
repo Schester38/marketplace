@@ -1,7 +1,14 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useLang } from '../i18n.jsx';
-import { IconChevronLeft, IconChevronRight, IconBolt, IconStore, IconGift, IconUsers } from './icons.jsx';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { useLang } from "../i18n.jsx";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconBolt,
+  IconStore,
+  IconGift,
+  IconUsers,
+} from "./icons.jsx";
 
 const AUTOPLAY_MS = 6000;
 const SWIPE_PX = 42;
@@ -20,43 +27,49 @@ export default function HeroCarousel({ onExplore }) {
 
   const slides = [
     {
-      id: 'welcome',
-      cls: 'hc-orange',
-      kicker: t('BIENVENUE SUR MBOPPI'),
-      title: t('Le marché de votre quartier, en ligne'),
-      text: t('Produits des boutiques, créations des créateurs, livraison près de chez vous.'),
-      cta: t('Découvrir les produits'),
-      to: '#produits',
+      id: "welcome",
+      cls: "hc-orange",
+      kicker: t("BIENVENUE SUR MBOPPI"),
+      title: t("Le marché de votre quartier, en ligne"),
+      text: t("Produits des boutiques, créations des créateurs, livraison près de chez vous."),
+      cta: t("Découvrir les produits"),
+      to: "#produits",
       icon: <IconUsers size={26} />,
     },
     {
-      id: 'flash',
-      cls: 'hc-navy',
-      kicker: t('PROMOTIONS DU JOUR'),
-      title: t('Offres éclair à durée limitée'),
-      text: t('Jusqu\'à -50 % sur une sélection de produits. Une seule semaine par boutique : unique !'),
-      cta: t('Voir les promotions'),
-      to: '/?rail=promos',
+      id: "flash",
+      cls: "hc-navy",
+      kicker: t("PROMOTIONS DU JOUR"),
+      title: t("Offres éclair à durée limitée"),
+      text: t(
+        "Jusqu'à -50 % sur une sélection de produits. Une seule semaine par boutique : unique !"
+      ),
+      cta: t("Voir les promotions"),
+      to: "/?rail=promos",
       icon: <IconBolt size={26} />,
     },
     {
-      id: 'seller',
-      cls: 'hc-green',
-      kicker: t('VENDEURS & BOUTIQUES'),
-      title: t('Vendez près de chez vous, sans frais de plateforme'),
-      text: t('Publiez vos produits en quelques minutes et recevez vos commandes par téléphone ou WhatsApp.'),
-      cta: t('Devenir vendeur'),
-      to: '/register',
+      id: "seller",
+      cls: "hc-green",
+      kicker: t("VENDEURS & BOUTIQUES"),
+      title: t("Vendez près de chez vous, sans frais de plateforme"),
+      text: t(
+        "Publiez vos produits en quelques minutes et recevez vos commandes par téléphone ou WhatsApp."
+      ),
+      cta: t("Devenir vendeur"),
+      to: "/register",
       icon: <IconStore size={26} />,
     },
     {
-      id: 'referral',
-      cls: 'hc-violet',
-      kicker: t('PROGRAMME DE PARRAINAGE'),
-      title: t('Gagnez 2 % sur chaque achat de vos clients affiliés'),
-      text: t('Partagez votre code vendeur : vos clients achètent, vous touchez 2 % automatiquement.'),
-      cta: t('Créer mon compte gratuit'),
-      to: '/register',
+      id: "referral",
+      cls: "hc-violet",
+      kicker: t("PROGRAMME DE PARRAINAGE"),
+      title: t("Gagnez 2 % sur chaque achat de vos clients affiliés"),
+      text: t(
+        "Partagez votre code vendeur : vos clients achètent, vous touchez 2 % automatiquement."
+      ),
+      cta: t("Créer mon compte gratuit"),
+      to: "/register",
       icon: <IconGift size={26} />,
     },
   ];
@@ -64,7 +77,7 @@ export default function HeroCarousel({ onExplore }) {
   const count = slides.length;
   const rtlMult = (() => {
     try {
-      return (document.documentElement.getAttribute('dir') === 'rtl') ? -1 : 1;
+      return document.documentElement.getAttribute("dir") === "rtl" ? -1 : 1;
     } catch {
       return 1;
     }
@@ -74,7 +87,11 @@ export default function HeroCarousel({ onExplore }) {
 
   useEffect(() => {
     if (paused || count <= 1) return undefined;
-    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
       return undefined;
     }
     timer.current = setTimeout(() => go(index + 1), AUTOPLAY_MS);
@@ -96,10 +113,10 @@ export default function HeroCarousel({ onExplore }) {
 
   return (
     <section
-      className={`hero-carousel hc-${slides[index]?.cls || ''}`}
+      className={`hero-carousel hc-${slides[index]?.cls || ""}`}
       role="region"
       aria-roledescription="carrousel"
-      aria-label={t('À la une sur Mboppi')}
+      aria-label={t("À la une sur Mboppi")}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -118,18 +135,29 @@ export default function HeroCarousel({ onExplore }) {
             aria-hidden={i !== index || undefined}
             aria-label={`${i + 1} / ${count}`}
           >
-            <span className="hero-slide-icon" aria-hidden="true">{s.icon}</span>
+            <span className="hero-slide-icon" aria-hidden="true">
+              {s.icon}
+            </span>
             <div className="hero-slide-body">
               <span className="hero-slide-kicker">{s.kicker}</span>
               <h2>{s.title}</h2>
               <p>{s.text}</p>
             </div>
-            {s.to.startsWith('#') ? (
-              <button type="button" className="btn btn-light hero-slide-cta" tabIndex={i === index ? 0 : -1} onClick={onExplore}>
+            {s.to.startsWith("#") ? (
+              <button
+                type="button"
+                className="btn btn-light hero-slide-cta"
+                tabIndex={i === index ? 0 : -1}
+                onClick={onExplore}
+              >
                 {s.cta} →
               </button>
             ) : (
-              <Link className="btn btn-light hero-slide-cta" to={s.to} tabIndex={i === index ? 0 : -1}>
+              <Link
+                className="btn btn-light hero-slide-cta"
+                to={s.to}
+                tabIndex={i === index ? 0 : -1}
+              >
                 {s.cta} →
               </Link>
             )}
@@ -140,7 +168,7 @@ export default function HeroCarousel({ onExplore }) {
       <button
         type="button"
         className="hc-arrow hc-arrow-prev"
-        aria-label={t('Diapositive précédente')}
+        aria-label={t("Diapositive précédente")}
         onClick={() => go(index - 1)}
       >
         <IconChevronLeft size={20} />
@@ -148,21 +176,21 @@ export default function HeroCarousel({ onExplore }) {
       <button
         type="button"
         className="hc-arrow hc-arrow-next"
-        aria-label={t('Diapositive suivante')}
+        aria-label={t("Diapositive suivante")}
         onClick={() => go(index + 1)}
       >
         <IconChevronRight size={20} />
       </button>
 
-      <div className="hc-dots" role="tablist" aria-label={t('Choisir une diapositive')}>
+      <div className="hc-dots" role="tablist" aria-label={t("Choisir une diapositive")}>
         {slides.map((s, i) => (
           <button
             key={s.id}
             type="button"
             role="tab"
             aria-selected={i === index}
-            aria-label={`${t('Diapositive')} ${i + 1} : ${s.kicker}`}
-            className={`hc-dot ${i === index ? 'active' : ''}`}
+            aria-label={`${t("Diapositive")} ${i + 1} : ${s.kicker}`}
+            className={`hc-dot ${i === index ? "active" : ""}`}
             onClick={() => go(i)}
           />
         ))}

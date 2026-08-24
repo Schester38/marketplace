@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
-import { useLang } from '../i18n.jsx';
-import { getCategoryIcon } from './icons.jsx';
+import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
+import { useLang } from "../i18n.jsx";
+import { getCategoryIcon } from "./icons.jsx";
 
 function MegaMenuItem({ sub, cat, t, closeMegaMenu }) {
   return (
@@ -22,13 +22,7 @@ function MegaMenuGrid({ cat, t, closeMegaMenu }) {
   return (
     <div className="mega-menu-grid">
       {cat.subcategories.map((sub) => (
-        <MegaMenuItem
-          key={sub}
-          sub={sub}
-          cat={cat}
-          t={t}
-          closeMegaMenu={closeMegaMenu}
-        />
+        <MegaMenuItem key={sub} sub={sub} cat={cat} t={t} closeMegaMenu={closeMegaMenu} />
       ))}
     </div>
   );
@@ -43,9 +37,11 @@ function MegaMenuContent({ cat, t, closeMegaMenu }) {
           onClick={closeMegaMenu}
           className="mega-menu-title-link"
         >
-          <span className="mega-item-icon mega-title-icon">{getCategoryIcon(cat.main || cat.label, 18)}</span>
+          <span className="mega-item-icon mega-title-icon">
+            {getCategoryIcon(cat.main || cat.label, 18)}
+          </span>
           <span className="mega-menu-title">{cat.label}</span>
-          <span className="mega-see-all">{t('Voir tout')} →</span>
+          <span className="mega-see-all">{t("Voir tout")} →</span>
         </Link>
       </div>
       <MegaMenuGrid cat={cat} t={t} closeMegaMenu={closeMegaMenu} />
@@ -53,7 +49,16 @@ function MegaMenuContent({ cat, t, closeMegaMenu }) {
   );
 }
 
-function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMenuLeave, close, t, closeMegaMenu, activeCat }) {
+function MegaMenuTrigger({
+  cat,
+  megaMenuOpen,
+  handleMegaMenuEnter,
+  handleMegaMenuLeave,
+  close,
+  t,
+  closeMegaMenu,
+  activeCat,
+}) {
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
   const [pos, setPos] = useState(null);
@@ -64,7 +69,7 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
   // toucher, pas au mouseenter (événements souris synthétiques sur tactile).
   const [touchMode] = useState(() => {
     try {
-      return typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+      return typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
     } catch {
       return false;
     }
@@ -96,7 +101,7 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
       const r = el.getBoundingClientRect();
       const vw = window.innerWidth || 360;
       const width = Math.min(380, vw - 24);
-      const rtl = document.documentElement.getAttribute('dir') === 'rtl';
+      const rtl = document.documentElement.getAttribute("dir") === "rtl";
       let left = rtl ? r.right - width : r.left;
       left = Math.max(12, Math.min(left, vw - width - 12));
       setPos({ top: Math.round(r.bottom - 1), left: Math.round(left), width });
@@ -113,19 +118,19 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
         if (triggerRef.current && triggerRef.current.contains(tgt)) return;
         handleMegaMenuLeave();
       };
-      window.addEventListener('resize', update);
-      document.addEventListener('pointerdown', onDocDown);
+      window.addEventListener("resize", update);
+      document.addEventListener("pointerdown", onDocDown);
       return () => {
-        window.removeEventListener('resize', update);
-        document.removeEventListener('pointerdown', onDocDown);
+        window.removeEventListener("resize", update);
+        document.removeEventListener("pointerdown", onDocDown);
       };
     }
     const closeOnMove = () => handleMegaMenuLeave();
-    window.addEventListener('resize', closeOnMove);
-    window.addEventListener('scroll', closeOnMove, true);
+    window.addEventListener("resize", closeOnMove);
+    window.addEventListener("scroll", closeOnMove, true);
     return () => {
-      window.removeEventListener('resize', closeOnMove);
-      window.removeEventListener('scroll', closeOnMove, true);
+      window.removeEventListener("resize", closeOnMove);
+      window.removeEventListener("scroll", closeOnMove, true);
     };
   }, [isOpen, touchMode, handleMegaMenuLeave]);
 
@@ -136,7 +141,9 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
       <div
         key={cat.label}
         className="mega-menu-trigger"
-        onTouchStart={() => { lastTouchAt.current = Date.now(); }}
+        onTouchStart={() => {
+          lastTouchAt.current = Date.now();
+        }}
         onMouseEnter={() => {
           // Ignorer les événements souris SYNTHÉTIQUES qui suivent un tap tactile
           if (Date.now() - lastTouchAt.current < 800) return;
@@ -149,13 +156,16 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
           ref={triggerRef}
           to={`/?cat=${encodeURIComponent(mainTarget)}`}
           data-cat={mainTarget}
-          className={`cat-link mega-link${activeCat === mainTarget ? ' cat-active' : ''}`}
+          className={`cat-link mega-link${activeCat === mainTarget ? " cat-active" : ""}`}
           role="tab"
           aria-selected={false}
           aria-haspopup="true"
           aria-expanded={isOpen}
           onClick={(e) => {
-            if (!touchMode) { close(); return; } // Desktop : navigation directe
+            if (!touchMode) {
+              close();
+              return;
+            } // Desktop : navigation directe
             // Tactile : 1ᵉʳ appui = OUVRIR le panneau (sans naviguer),
             // 2ᵉ appui = refermer. La navigation passe par les sous-catégories
             // ou le lien « Voir tout » du panneau.
@@ -167,41 +177,57 @@ function MegaMenuTrigger({ cat, megaMenuOpen, handleMegaMenuEnter, handleMegaMen
               handleMegaMenuEnter(cat.label);
             }
           }}
-          onFocus={() => { cancelLeave(); handleMegaMenuEnter(cat.label); }}
-          onBlur={delayedLeave}
-        >
-          <span className="cat-icon" aria-hidden="true">{cat.icon}</span>
-          <span className="cat-label">{cat.label}</span>
-          <svg className="mega-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </Link>
-      </div>
-      {isOpen && pos && createPortal(
-        <div
-          ref={panelRef}
-          className="mega-menu open"
-          role="menu"
-          aria-label={cat.label}
-          style={{
-            position: 'fixed',
-            top: pos.top,
-            left: pos.left,
-            width: pos.width,
-            borderRadius: 14,
-            maxHeight: 'min(70vh, 520px)',
-            overflowY: 'auto',
-            overscrollBehavior: 'contain',
-          }}
-          onMouseEnter={() => {
-            if (Date.now() - lastTouchAt.current < 800) return;
+          onFocus={() => {
             cancelLeave();
             handleMegaMenuEnter(cat.label);
           }}
-          onMouseLeave={delayedLeave}
+          onBlur={delayedLeave}
         >
-          <MegaMenuContent cat={cat} t={t} closeMegaMenu={closeMegaMenu} />
-        </div>,
-        document.body
-      )}
+          <span className="cat-icon" aria-hidden="true">
+            {cat.icon}
+          </span>
+          <span className="cat-label">{cat.label}</span>
+          <svg
+            className="mega-arrow"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </Link>
+      </div>
+      {isOpen &&
+        pos &&
+        createPortal(
+          <div
+            ref={panelRef}
+            className="mega-menu open"
+            role="menu"
+            aria-label={cat.label}
+            style={{
+              position: "fixed",
+              top: pos.top,
+              left: pos.left,
+              width: pos.width,
+              borderRadius: 14,
+              maxHeight: "min(70vh, 520px)",
+              overflowY: "auto",
+              overscrollBehavior: "contain",
+            }}
+            onMouseEnter={() => {
+              if (Date.now() - lastTouchAt.current < 800) return;
+              cancelLeave();
+              handleMegaMenuEnter(cat.label);
+            }}
+            onMouseLeave={delayedLeave}
+          >
+            <MegaMenuContent cat={cat} t={t} closeMegaMenu={closeMegaMenu} />
+          </div>,
+          document.body
+        )}
     </>
   );
 }

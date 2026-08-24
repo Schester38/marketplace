@@ -1,5 +1,5 @@
-import { useLang } from '../i18n.jsx';
-import Logo from './Logo.jsx';
+import { useLang } from "../i18n.jsx";
+import Logo from "./Logo.jsx";
 
 export default function LoadingScreen({ label }) {
   const { t } = useLang();
@@ -7,7 +7,7 @@ export default function LoadingScreen({ label }) {
     <div className="route-loader">
       <Logo className="route-loader-logo" />
       <div className="route-loader-spinner" />
-      <p>{label || t('Chargement…')}</p>
+      <p>{label || t("Chargement…")}</p>
     </div>
   );
 }

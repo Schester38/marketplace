@@ -1,9 +1,16 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { formatMoney } from './ProductCard.jsx';
-import { offerUrl, offersWhatsappLink, offerDiscount, offerSavings, categoryEmoji, currencySymbol } from '../config.js';
-import { useLang } from '../i18n.jsx';
-import Logo from './Logo.jsx';
+import React from "react";
+import { Link } from "react-router-dom";
+import { formatMoney } from "./ProductCard.jsx";
+import {
+  offerUrl,
+  offersWhatsappLink,
+  offerDiscount,
+  offerSavings,
+  categoryEmoji,
+  currencySymbol,
+} from "../config.js";
+import { useLang } from "../i18n.jsx";
+import Logo from "./Logo.jsx";
 
 export default function OfferCard({ offer }) {
   const { t } = useLang();
@@ -11,9 +18,9 @@ export default function OfferCard({ offer }) {
   const hasPhotos = photos.length > 0;
   const discount = offerDiscount(offer);
   const savings = offerSavings(offer);
-  const symbol = currencySymbol(offer.currency || 'XAF');
+  const symbol = currencySymbol(offer.currency || "XAF");
 
-  const waMessage = t('Bonjour, je suis intéressé(e) par votre offre « {name} » : {url}', {
+  const waMessage = t("Bonjour, je suis intéressé(e) par votre offre « {name} » : {url}", {
     name: offer.name,
     url: offerUrl(offer.id),
   });
@@ -28,31 +35,54 @@ export default function OfferCard({ offer }) {
         )}
         {discount > 0 && <span className="discount-badge">−{discount}%</span>}
         {photos.length > 1 && (
-          <span className="offer-photo-count">{t('{n} photos', { n: photos.length })}</span>
+          <span className="offer-photo-count">{t("{n} photos", { n: photos.length })}</span>
         )}
       </Link>
       <div className="offer-body">
         <div className="offer-tags">
-          <span className="badge badge-offer">{t('Offre')}</span>
-          {offer.category && <span className="badge badge-cat">{categoryEmoji(offer.category)} {t(offer.category)}</span>}
+          <span className="badge badge-offer">{t("Offre")}</span>
+          {offer.category && (
+            <span className="badge badge-cat">
+              {categoryEmoji(offer.category)} {t(offer.category)}
+            </span>
+          )}
         </div>
-        <h3><Link to={`/offre/${offer.id}`}>{offer.name}</Link></h3>
+        <h3>
+          <Link to={`/offre/${offer.id}`}>{offer.name}</Link>
+        </h3>
         {offer.description && <p className="product-desc">{offer.description}</p>}
-        {offer.warranty && <p className="offer-warranty">🛡️ {t('Garantie : {warranty}', { warranty: offer.warranty })}</p>}
+        {offer.warranty && (
+          <p className="offer-warranty">
+            🛡️ {t("Garantie : {warranty}", { warranty: offer.warranty })}
+          </p>
+        )}
         <div className="offer-prices">
-          <span className="old-price">{formatMoney(offer.original_price)} {symbol}</span>
-          <span className="promo-price">{formatMoney(offer.promo_price)} {symbol}</span>
+          <span className="old-price">
+            {formatMoney(offer.original_price)} {symbol}
+          </span>
+          <span className="promo-price">
+            {formatMoney(offer.promo_price)} {symbol}
+          </span>
         </div>
-        {savings > 0 && <p className="offer-savings">💰 {t('Économisez {n} {symbol}', { n: formatMoney(savings), symbol })}</p>}
+        {savings > 0 && (
+          <p className="offer-savings">
+            💰 {t("Économisez {n} {symbol}", { n: formatMoney(savings), symbol })}
+          </p>
+        )}
         {offer.phone && (
           <a className="btn btn-primary btn-block" href={`tel:${offer.phone}`}>
-            📞 {t('Appeler')}
+            📞 {t("Appeler")}
           </a>
         )}
-        <a className="btn btn-whatsapp btn-block" href={offersWhatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">
-          <WhatsAppIcon /> {t('Commander sur WhatsApp')}
+        <a
+          className="btn btn-whatsapp btn-block"
+          href={offersWhatsappLink(waMessage)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <WhatsAppIcon /> {t("Commander sur WhatsApp")}
         </a>
-        <p className="offer-qty">{t('Disponibilité : {n} unité(s)', { n: offer.quantity })}</p>
+        <p className="offer-qty">{t("Disponibilité : {n} unité(s)", { n: offer.quantity })}</p>
       </div>
     </div>
   );

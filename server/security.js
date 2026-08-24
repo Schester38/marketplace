@@ -1,10 +1,10 @@
-import { q } from './db.js';
+import { q } from "./db.js";
 
 const ALLOWED_ORIGINS = [
-  'http://localhost:5173',
-  'http://localhost:4173',
+  "http://localhost:5173",
+  "http://localhost:4173",
   process.env.ALLOWED_ORIGIN,
-  'https://mboppi-mboppi.vercel.app',
+  "https://mboppi-mboppi.vercel.app",
 ].filter(Boolean);
 
 const CSP =
@@ -20,25 +20,27 @@ const CSP =
   "form-action 'self' https://www.google.com";
 
 export function securityHeaders(req, res, next) {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.setHeader('Content-Security-Policy', CSP);
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader("Content-Security-Policy", CSP);
   next();
 }
 
 export function originCheck(req, res, next) {
-  if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return next();
   const origin = req.headers.origin;
   if (!origin) return next();
   if (ALLOWED_ORIGINS.includes(origin)) return next();
-  return res.status(403).json({ error: 'Origine non autorisée' });
+  return res.status(403).json({ error: "Origine non autorisée" });
 }
 
 export function logAudit(userId, action, detail, ip) {
-  return q(
-    'INSERT INTO audit_log (user_id, action, detail, ip) VALUES ($1, $2, $3, $4)',
-    [userId, action, detail || null, ip || null]
-  ).catch(() => {});
+  return q("INSERT INTO audit_log (user_id, action, detail, ip) VALUES ($1, $2, $3, $4)", [
+    userId,
+    action,
+    detail || null,
+    ip || null,
+  ]).catch(() => {});
 }

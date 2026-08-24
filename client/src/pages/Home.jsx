@@ -1,20 +1,20 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { api } from '../api.js';
-import ProductCard, { formatMoney } from '../components/ProductCard.jsx';
-import ProductRail, { RailShell } from '../components/ProductRail.jsx';
-import FlashPromoCard from '../components/FlashPromo.jsx';
-import Seo from '../components/Seo.jsx';
-import RecentSales from '../components/RecentSales.jsx';
-import Logo from '../components/Logo.jsx';
-import HeroCarousel from '../components/HeroCarousel.jsx';
-import CategoryGrid from '../components/CategoryGrid.jsx';
-import TrustBadges from '../components/TrustBadges.jsx';
-import Reveal from '../components/Reveal.jsx';
-import { useLang } from '../i18n.jsx';
-import { PRODUCT_CATEGORIES, currencySymbol } from '../config.js';
-import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
-import { useAuth } from '../App.jsx';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { api } from "../api.js";
+import ProductCard, { formatMoney } from "../components/ProductCard.jsx";
+import ProductRail, { RailShell } from "../components/ProductRail.jsx";
+import FlashPromoCard from "../components/FlashPromo.jsx";
+import Seo from "../components/Seo.jsx";
+import RecentSales from "../components/RecentSales.jsx";
+import Logo from "../components/Logo.jsx";
+import HeroCarousel from "../components/HeroCarousel.jsx";
+import CategoryGrid from "../components/CategoryGrid.jsx";
+import TrustBadges from "../components/TrustBadges.jsx";
+import Reveal from "../components/Reveal.jsx";
+import { useLang } from "../i18n.jsx";
+import { PRODUCT_CATEGORIES, currencySymbol } from "../config.js";
+import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
+import { useAuth } from "../App.jsx";
 
 function mergeUnique(prev, next) {
   if (!prev.length) return next;
@@ -32,21 +32,21 @@ export default function Home() {
   const retryRef = useRef(0);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [search, setSearch] = useState(() => params.get('q') || '');
-  const [debouncedSearch, setDebouncedSearch] = useState(() => params.get('q') || '');
-  const [category, setCategory] = useState(() => params.get('cat') || '');
-  const [sort, setSort] = useState('popular');
-  const [scope, setScope] = useState('product');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [mode, setMode] = useState('products');
-  const [cityInput, setCityInput] = useState('');
-  const [city, setCity] = useState('');
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState(() => params.get("q") || "");
+  const [debouncedSearch, setDebouncedSearch] = useState(() => params.get("q") || "");
+  const [category, setCategory] = useState(() => params.get("cat") || "");
+  const [sort, setSort] = useState("popular");
+  const [scope, setScope] = useState("product");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [mode, setMode] = useState("products");
+  const [cityInput, setCityInput] = useState("");
+  const [city, setCity] = useState("");
   const [shops, setShops] = useState([]);
   const [cityProducts, setCityProducts] = useState([]);
   const [shopsLoading, setShopsLoading] = useState(false);
-  const [shopsError, setShopsError] = useState('');
+  const [shopsError, setShopsError] = useState("");
   const PER_PAGE = 24;
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -58,18 +58,18 @@ export default function Home() {
   const [bestSellers, setBestSellers] = useState([]);
   const [popular, setPopular] = useState([]);
   const [flashPromos, setFlashPromos] = useState([]);
-  const [activeRail, setActiveRail] = useState(() => params.get('rail') || '');
+  const [activeRail, setActiveRail] = useState(() => params.get("rail") || "");
 
   // Lien « Promotions » du header : /?rail=promos ouvre directement le rail.
   useEffect(() => {
-    const r = params.get('rail');
+    const r = params.get("rail");
     if (r) setActiveRail(r);
   }, [params]);
   const [recent, setRecent] = useState([]);
 
   useEffect(() => {
     try {
-      const cached = sessionStorage.getItem('mboppi_products');
+      const cached = sessionStorage.getItem("mboppi_products");
       const arr = cached ? JSON.parse(cached) : null;
       if (Array.isArray(arr) && arr.length) {
         hasLoaded.current = true;
@@ -83,7 +83,7 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      const list = JSON.parse(localStorage.getItem('mboppi_recent') || '[]');
+      const list = JSON.parse(localStorage.getItem("mboppi_recent") || "[]");
       const filtered = Array.isArray(list) ? list.filter((p) => Number(p.quantity || 0) > 0) : [];
       setRecent(filtered);
     } catch {
@@ -94,24 +94,24 @@ export default function Home() {
   // Synchronisation recherche/catégorie avec l'URL (?q= / ?cat=) : les liens de la
   // barre de recherche et du bandeau catégories (navbar) s'appliquent partout.
   useEffect(() => {
-    setSearch(params.get('q') || '');
-    setDebouncedSearch(params.get('q') || '');
+    setSearch(params.get("q") || "");
+    setDebouncedSearch(params.get("q") || "");
     setOffset(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.get('q')]);
+  }, [params.get("q")]);
 
   useEffect(() => {
-    setCategory(params.get('cat') || '');
+    setCategory(params.get("cat") || "");
     setOffset(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.get('cat')]);
+  }, [params.get("cat")]);
 
   useEffect(() => {
     const next = new URLSearchParams(params);
     const q = debouncedSearch.trim();
-    if ((next.get('q') || '') !== q) {
-      if (q) next.set('q', q);
-      else next.delete('q');
+    if ((next.get("q") || "") !== q) {
+      if (q) next.set("q", q);
+      else next.delete("q");
       setSearchParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -119,9 +119,9 @@ export default function Home() {
 
   useEffect(() => {
     const next = new URLSearchParams(params);
-    if ((next.get('cat') || '') !== category) {
-      if (category) next.set('cat', category);
-      else next.delete('cat');
+    if ((next.get("cat") || "") !== category) {
+      if (category) next.set("cat", category);
+      else next.delete("cat");
       setSearchParams(next, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -134,11 +134,11 @@ export default function Home() {
       .then((d) => ok && setTrending(d.products || []))
       .catch(() => {});
     api
-      .listProducts({ sort: 'sales', limit: 10 })
+      .listProducts({ sort: "sales", limit: 10 })
       .then((d) => ok && setBestSellers(d.products || []))
       .catch(() => {});
     api
-      .listProducts({ sort: 'popular', limit: 10 })
+      .listProducts({ sort: "popular", limit: 10 })
       .then((d) => ok && setPopular(d.products || []))
       .catch(() => {});
     api
@@ -178,27 +178,30 @@ export default function Home() {
     setSugLoading(true);
     sugTimer.current = setTimeout(() => {
       let ok = true;
-      Promise.all([api.listProducts({ search: query, limit: 6 }), api.listShops({ search: query, limit: 4 })])
+      Promise.all([
+        api.listProducts({ search: query, limit: 6 }),
+        api.listShops({ search: query, limit: 4 }),
+      ])
         .then(([pr, sr]) => {
           if (!ok) return;
           const items = [
             ...(pr.products || []).map((p) => ({
-              kind: 'product',
+              kind: "product",
               id: p.id,
               title: p.name,
-              sub: p.shop_name || t('Produit'),
+              sub: p.shop_name || t("Produit"),
               price: p.price,
               currency: p.currency,
               image: p.image,
               url: `/produit/${p.id}`,
             })),
             ...(sr.shops || []).map((s) => ({
-              kind: 'shop',
+              kind: "shop",
               id: s.id,
               title: s.name,
-              sub: s.role === 'creator' ? t('Créateur·rice') : t('Boutique'),
+              sub: s.role === "creator" ? t("Créateur·rice") : t("Boutique"),
               image: s.sample_image,
-              url: s.role === 'creator' ? `/createur/${s.id}` : `/boutique/${s.id}`,
+              url: s.role === "creator" ? `/createur/${s.id}` : `/boutique/${s.id}`,
             })),
           ];
           setSugItems(items);
@@ -215,7 +218,7 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
-const loadProducts = useCallback(
+  const loadProducts = useCallback(
     (silent, append) => {
       if (!silent && !hasLoaded.current) setLoading(true);
       api
@@ -224,8 +227,8 @@ const loadProducts = useCallback(
           category,
           sort,
           scope,
-          min_price: minPrice === '' ? undefined : minPrice,
-          max_price: maxPrice === '' ? undefined : maxPrice,
+          min_price: minPrice === "" ? undefined : minPrice,
+          max_price: maxPrice === "" ? undefined : maxPrice,
           limit: PER_PAGE,
           offset,
         })
@@ -233,19 +236,20 @@ const loadProducts = useCallback(
           if (mounted.current) {
             hasLoaded.current = true;
             const next = d.products || [];
-            const unfiltered = !debouncedSearch && !category && !minPrice && !maxPrice && scope === 'product';
+            const unfiltered =
+              !debouncedSearch && !category && !minPrice && !maxPrice && scope === "product";
             if (next.length === 0 && hasData.current && unfiltered) {
-              setError('');
+              setError("");
             } else {
               setHasMore(Boolean(d.hasMore));
               setProducts((prev) => (append ? mergeUnique(prev, next) : next));
               hasData.current = d.total != null ? d.total > 0 : next.length > 0;
               if (next.length > 0) retryRef.current = 0;
-              setError('');
+              setError("");
             }
-            if (unfiltered && sort === 'recent' && !append) {
+            if (unfiltered && sort === "recent" && !append) {
               try {
-                sessionStorage.setItem('mboppi_products', JSON.stringify(next));
+                sessionStorage.setItem("mboppi_products", JSON.stringify(next));
               } catch {
                 /* stockage indisponible : on ignore */
               }
@@ -263,7 +267,7 @@ const loadProducts = useCallback(
               !category &&
               !minPrice &&
               !maxPrice &&
-              scope === 'product' &&
+              scope === "product" &&
               retryRef.current < 2
             ) {
               retryRef.current += 1;
@@ -272,8 +276,7 @@ const loadProducts = useCallback(
           }
         });
     },
-    [user, debouncedSearch, category, sort, scope, minPrice, maxPrice, offset]
-
+    [debouncedSearch, category, sort, scope, minPrice, maxPrice, offset]
   );
 
   useEffect(() => {
@@ -288,16 +291,16 @@ const loadProducts = useCallback(
   useRefreshOnFocus(() => loadProducts(true));
 
   useEffect(() => {
-    if (mode !== 'city') return;
+    if (mode !== "city") return;
     const id = setTimeout(() => setCity(cityInput.trim()), 500);
     return () => clearTimeout(id);
   }, [cityInput, mode]);
 
   useEffect(() => {
-    if (mode !== 'city' || !city) return;
+    if (mode !== "city" || !city) return;
     let ok = true;
     setShopsLoading(true);
-    setShopsError('');
+    setShopsError("");
     Promise.all([api.listShops({ city }), api.listProducts({ city })])
       .then(([shopsRes, productsRes]) => {
         if (ok) {
@@ -313,13 +316,13 @@ const loadProducts = useCallback(
   }, [mode, city]);
 
   const goToProducts = () => {
-    produitsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    produitsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const scrollTabs = (dir) => {
     const el = tabsRef.current;
     if (!el) return;
-    el.scrollBy({ left: dir * el.clientWidth * 0.6, behavior: 'smooth' });
+    el.scrollBy({ left: dir * el.clientWidth * 0.6, behavior: "smooth" });
   };
 
   const submitSearch = (e) => {
@@ -330,15 +333,20 @@ const loadProducts = useCallback(
   };
 
   const onSugKeyDown = (e) => {
-    if (!sugOpen || sugItems.length === 0 || e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Escape') return;
+    if (
+      !sugOpen ||
+      sugItems.length === 0 ||
+      (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Escape")
+    )
+      return;
     e.preventDefault();
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       setSugOpen(false);
       setSugActive(-1);
       return;
     }
     const next =
-      e.key === 'ArrowDown'
+      e.key === "ArrowDown"
         ? sugActive < sugItems.length - 1
           ? sugActive + 1
           : 0
@@ -382,166 +390,186 @@ const loadProducts = useCallback(
 
       {!user && (
         <>
-      <section className="hero vitrine-hero">
-        <div className="hero-floats" aria-hidden="true">
-          <span className="logo-float"><Logo className="hero-float-logo" /></span>
-          <span>💸</span>
-          <span>🛒</span>
-          <span>✨</span>
-          <span>💰</span>
-          <span>🎊</span>
-        </div>
-        <span className="hero-badge"><Logo className="logo-inline" /> {t('BIENVENUE SUR MBOPPI')}</span>
-        <h1>{t('Mboppi, le marché de votre quartier, en ligne')}</h1>
-        <p>
-          {t("Mboppi est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans prix écrasant et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les créateurs exposent leurs talents, juste avec un téléphone et une connexion internet, les vendeurs vendent et gagnent des commissions, et les clients trouvent tout au même endroit avec satisfaction, sans se déplacer.")}
-        </p>
-        <div className="hero-actions">
-          <Link to="/register" className="btn btn-primary btn-xl">{t('Créer un compte gratuit')}</Link>
-        </div>
-      </section>
+          <section className="hero vitrine-hero">
+            <div className="hero-floats" aria-hidden="true">
+              <span className="logo-float">
+                <Logo className="hero-float-logo" />
+              </span>
+              <span>💸</span>
+              <span>🛒</span>
+              <span>✨</span>
+              <span>💰</span>
+              <span>🎊</span>
+            </div>
+            <span className="hero-badge">
+              <Logo className="logo-inline" /> {t("BIENVENUE SUR MBOPPI")}
+            </span>
+            <h1>{t("Mboppi, le marché de votre quartier, en ligne")}</h1>
+            <p>
+              {t(
+                "Mboppi est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans prix écrasant et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les créateurs exposent leurs talents, juste avec un téléphone et une connexion internet, les vendeurs vendent et gagnent des commissions, et les clients trouvent tout au même endroit avec satisfaction, sans se déplacer."
+              )}
+            </p>
+            <div className="hero-actions">
+              <Link to="/register" className="btn btn-primary btn-xl">
+                {t("Créer un compte gratuit")}
+              </Link>
+            </div>
+          </section>
 
-      <section className="section">
-        <div className="section-head">
-          <h2>{t('Comment ça marche ?')}</h2>
-          <p>{t('Un rôle pour chacun, une plateforme pour tous.')}</p>
-        </div>
-        <div className="steps">
-          <div className="step">
-            <div className="step-icon">🏪</div>
-            <div className="step-num">1</div>
-            <h3>{t('Boutique')}</h3>
-            <p>{t('Publiez vos produits et recevez les commandes.')}</p>
-          </div>
-          <div className="step">
-            <div className="step-icon">🎨</div>
-            <div className="step-num">2</div>
-            <h3>{t('Créateur')}</h3>
-            <p>{t('Exposez vos créations et touchez un public plus large.')}</p>
-          </div>
-          <div className="step">
-            <div className="step-icon">🛒</div>
-            <div className="step-num">3</div>
-            <h3>{t('Vendeur')}</h3>
-            <p>{t('Vendez en ligne et gagnez une commission sur chaque vente.')}</p>
-          </div>
-          <div className="step">
-            <div className="step-icon"><Logo className="logo-inline" /></div>
-            <div className="step-num">4</div>
-            <h3>{t('Client')}</h3>
-            <p>{t('Commandez en un clic et recevez chez vous avec un livreur.')}</p>
-          </div>
-          <div className="step">
-            <div className="step-icon">🛵</div>
-            <div className="step-num">5</div>
-            <h3>{t('Livreur')}</h3>
-            <p>{t('Livrez les articles commandés et confirmez l\'achat.')}</p>
-          </div>
-        </div>
-      </section>
+          <section className="section">
+            <div className="section-head">
+              <h2>{t("Comment ça marche ?")}</h2>
+              <p>{t("Un rôle pour chacun, une plateforme pour tous.")}</p>
+            </div>
+            <div className="steps">
+              <div className="step">
+                <div className="step-icon">🏪</div>
+                <div className="step-num">1</div>
+                <h3>{t("Boutique")}</h3>
+                <p>{t("Publiez vos produits et recevez les commandes.")}</p>
+              </div>
+              <div className="step">
+                <div className="step-icon">🎨</div>
+                <div className="step-num">2</div>
+                <h3>{t("Créateur")}</h3>
+                <p>{t("Exposez vos créations et touchez un public plus large.")}</p>
+              </div>
+              <div className="step">
+                <div className="step-icon">🛒</div>
+                <div className="step-num">3</div>
+                <h3>{t("Vendeur")}</h3>
+                <p>{t("Vendez en ligne et gagnez une commission sur chaque vente.")}</p>
+              </div>
+              <div className="step">
+                <div className="step-icon">
+                  <Logo className="logo-inline" />
+                </div>
+                <div className="step-num">4</div>
+                <h3>{t("Client")}</h3>
+                <p>{t("Commandez en un clic et recevez chez vous avec un livreur.")}</p>
+              </div>
+              <div className="step">
+                <div className="step-icon">🛵</div>
+                <div className="step-num">5</div>
+                <h3>{t("Livreur")}</h3>
+                <p>{t("Livrez les articles commandés et confirmez l'achat.")}</p>
+              </div>
+            </div>
+          </section>
 
-      <section className="section">
-        <div className="section-head">
-          <h2>{t('Nos valeurs')}</h2>
-          <p>{t('Ce qui nous pousse chaque jour.')}</p>
-        </div>
-        <div className="steps">
-          <div className="step">
-            <div className="step-icon">🤝</div>
-            <h3>{t('La confiance')}</h3>
-            <p>{t('Des commandes simples, des contacts directs avec les vendeurs.')}</p>
-          </div>
-          <div className="step">
-            <div className="step-icon">📱</div>
-            <h3>{t('La proximité')}</h3>
-            <p>{t('Commander avec son téléphone, sans carte bancaire ni frais cachés.')}</p>
-          </div>
-          <div className="step">
-            <div className="step-icon">⚡</div>
-            <h3>{t('La rapidité')}</h3>
-            <p>{t('Une plateforme légère, qui s\'affiche vite, même en 3G.')}</p>
-          </div>
-        </div>
-      </section>
+          <section className="section">
+            <div className="section-head">
+              <h2>{t("Nos valeurs")}</h2>
+              <p>{t("Ce qui nous pousse chaque jour.")}</p>
+            </div>
+            <div className="steps">
+              <div className="step">
+                <div className="step-icon">🤝</div>
+                <h3>{t("La confiance")}</h3>
+                <p>{t("Des commandes simples, des contacts directs avec les vendeurs.")}</p>
+              </div>
+              <div className="step">
+                <div className="step-icon">📱</div>
+                <h3>{t("La proximité")}</h3>
+                <p>{t("Commander avec son téléphone, sans carte bancaire ni frais cachés.")}</p>
+              </div>
+              <div className="step">
+                <div className="step-icon">⚡</div>
+                <h3>{t("La rapidité")}</h3>
+                <p>{t("Une plateforme légère, qui s'affiche vite, même en 3G.")}</p>
+              </div>
+            </div>
+          </section>
 
-      <section className="section cta-section">
-        <h2>{t("Prêt à rejoindre l'aventure ?")}</h2>
-        <p>{t("Créez votre compte gratuitement en moins d'une minute.")}</p>
-        <Link to="/register" className="btn btn-primary btn-xl">{t('Créer mon compte')}</Link>
-      </section>
+          <section className="section cta-section">
+            <h2>{t("Prêt à rejoindre l'aventure ?")}</h2>
+            <p>{t("Créez votre compte gratuitement en moins d'une minute.")}</p>
+            <Link to="/register" className="btn btn-primary btn-xl">
+              {t("Créer mon compte")}
+            </Link>
+          </section>
         </>
       )}
 
-      <section ref={produitsRef} aria-label={t('Produits')} style={{ scrollMarginTop: 80 }}>
-          <div className="section-head">
-            <h2 className="section-title"><Logo className="logo-inline" /> {t('Produits et créations')}</h2>
-            {category || minPrice || maxPrice ? (
-              <button
-                type="button"
-                className="section-link"
-                onClick={() => {
-                  setCategory('');
-                  setMinPrice('');
-                  setMaxPrice('');
-                }}
-              >
-                ✕ {t('Réinitialiser les filtres')}
-              </button>
-            ) : null}
-          </div>
-          {mode === 'products' && !category && !minPrice && !maxPrice && !search.trim() && scope === 'product' && (
+      <section ref={produitsRef} aria-label={t("Produits")} style={{ scrollMarginTop: 80 }}>
+        <div className="section-head">
+          <h2 className="section-title">
+            <Logo className="logo-inline" /> {t("Produits et créations")}
+          </h2>
+          {category || minPrice || maxPrice ? (
+            <button
+              type="button"
+              className="section-link"
+              onClick={() => {
+                setCategory("");
+                setMinPrice("");
+                setMaxPrice("");
+              }}
+            >
+              ✕ {t("Réinitialiser les filtres")}
+            </button>
+          ) : null}
+        </div>
+        {mode === "products" &&
+          !category &&
+          !minPrice &&
+          !maxPrice &&
+          !search.trim() &&
+          scope === "product" && (
             <>
               <div className="home-tabs-wrap">
                 <button
                   type="button"
                   className="tabs-arrow tabs-arrow-left"
                   onClick={() => scrollTabs(-1)}
-                  aria-label={t('Défiler vers la gauche')}
+                  aria-label={t("Défiler vers la gauche")}
                 >
                   ‹
                 </button>
                 <div className="home-tabs" ref={tabsRef}>
                   <button
                     type="button"
-                    className={`home-tab t-recent ${activeRail === 'recent' ? 'active' : ''}`}
-                    onClick={() => setActiveRail(activeRail === 'recent' ? '' : 'recent')}
+                    className={`home-tab t-recent ${activeRail === "recent" ? "active" : ""}`}
+                    onClick={() => setActiveRail(activeRail === "recent" ? "" : "recent")}
                   >
-                    <span className="tab-emoji">👀</span> <span>{t('Vus récemment')}</span>
+                    <span className="tab-emoji">👀</span> <span>{t("Vus récemment")}</span>
                   </button>
                   {trending.length > 0 && (
                     <button
                       type="button"
-                      className={`home-tab t-trending ${activeRail === 'trending' ? 'active' : ''}`}
-                      onClick={() => setActiveRail(activeRail === 'trending' ? '' : 'trending')}
+                      className={`home-tab t-trending ${activeRail === "trending" ? "active" : ""}`}
+                      onClick={() => setActiveRail(activeRail === "trending" ? "" : "trending")}
                     >
-                      <span className="tab-emoji">⚡</span> <span>{t('Tendances de la semaine')}</span>
+                      <span className="tab-emoji">⚡</span>{" "}
+                      <span>{t("Tendances de la semaine")}</span>
                     </button>
                   )}
                   {bestSellers.length > 0 && (
                     <button
                       type="button"
-                      className={`home-tab t-best ${activeRail === 'best' ? 'active' : ''}`}
-                      onClick={() => setActiveRail(activeRail === 'best' ? '' : 'best')}
+                      className={`home-tab t-best ${activeRail === "best" ? "active" : ""}`}
+                      onClick={() => setActiveRail(activeRail === "best" ? "" : "best")}
                     >
-                      <span className="tab-emoji">🔥</span> <span>{t('Meilleures ventes')}</span>
+                      <span className="tab-emoji">🔥</span> <span>{t("Meilleures ventes")}</span>
                     </button>
                   )}
                   {popular.length > 0 && (
                     <button
                       type="button"
-                      className={`home-tab t-popular ${activeRail === 'popular' ? 'active' : ''}`}
-                      onClick={() => setActiveRail(activeRail === 'popular' ? '' : 'popular')}
+                      className={`home-tab t-popular ${activeRail === "popular" ? "active" : ""}`}
+                      onClick={() => setActiveRail(activeRail === "popular" ? "" : "popular")}
                     >
-                      <span className="tab-emoji">🔥</span> <span>{t('Plus populaires')}</span>
+                      <span className="tab-emoji">🔥</span> <span>{t("Plus populaires")}</span>
                     </button>
                   )}
                   {flashPromos.length >= 0 && (
                     <button
                       type="button"
-                      className={`home-tab t-flash ${activeRail === 'promos' ? 'active' : ''}`}
-                      onClick={() => setActiveRail(activeRail === 'promos' ? '' : 'promos')}
+                      className={`home-tab t-flash ${activeRail === "promos" ? "active" : ""}`}
+                      onClick={() => setActiveRail(activeRail === "promos" ? "" : "promos")}
                     >
-                      <span className="tab-emoji">⚡</span> <span>{t('Promotions du jour')}</span>
+                      <span className="tab-emoji">⚡</span> <span>{t("Promotions du jour")}</span>
                     </button>
                   )}
                 </div>
@@ -549,302 +577,347 @@ const loadProducts = useCallback(
                   type="button"
                   className="tabs-arrow tabs-arrow-right"
                   onClick={() => scrollTabs(1)}
-                  aria-label={t('Défiler vers la droite')}
+                  aria-label={t("Défiler vers la droite")}
                 >
                   ›
                 </button>
               </div>
-              {activeRail === 'recent' && (
-                recent.length > 0 ? (
+              {activeRail === "recent" &&
+                (recent.length > 0 ? (
                   <ProductRail
-                    title={t('Vus récemment')}
-                    hint={t('Reprenez là où vous vous étiez arrêté.')}
+                    title={t("Vus récemment")}
+                    hint={t("Reprenez là où vous vous étiez arrêté.")}
                     emoji="👀"
                     products={recent}
                   />
                 ) : (
-                  <p className="hint home-tabs-empty">{t('Vous n\'avez pas encore consulté de produit.')}</p>
-                )
-              )}
-              {activeRail === 'trending' && trending.length > 0 && (
+                  <p className="hint home-tabs-empty">
+                    {t("Vous n'avez pas encore consulté de produit.")}
+                  </p>
+                ))}
+              {activeRail === "trending" && trending.length > 0 && (
                 <ProductRail
-                  title={t('Tendances de la semaine')}
-                  hint={t('Les produits les plus consultés ces 7 derniers jours.')}
+                  title={t("Tendances de la semaine")}
+                  hint={t("Les produits les plus consultés ces 7 derniers jours.")}
                   emoji="⚡"
                   products={trending}
-                  badge={{ cls: 'badge-hot', text: t('⭐ Populaire') }}
+                  badge={{ cls: "badge-hot", text: t("⭐ Populaire") }}
                 />
               )}
-              {activeRail === 'best' && bestSellers.length > 0 && (
+              {activeRail === "best" && bestSellers.length > 0 && (
                 <ProductRail
-                  title={t('Meilleures ventes')}
-                  hint={t('Les produits les plus commandés.')}
+                  title={t("Meilleures ventes")}
+                  hint={t("Les produits les plus commandés.")}
                   emoji="🔥"
                   products={bestSellers}
                 />
               )}
-              {activeRail === 'popular' && popular.length > 0 && (
+              {activeRail === "popular" && popular.length > 0 && (
                 <ProductRail
-                  title={t('Plus populaires')}
-                  hint={t('Les produits les plus consultés et commandés.')}
+                  title={t("Plus populaires")}
+                  hint={t("Les produits les plus consultés et commandés.")}
                   emoji="🔥"
                   products={popular}
                 />
               )}
-              {activeRail === 'promos' && (
-                flashPromos.length > 0 ? (
-                <RailShell
-                  title={t('Promotions du jour')}
-                  hint={t('Des offres à durée limitée : dépêchez-vous !')}
-                  emoji="⚡"
-                  ariaLabel={t('Promotions du jour')}
-                >
-                  {flashPromos.map((pr) => (
-                    <FlashPromoCard key={pr.id} promo={pr} />
-                  ))}
-                </RailShell>
+              {activeRail === "promos" &&
+                (flashPromos.length > 0 ? (
+                  <RailShell
+                    title={t("Promotions du jour")}
+                    hint={t("Des offres à durée limitée : dépêchez-vous !")}
+                    emoji="⚡"
+                    ariaLabel={t("Promotions du jour")}
+                  >
+                    {flashPromos.map((pr) => (
+                      <FlashPromoCard key={pr.id} promo={pr} />
+                    ))}
+                  </RailShell>
                 ) : (
-                  <p className="hint home-tabs-empty">{t('Aucune promotion du jour pour le moment. Les boutiques peuvent en lancer une depuis leur espace.')}</p>
-                )
-              )}
+                  <p className="hint home-tabs-empty">
+                    {t(
+                      "Aucune promotion du jour pour le moment. Les boutiques peuvent en lancer une depuis leur espace."
+                    )}
+                  </p>
+                ))}
             </>
           )}
-          <form
-              className="hero-search"
-              onSubmit={submitSearch}
+        <form
+          className="hero-search"
+          onSubmit={submitSearch}
+          role="search"
+          onKeyDown={onSugKeyDown}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget)) {
+              setSugOpen(false);
+              setSugActive(-1);
+            }
+          }}
+        >
+          <span className="emoji" aria-hidden="true">
+            🔍
+          </span>
+          <input
+            type="search"
+            placeholder={t("Rechercher un produit, une boutique…")}
+            aria-label={t("Rechercher un produit, une boutique…")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={onSugKeyDown}
+          />
+          <button type="submit" className="btn btn-primary">
+            {t("Rechercher")}
+          </button>
+          {sugOpen && (
+            <div className="search-suggest" role="listbox" aria-label={t("Suggestions")}>
+              {sugLoading && <div className="search-suggest-empty">{t("Recherche…")}</div>}
+              {sugItems.map((it, i) => (
+                <Link
+                  key={`${it.kind}-${it.id}`}
+                  ref={(el) => {
+                    sugRefs.current[i] = el;
+                  }}
+                  role="option"
+                  aria-selected={sugActive === i}
+                  className={`search-suggest-item${sugActive === i ? " active" : ""}`}
+                  to={it.url}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    setSugOpen(false);
+                    setSugActive(-1);
+                  }}
+                >
+                  {it.image && <img src={it.image} alt="" loading="lazy" />}
+                  <span className="search-suggest-body">
+                    <span className="search-suggest-title">{it.title}</span>
+                    <span className="search-suggest-sub">
+                      {it.kind === "shop" ? <>🏪 {it.sub}</> : it.sub}
+                    </span>
+                  </span>
+                  {it.kind === "product" && (
+                    <span className="search-suggest-price">
+                      {formatMoney(it.price)} {currencySymbol(it.currency)}
+                    </span>
+                  )}
+                </Link>
+              ))}
+              <button
+                type="submit"
+                className="search-suggest-all"
+                onClick={() => setSugOpen(false)}
+              >
+                {t("Voir tous les résultats")} →
+              </button>
+            </div>
+          )}
+        </form>
+        <div className="view-switch">
+          <button
+            type="button"
+            className={`btn ${mode === "products" ? "btn-primary" : "btn-outline"}`}
+            onClick={() => setMode("products")}
+          >
+            <Logo className="logo-inline" /> {t("Voir tous les produits")}
+          </button>
+          <button
+            type="button"
+            className={`btn ${mode === "city" ? "btn-primary" : "btn-outline"}`}
+            onClick={() => setMode("city")}
+          >
+            📍 {t("Voir par ville")}
+          </button>
+        </div>
+        <div className="toolbar filter-toolbar">
+          <select
+            className="input filter-select"
+            value={category}
+            onChange={changeFilter(setCategory)}
+            aria-label={t("Filtrer par catégorie")}
+          >
+            <option value="">{t("Toutes les catégories")}</option>
+            {PRODUCT_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {t(c)}
+              </option>
+            ))}
+          </select>
+          <select
+            className="input filter-select"
+            value={sort}
+            onChange={changeFilter(setSort)}
+            aria-label={t("Trier")}
+          >
+            <option value="recent">{t("Plus récents")}</option>
+            <option value="popular">{t("🔥 Plus populaires")}</option>
+            <option value="rating">{t("⭐ Mieux notés")}</option>
+            <option value="price_asc">{t("Prix croissant")}</option>
+            <option value="price_desc">{t("Prix décroissant")}</option>
+          </select>
+          <input
+            className="input filter-price"
+            type="number"
+            min="0"
+            placeholder={t("Prix min")}
+            aria-label={t("Prix minimum")}
+            value={minPrice}
+            onChange={changeFilter(setMinPrice)}
+          />
+          <input
+            className="input filter-price"
+            type="number"
+            min="0"
+            placeholder={t("Prix max")}
+            aria-label={t("Prix maximum")}
+            value={maxPrice}
+            onChange={changeFilter(setMaxPrice)}
+          />
+          <select
+            className="input filter-select"
+            value={scope}
+            onChange={changeFilter(setScope)}
+            aria-label={t("Type de recherche")}
+          >
+            <option value="product">{t("Rechercher un produit")}</option>
+            <option value="shop">{t("Rechercher une boutique")}</option>
+            <option value="creation">{t("Rechercher une création")}</option>
+          </select>
+        </div>
+        {error && mode === "products" && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        {mode === "city" ? (
+          <div className="city-shops">
+            <form
+              className="city-search"
               role="search"
-              onKeyDown={onSugKeyDown}
-              onBlur={(e) => {
-                if (!e.currentTarget.contains(e.relatedTarget)) {
-                  setSugOpen(false);
-                  setSugActive(-1);
-                }
+              onSubmit={(e) => {
+                e.preventDefault();
+                setCity(cityInput.trim());
               }}
             >
-            <span className="emoji" aria-hidden="true">🔍</span>
-            <input
-              type="search"
-              placeholder={t('Rechercher un produit, une boutique…')}
-              aria-label={t('Rechercher un produit, une boutique…')}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={onSugKeyDown}
-            />
-            <button type="submit" className="btn btn-primary">{t('Rechercher')}</button>
-            {sugOpen && (
-              <div className="search-suggest" role="listbox" aria-label={t('Suggestions')}>
-                {sugLoading && <div className="search-suggest-empty">{t('Recherche…')}</div>}
-                {sugItems.map((it, i) => (
-                  <Link
-                    key={`${it.kind}-${it.id}`}
-                    ref={(el) => {
-                      sugRefs.current[i] = el;
-                    }}
-                    role="option"
-                    aria-selected={sugActive === i}
-                    className={`search-suggest-item${sugActive === i ? ' active' : ''}`}
-                    to={it.url}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      setSugOpen(false);
-                      setSugActive(-1);
-                    }}
-                  >
-                    {it.image && <img src={it.image} alt="" loading="lazy" />}
-                    <span className="search-suggest-body">
-                      <span className="search-suggest-title">{it.title}</span>
-                      <span className="search-suggest-sub">
-                        {it.kind === 'shop' ? <>🏪 {it.sub}</> : it.sub}
-                      </span>
-                    </span>
-                    {it.kind === 'product' && (
-                      <span className="search-suggest-price">
-                        {formatMoney(it.price)} {currencySymbol(it.currency)}
-                      </span>
-                    )}
-                  </Link>
-                ))}
-                <button type="submit" className="search-suggest-all" onClick={() => setSugOpen(false)}>
-                  {t('Voir tous les résultats')} →
+              <input
+                type="search"
+                value={cityInput}
+                onChange={(e) => setCityInput(e.target.value)}
+                placeholder={t("Saisir une ville (ex : Yaoundé)…")}
+                aria-label={t("Saisir une ville")}
+              />
+              <button type="submit" className="btn btn-primary">
+                {t("Rechercher")}
+              </button>
+            </form>
+            {city ? (
+              shopsLoading ? (
+                <p className="muted">{t("Chargement…")}</p>
+              ) : shopsError ? (
+                <p className="error" role="alert">
+                  {shopsError}
+                </p>
+              ) : shops.length === 0 && cityProducts.length === 0 ? (
+                <p className="empty">
+                  {t("Aucune boutique ni produit dans cette ville pour le moment.")}
+                </p>
+              ) : (
+                <>
+                  {shops.length > 0 && (
+                    <section aria-label={t("Boutiques et créateurs")}>
+                      <h3 className="section-title">🏪 {t("Boutiques et créateurs")}</h3>
+                      <div className="grid shops-grid">
+                        {shops.map((s) => (
+                          <Link
+                            key={s.id}
+                            to={s.role === "creator" ? `/createur/${s.id}` : `/boutique/${s.id}`}
+                            className="card shop-card"
+                          >
+                            <div className="shop-thumb">
+                              {s.sample_image ? (
+                                <img
+                                  src={s.sample_image}
+                                  alt={s.name}
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              ) : (
+                                <span>{s.role === "creator" ? "🎨" : "🏪"}</span>
+                              )}
+                            </div>
+                            <div className="shop-body">
+                              <h3>
+                                {s.name}
+                                {s.verified && (
+                                  <span className="badge">✓ {t("Boutique vérifiée")}</span>
+                                )}
+                              </h3>
+                              <p>
+                                📍{" "}
+                                {[s.city, s.location].filter(Boolean).join(", ") ||
+                                  t("Ville non renseignée")}
+                              </p>
+                              <p className="muted">
+                                {t("{n} produits", { n: s.product_count || 0 })}
+                              </p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                  {cityProducts.length > 0 && (
+                    <section aria-label={t("Produits")}>
+                      <h3 className="section-title">
+                        <Logo className="logo-inline" /> {t("Produits")}
+                      </h3>
+                      <div className="grid">
+                        {cityProducts.map((p) => (
+                          <ProductCard key={p.id} product={p} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </>
+              )
+            ) : (
+              <p className="muted">
+                {t("Saisissez une ville pour voir ses boutiques, ses créateurs et ses produits.")}
+              </p>
+            )}
+          </div>
+        ) : loading && !hasLoaded.current ? (
+          <div className="grid">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="card product-card skeleton" aria-hidden="true">
+                <div className="skeleton-block skeleton-photo"></div>
+              </div>
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="card page-center">
+            <p className="empty">
+              {category
+                ? t("Aucun produit dans cette catégorie.")
+                : search
+                  ? t("Aucun résultat pour votre recherche.")
+                  : t("Aucun produit disponible.")}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="grid">
+              {products.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+            {hasMore && (
+              <div className="load-more-wrap">
+                <button className="btn btn-outline" disabled={loadingMore} onClick={loadMore}>
+                  {loadingMore ? "…" : `⬇️ ${t("Voir plus de produits")}`}
                 </button>
               </div>
             )}
-          </form>
-          <div className="view-switch">
-            <button
-              type="button"
-              className={`btn ${mode === 'products' ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setMode('products')}
-            >
-              <Logo className="logo-inline" /> {t('Voir tous les produits')}
-            </button>
-            <button
-              type="button"
-              className={`btn ${mode === 'city' ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setMode('city')}
-            >
-              📍 {t('Voir par ville')}
-            </button>
-          </div>
-          <div className="toolbar filter-toolbar">
-            <select
-              className="input filter-select"
-              value={category}
-              onChange={changeFilter(setCategory)}
-              aria-label={t('Filtrer par catégorie')}
-            >
-              <option value="">{t('Toutes les catégories')}</option>
-              {PRODUCT_CATEGORIES.map((c) => (
-                <option key={c} value={c}>{t(c)}</option>
-              ))}
-            </select>
-            <select
-              className="input filter-select"
-              value={sort}
-              onChange={changeFilter(setSort)}
-              aria-label={t('Trier')}
-            >
-              <option value="recent">{t('Plus récents')}</option>
-              <option value="popular">{t('🔥 Plus populaires')}</option>
-              <option value="rating">{t('⭐ Mieux notés')}</option>
-              <option value="price_asc">{t('Prix croissant')}</option>
-              <option value="price_desc">{t('Prix décroissant')}</option>
-            </select>
-            <input
-              className="input filter-price"
-              type="number"
-              min="0"
-              placeholder={t('Prix min')}
-              aria-label={t('Prix minimum')}
-              value={minPrice}
-              onChange={changeFilter(setMinPrice)}
-            />
-            <input
-              className="input filter-price"
-              type="number"
-              min="0"
-              placeholder={t('Prix max')}
-              aria-label={t('Prix maximum')}
-              value={maxPrice}
-              onChange={changeFilter(setMaxPrice)}
-            />
-            <select
-              className="input filter-select"
-              value={scope}
-              onChange={changeFilter(setScope)}
-              aria-label={t('Type de recherche')}
-            >
-              <option value="product">{t('Rechercher un produit')}</option>
-              <option value="shop">{t('Rechercher une boutique')}</option>
-              <option value="creation">{t('Rechercher une création')}</option>
-            </select>
-          </div>
-          {error && mode === 'products' && <p className="error" role="alert">{error}</p>}
-          {mode === 'city' ? (
-            <div className="city-shops">
-              <form
-                className="city-search"
-                role="search"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setCity(cityInput.trim());
-                }}
-              >
-                <input
-                  type="search"
-                  value={cityInput}
-                  onChange={(e) => setCityInput(e.target.value)}
-                  placeholder={t('Saisir une ville (ex : Yaoundé)…')}
-                  aria-label={t('Saisir une ville')}
-                />
-                <button type="submit" className="btn btn-primary">{t('Rechercher')}</button>
-              </form>
-              {city ? (
-                shopsLoading ? (
-                  <p className="muted">{t('Chargement…')}</p>
-                ) : shopsError ? (
-                  <p className="error" role="alert">{shopsError}</p>
-                ) : shops.length === 0 && cityProducts.length === 0 ? (
-                  <p className="empty">{t('Aucune boutique ni produit dans cette ville pour le moment.')}</p>
-                ) : (
-                  <>
-                    {shops.length > 0 && (
-                      <section aria-label={t('Boutiques et créateurs')}>
-                        <h3 className="section-title">🏪 {t('Boutiques et créateurs')}</h3>
-                        <div className="grid shops-grid">
-                          {shops.map((s) => (
-                            <Link key={s.id} to={s.role === 'creator' ? `/createur/${s.id}` : `/boutique/${s.id}`} className="card shop-card">
-                              <div className="shop-thumb">
-                                {s.sample_image ? (
-                                  <img src={s.sample_image} alt={s.name} loading="lazy" decoding="async" />
-                                ) : (
-                                  <span>{s.role === 'creator' ? '🎨' : '🏪'}</span>
-                                )}
-                              </div>
-                              <div className="shop-body">
-                                <h3>
-                                  {s.name}
-                                  {s.verified && <span className="badge">✓ {t('Boutique vérifiée')}</span>}
-                                </h3>
-                                <p>📍 {[s.city, s.location].filter(Boolean).join(', ') || t('Ville non renseignée')}</p>
-                                <p className="muted">{t('{n} produits', { n: s.product_count || 0 })}</p>
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-                      </section>
-                    )}
-                    {cityProducts.length > 0 && (
-                      <section aria-label={t('Produits')}>
-                        <h3 className="section-title"><Logo className="logo-inline" /> {t('Produits')}</h3>
-                        <div className="grid">
-                          {cityProducts.map((p) => (
-                            <ProductCard key={p.id} product={p} />
-                          ))}
-                        </div>
-                      </section>
-                    )}
-                  </>
-                )
-              ) : (
-                <p className="muted">{t('Saisissez une ville pour voir ses boutiques, ses créateurs et ses produits.')}</p>
-              )}
-            </div>
-          ) : loading && !hasLoaded.current ? (
-            <div className="grid">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="card product-card skeleton" aria-hidden="true">
-                  <div className="skeleton-block skeleton-photo"></div>
-                </div>
-              ))}
-            </div>
-          ) : products.length === 0 ? (
-            <div className="card page-center">
-              <p className="empty">
-                {category
-                  ? t('Aucun produit dans cette catégorie.')
-                  : search
-                    ? t('Aucun résultat pour votre recherche.')
-                    : t('Aucun produit disponible.')}
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="grid">
-                {products.map((p) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
-              {hasMore && (
-                <div className="load-more-wrap">
-                  <button className="btn btn-outline" disabled={loadingMore} onClick={loadMore}>
-                    {loadingMore ? '…' : `⬇️ ${t('Voir plus de produits')}`}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </section>
+          </>
+        )}
+      </section>
     </main>
   );
 }

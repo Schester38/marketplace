@@ -1,22 +1,22 @@
-import { Router } from 'express';
-import { q } from '../db.js';
-import { listPhotos } from '../photo.js';
+import { Router } from "express";
+import { q } from "../db.js";
+import { listPhotos } from "../photo.js";
 
 const router = Router();
 const MAX_BATCH = 50;
 const MAX_PATH = 200;
 
-router.post('/views', async (req, res) => {
+router.post("/views", async (req, res) => {
   const raw = Array.isArray(req.body?.views) ? req.body.views.slice(0, MAX_BATCH) : [];
   const views = [];
   for (const item of raw) {
-    const type = String(item?.type || '').trim();
+    const type = String(item?.type || "").trim();
     const id = Number(item?.id);
-    if ((type === 'product' || type === 'offer') && Number.isInteger(id) && id > 0) {
+    if ((type === "product" || type === "offer") && Number.isInteger(id) && id > 0) {
       views.push([type, id]);
     }
   }
-  if (!views.length) return res.status(400).json({ error: 'Requête invalide' });
+  if (!views.length) return res.status(400).json({ error: "Requête invalide" });
   for (const [type, id] of views) {
     await q(
       `INSERT INTO item_views (item_type, item_id, count)
@@ -29,11 +29,14 @@ router.post('/views', async (req, res) => {
   res.json({ ok: true, counted: views.length });
 });
 
-router.post('/visit', async (req, res) => {
-  const path = String((req.body && req.body.path) || req.path || '/').slice(0, MAX_PATH);
-  const visitorId = String(req.get('X-Visitor-Id') || '').slice(0, 100);
-  if (!visitorId) return res.status(400).json({ error: 'Identifiant visiteur manquant' });
-  const country = String((req.body && req.body.country) || 'CM').trim().slice(0, 40) || 'CM';
+router.post("/visit", async (req, res) => {
+  const path = String((req.body && req.body.path) || req.path || "/").slice(0, MAX_PATH);
+  const visitorId = String(req.get("X-Visitor-Id") || "").slice(0, 100);
+  if (!visitorId) return res.status(400).json({ error: "Identifiant visiteur manquant" });
+  const country =
+    String((req.body && req.body.country) || "CM")
+      .trim()
+      .slice(0, 40) || "CM";
   await q(
     `INSERT INTO daily_visits (visitor_id, path, country)
      VALUES ($1, $2, $3)
@@ -43,8 +46,8 @@ router.post('/visit', async (req, res) => {
   res.json({ ok: true });
 });
 
-router.get('/trending', async (req, res) => {
-  res.set('Cache-Control', 'public, s-maxage=120, max-age=60, stale-while-revalidate=30');
+router.get("/trending", async (req, res) => {
+  res.set("Cache-Control", "public, s-maxage=120, max-age=60, stale-while-revalidate=30");
   const rows = await q(
     `SELECT p.id, p.name, p.price, p.commission_percent, p.currency, p.quantity, p.shop_id, u.name AS shop_name,
             u.country AS shop_country,
@@ -80,10 +83,7 @@ router.get('/trending', async (req, res) => {
   }));
   if (products.length) {
     const ids = products.map((p) => p.id);
-    const imgs = await q(
-      `SELECT id, photos FROM products WHERE id = ANY($1::int[])`,
-      [ids]
-    );
+    const imgs = await q(`SELECT id, photos FROM products WHERE id = ANY($1::int[])`, [ids]);
     const byId = new Map(imgs.map((r) => [r.id, r]));
     for (const p of products) {
       p.image = (listPhotos(byId.get(p.id)?.photos) || [])[0] || null;

@@ -1,11 +1,13 @@
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 
-const SMTP_HOST = process.env.SMTP_HOST || '';
+const SMTP_HOST = process.env.SMTP_HOST || "";
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_SECURE = process.env.SMTP_SECURE === 'true';
-const SMTP_USER = process.env.SMTP_USER || '';
-const SMTP_PASS = process.env.SMTP_PASS || '';
-const EMAIL_FROM = process.env.EMAIL_FROM || (SMTP_USER ? `Mboppi <${SMTP_USER}>` : 'Mboppi <noreply@mboppi.vercel.app>');
+const SMTP_SECURE = process.env.SMTP_SECURE === "true";
+const SMTP_USER = process.env.SMTP_USER || "";
+const SMTP_PASS = process.env.SMTP_PASS || "";
+const EMAIL_FROM =
+  process.env.EMAIL_FROM ||
+  (SMTP_USER ? `Mboppi <${SMTP_USER}>` : "Mboppi <noreply@mboppi.vercel.app>");
 
 let transporter = null;
 
@@ -28,21 +30,30 @@ function getTransporter() {
 export async function sendMail({ to, subject, text, html }) {
   const tr = getTransporter();
   if (!tr) {
-    console.log(`[mailer:simulé] → ${to}\nSujet: ${subject}\n${text}`);
+    console.warn(`[mailer:simulé] → ${to}\nSujet: ${subject}\n${text}`);
     return { simulated: true };
   }
   try {
     const info = await tr.sendMail({ from: EMAIL_FROM, to, subject, text, html });
     return info;
   } catch (err) {
-    console.error('[mailer] Erreur d\'envoi:', err.message);
-    console.error('[mailer] Config:', JSON.stringify({ host: SMTP_HOST, port: SMTP_PORT, secure: SMTP_SECURE, user: SMTP_USER, numPassChars: SMTP_PASS.length }));
+    console.error("[mailer] Erreur d'envoi:", err.message);
+    console.error(
+      "[mailer] Config:",
+      JSON.stringify({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_SECURE,
+        user: SMTP_USER,
+        numPassChars: SMTP_PASS.length,
+      })
+    );
     throw err;
   }
 }
 
 export function verificationEmailHtml({ name, link }) {
-  const safeName = String(name || '').replace(/[<>&]/g, '');
+  const safeName = String(name || "").replace(/[<>&]/g, "");
   return `<!DOCTYPE html>
 <html lang="fr">
 <body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;">
@@ -88,8 +99,8 @@ export function verificationEmailHtml({ name, link }) {
 }
 
 export function newsletterEmailHtml({ title, body, unsubscribeUrl }) {
-  const safeTitle = String(title || '').replace(/[<>&]/g, '');
-  const safeBody = String(body || '').replace(/[<>&]/g, '');
+  const safeTitle = String(title || "").replace(/[<>&]/g, "");
+  const safeBody = String(body || "").replace(/[<>&]/g, "");
   return `<!DOCTYPE html>
 <html lang="fr">
 <body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;">

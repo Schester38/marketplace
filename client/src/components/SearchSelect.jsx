@@ -1,8 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
-export default function SearchSelect({ options, value, onChange, placeholder = 'Choisir…', emptyLabel = 'Aucun résultat' }) {
+export default function SearchSelect({
+  options,
+  value,
+  onChange,
+  placeholder = "Choisir…",
+  emptyLabel = "Aucun résultat",
+}) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const boxRef = useRef(null);
   const inputRef = useRef(null);
@@ -12,12 +18,12 @@ export default function SearchSelect({ options, value, onChange, placeholder = '
     const onDoc = (e) => {
       if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false);
     };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
   const filtered = query
-    ? options.filter((o) => ((o.label || o.name) || '').toLowerCase().includes(query.toLowerCase()))
+    ? options.filter((o) => (o.label || o.name || "").toLowerCase().includes(query.toLowerCase()))
     : options;
 
   const selected = options.find((o) => o.value === value);
@@ -25,32 +31,32 @@ export default function SearchSelect({ options, value, onChange, placeholder = '
   const select = (o) => {
     onChange(o.value);
     setOpen(false);
-    setQuery('');
+    setQuery("");
   };
 
   const onKey = (e) => {
-    if (!open && typeof e.key === 'string' && e.key.length === 1) {
+    if (!open && typeof e.key === "string" && e.key.length === 1) {
       e.preventDefault();
       setQuery((q) => q + e.key);
       setOpen(true);
       setActive(0);
       return;
     }
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setActive((a) => Math.min(a + 1, filtered.length - 1));
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setActive((a) => Math.max(a - 1, 0));
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       if (open) {
         e.preventDefault();
         if (filtered[active]) select(filtered[active]);
       }
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       e.preventDefault();
       setOpen(false);
-      setQuery('');
+      setQuery("");
     }
   };
 
@@ -61,7 +67,7 @@ export default function SearchSelect({ options, value, onChange, placeholder = '
         className="input"
         readOnly={!open}
         placeholder={placeholder}
-        value={open ? query : selected ? `${selected.flag} ${selected.label}` : ''}
+        value={open ? query : selected ? `${selected.flag} ${selected.label}` : ""}
         onFocus={() => setOpen(true)}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -79,7 +85,7 @@ export default function SearchSelect({ options, value, onChange, placeholder = '
           {filtered.map((o, i) => (
             <li
               key={o.value}
-              className={`${o.value === value ? 'selected' : ''} ${i === active ? 'active' : ''}`}
+              className={`${o.value === value ? "selected" : ""} ${i === active ? "active" : ""}`}
               onMouseEnter={() => setActive(i)}
               onMouseDown={(e) => {
                 e.preventDefault();

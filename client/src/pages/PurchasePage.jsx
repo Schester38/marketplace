@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { api } from '../api.js';
-import { countrySymbol, categoryEmoji } from '../config.js';
-import Seo from '../components/Seo.jsx';
-import Logo from '../components/Logo.jsx';
-import { formatMoney } from '../components/ProductCard.jsx';
-import CopyCode from '../components/CopyCode.jsx';
-import { useAuth } from '../App.jsx';
-import { useLang } from '../i18n.jsx';
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { api } from "../api.js";
+import { countrySymbol, categoryEmoji } from "../config.js";
+import Seo from "../components/Seo.jsx";
+import Logo from "../components/Logo.jsx";
+import { formatMoney } from "../components/ProductCard.jsx";
+import CopyCode from "../components/CopyCode.jsx";
+import { useAuth } from "../App.jsx";
+import { useLang } from "../i18n.jsx";
 
 export default function PurchasePage() {
   const { id } = useParams();
@@ -16,23 +16,23 @@ export default function PurchasePage() {
   const { t } = useLang();
   const navigate = useNavigate();
   const location = useLocation();
-  const linkCode = (params.get('code') || '').trim().toUpperCase();
+  const linkCode = (params.get("code") || "").trim().toUpperCase();
   const [product, setProduct] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [shopWallets, setShopWallets] = useState(null);
   const [form, setForm] = useState({
     seller_code: linkCode,
-    buyer_name: '',
-    buyer_city: '',
-    buyer_address: '',
-    buyer_phone: '',
+    buyer_name: "",
+    buyer_city: "",
+    buyer_address: "",
+    buyer_phone: "",
   });
-  const [paymentMethod, setPaymentMethod] = useState('mobile');
-  const [automaticOperator, setAutomaticOperator] = useState('ORANGE');
+  const [paymentMethod, setPaymentMethod] = useState("mobile");
+  const [automaticOperator, setAutomaticOperator] = useState("ORANGE");
   const [paymentLink, setPaymentLink] = useState(null);
-   const [paymentError, setPaymentError] = useState('');
+  const [paymentError, setPaymentError] = useState("");
   const [copiedWallet, setCopiedWallet] = useState(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [purchase, setPurchase] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -62,7 +62,7 @@ export default function PurchasePage() {
 
   const submit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setSubmitting(true);
     try {
       const d = await api.purchaseCreate({
@@ -75,19 +75,19 @@ export default function PurchasePage() {
         payment_method: paymentMethod,
       });
       setPurchase(d.sale || null);
-      if (paymentMethod === 'automatic' && d.sale) {
-          try {
-            const payment = await api.ikeepayPayin({
-              sale_id: d.sale.id,
-              confirm_code: d.sale.confirm_code,
-              country: user?.country || d.sale.shop_country || product.shop_country,
-              phone: form.buyer_phone,
-              operator: automaticOperator,
-            });
-            setPaymentLink(payment.payment_link || null);
-          } catch (paymentErr) {
-            setPaymentError(paymentErr.message);
-          }
+      if (paymentMethod === "automatic" && d.sale) {
+        try {
+          const payment = await api.ikeepayPayin({
+            sale_id: d.sale.id,
+            confirm_code: d.sale.confirm_code,
+            country: user?.country || d.sale.shop_country || product.shop_country,
+            phone: form.buyer_phone,
+            operator: automaticOperator,
+          });
+          setPaymentLink(payment.payment_link || null);
+        } catch (paymentErr) {
+          setPaymentError(paymentErr.message);
+        }
       }
       setDone(true);
     } catch (err) {
@@ -101,8 +101,10 @@ export default function PurchasePage() {
     return (
       <main className="container narrow">
         <div className="card page-center">
-          <p className="empty">{t('Produit non trouvé')}</p>
-          <Link to="/" className="btn btn-primary">{t('Retour à l\'accueil')}</Link>
+          <p className="empty">{t("Produit non trouvé")}</p>
+          <Link to="/" className="btn btn-primary">
+            {t("Retour à l'accueil")}
+          </Link>
         </div>
       </main>
     );
@@ -125,11 +127,17 @@ export default function PurchasePage() {
 
   return (
     <main className="container narrow">
-      <Seo title={`${t('Acheter')} — ${product.name} — Mboppi`} description={t('Confirmez votre commande avec le code du vendeur.')} noindex/>
+      <Seo
+        title={`${t("Acheter")} — ${product.name} — Mboppi`}
+        description={t("Confirmez votre commande avec le code du vendeur.")}
+        noindex
+      />
       <section className="dash-header">
         <div>
-          <h1><Logo className="logo-inline" /> {t('Acheter')}</h1>
-          <p>{t('Confirmez votre commande : la boutique et le vendeur seront notifiés.')}</p>
+          <h1>
+            <Logo className="logo-inline" /> {t("Acheter")}
+          </h1>
+          <p>{t("Confirmez votre commande : la boutique et le vendeur seront notifiés.")}</p>
         </div>
       </section>
 
@@ -137,79 +145,117 @@ export default function PurchasePage() {
         {photo && <img className="purchase-photo" src={photo} alt={product.name} loading="lazy" />}
         <div className="purchase-info">
           <h2>{product.name}</h2>
-          {product.category && <p className="product-cat">{categoryEmoji(product.category)} {t(product.category)}</p>}
+          {product.category && (
+            <p className="product-cat">
+              {categoryEmoji(product.category)} {t(product.category)}
+            </p>
+          )}
           {product.description && <p className="product-desc">{product.description}</p>}
           <div className="product-meta">
-            {product.warranty && <span className="meta-chip">🛡️ {t('Garantie : {warranty}', { warranty: product.warranty })}</span>}
+            {product.warranty && (
+              <span className="meta-chip">
+                🛡️ {t("Garantie : {warranty}", { warranty: product.warranty })}
+              </span>
+            )}
             {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
           </div>
           <p className="price-line" style={{ marginTop: 10 }}>
-            {flash && <span className="old-price">{formatMoney(product.price)} {symbol}</span>}
-            <span className={`price ${flash ? 'price-flash' : ''}`}>{formatMoney(displayPrice)} {symbol}</span>
+            {flash && (
+              <span className="old-price">
+                {formatMoney(product.price)} {symbol}
+              </span>
+            )}
+            <span className={`price ${flash ? "price-flash" : ""}`}>
+              {formatMoney(displayPrice)} {symbol}
+            </span>
           </p>
           <p className="product-shop" style={{ marginTop: 6 }}>
-            {t('Boutique : {shop}', { shop: product.shop_name })}
-            {product.shop_location ? <span className="shop-loc"> · 📍 {product.shop_location}</span> : null}
+            {t("Boutique : {shop}", { shop: product.shop_name })}
+            {product.shop_location ? (
+              <span className="shop-loc"> · 📍 {product.shop_location}</span>
+            ) : null}
           </p>
         </div>
       </div>
 
       {done ? (
         <div className="card page-center">
-          <h2>✅ {t('Commande confirmée !')}</h2>
-          <p className="hint">{t('Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison.')}</p>
+          <h2>✅ {t("Commande confirmée !")}</h2>
+          <p className="hint">
+            {t(
+              "Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison."
+            )}
+          </p>
           {purchase && (purchase.confirm_code || purchase.buyer_code) && (
             <div className="buyer-code-box">
-              <span className="buyer-code-label">{t('Votre code de confirmation')} :</span>
-              <span className="buyer-code-value">{purchase.confirm_code || purchase.buyer_code}</span>
+              <span className="buyer-code-label">{t("Votre code de confirmation")} :</span>
+              <span className="buyer-code-value">
+                {purchase.confirm_code || purchase.buyer_code}
+              </span>
               <CopyCode code={purchase.confirm_code || purchase.buyer_code} />
             </div>
           )}
           {paymentLink && (
             <a className="btn btn-primary" href={paymentLink} target="_blank" rel="noreferrer">
-              🔗 {t('Ouvrir le paiement automatique')}
+              🔗 {t("Ouvrir le paiement automatique")}
             </a>
           )}
-            {paymentError && <p className="error">{t('Commande enregistrée, mais le paiement automatique n’a pas pu être lancé : {error}', { error: paymentError })}</p>}
+          {paymentError && (
+            <p className="error">
+              {t(
+                "Commande enregistrée, mais le paiement automatique n’a pas pu être lancé : {error}",
+                { error: paymentError }
+              )}
+            </p>
+          )}
           {purchase && purchase.id && (
-            <Link className="btn btn-primary" to={`/suivi/${purchase.id}?code=${encodeURIComponent(purchase.confirm_code || purchase.buyer_code || '')}`}>
-              📦 {t('Suivre ma commande')}
+            <Link
+              className="btn btn-primary"
+              to={`/suivi/${purchase.id}?code=${encodeURIComponent(purchase.confirm_code || purchase.buyer_code || "")}`}
+            >
+              📦 {t("Suivre ma commande")}
             </Link>
           )}
           {user && (
-            <Link className="btn btn-outline" style={{ marginTop: 8 }} to="/client">{t('Voir mes achats')}</Link>
+            <Link className="btn btn-outline" style={{ marginTop: 8 }} to="/client">
+              {t("Voir mes achats")}
+            </Link>
           )}
-          <Link className="btn btn-outline" style={{ marginTop: 8 }} to="/">{t('Continuer mes achats')}</Link>
+          <Link className="btn btn-outline" style={{ marginTop: 8 }} to="/">
+            {t("Continuer mes achats")}
+          </Link>
         </div>
       ) : (
         <div className="card form-card">
-          <h2>{t('Commander')}</h2>
+          <h2>{t("Commander")}</h2>
           <p className="hint">
-            {t('Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande. Aucun compte requis.')}
+            {t(
+              "Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande. Aucun compte requis."
+            )}
           </p>
           <form onSubmit={submit}>
-            <label>{t('Nom et prénom *')}</label>
+            <label>{t("Nom et prénom *")}</label>
             <input
               className="input"
               required
               value={form.buyer_name}
               onChange={(e) => setForm({ ...form, buyer_name: e.target.value })}
             />
-            <label>{t('Ville *')}</label>
+            <label>{t("Ville *")}</label>
             <input
               className="input"
               required
               value={form.buyer_city}
               onChange={(e) => setForm({ ...form, buyer_city: e.target.value })}
             />
-            <label>{t('Adresse / Quartier *')}</label>
+            <label>{t("Adresse / Quartier *")}</label>
             <input
               className="input"
               required
               value={form.buyer_address}
               onChange={(e) => setForm({ ...form, buyer_address: e.target.value })}
             />
-            <label>{t('Numéro de téléphone *')}</label>
+            <label>{t("Numéro de téléphone *")}</label>
             <input
               className="input"
               type="tel"
@@ -217,7 +263,7 @@ export default function PurchasePage() {
               value={form.buyer_phone}
               onChange={(e) => setForm({ ...form, buyer_phone: e.target.value })}
             />
-            <label>{t('Code du vendeur *')}</label>
+            <label>{t("Code du vendeur *")}</label>
             <input
               className="input code-input"
               required
@@ -229,81 +275,107 @@ export default function PurchasePage() {
             />
 
             <>
-                <div className="payment-options">
-                  <button
-                    type="button"
-                    className={`payment-option ${paymentMethod === 'espece' ? 'active' : ''}`}
-                    onClick={() => setPaymentMethod('espece')}
-                  >
-                    💵 {t('En espèces (à la livraison)')}
-                  </button>
-                  <button
-                    type="button"
-                    className={`payment-option ${paymentMethod === 'mobile' ? 'active' : ''}`}
-                    onClick={() => setPaymentMethod('mobile')}
-                  >
-                    📱 {t('Virement Mobile Money direct')}
-                  </button>
-                  <button
-                    type="button"
-                    className={`payment-option ${paymentMethod === 'automatic' ? 'active' : ''}`}
-                    onClick={() => setPaymentMethod('automatic')}
-                  >
-                    ⚡ {t('Paiement automatique')}
-                  </button>
-                </div>
+              <div className="payment-options">
+                <button
+                  type="button"
+                  className={`payment-option ${paymentMethod === "espece" ? "active" : ""}`}
+                  onClick={() => setPaymentMethod("espece")}
+                >
+                  💵 {t("En espèces (à la livraison)")}
+                </button>
+                <button
+                  type="button"
+                  className={`payment-option ${paymentMethod === "mobile" ? "active" : ""}`}
+                  onClick={() => setPaymentMethod("mobile")}
+                >
+                  📱 {t("Virement Mobile Money direct")}
+                </button>
+                <button
+                  type="button"
+                  className={`payment-option ${paymentMethod === "automatic" ? "active" : ""}`}
+                  onClick={() => setPaymentMethod("automatic")}
+                >
+                  ⚡ {t("Paiement automatique")}
+                </button>
+              </div>
 
-                {paymentMethod === 'automatic' && (
-                  <div className="wallet-card">
-                    <label>{t('Opérateur de paiement')}</label>
-                    <select className="input" value={automaticOperator} onChange={(e) => setAutomaticOperator(e.target.value)}>
-                      {['ORANGE', 'MTN', 'WAVE', 'MOOV', 'FREE', 'AIRTEL', 'VODACOM', 'MOBICASH'].map((operator) => (
-                        <option key={operator} value={operator}>{operator}</option>
-                      ))}
-                    </select>
-                    <p className="hint">{t('Le paiement est encaissé par l’agrégateur. Selon l’opérateur, un lien de paiement peut être ouvert.')}</p>
-                  </div>
-                )}
-
-                {paymentMethod === 'mobile' && (
-                  <div className="card wallet-card">
-                    {shopWallets && shopWallets.wallets.length > 0 ? (
-                      <>
-                        <p className="hint" style={{ marginTop: 0 }}>
-                          {t('Envoyez le paiement à la boutique sur l\'un de ces portefeuilles :')}
-                        </p>
-                        {shopWallets.full_name && <p className="hint">{t('Titulaire : {name}', { name: shopWallets.full_name })}</p>}
-                        <div className="wallet-list">
-                          {shopWallets.wallets.map((w) => (
-                            <div className="wallet-row" key={w.name}>
-                              <span className="wallet-name">{w.name}</span>
-                              <span className="wallet-value">{w.value}</span>
-                              <button type="button" className="btn btn-outline btn-sm" onClick={() => copyWallet(w.value)}>
-                                {copiedWallet === w.value ? t('Copié !') : t('Copier')}
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <p className="hint">
-                          {t('Indiquez votre nom et votre numéro lors du transfert pour faciliter la livraison.')}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="hint" style={{ marginTop: 0 }}>
-                        {t('La boutique n\'a pas encore configuré ses portefeuilles de paiement. Paiement à la livraison recommandé.')}
-                      </p>
+              {paymentMethod === "automatic" && (
+                <div className="wallet-card">
+                  <label>{t("Opérateur de paiement")}</label>
+                  <select
+                    className="input"
+                    value={automaticOperator}
+                    onChange={(e) => setAutomaticOperator(e.target.value)}
+                  >
+                    {["ORANGE", "MTN", "WAVE", "MOOV", "FREE", "AIRTEL", "VODACOM", "MOBICASH"].map(
+                      (operator) => (
+                        <option key={operator} value={operator}>
+                          {operator}
+                        </option>
+                      )
                     )}
-                  </div>
-                )}
-                {error && <p className="error">{error}</p>}
-                  {paymentMethod === 'mobile' && product && (
-                    <p className="hint" style={{ marginTop: 8 }}>
-                      {t('Paiement manuel : espèces ou virement Mobile Money direct. Aucun frais de plateforme.')}
+                  </select>
+                  <p className="hint">
+                    {t(
+                      "Le paiement est encaissé par l’agrégateur. Selon l’opérateur, un lien de paiement peut être ouvert."
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {paymentMethod === "mobile" && (
+                <div className="card wallet-card">
+                  {shopWallets && shopWallets.wallets.length > 0 ? (
+                    <>
+                      <p className="hint" style={{ marginTop: 0 }}>
+                        {t("Envoyez le paiement à la boutique sur l'un de ces portefeuilles :")}
+                      </p>
+                      {shopWallets.full_name && (
+                        <p className="hint">
+                          {t("Titulaire : {name}", { name: shopWallets.full_name })}
+                        </p>
+                      )}
+                      <div className="wallet-list">
+                        {shopWallets.wallets.map((w) => (
+                          <div className="wallet-row" key={w.name}>
+                            <span className="wallet-name">{w.name}</span>
+                            <span className="wallet-value">{w.value}</span>
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              onClick={() => copyWallet(w.value)}
+                            >
+                              {copiedWallet === w.value ? t("Copié !") : t("Copier")}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="hint">
+                        {t(
+                          "Indiquez votre nom et votre numéro lors du transfert pour faciliter la livraison."
+                        )}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="hint" style={{ marginTop: 0 }}>
+                      {t(
+                        "La boutique n'a pas encore configuré ses portefeuilles de paiement. Paiement à la livraison recommandé."
+                      )}
                     </p>
                   )}
+                </div>
+              )}
+              {error && <p className="error">{error}</p>}
+              {paymentMethod === "mobile" && product && (
+                <p className="hint" style={{ marginTop: 8 }}>
+                  {t(
+                    "Paiement manuel : espèces ou virement Mobile Money direct. Aucun frais de plateforme."
+                  )}
+                </p>
+              )}
             </>
             <button className="btn btn-primary btn-block" disabled={submitting}>
-              {submitting ? '…' : `✅ ${t('Confirmer la Commande')}`}
+              {submitting ? "…" : `✅ ${t("Confirmer la Commande")}`}
             </button>
           </form>
         </div>

@@ -1,11 +1,16 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useLang } from '../i18n.jsx';
-import { useCart, useFavs } from '../store.jsx';
-import { useAuth } from '../App.jsx';
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLang } from "../i18n.jsx";
+import { useCart, useFavs } from "../store.jsx";
+import { useAuth } from "../App.jsx";
 import {
-  IconHome, IconSearch, IconHeart, IconHeartFilled,
-  IconCart, IconUser, IconUserCheck,
-} from './icons.jsx';
+  IconHome,
+  IconSearch,
+  IconHeart,
+  IconHeartFilled,
+  IconCart,
+  IconUser,
+  IconUserCheck,
+} from "./icons.jsx";
 
 export default function BottomNav() {
   const { t } = useLang();
@@ -17,11 +22,11 @@ export default function BottomNav() {
   const path = location.pathname;
 
   const focusSearch = () => {
-    const el = document.querySelector('.hero-search input');
+    const el = document.querySelector(".hero-search input");
     if (el) {
       el.focus();
       try {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
       } catch {
         /* anciens navigateurs */
       }
@@ -29,11 +34,11 @@ export default function BottomNav() {
   };
 
   const goSearch = () => {
-    if (path === '/') {
+    if (path === "/") {
       focusSearch();
       return;
     }
-    navigate('/');
+    navigate("/");
     setTimeout(focusSearch, 500);
   };
 
@@ -43,14 +48,16 @@ export default function BottomNav() {
     return (
       <Link
         to={to}
-        className={active ? 'active' : ''}
+        className={active ? "active" : ""}
         aria-label={label}
-        aria-current={active ? 'page' : undefined}
+        aria-current={active ? "page" : undefined}
       >
         <span className="bn-icon">
           {active && IconActive ? <IconActive size={22} /> : <IconBase size={22} />}
           {count > 0 && (
-            <span className="nav-badge bump" key={`${to}-${count}`}>{count > 99 ? '99+' : count}</span>
+            <span className="nav-badge bump" key={`${to}-${count}`}>
+              {count > 99 ? "99+" : count}
+            </span>
           )}
         </span>
         <span className="bn-label">{label}</span>
@@ -59,22 +66,21 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="bottom-nav" aria-label={t('Menu principal')}>
-      {item('/', t('Accueil'), IconHome, null, 0)}
+    <nav className="bottom-nav" aria-label={t("Menu principal")}>
+      {item("/", t("Accueil"), IconHome, null, 0)}
       <button
-        className={path === '/' ? 'active' : ''}
+        className={path === "/" ? "active" : ""}
         onClick={goSearch}
-        aria-label={t('Recherche')}
+        aria-label={t("Recherche")}
       >
         <span className="bn-icon">
           <IconSearch size={22} />
         </span>
-        <span className="bn-label">{t('Recherche')}</span>
+        <span className="bn-label">{t("Recherche")}</span>
       </button>
-      {item('/favoris', t('Favoris'), IconHeart, IconHeartFilled, favs.length)}
-      {item('/panier', t('Panier'), IconCart, null, cartCount)}
-      {!user && item('/login', t('Connexion'), IconUser, IconUserCheck, 0)}
+      {item("/favoris", t("Favoris"), IconHeart, IconHeartFilled, favs.length)}
+      {item("/panier", t("Panier"), IconCart, null, cartCount)}
+      {!user && item("/login", t("Connexion"), IconUser, IconUserCheck, 0)}
     </nav>
   );
 }
-

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
 export default function BackToTop() {
   const [visible, setVisible] = useState(false);
@@ -12,19 +12,19 @@ export default function BackToTop() {
   };
 
   useEffect(() => {
-    window.addEventListener('scroll', onScroll.current, { passive: true });
+    window.addEventListener("scroll", onScroll.current, { passive: true });
     onScroll.current();
-    return () => window.removeEventListener('scroll', onScroll.current);
+    return () => window.removeEventListener("scroll", onScroll.current);
   }, []);
 
   const goTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <button
       type="button"
-      className={`back-to-top${visible ? ' back-to-top-show' : ''}`}
+      className={`back-to-top${visible ? " back-to-top-show" : ""}`}
       onClick={goTop}
       aria-label="Revenir en haut"
       aria-hidden={!visible}

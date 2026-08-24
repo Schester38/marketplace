@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { useLang } from '../i18n.jsx';
-import { isLite, setLite, weakConnection, useLite } from '../liteMode.js';
+import React, { useEffect, useState } from "react";
+import { useLang } from "../i18n.jsx";
+import { isLite, setLite, weakConnection, useLite } from "../liteMode.js";
 
 export default function LiteBanner() {
   const { t } = useLang();
@@ -19,15 +19,9 @@ export default function LiteBanner() {
   if (!show) return null;
   return (
     <div className="lite-banner" role="status">
-      <span>
-        📶 {t('Connexion lente détectée — mode économie activé (images allégées).')}
-      </span>
-      <button
-        type="button"
-        className="btn btn-small"
-        onClick={() => setShow(false)}
-      >
-        {t('OK')}
+      <span>📶 {t("Connexion lente détectée — mode économie activé (images allégées).")}</span>
+      <button type="button" className="btn btn-small" onClick={() => setShow(false)}>
+        {t("OK")}
       </button>
       {auto && (
         <button
@@ -39,7 +33,7 @@ export default function LiteBanner() {
             setShow(false);
           }}
         >
-          {t('Désactiver')}
+          {t("Désactiver")}
         </button>
       )}
     </div>

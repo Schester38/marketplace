@@ -16,12 +16,22 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: |
+            package-lock.json
             client/package-lock.json
             server/package-lock.json
+
+      - name: Installation des dépendances
+        run: npm install --no-audit --no-fund
 
       - name: Syntaxe des fichiers serveur
         run: |
           find server -name "*.js" -not -path "*/node_modules/*" -print0 | xargs -0 -n1 node --check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests smoke
+        run: node server/tests/smoke.test.js
 
       - name: Installation du client
         run: npm --prefix client install --no-audit --no-fund

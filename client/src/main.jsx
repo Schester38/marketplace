@@ -1,12 +1,12 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
-import App, { AuthProvider } from './App.jsx';
-import { LangProvider } from './i18n.jsx';
-import { StoreProvider } from './store.jsx';
-import './styles.css';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
+import App, { AuthProvider } from "./App.jsx";
+import { LangProvider } from "./i18n.jsx";
+import { StoreProvider } from "./store.jsx";
+import "./styles.css";
 
-import * as Sentry from '@sentry/react';
+import * as Sentry from "@sentry/react";
 
 const DSN = import.meta.env.VITE_SENTRY_DSN;
 if (DSN) {
@@ -20,44 +20,70 @@ if (DSN) {
 const pathname = window.location.pathname;
 
 // Monitoring léger : remontée des erreurs globales (auto-hébergé, sans compte externe).
-if (!pathname.startsWith('/admin')) {
+if (!pathname.startsWith("/admin")) {
   let lastSent = 0;
   const sendLog = (message, stack) => {
     const now = Date.now();
     if (now - lastSent < 5000) return; // anti-flood
     lastSent = now;
-    const payload = { message, stack, url: window.location.href, username: (() => { try { return JSON.parse(localStorage.getItem('user') || 'null')?.name || ''; } catch { return ''; } })() };
-    try { navigator.sendBeacon('/api/logs', new Blob([JSON.stringify(payload)], { type: 'application/json' })); } catch { fetch('/api/logs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {}); }
+    const payload = {
+      message,
+      stack,
+      url: window.location.href,
+      username: (() => {
+        try {
+          return JSON.parse(localStorage.getItem("user") || "null")?.name || "";
+        } catch {
+          return "";
+        }
+      })(),
+    };
+    try {
+      navigator.sendBeacon(
+        "/api/logs",
+        new Blob([JSON.stringify(payload)], { type: "application/json" })
+      );
+    } catch {
+      fetch("/api/logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch(() => {});
+    }
   };
-  window.addEventListener('error', (e) => sendLog(String(e.message || 'Erreur inconnue'), e.error?.stack));
-  window.addEventListener('unhandledrejection', (e) => sendLog(String(e.reason?.message || e.reason || 'Promesse rejetée'), e.reason?.stack));
+  window.addEventListener("error", (e) =>
+    sendLog(String(e.message || "Erreur inconnue"), e.error?.stack)
+  );
+  window.addEventListener("unhandledrejection", (e) =>
+    sendLog(String(e.reason?.message || e.reason || "Promesse rejetée"), e.reason?.stack)
+  );
 }
 
 try {
-  let t = localStorage.getItem('theme');
-  if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  document.documentElement.setAttribute('data-theme', t);
+  let t = localStorage.getItem("theme");
+  if (!t) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", t);
 } catch {
   /* stockage indisponible */
 }
 
 const themeCol = document.querySelector('meta[name="theme-color"]');
-if (themeCol) themeCol.content = '#131a22';
-if (pathname.startsWith('/verone')) {
+if (themeCol) themeCol.content = "#131a22";
+if (pathname.startsWith("/verone")) {
   const link = document.querySelector('link[rel="manifest"]');
-  if (link) link.href = '/manifest-verone.webmanifest';
-  document.title = 'Verone';
-} else if (pathname.startsWith('/livreur')) {
+  if (link) link.href = "/manifest-verone.webmanifest";
+  document.title = "Verone";
+} else if (pathname.startsWith("/livreur")) {
   const link = document.querySelector('link[rel="manifest"]');
-  if (link) link.href = '/manifest-livreur.webmanifest';
-  document.title = 'Mboppi Livreur';
-} else if (pathname.startsWith('/admin')) {
+  if (link) link.href = "/manifest-livreur.webmanifest";
+  document.title = "Mboppi Livreur";
+} else if (pathname.startsWith("/admin")) {
   const link = document.querySelector('link[rel="manifest"]');
-  if (link) link.href = '/manifest-admin.webmanifest';
-  document.title = 'Mboppi Admin';
+  if (link) link.href = "/manifest-admin.webmanifest";
+  document.title = "Mboppi Admin";
 }
 
-if ('serviceWorker' in navigator) {
+if ("serviceWorker" in navigator) {
   const reloadScheduler = (() => {
     let applied = false;
     const go = () => {
@@ -68,13 +94,13 @@ if ('serviceWorker' in navigator) {
     return {
       request() {
         if (applied) return;
-        fetch('/', { cache: 'no-store' }).catch(() => {});
-        if (document.visibilityState === 'hidden') {
+        fetch("/", { cache: "no-store" }).catch(() => {});
+        if (document.visibilityState === "hidden") {
           go();
           return;
         }
-        document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'hidden') go();
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "hidden") go();
         });
       },
     };
@@ -82,20 +108,20 @@ if ('serviceWorker' in navigator) {
 
   let registered = false;
   const hadController = Boolean(navigator.serviceWorker.controller);
-  navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'APP_UPDATED') reloadScheduler.request();
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data && event.data.type === "APP_UPDATED") reloadScheduler.request();
   });
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (registered && hadController) reloadScheduler.request();
   });
   if (import.meta.env.PROD) {
-    window.addEventListener('load', () => {
+    window.addEventListener("load", () => {
       navigator.serviceWorker
-        .register('/sw.js')
+        .register("/sw.js")
         .then(() => {
           registered = true;
         })
-        .catch((err) => console.error('SW error:', err));
+        .catch((err) => console.error("SW error:", err));
     });
   }
 }
@@ -114,4 +140,4 @@ const Root = () => (
   </React.StrictMode>
 );
 
-ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
+ReactDOM.createRoot(document.getElementById("root")).render(<Root />);

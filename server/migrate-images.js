@@ -1,5 +1,5 @@
-import { q } from './db.js';
-import { ensureBucket, isBase64Photo, isStoredUrl, uploadPhoto } from './storage.js';
+import { q } from "./db.js";
+import { ensureBucket, isBase64Photo, isStoredUrl, uploadPhoto } from "./storage.js";
 
 async function uploadEntry(value, folder) {
   if (isStoredUrl(value)) return { value, uploaded: false };
@@ -25,18 +25,18 @@ export async function migrateImages() {
   for (const p of products) {
     let entries = [];
     try {
-      entries = JSON.parse(p.photos || '[]');
+      entries = JSON.parse(p.photos || "[]");
     } catch {
       entries = [];
     }
     const folder = `products/${p.shop_id}`;
     const stored = [];
     for (const e of entries) {
-      if (typeof e === 'string') {
+      if (typeof e === "string") {
         const { value, uploaded: up } = await uploadEntry(e, folder);
         if (up) uploaded += 1;
         if (value) stored.push({ thumb: value, full: value });
-      } else if (e && typeof e === 'object') {
+      } else if (e && typeof e === "object") {
         const { value: thumb, uploaded: upT } = await uploadEntry(e.thumb, folder);
         const { value: full, uploaded: upF } = await uploadEntry(e.full, folder);
         if (upT) uploaded += 1;
@@ -46,7 +46,11 @@ export async function migrateImages() {
     }
     if (!stored.length) continue;
     const image = stored[0].thumb;
-    await q('UPDATE products SET image = $1, photos = $2 WHERE id = $3', [image, JSON.stringify(stored), p.id]);
+    await q("UPDATE products SET image = $1, photos = $2 WHERE id = $3", [
+      image,
+      JSON.stringify(stored),
+      p.id,
+    ]);
     productsUpdated += 1;
   }
 
@@ -54,18 +58,18 @@ export async function migrateImages() {
   for (const o of offers) {
     let photos = [];
     try {
-      photos = JSON.parse(o.photos || '[]');
+      photos = JSON.parse(o.photos || "[]");
     } catch {
       photos = [];
     }
     const stored = [];
     for (const photo of photos) {
-      const { value, uploaded: up } = await uploadEntry(photo, 'offers');
+      const { value, uploaded: up } = await uploadEntry(photo, "offers");
       if (up) uploaded += 1;
       if (value) stored.push(value);
     }
     if (!stored.length) continue;
-    await q('UPDATE offers SET photos = $1 WHERE id = $2', [JSON.stringify(stored), o.id]);
+    await q("UPDATE offers SET photos = $1 WHERE id = $2", [JSON.stringify(stored), o.id]);
     offersUpdated += 1;
   }
 
@@ -82,11 +86,11 @@ export async function migrateImages() {
       if (item && isBase64Photo(item.photo)) {
         const pid = Number(item.product_id || item.productId);
         if (pid) {
-          const prod = (await q('SELECT image, photos FROM products WHERE id = $1', [pid]))[0];
+          const prod = (await q("SELECT image, photos FROM products WHERE id = $1", [pid]))[0];
           let url = prod?.image;
           if (!url) {
             try {
-              url = JSON.parse(prod?.photos || '[]')[0]?.thumb ?? null;
+              url = JSON.parse(prod?.photos || "[]")[0]?.thumb ?? null;
             } catch {
               url = null;
             }
@@ -99,7 +103,7 @@ export async function migrateImages() {
       }
     }
     if (changed) {
-      await q('UPDATE orders SET items = $1::jsonb WHERE id = $2', [JSON.stringify(items), o.id]);
+      await q("UPDATE orders SET items = $1::jsonb WHERE id = $2", [JSON.stringify(items), o.id]);
       ordersUpdated += 1;
     }
   }

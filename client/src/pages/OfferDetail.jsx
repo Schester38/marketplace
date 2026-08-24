@@ -1,18 +1,25 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { api } from '../api.js';
-import { formatMoney } from '../components/ProductCard.jsx';
-import { offerUrl, offersWhatsappLink, offerDiscount, offerSavings, categoryEmoji, currencySymbol } from '../config.js';
-import Seo from '../components/Seo.jsx';
-import Logo from '../components/Logo.jsx';
-import { useLang } from '../i18n.jsx';
-import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
+import React, { useCallback, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { api } from "../api.js";
+import { formatMoney } from "../components/ProductCard.jsx";
+import {
+  offerUrl,
+  offersWhatsappLink,
+  offerDiscount,
+  offerSavings,
+  categoryEmoji,
+  currencySymbol,
+} from "../config.js";
+import Seo from "../components/Seo.jsx";
+import Logo from "../components/Logo.jsx";
+import { useLang } from "../i18n.jsx";
+import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 
 export default function OfferDetail() {
   const { id } = useParams();
   const { t } = useLang();
   const [offer, setOffer] = useState(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [lightbox, setLightbox] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
@@ -21,12 +28,12 @@ export default function OfferDetail() {
       .getOffer(id)
       .then((d) => {
         setOffer(d.offer);
-        const key = 'mboppi_view_offer_' + id;
+        const key = "mboppi_view_offer_" + id;
         try {
           if (sessionStorage.getItem(key)) return;
-          sessionStorage.setItem(key, '1');
+          sessionStorage.setItem(key, "1");
         } catch {}
-        api.trackViews([{ type: 'offer', id: Number(id) }]).catch(() => {});
+        api.trackViews([{ type: "offer", id: Number(id) }]).catch(() => {});
       })
       .catch((e) => setError(e.message));
   }, [id]);
@@ -44,19 +51,21 @@ export default function OfferDetail() {
   useEffect(() => {
     if (!lightbox) return;
     const onKey = (e) => {
-      if (e.key === 'Escape') setLightbox(false);
-      if (e.key === 'ArrowRight') setLightboxIndex((i) => (i + 1) % photos.length);
-      if (e.key === 'ArrowLeft') setLightboxIndex((i) => (i - 1 + photos.length) % photos.length);
+      if (e.key === "Escape") setLightbox(false);
+      if (e.key === "ArrowRight") setLightboxIndex((i) => (i + 1) % photos.length);
+      if (e.key === "ArrowLeft") setLightboxIndex((i) => (i - 1 + photos.length) % photos.length);
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [lightbox, photos.length]);
 
   if (error) {
     return (
       <main className="container narrow">
         <p className="error">{error}</p>
-        <Link to="/vitrine-offre" className="btn btn-outline">{t('← Retour à la vitrine')}</Link>
+        <Link to="/vitrine-offre" className="btn btn-outline">
+          {t("← Retour à la vitrine")}
+        </Link>
       </main>
     );
   }
@@ -71,8 +80,8 @@ export default function OfferDetail() {
     );
   }
 
-  const symbol = currencySymbol(offer.currency || 'XAF');
-  const waMessage = t('Bonjour, je suis intéressé(e) par votre offre « {name} » : {url}', {
+  const symbol = currencySymbol(offer.currency || "XAF");
+  const waMessage = t("Bonjour, je suis intéressé(e) par votre offre « {name} » : {url}", {
     name: offer.name,
     url: offerUrl(offer.id),
   });
@@ -82,17 +91,21 @@ export default function OfferDetail() {
   return (
     <main className="container narrow">
       <Seo
-        title={offer ? `${offer.name} — Mboppi` : `${t('Offre')} — Mboppi`}
-        description={offer ? `${t('Découvrez « {name} » à {price} {symbol} sur Mboppi.', { name: offer.name, price: formatMoney(offer.price), symbol })}` : undefined}
+        title={offer ? `${offer.name} — Mboppi` : `${t("Offre")} — Mboppi`}
+        description={
+          offer
+            ? `${t("Découvrez « {name} » à {price} {symbol} sur Mboppi.", { name: offer.name, price: formatMoney(offer.price), symbol })}`
+            : undefined
+        }
       />
       <Link to="/vitrine-offre" className="btn btn-outline" style={{ marginBottom: 16 }}>
-        {t('← Retour à la vitrine')}
+        {t("← Retour à la vitrine")}
       </Link>
 
       <div className="card offer-detail">
         <div
           className="offer-photo"
-          style={{ height: 260, cursor: photos.length > 0 ? 'zoom-in' : undefined }}
+          style={{ height: 260, cursor: photos.length > 0 ? "zoom-in" : undefined }}
           onClick={() => photos.length > 0 && setLightbox(true)}
         >
           {photos.length > 0 ? (
@@ -102,45 +115,83 @@ export default function OfferDetail() {
           )}
           {discount > 0 && <span className="discount-badge">−{discount}%</span>}
           {photos.length > 1 && (
-            <span className="offer-photo-count">{t('{n} photos — cliquez pour agrandir', { n: photos.length })}</span>
+            <span className="offer-photo-count">
+              {t("{n} photos — cliquez pour agrandir", { n: photos.length })}
+            </span>
           )}
         </div>
 
         <div className="offer-body">
           <div className="offer-tags">
-            <span className="badge badge-offer">{t('Offre')}</span>
-            {offer.category && <span className="badge badge-cat">{categoryEmoji(offer.category)} {t(offer.category)}</span>}
+            <span className="badge badge-offer">{t("Offre")}</span>
+            {offer.category && (
+              <span className="badge badge-cat">
+                {categoryEmoji(offer.category)} {t(offer.category)}
+              </span>
+            )}
           </div>
           <h2>{offer.name}</h2>
           {offer.description && <p>{offer.description}</p>}
-          {offer.warranty && <p className="offer-warranty">🛡️ {t('Garantie : {warranty}', { warranty: offer.warranty })}</p>}
+          {offer.warranty && (
+            <p className="offer-warranty">
+              🛡️ {t("Garantie : {warranty}", { warranty: offer.warranty })}
+            </p>
+          )}
           <div className="offer-prices">
-            <span className="old-price">{formatMoney(offer.original_price)} {symbol}</span>
-            <span className="promo-price">{formatMoney(offer.promo_price)} {symbol}</span>
+            <span className="old-price">
+              {formatMoney(offer.original_price)} {symbol}
+            </span>
+            <span className="promo-price">
+              {formatMoney(offer.promo_price)} {symbol}
+            </span>
           </div>
-          {savings > 0 && <p className="offer-savings">💰 {t('Économisez {n} {symbol} par rapport au prix d\'origine', { n: formatMoney(savings), symbol })}</p>}
-          <p className="offer-qty">{t('Disponibilité : {n} unité(s)', { n: offer.quantity })}</p>
+          {savings > 0 && (
+            <p className="offer-savings">
+              💰{" "}
+              {t("Économisez {n} {symbol} par rapport au prix d'origine", {
+                n: formatMoney(savings),
+                symbol,
+              })}
+            </p>
+          )}
+          <p className="offer-qty">{t("Disponibilité : {n} unité(s)", { n: offer.quantity })}</p>
 
           {offer.phone && (
             <a className="btn btn-primary btn-block" href={`tel:${offer.phone}`}>
-              📞 {t('Appeler')}
+              📞 {t("Appeler")}
             </a>
           )}
-          <a className="btn btn-whatsapp btn-block" href={offersWhatsappLink(waMessage)} target="_blank" rel="noopener noreferrer">
-            <WhatsAppIcon /> {t('Commander sur WhatsApp')}
+          <a
+            className="btn btn-whatsapp btn-block"
+            href={offersWhatsappLink(waMessage)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <WhatsAppIcon /> {t("Commander sur WhatsApp")}
           </a>
         </div>
       </div>
 
       {lightbox && (
         <div className="lightbox" onClick={() => setLightbox(false)}>
-          <button className="lightbox-close" onClick={() => setLightbox(false)} aria-label={t('Fermer')}>✕</button>
+          <button
+            className="lightbox-close"
+            onClick={() => setLightbox(false)}
+            aria-label={t("Fermer")}
+          >
+            ✕
+          </button>
           {photos.length > 1 && (
             <button
               className="lightbox-nav prev"
-              onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i - 1 + photos.length) % photos.length); }}
-              aria-label={t('Photo précédente')}
-            >‹</button>
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((i) => (i - 1 + photos.length) % photos.length);
+              }}
+              aria-label={t("Photo précédente")}
+            >
+              ‹
+            </button>
           )}
           <img
             className="lightbox-img"
@@ -151,9 +202,14 @@ export default function OfferDetail() {
           {photos.length > 1 && (
             <button
               className="lightbox-nav next"
-              onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i + 1) % photos.length); }}
-              aria-label={t('Photo suivante')}
-            >›</button>
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightboxIndex((i) => (i + 1) % photos.length);
+              }}
+              aria-label={t("Photo suivante")}
+            >
+              ›
+            </button>
           )}
         </div>
       )}

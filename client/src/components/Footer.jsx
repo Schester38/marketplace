@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useLang } from '../i18n.jsx';
-import { api } from '../api.js';
-import pkg from '../../package.json';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useLang } from "../i18n.jsx";
+import { api } from "../api.js";
+import pkg from "../../package.json";
 
 export default function Footer() {
   const { t } = useLang();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [status, setStatus] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -15,17 +15,17 @@ export default function Footer() {
     if (busy) return;
     const value = email.trim();
     if (!value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      setStatus('error');
+      setStatus("error");
       return;
     }
     setBusy(true);
     setStatus(null);
     try {
       await api.subscribeNewsletter(value);
-      setStatus('ok');
-      setEmail('');
+      setStatus("ok");
+      setEmail("");
     } catch {
-      setStatus('error');
+      setStatus("error");
     } finally {
       setBusy(false);
     }
@@ -39,21 +39,37 @@ export default function Footer() {
           <span>Mboppi</span>
         </div>
         <nav className="footer-nav">
-          <Link to="/a-propos">{t('À propos')}</Link>
-          <Link to="/faq">❓ {t('FAQ')}</Link>
-          <Link to="/donnees">{t('Données & confidentialité')}</Link>
-          <Link to="/cgv">{t('CGV')}</Link>
-          <Link to="/cgu">{t('CGU')}</Link>
-          <Link to="/mentions-legales">{t('Mentions légales')}</Link>
+          <Link to="/a-propos">{t("À propos")}</Link>
+          <Link to="/faq">❓ {t("FAQ")}</Link>
+          <Link to="/donnees">{t("Données & confidentialité")}</Link>
+          <Link to="/cgv">{t("CGV")}</Link>
+          <Link to="/cgu">{t("CGU")}</Link>
+          <Link to="/mentions-legales">{t("Mentions légales")}</Link>
         </nav>
         <div className="tp-block">
           <div className="tp-head">
-            <span className="tp-stars" aria-hidden="true">★★★★★</span>
-            <h3 className="tp-title">{t('Avis clients')}</h3>
+            <span className="tp-stars" aria-hidden="true">
+              ★★★★★
+            </span>
+            <h3 className="tp-title">{t("Avis clients")}</h3>
           </div>
-          <p className="tp-sub">{t('Partagez votre expérience avec nous sur Trustpilot')}</p>
-          <div className="trustpilot-widget" data-locale="fr-FR" data-template-id="56278e9abfbbba0bdcd568bc" data-businessunit-id="6a8779883986f46709270588" data-style-height="52px" data-style-width="100%" data-token="f1155ee0-5326-46a5-a398-f288affba9bb">
-            <a href="https://fr.trustpilot.com/review/mboppi-mboppi.vercel.app" target="_blank" rel="noopener">Trustpilot</a>
+          <p className="tp-sub">{t("Partagez votre expérience avec nous sur Trustpilot")}</p>
+          <div
+            className="trustpilot-widget"
+            data-locale="fr-FR"
+            data-template-id="56278e9abfbbba0bdcd568bc"
+            data-businessunit-id="6a8779883986f46709270588"
+            data-style-height="52px"
+            data-style-width="100%"
+            data-token="f1155ee0-5326-46a5-a398-f288affba9bb"
+          >
+            <a
+              href="https://fr.trustpilot.com/review/mboppi-mboppi.vercel.app"
+              target="_blank"
+              rel="noopener"
+            >
+              Trustpilot
+            </a>
           </div>
           <a
             className="tp-btn"
@@ -61,47 +77,49 @@ export default function Footer() {
             target="_blank"
             rel="noopener"
           >
-            <span className="tp-btn-stars" aria-hidden="true">★★★★★</span>
-            {t('Évaluez-nous sur Trustpilot')}
+            <span className="tp-btn-stars" aria-hidden="true">
+              ★★★★★
+            </span>
+            {t("Évaluez-nous sur Trustpilot")}
           </a>
         </div>
         <form className="newsletter" onSubmit={subscribe}>
-          <h3 className="newsletter-title">✉️ {t('Restez informé')}</h3>
+          <h3 className="newsletter-title">✉️ {t("Restez informé")}</h3>
           <p className="newsletter-desc">
-            {t('Recevez nos bons plans et nouveautés directement par email.')}
+            {t("Recevez nos bons plans et nouveautés directement par email.")}
           </p>
           <div className="newsletter-row">
             <input
               type="email"
               className="newsletter-input"
-              placeholder={t('Votre adresse email')}
+              placeholder={t("Votre adresse email")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={busy}
               required
             />
             <button type="submit" className="btn btn-primary" disabled={busy}>
-              {busy ? t('Envoi…') : t("S'abonner")}
+              {busy ? t("Envoi…") : t("S'abonner")}
             </button>
           </div>
-          {status === 'ok' && (
+          {status === "ok" && (
             <p className="newsletter-status ok" role="status">
-              {t('Merci ! Vous êtes bien inscrit(e) à la newsletter.')}
+              {t("Merci ! Vous êtes bien inscrit(e) à la newsletter.")}
             </p>
           )}
-          {status === 'error' && (
+          {status === "error" && (
             <p className="newsletter-status err" role="alert">
               {t("Adresse invalide ou problème lors de l'inscription. Réessayez.")}
             </p>
           )}
-          <p className="newsletter-legal">{t('Désinscription possible à tout moment via le lien présent dans chaque email.')}</p>
+          <p className="newsletter-legal">
+            {t("Désinscription possible à tout moment via le lien présent dans chaque email.")}
+          </p>
         </form>
         <p className="footer-copy">
-          © {new Date().getFullYear()} Mboppi. {t('Tous droits réservés.')}
+          © {new Date().getFullYear()} Mboppi. {t("Tous droits réservés.")}
         </p>
-        <p className="footer-copy">
-          v{pkg.version}
-        </p>
+        <p className="footer-copy">v{pkg.version}</p>
       </div>
     </footer>
   );

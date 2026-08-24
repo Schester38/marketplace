@@ -1,17 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { formatMoney } from './ProductCard.jsx';
-import { countrySymbol } from '../config.js';
-import { useLang } from '../i18n.jsx';
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { formatMoney } from "./ProductCard.jsx";
+import { countrySymbol } from "../config.js";
+import { useLang } from "../i18n.jsx";
 
 export function formatFlashTime(ms) {
-  if (!Number.isFinite(ms) || ms <= 0) return '00:00';
+  if (!Number.isFinite(ms) || ms <= 0) return "00:00";
   const totalSec = Math.ceil(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
   const s = totalSec % 60;
-  const mm = String(m).padStart(2, '0');
-  const ss = String(s).padStart(2, '0');
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
@@ -38,9 +38,17 @@ export default function FlashPromoCard({ promo, onDelete, onShare, showShop = tr
   const image = promo.image;
   return (
     <div className="card product-card flash-promo-card">
-      <Link to={`/produit/${promo.product_id}`} className="product-link" aria-label={promo.product_name}>
+      <Link
+        to={`/produit/${promo.product_id}`}
+        className="product-link"
+        aria-label={promo.product_name}
+      >
         <div className="product-thumb">
-          {image ? <img src={image} alt={promo.product_name} loading="lazy" decoding="async" /> : <span>⚡</span>}
+          {image ? (
+            <img src={image} alt={promo.product_name} loading="lazy" decoding="async" />
+          ) : (
+            <span>⚡</span>
+          )}
         </div>
       </Link>
       <span className="badge badge-flash">⚡ -{promo.discount_percent || 0}%</span>
@@ -49,15 +57,19 @@ export default function FlashPromoCard({ promo, onDelete, onShare, showShop = tr
           type="button"
           className="btn btn-small btn-primary flash-share"
           onClick={() => onShare(promo)}
-          aria-label={t('Partager la promotion')}
-          title={t('Partager la promotion')}
+          aria-label={t("Partager la promotion")}
+          title={t("Partager la promotion")}
         >
-          🔗 {t('Partager')}
+          🔗 {t("Partager")}
         </button>
       )}
       {onDelete && (
-        <button type="button" className="btn btn-small btn-danger flash-delete" onClick={() => onDelete(promo)}>
-          {t('Annuler')}
+        <button
+          type="button"
+          className="btn btn-small btn-danger flash-delete"
+          onClick={() => onDelete(promo)}
+        >
+          {t("Annuler")}
         </button>
       )}
       <Link to={`/produit/${promo.product_id}`} className="product-body">
@@ -67,7 +79,7 @@ export default function FlashPromoCard({ promo, onDelete, onShare, showShop = tr
           endsAt={promo.ends_at}
           render={({ remains, ended }) =>
             ended ? (
-              <span className="flash-countdown ended">⏰ {t('Terminée')}</span>
+              <span className="flash-countdown ended">⏰ {t("Terminée")}</span>
             ) : (
               <span className="flash-countdown">⏰ {formatFlashTime(remains)}</span>
             )
@@ -75,8 +87,12 @@ export default function FlashPromoCard({ promo, onDelete, onShare, showShop = tr
         />
         <div className="price-box">
           <span className="price-line">
-            <span className="old-price">{formatMoney(promo.price)} {symbol}</span>
-            <span className="price price-flash">{formatMoney(promo.promo_price)} {symbol}</span>
+            <span className="old-price">
+              {formatMoney(promo.price)} {symbol}
+            </span>
+            <span className="price price-flash">
+              {formatMoney(promo.promo_price)} {symbol}
+            </span>
           </span>
         </div>
       </Link>

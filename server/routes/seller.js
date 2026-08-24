@@ -1,6 +1,7 @@
-import { Router } from 'express';
-import { q } from '../db.js';
-import { authRequired, roleRequired } from '../auth.js';
+import { Router } from "express";
+import { q } from "../db.js";
+import { authRequired, roleRequired } from "../auth.js";
+import { updatePaymentMethodsSchema } from "../validators.js";
 
 const router = Router();
 
@@ -15,35 +16,47 @@ function rowMethods(m) {
   };
 }
 
-router.get('/payment-methods', authRequired, roleRequired('seller'), ah(async (req, res) => {
-  const m = (
-    await q('SELECT full_name, wallets, updated_at FROM seller_payment_methods WHERE seller_id = $1', [req.user.id])
-  )[0];
-  res.json({ methods: rowMethods(m) });
-}));
+router.get(
+  "/payment-methods",
+  authRequired,
+  roleRequired("seller"),
+  ah(async (req, res) => {
+    const m = (
+      await q(
+        "SELECT full_name, wallets, updated_at FROM seller_payment_methods WHERE seller_id = $1",
+        [req.user.id]
+      )
+    )[0];
+    res.json({ methods: rowMethods(m) });
+  })
+);
 
-router.put('/payment-methods', authRequired, roleRequired('seller'), ah(async (req, res) => {
-  const { full_name, wallets } = req.body || {};
-  const name = full_name ? String(full_name).trim() : null;
-  const list = Array.isArray(wallets)
-    ? wallets
-        .filter((w) => w && String(w.name || '').trim() && String(w.value || '').trim())
-        .map((w) => ({
+router.put(
+  "/payment-methods",
+  authRequired,
+  roleRequired("seller"),
+  validate(updatePaymentMethodsSchema),
+  ah(async (req, res) => {
+    const { full_name, wallets } = req.body;
+    const name = full_name ? String(full_name).trim() : null;
+    const list = Array.isArray(wallets)
+      ? wallets.map((w) => ({
           name: String(w.name).trim(),
           value: String(w.value).trim(),
         }))
-    : [];
-  const updated = (
-    await q(
-      `INSERT INTO seller_payment_methods (seller_id, full_name, wallets, updated_at)
+      : [];
+    const updated = (
+      await q(
+        `INSERT INTO seller_payment_methods (seller_id, full_name, wallets, updated_at)
        VALUES ($1, $2, $3::jsonb, now())
        ON CONFLICT (seller_id)
        DO UPDATE SET full_name = EXCLUDED.full_name, wallets = EXCLUDED.wallets, updated_at = now()
        RETURNING full_name, wallets, updated_at`,
-      [req.user.id, name, JSON.stringify(list)]
-    )
-  )[0];
-  res.json({ methods: rowMethods(updated), ok: true });
-}));
+        [req.user.id, name, JSON.stringify(list)]
+      )
+    )[0];
+    res.json({ methods: rowMethods(updated), ok: true });
+  })
+);
 
 export default router;

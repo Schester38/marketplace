@@ -1,21 +1,21 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { api } from '../api.js';
-import Seo from '../components/Seo.jsx';
-import { useAuth } from '../App.jsx';
-import { useLang } from '../i18n.jsx';
-import { useRefreshOnFocus } from '../useRefreshOnFocus.js';
-import { getCountry } from '../config.js';
-import { WALLETS_BY_COUNTRY, DEFAULT_WALLETS } from './SellerPayments.jsx';
+import React, { useCallback, useEffect, useState } from "react";
+import { api } from "../api.js";
+import Seo from "../components/Seo.jsx";
+import { useAuth } from "../App.jsx";
+import { useLang } from "../i18n.jsx";
+import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
+import { getCountry } from "../config.js";
+import { WALLETS_BY_COUNTRY, DEFAULT_WALLETS } from "./SellerPayments.jsx";
 
 export default function ShopPayments() {
   const { user } = useAuth();
   const { t } = useLang();
-  const [fullName, setFullName] = useState('');
+  const [fullName, setFullName] = useState("");
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [savedCount, setSavedCount] = useState(0);
 
   const loadPaymentMethods = useCallback(() => {
@@ -23,7 +23,7 @@ export default function ShopPayments() {
       .getShopPaymentMethods()
       .then((d) => {
         const saved = d.methods ? d.methods.wallets : [];
-        setFullName(d.methods ? d.methods.full_name || '' : '');
+        setFullName(d.methods ? d.methods.full_name || "" : "");
         const country = getCountry(user?.country);
         const suggestions = (country && WALLETS_BY_COUNTRY[country.name]) || DEFAULT_WALLETS;
         const unique = [...suggestions];
@@ -33,7 +33,7 @@ export default function ShopPayments() {
         setWallets(
           unique.map((name) => {
             const prev = saved.find((w) => w.name === name);
-            return { name, value: prev ? prev.value : '', checked: !!prev };
+            return { name, value: prev ? prev.value : "", checked: !!prev };
           })
         );
         setSavedCount(saved.length);
@@ -50,19 +50,19 @@ export default function ShopPayments() {
 
   const save = async (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setSaving(true);
     try {
-      const list = wallets.filter((w) => w.checked && String(w.value || '').trim());
+      const list = wallets.filter((w) => w.checked && String(w.value || "").trim());
       if (list.length === 0) {
-        setError(t('Ajoutez au moins un portefeuille avec son numéro.'));
+        setError(t("Ajoutez au moins un portefeuille avec son numéro."));
         setSaving(false);
         return;
       }
       const d = await api.updateShopPaymentMethods({ full_name: fullName, wallets: list });
       setSavedCount(d.methods.wallets.length);
-      setSuccess(t('Moyens de paiement enregistrés !'));
+      setSuccess(t("Moyens de paiement enregistrés !"));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -72,11 +72,19 @@ export default function ShopPayments() {
 
   return (
     <main className="container narrow">
-      <Seo title={t('Mes moyens de paiement') + ' — Mboppi'} description={t('Enregistrez vos portefeuilles électroniques pour recevoir les paiements de vos clients.')} noindex/>
+      <Seo
+        title={t("Mes moyens de paiement") + " — Mboppi"}
+        description={t(
+          "Enregistrez vos portefeuilles électroniques pour recevoir les paiements de vos clients."
+        )}
+        noindex
+      />
       <section className="dash-header">
         <div>
-          <h1>💳 {t('Mes moyens de paiement')}</h1>
-          <p>{t('Ces informations seront visibles par vos clients sur le formulaire de commande.')}</p>
+          <h1>💳 {t("Mes moyens de paiement")}</h1>
+          <p>
+            {t("Ces informations seront visibles par vos clients sur le formulaire de commande.")}
+          </p>
         </div>
       </section>
 
@@ -88,11 +96,11 @@ export default function ShopPayments() {
         <div className="card form-card">
           {savedCount > 0 && (
             <p className="success" style={{ marginBottom: 10 }}>
-              ✅ {t('{count} moyen(s) de paiement enregistré(s).', { count: savedCount })}
+              ✅ {t("{count} moyen(s) de paiement enregistré(s).", { count: savedCount })}
             </p>
           )}
           <form onSubmit={save}>
-            <label>{t('Nom complet (tel qu\'il apparaît sur le compte)')}</label>
+            <label>{t("Nom complet (tel qu'il apparaît sur le compte)")}</label>
             <input
               className="input"
               value={fullName}
@@ -100,10 +108,10 @@ export default function ShopPayments() {
               placeholder={user.name}
             />
 
-            <div style={{ margin: '18px 0 8px' }}>
-              <strong>{t('Portefeuilles électroniques')}</strong>
+            <div style={{ margin: "18px 0 8px" }}>
+              <strong>{t("Portefeuilles électroniques")}</strong>
               <p className="hint" style={{ marginTop: 4 }}>
-                {t('Cochez vos portefeuilles et entrez le numéro associé.')}
+                {t("Cochez vos portefeuilles et entrez le numéro associé.")}
               </p>
             </div>
 
@@ -126,7 +134,7 @@ export default function ShopPayments() {
                     <input
                       className="input wallet-value"
                       value={w.value}
-                      placeholder={t('Numéro')}
+                      placeholder={t("Numéro")}
                       onChange={(e) =>
                         setWallets((prev) =>
                           prev.map((x, j) => (j === i ? { ...x, value: e.target.value } : x))
@@ -141,7 +149,7 @@ export default function ShopPayments() {
             {error && <p className="error">{error}</p>}
             {success && <p className="success">{success}</p>}
             <button className="btn btn-primary btn-block" disabled={saving}>
-              {saving ? '…' : t('Enregistrer mes moyens de paiement')}
+              {saving ? "…" : t("Enregistrer mes moyens de paiement")}
             </button>
           </form>
         </div>

@@ -1,34 +1,34 @@
-import React, { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { api } from '../api.js';
-import { useAuth, postLoginPath } from '../App.jsx';
-import { GoogleIcon } from '../components/icons.jsx';
-import Seo from '../components/Seo.jsx';
-import Logo from '../components/Logo.jsx';
-import { useLang } from '../i18n.jsx';
+import React, { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { api } from "../api.js";
+import { useAuth, postLoginPath } from "../App.jsx";
+import { GoogleIcon } from "../components/icons.jsx";
+import Seo from "../components/Seo.jsx";
+import Logo from "../components/Logo.jsx";
+import { useLang } from "../i18n.jsx";
 
 export default function Login() {
   const { login } = useAuth();
   const { t } = useLang();
   const navigate = useNavigate();
   const location = useLocation();
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
-  const [unverified, setUnverified] = useState('');
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+  const [unverified, setUnverified] = useState("");
   const [resending, setResending] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
-    setError('');
-    setUnverified('');
+    setError("");
+    setUnverified("");
     try {
       const data = await api.login(form);
       login(data.user, data.token);
-      localStorage.setItem('mboppi_welcome', 'login');
+      localStorage.setItem("mboppi_welcome", "login");
       const from = location.state?.from;
-      navigate(typeof from === 'string' && from ? from : postLoginPath(data.user));
+      navigate(typeof from === "string" && from ? from : postLoginPath(data.user));
     } catch (err) {
-      if (err.code === 'EMAIL_NOT_VERIFIED') {
+      if (err.code === "EMAIL_NOT_VERIFIED") {
         setUnverified(err.email || form.email);
         return;
       }
@@ -38,12 +38,12 @@ export default function Login() {
 
   const resend = async () => {
     setResending(true);
-    setError('');
+    setError("");
     try {
       await api.resendVerification(unverified);
-      setError('');
-      setUnverified('');
-      alert(t('Un nouveau lien de confirmation vient d\'être envoyé. Vérifiez votre boîte mail.'));
+      setError("");
+      setUnverified("");
+      alert(t("Un nouveau lien de confirmation vient d'être envoyé. Vérifiez votre boîte mail."));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -53,24 +53,37 @@ export default function Login() {
 
   return (
     <main className="container narrow">
-      <Seo title={t('Connexion') + ' — Mboppi'} description={t('Connexion à Mboppi')} noindex/>
+      <Seo title={t("Connexion") + " — Mboppi"} description={t("Connexion à Mboppi")} noindex />
       <div className="card form-card">
-        <div className="auth-brand"><Logo className="logo-inline" /></div>
-        <h2>{t('Connexion')}</h2>
+        <div className="auth-brand">
+          <Logo className="logo-inline" />
+        </div>
+        <h2>{t("Connexion")}</h2>
 
         {unverified && (
-          <div className="card" style={{ background: '#fffbeb', borderColor: '#fde68a', marginBottom: 16 }}>
+          <div
+            className="card"
+            style={{ background: "#fffbeb", borderColor: "#fde68a", marginBottom: 16 }}
+          >
             <p className="hint" style={{ margin: 0 }}>
-              ⚠️ {t('Votre adresse email n\'est pas encore confirmée. Cliquez sur le lien reçu par email pour activer votre compte.')}
+              ⚠️{" "}
+              {t(
+                "Votre adresse email n'est pas encore confirmée. Cliquez sur le lien reçu par email pour activer votre compte."
+              )}
             </p>
-            <button className="link-button" onClick={resend} disabled={resending} style={{ marginTop: 8 }}>
-              {resending ? t('Envoi…') : t('Renvoyer le lien de confirmation')}
+            <button
+              className="link-button"
+              onClick={resend}
+              disabled={resending}
+              style={{ marginTop: 8 }}
+            >
+              {resending ? t("Envoi…") : t("Renvoyer le lien de confirmation")}
             </button>
           </div>
         )}
 
         <form onSubmit={submit}>
-          <label>{t('Email')}</label>
+          <label>{t("Email")}</label>
           <input
             className="input"
             type="email"
@@ -78,7 +91,7 @@ export default function Login() {
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
-          <label>{t('Mot de passe')}</label>
+          <label>{t("Mot de passe")}</label>
           <input
             className="input"
             type="password"
@@ -87,22 +100,24 @@ export default function Login() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
           {error && <p className="error">{error}</p>}
-          <button className="btn btn-primary btn-block">{t('Se connecter')}</button>
+          <button className="btn btn-primary btn-block">{t("Se connecter")}</button>
         </form>
 
-        <div className="divider"><span>{t('ou')}</span></div>
+        <div className="divider">
+          <span>{t("ou")}</span>
+        </div>
         <button
           type="button"
           className="btn btn-google btn-block"
           onClick={() => {
-            window.location.href = '/api/auth/google';
+            window.location.href = "/api/auth/google";
           }}
         >
           <GoogleIcon />
-          {t('Se connecter avec Google')}
+          {t("Se connecter avec Google")}
         </button>
         <p className="hint">
-          {t('Pas encore de compte ?')} <Link to="/register">{t('Créer un compte')}</Link>
+          {t("Pas encore de compte ?")} <Link to="/register">{t("Créer un compte")}</Link>
         </p>
       </div>
     </main>
