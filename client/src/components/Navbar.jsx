@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App.jsx';
 import { LANGS, useLang } from '../i18n.jsx';
@@ -831,8 +832,10 @@ export default function Navbar({ onLogout }) {
         </div>
       </nav>
 
-      {open && <div className="drawer-overlay" onClick={close} aria-hidden="true"></div>}
-      <aside className={`drawer ${open ? 'open' : ''}`} aria-hidden={!open} role="dialog" aria-modal="true" aria-label={t('Menu principal')}>
+      {createPortal(
+        <>
+          {open && <div className="drawer-overlay" onClick={close} aria-hidden="true"></div>}
+          <aside className={`drawer ${open ? 'open' : ''}`} aria-hidden={!open} role="dialog" aria-modal="true" aria-label={t('Menu principal')}>
         <div className="drawer-header">
           <img src="/navbar-logo.png" alt="Mboppi" className="brand-logo" />
           <span>Mboppi</span>
@@ -878,7 +881,10 @@ export default function Navbar({ onLogout }) {
             <button className="btn btn-outline drawer-auth-btn" onClick={logout}>🚪 {t('Déconnexion')}</button>
           )}
         </div>
-      </aside>
+          </aside>
+        </>,
+        document.body
+      )}
     </header>
   );
 }

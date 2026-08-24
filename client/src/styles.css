@@ -4919,3 +4919,18 @@ tr.tr-hidden td { opacity: 0.55; }
   .drawer-tools { padding: 14px 16px; }
   .drawer-nav { padding: 12px; }
 }
+
+/* --- Drawer AU-DESSUS de tout le contenu (portail <body> + z dédiés) --- */
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 20, 26, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 2100;
+  animation: drawerFade 0.2s ease;
+}
+.drawer { z-index: 2110; }
+@keyframes drawerFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
