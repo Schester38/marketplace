@@ -4814,3 +4814,108 @@ tr.tr-hidden td { opacity: 0.55; }
   .hero-carousel-track, .pd-track { transition: none; }
   .nav-badge.bump { animation: none; }
 }
+
+/* ============================================================
+   DRAWER réorganisé (v99) — ordre constant mobile/tablette/desktop :
+   ① langue · thème · mode éco   ② Suivez-nous · Suggestion
+   ③ liens principaux            ④ espaces/compte   ⑤ installation
+   ============================================================ */
+
+/* --- Rangée réglages : langue pleine largeur + 2 boutons carrés --- */
+.drawer-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.drawer-tools .drawer-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px 44px;
+  gap: 8px;
+  align-items: center;
+}
+.drawer-tools .lang-wrap { width: 100%; }
+.drawer-tools .lang-toggle { width: 100%; min-height: 44px; }
+.drawer-tools .theme-toggle,
+.drawer-tools .lite-toggle { width: 44px; height: 44px; font-size: 1.15rem; }
+
+/* --- Boutons communautaires pleine largeur --- */
+.drawer-tools .follow-wrap { width: 100%; }
+.drawer-tools .follow-toggle,
+.drawer-tools .suggest-toggle {
+  width: 100%;
+  justify-content: flex-start;
+  min-height: 44px;
+  font-weight: 600;
+}
+
+/* Menus langue/réseaux EN FLUX sous leur bouton
+   (l'ancien absolute se calait sur le drawer fixe → panneau égaré) */
+.drawer-tools .lang-menu,
+.drawer-tools .follow-menu {
+  position: static;
+  box-shadow: none;
+  border-style: dashed;
+  margin-top: 8px;
+}
+
+/* --- Liens : lignes nettes, cibles tactiles ≥48px, chevron --- */
+.drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+}
+.drawer-nav > a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background var(--transition-smooth), color var(--transition-smooth);
+}
+.drawer-nav > a:hover, .drawer-nav > a:focus-visible { background: var(--soft); color: var(--primary); }
+.drawer-nav > a::after {
+  content: '›';
+  opacity: 0.45;
+  font-size: 1.05rem;
+  margin-inline-start: auto;
+}
+[dir='rtl'] .drawer-nav > a::after { content: '‹'; }
+.drawer-nav a.nav-icon svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* Connexion : CTA visible en bas de liste */
+.drawer-nav a.drawer-login-btn {
+  justify-content: center;
+  color: #fff;
+  background: var(--grad-primary);
+  box-shadow: var(--shadow-xs);
+  margin-top: 8px;
+}
+.drawer-nav a.drawer-login-btn::after { display: none; }
+.drawer-nav a.drawer-login-btn:hover,
+.drawer-nav a.drawer-login-btn:focus-visible {
+  background: var(--grad-primary-hover);
+  color: #fff;
+}
+
+/* Chip utilisateur sur sa propre ligne */
+.drawer-nav .user-chip {
+  align-self: flex-start;
+  margin-top: 6px;
+  white-space: normal;
+  text-align: start;
+}
+
+/* Desktop ≥1024 : drawer 300px, mêmes sections aérées */
+@media (min-width: 1024px) {
+  .drawer-tools { padding: 14px 16px; }
+  .drawer-nav { padding: 12px; }
+}

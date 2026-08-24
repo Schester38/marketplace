@@ -667,12 +667,13 @@ export default function Navbar({ onLogout }) {
 
   const tools = (
     <div className="drawer-tools">
-      <LangSwitcher />
-      {themeToggle}
-      {liteToggle}
-      {favLink}
-      {cartLink}
-      {userIcon}
+      <div className="drawer-row">
+        <LangSwitcher />
+        {themeToggle}
+        {liteToggle}
+      </div>
+      <FollowUs />
+      <SuggestionButton onOpened={close} />
     </div>
   );
 
@@ -710,8 +711,6 @@ export default function Navbar({ onLogout }) {
 
   const navLinks = (
     <>
-      <FollowUs />
-      <SuggestionButton onOpened={close} />
       <Link to="/" onClick={close}>{t('Produits')}</Link>
       <Link to="/createurs" onClick={close}>{t('Créateurs')}</Link>
       <Link to="/soutien" onClick={close}>{t('Je soutiens')}</Link>
@@ -737,7 +736,7 @@ export default function Navbar({ onLogout }) {
           </span>
         </>
       )}
-      {!user && <Link to="/login" onClick={close}>{t('Connexion')}</Link>}
+      {!user && <Link to="/login" onClick={close} className="drawer-login-btn">{t('Connexion')}</Link>}
     </>
 );
 
