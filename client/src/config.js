@@ -259,3 +259,9 @@ export function categoryEmoji(category) {
   if (!category) return '🏷️';
   return CATEGORY_EMOJI[category.trim().toLowerCase()] || '🏷️';
 }
+
+export function categoryIcon(category) {
+  if (!category) return '🏷️';
+  const emoji = CATEGORY_EMOJI[category.trim().toLowerCase()];
+  return emoji || '🏷️';
+}

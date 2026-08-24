@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { q } from '../db.js';
+import { authRequired } from '../auth.js';
 import { countryCode, currencyForCountry, normalizePhone, payin } from '../ikeepay.js';
-import { completeAutomaticPayout, paySaleAutomatically } from '../finance.js';
+import { completeAutomaticPayout, completeMembershipPayment, completePlatformPayout, paySaleAutomatically } from '../finance.js';
 
 const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -14,6 +15,30 @@ const optionalAuth = (req, res, next) => {
   next();
 };
 
+router.post('/ikeepay/membership', authRequired, ah(async (req, res) => {
+  const user = (await q('SELECT * FROM users WHERE id = $1', [req.user.id]))[0];
+  const fee = user?.role === 'shop' ? 2500 : user?.role === 'seller' ? 1500 : 0;
+  if (!user || !fee) return res.status(403).json({ error: 'Ce rôle ne nécessite pas d’adhésion' });
+  if (user.verified || (user.membership_expires_at && new Date(user.membership_expires_at) > new Date())) return res.json({ ok: true, active: true });
+  const existing = (await q('SELECT * FROM membership_payments WHERE user_id = $1 AND status = \'pending\' ORDER BY id DESC LIMIT 1', [user.id]))[0];
+  if (existing) return res.json({ ok: true, pending: true, payment_link: existing.payment_link, external_reference: existing.external_reference });
+  const country = countryCode(req.body?.country || user.country);
+  const operator = String(req.body?.operator || '').trim().toUpperCase();
+  const phone = normalizePhone(req.body?.phone || user.phone, country);
+  if (!country || !operator || !phone) return res.status(400).json({ error: 'Pays, opérateur et numéro de paiement requis' });
+  const external = `MEMBERSHIP:${user.id}:${Date.now()}`;
+  const created = (await q('INSERT INTO membership_payments (user_id, amount, currency, external_reference) VALUES ($1, $2, $3, $4) RETURNING id', [user.id, fee, user.country === 'Côte d\'Ivoire' ? 'XOF' : currencyForCountry(country), external]))[0];
+  try {
+    const result = await payin({ amount: fee, currency: user.country === 'Côte d\'Ivoire' ? 'XOF' : currencyForCountry(country), country, phoneNumber: phone, operator, external_reference: external, customer_email: user.email });
+    const link = result.payment_link || result.data?.payment_link || null;
+    await q('UPDATE membership_payments SET payment_link = $1 WHERE id = $2', [link, created.id]);
+    return res.status(201).json({ ok: true, payment_link: link, external_reference: external, provider: result });
+  } catch (error) {
+    await q('UPDATE membership_payments SET status = \'failed\', error = $1 WHERE id = $2', [error.message, created.id]);
+    throw error;
+  }
+}));
+
 router.post('/ikeepay/payin', optionalAuth, ah(async (req, res) => {
   const saleId = Number(req.body?.sale_id);
   const sale = (await q('SELECT * FROM sales WHERE id = $1', [saleId]))[0];
@@ -24,7 +49,7 @@ router.post('/ikeepay/payin', optionalAuth, ah(async (req, res) => {
   if (sale.payment_status === 'paid' || sale.payment_status === 'completed') return res.json({ ok: true, already_paid: true });
   if (sale.payment_external_reference) return res.json({ ok: true, pending: true, payment_link: sale.payment_link });
 
-  const country = countryCode(req.body?.country || sale.payment_country || req.user.country);
+  const country = countryCode(req.body?.country || sale.payment_country || req.user?.country || sale.payment_country);
   const operator = String(req.body?.operator || '').trim().toUpperCase();
   const phone = normalizePhone(req.body?.phone || sale.buyer_phone, country);
   if (!country || !operator || !phone) return res.status(400).json({ error: 'Pays, opérateur et numéro Mobile Money requis' });
@@ -58,10 +83,15 @@ router.post('/ikeepay/webhook', ah(async (req, res) => {
     [data.provider_reference || null, external, req.body?.event || null, req.body, data.status || null]
   );
   const sale = (await q('SELECT * FROM sales WHERE payment_external_reference = $1', [external]))[0];
+  const membership = (await q('SELECT * FROM membership_payments WHERE external_reference = $1', [external]))[0];
+  const platformPayout = external.startsWith('MBOPPI_ACTIVATION:');
+  const donation = (await q('SELECT * FROM donations WHERE external_reference = $1', [external]))[0];
   if (String(data.type || '').toLowerCase() === 'payout') {
     const payoutStatus = String(data.status || '').toLowerCase();
     let payoutResult;
-    if (payoutStatus === 'failed') {
+    if (platformPayout && payoutStatus === 'completed') {
+      payoutResult = await completePlatformPayout(external, data.provider_reference || null);
+    } else if (payoutStatus === 'failed') {
       await q('UPDATE automatic_payouts SET status = \'failed\', provider_reference = COALESCE($1, provider_reference), error = $2 WHERE external_reference = $3', [data.provider_reference || null, 'Le prestataire a refusé le retrait', external]);
       payoutResult = { ok: false, error: 'Le prestataire a refusé le retrait' };
     } else if (payoutStatus === 'completed') {
@@ -71,6 +101,15 @@ router.post('/ikeepay/webhook', ah(async (req, res) => {
       payoutResult = { ok: true, pending: true };
     }
     await q('UPDATE payment_webhook_logs SET handled = $1, error = $2 WHERE id = $3', [payoutResult.ok, payoutResult.error || null, logged[0].id]);
+  } else if (donation && String(data.type || '').toLowerCase() === 'payin') {
+    const status = String(data.status || '').toLowerCase();
+    await q('UPDATE donations SET status = $1, provider_reference = COALESCE($2, provider_reference), completed_at = CASE WHEN $1 = \'completed\' THEN COALESCE(completed_at, now()) ELSE completed_at END WHERE id = $3', [status === 'completed' ? 'completed' : status === 'failed' ? 'failed' : 'pending', data.provider_reference || null, donation.id]);
+    await q('UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1', [logged[0].id]);
+  } else if (membership && String(data.type || '').toLowerCase() === 'payin') {
+    const status = String(data.status || '').toLowerCase();
+    if (status === 'completed') await completeMembershipPayment(membership.id, data.provider_reference || null);
+    else if (status === 'failed') await q('UPDATE membership_payments SET status = \'failed\', provider_reference = COALESCE($1, provider_reference), error = $2 WHERE id = $3', [data.provider_reference || null, data.status || null, membership.id]);
+    await q('UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1', [logged[0].id]);
   } else if (sale && String(data.type || '').toLowerCase() === 'payin') {
     const status = String(data.status || '').toLowerCase();
     const next = status === 'completed' ? 'paid' : status === 'failed' ? 'failed' : 'pending';

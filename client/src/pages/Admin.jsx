@@ -630,25 +630,31 @@ api.adminProducts().then((d) => setProducts(d.products)).catch(onErr);
             <tr>
               <th>{t('Nom')}</th>
               <th>{t('Email')}</th>
+              <th>{t('Téléphone')}</th>
               <th>{t('Rôle')}</th>
               <th>{t('Pays')}</th>
+              <th>{t('Référence')}</th>
               <th>{t('Inscription')}</th>
+              <th>{t('Adhésion')}</th>
               <th>{t('Vérifié')}</th>
             </tr>
           </thead>
           <tbody>
             {users === null ? (
-              <tr><td colSpan="6"><div className="skeleton-block" style={{ height: 30 }}></div></td></tr>
+              <tr><td colSpan="9"><div className="skeleton-block" style={{ height: 30 }}></div></td></tr>
             ) : users.length === 0 ? (
-              <tr><td colSpan="6" className="empty">{t('Aucun utilisateur')}</td></tr>
+              <tr><td colSpan="9" className="empty">{t('Aucun utilisateur')}</td></tr>
             ) : (
               users.map((u) => (
                 <tr key={u.id}>
                   <td>{u.name}</td>
                   <td className="hint">{u.email}</td>
+                  <td>{u.phone || '—'}</td>
                   <td><span className="badge">{t(u.role)}</span></td>
                   <td>{u.country || '—'}</td>
+                  <td><code>{u.reference_number || '—'}</code></td>
                   <td className="hint">{new Date(u.created_at).toLocaleDateString()}</td>
+                  <td className="hint">{u.membership_fee ? `${u.membership_fee} · ${u.membership_expires_at ? new Date(u.membership_expires_at).toLocaleDateString() : t('Non payée')}` : t('Non requise')}</td>
                   <td>
                     <button
                       type="button"

@@ -8,6 +8,27 @@ import Logo from '../components/Logo.jsx';
 import { COUNTRIES } from '../config.js';
 import { useLang } from '../i18n.jsx';
 
+const OPERATORS_BY_COUNTRY = {
+  Cameroun: ['ORANGE', 'MTN'],
+  "Côte d'Ivoire": ['ORANGE', 'MTN'],
+  Sénégal: ['ORANGE', 'WAVE', 'FREE', 'MTN'],
+  Mali: ['ORANGE', 'MOOV'],
+  'Burkina Faso': ['ORANGE', 'MOBICASH'],
+  Niger: ['MOOV', 'AIRTEL'],
+  Togo: ['MOOV', 'MOBICASH'],
+  Bénin: ['MOOV', 'MTN'],
+  Gabon: ['AIRTEL'],
+  'République du Congo': ['AIRTEL', 'MTN'],
+  'République démocratique du Congo': ['AIRTEL', 'ORANGE', 'VODACOM'],
+  Kenya: ['MPESA'],
+  Tanzanie: ['AIRTEL', 'HALOPESA', 'TIGO'],
+  Rwanda: ['AIRTEL', 'MTN MOMO'],
+  Ouganda: ['AIRTEL', 'MTN MOMO'],
+  Zambie: ['AIRTEL', 'MTN', 'ZAMTEL'],
+  Ghana: ['AIRTEL', 'MTN', 'TELECEL'],
+  Nigeria: ['OPAY', 'MONIEPOINT', 'MTN', 'AIRTEL'],
+};
+
 export default function Register() {
   const { t } = useLang();
   const [searchParams] = useSearchParams();
@@ -19,6 +40,8 @@ export default function Register() {
     password: '',
     role: refCode ? 'client' : 'seller',
     country: '',
+    operator: '',
+    phone: '',
   });
   const [error, setError] = useState('');
   const [accepted, setAccepted] = useState(false);
@@ -26,6 +49,7 @@ export default function Register() {
   const [resending, setResending] = useState(false);
 
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
+  const operators = OPERATORS_BY_COUNTRY[form.country] || ['ORANGE', 'MTN'];
 
   const ensureAccepted = () => {
     if (!accepted) {
@@ -56,7 +80,7 @@ export default function Register() {
     }
     if (!ensureAccepted()) return;
     try {
-      const role = form.role === 'creator' ? 'seller' : form.role;
+      const role = form.role;
       await api.register({
         ...form,
         role,
@@ -109,7 +133,7 @@ export default function Register() {
           <SearchSelect
             options={COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }))}
             value={form.country}
-            onChange={(v) => setForm({ ...form, country: v })}
+            onChange={(v) => setForm({ ...form, country: v, operator: '' })}
             placeholder={t('Choisir votre pays…')}
             emptyLabel={t('Aucun résultat')}
           />
@@ -151,16 +175,15 @@ export default function Register() {
                   <span><Logo className="logo-inline" /> {t('Client')}</span>
                   <small>{t('Je consulte les offres et les produits, je commande facilement')}</small>
                 </label>
-                <label className={`role-option ${form.role === 'creator' ? 'selected' : ''} role-disabled`}>
+                <label className={`role-option ${form.role === 'creator' ? 'selected' : ''}`}>
                   <input
                     type="radio"
                     name="role"
                     value="creator"
-                    disabled
                     checked={form.role === 'creator'}
                     onChange={(e) => setForm({ ...form, role: e.target.value })}
                   />
-                  <span>🎨 {t('Créateur')} <span className="badge badge-warn" style={{ marginLeft: 4 }}>{t('Bientôt disponible')}</span></span>
+                  <span>🎨 {t('Créateur')}</span>
                   <small>{t('Je présente et vends mes créations au marché Mboppi')}</small>
                 </label>
                 <label className={`role-option ${form.role === 'livreur' ? 'selected' : ''}`}>
@@ -203,6 +226,21 @@ export default function Register() {
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
+
+          {(form.role === 'shop' || form.role === 'seller') && (
+            <div className="card" style={{ margin: '16px 0', background: '#f8fafc' }}>
+              <strong>{t('Moyen de paiement')}</strong>
+              <p className="hint">{t('Ce numéro servira à payer les frais d’adhésion et à recevoir automatiquement vos paiements.')}</p>
+              <label>{t('Opérateur *')}</label>
+              <select className="input" required value={form.operator} onChange={(e) => setForm({ ...form, operator: e.target.value })}>
+                <option value="">{t('Choisir un opérateur…')}</option>
+                {operators.map((operator) => <option key={operator} value={operator}>{operator}</option>)}
+              </select>
+              <label>{t('Numéro de paiement *')}</label>
+              <input className="input" required type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder={t('Numéro avec indicatif du pays')} />
+              <p className="hint">{t(form.role === 'shop' ? 'Adhésion boutique : 2 500 XAF pour 30 jours.' : 'Adhésion vendeur : 1 500 XAF pour 30 jours.')}</p>
+            </div>
+          )}
 
           {error && <p className="error">{error}</p>}
 

@@ -15,13 +15,15 @@ Mboppi est une marketplace pour le Cameroun et l'Afrique. Elle met en relation d
 
 ## Paiements et commissions
 
-Mboppi ne collecte aucun paiement en ligne et ne prélève aucun frais de plateforme. Les paiements sont directs et manuels :
+Mboppi conserve le paiement manuel et propose aussi un paiement automatique via Ikeepay lorsqu’il est configuré. Les paiements manuels restent directs :
 
 - espèces à la livraison ;
 - virement Mobile Money direct ;
 - virement bancaire.
 
-Le moyen choisi est enregistré sur la vente. Après livraison, la boutique règle manuellement le vendeur et le parrain et ajoute une preuve de paiement. Les montants sont suivis dans les wallets internes, sans frais de plateforme.
+Le moyen choisi est enregistré sur la vente. Après livraison, la boutique règle manuellement le vendeur et le parrain, ou les Payouts Ikeepay sont déclenchés après un Payin confirmé. Les montants sont suivis dans les wallets internes.
+
+Les boutiques et vendeurs doivent aussi régler une adhésion Ikeepay de 30 jours : 2 500 XAF pour une boutique et 1 500 XAF pour un vendeur. Un compte validé par l’administrateur peut accéder à son espace sans paiement. Un vendeur parrain reçoit 1 000 XAF lorsqu’un vendeur inscrit avec son code paie son adhésion ; les 500 XAF restants sont reversés au portefeuille Ikeepay de Mboppi.
 
 La commission du vendeur est définie par la boutique sur chaque produit. Le parrainage client rapporte 2 % au vendeur référent, lorsque le client s'est inscrit avec son code ; le versement automatique du cumul intervient à partir de 1 500 XAF.
 

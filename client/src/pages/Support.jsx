@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Seo from '../components/Seo.jsx';
 import { useLang } from '../i18n.jsx';
+import { api } from '../api.js';
 
 function OrangeLogo() {
   return (
@@ -90,6 +91,26 @@ function InfoRow({ label, value, copyable }) {
 
 export default function Support() {
   const { t } = useLang();
+  const [amount, setAmount] = useState('');
+  const [phone, setPhone] = useState('');
+  const [operator, setOperator] = useState('ORANGE');
+  const [paymentLink, setPaymentLink] = useState('');
+  const [paymentError, setPaymentError] = useState('');
+  const [paying, setPaying] = useState(false);
+
+  const startDonation = async (event) => {
+    event.preventDefault();
+    setPaying(true);
+    setPaymentError('');
+    try {
+      const result = await api.ikeepayDonation({ amount, phone_number: phone, operator, country: 'CM' });
+      setPaymentLink(result.payment_link || '');
+    } catch (error) {
+      setPaymentError(error.message);
+    } finally {
+      setPaying(false);
+    }
+  };
 
   const methods = [
     {
@@ -147,9 +168,20 @@ export default function Support() {
         <section className="section">
           <div className="card form-card support-donate">
             <h3>💛 {t('Donner en ligne')}</h3>
-            <p className="hint">
-              {t('Le montant est prélevé sur votre mobile money et reversé automatiquement sur les portefeuilles indiqués ci-dessous.')}
-            </p>
+            <p className="hint">{t('Payez votre soutien avec Ikeepay. Selon l’opérateur, un lien de paiement peut être ouvert. Votre contribution est destinée au fonctionnement de Mboppi.')}</p>
+            <form onSubmit={startDonation}>
+              <label>{t('Montant (XAF)')}</label>
+              <input className="input" type="number" min="1" required value={amount} onChange={(event) => setAmount(event.target.value)} />
+              <label>{t('Opérateur')}</label>
+              <select className="input" value={operator} onChange={(event) => setOperator(event.target.value)}>
+                {['ORANGE', 'MTN', 'WAVE', 'MOOV', 'AIRTEL', 'VODACOM', 'MOBICASH'].map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <label>{t('Numéro Mobile Money')}</label>
+              <input className="input" type="tel" required value={phone} onChange={(event) => setPhone(event.target.value)} />
+              {paymentError && <p className="error">{paymentError}</p>}
+              <button className="btn btn-primary btn-block" disabled={paying}>{paying ? '…' : t('Payer avec Ikeepay')}</button>
+            </form>
+            {paymentLink && <a className="btn btn-primary btn-block" href={paymentLink} target="_blank" rel="noreferrer">🔗 {t('Ouvrir le paiement')}</a>}
           </div>
         </section>
 

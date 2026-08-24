@@ -148,6 +148,8 @@ export const api = {
   createFlashPromotion: (payload) => request('/flash-promotions', { method: 'POST', body: JSON.stringify(payload) }),
   trending: () => request('/metrics/trending'),
   createDonation: (payload) => request('/donations', { method: 'POST', body: JSON.stringify(payload) }),
+  ikeepayDonation: (payload) => request('/donations/ikeepay', { method: 'POST', body: JSON.stringify(payload) }),
   ikeepayPayin: (payload) => request('/payments/ikeepay/payin', { method: 'POST', body: JSON.stringify(payload) }),
+  membershipPayin: (payload) => request('/payments/ikeepay/membership', { method: 'POST', body: JSON.stringify(payload) }),
   trackViews: (items) => request('/views', { method: 'POST', body: JSON.stringify({ items }) }),
 };

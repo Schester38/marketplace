@@ -24,7 +24,7 @@ Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiqu
 
 ### Frais de service — 0 % (paiements manuels)
 
-**Tous les paiements sont manuels** : pas de frais de plateforme, pas de frais iKeePay. Les transactions se font en espèces, virement Mobile Money direct vers le bénéficiaire, ou virement bancaire. Les montants sont reversés intégralement aux bénéficiaires.
+**Deux modes de paiement existent** : paiement manuel (espèces, virement Mobile Money direct ou virement bancaire) et paiement automatique Ikeepay lorsqu’il est configuré. Le Payin H2H est confirmé par webhook avant les Payouts vers les moyens enregistrés.
 
 ### Répartition d'une vente — `server/finance.js` `computeRedistribution`
 
@@ -51,7 +51,7 @@ Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau v
 
 - `products.commission_percent` est choisi par la **boutique à la création du produit** (0-100, `products.js:261,273,384,396`). Commission vente seller = `prix × commission_percent % × qty`.
 - Pendant une **promo éclair, commission = 0 %** : le vendeur est exclu du produit (le produit est masqué de son catalogue et `sales.js:41-50` bloque la vente pendant la promo).
-- Activation seller : **gratuite** (plus de `SELLER_ACTIVATION_FEE`), durée illimitée.
+- Adhésion : boutique `2 500 XAF` et vendeur `1 500 XAF`, valable 30 jours. Un compte validé par l’admin peut accéder à son espace sans paiement.
 
 ### Wallet et moyens de paiement
 

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { q } from '../db.js';
+import { countryCode, currencyForCountry, normalizePhone as normalizeIkeepayPhone, payin } from '../ikeepay.js';
 
 const router = Router();
 
@@ -42,6 +43,28 @@ router.post('/', ah(async (req, res) => {
     manual: true,
     instructions: `Effectuez un virement de ${amt} XAF sur le compte ${operator} du projet Mboppi, puis envoyez la capture d'écran à l'équipe Mboppi pour validation.`
   });
+}));
+
+router.post('/ikeepay', ah(async (req, res) => {
+  const amount = Math.round(Number(req.body?.amount || 0) * 100) / 100;
+  const country = countryCode(req.body?.country || 'CM');
+  const operator = String(req.body?.operator || '').trim().toUpperCase();
+  const phone = normalizeIkeepayPhone(req.body?.phone_number, country);
+  if (!Number.isFinite(amount) || amount <= 0 || !country || !operator || !phone) {
+    return res.status(400).json({ error: 'Montant, pays, opérateur et numéro requis' });
+  }
+  const currency = currencyForCountry(country);
+  const reference = `DONATION:${Date.now()}:${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  const created = (await q('INSERT INTO donations (amount, currency, country, donor_phone, operator, external_reference) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id', [amount, currency, country, phone, operator, reference]))[0];
+  try {
+    const result = await payin({ amount, currency, country, phoneNumber: phone, operator, external_reference: reference });
+    const link = result.payment_link || result.data?.payment_link || null;
+    await q('UPDATE donations SET payment_link = $1 WHERE id = $2', [link, created.id]);
+    res.status(201).json({ ok: true, donation_id: created.id, payment_link: link, external_reference: reference, provider: result });
+  } catch (error) {
+    await q('UPDATE donations SET status = \'failed\' WHERE id = $1', [created.id]);
+    throw error;
+  }
 }));
 
 function normalizePhone(phone, countryName) {

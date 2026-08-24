@@ -12,6 +12,7 @@ import Home from './pages/Home.jsx';
 import CityPage from './pages/CityPage.jsx';
 import { LangProvider, useLang } from './i18n.jsx';
 import { StoreProvider } from './store.jsx';
+import { membershipActive } from './auth-access.js';
 
 const lazyRetry = (importer) =>
   React.lazy(async () => {
@@ -43,6 +44,7 @@ const Verone = lazyRetry(() => import('./pages/Verone.jsx'));
 const OfferDetail = lazyRetry(() => import('./pages/OfferDetail.jsx'));
 const ProductDetail = lazyRetry(() => import('./pages/ProductDetail.jsx'));
 const PurchasePage = lazyRetry(() => import('./pages/PurchasePage.jsx'));
+const MembershipPage = lazyRetry(() => import('./pages/MembershipPage.jsx'));
 
 const AuthGoogle = lazyRetry(() => import('./pages/AuthGoogle.jsx'));
 const About = lazyRetry(() => import('./pages/About.jsx'));
@@ -162,6 +164,7 @@ function RoleOnly({ role, children }) {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== role) return <Navigate to="/" replace />;
+  if (!membershipActive(user)) return <Navigate to="/adhesion" replace />;
   return children;
 }
 
@@ -323,6 +326,7 @@ export default function App() {
           <Route path="/offre/:id" element={<OfferDetail />} />
           <Route path="/produit/:id" element={<ProductDetail />} />
           <Route path="/acheter/:id" element={<PurchasePage />} />
+          <Route path="/adhesion" element={<Protected><MembershipPage /></Protected>} />
           <Route path="/verone" element={<Verone />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

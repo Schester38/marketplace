@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { q } from '../db.js';
-import { signToken, authRequired, roleRequired } from '../auth.js';
+import { signToken, authRequired, roleRequired, MEMBERSHIP_FEES } from '../auth.js';
 import { googleConfigured, googleAuthUrl, getGoogleProfile } from '../google.js';
 import { logAudit } from '../security.js';
 import { sendMail, verificationEmailHtml } from '../mailer.js';
@@ -45,7 +45,7 @@ function validEmail(v) {
 }
 
 function publicUser(u) {
-  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, city: u.city || null, quartier: u.quartier || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null, email_verified: !!u.email_verified, verified: !!u.verified };
+  return { id: u.id, name: u.name, email: u.email, role: u.role, created_at: u.created_at, has_password: !!u.password, location: u.location || null, city: u.city || null, quartier: u.quartier || null, country: u.country || null, phone: u.phone || null, seller_code: u.seller_code || null, reference_number: u.reference_number || null, email_verified: !!u.email_verified, verified: !!u.verified, membership_required: Boolean(MEMBERSHIP_FEES[u.role]), membership_fee: MEMBERSHIP_FEES[u.role] || null, membership_expires_at: u.membership_expires_at || null, membership_active: !!(u.verified || (u.membership_expires_at && new Date(u.membership_expires_at) > new Date())) };
 }
 
 const VALID_ROLES = ['shop', 'seller', 'client', 'creator', 'livreur'];
@@ -92,20 +92,24 @@ router.post('/register', ah(async (req, res) => {
   if (!validEmail(email)) {
     return res.status(400).json({ error: 'Adresse email invalide' });
   }
+  const walletName = finalRole === 'shop' || finalRole === 'seller' ? String(operator || '').trim() : '';
+  const walletValue = finalRole === 'shop' || finalRole === 'seller' ? String(phone || '').trim() : '';
+  if ((finalRole === 'shop' || finalRole === 'seller') && (!walletName || !walletValue)) {
+    return res.status(400).json({ error: 'Un opérateur et un numéro de paiement sont requis pour ce rôle' });
+  }
   const emailNorm = String(email).trim().toLowerCase();
   const exists = await q('SELECT id FROM users WHERE email = $1', [emailNorm]);
   if (exists.length) {
     return res.status(409).json({ error: 'Un compte existe déjà avec cet email' });
   }
   const hash = bcrypt.hashSync(String(password), 12);
+  const referenceNumber = `MBP-${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
   const created = await q(
-    'INSERT INTO users (name, email, password, role, country, referred_by, accepted_terms_at, email_verified) VALUES ($1, $2, $3, $4, $5, $6, now(), FALSE) RETURNING id',
-    [String(name).trim(), emailNorm, hash, finalRole, country ? String(country).trim() : null, referredBy]
+    'INSERT INTO users (name, email, password, role, country, phone, referred_by, accepted_terms_at, email_verified, reference_number, membership_fee) VALUES ($1, $2, $3, $4, $5, $6, $7, now(), FALSE, $8, $9) RETURNING id',
+    [String(name).trim(), emailNorm, hash, finalRole, country ? String(country).trim() : null, walletValue || null, referredBy, referenceNumber, MEMBERSHIP_FEES[finalRole] || null]
   );
   const user = (await q('SELECT * FROM users WHERE id = $1', [created[0].id]))[0];
 
-  const walletName = operator ? String(operator).trim() : '';
-  const walletValue = phone ? String(phone).trim() : '';
   if (finalRole === 'seller' && walletName && walletValue) {
     try {
       await q(
@@ -119,13 +123,19 @@ router.post('/register', ah(async (req, res) => {
       console.error('Enregistrement du portefeuille vendeur échoué:', err.message);
     }
   }
+  if (finalRole === 'shop' && walletName && walletValue) {
+    await q(
+      `INSERT INTO shop_payment_methods (shop_id, wallets, updated_at) VALUES ($1, $2::jsonb, now()) ON CONFLICT (shop_id) DO UPDATE SET wallets = EXCLUDED.wallets, updated_at = now()`,
+      [user.id, JSON.stringify([{ name: walletName, value: walletValue }])]
+    );
+  }
 
   try {
     await sendVerification(user);
   } catch (err) {
     console.error('Envoi de confirmation échoué:', err.message);
   }
-  res.status(201).json({ needs_confirmation: true, email: emailNorm });
+  res.status(201).json({ needs_confirmation: true, email: emailNorm, reference_number: referenceNumber, membership_required: Boolean(MEMBERSHIP_FEES[finalRole]), membership_fee: MEMBERSHIP_FEES[finalRole] || null });
 }));
 
 router.post('/login', ah(async (req, res) => {
@@ -259,8 +269,8 @@ router.get('/google/callback', ah(async (req, res) => {
         }
       }
       const created = await q(
-        'INSERT INTO users (name, email, password, provider, role, country, referred_by, accepted_terms_at, email_verified, email_verified_at) VALUES ($1, $2, NULL, \'google\', $3, $4, $5, now(), TRUE, now()) RETURNING id',
-        [profile.name, profile.email, cleanRole, cleanCountry, referredBy]
+        'INSERT INTO users (name, email, password, provider, role, country, referred_by, accepted_terms_at, email_verified, email_verified_at, reference_number, membership_fee) VALUES ($1, $2, NULL, \'google\', $3, $4, $5, now(), TRUE, now(), $6, $7) RETURNING id',
+        [profile.name, profile.email, cleanRole, cleanCountry, referredBy, `MBP-${crypto.randomBytes(5).toString('hex').toUpperCase()}`, MEMBERSHIP_FEES[cleanRole] || null]
       );
       user = (await q('SELECT * FROM users WHERE id = $1', [created[0].id]))[0];
     }

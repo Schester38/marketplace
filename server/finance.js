@@ -56,7 +56,7 @@ async function providerPayout({ user, methods, amount, saleId, kind, reference }
 export async function completeAutomaticPayout(reference, providerReference) {
   const completed = (await q('UPDATE automatic_payouts SET status = \'completed\', provider_reference = COALESCE($1, provider_reference), completed_at = COALESCE(completed_at, now()), error = NULL WHERE external_reference = $2 RETURNING *', [providerReference || null, reference]))[0];
   if (!completed) return { ok: false, error: 'Reversement introuvable' };
-  const transactionType = completed.kind === 'referral' ? 'referral_credit' : completed.kind === 'seller' ? 'commission_credit' : completed.kind === 'livreur' ? 'online_payout' : 'online_collect';
+  const transactionType = completed.kind === 'referral' || completed.kind === 'activation_referral' ? 'referral_credit' : completed.kind === 'seller' ? 'commission_credit' : completed.kind === 'livreur' ? 'online_payout' : 'online_collect';
   await q(
     `INSERT INTO wallet_transactions (user_id, amount, currency, transaction_type, reference_type, reference_id, description)
      VALUES ($1, $2, $3, $4, 'ikeepay_payout', $5, $6)
@@ -66,6 +66,51 @@ export async function completeAutomaticPayout(reference, providerReference) {
   if (completed.kind === 'seller' && completed.sale_id) await q('UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()) WHERE id = $1', [completed.sale_id]);
   if (completed.kind === 'referral') await q('UPDATE sales SET referral_paid = TRUE, referral_paid_at = now() WHERE referred_by = $1 AND status = \'delivered\' AND payment_status = \'paid\' AND referral_paid = FALSE', [completed.user_id]);
   return { ok: true, payout: completed };
+}
+
+export async function completePlatformPayout(reference, providerReference) {
+  const row = (await q('UPDATE platform_payouts SET status = \'completed\', provider_reference = COALESCE($1, provider_reference), completed_at = COALESCE(completed_at, now()), error = NULL WHERE external_reference = $2 RETURNING *', [providerReference || null, reference]))[0];
+  return row ? { ok: true, payout: row } : { ok: false, error: 'Reversement plateforme introuvable' };
+}
+
+export async function completeMembershipPayment(paymentId, providerReference) {
+  const payment = (await q('SELECT * FROM membership_payments WHERE id = $1', [paymentId]))[0];
+  if (!payment) return { ok: false, error: 'Paiement d’adhésion introuvable' };
+  const user = (await q('SELECT id, role, referred_by FROM users WHERE id = $1', [payment.user_id]))[0];
+  if (!user) return { ok: false, error: 'Utilisateur introuvable' };
+  await q('UPDATE membership_payments SET status = \'completed\', provider_reference = COALESCE($1, provider_reference), completed_at = COALESCE(completed_at, now()), error = NULL WHERE id = $2', [providerReference || null, payment.id]);
+  await q(
+    `UPDATE users SET membership_paid_at = COALESCE(membership_paid_at, now()), membership_expires_at = GREATEST(COALESCE(membership_expires_at, now()), now()) + interval '30 days', membership_payment_reference = $1 WHERE id = $2`,
+    [payment.external_reference, user.id]
+  );
+  if (user.role === 'seller' && user.referred_by) {
+    const referrer = (await q('SELECT id, country FROM users WHERE id = $1 AND role = \'seller\'', [user.referred_by]))[0];
+    if (referrer) {
+      const methods = await methodsFor(referrer.id, 'seller');
+      await providerPayout({ user: referrer, methods, amount: 1000, kind: 'activation_referral', reference: `ACTIVATION_REFERRAL:${user.id}` });
+      await payoutPlatformShare(user.id, 500);
+    }
+  }
+  return { ok: true };
+}
+
+async function payoutPlatformShare(userId, amount) {
+  const country = process.env.MBOPPI_PAYOUT_COUNTRY || 'CM';
+  const operator = String(process.env.MBOPPI_PAYOUT_OPERATOR || 'ORANGE').trim().toUpperCase();
+  const phoneNumber = normalizePhone(process.env.MBOPPI_PAYOUT_PHONE || '+237699486146', country);
+  const reference = `MBOPPI_ACTIVATION:${userId}`;
+  const existing = (await q('SELECT * FROM platform_payouts WHERE external_reference = $1', [reference]))[0];
+  if (existing?.status === 'completed') return { ok: true, already: true };
+  if (!existing) await q('INSERT INTO platform_payouts (external_reference, amount, currency) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [reference, amount, currencyForCountry(country)]);
+  try {
+    const result = await payout({ amount, currency: currencyForCountry(country), country, phoneNumber, operator, external_reference: reference });
+    if (providerStatus(result) === 'failed') throw new Error('Le prestataire a refusé le reversement Mboppi');
+    if (providerStatus(result) === 'completed') await q('UPDATE platform_payouts SET status = \'completed\', provider_reference = $1, completed_at = now() WHERE external_reference = $2', [result.provider_reference || result.data?.provider_reference || null, reference]);
+    return { ok: true, pending: providerStatus(result) !== 'completed' };
+  } catch (error) {
+    await q('UPDATE platform_payouts SET status = \'failed\', error = $1 WHERE external_reference = $2', [error.message, reference]);
+    return { ok: false, error: error.message };
+  }
 }
 
 export async function paySaleAutomatically(saleId) {

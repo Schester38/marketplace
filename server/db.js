@@ -189,6 +189,11 @@ export async function initDb() {
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS accepted_terms_at TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS reference_number TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_paid_at TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_expires_at TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_fee NUMERIC(14,2);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_payment_reference TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_commission REAL NOT NULL DEFAULT 0;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_paid BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS referral_paid_at TIMESTAMPTZ;
@@ -263,6 +268,7 @@ export async function initDb() {
   await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_seller_code ON users(seller_code) WHERE seller_code IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_shop_code ON users(shop_code) WHERE shop_code IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_reference_number ON users(reference_number) WHERE reference_number IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_payment_external_reference ON sales(payment_external_reference) WHERE payment_external_reference IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS notifications (
@@ -384,6 +390,45 @@ export async function initDb() {
       error TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS membership_payments (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount NUMERIC(14,2) NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      external_reference TEXT NOT NULL UNIQUE,
+      provider_reference TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+      payment_link TEXT,
+      error TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ
+    );
+    CREATE TABLE IF NOT EXISTS platform_payouts (
+      id BIGSERIAL PRIMARY KEY,
+      external_reference TEXT NOT NULL UNIQUE,
+      amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+      provider_reference TEXT,
+      error TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ
+    );
+    CREATE TABLE IF NOT EXISTS donations (
+      id BIGSERIAL PRIMARY KEY,
+      amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      country TEXT NOT NULL DEFAULT 'Cameroun',
+      donor_phone TEXT,
+      operator TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+      external_reference TEXT UNIQUE,
+      provider_reference TEXT,
+      payment_link TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_membership_payments_user ON membership_payments(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_provider ON payment_webhook_logs(provider, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_order ON payment_webhook_logs(provider_order_id);
 

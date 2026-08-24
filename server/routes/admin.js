@@ -152,7 +152,7 @@ router.get('/backup', ah(async (req, res) => {
 router.get('/users', ah(async (req, res) => {
   const search = req.query.search ? String(req.query.search).trim().slice(0, 60) : '';
   const users = await q(
-    `SELECT id, name, email, role, country, location, phone, verified, seller_code, shop_code, created_at
+    `SELECT id, name, email, role, country, location, phone, verified, seller_code, shop_code, reference_number, membership_fee, membership_paid_at, membership_expires_at, created_at
      FROM users
      WHERE $1 = '' OR name ILIKE $2 OR email ILIKE $2
      ORDER BY created_at DESC LIMIT 100`,
