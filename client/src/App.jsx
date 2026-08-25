@@ -43,7 +43,7 @@ const SellerPayments = lazyRetry(() => import("./pages/SellerPayments.jsx"));
 const ShopPayments = lazyRetry(() => import("./pages/ShopPayments.jsx"));
 const LivreurDashboard = lazyRetry(() => import("./pages/LivreurDashboard.jsx"));
 const LivreurPayments = lazyRetry(() => import("./pages/LivreurPayments.jsx"));
-const CreatorPayments = lazyRetry(() => import("./pages/ShopPayments.jsx"));
+const CreatorPayments = lazyRetry(() => import("./pages/CreatorPayments.jsx"));
 const LivreursList = lazyRetry(() => import("./pages/LivreursList.jsx"));
 const ClientDashboard = lazyRetry(() => import("./pages/ClientDashboard.jsx"));
 const CreatorDashboard = lazyRetry(() => import("./pages/CreatorDashboard.jsx"));

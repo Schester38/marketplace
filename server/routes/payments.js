@@ -3,9 +3,12 @@ import jwt from "jsonwebtoken";
 import { q } from "../db.js";
 import { authRequired } from "../auth.js";
 import { countryCode, currencyForCountry, normalizePhone, payin } from "../ikeepay.js";
-import { completeAutomaticPayout } from "../services/payouts.js";
-import { completeMembershipPayment, completePlatformPayout } from "../finance.js";
-import { paySaleAutomatically } from "../services/sales.js";
+import {
+  completeAutomaticPayout,
+  completeMembershipPayment,
+  completePlatformPayout,
+  paySaleAutomatically,
+} from "../services/payouts.js";
 
 const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);

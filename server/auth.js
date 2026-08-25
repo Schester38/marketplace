@@ -59,7 +59,7 @@ export function roleRequired(...roles) {
   };
 }
 
-export const MEMBERSHIP_FEES = { shop: 2500, seller: 1500 };
+export const MEMBERSHIP_FEES = { shop: 2500, seller: 1500, creator: 2500 };
 export const MEMBERSHIP_DAYS = 30;
 
 export function membershipRequired(user) {

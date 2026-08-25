@@ -2,7 +2,7 @@ import { Router } from "express";
 import { q, withTransaction } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { sendPush } from "../push.js";
-import { paySaleAutomatically } from "../finance.js";
+import { paySaleAutomatically } from "../services/payouts.js";
 
 const router = Router();
 
@@ -798,7 +798,7 @@ router.post(
       )
     )[0];
 
-    if (full.payment_status === "paid") {
+    if (full.payment_status === "paid" && !full.online_payment) {
       await paySaleAutomatically(full.id);
     }
 

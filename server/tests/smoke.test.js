@@ -1,4 +1,4 @@
-import { computeRedistribution, REFERRAL_AUTO_PAY_MIN } from "../services/sales.js";
+import { computeRedistribution, REFERRAL_AUTO_PAY_MIN } from "../services/payouts.js";
 import {
   registerSchema,
   loginSchema,
