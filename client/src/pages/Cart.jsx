@@ -8,6 +8,7 @@ import { useAuth } from "../App.jsx";
 import { useCart } from "../store.jsx";
 import { useLang } from "../i18n.jsx";
 import CopyCode from "../components/CopyCode.jsx";
+import { addIkeepayFee, formatIkeepayFee } from "../utils.js";
 
 export default function Cart() {
   const { user } = useAuth();
@@ -288,6 +289,26 @@ export default function Cart() {
                     </option>
                   ))}
                 </select>
+                <div className="fee-summary" style={{ marginTop: 10 }}>
+                  <p>
+                    <span className="label">{t("Total panier")} :</span>{" "}
+                    <strong>
+                      {formatMoney(cartTotal)} {countrySymbol(user?.country)}
+                    </strong>
+                  </p>
+                  <p className="hint">
+                    {t("Frais Ikeepay (6%)")} :{" "}
+                    <strong>
+                      {formatMoney(formatIkeepayFee(cartTotal))} {countrySymbol(user?.country)}
+                    </strong>
+                  </p>
+                  <p>
+                    <span className="label">{t("Total à payer")} :</span>{" "}
+                    <strong className="price-total">
+                      {formatMoney(addIkeepayFee(cartTotal))} {countrySymbol(user?.country)}
+                    </strong>
+                  </p>
+                </div>
               </div>
             )}
 

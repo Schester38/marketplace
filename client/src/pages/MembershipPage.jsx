@@ -6,6 +6,7 @@ import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 
 import { OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
+import { addIkeepayFee, formatIkeepayFee } from "../utils.js";
 
 export default function MembershipPage() {
   const { user, login } = useAuth();
@@ -87,6 +88,32 @@ export default function MembershipPage() {
             onChange={(event) => setPhone(event.target.value)}
             inputMode="tel"
           />
+          <div className="fee-summary" style={{ margin: "12px 0" }}>
+            <p>
+              <span className="label">{t("Montant adhésion")} :</span>{" "}
+              <strong>
+                {user?.role === "shop" ? "2 500" : user?.role === "creator" ? "2 500" : "1 500"} XAF
+              </strong>
+            </p>
+            <p className="hint">
+              {t("Frais Ikeepay (6%)")} :{" "}
+              <strong>
+                {formatMoney(
+                  formatIkeepayFee(user?.role === "shop" || user?.role === "creator" ? 2500 : 1500)
+                )}{" "}
+                XAF
+              </strong>
+            </p>
+            <p>
+              <span className="label">{t("Total à payer")} :</span>{" "}
+              <strong className="price-total">
+                {formatMoney(
+                  addIkeepayFee(user?.role === "shop" || user?.role === "creator" ? 2500 : 1500)
+                )}{" "}
+                XAF
+              </strong>
+            </p>
+          </div>
           {error && <p className="error">{error}</p>}
           <button className="btn btn-primary btn-block" disabled={loading}>
             {loading ? "…" : t("Payer mon adhésion avec Ikeepay")}
