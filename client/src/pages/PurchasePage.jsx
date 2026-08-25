@@ -13,7 +13,6 @@ import { formatMoney } from "../components/ProductCard.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
-import { addIkeepayFee, formatIkeepayFee } from "../utils.js";
 
 export default function PurchasePage() {
   const { id } = useParams();
@@ -319,26 +318,6 @@ export default function PurchasePage() {
                       </option>
                     ))}
                   </select>
-                  <div className="fee-summary" style={{ marginTop: 10 }}>
-                    <p>
-                      <span className="label">{t("Montant article")} :</span>{" "}
-                      <strong>
-                        {formatMoney(displayPrice)} {symbol}
-                      </strong>
-                    </p>
-                    <p className="hint">
-                      {t("Frais Ikeepay (6%)")} :{" "}
-                      <strong>
-                        {formatMoney(formatIkeepayFee(displayPrice))} {symbol}
-                      </strong>
-                    </p>
-                    <p>
-                      <span className="label">{t("Total à payer")} :</span>{" "}
-                      <strong className="price-total">
-                        {formatMoney(addIkeepayFee(displayPrice))} {symbol}
-                      </strong>
-                    </p>
-                  </div>
                   <p className="hint">
                     {t(
                       "Le paiement est encaissé par l’agrégateur. Selon l’opérateur, un lien de paiement peut être ouvert."

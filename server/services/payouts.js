@@ -9,11 +9,7 @@ import {
 import { sendPush } from "../push.js";
 
 export const REFERRAL_AUTO_PAY_MIN = 5000;
-const IKEEPAY_FEE_RATE = 0.06;
-
-export function addIkeepayFee(amount) {
-  return Math.round((amount / (1 - IKEEPAY_FEE_RATE)) * 100) / 100;
-}
+const IKEEPAY_FEE_RATE = 0.1;
 
 const OPERATOR_MAP = [
   ["orange", "ORANGE"],
@@ -82,7 +78,7 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
   )[0];
   if (existing?.status === "completed") return { ok: true, already: true };
 
-  const fee = Math.round((amount / (1 - IKEEPAY_FEE_RATE) - amount) * 100) / 100;
+  const fee = Math.round(amount * IKEEPAY_FEE_RATE * 100) / 100;
 
   if (!existing) {
     await q(
@@ -232,8 +228,7 @@ export async function payoutPlatformShare(userId, amount) {
     .toUpperCase();
   const reference = `MBOPPI_ACTIVATION:${userId}`;
 
-  const fee = Math.round((amount / (1 - IKEEPAY_FEE_RATE) - amount) * 100) / 100;
-  const grossAmount = Math.round((amount + fee) * 100) / 100;
+  const fee = Math.round(amount * IKEEPAY_FEE_RATE * 100) / 100;
 
   const existing = (
     await q("SELECT * FROM platform_payouts WHERE external_reference = $1", [reference])
@@ -248,7 +243,7 @@ export async function payoutPlatformShare(userId, amount) {
   }
   try {
     const result = await payout({
-      amount: grossAmount,
+      amount,
       currency,
       country,
       phoneNumber: phone,
@@ -263,15 +258,7 @@ export async function payoutPlatformShare(userId, amount) {
         [result.provider_reference || result.data?.provider_reference || null, reference]
       );
     }
-    return {
-      ok: true,
-      pending: status !== "completed",
-      operator,
-      provider: result,
-      amount,
-      fee,
-      grossAmount,
-    };
+    return { ok: true, pending: status !== "completed", operator, provider: result, amount, fee };
   } catch (error) {
     await q(
       "UPDATE platform_payouts SET status = 'failed', error = $1 WHERE external_reference = $2",

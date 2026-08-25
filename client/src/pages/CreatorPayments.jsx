@@ -87,7 +87,7 @@ export default function CreatorPayments() {
           </p>
           <p className="hint" style={{ marginTop: 8 }}>
             {t(
-              "Les paiements automatiques sont traités via Ikeepay. Les frais de traitement (environ 6%) sont déduits par Ikeepay sur chaque transaction. Les montants que vous recevez correspondent aux sommes calculées par Mboppi, nettes des frais Ikeepay."
+              "Les paiements automatiques sont traités via Ikeepay. Ikeepay prélève 10% de frais de traitement sur chaque transaction. Les montants que vous recevez correspondent aux sommes calculées par Mboppi, nettes des frais Ikeepay."
             )}
           </p>
         </div>

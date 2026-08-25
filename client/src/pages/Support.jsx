@@ -4,7 +4,6 @@ import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
 import { OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
-import { addIkeepayFee, formatIkeepayFee } from "../utils.js";
 
 function OrangeLogo() {
   return (
@@ -257,20 +256,6 @@ export default function Support() {
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
               />
-              {amount && Number(amount) > 0 && (
-                <div className="fee-summary" style={{ margin: "10px 0" }}>
-                  <p className="hint">
-                    {t("Frais Ikeepay (6%)")} :{" "}
-                    <strong>{formatMoney(formatIkeepayFee(Number(amount)))} XAF</strong>
-                  </p>
-                  <p>
-                    <span className="label">{t("Total à payer")} :</span>{" "}
-                    <strong className="price-total">
-                      {formatMoney(addIkeepayFee(Number(amount)))} XAF
-                    </strong>
-                  </p>
-                </div>
-              )}
               <label>{t("Opérateur")}</label>
               <select
                 className="input"

@@ -1231,30 +1231,6 @@ button.payment-option.active {
   margin: 6px 0 0;
   font-weight: 600;
 }
-.fee-summary {
-  margin: 10px 0;
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #f9fafb;
-}
-.fee-summary p {
-  margin: 4px 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-.fee-summary .label {
-  color: #6b7280;
-}
-.fee-summary .hint {
-  justify-content: flex-end;
-  color: #6b7280;
-}
-.price-total {
-  color: var(--primary-700);
-  font-size: 1.1rem;
-}
 .wallet-name {
   font-weight: 600;
   min-width: 130px;

@@ -382,7 +382,7 @@ export default function LivreurDashboard() {
               </div>
               <p className="hint" style={{ marginTop: 10 }}>
                 {t(
-                  "Les paiements en ligne sont traités via Ikeepay. Les frais de traitement (environ 6%) sont déduits par Ikeepay sur chaque transaction."
+                  "Les paiements en ligne sont traités via Ikeepay. Ikeepay prélève 10% de frais de traitement sur chaque transaction."
                 )}
               </p>
               <div className="row2" style={{ marginTop: 14 }}>

@@ -27,6 +27,8 @@ Les boutiques et vendeurs doivent aussi régler une adhésion valable 30 jours :
 
 La commission du vendeur est définie par la boutique sur chaque produit. Le parrainage client rapporte 2 % au vendeur référent, lorsque le client s'est inscrit avec son code ; le versement automatique du cumul intervient à partir de 5 000 XAF.
 
+Pour les paiements en ligne via Ikeepay, le prestataire prélève 10% de frais de traitement sur chaque transaction. Le client paie le prix affiché (produit + livraison) sans frais supplémentaires. Chaque bénéficiaire reçoit sa part calculée par Mboppi, nette des 10% de frais Ikeepay.
+
 ## Architecture
 
 ```text

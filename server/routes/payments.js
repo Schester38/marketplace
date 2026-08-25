@@ -9,7 +9,6 @@ import {
   completePlatformPayout,
   paySaleAutomatically,
   payoutPlatformShare,
-  addIkeepayFee,
 } from "../services/payouts.js";
 
 const router = Router();
@@ -71,7 +70,7 @@ router.post(
     )[0];
     try {
       const result = await payin({
-        amount: addIkeepayFee(fee),
+        amount: fee,
         currency: user.country === "Côte d'Ivoire" ? "XOF" : currencyForCountry(country),
         country,
         phoneNumber: phone,
@@ -127,9 +126,8 @@ router.post(
     if (!country || !operator || !phone)
       return res.status(400).json({ error: "Pays, opérateur et numéro Mobile Money requis" });
     const externalReference = `SALE:${sale.id}:${Date.now()}`;
-    const grossAmount = addIkeepayFee(Number(sale.total_price) + Number(sale.delivery_fee || 0));
     const result = await payin({
-      amount: grossAmount,
+      amount: Number(sale.total_price) + Number(sale.delivery_fee || 0),
       currency: sale.currency || currencyForCountry(country),
       country,
       phoneNumber: phone,

@@ -68,13 +68,3 @@ export function compressImage(file, maxDim = 800, quality = 0.72) {
     reader.readAsDataURL(file);
   });
 }
-
-export const IKEEPAY_FEE_RATE = 0.06;
-
-export function addIkeepayFee(amount) {
-  return Math.round((amount / (1 - IKEEPAY_FEE_RATE)) * 100) / 100;
-}
-
-export function formatIkeepayFee(amount) {
-  return Math.round((amount / (1 - IKEEPAY_FEE_RATE) - amount) * 100) / 100;
-}

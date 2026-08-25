@@ -91,7 +91,7 @@ export default function About() {
             <h3>{t("Une rémunération lisible")}</h3>
             <p>
               {t(
-                "La commission vendeur est affichée avant la vente. Le parrainage client représente 2 % pour le vendeur référent, et les frais de livraison sont saisis au moment de la livraison. Pour les paiements en ligne via Ikeepay, des frais de traitement d'environ 6% sont déduits par Ikeepay sur chaque transaction ; les montants reversés aux bénéficiaires sont nets de ces frais."
+                "La commission vendeur est affichée avant la vente. Le parrainage client représente 2 % pour le vendeur référent, et les frais de livraison sont saisis au moment de la livraison. Pour les paiements en ligne via Ikeepay, des frais de traitement de 10% sont déduits par Ikeepay sur chaque transaction ; les montants reversés aux bénéficiaires sont nets de ces frais."
               )}
             </p>
           </div>
@@ -124,7 +124,7 @@ export default function About() {
             <h3>{t("L'argent, en toute transparence")}</h3>
             <p>
               {t(
-                "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire, sans frais de plateforme. Pour les paiements en ligne via Ikeepay, des frais de traitement d'environ 6% sont appliqués par le prestataire et déduits des montants reversés aux bénéficiaires."
+                "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire, sans frais de plateforme. Pour les paiements en ligne via Ikeepay, des frais de traitement de 10% sont appliqués par le prestataire et déduits des montants reversés aux bénéficiaires."
               )}
             </p>
           </div>
