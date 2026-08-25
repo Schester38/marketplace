@@ -5,29 +5,8 @@ import { GoogleIcon } from "../components/icons.jsx";
 import Seo from "../components/Seo.jsx";
 import SearchSelect from "../components/SearchSelect.jsx";
 import Logo from "../components/Logo.jsx";
-import { COUNTRIES } from "../config.js";
+import { COUNTRIES, OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
 import { useLang } from "../i18n.jsx";
-
-const OPERATORS_BY_COUNTRY = {
-  Cameroun: ["ORANGE", "MTN"],
-  "Côte d'Ivoire": ["ORANGE", "MTN"],
-  Sénégal: ["ORANGE", "WAVE", "FREE", "MTN"],
-  Mali: ["ORANGE", "MOOV"],
-  "Burkina Faso": ["ORANGE", "MOBICASH"],
-  Niger: ["MOOV", "AIRTEL"],
-  Togo: ["MOOV", "MOBICASH"],
-  Bénin: ["MOOV", "MTN"],
-  Gabon: ["AIRTEL"],
-  "République du Congo": ["AIRTEL", "MTN"],
-  "République démocratique du Congo": ["AIRTEL", "ORANGE", "VODACOM"],
-  Kenya: ["MPESA"],
-  Tanzanie: ["AIRTEL", "HALOPESA", "TIGO"],
-  Rwanda: ["AIRTEL", "MTN MOMO"],
-  Ouganda: ["AIRTEL", "MTN MOMO"],
-  Zambie: ["AIRTEL", "MTN", "ZAMTEL"],
-  Ghana: ["AIRTEL", "MTN", "TELECEL"],
-  Nigeria: ["OPAY", "MONIEPOINT", "MTN", "AIRTEL"],
-};
 
 export default function Register() {
   const { t } = useLang();
@@ -49,7 +28,7 @@ export default function Register() {
   const [resending, setResending] = useState(false);
 
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
-  const operators = OPERATORS_BY_COUNTRY[form.country] || ["ORANGE", "MTN"];
+  const operators = OPERATORS_BY_COUNTRY[form.country] || DEFAULT_OPERATORS;
 
   const ensureAccepted = () => {
     if (!accepted) {

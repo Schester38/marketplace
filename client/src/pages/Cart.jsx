@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
 import { formatMoney } from "../components/ProductCard.jsx";
-import { countrySymbol, BASE_URL } from "../config.js";
+import { countrySymbol, BASE_URL, OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
 import { useAuth } from "../App.jsx";
 import { useCart } from "../store.jsx";
 import { useLang } from "../i18n.jsx";
@@ -282,13 +282,11 @@ export default function Cart() {
                   value={automaticOperator}
                   onChange={(e) => setAutomaticOperator(e.target.value)}
                 >
-                  {["ORANGE", "MTN", "WAVE", "MOOV", "FREE", "AIRTEL", "VODACOM", "MOBICASH"].map(
-                    (operator) => (
-                      <option key={operator} value={operator}>
-                        {operator}
-                      </option>
-                    )
-                  )}
+                  {(OPERATORS_BY_COUNTRY[user?.country] || DEFAULT_OPERATORS).map((operator) => (
+                    <option key={operator} value={operator}>
+                      {operator}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}

@@ -204,6 +204,38 @@ export const PRODUCT_CATEGORIES = [
   "Autre",
 ];
 
+export const OPERATORS_BY_COUNTRY = {
+  Cameroun: ["ORANGE", "MTN"],
+  "Côte d'Ivoire": ["ORANGE", "MTN"],
+  Sénégal: ["ORANGE", "WAVE", "FREE", "MTN"],
+  Mali: ["ORANGE", "MOOV"],
+  "Burkina Faso": ["ORANGE", "MOBICASH"],
+  Niger: ["MOOV", "AIRTEL"],
+  Togo: ["MOOV", "MOBICASH"],
+  Bénin: ["MOOV", "MTN"],
+  Gabon: ["AIRTEL"],
+  "République du Congo": ["AIRTEL", "MTN"],
+  "République démocratique du Congo": ["AIRTEL", "ORANGE", "VODACOM"],
+  Kenya: ["MPESA"],
+  Tanzanie: ["AIRTEL", "HALOPESA", "TIGO"],
+  Rwanda: ["MTN MOMO"],
+  Ouganda: ["MTN MOMO"],
+  Zambie: ["AIRTEL", "MTN", "ZAMTEL"],
+  Ghana: ["AIRTEL", "MTN", "TELECEL"],
+  Nigeria: ["OPAY", "MONIEPOINT", "MTN", "AIRTEL"],
+};
+
+export const DEFAULT_OPERATORS = [
+  "ORANGE",
+  "MTN",
+  "WAVE",
+  "MOOV",
+  "FREE",
+  "AIRTEL",
+  "VODACOM",
+  "MOBICASH",
+];
+
 const CATEGORY_EMOJI = {
   électronique: "📱",
   electronique: "📱",

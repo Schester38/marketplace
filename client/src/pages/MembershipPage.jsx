@@ -5,7 +5,7 @@ import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 
-const OPERATORS = ["ORANGE", "MTN", "WAVE", "MOOV", "FREE", "AIRTEL", "VODACOM", "MOBICASH"];
+import { OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
 
 export default function MembershipPage() {
   const { user, login } = useAuth();
@@ -67,7 +67,7 @@ export default function MembershipPage() {
             value={operator}
             onChange={(event) => setOperator(event.target.value)}
           >
-            {OPERATORS.map((item) => (
+            {(OPERATORS_BY_COUNTRY[user?.country] || DEFAULT_OPERATORS).map((item) => (
               <option key={item} value={item}>
                 {item}
               </option>

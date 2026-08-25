@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
-import { countrySymbol, categoryEmoji } from "../config.js";
+import {
+  countrySymbol,
+  categoryEmoji,
+  OPERATORS_BY_COUNTRY,
+  DEFAULT_OPERATORS,
+} from "../config.js";
 import Seo from "../components/Seo.jsx";
 import Logo from "../components/Logo.jsx";
 import { formatMoney } from "../components/ProductCard.jsx";
@@ -307,13 +312,11 @@ export default function PurchasePage() {
                     value={automaticOperator}
                     onChange={(e) => setAutomaticOperator(e.target.value)}
                   >
-                    {["ORANGE", "MTN", "WAVE", "MOOV", "FREE", "AIRTEL", "VODACOM", "MOBICASH"].map(
-                      (operator) => (
-                        <option key={operator} value={operator}>
-                          {operator}
-                        </option>
-                      )
-                    )}
+                    {(OPERATORS_BY_COUNTRY[user?.country] || DEFAULT_OPERATORS).map((operator) => (
+                      <option key={operator} value={operator}>
+                        {operator}
+                      </option>
+                    ))}
                   </select>
                   <p className="hint">
                     {t(
