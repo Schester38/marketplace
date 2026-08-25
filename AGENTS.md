@@ -16,48 +16,68 @@ Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiqu
 `role IN ('shop','seller','client','creator','livreur')` — contrainte DB. Admin = utilisateur virtuel (id 0), auth par `ADMIN_PASSWORD` env → `POST /api/admin/pass`.
 
 - **shop** : boutique (Max **5 produits**), peut lancer des **promos éclair**, boutons partage.
-- **seller** : vendeur indépendant, plus d'activation payante (gratuite), accès direct au dashboard.
-- **client / creator / livreur** : espaces distincts. Livreur confirme les livraisons (flux `submitDeliver`).
+- **seller** : vendeur indépendant ; adhésion **1 500 XAF / 30 jours** requise (comme shop et creator) pour accéder au dashboard.
+- **client / creator / livreur** : espaces distincts (créateur : adhésion 2 500 XAF / 30 jours). Livreur confirme les livraisons (flux `submitDeliver`).
 - Auth : JWT (`JWT_SECRET` **requis, min 32 chars** sinon le serveur refuse de démarrer), 24 h. Email verification (24 h TTL, `SITE_URL`), Google OAuth optionnel.
 
 ## Commission et argent
 
-### Frais de service — 0 %
+### Règle financière — ENTRÉE 100 % / SORTIE 90 %
 
-Les paiements peuvent être manuels (espèces, Mobile Money direct, virement bancaire) ou automatiques via Ikeepay pour les adhésions, les dons et les ventes. Les webhooks Ikeepay confirment les payins avant les payouts automatiques vers les moyens enregistrés.
+- **Tout ce qui entre est encaissé à 100 %** : l'acheteur paie le prix normal (aucun supplément), les adhésions et les dons au tarif plein.
+- **Tout ce qui sort via Ikeepay transfère 90 % du montant** au bénéficiaire (`IKEEPAY_FEE_RATE = 0.1` dans `server/services/payouts.js`) ; les 10 % couvrent les frais de traitement / marge Mboppi.
+- **Exception — paiements manuels** : la boutique qui règle vendeur/parrain en espèces/mobile avec preuve crédite le wallet à **100 %, sans frais**.
 
-### Répartition d'une vente — `server/finance.js` `computeRedistribution`
+### Répartition d'une vente — `server/services/payouts.js` `computeRedistribution`
 
-`totalPrice = prix × quantité` (le prix de référence : erreur de sécurité si le client fournit un prix inférieur). Champs d'une vente : `commission` (commission vendeur), `referral_commission` (commission de parrainage 2 %), `delivery_fee` (frais de livraison, saisis par le livreur à la livraison, valeur par défaut 0).
+`totalPrice = prix × quantité`. Le **prix de référence** est celui du catalogue OU de la promo éclair active (`purchases.js:93-101`), jamais le prix client. Champs d'une vente : `commission` (commission vendeur), `referral_commission` (parrainage client affilié 2 %), `delivery_fee` (saisis par le livreur à la livraison, défaut 0).
 
-- `shopAmount = totalPrice − commission − referralCommission` (ce que touche la boutique)
+- `shopAmount = totalPrice − commission − referralCommission` (la boutique)
 - `sellerAmount = commission` (le vendeur)
 - `referrerAmount = referralCommission` (le parrain)
 - `livreurAmount = deliveryFee` (le livreur)
 
-Reverse automatique `sendSalePayouts` (après validation manuelle, `markSalePaid`) : chaque montant > 0 est enregistré dans `wallet_transactions` **sans frais**, vers le portefeuille Mobile Money du bénéficiaire (`payoutTargetFor` : lit `wallets` jsonb de `*_payment_methods`, priorité au wallet dont le nom contient « orange », numéro normalisé avec le préfixe pays). Sans wallet valide → pas de reverse + notification `payment_need_wallet`.
+### Flux de paiement d'une vente
+
+1. **Manuel (défaut)** : achat `POST /api/purchases` (`payment_method` 'mobile'|'espece') → statuts `pending → bought → confirmed → delivered` → la boutique règle via `POST /api/sales/:id/pay` avec **preuve photo/vidéo obligatoire** (data URI ≤ 12 M) → wallet vendeur crédité **sans frais** + notification `sale_paid`. Parrain : `POST /api/sales/:id/pay-referral`.
+2. **Automatique Ikeepay** : `POST /api/payments/ikeepay/payin` débite au client `total_price + delivery_fee` (100 %) → webhook `/api/payments/ikeepay/webhook` confirme → `paySaleAutomatically` reverse à chaque bénéficiaire (boutique `online_collect`, vendeur `commission_credit`, livreur `online_payout`) **net 90 %**, puis `payReferralAutomatically`.
+- `providerPayout` : lit le **premier wallet dont le nom contient un opérateur connu** (orange, mtn, wave, moov, free, airtel, vodacom/mpesa, mobicash, tigo, halopesa, zamtel, opay, moniepoint) dans `wallets` jsonb des `*_payment_methods`, numéro normalisé avec préfixe pays. Trace dans `automatic_payouts` (amount, fee, net). Sans wallet valide → pas de reversement.
+- Reversements « pending » confirmés par le webhook (`type=payout`, `status=completed`) via `completeAutomaticPayout` ; échecs tracés + push « Paiement échoué ». Anti-doublon : références externes uniques + `ON CONFLICT DO NOTHING`.
 
 ### Commission vendeur (2 % — PARRAINAGE DE CLIENTS AFFILIÉS)
 
 **Ne pas confondre** : le **2 % est lié à un CLIENT affilié**, pas à un « vendeur affilié ». Le flux :
 
-1. Un **client** s'inscrit avec le code vendeur d'un vendeur (`ref` = `seller_code`, `auth.js:63-72`) → son compte est marqué `referred_by = id_du_vendeur` et son rôle est forcé à `client`. Ce client est maintenant **client affilié** du vendeur.
-2. Quand ce **client affilié** (identifié par `req.user`, donc auth obligatoire pour déclencher le 2 %) achète un produit — `purchases.js:101-107` ou `orders.js:75-80` — alors `referralCommission = prix × quantité × 2 %` et `referred_by` est enregistré sur la vente. Le **vendeur parrain** (le référent) reçoit ces 2 %.
-3. Le 2 % **n'est pas payé vente par vente** : il s'accumule (`referral_commission` non payée, `referral_paid = false`) et est versé automatiquement quand le cumul du parrain atteint `REFERRAL_AUTO_PAY_MIN = 5000` (`finance.js:154` `maybeAutoPayReferrals`, déclenché à la livraison `sales.js:609-615`), vers le wallet seller du parrain **sans frais**, avec notification + push « Parrainage versé ».
+1. Un **client** s'inscrit avec le code vendeur d'un vendeur (`ref` = `seller_code`) → son compte est marqué `referred_by` et son rôle forcé à `client`.
+2. Quand ce **client affilié** (auth obligatoire) achète — `purchases.js:128-136` ou `orders.js:114` — `referralCommission = prix × quantité × 2 %` et `referred_by` est enregistré sur la vente.
+3. Le 2 % **s'accumule** (`referral_commission`, `referral_paid = false`) et est versé automatiquement quand le cumul du parrain atteint `REFERRAL_AUTO_PAY_MIN = 5000` (`payReferralAutomatically` dans `services/payouts.js`, déclenché après livraison/paiement automatique) — transfert **net 90 %** vers le wallet seller du parrain, puis `referral_paid = true`.
 
-Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau vendeur s'inscrit avec le `seller_code` d'un autre vendeur (`ref_seller`, `auth.js:73-82`) ; le parrain reçoit **1 000 XAF** lors du paiement de l'adhésion du vendeur parrainé, et **500 XAF** sont reversés au compte Mboppi (`finance.js:174-188` `completeMembershipPayment`, `payoutPlatformShare`).
+Il existe aussi le **parrainage d'activation vendeur/créateur** (distinct) : un nouveau vendeur OU créateur s'inscrit avec le code d'un vendeur (`ref_seller`) ; quand il paie son adhésion, le parrain reçoit **1 000 XAF** (transfert net 90 % = 900) et **500 XAF** de part plateforme sont reversés aux portefeuilles Mboppi (net 450) — `completeMembershipPayment` + `payoutPlatformShare`.
 
 ### Commission de vente d'un produit
 
-- `products.commission_percent` est choisi par la **boutique à la création du produit** (0-100, `products.js:261,273,384,396`). Commission vente seller = `prix × commission_percent % × qty`.
-- Pendant une **promo éclair, commission = 0 %** : le vendeur est exclu du produit (le produit est masqué de son catalogue et `sales.js:41-50` bloque la vente pendant la promo).
-- Adhésion : boutique `2 500 XAF` et vendeur `1 500 XAF`, valable 30 jours. Un compte validé par l’admin peut accéder à son espace sans paiement.
+- `products.commission_percent` est choisi par la **boutique/créateur à la création du produit**, validé Zod **0 à 100 %** (`server/validators.js`), défaut 0. Commission vente seller = `prix × commission_percent % × qty`.
+- Pendant une **promo éclair, commission = 0 %** (stockée dans `flash_promotions.commission_percent`) : le vendeur est exclu du produit (masqué de son catalogue, vente bloquée pendant la promo).
+
+### Adhésions (accès aux espaces pro)
+
+- Tarifs (`server/auth.js` `MEMBERSHIP_FEES`) : **shop 2 500 · seller 1 500 · creator 2 500 XAF**, valables **30 jours**. Livreur/client : pas d'adhésion.
+- Un compte validé par l'admin (« Ouvrir » sur /admin, colonne `admin_approved`) accède sans paiement ; « Fermer » coupe l'accès.
+- Sinon accès bloqué : `roleRequired` renvoie **402 MEMBERSHIP_REQUIRED** → le client intercepte ce code (événement `membership-required` dans `client/src/api.js`), rafraîchit la session et redirige vers `/adhesion` (page de paiement).
+- Paiement : `POST /api/payments/ikeepay/membership` → webhook completed → `completeMembershipPayment` active 30 jours puis **balaye 90 % du frais vers les portefeuilles Mboppi** (`MBOPPI_SHARE:membership:{paymentId}`).
+
+### Dons
+
+- Manuels (`POST /api/donations`, virement direct hors système) ou Ikeepay (`POST /api/donations/ikeepay`). À la confirmation webhook d'un don Ikeepay, **90 % sont balayés vers les portefeuilles Mboppi** (`MBOPPI_SHARE:donation:{id}`).
+
+### Portefeuille Mboppi
+
+- Configuré par env `MBOPPI_PAYOUT_COUNTRY` (défaut CM), `MBOPPI_PAYOUT_PHONE` (défaut +237699486146), `MBOPPI_PAYOUT_OPERATOR` (défaut ORANGE). Balayages tracés dans `platform_payouts` (`MBOPPI_SHARE:{kind}:{sourceId}`, UNIQUE) ; échecs visibles en base.
 
 ### Wallet et moyens de paiement
 
-- **Wallet** (`server/routes/wallet.js`) : `GET /api/wallet/me` pour seller/creator, `wallet_transactions`, `balance = SUM(amount)` (montants signés), devise XAF.
-- Moyens de paiement des gains : `shop_payment_methods` / `seller_payment_methods` / `livreur_payment_methods` (PK = `*_id`, `full_name`, `wallets` jsonb — liste `{name, value}`, upsert `ON CONFLICT`).
-- Pays et moyens de paiement : liste statique des pays et des wallets dans le frontend et les routes de moyens de paiement. Les coordonnées servent aux transferts directs entre parties ; Mboppi ne collecte pas les paiements.
+- **Wallet** (`server/routes/wallet.js`) : `GET /api/wallet/me` pour seller/creator, `wallet_transactions`, `balance = SUM(amount)` (montants signés), devise affichée XAF.
+- Moyens de paiement des gains : `shop_payment_methods` / `seller_payment_methods` / `livreur_payment_methods` (le créateur réutilise `shop_payment_methods`/`shop_id`) — `full_name`, `wallets` jsonb liste `{name, value}` (max 20).
 
 ## Promotions éclair (flash promotions)
 
@@ -77,16 +97,16 @@ Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau v
 ## Ventes / commandes
 
 - `sales` : status `pending → bought → confirmed → delivered`; `confirm_code` 6 chars (`ABCDEFGHJKMNPQRSTUVWXYZ23456789`), unique aussi contre `orders`.
-- `purchases.js` : `POST /` avec `product_id, seller_code (uppercasé), purchase_price, quantity, buyer_*, payment_method ('mobile'|'espece')`; auth optionnelle. Le **prix de référence** est celui du catalogue OU de la promo active (`purchases.js:75`), jamais le prix client.
+- `purchases.js` : `POST /` avec `product_id, seller_code (uppercasé), quantity, buyer_*, payment_method ('mobile'|'espece'|'automatic')`; auth optionnelle. Le **prix de référence** est celui du catalogue OU de la promo active (`purchases.js:93-101`), jamais le prix client.
 - `orders.js` : panier multi-articles (code 6 chars).
-- **Livraison** (`sales.js:540` `/:id/deliver`) : le livreur saisit `delivery_fee` + `payment_method` (`espèce`/`mobile`/`en ligne`), doit fournir le `shop_code` de la boutique et le `confirm_code` du client ; décrémente le stock (ou `reserved_quantity` si `stock_reserved`). À la livraison : déclenche `maybeAutoPayReferrals` pour le parrain (`sales.js:609-615`).
-- **Paiement d'une vente** : maintenant **manuel uniquement** (espèces, mobile money direct, virement). Plus de `POST /api/payments/payin` ni webhook iKeePay. Validation manuelle via `POST /sales/:id/pay` (boutique paie vendeur) et `POST /sales/:id/pay-referral` (boutique paie parrain).
-- **Suppression de livraison** : bloquée si commission vendeur (`paid`) ou parrainage (`referral_paid`) non payés (`sales.js:436-444`). Paiement groupé des commissions par la boutique : `/:id/claim` et `/:id/pay-referral` (`sales.js:782-917`).
+- **Livraison** (`sales.js` `/:id/deliver`) : le livreur saisit `delivery_fee` + `payment_method` (`espèce`/`mobile`), doit fournir le `shop_code` de la boutique et le `client_code` du client ; décrémente le stock (ou `reserved_quantity` si `stock_reserved`). Après livraison, le cumul de parrainage du vendeur référent peut être versé automatiquement.
+- **Paiement d'une vente** : manuel avec preuve (`POST /api/sales/:id/pay`, wallet crédité 100 %) **ou** automatique Ikeepay (`POST /api/payments/ikeepay/payin` → webhook → reversements nets 90 % — voir « Commission et argent »).
+- **Suppression de livraison** : bloquée si commission vendeur (`paid`) ou parrainage (`referral_paid`) non payés. Paiement groupé des commissions par la boutique : `/:id/claim` et `/:id/pay-referral`.
 - **Facture PDF** : `client/src/components/Invoice.jsx` — jspdf **v4.2.1** importé dynamiquement, `doc.save('facture-{id}.pdf')`, logo `/navbar-logo.png`, boutons dans Shop/Seller/Livreur dashboards.
 
 ## Tableaux principaux (créés dans `server/db.js` initDb)
 
-`users` (dont `email_verified`, `activation_fee_paid`, `activation_fee_paid_at`), `products`, `photos`, `sales`, `orders`, `offers` (Verone/Vitrine), `flash_promotions(id, shop_id, product_id, promo_price, duration_minutes, starts_at, ends_at, created_at, currency)`, `wallet_transactions`, `shop_payment_methods`, `seller_payment_methods`, `livreur_payment_methods`, `livreurs`, `notifications`, `reviews`, `push_subscriptions`, `newsletter_subscribers`, `admin_messages`, `admin_message_reads`, `audit_log`, `client_logs`, `item_views`, `daily_visits` (purge 6 mois via `server/cleanup.js`).
+`users` (dont `email_verified`, `admin_approved`, `membership_paid_at`, `membership_expires_at`, `membership_fee`, `referred_by`, `seller_code`, `shop_code`), `products` (dont `commission_percent`, `delivery_fee`), `photos`, `sales` (dont `commission`, `referral_commission`, `delivery_fee`, `paid`, `referral_paid`, `payment_status`, champs Ikeepay), `orders`, `offers` (Verone/Vitrine), `flash_promotions(id, shop_id, product_id, promo_price, duration_minutes, starts_at, ends_at, created_at, currency)`, `wallet_transactions`, `wallet_accounts`, `shop_payment_methods`, `seller_payment_methods`, `livreur_payment_methods`, `livreurs`, `notifications`, `reviews`, `push_subscriptions`, `newsletter_subscribers`, `admin_messages`, `admin_message_reads`, `audit_log`, `client_logs`, `item_views`, `daily_visits` (purge 6 mois via `server/cleanup.js`), `membership_payments`, `automatic_payouts`, `platform_payouts`, `payment_webhook_logs`, `donations`, `admin_hidden_sales` / `admin_hidden_statuses` / `admin_hidden_shops` / `admin_hidden_sellers`.
 
 ## Autres fonctionnalités notables
 
@@ -95,7 +115,7 @@ Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau v
 - **Verone / Vitrine d'offres** : `server/routes/offers.js` (public, 3 photos max) + `presentation.js` (`GET /image/:id`, page HTML) ; pages client `Verone.jsx`, `VitrineOffre.jsx`.
 - **Métriques** : `POST /views` (batch 50 → `item_views`), `POST /visit` (X-Visitor-Id → `daily_visits`), `GET /trending` (cache s-maxage 120).
 - **i18n** : fr (clés = chaînes), en/es/ar chargés dynamiquement, RTL pour ar. `t()` dans `client/src/i18n.jsx`.
-- **PWA** : `client/public/sw.js`, cache `mboppi-v53`, app shell + push handler + 4 manifest.
+- **PWA** : `client/public/sw.js`, cache `mboppi-v113` (incrémenté à chaque déploiement), app shell + push handler + 4 manifest.
 - **Audit/sécurité** : `server/security.js` (origines autorisées, audit log), rate limits par route.
 - **Photos** : Supabase Storage bucket `photos`, jusqu'à 3 par produit/offre, `{thumb, full}`, `SUPABASE_JWT_SECRET` pour clé opaque `sb_secret_...`.
 - **Menu** (`client/src/components/Navbar.jsx`) : Produits, Créateurs (sans emoji 🎨), Je soutiens, Formations et Digital (lien externe chariow.pics), Formation Mboppi (YouTube, sans emoji 🎓), espaces par rôle, Administration 🛡️.
@@ -103,7 +123,7 @@ Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau v
 ## Conventions de dev (IMPORTANT)
 
 1. **Ne jamais committer sans demande explicite.** Quand le user demande « deployer » / « mettre en ligne » : bump + commit + push.
-2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` `CACHE_NAME = 'mboppi-v5X'` incrémenté. Historique : v51 → 1.10.0, v52 → 1.11.0, v53 → 1.12.0.
+2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (occurrences `"version"` lignes 3 **et** 9, ne pas toucher les entrées deps) + `package.json` racine. PWA : `client/public/sw.js` `CACHE_NAME = 'mboppi-vXXX'` incrémenté. Historique : v109 → 1.46.0, v110 → 1.47.0, v111 → 1.47.1, v112 → 1.47.2, v113 → 1.47.3.
 3. **Build** : `npm run build` dans `client/` (le hash du JS local diffère de celui de Vercel pour des raisons d'environnement ; vérifier le déploiement via le CSS hash ou en cherchant une chaîne caractéristique du nouveau code dans le JS servi).
 4. **Vérifier le déploiement** : attendre ~75–90 s après push, puis `curl` sur `https://mboppi-mboppi.vercel.app/` (avec header `Accept: text/html` pour le HTML SEO) et chercher le hash CSS/JS du build local ; tester les API concernées.
 5. Commandes utiles : `node --check server/routes/*.js` pour la syntaxe serveur.
@@ -112,8 +132,9 @@ Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau v
 
 ## Historique récent des modifications
 
-- **1.10.0 / v51** : refonte promotion éclair (masquage catalogue, règles serveur, UI shop).
-- **1.11.0 / v52** : masquage SEO complet, blocage sellers côté serveur, commission promo 0, partage promo, offres Verone dans l'accueil (rail), suppression commission duo.
-- **1.12.0 / v53** : popup promos superposées sur un même cadre avec rotation 5 s et titre « PROMOTION DU JOUR » centré (X ferme tout) ; correctif ancrage `bottom: 0` des cartes (popup cachée hors écran) ; retrait des emojis 🎨/🎓 du menu.
-- **1.13.0** : commission activation vendeur 1 000 XAF + part Mboppi 500 XAF lors de l'adhésion Ikeepay d'un vendeur parrainé ; seuil parrainage client automatique remonté à 5 000 XAF.
+- **1.46.0 / v109** : rôle livreur réaffiché après login, déballage `{ user }` de `/me` dans AuthProvider, auto-réparation des sessions corrompues, audit google.register.
+- **1.47.0 / v110** : « Ouvrir/Fermer » admin — le 402 MEMBERSHIP_REQUIRED rafraîchit la session et redirige vers `/adhesion` ; fix adhésion créateur (2 500 XAF, avant : bloqué à vie) ; popup messages admin réparée (LEFT JOIN — les messages « à tous » n'étaient jamais affichés — ciblage créateurs, liste chargée à l'ouverture) ; boutons Supprimer /admin réparés (10 méthodes api manquantes) ; suppression de comptes désactivée (bouton retiré + serveur 403), seuls les produits publiés sont supprimables ; masquages doux transactions/boutiques/vendeurs opérationnels ; fix crash Déconnexion (`setLogs` inexistant).
+- **1.47.1 / v111** : fix crash dashboards livreur et créateur (`useCallback` non importé) + audit automatique de tous les hooks React du client.
+- **1.47.2 / v112** : règle financière **entrée 100 % / sortie 90 %** — suppression du supplément « Frais Ikeepay 6 % » côté acheteur ; reversements sortants Ikeepay transfèrent le net 90 % ; FAQ/mentions légales harmonisées à 10 %.
+- **1.47.3 / v113** : balayage de **90 % des adhésions, dons Ikeepay et part plateforme 500 XAF** vers les portefeuilles Mboppi (`payoutPlatformShare` généralisé `MBOPPI_SHARE:{kind}:{id}`, devise d'origine conservée) ; échecs plateforme tracés en base ; audit complet de la chaîne de reversement.
 - Facture PDF : parfaitement fonctionnelle (vérifié — téléchargement jsPDF OK).

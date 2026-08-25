@@ -5,9 +5,9 @@ Mboppi est une marketplace pour le Cameroun et l'Afrique. Elle met en relation d
 ## Fonctionnalités
 
 - **Boutique** : publie jusqu'à 5 produits, définit les prix, le stock et la commission du vendeur, confirme les commandes et règle les commissions.
-- **Vendeur** : s'inscrit gratuitement, génère un code vendeur, partage les produits et reçoit la commission prévue pour chaque vente.
+- **Vendeur** : génère un code vendeur, partage les produits et reçoit la commission prévue pour chaque vente (adhésion 1 500 XAF / 30 jours).
 - **Client** : commande avec ou sans compte, reçoit un code de confirmation et suit sa commande.
-- **Créateur** : publie des créations et gère son espace.
+- **Créateur** : publie des créations et gère son espace (adhésion 2 500 XAF / 30 jours).
 - **Livreur** : utilise le code de la boutique, saisit les frais de livraison et confirme la remise avec le code client.
 - **Administrateur** : consulte les statistiques, utilisateurs, ventes, messages, journaux et sauvegardes.
 - **Promotions éclair** : une promotion par semaine et par boutique, pendant 24 heures maximum. Le produit est masqué des catalogues et sa commission vendeur devient 0 %.
@@ -15,17 +15,17 @@ Mboppi est une marketplace pour le Cameroun et l'Afrique. Elle met en relation d
 
 ## Paiements et commissions
 
-Mboppi conserve le paiement manuel et propose aussi un paiement automatique via Ikeepay pour les adhésions, les dons et les ventes, lorsqu’il est configuré. Les paiements manuels restent directs :
+Règle financière Mboppi : **tout ce qui entre est encaissé à 100 %** — l'acheteur paie le prix normal sans supplément — et **tout ce qui sort via Ikeepay transfère 90 % du montant** au bénéficiaire ; les 10 % couvrent les frais de traitement. Les paiements manuels restent directs et sans frais :
 
 - espèces à la livraison ;
 - virement Mobile Money direct ;
 - virement bancaire.
 
-Le moyen choisi est enregistré sur la vente. Après livraison, la boutique règle manuellement le vendeur et le parrain, ou les Payouts Ikeepay sont déclenchés après un Payin confirmé. Les montants sont suivis dans les wallets internes.
+Après livraison, la boutique règle manuellement le vendeur et le parrain depuis son espace (preuve photo/vidéo obligatoire), ou les reversements Ikeepay sont déclenchés après un Payin confirmé. Tous les montants sont suivis dans les wallets internes et versés sur les moyens de paiement Mobile Money enregistrés par chacun (boutique, vendeur, parrain, livreur).
 
-Les boutiques et vendeurs doivent aussi régler une adhésion valable 30 jours : 2 500 XAF pour une boutique et 1 500 XAF pour un vendeur. Un compte validé par l’administrateur peut accéder à son espace sans paiement. Un vendeur parrain reçoit 1 000 XAF lorsqu’un vendeur inscrit avec son code paie son adhésion ; 500 XAF sont reversés au compte Mboppi.
+Les adhésions, valables 30 jours, donnent accès aux espaces professionnels : 2 500 XAF pour une boutique, 1 500 XAF pour un vendeur, 2 500 XAF pour un créateur. Un compte validé par l'administrateur accède à son espace sans paiement. Lorsqu'un vendeur ou créateur inscrit avec le code d'un vendeur paie son adhésion, le parrain reçoit 1 000 XAF et 500 XAF de part plateforme reviennent à Mboppi — chaque reversement part net de frais (90 %).
 
-La commission du vendeur est définie par la boutique sur chaque produit. Le parrainage client rapporte 2 % au vendeur référent, lorsque le client s'est inscrit avec son code ; le versement automatique du cumul intervient à partir de 5 000 XAF.
+La commission du vendeur est définie par la boutique sur chaque produit (0 à 100 %) ; pendant une promotion éclair, elle passe à 0 %. Le parrainage client rapporte 2 % au vendeur référent lorsque le client s'est inscrit avec son code ; le versement automatique du cumul intervient à partir de 5 000 XAF. Les frais de livraison sont saisis par le livreur à la livraison et lui sont reversés.
 
 ## Architecture
 
@@ -44,7 +44,8 @@ api/index.js  Entrée Vercel serverless
 - [server/routes/orders.js](server/routes/orders.js) crée les commandes multi-produits.
 - [server/routes/purchases.js](server/routes/purchases.js) crée les achats directs.
 - [server/routes/sales.js](server/routes/sales.js) gère statuts, livraison, commissions et preuves de paiement.
-- [server/finance.js](server/finance.js) calcule la répartition des montants et les écritures wallet.
+- [server/services/payouts.js](server/services/payouts.js) calcule la répartition (`computeRedistribution`), les écritures wallet et les reversements Ikeepay (nets 90 %).
+- [server/ikeepay.js](server/ikeepay.js) encapsule le prestataire de paiement (payins, payouts, pays et devises).
 
 ## Démarrage local
 
@@ -58,7 +59,7 @@ JWT_SECRET=une-chaine-aleatoire-d-au-moins-32-caracteres
 ADMIN_PASSWORD=mot-de-passe-admin
 ```
 
-Variables optionnelles : `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, `SITE_URL`, `PUBLIC_URL`, `ALLOWED_ORIGIN`, `IKEEPAY_API_KEY` (ou `IKE_SECRET_KEY`), `IKEEPAY_API_URL`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `SENTRY_DSN`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` et les variables SMTP. `IKEEPAY_API_URL` vaut par défaut `https://api.ikeepay.com`.
+Variables optionnelles : `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, `SITE_URL`, `PUBLIC_URL`, `ALLOWED_ORIGIN`, `IKEEPAY_API_KEY` (ou `IKE_SECRET_KEY`), `IKEEPAY_API_URL`, `MBOPPI_PAYOUT_COUNTRY` (défaut CM), `MBOPPI_PAYOUT_PHONE` (portefeuille Mboppi recevant les 90 % des adhésions/dons/part plateforme ; défaut +237699486146), `MBOPPI_PAYOUT_OPERATOR` (défaut ORANGE), `GEMINI_API_KEY`, `GEMINI_MODEL`, `SENTRY_DSN`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` et les variables SMTP. `IKEEPAY_API_URL` vaut par défaut `https://api.ikeepay.com`.
 
 Pour activer les paiements automatiques, renseigner `IKEEPAY_API_KEY` dans Vercel puis configurer chez Ikeepay l’URL webhook `https://<domaine>/api/payments/ikeepay/webhook`. Le fournisseur doit envoyer les événements `transaction.created` et `transaction.updated`. Les clés ne doivent jamais être placées dans le frontend ou dans Git.
 
@@ -93,7 +94,12 @@ Le frontend est disponible sur http://localhost:5173 et l'API sur http://localho
 | POST | `/api/sales/:id/pay` | shop | Enregistrer le paiement du vendeur |
 | POST | `/api/sales/:id/pay-referral` | shop | Enregistrer le paiement du parrain |
 | GET | `/api/wallet/me` | seller, creator | Consulter le wallet |
+| POST | `/api/payments/ikeepay/membership` | connecté | Payer son adhésion (30 jours) |
+| POST | `/api/payments/ikeepay/payin` | public/connecté | Payer une commande en ligne |
+| POST | `/api/payments/ikeepay/webhook` | Ikeepay | Confirmer payins et reversements |
+| GET | `/api/messages/popup` | connecté | Message admin non lu (popup) |
 | GET/POST | `/api/flash-promotions` | public / shop | Consulter ou créer une promotion |
+| PATCH | `/api/admin/users/:id/admin-approved` | admin | Ouvrir/Fermer l'accès d'un compte |
 | POST | `/api/admin/pass` | public | Ouvrir la session admin |
 
 ## Build et déploiement
