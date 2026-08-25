@@ -192,6 +192,63 @@ export function AuthProvider({ children }) {
     };
   }, [navigate]);
 
+  // Synchronisation automatique de la session (60 s + retour sur l'onglet) :
+  // applique immédiatement « Ouvrir »/« Fermer » décidés par l'admin ou une
+  // adhésion confirmée, sans déconnexion/reconnexion.
+  useEffect(() => {
+    if (!user?.id || user.role === "admin") return undefined;
+    let cancelled = false;
+    let lastSig = "";
+    const sync = async () => {
+      try {
+        const d = await api.me();
+        const u = d?.user;
+        if (cancelled || !u?.id) return;
+        const sig = JSON.stringify([
+          u.id,
+          u.role,
+          u.name,
+          u.email,
+          !!u.admin_approved,
+          u.membership_expires_at || "",
+        ]);
+        if (sig === lastSig) return;
+        lastSig = sig;
+        setUser(u);
+        localStorage.setItem("user", JSON.stringify(u));
+      } catch {
+        /* réseau indisponible : nouvelle tentative au prochain cycle */
+      }
+    };
+    sync();
+    const id = setInterval(sync, 60000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") sync();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [user?.id]);
+
+  // Si l'accès vient d'être ouvert pendant que l'utilisateur est sur la page
+  // d'adhésion, le renvoyer automatiquement vers son espace.
+  useEffect(() => {
+    if (!user || window.location.pathname !== "/adhesion") return;
+    if (!membershipActive(user)) return;
+    const home =
+      user.role === "shop"
+        ? "/shop"
+        : user.role === "seller"
+          ? "/seller"
+          : user.role === "creator"
+            ? "/creator"
+            : "/";
+    navigate(home, { replace: true });
+  }, [user, navigate]);
+
   useEffect(() => {
     if (!user) return;
     if (userIdRef.current === user.id) return;

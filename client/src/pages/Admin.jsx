@@ -106,6 +106,14 @@ export default function Admin() {
   }, [gate, load]);
   useRefreshOnFocus(load);
 
+  // Temps réel : actualisation silencieuse des statistiques et transactions
+  // toutes les 30 s, quel que soit le mode de paiement (manuel ou Ikeepay).
+  useEffect(() => {
+    if (gate) return undefined;
+    const id = setInterval(() => load(true), 30000);
+    return () => clearInterval(id);
+  }, [gate, load]);
+
   const submitGate = async (e) => {
     e.preventDefault();
     setBusy(true);
@@ -1142,6 +1150,7 @@ export default function Admin() {
                   <th>{t("Client")}</th>
                   <th>{t("Montant")}</th>
                   <th>{t("Commission")}</th>
+                  <th>{t("Paiement")}</th>
                   <th>{t("Statut")}</th>
                   <th>{t("Date")}</th>
                   <th>{t("Actions")}</th>
@@ -1155,7 +1164,7 @@ export default function Admin() {
                   if (visible.length === 0) {
                     return (
                       <tr>
-                        <td colSpan="10" className="empty">
+                        <td colSpan="11" className="empty">
                           {t("Aucune transaction")}
                         </td>
                       </tr>
@@ -1174,6 +1183,34 @@ export default function Admin() {
                       <td>
                         {formatMoney(r.commission + r.referral_commission)}{" "}
                         {countrySymbol(r.shop_country)}
+                      </td>
+                      <td>
+                        {(() => {
+                          const online = !!r.online_payment;
+                          const regle =
+                            r.payment_status === "paid" || (!online && r.paid);
+                          const mode = online
+                            ? t("En ligne (Ikeepay)")
+                            : r.payment_method === "mobile"
+                              ? t("Mobile direct")
+                              : r.payment_method === "espece"
+                                ? t("Espèces")
+                                : "—";
+                          return (
+                            <>
+                              <span
+                                className={`badge ${regle ? "badge-verified" : "badge-warn"}`}
+                              >
+                                {regle ? `✅ ${t("Payé")}` : `⏳ ${t("À régler")}`}
+                              </span>
+                              <br />
+                              <span className="hint">
+                                {mode}
+                                {r.referral_paid ? ` · ${t("parrain payé")}` : ""}
+                              </span>
+                            </>
+                          );
+                        })()}
                       </td>
                       <td>{statusBadge(r.status)}</td>
                       <td className="hint">{new Date(r.created_at).toLocaleDateString()}</td>

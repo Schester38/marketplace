@@ -437,6 +437,7 @@ router.get(
     const rows = await q(
       `SELECT s.id, s.status, s.created_at, s.quantity, s.total_price, s.commission,
             s.referral_commission, s.paid, s.referral_paid, s.delivered_at, s.payment_method,
+            s.payment_status, s.online_payment,
             s.buyer_name, s.buyer_city,
             p.name AS product_name, p.shop_id,
             shop.name AS shop_name, shop.country AS shop_country,
