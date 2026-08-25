@@ -412,6 +412,7 @@ router.get(
         user = (await q("SELECT * FROM users WHERE id = $1", [created[0].id]))[0];
       }
       res.redirect(`/auth-google?token=${signToken(user)}`);
+      await logAudit(null, "google.register", `user=${user.id} email=${user.email} role=${user.role}`, req.ip);
     } catch (err) {
       res.redirect(`/auth-google?error=${encodeURIComponent(err.message)}`);
     }

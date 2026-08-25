@@ -23,6 +23,7 @@ export default function Login() {
     setUnverified("");
     try {
       const data = await api.login(form);
+      console.log("[login] api.login role=", data.user?.role, "email=", data.user?.email);
       login(data.user, data.token);
       localStorage.setItem("mboppi_welcome", "login");
       const from = location.state?.from;

@@ -36,6 +36,7 @@ export default function AuthGoogle() {
     );
     Promise.race([api.me(), timeout])
       .then((data) => {
+        console.log("[AuthGoogle] me response", data.user?.id, data.user?.email, data.user?.role);
         login(data.user, token);
         localStorage.setItem("mboppi_welcome", "login");
         navigate(postLoginPath(data.user), { replace: true });

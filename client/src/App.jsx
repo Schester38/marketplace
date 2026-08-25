@@ -100,7 +100,15 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("user"));
+      let u = JSON.parse(localStorage.getItem("user"));
+      // Auto-réparation : répare les sessions corrompues par l'ancien bug
+      // (objet { user: {...} } stocké tel quel, sans role/id au premier niveau)
+      if (u && typeof u === "object" && !u.role && u.user && typeof u.user === "object") {
+        u = u.user;
+        localStorage.setItem("user", JSON.stringify(u));
+      }
+      if (u?.role) console.log("[auth] init user role=", u.role, "email=", u.email);
+      return u;
     } catch {
       return null;
     }
@@ -110,6 +118,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
+    if (userData?.role) console.log("[auth] login role=", userData.role, "email=", userData.email);
   };
 
   const logout = useCallback(() => {
@@ -163,12 +172,15 @@ export function AuthProvider({ children }) {
     let cancelled = false;
     api
       .me()
-      .then((u) => {
-        if (cancelled) return;
+      .then((data) => {
+        const u = data?.user;
+        console.log("[auth] /me refresh role=", u?.role, "email=", u?.email, "id=", u?.id);
+        // L'API renvoie { user }, ne jamais écraser la session si la réponse est invalide
+        if (cancelled || !u?.id) return;
         setUser(u);
         localStorage.setItem("user", JSON.stringify(u));
       })
-      .catch(() => {});
+      .catch((e) => console.log("[auth] /me refresh failed", e.message));
     return () => {
       cancelled = true;
     };
