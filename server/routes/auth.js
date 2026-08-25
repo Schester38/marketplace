@@ -6,6 +6,8 @@ import { signToken, authRequired, roleRequired, MEMBERSHIP_FEES } from "../auth.
 import { googleConfigured, googleAuthUrl, getGoogleProfile } from "../google.js";
 import { logAudit } from "../security.js";
 import { sendMail, verificationEmailHtml } from "../mailer.js";
+import { registerSchema } from "../validators.js";
+import { validate } from "../middlewares/validate.js";
 
 const router = Router();
 
@@ -61,11 +63,12 @@ function publicUser(u) {
     reference_number: u.reference_number || null,
     email_verified: !!u.email_verified,
     verified: !!u.verified,
+    admin_approved: !!u.admin_approved,
     membership_required: Boolean(MEMBERSHIP_FEES[u.role]),
     membership_fee: MEMBERSHIP_FEES[u.role] || null,
     membership_expires_at: u.membership_expires_at || null,
     membership_active: !!(
-      u.verified ||
+      u.admin_approved ||
       (u.membership_expires_at && new Date(u.membership_expires_at) > new Date())
     ),
   };
@@ -75,6 +78,7 @@ const VALID_ROLES = ["shop", "seller", "client", "creator", "livreur"];
 
 router.post(
   "/register",
+  validate(registerSchema),
   ah(async (req, res) => {
     const {
       name,
@@ -154,7 +158,14 @@ router.post(
       return res.status(409).json({ error: "Un compte existe déjà avec cet email" });
     }
     const hash = bcrypt.hashSync(String(password), 12);
-    const referenceNumber = `MBP-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
+    let referenceNumber = `MBP-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const collision = await q("SELECT id FROM users WHERE reference_number = $1", [
+        referenceNumber,
+      ]);
+      if (!collision.length) break;
+      referenceNumber = `MBP-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
+    }
     const created = await q(
       "INSERT INTO users (name, email, password, role, country, phone, referred_by, accepted_terms_at, email_verified, reference_number, membership_fee) VALUES ($1, $2, $3, $4, $5, $6, $7, now(), FALSE, $8, $9) RETURNING id",
       [

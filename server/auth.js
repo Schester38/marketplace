@@ -15,6 +15,7 @@ export function signToken(user) {
       role: user.role,
       name: user.name,
       verified: Boolean(user.verified),
+      admin_approved: Boolean(user.admin_approved),
       membership_expires_at: user.membership_expires_at || null,
     },
     SECRET,
@@ -40,13 +41,15 @@ export function roleRequired(...roles) {
     if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({ error: "Accès réservé aux " + roles.join(" / ") });
     }
-    if (["shop", "seller"].includes(req.user.role)) {
+    if (["shop", "seller", "creator"].includes(req.user.role)) {
       const current = (
-        await q("SELECT verified, membership_expires_at FROM users WHERE id = $1", [req.user.id])
+        await q("SELECT admin_approved, membership_expires_at FROM users WHERE id = $1", [
+          req.user.id,
+        ])
       )[0];
       if (
         current &&
-        !current.verified &&
+        !current.admin_approved &&
         (!current.membership_expires_at || new Date(current.membership_expires_at) <= new Date())
       ) {
         return res.status(402).json({
@@ -67,6 +70,6 @@ export function membershipRequired(user) {
 }
 
 export function membershipActive(user) {
-  if (!membershipRequired(user) || user.verified) return true;
+  if (!membershipRequired(user) || user.admin_approved) return true;
   return Boolean(user.membership_expires_at && new Date(user.membership_expires_at) > new Date());
 }

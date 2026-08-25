@@ -175,10 +175,10 @@ export const api = {
   adminTransactions: () => adminRequest("/admin/transactions"),
   adminUsers: (search = "") =>
     adminRequest("/admin/users" + (search ? `?search=${encodeURIComponent(search)}` : "")),
-  adminSetVerified: (id, verified) =>
-    adminRequest(`/admin/users/${id}/verified`, {
+  adminSetAdminApproved: (id, adminApproved) =>
+    adminRequest(`/admin/users/${id}/admin-approved`, {
       method: "PATCH",
-      body: JSON.stringify({ verified }),
+      body: JSON.stringify({ admin_approved: adminApproved }),
     }),
   adminProducts: () => adminRequest("/admin/products"),
   adminDeleteProduct: (id) => adminRequest(`/admin/products/${id}`, { method: "DELETE" }),

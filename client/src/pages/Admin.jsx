@@ -143,10 +143,12 @@ export default function Admin() {
     }
   };
 
-  const toggleVerified = async (u) => {
+  const toggleAdminApproved = async (u) => {
     try {
-      await api.adminSetVerified(u.id, !u.verified);
-      setUsers((us) => us.map((x) => (x.id === u.id ? { ...x, verified: !x.verified } : x)));
+      await api.adminSetAdminApproved(u.id, !u.admin_approved);
+      setUsers((us) =>
+        us.map((x) => (x.id === u.id ? { ...x, admin_approved: !x.admin_approved } : x))
+      );
     } catch (err) {
       setError(err.message);
     }
@@ -734,6 +736,8 @@ export default function Admin() {
               <th>{t("Rôle")}</th>
               <th>{t("Pays")}</th>
               <th>{t("Référence")}</th>
+              <th>{t("Code vendeur")}</th>
+              <th>{t("Code boutique")}</th>
               <th>{t("Inscription")}</th>
               <th>{t("Adhésion")}</th>
               <th>{t("Vérifié")}</th>
@@ -742,7 +746,7 @@ export default function Admin() {
           <tbody>
             {users === null ? (
               <tr>
-                <td colSpan="9">
+                <td colSpan="11">
                   <div className="skeleton-block" style={{ height: 30 }}></div>
                 </td>
               </tr>
@@ -765,6 +769,12 @@ export default function Admin() {
                   <td>
                     <code>{u.reference_number || "—"}</code>
                   </td>
+                  <td>
+                    <code>{u.seller_code || "—"}</code>
+                  </td>
+                  <td>
+                    <code>{u.shop_code || "—"}</code>
+                  </td>
                   <td className="hint">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="hint">
                     {u.membership_fee
@@ -772,13 +782,17 @@ export default function Admin() {
                       : t("Non requise")}
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className={`btn btn-small ${u.verified ? "btn-primary" : "btn-outline"}`}
-                      onClick={() => toggleVerified(u)}
-                    >
-                      {u.verified ? t("✓ Vérifié") : t("Vérifier")}
-                    </button>
+                    {"shop" === u.role || "seller" === u.role || "creator" === u.role ? (
+                      <button
+                        type="button"
+                        className={`btn btn-small ${u.admin_approved ? "btn-primary" : "btn-outline"}`}
+                        onClick={() => toggleAdminApproved(u)}
+                      >
+                        {u.admin_approved ? t("Fermer") : t("Ouvrir")}
+                      </button>
+                    ) : (
+                      <span className="hint">—</span>
+                    )}
                   </td>
                 </tr>
               ))

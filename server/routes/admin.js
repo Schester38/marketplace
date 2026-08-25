@@ -215,7 +215,7 @@ router.get(
   ah(async (req, res) => {
     const search = req.query.search ? String(req.query.search).trim().slice(0, 60) : "";
     const users = await q(
-      `SELECT id, name, email, role, country, location, phone, verified, seller_code, shop_code, reference_number, membership_fee, membership_paid_at, membership_expires_at, created_at
+      `SELECT id, name, email, role, country, location, phone, verified, admin_approved, seller_code, shop_code, reference_number, membership_fee, membership_paid_at, membership_expires_at, created_at
      FROM users
      WHERE $1 = '' OR name ILIKE $2 OR email ILIKE $2
      ORDER BY created_at DESC LIMIT 100`,
@@ -226,18 +226,23 @@ router.get(
 );
 
 router.patch(
-  "/users/:id/verified",
+  "/users/:id/admin-approved",
   ah(async (req, res) => {
     const id = Number(req.params.id);
     if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
-    const verified = Boolean(req.body && req.body.verified);
-    const updated = await q("UPDATE users SET verified = $1 WHERE id = $2 RETURNING id", [
-      verified,
+    const admin_approved = Boolean(req.body && req.body.admin_approved);
+    const updated = await q("UPDATE users SET admin_approved = $1 WHERE id = $2 RETURNING id", [
+      admin_approved,
       id,
     ]);
     if (!updated.length) return res.status(404).json({ error: "Utilisateur introuvable" });
-    await logAudit(req.user.id, "admin.set_verified", `user=${id} verified=${verified}`, req.ip);
-    res.json({ ok: true, verified });
+    await logAudit(
+      req.user.id,
+      "admin.set_admin_approved",
+      `user=${id} admin_approved=${admin_approved}`,
+      req.ip
+    );
+    res.json({ ok: true, admin_approved });
   })
 );
 
