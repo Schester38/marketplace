@@ -103,7 +103,18 @@ async function request(path, payload) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(data.error || data.message || `Ikeepay ${response.status}`);
+    // Diagnostic : payload sortant + réponse brute du partenaire (logs Vercel)
+    console.error(
+      `[ikeepay] ${path} -> HTTP ${response.status}`,
+      "payload:", JSON.stringify(payload),
+      "reponse:", JSON.stringify(data)
+    );
+    let message = data.error || data.message || `Ikeepay ${response.status}`;
+    const raw = JSON.stringify(data);
+    if (raw && raw !== "{}" && raw.length > 2) {
+      message = `${message} · iKeePay: ${raw.slice(0, 350)}`;
+    }
+    const error = new Error(message);
     error.statusCode = response.status >= 500 ? 502 : 400;
     error.providerPayload = data;
     throw error;
@@ -156,30 +167,13 @@ export function normalizeProvider(operator) {
   return PROVIDER_ALIASES[key] || key;
 }
 
-// Codes provider réels par pays/opérateur, extraits du checkout officiel
-// ikeepay.com (leur propre page de paiement envoie ces valeurs comme
-// `provider`, ex. Cameroun → ORANGE_CMR / MTN_MOMO_CMR).
-const PROVIDER_CODES_BY_COUNTRY = {
-  CM: { ORANGE: "ORANGE_CMR", MTN: "MTN_MOMO_CMR" },
-  CI: { ORANGE: "ORANGE_CIV", MTN: "MTN_MOMO_CIV" },
-  BJ: { MOOV: "MOOV_BEN", MTN: "MTN_MOMO_BEN" },
-  CD: { AIRTEL: "AIRTEL_COD", ORANGE: "ORANGE_COD", VODACOM: "VODACOM_MPESA_COD" },
-  GA: { AIRTEL: "AIRTEL_GAB" },
-  KE: { MPESA: "MPESA_KEN" },
-  CG: { AIRTEL: "AIRTEL_COG", MTN: "MTN_MOMO_COG" },
-  RW: { AIRTEL: "AIRTEL_RWA", "MTN MOMO": "MTN_MOMO_RWA", MTN: "MTN_MOMO_RWA" },
-  SL: { ORANGE: "ORANGE_SLE" },
-  UG: { AIRTEL: "AIRTEL_UGA", "MTN MOMO": "MTN_MOMO_UGA", MTN: "MTN_MOMO_UGA" },
-  ZM: { AIRTEL: "AIRTEL_ZMB", MTN: "MTN_MOMO_ZMB", ZAMTEL: "ZAMTEL_ZMB" },
-  SN: { ORANGE: "ORANGE_SEN", FREE: "FREE_SEN" },
-};
-
 function withProvider(payload = {}) {
   const operator = normalizeProvider(payload.operator ?? payload.provider);
-  const country = countryCode(payload.country);
-  const codes = PROVIDER_CODES_BY_COUNTRY[country] || {};
-  const provider = codes[operator] || operator;
-  return { ...payload, operator, provider };
+  // L'API en production valide le champ `provider` : il reprend le nom de
+  // l'opérateur (les codes du type ORANGE_CMR sont spécifiques au routage
+  // interne pawapay et font échouer l'initialisation chez les partenaires
+  // routés autrement, ex. PIXPAY pour le Cameroun).
+  return { ...payload, operator, provider: operator };
 }
 
 export function payin(payload) {
