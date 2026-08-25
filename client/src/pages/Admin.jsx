@@ -752,7 +752,7 @@ export default function Admin() {
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan="9" className="empty">
+                <td colSpan="11" className="empty">
                   {t("Aucun utilisateur")}
                 </td>
               </tr>
