@@ -24,6 +24,16 @@ export async function q(text, params = []) {
   return res.rows;
 }
 
+export async function ensureColumn(table, column, definition) {
+  const exists = await q(
+    `SELECT column_name FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
+    [table, column]
+  );
+  if (!exists.length) {
+    await q(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${definition}`);
+  }
+}
+
 export async function withTransaction(fn) {
   const client = await getPool().connect();
   try {

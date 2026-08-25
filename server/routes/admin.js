@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { q } from "../db.js";
+import { q, ensureColumn } from "../db.js";
 import { authRequired, roleRequired, signToken } from "../auth.js";
 import { logAudit } from "../security.js";
 import { migrateImages } from "../migrate-images.js";
@@ -213,6 +213,7 @@ router.get(
 router.get(
   "/users",
   ah(async (req, res) => {
+    await ensureColumn("users", "admin_approved", "BOOLEAN NOT NULL DEFAULT FALSE");
     const search = req.query.search ? String(req.query.search).trim().slice(0, 60) : "";
     const users = await q(
       `SELECT id, name, email, role, country, location, phone, verified, admin_approved, seller_code, shop_code, reference_number, membership_fee, membership_paid_at, membership_expires_at, created_at
