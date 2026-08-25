@@ -6016,6 +6016,73 @@ tr.tr-hidden td {
 [data-theme="dark"] .rider-card:hover {
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
 }
+
+/* Courbes admin (MiniChart) — lisibles dark/light */
+.mini-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mc-grid {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+  opacity: 0.7;
+}
+.mc-dot {
+  fill: var(--primary);
+  stroke: var(--card, #fff);
+  stroke-width: 1.5;
+}
+.mc-label {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-family: inherit;
+}
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Répartition des utilisateurs par rôle */
+.role-bars {
+  display: grid;
+  gap: 10px;
+}
+.role-bar-row {
+  display: grid;
+  grid-template-columns: 130px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.role-bar-label {
+  font-weight: var(--font-semibold);
+  color: var(--text);
+  white-space: nowrap;
+}
+.role-bar-track {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--soft-2, var(--soft));
+  overflow: hidden;
+}
+.role-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width var(--transition-smooth);
+}
+.role-bar-value {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .role-bar-row {
+    grid-template-columns: 96px 1fr auto;
+    gap: 6px;
+  }
+}
 .rider-phone {
   margin: 4px 0 0;
   font-weight: 700;

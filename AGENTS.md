@@ -115,7 +115,7 @@ Il existe aussi le **parrainage d'activation vendeur/créateur** (distinct) : un
 - **Verone / Vitrine d'offres** : `server/routes/offers.js` (public, 3 photos max) + `presentation.js` (`GET /image/:id`, page HTML) ; pages client `Verone.jsx`, `VitrineOffre.jsx`.
 - **Métriques** : `POST /views` (batch 50 → `item_views`), `POST /visit` (X-Visitor-Id → `daily_visits`), `GET /trending` (cache s-maxage 120).
 - **i18n** : fr (clés = chaînes), en/es/ar chargés dynamiquement, RTL pour ar. `t()` dans `client/src/i18n.jsx`.
-- **PWA** : `client/public/sw.js`, cache `mboppi-v113` (incrémenté à chaque déploiement), app shell + push handler + 4 manifest.
+- **PWA** : `client/public/sw.js`, cache `mboppi-v118` (incrémenté à chaque déploiement), app shell + push handler + 4 manifest.
 - **Audit/sécurité** : `server/security.js` (origines autorisées, audit log), rate limits par route.
 - **Photos** : Supabase Storage bucket `photos`, jusqu'à 3 par produit/offre, `{thumb, full}`, `SUPABASE_JWT_SECRET` pour clé opaque `sb_secret_...`.
 - **Menu** (`client/src/components/Navbar.jsx`) : Produits, Créateurs (sans emoji 🎨), Je soutiens, Formations et Digital (lien externe chariow.pics), Formation Mboppi (YouTube, sans emoji 🎓), espaces par rôle, Administration 🛡️.
@@ -137,4 +137,9 @@ Il existe aussi le **parrainage d'activation vendeur/créateur** (distinct) : un
 - **1.47.1 / v111** : fix crash dashboards livreur et créateur (`useCallback` non importé) + audit automatique de tous les hooks React du client.
 - **1.47.2 / v112** : règle financière **entrée 100 % / sortie 90 %** — suppression du supplément « Frais Ikeepay 6 % » côté acheteur ; reversements sortants Ikeepay transfèrent le net 90 % ; FAQ/mentions légales harmonisées à 10 %.
 - **1.47.3 / v113** : balayage de **90 % des adhésions, dons Ikeepay et part plateforme 500 XAF** vers les portefeuilles Mboppi (`payoutPlatformShare` généralisé `MBOPPI_SHARE:{kind}:{id}`, devise d'origine conservée) ; échecs plateforme tracés en base ; audit complet de la chaîne de reversement.
+- **1.47.4 / v114** : documentation et textes utilisateurs harmonisés à la règle 100/90 (AGENTS, README, chat IA fr/en/ar, i18n 5000 F, FAQ/CGV/CGU/Privacy/About).
+- **1.47.5 / v115** : fix « Contacter un livreur » — méthodes `listLivreurs`/`livreurOptions` ajoutées au client.
+- **1.47.6 / v116** : paiement déplacé vers la livraison (formulaire commande épuré), annuaire livreurs branché (`app.use("/api/livreurs")`), Trustpilot retiré (erreurs Edge), lisibilité dark/light page livreurs.
+- **1.47.7 / v117** : colonne Paiement fidèle aux modes dans /admin/transactions (`payment_status`, `online_payment`), auto-refresh admin 30 s, synchronisation de session 60 s (Ouvrir/Fermer instantané, retour auto depuis /adhesion).
+- **1.47.8 / v118** : courbe des visites (MiniChart aire dégradée) + répartition des utilisateurs par rôle sur /admin ; visites rafraîchies toutes les 30 s.
 - Facture PDF : parfaitement fonctionnelle (vérifié — téléchargement jsPDF OK).

@@ -7,6 +7,7 @@ import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { formatMoney } from "../components/ProductCard.jsx";
 import { countrySymbol } from "../config.js";
+import MiniChart from "../components/MiniChart.jsx";
 
 const VISIT_RANGES = [
   { days: 1, label: "1 jour" },
@@ -106,13 +107,19 @@ export default function Admin() {
   }, [gate, load]);
   useRefreshOnFocus(load);
 
-  // Temps réel : actualisation silencieuse des statistiques et transactions
-  // toutes les 30 s, quel que soit le mode de paiement (manuel ou Ikeepay).
+  // Temps réel : actualisation silencieuse des statistiques, transactions et
+  // visites toutes les 30 s, quel que soit le mode de paiement.
   useEffect(() => {
     if (gate) return undefined;
-    const id = setInterval(() => load(true), 30000);
+    const id = setInterval(() => {
+      load(true);
+      api
+        .adminVisits(visitDays, visitCountry)
+        .then((d) => setVisits(d.visits))
+        .catch(() => {});
+    }, 30000);
     return () => clearInterval(id);
-  }, [gate, load]);
+  }, [gate, load, visitDays, visitCountry]);
 
   const submitGate = async (e) => {
     e.preventDefault();
@@ -494,6 +501,40 @@ export default function Admin() {
         {card(t("Abonnés newsletter"), stats ? stats.newsletter_subscribers : "…")}
       </section>
 
+      {stats && (
+        <section className="card section" style={{ marginBottom: 18 }}>
+          <h3 className="section-title" style={{ marginTop: 0 }}>
+            👥 {t("Répartition des utilisateurs")}
+          </h3>
+          <div className="role-bars">
+            {[
+              { k: "shops", label: t("Boutiques"), icon: "🏬", color: "#ee7d00" },
+              { k: "sellers", label: t("Vendeurs"), icon: "🧑‍💼", color: "#2563eb" },
+              { k: "clients", label: t("Clients"), icon: "👥", color: "#16a34a" },
+              { k: "creators", label: t("Créateurs"), icon: "🎨", color: "#7c3aed" },
+              { k: "livreurs", label: t("Livreurs"), icon: "🛵", color: "#0891b2" },
+            ].map((r) => {
+              const total = Number(stats.users) || 0;
+              const v = Number(stats[r.k]) || 0;
+              const pct = total > 0 ? Math.round((v / total) * 100) : 0;
+              return (
+                <div className="role-bar-row" key={r.k}>
+                  <span className="role-bar-label">
+                    {r.icon} {r.label}
+                  </span>
+                  <div className="role-bar-track">
+                    <div className="role-bar-fill" style={{ width: `${pct}%`, background: r.color }} />
+                  </div>
+                  <span className="role-bar-value">
+                    {v} · {pct}%
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {visits && (
         <section aria-label={t("Analyse des visites")} className="visits-panel">
           <div className="visits-head">
@@ -532,6 +573,24 @@ export default function Admin() {
             {card(t("Pages vues"), formatMoney(visits.page_views))}
             {card(t("Visiteurs uniques"), formatMoney(visits.unique_visitors))}
             {card(t("Jours actifs"), visits.active_days)}
+          </div>
+          <div className="card" style={{ marginTop: 14 }}>
+            <h3 className="section-title" style={{ marginTop: 0 }}>
+              📈 {t("Vues par jour")}
+            </h3>
+            <MiniChart
+              label={t("Pages vues")}
+              data={[...(visits.daily || [])]
+                .reverse()
+                .map((d) => ({
+                  label: new Date(d.date).toLocaleDateString("fr-FR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                  }),
+                  value: d.views,
+                  tip: `${new Date(d.date).toLocaleDateString("fr-FR")} — Vues : ${d.views} · Visiteurs : ${d.visitors}`,
+                }))}
+            />
           </div>
         </section>
       )}
