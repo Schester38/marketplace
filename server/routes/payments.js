@@ -8,6 +8,7 @@ import {
   completeMembershipPayment,
   completePlatformPayout,
   paySaleAutomatically,
+  payoutPlatformShare,
 } from "../services/payouts.js";
 
 const router = Router();
@@ -212,6 +213,13 @@ router.post(
           donation.id,
         ]
       );
+      if (status === "completed" && donation.amount > 0) {
+        try {
+          await payoutPlatformShare(donation.id, donation.amount);
+        } catch (e) {
+          console.error("[webhook] payout plateforme donation échoué:", e.message);
+        }
+      }
       await q("UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1", [logged[0].id]);
     } else if (membership && String(data.type || "").toLowerCase() === "payin") {
       const status = String(data.status || "").toLowerCase();
