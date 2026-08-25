@@ -6,6 +6,7 @@ import {
   normalizePhone as normalizeIkeepayPhone,
   payin,
 } from "../ikeepay.js";
+import { addIkeepayFee } from "../services/payouts.js";
 import { donationSchema, donationIkeepaySchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
 
@@ -72,7 +73,7 @@ router.post(
     )[0];
     try {
       const result = await payin({
-        amount,
+        amount: addIkeepayFee(amount),
         currency,
         country,
         phoneNumber: phone,
