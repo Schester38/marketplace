@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import MiniChart from "../components/MiniChart.jsx";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import ProductCard from "../components/ProductCard.jsx";
@@ -128,7 +129,7 @@ export default function ShopDashboard() {
       const [prodData, saleData, flashData] = await Promise.all([
         api.myProducts(),
         api.shopSales(user.id),
-        api.flashPromotions(),
+        api.myFlashPromotions(),
       ]);
       setProducts(prodData.products);
       setSales(saleData.sales);
@@ -146,6 +147,12 @@ export default function ShopDashboard() {
   }, [load]);
 
   useRefreshOnFocus(load);
+
+  // Temps réel : rafraîchit produits, ventes et statistiques toutes les 30 s
+  useEffect(() => {
+    const id = setInterval(() => load(), 30000);
+    return () => clearInterval(id);
+  }, [load]);
 
   const submitProduct = async (e) => {
     e.preventDefault();
@@ -405,16 +412,18 @@ export default function ShopDashboard() {
           ? await api.payReferral(payForm.sale.id, { proof: payForm.proof })
           : await api.paySale(payForm.sale.id, { proof: payForm.proof });
       setSales((prev) => prev.map((s) => (s.id === d.sale.id ? d.sale : s)));
+      // Ne déplacer que le montant réellement payé (commission vendeur ou parrainage),
+      // pas l'un et l'autre en même temps.
+      const moved =
+        payForm.kind === "referral"
+          ? Number(d.sale.referral_commission || 0)
+          : Number(d.sale.commission || 0);
       setStats((prev) =>
         prev
           ? {
               ...prev,
-              paid_commission:
-                (prev.paid_commission || 0) + d.sale.commission + (d.sale.referral_commission || 0),
-              owed_commission: Math.max(
-                0,
-                (prev.owed_commission || 0) - d.sale.commission - (d.sale.referral_commission || 0)
-              ),
+              paid_commission: (prev.paid_commission || 0) + moved,
+              owed_commission: Math.max(0, (prev.owed_commission || 0) - moved),
             }
           : prev
       );
@@ -451,15 +460,6 @@ export default function ShopDashboard() {
   bars.forEach((b) => {
     b.pct = Math.round((b.rev / maxRev) * 100);
   });
-
-  const CH_W = 720;
-  const CH_H = 210;
-  const CH_PAD = 24;
-  const chMax = Math.max(1, ...bars.map((b) => b.rev));
-  const chX = (i) => CH_PAD + (i * (CH_W - 2 * CH_PAD)) / Math.max(1, bars.length - 1);
-  const chY = (v) => CH_H - CH_PAD - (Number(v) / chMax) * (CH_H - 2 * CH_PAD);
-  const chLine = bars.map((b, i) => `${chX(i)},${chY(b.rev)}`).join(" ");
-  const chArea = `M${chX(0)},${CH_H - CH_PAD} L${chLine} L${chX(bars.length - 1)},${CH_H - CH_PAD} Z`;
 
   const remaining = (products?.length ?? 0) < 5;
 
@@ -1160,65 +1160,21 @@ export default function ShopDashboard() {
             {stats && (series.length > 0 || topProducts.length > 0) && (
               <div className="stats-extra">
                 <h3>{t("📈 Ventes des 14 derniers jours")}</h3>
-                <div className="chart-wrap">
-                  <svg
-                    viewBox={`0 0 ${CH_W} ${CH_H}`}
-                    className="line-chart"
-                    role="img"
-                    aria-label={t("Graphique des ventes des 14 derniers jours")}
-                  >
-                    <defs>
-                      <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.35" />
-                        <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.02" />
-                      </linearGradient>
-                    </defs>
-                    {[0.25, 0.5, 0.75, 1].map((f) => (
-                      <line
-                        key={f}
-                        className="chart-grid"
-                        x1={CH_PAD}
-                        y1={chY(chMax * f)}
-                        x2={CH_W - CH_PAD}
-                        y2={chY(chMax * f)}
-                      />
-                    ))}
-                    <path d={chArea} fill="url(#revGrad)" />
-                    <polyline
-                      points={chLine}
-                      className="chart-line"
-                      fill="none"
-                      strokeLinejoin="round"
-                      strokeLinecap="round"
-                    />
-                    {bars.map((b, i) =>
-                      b.rev > 0 || b.cnt > 0 ? (
-                        <circle
-                          key={b.key}
-                          className="chart-dot"
-                          cx={chX(i)}
-                          cy={chY(b.rev)}
-                          r="3.4"
-                        >
-                          <title>{`${b.label} : ${b.cnt} ${t("vente(s)")} — ${formatMoney(b.rev)} ${symbol}`}</title>
-                        </circle>
-                      ) : null
-                    )}
-                  </svg>
-                  <div className="chart-labels">
-                    {bars.map((b, i) => (
-                      <span key={b.key} className={i % 2 ? "chart-label-muted" : ""}>
-                        {b.label}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="chart-caption hint">
-                    <span className="chart-legend">
-                      <i style={{ background: "var(--primary)" }}></i>
-                      {t("Chiffre d'affaires ({symbol})", { symbol })}
-                    </span>
-                  </p>
-                </div>
+                <MiniChart
+                  label={t("Chiffre d'affaires")}
+                  valueSuffix={` ${symbol}`}
+                  data={bars.map((b) => ({
+                    label: b.label,
+                    value: b.rev,
+                    tip: `${b.label} — ${b.cnt} ${t("vente(s)")} · ${formatMoney(b.rev)} ${symbol}`,
+                  }))}
+                />
+                <p className="chart-caption hint">
+                  <span className="chart-legend">
+                    <i style={{ background: "var(--primary)" }}></i>
+                    {t("Chiffre d'affaires ({symbol})", { symbol })}
+                  </span>
+                </p>
                 {topProducts.length > 0 && (
                   <>
                     <h3 style={{ marginTop: 16 }}>{t("🏆 Meilleurs produits")}</h3>

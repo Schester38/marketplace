@@ -68,3 +68,28 @@ export function compressImage(file, maxDim = 800, quality = 0.72) {
     reader.readAsDataURL(file);
   });
 }
+
+// Agrège des éléments par jour sur N jours : [{key,label,value}] chronologiques.
+// Utilisé par les courbes des espaces boutique/vendeur/créateur/livreur.
+export function dailyBuckets(items, { days = 14, dateKey = "created_at", valueFn } = {}) {
+  const now = new Date();
+  const buckets = Array.from({ length: days }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(now.getDate() - (days - 1 - i));
+    return {
+      key: d.toISOString().slice(0, 10),
+      label: d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }),
+      value: 0,
+    };
+  });
+  const index = Object.fromEntries(buckets.map((b, i) => [b.key, i]));
+  for (const item of items || []) {
+    const raw = item?.[dateKey];
+    if (!raw) continue;
+    const k = new Date(raw).toISOString().slice(0, 10);
+    const i = index[k];
+    if (i === undefined) continue;
+    buckets[i].value += valueFn ? Number(valueFn(item) || 0) : 1;
+  }
+  return buckets;
+}

@@ -7,6 +7,8 @@ import { downloadInvoice } from "../components/Invoice.jsx";
 import { countrySymbol } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
+import MiniChart from "../components/MiniChart.jsx";
+import { dailyBuckets } from "../utils.js";
 
 const CODE_KEY = "livreur_shop_code";
 
@@ -65,6 +67,12 @@ export default function LivreurDashboard() {
   }, [code, load]);
 
   useRefreshOnFocus(() => load(true));
+
+  // Temps réel : rafraîchit livraisons et gains toutes les 30 s
+  useEffect(() => {
+    const id = setInterval(() => load(true), 30000);
+    return () => clearInterval(id);
+  }, [load]);
 
   const enterCode = async (e) => {
     e.preventDefault();
@@ -242,6 +250,17 @@ export default function LivreurDashboard() {
             )}
           </section>
 
+          <section className="card" style={{ marginBottom: 14 }}>
+            <h2>📈 {t("Gains des 14 derniers jours")}</h2>
+            <MiniChart
+              label={t("Gains livraison")}
+              data={dailyBuckets(delivered, {
+                days: 14,
+                dateKey: "delivered_at",
+                valueFn: (s) => s.delivery_fee,
+              })}
+            />
+          </section>
           <section className="card stats">
             <h2>✅ {t("Mes livraisons effectuées")}</h2>
             {delivered.length === 0 ? (

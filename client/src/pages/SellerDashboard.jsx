@@ -8,6 +8,8 @@ import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
+import MiniChart from "../components/MiniChart.jsx";
+import { dailyBuckets } from "../utils.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 
 const SALE_STATUS = {
@@ -74,6 +76,12 @@ export default function SellerDashboard() {
   }, []);
 
   useRefreshOnFocus(load);
+
+  // Temps réel : rafraîchit ventes et commissions toutes les 30 s
+  useEffect(() => {
+    const id = setInterval(() => load(), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   const generateCode = async () => {
     setCodeLoading(true);
@@ -396,6 +404,19 @@ export default function SellerDashboard() {
           </div>
         </section>
       )}
+
+      <section className="card" style={{ marginBottom: 14 }}>
+        <h2>📈 {t("Commissions des 14 derniers jours")}</h2>
+        <MiniChart
+          label={t("Commission")}
+          valueSuffix={` ${countrySymbol(user?.country)}`}
+          data={dailyBuckets(sales, {
+            days: 14,
+            dateKey: "created_at",
+            valueFn: (s) => Number(s.commission || 0),
+          })}
+        />
+      </section>
 
       {success && <p className="success">{success}</p>}
       {error && <p className="error">{error}</p>}

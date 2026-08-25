@@ -8,6 +8,8 @@ import { compressImage, thumbFromDataUrl } from "../utils.js";
 import { countryPhone, countrySymbol } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
+import MiniChart from "../components/MiniChart.jsx";
+import { dailyBuckets } from "../utils.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 
 const EMPTY_FORM = {
@@ -96,6 +98,12 @@ export default function CreatorDashboard() {
     load();
   }, [load]);
   useRefreshOnFocus(load);
+
+  // Temps réel : rafraîchit créations et statistiques toutes les 30 s
+  useEffect(() => {
+    const id = setInterval(() => load(), 30000);
+    return () => clearInterval(id);
+  }, [load]);
 
   const submitProduct = async (e) => {
     e.preventDefault();
@@ -364,6 +372,17 @@ export default function CreatorDashboard() {
       {success && <p className="success">{success}</p>}
       {error && <p className="error">{error}</p>}
 
+      <section className="card" style={{ marginBottom: 14 }}>
+        <h2>📈 {t("Chiffre d'affaires des 14 derniers jours")}</h2>
+        <MiniChart
+          label={t("Chiffre d'affaires")}
+          data={dailyBuckets(sales, {
+            days: 14,
+            dateKey: "created_at",
+            valueFn: (s) => Number(s.total_price || 0) - Number(s.commission || 0),
+          })}
+        />
+      </section>
       <section className="card stats">
         <h2>{t("Mes créations")}</h2>
         {products.length === 0 ? (

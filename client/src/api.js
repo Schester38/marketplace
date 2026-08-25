@@ -231,8 +231,11 @@ export const api = {
   adminSendNewsletter: (payload) =>
     adminRequest("/newsletter/send", { method: "POST", body: JSON.stringify(payload) }),
   flashPromotions: () => request("/flash-promotions"),
+  myFlashPromotions: () => request("/flash-promotions/mine"),
   createFlashPromotion: (payload) =>
     request("/flash-promotions", { method: "POST", body: JSON.stringify(payload) }),
+  deleteFlashPromotion: (id) =>
+    request(`/flash-promotions/${id}`, { method: "DELETE" }),
   trending: () => request("/metrics/trending"),
   createDonation: (payload) =>
     request("/donations", { method: "POST", body: JSON.stringify(payload) }),
