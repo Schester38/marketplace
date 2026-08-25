@@ -380,6 +380,11 @@ export default function LivreurDashboard() {
                   <span>📱 {t("Par Mobile")}</span>
                 </label>
               </div>
+              <p className="hint" style={{ marginTop: 10 }}>
+                {t(
+                  "Les paiements en ligne sont traités via Ikeepay. Les frais de traitement (environ 6%) sont déduits par Ikeepay sur chaque transaction."
+                )}
+              </p>
               <div className="row2" style={{ marginTop: 14 }}>
                 <button className="btn btn-primary" disabled={submitting}>
                   {submitting ? "…" : `✅ ${t("Confirmer l'Achat")}`}

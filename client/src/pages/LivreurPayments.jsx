@@ -87,6 +87,11 @@ export default function LivreurPayments() {
               "C'est sur ce portefeuille que vos frais de livraison seront reversés automatiquement après chaque livraison payée en ligne."
             )}
           </p>
+          <p className="hint" style={{ marginTop: 8 }}>
+            {t(
+              "Les paiements automatiques sont traités via Ikeepay. Les frais de traitement (environ 6%) sont déduits par Ikeepay sur chaque transaction. Les montants que vous recevez correspondent aux frais calculés par Mboppi, nettes des frais Ikeepay."
+            )}
+          </p>
         </div>
       </section>
 
