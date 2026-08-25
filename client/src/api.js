@@ -112,6 +112,16 @@ export const api = {
     request(`/sales/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   livreurSales: (shopCode) =>
     request("/sales/livreur" + (shopCode ? `?shop_code=${encodeURIComponent(shopCode)}` : "")),
+  // Annuaire des livreurs pour les boutiques (/shop/livreurs)
+  listLivreurs: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+      )
+    ).toString();
+    return request("/livreurs" + (qs ? `?${qs}` : ""));
+  },
+  livreurOptions: () => request("/livreurs/options"),
   deliverSale: (id, payload) =>
     request(`/sales/${id}/deliver`, { method: "POST", body: JSON.stringify(payload) }),
   deleteDeliveredSale: (id) => request(`/sales/${id}/delivered`, { method: "DELETE" }),
