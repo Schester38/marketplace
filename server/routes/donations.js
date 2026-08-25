@@ -91,10 +91,23 @@ router.post(
       });
     } catch (error) {
       // Repli : checkout hébergé iKeePay (le client choisit son opérateur).
-      console.error("[ikeepay] payin dons rejeté, repli checkout hébergé :", error.message);
-      const link = inlineCheckoutUrl({ amount: amt, currency, orderId: reference });
+      console.error(
+        "[ikeepay] payin dons rejeté :",
+        error.statusCode,
+        error.message,
+        JSON.stringify(error.providerPayload || null)
+      );
+      let link = null;
+      try {
+        link = inlineCheckoutUrl({ amount: amt, currency, orderId: reference });
+        if (link) {
+          await q("UPDATE donations SET payment_link = $1 WHERE id = $2", [link, created.id]);
+        }
+      } catch (fallbackError) {
+        console.error("[ikeepay] repli dons en échec :", fallbackError.message);
+        link = null;
+      }
       if (link) {
-        await q("UPDATE donations SET payment_link = $1 WHERE id = $2", [link, created.id]);
         return res.status(201).json({
           ok: true,
           donation_id: created.id,
@@ -103,8 +116,17 @@ router.post(
           fallback: true,
         });
       }
-      await q("UPDATE donations SET status = 'failed' WHERE id = $1", [created.id]);
-      throw error;
+      try {
+        await q("UPDATE donations SET status = 'failed' WHERE id = $1", [created.id]);
+      } catch {}
+      const status =
+        Number(error.statusCode) >= 400 && Number(error.statusCode) < 600
+          ? Number(error.statusCode)
+          : 502;
+      return res.status(status).json({
+        error: error.message || "Initialisation du paiement impossible",
+        detail: error.providerPayload || null,
+      });
     }
   })
 );

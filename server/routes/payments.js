@@ -89,18 +89,31 @@ router.post(
         .json({ ok: true, payment_link: link, external_reference: external, provider: result });
     } catch (error) {
       // Repli : checkout hébergé iKeePay (le client choisit son opérateur).
-      console.error("[ikeepay] payin adhésion rejeté, repli checkout hébergé :", error.message);
-      const fallbackLink = inlineCheckoutUrl({
-        amount: fee,
-        currency: user.country === "Côte d'Ivoire" ? "XOF" : currencyForCountry(country),
-        orderId: external,
-        email: user.email,
-      });
+      console.error(
+        "[ikeepay] payin adhésion rejeté :",
+        error.statusCode,
+        error.message,
+        JSON.stringify(error.providerPayload || null)
+      );
+      let fallbackLink = null;
+      try {
+        fallbackLink = inlineCheckoutUrl({
+          amount: fee,
+          currency: user.country === "Côte d'Ivoire" ? "XOF" : currencyForCountry(country),
+          orderId: external,
+          email: user.email,
+        });
+        if (fallbackLink) {
+          await q("UPDATE membership_payments SET payment_link = $1 WHERE id = $2", [
+            fallbackLink,
+            created.id,
+          ]);
+        }
+      } catch (fallbackError) {
+        console.error("[ikeepay] repli adhésion en échec :", fallbackError.message);
+        fallbackLink = null;
+      }
       if (fallbackLink) {
-        await q("UPDATE membership_payments SET payment_link = $1 WHERE id = $2", [
-          fallbackLink,
-          created.id,
-        ]);
         return res.status(201).json({
           ok: true,
           payment_link: fallbackLink,
@@ -108,11 +121,20 @@ router.post(
           fallback: true,
         });
       }
-      await q("UPDATE membership_payments SET status = 'failed', error = $1 WHERE id = $2", [
-        error.message,
-        created.id,
-      ]);
-      throw error;
+      try {
+        await q("UPDATE membership_payments SET status = 'failed', error = $1 WHERE id = $2", [
+          error.message,
+          created.id,
+        ]);
+      } catch {}
+      const status =
+        Number(error.statusCode) >= 400 && Number(error.statusCode) < 600
+          ? Number(error.statusCode)
+          : 502;
+      return res.status(status).json({
+        error: error.message || "Initialisation du paiement impossible",
+        detail: error.providerPayload || null,
+      });
     }
   })
 );
@@ -165,25 +187,48 @@ router.post(
       });
     } catch (error) {
       // Repli : checkout hébergé iKeePay (le client choisit son opérateur).
-      console.error("[ikeepay] payin vente rejeté, repli checkout hébergé :", error.message);
-      const fallbackLink = inlineCheckoutUrl({
-        amount: saleAmount,
-        currency: saleCurrency,
-        orderId: externalReference,
-        email: req.user?.email,
-      });
-      await q(
-        `UPDATE sales SET online_payment = TRUE, payment_status = 'pending', payment_provider = 'ikeepay',
-         payment_external_reference = $1, payment_link = $2, payment_country = $3, payment_operator = $4,
-         payment_error = CASE WHEN $2 IS NULL THEN $6 ELSE NULL END WHERE id = $5`,
-        [externalReference, fallbackLink, country, operator, sale.id, error.message]
+      console.error(
+        "[ikeepay] payin vente rejeté :",
+        error.statusCode,
+        error.message,
+        JSON.stringify(error.providerPayload || null)
       );
-      if (!fallbackLink) throw error;
-      return res.status(201).json({
-        ok: true,
-        external_reference: externalReference,
-        payment_link: fallbackLink,
-        fallback: true,
+      let fallbackLink = null;
+      try {
+        fallbackLink = inlineCheckoutUrl({
+          amount: saleAmount,
+          currency: saleCurrency,
+          orderId: externalReference,
+          email: req.user?.email,
+        });
+      } catch (fallbackError) {
+        console.error("[ikeepay] repli vente en échec :", fallbackError.message);
+      }
+      try {
+        await q(
+          `UPDATE sales SET online_payment = TRUE, payment_status = 'pending', payment_provider = 'ikeepay',
+           payment_external_reference = $1, payment_link = $2, payment_country = $3, payment_operator = $4,
+           payment_error = CASE WHEN $2 IS NULL THEN $6 ELSE NULL END WHERE id = $5`,
+          [externalReference, fallbackLink, country, operator, sale.id, error.message]
+        );
+      } catch (dbError) {
+        console.error("[ikeepay] mise à jour vente échouée :", dbError.message);
+      }
+      if (fallbackLink) {
+        return res.status(201).json({
+          ok: true,
+          external_reference: externalReference,
+          payment_link: fallbackLink,
+          fallback: true,
+        });
+      }
+      const status =
+        Number(error.statusCode) >= 400 && Number(error.statusCode) < 600
+          ? Number(error.statusCode)
+          : 502;
+      return res.status(status).json({
+        error: error.message || "Initialisation du paiement impossible",
+        detail: error.providerPayload || null,
       });
     }
     const paymentLink = result.payment_link || result.data?.payment_link || null;

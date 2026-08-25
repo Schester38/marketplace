@@ -96,11 +96,20 @@ async function request(path, payload) {
     error.statusCode = 503;
     throw error;
   }
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
-    body: JSON.stringify(payload),
-  });
+  let response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+      body: JSON.stringify(payload),
+    });
+  } catch (fetchError) {
+    console.error(`[ikeepay] ${path} injoignable :`, fetchError.message);
+    const error = new Error("iKeePay est momentanément injoignable. Réessaie dans un instant.");
+    error.statusCode = 502;
+    error.providerPayload = { cause: String(fetchError?.message || fetchError) };
+    throw error;
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     // Diagnostic : payload sortant + réponse brute du partenaire (logs Vercel)
