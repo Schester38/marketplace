@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { api } from "../api.js";
 import Seo from "../components/Seo.jsx";
 import PwaInstallButton from "../components/PwaInstallButton.jsx";
