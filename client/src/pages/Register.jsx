@@ -245,7 +245,7 @@ export default function Register() {
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
 
-          {(form.role === "shop" || form.role === "seller") && (
+          {(form.role === "shop" || form.role === "seller" || form.role === "creator") && (
             <div className="card" style={{ margin: "16px 0", background: "#f8fafc" }}>
               <strong>{t("Moyen de paiement")}</strong>
               <p className="hint">
@@ -280,7 +280,9 @@ export default function Register() {
                 {t(
                   form.role === "shop"
                     ? "Adhésion boutique : 2 500 XAF pour 30 jours."
-                    : "Adhésion vendeur : 1 500 XAF pour 30 jours."
+                    : form.role === "seller"
+                      ? "Adhésion vendeur : 1 500 XAF pour 30 jours."
+                      : "Adhésion créateur : 2 500 XAF pour 30 jours."
                 )}
               </p>
             </div>
