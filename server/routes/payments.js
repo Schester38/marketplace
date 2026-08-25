@@ -121,6 +121,11 @@ router.post(
           fallback: true,
         });
       }
+      const fallbackReason =
+        process.env.IKEEPAY_PUBLIC_KEY || process.env.IKE_PUBLIC_KEY
+          ? "Construction du lien impossible"
+          : "Clé publique iKeePay absente du déploiement (variable IKEEPAY_PUBLIC_KEY)";
+      console.error("[ikeepay] repli adhésion indisponible :", fallbackReason);
       try {
         await q("UPDATE membership_payments SET status = 'failed', error = $1 WHERE id = $2", [
           error.message,
@@ -134,6 +139,7 @@ router.post(
       return res.status(status).json({
         error: error.message || "Initialisation du paiement impossible",
         detail: error.providerPayload || null,
+        fallback_reason: fallbackReason,
       });
     }
   })
@@ -222,6 +228,11 @@ router.post(
           fallback: true,
         });
       }
+      const fallbackReason =
+        process.env.IKEEPAY_PUBLIC_KEY || process.env.IKE_PUBLIC_KEY
+          ? "Construction du lien impossible"
+          : "Clé publique iKeePay absente du déploiement (variable IKEEPAY_PUBLIC_KEY)";
+      console.error("[ikeepay] repli vente indisponible :", fallbackReason);
       const status =
         Number(error.statusCode) >= 400 && Number(error.statusCode) < 600
           ? Number(error.statusCode)
@@ -229,6 +240,7 @@ router.post(
       return res.status(status).json({
         error: error.message || "Initialisation du paiement impossible",
         detail: error.providerPayload || null,
+        fallback_reason: fallbackReason,
       });
     }
     const paymentLink = result.payment_link || result.data?.payment_link || null;

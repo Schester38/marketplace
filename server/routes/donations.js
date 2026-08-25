@@ -116,6 +116,11 @@ router.post(
           fallback: true,
         });
       }
+      const fallbackReason =
+        process.env.IKEEPAY_PUBLIC_KEY || process.env.IKE_PUBLIC_KEY
+          ? "Construction du lien impossible"
+          : "Clé publique iKeePay absente du déploiement (variable IKEEPAY_PUBLIC_KEY)";
+      console.error("[ikeepay] repli dons indisponible :", fallbackReason);
       try {
         await q("UPDATE donations SET status = 'failed' WHERE id = $1", [created.id]);
       } catch {}
@@ -126,6 +131,7 @@ router.post(
       return res.status(status).json({
         error: error.message || "Initialisation du paiement impossible",
         detail: error.providerPayload || null,
+        fallback_reason: fallbackReason,
       });
     }
   })
