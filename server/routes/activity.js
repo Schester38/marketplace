@@ -6,6 +6,18 @@ const router = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
+const ACTIVITY_CACHE_TTL_MS = 30 * 1000;
+const activityCache = new Map();
+
+function activityCacheKey(req, params) {
+  const qs = new URLSearchParams(
+    Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+    )
+  ).toString();
+  return `${req.user.id}:${qs}`;
+}
+
 function startOfWeek(d) {
   const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
   const day = date.getUTCDay();
@@ -67,7 +79,13 @@ router.get(
   "/",
   authRequired,
   ah(async (req, res) => {
-    const { from, to, period } = req.query || {};
+    const params = { ...req.query };
+    const key = activityCacheKey(req, params);
+    const cached = activityCache.get(key);
+    if (cached && Date.now() - cached.ts < ACTIVITY_CACHE_TTL_MS) {
+      return res.json(cached.data);
+    }
+    const { from, to, period } = params || {};
     const validPeriod = ["daily", "weekly", "monthly"].includes(String(period || ""));
     const p = validPeriod ? String(period) : "daily";
     const today = new Date();
@@ -149,7 +167,9 @@ router.get(
       orders_total: Math.round(b.orders_total * 100) / 100,
       products_count: b.products_count,
     }));
-    res.json({ period: p, rows });
+    const data = { period: p, rows };
+    activityCache.set(key, { ts: Date.now(), data });
+    res.json(data);
   })
 );
 
@@ -157,7 +177,13 @@ router.get(
   "/events",
   authRequired,
   ah(async (req, res) => {
-    const { from, to } = req.query || {};
+    const params = { ...req.query };
+    const key = activityCacheKey(req, params);
+    const cached = activityCache.get(key);
+    if (cached && Date.now() - cached.ts < ACTIVITY_CACHE_TTL_MS) {
+      return res.json(cached.data);
+    }
+    const { from, to } = params || {};
     const today = new Date();
     const end = to ? new Date(to) : today;
     const start = from
@@ -260,7 +286,9 @@ router.get(
     }
 
     events.sort((a, b) => a.date.localeCompare(b.date));
-    res.json({ events });
+    const data = { events };
+    activityCache.set(key, { ts: Date.now(), data });
+    res.json(data);
   })
 );
 

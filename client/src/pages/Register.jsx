@@ -127,6 +127,24 @@ export default function Register() {
             emptyLabel={t("Aucun résultat")}
           />
 
+          {(refCode || refSeller) && (
+            <div className="card" style={{ marginBottom: 16, padding: 16, background: "#e8f5e9" }}>
+              <p style={{ margin: 0, fontWeight: 600 }}>
+                {refCode
+                  ? t("Parrainage client détecté : votre rôle sera « Client ».")
+                  : t("Parrainage vendeur détecté : votre rôle sera « Vendeur ».")}
+              </p>
+              <p className="hint" style={{ margin: "4px 0 0" }}>
+                {refCode
+                  ? t(
+                      "Ce lien vous a été partagé par un vendeur Mboppi. L'inscription est gratuite et votre compte sera créé en tant que client affilié."
+                    )
+                  : t(
+                      "Ce lien vous a été partagé par un vendeur Mboppi. Votre compte sera créé en tant que vendeur et vous devrez payer l'adhésion."
+                    )}
+              </p>
+            </div>
+          )}
           {!refCode && !refSeller && (
             <>
               <label>{t("Je veux m'inscrire en tant que :")}</label>

@@ -181,6 +181,11 @@ router.post(
       ]
     );
     const user = (await q("SELECT * FROM users WHERE id = $1", [created[0].id]))[0];
+    await logAudit(
+      null,
+      "register",
+      `user=${user.id} email=${user.email} role=${user.role} finalRole=${finalRole} ref=${ref || ""} ref_seller=${ref_seller || ""}`
+    );
 
     if (finalRole === "seller" && walletName && walletValue) {
       try {
