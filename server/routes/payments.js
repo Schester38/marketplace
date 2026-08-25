@@ -178,7 +178,8 @@ router.post(
     const membership = (
       await q("SELECT * FROM membership_payments WHERE external_reference = $1", [external])
     )[0];
-    const platformPayout = external.startsWith("MBOPPI_ACTIVATION:");
+    const platformPayout =
+      external.startsWith("MBOPPI_ACTIVATION:") || external.startsWith("MBOPPI_SHARE:");
     const donation = (
       await q("SELECT * FROM donations WHERE external_reference = $1", [external])
     )[0];
@@ -191,6 +192,10 @@ router.post(
         await q(
           "UPDATE automatic_payouts SET status = 'failed', provider_reference = COALESCE($1, provider_reference), error = $2 WHERE external_reference = $3",
           [data.provider_reference || null, "Le prestataire a refusé le retrait", external]
+        );
+        await q(
+          "UPDATE platform_payouts SET status = 'failed', provider_reference = COALESCE($1, provider_reference), error = $2 WHERE external_reference = $3 AND status <> 'completed'",
+          [data.provider_reference || null, "Le prestataire a refusé le reversement Mboppi", external]
         );
         payoutResult = { ok: false, error: "Le prestataire a refusé le retrait" };
       } else if (payoutStatus === "completed") {
@@ -217,6 +222,16 @@ router.post(
           donation.id,
         ]
       );
+      // Règle Mboppi : 90 % de chaque don encaissé via Ikeepay est reversé sur
+      // les portefeuilles Mboppi (les 10 % couvrent les frais de traitement).
+      if (status === "completed") {
+        await payoutPlatformShare({
+          kind: "donation",
+          sourceId: donation.id,
+          amount: Number(donation.amount),
+          currency: donation.currency,
+        });
+      }
       await q("UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1", [logged[0].id]);
     } else if (membership && String(data.type || "").toLowerCase() === "payin") {
       const status = String(data.status || "").toLowerCase();

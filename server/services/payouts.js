@@ -193,22 +193,40 @@ export async function completeMembershipPayment(paymentId, providerReference) {
     `UPDATE users SET membership_paid_at = COALESCE(membership_paid_at, now()), membership_expires_at = GREATEST(COALESCE(membership_expires_at, now()), now()) + interval '30 days', membership_payment_reference = $1 WHERE id = $2`,
     [payment.external_reference, user.id]
   );
+  // Règle Mboppi : 90 % des frais d'adhésion sont reversés sur les portefeuilles
+  // Mboppi (les 10 % couvrent les frais de traitement Ikeepay).
+  const membershipShare = await payoutPlatformShare({
+    kind: "membership",
+    sourceId: payment.id,
+    amount: Number(payment.amount),
+    currency: payment.currency,
+  });
   if ((user.role === "seller" || user.role === "creator") && user.referred_by) {
     const referrer = (
       await q("SELECT id, country FROM users WHERE id = $1 AND role = 'seller'", [user.referred_by])
     )[0];
     if (referrer) {
       const methods = await methodsFor(referrer.id, "seller");
-      await providerPayout({
+      const referralPayout = await providerPayout({
         user: referrer,
         methods,
         amount: 1000,
         kind: "activation_referral",
         reference: `ACTIVATION_REFERRAL:${user.id}`,
       });
+      // Part plateforme : les 500 XAF de l'activation d'un vendeur/créateur
+      // affilié suivent la même logique (90 % versés nets aux portefeuilles Mboppi).
+      if (referralPayout.ok) {
+        await payoutPlatformShare({
+          kind: "activation_referral",
+          sourceId: user.id,
+          amount: 500,
+          currency: payment.currency,
+        });
+      }
     }
   }
-  return { ok: true };
+  return { ok: true, membershipShare };
 }
 
 export async function completePlatformPayout(reference, providerReference) {
@@ -223,16 +241,23 @@ export async function completePlatformPayout(reference, providerReference) {
     : { ok: false, error: "Reversement plateforme introuvable" };
 }
 
-export async function payoutPlatformShare(userId, amount) {
+// Reversement vers les portefeuilles Mboppi : règle « sortie = 90 % ».
+// Appelé pour les frais d'adhésion, les dons et la part plateforme (500 XAF)
+// de l'activation d'un vendeur/créateur affilié.
+export async function payoutPlatformShare({ kind, sourceId, amount, currency }) {
   const country = process.env.MBOPPI_PAYOUT_COUNTRY || "CM";
-  const currency = currencyForCountry(country);
+  const targetCurrency = currency || currencyForCountry(country);
   const phone = normalizePhone(process.env.MBOPPI_PAYOUT_PHONE || "+237699486146", country);
   const operator = String(process.env.MBOPPI_PAYOUT_OPERATOR || "ORANGE")
     .trim()
     .toUpperCase();
-  const reference = `MBOPPI_ACTIVATION:${userId}`;
+  const reference = `MBOPPI_SHARE:${kind}:${sourceId}`;
+  const amt = Math.round(Number(amount || 0) * 100) / 100;
+  if (!(amt > 0)) return { ok: false, error: "Montant de reversement invalide" };
 
-  const fee = Math.round(amount * IKEEPAY_FEE_RATE * 100) / 100;
+  // Sortie = 90 % : seul le net part vers le portefeuille Mboppi.
+  const fee = Math.round(amt * IKEEPAY_FEE_RATE * 100) / 100;
+  const netAmount = Math.round((amt - fee) * 100) / 100;
 
   const existing = (
     await q("SELECT * FROM platform_payouts WHERE external_reference = $1", [reference])
@@ -242,13 +267,13 @@ export async function payoutPlatformShare(userId, amount) {
   if (!existing) {
     await q(
       "INSERT INTO platform_payouts (external_reference, amount, currency, fee) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
-      [reference, amount, currency, fee]
+      [reference, amt, targetCurrency, fee]
     );
   }
   try {
     const result = await payout({
-      amount,
-      currency,
+      amount: netAmount,
+      currency: targetCurrency,
       country,
       phoneNumber: phone,
       operator,
@@ -262,7 +287,15 @@ export async function payoutPlatformShare(userId, amount) {
         [result.provider_reference || result.data?.provider_reference || null, reference]
       );
     }
-    return { ok: true, pending: status !== "completed", operator, provider: result, amount, fee };
+    return {
+      ok: true,
+      pending: status !== "completed",
+      operator,
+      provider: result,
+      amount: amt,
+      fee,
+      netAmount,
+    };
   } catch (error) {
     await q(
       "UPDATE platform_payouts SET status = 'failed', error = $1 WHERE external_reference = $2",
