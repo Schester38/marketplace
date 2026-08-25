@@ -13,8 +13,6 @@ import { formatMoney } from "../components/ProductCard.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
-import { addIkeepayFee, formatIkeepayFee } from "../utils.js";
-
 export default function PurchasePage() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -327,15 +325,12 @@ export default function PurchasePage() {
                       </strong>
                     </p>
                     <p className="hint">
-                      {t("Frais Ikeepay (6%)")} :{" "}
-                      <strong>
-                        {formatMoney(formatIkeepayFee(displayPrice))} {symbol}
-                      </strong>
+                      {t("Aucun frais supplémentaire : vous payez le prix normal.")}
                     </p>
                     <p>
                       <span className="label">{t("Total à payer")} :</span>{" "}
                       <strong className="price-total">
-                        {formatMoney(addIkeepayFee(displayPrice))} {symbol}
+                        {formatMoney(displayPrice)} {symbol}
                       </strong>
                     </p>
                   </div>

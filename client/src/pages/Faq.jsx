@@ -21,7 +21,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment est calculée ma commission ?",
-    a: "La boutique choisit un pourcentage de commission pour chaque produit. Ce pourcentage est affiché sur la fiche produit. Le vendeur reçoit le montant total moins la commission de la boutique. Votre commission est reversée automatiquement sur le numéro de mobile money enregistré dans votre espace. Pour les paiements en ligne, les frais Ikeepay (environ 6%) sont déduits par le prestataire.",
+    a: "La boutique choisit un pourcentage de commission pour chaque produit. Ce pourcentage est affiché sur la fiche produit. Le vendeur reçoit le montant total moins la commission de la boutique. Votre commission est reversée automatiquement sur le numéro de mobile money enregistré dans votre espace. Pour les paiements en ligne, les frais de traitement Ikeepay (10%) sont déduits des reversements.",
   },
   {
     q: "Comment recevoir mes gains ?",

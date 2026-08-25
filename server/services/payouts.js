@@ -9,6 +9,8 @@ import {
 import { sendPush } from "../push.js";
 
 export const REFERRAL_AUTO_PAY_MIN = 5000;
+// Frais prélevés sur chaque reversement SORTANT Ikeepay :
+// le bénéficiaire reçoit 90 % du montant (règle Mboppi : entrée 100 %, sortie 90 %).
 const IKEEPAY_FEE_RATE = 0.1;
 
 const OPERATOR_MAP = [
@@ -78,7 +80,9 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
   )[0];
   if (existing?.status === "completed") return { ok: true, already: true };
 
+  // Sortie = 90 % du montant : Ikeepay ne transfère que le net au bénéficiaire.
   const fee = Math.round(amount * IKEEPAY_FEE_RATE * 100) / 100;
+  const netAmount = Math.round((amount - fee) * 100) / 100;
 
   if (!existing) {
     await q(
@@ -89,7 +93,7 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
   }
   try {
     const result = await payout({
-      amount,
+      amount: netAmount,
       currency: target.currency,
       country: target.country,
       phoneNumber: target.phoneNumber,
