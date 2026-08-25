@@ -74,7 +74,7 @@ router.post(
       const result = await payin({
         amount,
         currency,
-        country,
+        country: countryCodeVal,
         phoneNumber: phone,
         operator,
         external_reference: reference,

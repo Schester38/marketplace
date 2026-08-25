@@ -111,12 +111,83 @@ async function request(path, payload) {
   return data;
 }
 
+// L'API iKeePay valide en production le paramètre `provider` (alias du champ
+// `operator` documenté). On normalise le nom de l'opérateur et on envoie les
+// deux champs avec la même valeur pour couvrir les deux signatures.
+const PROVIDER_ALIASES = {
+  "ORANGE MONEY": "ORANGE",
+  ORANGE: "ORANGE",
+  "MTN MOBILE MONEY": "MTN",
+  "MTN MONEY": "MTN",
+  MTN: "MTN",
+  "MTN MOMO": "MTN MOMO",
+  MOMO: "MTN MOMO",
+  MTN_MOMO: "MTN MOMO",
+  WAVE: "WAVE",
+  MOOV: "MOOV",
+  "MOOV FLOOZ": "MOOV",
+  "MOOV MONEY": "MOOV",
+  FLOOZ: "MOOV",
+  MOBICASH: "MOBICASH",
+  "T-MONEY": "MOBICASH",
+  "T MONEY": "MOBICASH",
+  AIRTEL: "AIRTEL",
+  "AIRTEL MONEY": "AIRTEL",
+  FREE: "FREE",
+  "FREE MONEY": "FREE",
+  VODACOM: "VODACOM",
+  "VODACOM MONEY": "VODACOM",
+  "M-PESA": "MPESA",
+  MPESA: "MPESA",
+  MPESA_MOMO: "MPESA",
+  HALOPESA: "HALOPESA",
+  TIGO: "TIGO",
+  ZAMTEL: "ZAMTEL",
+  TELECEL: "TELECEL",
+  OPAY: "OPAY",
+  MONIEPOINT: "MONIEPOINT",
+};
+
+export function normalizeProvider(operator) {
+  const key = String(operator || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, " ");
+  return PROVIDER_ALIASES[key] || key;
+}
+
+// Codes provider réels par pays/opérateur, extraits du checkout officiel
+// ikeepay.com (leur propre page de paiement envoie ces valeurs comme
+// `provider`, ex. Cameroun → ORANGE_CMR / MTN_MOMO_CMR).
+const PROVIDER_CODES_BY_COUNTRY = {
+  CM: { ORANGE: "ORANGE_CMR", MTN: "MTN_MOMO_CMR" },
+  CI: { ORANGE: "ORANGE_CIV", MTN: "MTN_MOMO_CIV" },
+  BJ: { MOOV: "MOOV_BEN", MTN: "MTN_MOMO_BEN" },
+  CD: { AIRTEL: "AIRTEL_COD", ORANGE: "ORANGE_COD", VODACOM: "VODACOM_MPESA_COD" },
+  GA: { AIRTEL: "AIRTEL_GAB" },
+  KE: { MPESA: "MPESA_KEN" },
+  CG: { AIRTEL: "AIRTEL_COG", MTN: "MTN_MOMO_COG" },
+  RW: { AIRTEL: "AIRTEL_RWA", "MTN MOMO": "MTN_MOMO_RWA", MTN: "MTN_MOMO_RWA" },
+  SL: { ORANGE: "ORANGE_SLE" },
+  UG: { AIRTEL: "AIRTEL_UGA", "MTN MOMO": "MTN_MOMO_UGA", MTN: "MTN_MOMO_UGA" },
+  ZM: { AIRTEL: "AIRTEL_ZMB", MTN: "MTN_MOMO_ZMB", ZAMTEL: "ZAMTEL_ZMB" },
+  SN: { ORANGE: "ORANGE_SEN", FREE: "FREE_SEN" },
+};
+
+function withProvider(payload = {}) {
+  const operator = normalizeProvider(payload.operator ?? payload.provider);
+  const country = countryCode(payload.country);
+  const codes = PROVIDER_CODES_BY_COUNTRY[country] || {};
+  const provider = codes[operator] || operator;
+  return { ...payload, operator, provider };
+}
+
 export function payin(payload) {
-  return request("/h2h-payin", payload);
+  return request("/h2h-payin", withProvider(payload));
 }
 
 export function payout(payload) {
-  return request("/h2h-payout", payload);
+  return request("/h2h-payout", withProvider(payload));
 }
 
 export function providerStatus(result) {
