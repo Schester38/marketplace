@@ -28,7 +28,11 @@ router.post(
   authRequired,
   ah(async (req, res) => {
     const user = (await q("SELECT * FROM users WHERE id = $1", [req.user.id]))[0];
-    const fee = user?.role === "shop" ? 2500 : user?.role === "seller" ? 1500 : 0;
+    // Adhésions : boutique 2 500 XAF, vendeur 1 500 XAF, créateur 2 500 XAF
+    // (MEMBERSHIP_FEES). Sans le créateur ici, un créateur fermé par l'admin
+    // ne pourrait jamais payer son adhésion et resterait bloqué.
+    const fee =
+      user?.role === "shop" ? 2500 : user?.role === "seller" ? 1500 : user?.role === "creator" ? 2500 : 0;
     if (!user || !fee)
       return res.status(403).json({ error: "Ce rôle ne nécessite pas d’adhésion" });
     if (

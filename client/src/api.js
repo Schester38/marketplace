@@ -9,6 +9,11 @@ async function request(path, options = {}, retries = 1) {
     const res = await fetch(API + path, { ...options, headers });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      // Accès fermé par l'admin (« Fermer ») ou adhésion expirée : signaler
+      // globalement pour que AuthProvider redirige vers /adhesion.
+      if (res.status === 402 && data.code === "MEMBERSHIP_REQUIRED") {
+        window.dispatchEvent(new CustomEvent("membership-required"));
+      }
       const err = new Error(data.error || `Erreur ${res.status}`);
       err.status = res.status;
       err.code = data.code;
@@ -180,12 +185,27 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ admin_approved: adminApproved }),
     }),
-  adminDeleteUser: (id) => adminRequest(`/admin/users/${id}`, { method: "DELETE" }),
+  // NB : pas de suppression de comptes utilisateurs (boutons « Supprimer »
+  // sans effet sur les utilisateurs) — seule la suppression des produits
+  // publiés est réelle.
   adminProducts: () => adminRequest("/admin/products"),
   adminDeleteProduct: (id) => adminRequest(`/admin/products/${id}`, { method: "DELETE" }),
   adminMessages: () => adminRequest("/admin/messages"),
   adminSendMessage: (payload) =>
     adminRequest("/admin/messages", { method: "POST", body: JSON.stringify(payload) }),
+  adminDeleteMessage: (id) => adminRequest(`/admin/messages/${id}`, { method: "DELETE" }),
+  adminResendMessage: (id) => adminRequest(`/admin/messages/${id}/resend`, { method: "POST" }),
+  // Masquages doux (vue admin uniquement, utilisateurs non affectés)
+  adminHideSale: (id) => adminRequest(`/admin/sales/${id}`, { method: "DELETE" }),
+  adminRestoreSale: (id) => adminRequest(`/admin/sales/${id}/restore`, { method: "POST" }),
+  adminHideStatus: (status) =>
+    adminRequest(`/admin/statuses/${encodeURIComponent(status)}`, { method: "DELETE" }),
+  adminRestoreStatus: (status) =>
+    adminRequest(`/admin/statuses/${encodeURIComponent(status)}/restore`, { method: "POST" }),
+  adminHideShop: (id) => adminRequest(`/admin/shops/${id}`, { method: "DELETE" }),
+  adminRestoreShop: (id) => adminRequest(`/admin/shops/${id}/restore`, { method: "POST" }),
+  adminHideSeller: (id) => adminRequest(`/admin/sellers/${id}`, { method: "DELETE" }),
+  adminRestoreSeller: (id) => adminRequest(`/admin/sellers/${id}/restore`, { method: "POST" }),
   adminLogs: (limit = 100) => adminRequest(`/logs/list?limit=${limit}`),
   adminVisits: (days = 30, country = "") =>
     adminRequest(

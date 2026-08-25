@@ -68,3 +68,18 @@ export function compressImage(file, maxDim = 800, quality = 0.72) {
     reader.readAsDataURL(file);
   });
 }
+
+// Frais Ikeepay (6 %) affichés à l'acheteur sur la page d'achat automatique.
+export const IKEEPAY_FEE_RATE = 0.06;
+
+export function ikeepayFee(price) {
+  return Math.ceil(Number(price || 0) * IKEEPAY_FEE_RATE);
+}
+
+export function formatIkeepayFee(price) {
+  return ikeepayFee(price);
+}
+
+export function addIkeepayFee(price) {
+  return Math.ceil(Number(price || 0) * (1 + IKEEPAY_FEE_RATE));
+}

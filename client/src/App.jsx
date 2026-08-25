@@ -165,6 +165,33 @@ export function AuthProvider({ children }) {
   }, [user, navigate]);
 
   const userIdRef = useRef(user?.id);
+
+  // Accès fermé par l'admin (bouton « Fermer ») ou adhésion expirée : une API
+  // a répondu 402 MEMBERSHIP_REQUIRED → rafraîchir la session puis rediriger
+  // vers la page de paiement de l'adhésion (/adhesion, valable 30 jours).
+  useEffect(() => {
+    let cancelled = false;
+    const onMembershipRequired = async () => {
+      if (window.location.pathname.startsWith("/admin")) return;
+      try {
+        const d = await api.me();
+        const u = d?.user;
+        if (!cancelled && u?.id) {
+          setUser(u);
+          localStorage.setItem("user", JSON.stringify(u));
+        }
+      } catch {
+        /* session peut-être expirée : on redirige quand même */
+      }
+      if (!cancelled) navigate("/adhesion", { replace: true });
+    };
+    window.addEventListener("membership-required", onMembershipRequired);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("membership-required", onMembershipRequired);
+    };
+  }, [navigate]);
+
   useEffect(() => {
     if (!user) return;
     if (userIdRef.current === user.id) return;

@@ -82,6 +82,10 @@ export default function Admin() {
         .catch(onErr);
       api.adminTransactions().then(setTransactions).catch(onErr);
       api
+        .adminMessages()
+        .then((d) => setMessages(d.messages))
+        .catch(onErr);
+      api
         .adminNewsletter()
         .then((d) => setNewsletter(d))
         .catch(() => {});
@@ -127,7 +131,6 @@ export default function Admin() {
     setProducts(null);
     setTransactions(null);
     setMessages(null);
-    setLogs(null);
     setNewsletter(null);
     setVisits(null);
     setNlOk("");
@@ -149,16 +152,6 @@ export default function Admin() {
       setUsers((us) =>
         us.map((x) => (x.id === u.id ? { ...x, admin_approved: !x.admin_approved } : x))
       );
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const removeUser = async (u) => {
-    if (!window.confirm(t("Supprimer le compte « {name} » ?", { name: u.name }))) return;
-    try {
-      await api.adminDeleteUser(u.id);
-      setUsers((us) => us.filter((x) => x.id !== u.id));
     } catch (err) {
       setError(err.message);
     }
@@ -206,6 +199,7 @@ export default function Admin() {
     if (m.target === "shop") return t("Boutiques");
     if (m.target === "seller") return t("Vendeurs");
     if (m.target === "client") return t("Clients");
+    if (m.target === "creator") return t("Créateurs");
     if (m.target === "user") return `${t("Utilisateur")} : ${m.user_name || "—"}`;
     return m.target;
   };
@@ -595,6 +589,15 @@ export default function Admin() {
             />
             <span>{t("Aux clients")}</span>
           </label>
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="msg-target"
+              checked={msgTarget === "creator"}
+              onChange={() => setMsgTarget("creator")}
+            />
+            <span>{t("Aux créateurs")}</span>
+          </label>
         </div>
         {msgTarget === "user" && (
           <select
@@ -803,14 +806,6 @@ export default function Admin() {
                     ) : (
                       <span className="hint">—</span>
                     )}
-                    <button
-                      type="button"
-                      className="btn btn-small btn-danger"
-                      style={{ marginLeft: 6 }}
-                      onClick={() => removeUser(u)}
-                    >
-                      {t("Supprimer")}
-                    </button>
                   </td>
                 </tr>
               ))

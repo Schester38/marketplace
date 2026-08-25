@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
@@ -7,36 +7,33 @@ export default function AdminMessagePopup() {
   const { user } = useAuth();
   const { t } = useLang();
   const [message, setMessage] = useState(null);
-  const [done, setDone] = useState(false);
-  const pendingRef = useRef(false);
 
-  useEffect(() => {
-    if (!user || done) return;
-    if (pendingRef.current) return;
-    pendingRef.current = true;
+  const load = useCallback(() => {
+    if (!user) return;
     let cancelled = false;
     api
       .popupMessage()
       .then((d) => {
-        if (!cancelled && d.message) setMessage(d.message);
+        if (!cancelled) setMessage(d.message || null);
       })
-      .catch(() => {})
-      .finally(() => {
-        pendingRef.current = false;
-      });
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [user, done]);
+  }, [user]);
 
-  if (!user || !message || done) return null;
+  // Affiché à l'ouverture de session ou après une nouvelle inscription :
+  // dès que `user` existe, on récupère le prochain message non lu.
+  useEffect(() => load(), [load]);
+
+  if (!user || !message) return null;
 
   const close = () => {
-    if (!message) return;
     const id = message.id;
     setMessage(null);
-    setDone(true);
-    api.ackMessage(id).catch(() => {});
+    if (id) api.ackMessage(id).catch(() => {});
+    // S'il reste des messages non lus, afficher le suivant.
+    load();
   };
 
   return (

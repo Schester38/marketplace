@@ -13,13 +13,15 @@ router.get(
   authRequired,
   ah(async (req, res) => {
     const uid = req.user.id;
+    // LEFT JOIN obligatoire : les messages "all" ont user_id NULL,
+    // une jointure interne les exclurait (popup jamais affichée).
     const rows = await q(
       `SELECT am.id, am.message, am.created_at
      FROM admin_messages am
-     JOIN users u ON u.id = am.user_id
+     LEFT JOIN users u ON u.id = am.user_id
      WHERE (am.target = 'all'
             OR (am.target = 'user' AND am.user_id = $1)
-            OR (am.target IN ('shop', 'seller', 'client')
+            OR (am.target IN ('shop', 'seller', 'client', 'creator')
                 AND am.target = u.role))
        AND am.id NOT IN (SELECT message_id FROM admin_message_reads WHERE user_id = $1)
      ORDER BY am.id DESC
@@ -41,10 +43,11 @@ router.post(
       await q(
         `SELECT am.id
        FROM admin_messages am
+       LEFT JOIN users u ON u.id = am.user_id
        WHERE am.id = $1 AND (am.target = 'all'
              OR (am.target = 'user' AND am.user_id = $2)
-             OR (am.target IN ('shop', 'seller', 'client')
-                 AND am.target = (SELECT role FROM users WHERE id = $2)))`,
+             OR (am.target IN ('shop', 'seller', 'client', 'creator')
+                 AND am.target = u.role))`,
         [id, uid]
       )
     )[0];

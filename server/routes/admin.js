@@ -541,7 +541,7 @@ router.get(
   })
 );
 
-const MSG_TARGETS = ["all", "user", "shop", "seller", "client"];
+const MSG_TARGETS = ["all", "user", "shop", "seller", "client", "creator"];
 
 router.post(
   "/messages",
@@ -594,16 +594,17 @@ router.delete(
   })
 );
 
+// NB : les boutons « Supprimer » de l'admin ne doivent pas affecter les
+// utilisateurs — seule la suppression des produits publiés est autorisée.
+// La suppression de comptes est donc désactivée (aucun compte n'est effacé).
 router.delete(
   "/users/:id",
   ah(async (req, res) => {
-    const id = Number(req.params.id);
-    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
-    if (id === 0) return res.status(400).json({ error: "Impossible de supprimer l'admin" });
-    const deleted = await q("DELETE FROM users WHERE id = $1 RETURNING id", [id]);
-    if (!deleted.length) return res.status(404).json({ error: "Utilisateur introuvable" });
-    await logAudit(req.user.id, "admin.delete_user", `user=${id}`, req.ip);
-    res.json({ ok: true });
+    await logAudit(req.user.id, "admin.delete_user_refused", `user=${req.params.id}`, req.ip);
+    return res.status(403).json({
+      error:
+        "La suppression des comptes utilisateurs est désactivée. Utilisez « Fermer » pour couper l'accès.",
+    });
   })
 );
 

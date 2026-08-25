@@ -57,7 +57,7 @@ export default function Cgu() {
           <h2>{t("4. Commandes et paiement")}</h2>
           <p>
             {t(
-              "Le paiement peut être effectué directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne collecte pas les paiements et ne prélève aucun frais de plateforme sur les transactions directes. Les paiements en ligne passent par le prestataire Ikeepay, qui prélève 10% de frais de traitement sur chaque transaction."
+              "Le paiement peut être effectué directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne collecte pas les paiements et ne prélève aucun frais de plateforme sur les transactions directes. Les paiements en ligne passent par le prestataire Ikeepay, qui prélève environ 6% de frais de traitement sur chaque transaction."
             )}
           </p>
         </div>
@@ -65,7 +65,7 @@ export default function Cgu() {
           <h2>{t("5. Paiements directs et commissions")}</h2>
           <p>
             {t(
-              "Les paiements directs sont convenus entre le client et la boutique, le vendeur ou le livreur. Les commissions sont enregistrées sur la plateforme et réglées manuellement par la boutique, sans frais de plateforme. Pour les paiements automatiques via Ikeepay, les frais de traitement de 10% sont déduits par Ikeepay ; les montants reçus par les bénéficiaires correspondent aux sommes calculées par Mboppi, nettes de ces frais."
+              "Les paiements directs sont convenus entre le client et la boutique, le vendeur ou le livreur. Les commissions sont enregistrées sur la plateforme et réglées manuellement par la boutique, sans frais de plateforme. Pour les paiements automatiques via Ikeepay, les frais de traitement d'environ 6% sont déduits par Ikeepay ; les montants reçus par les bénéficiaires correspondent aux sommes calculées par Mboppi, nettes de ces frais."
             )}
           </p>
         </div>

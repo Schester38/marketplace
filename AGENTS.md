@@ -26,8 +26,6 @@ Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiqu
 
 Les paiements peuvent être manuels (espèces, Mobile Money direct, virement bancaire) ou automatiques via Ikeepay pour les adhésions, les dons et les ventes. Les webhooks Ikeepay confirment les payins avant les payouts automatiques vers les moyens enregistrés.
 
-Pour les paiements en ligne via Ikeepay, le prestataire prélève 10% de frais de traitement sur chaque transaction. Le client paie le prix affiché (produit + livraison) sans frais supplémentaires. Chaque bénéficiaire reçoit sa part calculée par Mboppi, nette des 10% de frais Ikeepay.
-
 ### Répartition d'une vente — `server/finance.js` `computeRedistribution`
 
 `totalPrice = prix × quantité` (le prix de référence : erreur de sécurité si le client fournit un prix inférieur). Champs d'une vente : `commission` (commission vendeur), `referral_commission` (commission de parrainage 2 %), `delivery_fee` (frais de livraison, saisis par le livreur à la livraison, valeur par défaut 0).
@@ -37,7 +35,7 @@ Pour les paiements en ligne via Ikeepay, le prestataire prélève 10% de frais d
 - `referrerAmount = referralCommission` (le parrain)
 - `livreurAmount = deliveryFee` (le livreur)
 
-Reverse automatique `sendSalePayouts` (après validation manuelle, `markSalePaid`) : chaque montant > 0 est enregistré dans `wallet_transactions` **net des frais Ikeepay 10%**, vers le portefeuille Mobile Money du bénéficiaire (`payoutTargetFor` : lit `wallets` jsonb de `*_payment_methods`, priorité au wallet dont le nom contient « orange », numéro normalisé avec le préfixe pays). Sans wallet valide → pas de reverse + notification `payment_need_wallet`.
+Reverse automatique `sendSalePayouts` (après validation manuelle, `markSalePaid`) : chaque montant > 0 est enregistré dans `wallet_transactions` **sans frais**, vers le portefeuille Mobile Money du bénéficiaire (`payoutTargetFor` : lit `wallets` jsonb de `*_payment_methods`, priorité au wallet dont le nom contient « orange », numéro normalisé avec le préfixe pays). Sans wallet valide → pas de reverse + notification `payment_need_wallet`.
 
 ### Commission vendeur (2 % — PARRAINAGE DE CLIENTS AFFILIÉS)
 
@@ -45,7 +43,7 @@ Reverse automatique `sendSalePayouts` (après validation manuelle, `markSalePaid
 
 1. Un **client** s'inscrit avec le code vendeur d'un vendeur (`ref` = `seller_code`, `auth.js:63-72`) → son compte est marqué `referred_by = id_du_vendeur` et son rôle est forcé à `client`. Ce client est maintenant **client affilié** du vendeur.
 2. Quand ce **client affilié** (identifié par `req.user`, donc auth obligatoire pour déclencher le 2 %) achète un produit — `purchases.js:101-107` ou `orders.js:75-80` — alors `referralCommission = prix × quantité × 2 %` et `referred_by` est enregistré sur la vente. Le **vendeur parrain** (le référent) reçoit ces 2 %.
-3. Le 2 % **n'est pas payé vente par vente** : il s'accumule (`referral_commission` non payée, `referral_paid = false`) et est versé automatiquement quand le cumul du parrain atteint `REFERRAL_AUTO_PAY_MIN = 5000` (`services/payouts.js:154` `maybeAutoPayReferrals`, déclenché à la livraison `sales.js:609-615`), vers le wallet seller du parrain **net des frais Ikeepay 10%**, avec notification + push « Parrainage versé ».
+3. Le 2 % **n'est pas payé vente par vente** : il s'accumule (`referral_commission` non payée, `referral_paid = false`) et est versé automatiquement quand le cumul du parrain atteint `REFERRAL_AUTO_PAY_MIN = 5000` (`finance.js:154` `maybeAutoPayReferrals`, déclenché à la livraison `sales.js:609-615`), vers le wallet seller du parrain **sans frais**, avec notification + push « Parrainage versé ».
 
 Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau vendeur s'inscrit avec le `seller_code` d'un autre vendeur (`ref_seller`, `auth.js:73-82`) ; le parrain reçoit **1 000 XAF** lors du paiement de l'adhésion du vendeur parrainé, et **500 XAF** sont reversés au compte Mboppi (`finance.js:174-188` `completeMembershipPayment`, `payoutPlatformShare`).
 
