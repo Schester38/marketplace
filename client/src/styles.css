@@ -5994,6 +5994,28 @@ tr.tr-hidden td {
 .rider-main .hint {
   margin: 0;
 }
+
+/* Lisibilité garantie dark/light — page « Contacter un livreur » */
+.search-bar .field > span,
+.rider-main h3,
+.rider-main p,
+.rider-main .hint {
+  color: var(--text);
+}
+.rider-main .hint {
+  color: var(--text-muted);
+}
+.rider-card {
+  background: var(--card);
+  border-color: var(--border);
+}
+[data-theme="dark"] .search-bar .field > span,
+[data-theme="dark"] .rider-main h3 {
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .rider-card:hover {
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
+}
 .rider-phone {
   margin: 4px 0 0;
   font-weight: 700;

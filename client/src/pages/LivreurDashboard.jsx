@@ -333,6 +333,16 @@ export default function LivreurDashboard() {
                 value={deliverForm.delivery_fee}
                 onChange={(e) => setDeliverForm({ ...deliverForm, delivery_fee: e.target.value })}
               />
+              <p className="hint" style={{ marginTop: 6 }}>
+                {t("Montant total à encaisser au client")} :{" "}
+                <strong>
+                  {formatMoney(
+                    Number(deliverForm.sale.total_price || 0) +
+                      Number(deliverForm.delivery_fee || 0)
+                  )}{" "}
+                  {symbol(deliverForm.sale)}
+                </strong>
+              </p>
               <label style={{ marginTop: 12 }}>{t("Code de confirmation du client *")}</label>
               <input
                 className="input code-input"
@@ -349,7 +359,7 @@ export default function LivreurDashboard() {
                   "Demandez ce code au client. Il l'a reçu à la commande et sur le suivi de commande."
                 )}
               </p>
-              <label style={{ marginTop: 12 }}>{t("Paiement *")}</label>
+              <label style={{ marginTop: 12 }}>{t("Paiement de la commande *")}</label>
               <div className="row2">
                 <label
                   className={`payment-option ${deliverForm.payment_method === "espece" ? "selected" : ""}`}

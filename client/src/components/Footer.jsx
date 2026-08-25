@@ -54,23 +54,6 @@ export default function Footer() {
             <h3 className="tp-title">{t("Avis clients")}</h3>
           </div>
           <p className="tp-sub">{t("Partagez votre expérience avec nous sur Trustpilot")}</p>
-          <div
-            className="trustpilot-widget"
-            data-locale="fr-FR"
-            data-template-id="56278e9abfbbba0bdcd568bc"
-            data-businessunit-id="6a8779883986f46709270588"
-            data-style-height="52px"
-            data-style-width="100%"
-            data-token="f1155ee0-5326-46a5-a398-f288affba9bb"
-          >
-            <a
-              href="https://fr.trustpilot.com/review/mboppi-mboppi.vercel.app"
-              target="_blank"
-              rel="noopener"
-            >
-              Trustpilot
-            </a>
-          </div>
           <a
             className="tp-btn"
             href="https://fr.trustpilot.com/review/mboppi-mboppi.vercel.app"
