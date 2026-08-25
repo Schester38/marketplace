@@ -448,6 +448,23 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_provider ON payment_webhook_logs(provider, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_order ON payment_webhook_logs(provider_order_id);
 
+    -- Migrations idempotentes : CREATE TABLE IF NOT EXISTS n'ajoute pas les
+    -- colonnes aux tables déjà existantes en production. Sans ces ALTER, la
+    -- table donations (créée avant l'arrivée d'iKeePay) manque de colonnes
+    -- (provider_reference, payment_link, completed_at) et le webhook renvoie
+    -- « column does not exist ».
+    ALTER TABLE donations ADD COLUMN IF NOT EXISTS external_reference TEXT;
+    ALTER TABLE donations ADD COLUMN IF NOT EXISTS provider_reference TEXT;
+    ALTER TABLE donations ADD COLUMN IF NOT EXISTS payment_link TEXT;
+    ALTER TABLE donations ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+    ALTER TABLE membership_payments ADD COLUMN IF NOT EXISTS provider_reference TEXT;
+    ALTER TABLE membership_payments ADD COLUMN IF NOT EXISTS payment_link TEXT;
+    ALTER TABLE membership_payments ADD COLUMN IF NOT EXISTS error TEXT;
+    ALTER TABLE membership_payments ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+    ALTER TABLE platform_payouts ADD COLUMN IF NOT EXISTS provider_reference TEXT;
+    ALTER TABLE platform_payouts ADD COLUMN IF NOT EXISTS error TEXT;
+    ALTER TABLE platform_payouts ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+
     ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_transaction_type_check;
     ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_transaction_type_check CHECK (transaction_type IN ('commission_credit','referral_credit','payout_debit','adjustment','online_collect','online_payout'));
   `);
