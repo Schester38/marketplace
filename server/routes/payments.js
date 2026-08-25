@@ -32,7 +32,7 @@ router.post(
     if (!user || !fee)
       return res.status(403).json({ error: "Ce rôle ne nécessite pas d’adhésion" });
     if (
-      user.verified ||
+      user.admin_approved ||
       (user.membership_expires_at && new Date(user.membership_expires_at) > new Date())
     )
       return res.json({ ok: true, active: true });

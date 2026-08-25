@@ -155,6 +155,25 @@ export function AuthProvider({ children }) {
     };
   }, [user, navigate]);
 
+  const userIdRef = useRef(user?.id);
+  useEffect(() => {
+    if (!user) return;
+    if (userIdRef.current === user.id) return;
+    userIdRef.current = user.id;
+    let cancelled = false;
+    api
+      .me()
+      .then((u) => {
+        if (cancelled) return;
+        setUser(u);
+        localStorage.setItem("user", JSON.stringify(u));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
 }
 

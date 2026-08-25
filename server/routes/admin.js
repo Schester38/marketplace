@@ -229,6 +229,7 @@ router.get(
 router.patch(
   "/users/:id/admin-approved",
   ah(async (req, res) => {
+    await ensureColumn("users", "admin_approved", "BOOLEAN NOT NULL DEFAULT FALSE");
     const id = Number(req.params.id);
     if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
     const admin_approved = Boolean(req.body && req.body.admin_approved);
