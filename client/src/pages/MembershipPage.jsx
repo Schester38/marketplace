@@ -51,7 +51,13 @@ export default function MembershipPage() {
         </p>
         <div className="card" style={{ background: "#fff7ed", borderColor: "#fed7aa" }}>
           <strong>
-            {t(user?.role === "shop" ? "Adhésion boutique : 2 500" : "Adhésion vendeur : 1 500")}{" "}
+            {t(
+              user?.role === "shop"
+                ? "Adhésion boutique : 2 500"
+                : user?.role === "creator"
+                  ? "Adhésion créateur : 2 500"
+                  : "Adhésion vendeur : 1 500"
+            )}{" "}
             XAF
           </strong>
           <p className="hint">

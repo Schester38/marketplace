@@ -220,63 +220,48 @@ export async function completePlatformPayout(reference, providerReference) {
 export async function payoutPlatformShare(userId, amount) {
   const country = process.env.MBOPPI_PAYOUT_COUNTRY || "CM";
   const currency = currencyForCountry(country);
-  const baseReference = `MBOPPI_ACTIVATION:${userId}`;
+  const phone = normalizePhone(process.env.MBOPPI_PAYOUT_PHONE || "+237699486146", country);
+  const operator = String(process.env.MBOPPI_PAYOUT_OPERATOR || "ORANGE")
+    .trim()
+    .toUpperCase();
+  const reference = `MBOPPI_ACTIVATION:${userId}`;
 
-  const wallets = [
-    { phone: process.env.MBOPPI_PAYOUT_PHONE_ORANGE || "+237699486146", operator: "ORANGE" },
-    { phone: process.env.MBOPPI_PAYOUT_PHONE_MTN || "+237672886348", operator: "MTN" },
-  ];
+  const existing = (
+    await q("SELECT * FROM platform_payouts WHERE external_reference = $1", [reference])
+  )[0];
+  if (existing?.status === "completed") return { ok: true, already: true };
 
-  const results = [];
-  for (const wallet of wallets) {
-    const reference = `${baseReference}:${wallet.operator.toLowerCase()}`;
-    const existing = (
-      await q("SELECT * FROM platform_payouts WHERE external_reference = $1", [reference])
-    )[0];
-    if (existing?.status === "completed") {
-      results.push({ ok: true, already: true, operator: wallet.operator });
-      continue;
-    }
-    if (!existing) {
-      await q(
-        "INSERT INTO platform_payouts (external_reference, amount, currency) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
-        [reference, amount, currency]
-      );
-    }
-    try {
-      const phoneNumber = normalizePhone(wallet.phone, country);
-      const result = await payout({
-        amount,
-        currency,
-        country,
-        phoneNumber,
-        operator: wallet.operator,
-        external_reference: reference,
-      });
-      const status = providerStatus(result);
-      if (status === "failed")
-        throw new Error(`Le prestataire a refusé le reversement Mboppi (${wallet.operator})`);
-      if (status === "completed") {
-        await q(
-          "UPDATE platform_payouts SET status = 'completed', provider_reference = $1, completed_at = now() WHERE external_reference = $2",
-          [result.provider_reference || result.data?.provider_reference || null, reference]
-        );
-      }
-      results.push({
-        ok: true,
-        pending: status !== "completed",
-        operator: wallet.operator,
-        provider: result,
-      });
-    } catch (error) {
-      await q(
-        "UPDATE platform_payouts SET status = 'failed', error = $1 WHERE external_reference = $2",
-        [error.message, reference]
-      );
-      results.push({ ok: false, error: error.message, operator: wallet.operator });
-    }
+  if (!existing) {
+    await q(
+      "INSERT INTO platform_payouts (external_reference, amount, currency) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+      [reference, amount, currency]
+    );
   }
-  return results;
+  try {
+    const result = await payout({
+      amount,
+      currency,
+      country,
+      phoneNumber: phone,
+      operator,
+      external_reference: reference,
+    });
+    const status = providerStatus(result);
+    if (status === "failed") throw new Error("Le prestataire a refusé le reversement Mboppi");
+    if (status === "completed") {
+      await q(
+        "UPDATE platform_payouts SET status = 'completed', provider_reference = $1, completed_at = now() WHERE external_reference = $2",
+        [result.provider_reference || result.data?.provider_reference || null, reference]
+      );
+    }
+    return { ok: true, pending: status !== "completed", operator, provider: result };
+  } catch (error) {
+    await q(
+      "UPDATE platform_payouts SET status = 'failed', error = $1 WHERE external_reference = $2",
+      [error.message, reference]
+    );
+    return { ok: false, error: error.message };
+  }
 }
 
 export function computeRedistribution(sale) {

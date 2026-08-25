@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import Seo from "../components/Seo.jsx";
 import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
-import { COUNTRIES, OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
-import SearchSelect from "../components/SearchSelect.jsx";
+import { useAuth } from "../App.jsx";
+import { OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
 
 function OrangeLogo() {
   return (
@@ -145,16 +145,16 @@ function InfoRow({ label, value, copyable }) {
 }
 
 export default function Support() {
+  const { user } = useAuth();
   const { t } = useLang();
   const [amount, setAmount] = useState("");
-  const [country, setCountry] = useState("");
   const [phone, setPhone] = useState("");
   const [operator, setOperator] = useState("ORANGE");
   const [paymentLink, setPaymentLink] = useState("");
   const [paymentError, setPaymentError] = useState("");
   const [paying, setPaying] = useState(false);
 
-  const operators = OPERATORS_BY_COUNTRY[country] || DEFAULT_OPERATORS;
+  const operators = OPERATORS_BY_COUNTRY[user?.country] || DEFAULT_OPERATORS;
 
   const startDonation = async (event) => {
     event.preventDefault();
@@ -165,7 +165,7 @@ export default function Support() {
         amount,
         phone_number: phone,
         operator,
-        country: "CM",
+        country: user?.country || "Cameroun",
       });
       setPaymentLink(result.payment_link || "");
     } catch (error) {
@@ -255,17 +255,6 @@ export default function Support() {
                 required
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
-              />
-              <label>{t("Pays *")}</label>
-              <SearchSelect
-                options={COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }))}
-                value={country}
-                onChange={(v) => {
-                  setCountry(v);
-                  setOperator("");
-                }}
-                placeholder={t("Choisir votre pays…")}
-                emptyLabel={t("Aucun résultat")}
               />
               <label>{t("Opérateur")}</label>
               <select
