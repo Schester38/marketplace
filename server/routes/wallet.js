@@ -24,7 +24,7 @@ router.get(
     )[0];
     const transactions = await q(
       `
-    SELECT id, amount, currency, transaction_type, reference_type, reference_id, description, created_at
+    SELECT id, amount, currency, transaction_type, reference_type, reference_id, description, fee, created_at
     FROM wallet_transactions WHERE user_id = $1 ORDER BY created_at DESC, id DESC LIMIT 100
   `,
       [req.user.id]
@@ -35,7 +35,11 @@ router.get(
       credits: Number(summary.credits),
       debits: Number(summary.debits),
       last_transaction_at: summary.last_transaction_at,
-      transactions: transactions.map((t) => ({ ...t, amount: Number(t.amount) })),
+      transactions: transactions.map((t) => ({
+        ...t,
+        amount: Number(t.amount),
+        fee: Number(t.fee),
+      })),
     });
   })
 );

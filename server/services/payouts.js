@@ -9,6 +9,7 @@ import {
 import { sendPush } from "../push.js";
 
 export const REFERRAL_AUTO_PAY_MIN = 5000;
+const IKEEPAY_FEE_RATE = 0.06;
 
 const OPERATOR_MAP = [
   ["orange", "ORANGE"],
@@ -76,16 +77,20 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
     await q("SELECT * FROM automatic_payouts WHERE external_reference = $1", [reference])
   )[0];
   if (existing?.status === "completed") return { ok: true, already: true };
+
+  const fee = Math.round(amount * IKEEPAY_FEE_RATE * 100) / 100;
+  const grossAmount = Math.round((amount + fee) * 100) / 100;
+
   if (!existing) {
     await q(
-      `INSERT INTO automatic_payouts (external_reference, user_id, sale_id, kind, amount, currency)
-       VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (external_reference) DO NOTHING`,
-      [reference, user.id, saleId || null, kind, amount, target.currency]
+      `INSERT INTO automatic_payouts (external_reference, user_id, sale_id, kind, amount, currency, fee)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (external_reference) DO NOTHING`,
+      [reference, user.id, saleId || null, kind, amount, target.currency, fee]
     );
   }
   try {
     const result = await payout({
-      amount,
+      amount: grossAmount,
       currency: target.currency,
       country: target.country,
       phoneNumber: target.phoneNumber,
@@ -99,13 +104,13 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
         "UPDATE automatic_payouts SET status = 'pending', provider_reference = $1, error = NULL WHERE external_reference = $2",
         [result.provider_reference || result.data?.provider_reference || null, reference]
       );
-      return { ok: true, pending: true, provider: result };
+      return { ok: true, pending: true, provider: result, amount, fee, grossAmount };
     }
     await completeAutomaticPayout(
       reference,
       result.provider_reference || result.data?.provider_reference || null
     );
-    return { ok: true, provider: result };
+    return { ok: true, provider: result, amount, fee, grossAmount };
   } catch (error) {
     await q(
       "UPDATE automatic_payouts SET status = 'failed', error = $1 WHERE external_reference = $2",
@@ -138,17 +143,19 @@ export async function completeAutomaticPayout(reference, providerReference) {
           : completed.kind === "creator"
             ? "commission_credit"
             : "online_collect";
+  const netAmount = Math.round((completed.amount - (completed.fee || 0)) * 100) / 100;
   await q(
-    `INSERT INTO wallet_transactions (user_id, amount, currency, transaction_type, reference_type, reference_id, description)
-     VALUES ($1, $2, $3, $4, 'ikeepay_payout', $5, $6)
+    `INSERT INTO wallet_transactions (user_id, amount, currency, transaction_type, reference_type, reference_id, description, fee)
+     VALUES ($1, $2, $3, $4, 'ikeepay_payout', $5, $6, $7)
      ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
     [
       completed.user_id,
-      completed.amount,
+      netAmount,
       completed.currency,
       transactionType,
       completed.id,
-      `Paiement automatique Ikeepay — ${completed.kind}`,
+      `Paiement automatique Ikeepay — ${completed.kind} (net après frais)`,
+      completed.fee || 0,
     ]
   );
   if (completed.kind === "seller" && completed.sale_id)
@@ -196,11 +203,7 @@ export async function completeMembershipPayment(paymentId, providerReference) {
         kind: "activation_referral",
         reference: `ACTIVATION_REFERRAL:${user.id}`,
       });
-      await payoutPlatformShare(user.id, 500);
     }
-  }
-  if (payment.amount > 0) {
-    await payoutPlatformShare(user.id, payment.amount);
   }
   return { ok: true };
 }

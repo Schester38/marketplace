@@ -357,6 +357,7 @@ export async function initDb() {
       reference_type TEXT,
       reference_id INTEGER,
       description TEXT,
+      fee NUMERIC(14,2) DEFAULT 0,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       UNIQUE (user_id, transaction_type, reference_type, reference_id)
     );
@@ -371,6 +372,7 @@ export async function initDb() {
       kind TEXT NOT NULL,
       amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
       currency TEXT NOT NULL DEFAULT 'XAF',
+      fee NUMERIC(14,2) DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
       provider_reference TEXT,
       error TEXT,
