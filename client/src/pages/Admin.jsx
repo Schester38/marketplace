@@ -154,6 +154,16 @@ export default function Admin() {
     }
   };
 
+  const removeUser = async (u) => {
+    if (!window.confirm(t("Supprimer le compte « {name} » ?", { name: u.name }))) return;
+    try {
+      await api.adminDeleteUser(u.id);
+      setUsers((us) => us.filter((x) => x.id !== u.id));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const removeProduct = async (p) => {
     if (!window.confirm(t("Supprimer « {name} » ?", { name: p.name }))) return;
     try {
@@ -740,7 +750,7 @@ export default function Admin() {
               <th>{t("Code boutique")}</th>
               <th>{t("Inscription")}</th>
               <th>{t("Adhésion")}</th>
-              <th>{t("Vérifié")}</th>
+              <th>{t("Accès")}</th>
             </tr>
           </thead>
           <tbody>
@@ -793,6 +803,14 @@ export default function Admin() {
                     ) : (
                       <span className="hint">—</span>
                     )}
+                    <button
+                      type="button"
+                      className="btn btn-small btn-danger"
+                      style={{ marginLeft: 6 }}
+                      onClick={() => removeUser(u)}
+                    >
+                      {t("Supprimer")}
+                    </button>
                   </td>
                 </tr>
               ))

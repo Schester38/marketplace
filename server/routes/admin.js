@@ -594,6 +594,19 @@ router.delete(
   })
 );
 
+router.delete(
+  "/users/:id",
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
+    if (id === 0) return res.status(400).json({ error: "Impossible de supprimer l'admin" });
+    const deleted = await q("DELETE FROM users WHERE id = $1 RETURNING id", [id]);
+    if (!deleted.length) return res.status(404).json({ error: "Utilisateur introuvable" });
+    await logAudit(req.user.id, "admin.delete_user", `user=${id}`, req.ip);
+    res.json({ ok: true });
+  })
+);
+
 router.post(
   "/messages/:id/resend",
   ah(async (req, res) => {
