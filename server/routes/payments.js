@@ -2,7 +2,7 @@ import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { q } from "../db.js";
 import { authRequired } from "../auth.js";
-import { countryCode, currencyForCountry, normalizePhone, payin } from "../ikeepay.js";
+import { countryCode, currencyForCountry, inlineCheckoutUrl, normalizePhone, payin } from "../ikeepay.js";
 import {
   completeAutomaticPayout,
   completeMembershipPayment,
@@ -88,6 +88,26 @@ router.post(
         .status(201)
         .json({ ok: true, payment_link: link, external_reference: external, provider: result });
     } catch (error) {
+      // Repli : checkout hébergé iKeePay (le client choisit son opérateur).
+      console.error("[ikeepay] payin adhésion rejeté, repli checkout hébergé :", error.message);
+      const fallbackLink = inlineCheckoutUrl({
+        amount: fee,
+        currency: user.country === "Côte d'Ivoire" ? "XOF" : currencyForCountry(country),
+        orderId: external,
+        email: user.email,
+      });
+      if (fallbackLink) {
+        await q("UPDATE membership_payments SET payment_link = $1 WHERE id = $2", [
+          fallbackLink,
+          created.id,
+        ]);
+        return res.status(201).json({
+          ok: true,
+          payment_link: fallbackLink,
+          external_reference: external,
+          fallback: true,
+        });
+      }
       await q("UPDATE membership_payments SET status = 'failed', error = $1 WHERE id = $2", [
         error.message,
         created.id,
@@ -130,15 +150,42 @@ router.post(
     if (!country || !operator || !phone)
       return res.status(400).json({ error: "Pays, opérateur et numéro Mobile Money requis" });
     const externalReference = `SALE:${sale.id}:${Date.now()}`;
-    const result = await payin({
-      amount: Number(sale.total_price) + Number(sale.delivery_fee || 0),
-      currency: sale.currency || currencyForCountry(country),
-      country,
-      phoneNumber: phone,
-      operator,
-      external_reference: externalReference,
-      customer_email: req.user?.email || undefined,
-    });
+    const saleAmount = Number(sale.total_price) + Number(sale.delivery_fee || 0);
+    const saleCurrency = sale.currency || currencyForCountry(country);
+    let result;
+    try {
+      result = await payin({
+        amount: saleAmount,
+        currency: saleCurrency,
+        country,
+        phoneNumber: phone,
+        operator,
+        external_reference: externalReference,
+        customer_email: req.user?.email || undefined,
+      });
+    } catch (error) {
+      // Repli : checkout hébergé iKeePay (le client choisit son opérateur).
+      console.error("[ikeepay] payin vente rejeté, repli checkout hébergé :", error.message);
+      const fallbackLink = inlineCheckoutUrl({
+        amount: saleAmount,
+        currency: saleCurrency,
+        orderId: externalReference,
+        email: req.user?.email,
+      });
+      await q(
+        `UPDATE sales SET online_payment = TRUE, payment_status = 'pending', payment_provider = 'ikeepay',
+         payment_external_reference = $1, payment_link = $2, payment_country = $3, payment_operator = $4,
+         payment_error = CASE WHEN $2 IS NULL THEN $6 ELSE NULL END WHERE id = $5`,
+        [externalReference, fallbackLink, country, operator, sale.id, error.message]
+      );
+      if (!fallbackLink) throw error;
+      return res.status(201).json({
+        ok: true,
+        external_reference: externalReference,
+        payment_link: fallbackLink,
+        fallback: true,
+      });
+    }
     const paymentLink = result.payment_link || result.data?.payment_link || null;
     await q(
       `UPDATE sales SET online_payment = TRUE, payment_status = 'pending', payment_provider = 'ikeepay',

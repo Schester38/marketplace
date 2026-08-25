@@ -180,6 +180,25 @@ export function payin(payload) {
   return request("/h2h-payin", withProvider(payload));
 }
 
+// Checkout hébergé officiel (utilisé par le plugin WooCommerce iKeePay) :
+// le client choisit lui-même son opérateur sur la page iKeePay. Utilisé en
+// repli quand l'initialisation H2H est rejetée par le partenaire.
+const CHECKOUT_URL = process.env.IKEEPAY_CHECKOUT_URL || "https://ikeepay.com/checkout/v1/inline";
+const PUBLIC_KEY = process.env.IKEEPAY_PUBLIC_KEY || process.env.IKE_PUBLIC_KEY;
+
+export function inlineCheckoutUrl({ amount, currency, orderId, email }) {
+  if (!API_KEY || !PUBLIC_KEY) return null;
+  const params = new URLSearchParams({
+    pk: PUBLIC_KEY,
+    sk: API_KEY,
+    amount: String(Math.round(Number(amount) || 0)),
+    ...(currency ? { currency } : {}),
+    order_id: orderId,
+    ...(email ? { email } : {}),
+  });
+  return `${CHECKOUT_URL}?${params.toString()}`;
+}
+
 export function payout(payload) {
   return request("/h2h-payout", withProvider(payload));
 }

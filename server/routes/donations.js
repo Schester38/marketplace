@@ -3,6 +3,7 @@ import { q } from "../db.js";
 import {
   countryCode,
   currencyForCountry,
+  inlineCheckoutUrl,
   normalizePhone as normalizeIkeepayPhone,
   payin,
 } from "../ikeepay.js";
@@ -89,6 +90,19 @@ router.post(
         provider: result,
       });
     } catch (error) {
+      // Repli : checkout hébergé iKeePay (le client choisit son opérateur).
+      console.error("[ikeepay] payin dons rejeté, repli checkout hébergé :", error.message);
+      const link = inlineCheckoutUrl({ amount: amt, currency, orderId: reference });
+      if (link) {
+        await q("UPDATE donations SET payment_link = $1 WHERE id = $2", [link, created.id]);
+        return res.status(201).json({
+          ok: true,
+          donation_id: created.id,
+          payment_link: link,
+          external_reference: reference,
+          fallback: true,
+        });
+      }
       await q("UPDATE donations SET status = 'failed' WHERE id = $1", [created.id]);
       throw error;
     }
