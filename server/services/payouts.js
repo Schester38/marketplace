@@ -78,7 +78,7 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
   )[0];
   if (existing?.status === "completed") return { ok: true, already: true };
 
-  const fee = Math.round(amount * IKEEPAY_FEE_RATE * 100) / 100;
+  const fee = Math.round((amount / (1 - IKEEPAY_FEE_RATE) - amount) * 100) / 100;
   const grossAmount = Math.round((amount + fee) * 100) / 100;
 
   if (!existing) {
@@ -143,18 +143,17 @@ export async function completeAutomaticPayout(reference, providerReference) {
           : completed.kind === "creator"
             ? "commission_credit"
             : "online_collect";
-  const netAmount = Math.round((completed.amount - (completed.fee || 0)) * 100) / 100;
   await q(
     `INSERT INTO wallet_transactions (user_id, amount, currency, transaction_type, reference_type, reference_id, description, fee)
      VALUES ($1, $2, $3, $4, 'ikeepay_payout', $5, $6, $7)
      ON CONFLICT (user_id, transaction_type, reference_type, reference_id) DO NOTHING`,
     [
       completed.user_id,
-      netAmount,
+      completed.amount,
       completed.currency,
       transactionType,
       completed.id,
-      `Paiement automatique Ikeepay — ${completed.kind} (net après frais)`,
+      `Paiement automatique Ikeepay — ${completed.kind}`,
       completed.fee || 0,
     ]
   );
@@ -229,6 +228,9 @@ export async function payoutPlatformShare(userId, amount) {
     .toUpperCase();
   const reference = `MBOPPI_ACTIVATION:${userId}`;
 
+  const fee = Math.round((amount / (1 - IKEEPAY_FEE_RATE) - amount) * 100) / 100;
+  const grossAmount = Math.round((amount + fee) * 100) / 100;
+
   const existing = (
     await q("SELECT * FROM platform_payouts WHERE external_reference = $1", [reference])
   )[0];
@@ -236,13 +238,13 @@ export async function payoutPlatformShare(userId, amount) {
 
   if (!existing) {
     await q(
-      "INSERT INTO platform_payouts (external_reference, amount, currency) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
-      [reference, amount, currency]
+      "INSERT INTO platform_payouts (external_reference, amount, currency, fee) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
+      [reference, amount, currency, fee]
     );
   }
   try {
     const result = await payout({
-      amount,
+      amount: grossAmount,
       currency,
       country,
       phoneNumber: phone,
@@ -257,7 +259,15 @@ export async function payoutPlatformShare(userId, amount) {
         [result.provider_reference || result.data?.provider_reference || null, reference]
       );
     }
-    return { ok: true, pending: status !== "completed", operator, provider: result };
+    return {
+      ok: true,
+      pending: status !== "completed",
+      operator,
+      provider: result,
+      amount,
+      fee,
+      grossAmount,
+    };
   } catch (error) {
     await q(
       "UPDATE platform_payouts SET status = 'failed', error = $1 WHERE external_reference = $2",
