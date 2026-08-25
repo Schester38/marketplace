@@ -172,12 +172,6 @@ function RoleOnly({ role, children }) {
   return children;
 }
 
-function AdminRoute({ children }) {
-  const { user } = useAuth();
-  if (!user || user.role !== "admin") return <Navigate to="/" replace />;
-  return children;
-}
-
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -459,14 +453,7 @@ export default function App() {
             <Route path="/faq" element={<Faq />} />
             <Route path="/mentions-legales" element={<MentionsLegales />} />
             <Route path="/soutien" element={<Support />} />
-            <Route
-              path="/admin"
-              element={
-                <AdminRoute>
-                  <Admin />
-                </AdminRoute>
-              }
-            />
+            <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
