@@ -156,6 +156,40 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
   `);
 
+  // Tables de masquage doux admin, créées dans un bloc ISOLÉ, AVANT le grand
+  // batch de migrations ci-dessous. Ce gros batch s'arrête à la première
+  // instruction en échec sur une base au schéma ancien (il n'est PAS enveloppé
+  // de try/catch) : placer ces tables APRÈS laisserait passer le risque de
+  // ne jamais les créer. Ici elles sont créées seules et idempotentes, ce qui
+  // garantit leur existence pour les boutons « Supprimer » du panneau admin
+  // (masquage doux, jamais de vraie suppression) et pour /admin/transactions.
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS admin_hidden_sales (
+        sale_id BIGINT PRIMARY KEY,
+        hidden_by INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS admin_hidden_statuses (
+        status TEXT PRIMARY KEY,
+        hidden_by INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS admin_hidden_shops (
+        shop_id BIGINT PRIMARY KEY,
+        hidden_by INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE TABLE IF NOT EXISTS admin_hidden_sellers (
+        seller_id BIGINT PRIMARY KEY,
+        hidden_by INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+  } catch (err) {
+    console.error("[initDb] admin_hidden_* :", err.message);
+  }
+
   await pool.query(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'email';
     ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
@@ -454,29 +488,6 @@ export async function initDb() {
       payment_link TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       completed_at TIMESTAMPTZ
-    );
-    -- Masquages doux admin (vue admin uniquement, utilisateurs non affectés).
-    -- Ces tables sont utilisées par /admin/transactions et par les boutons
-    -- « Supprimer » du panneau admin (masquage, jamais de vraie suppression).
-    CREATE TABLE IF NOT EXISTS admin_hidden_sales (
-      sale_id BIGINT PRIMARY KEY,
-      hidden_by INTEGER,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    CREATE TABLE IF NOT EXISTS admin_hidden_statuses (
-      status TEXT PRIMARY KEY,
-      hidden_by INTEGER,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    CREATE TABLE IF NOT EXISTS admin_hidden_shops (
-      shop_id BIGINT PRIMARY KEY,
-      hidden_by INTEGER,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    CREATE TABLE IF NOT EXISTS admin_hidden_sellers (
-      seller_id BIGINT PRIMARY KEY,
-      hidden_by INTEGER,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS idx_membership_payments_user ON membership_payments(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_provider ON payment_webhook_logs(provider, created_at DESC);
