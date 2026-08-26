@@ -421,7 +421,11 @@ router.delete(
   "/sellers/:id",
   ah(async (req, res) => {
     const id = Number(req.params.id);
-    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
+    // id 0 = ligne « ventes sans vendeur » (parrain/vendeur non renseigné) :
+    // c'est une pseudo-ligne masquable, pas un vrai utilisateur.
+    if ((!isId(id) && id !== 0) || Number.isNaN(id)) {
+      return res.status(400).json({ error: "Identifiant invalide" });
+    }
     const seller = id === 0 ? true : (await q("SELECT id FROM users WHERE id = $1", [id]))[0];
     if (!seller) return res.status(404).json({ error: "Vendeur introuvable" });
     await q(
@@ -437,7 +441,9 @@ router.post(
   "/sellers/:id/restore",
   ah(async (req, res) => {
     const id = Number(req.params.id);
-    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
+    if ((!isId(id) && id !== 0) || Number.isNaN(id)) {
+      return res.status(400).json({ error: "Identifiant invalide" });
+    }
     await q("DELETE FROM admin_hidden_sellers WHERE seller_id = $1", [id]);
     await logAudit(
       req.user.id,
