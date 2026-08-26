@@ -101,7 +101,7 @@ export default function IkeepayCheckout({
                 src={link}
                 title={label || t("Paiement sécurisé")}
                 allow="payment *"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+                allowTransparency
                 style={{
                   width: "100%",
                   height: "100%",
