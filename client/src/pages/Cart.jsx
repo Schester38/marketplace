@@ -3,12 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
 import { formatMoney } from "../components/ProductCard.jsx";
-import { countrySymbol, BASE_URL, OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
+import { countrySymbol, BASE_URL } from "../config.js";
 import { useAuth } from "../App.jsx";
 import { useCart } from "../store.jsx";
 import { useLang } from "../i18n.jsx";
 import CopyCode from "../components/CopyCode.jsx";
-import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 
 export default function Cart() {
   const { user } = useAuth();
@@ -19,10 +18,6 @@ export default function Cart() {
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("espece");
-  const [automaticOperator, setAutomaticOperator] = useState("ORANGE");
-  const [paymentLinks, setPaymentLinks] = useState([]);
-  const [paymentError, setPaymentError] = useState("");
   const [error, setError] = useState("");
   const [placing, setPlacing] = useState(false);
   const [sales, setSales] = useState(null);
@@ -46,31 +41,10 @@ export default function Cart() {
         buyer_phone: phone.trim(),
         buyer_city: city.trim(),
         buyer_address: address.trim(),
-        payment_method: paymentMethod,
+        // Le paiement se règle à la livraison auprès du livreur :
+        // le livreur choisit le mode (espèces / mobile) sur son formulaire.
+        payment_method: "espece",
       });
-      let links = [];
-      if (paymentMethod === "automatic") {
-        const payments = await Promise.all(
-          data.sales.map(async (sale) => {
-            try {
-              return {
-                ...(await api.ikeepayPayin({
-                  sale_id: sale.id,
-                  country: user.country,
-                  phone,
-                  operator: automaticOperator,
-                })),
-                saleId: sale.id,
-              };
-            } catch (paymentErr) {
-              setPaymentError(paymentErr.message);
-              return null;
-            }
-          })
-        );
-        links = payments.filter(Boolean);
-      }
-      setPaymentLinks(links);
       setSales(data.sales);
       clearCart();
     } catch (err) {
@@ -92,28 +66,7 @@ export default function Cart() {
               name: sales[0].buyer_name,
             })}
           </p>
-          {paymentLinks.map((payment) =>
-            payment.payment_link ? (
-              <IkeepayCheckout
-                key={payment.saleId}
-                link={payment.payment_link}
-                externalReference={payment.external_reference}
-                label={`${t("Paiement automatique")} #${payment.saleId}`}
-                onConfirmed={() => {
-                  /* la répartition est lancée côté serveur */
-                }}
-                onClose={() => {}}
-              />
-            ) : null
-          )}
-          {paymentError && (
-            <p className="error">
-              {t(
-                "Commande enregistrée, mais le paiement automatique n’a pas pu être lancé : {error}",
-                { error: paymentError }
-              )}
-            </p>
-          )}
+          <p className="hint">💰 {t("Paiement à la livraison, auprès du livreur.")}</p>
           <p className="hint">
             {t(
               "Chaque article a son code de confirmation : communiquez-le à la boutique ou au livreur, ou suivez votre commande avec celui-ci."
@@ -253,45 +206,14 @@ export default function Cart() {
             </div>
             <p className="hint">{t("Les frais de livraison sont confirmés avec la boutique.")}</p>
 
-            <div className="payment-options">
-              <button
-                type="button"
-                className={`payment-option ${paymentMethod === "espece" ? "active" : ""}`}
-                onClick={() => setPaymentMethod("espece")}
-              >
-                💵 {t("Paiement manuel (espèces)")}
-              </button>
-              <button
-                type="button"
-                className={`payment-option ${paymentMethod === "mobile" ? "active" : ""}`}
-                onClick={() => setPaymentMethod("mobile")}
-              >
-                📱 {t("Mobile Money manuel")}
-              </button>
-              <button
-                type="button"
-                className={`payment-option ${paymentMethod === "automatic" ? "active" : ""}`}
-                onClick={() => setPaymentMethod("automatic")}
-              >
-                ⚡ {t("Paiement automatique")}
-              </button>
+            <div className="wallet-card">
+              <p className="hint" style={{ marginTop: 0 }}>
+                💵{" "}
+                {t(
+                  "Paiement à la livraison : réglez la commande au livreur en espèces ou par Mobile Money, selon ce qui est convenu avec la boutique."
+                )}
+              </p>
             </div>
-            {paymentMethod === "automatic" && (
-              <div className="wallet-card">
-                <label>{t("Opérateur de paiement")}</label>
-                <select
-                  className="input"
-                  value={automaticOperator}
-                  onChange={(e) => setAutomaticOperator(e.target.value)}
-                >
-                  {(OPERATORS_BY_COUNTRY[user?.country] || DEFAULT_OPERATORS).map((operator) => (
-                    <option key={operator} value={operator}>
-                      {operator}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
 
             <form onSubmit={submit}>
               <label>{t("Votre nom *")}</label>
