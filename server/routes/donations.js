@@ -74,7 +74,7 @@ router.post(
     )[0];
     try {
       const result = await payin({
-        amount,
+        amount: amt,
         currency,
         country: countryCodeVal,
         phoneNumber: phone,
@@ -135,7 +135,7 @@ router.post(
           ? Number(error.statusCode)
           : 502;
       return res.status(status).json({
-        error: error.message || "Initialisation du paiement impossible",
+        error: `${error.message || "Initialisation du paiement impossible"} · Repli indisponible : ${fallbackReason}`,
         detail: error.providerPayload || null,
         fallback_reason: fallbackReason,
       });
