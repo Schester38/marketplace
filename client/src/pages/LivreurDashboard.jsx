@@ -34,6 +34,9 @@ export default function LivreurDashboard() {
   // règle dans la modale lightbox, pas de manière silencieuse.
   const [payLink, setPayLink] = useState("");
   const [payRef, setPayRef] = useState("");
+  // Moyens de paiement de la boutique, affichés quand on choisit « Par Mobile ».
+  const [shopMethods, setShopMethods] = useState(null);
+  const [shopMethodsLoading, setShopMethodsLoading] = useState(false);
 
   const load = useCallback(
     async (silent) => {
@@ -73,6 +76,25 @@ export default function LivreurDashboard() {
 
   useRefreshOnFocus(() => load(true));
 
+  // Charge les moyens de paiement de la boutique (full_name + portefeuilles).
+  const loadShopMethods = useCallback(async (shopId) => {
+    if (!shopId) {
+      setShopMethods(null);
+      setShopMethodsLoading(false);
+      return;
+    }
+    setShopMethods(null);
+    setShopMethodsLoading(true);
+    try {
+      const d = await api.shopPaymentMethods(Number(shopId));
+      setShopMethods(d && d.methods ? d.methods : null);
+    } catch {
+      setShopMethods(null);
+    } finally {
+      setShopMethodsLoading(false);
+    }
+  }, []);
+
   // Temps réel : rafraîchit livraisons et gains toutes les 30 s
   useEffect(() => {
     const id = setInterval(() => load(true), 30000);
@@ -103,18 +125,21 @@ export default function LivreurDashboard() {
 
   const openDeliver = (s) => {
     const operators = OPERATORS_BY_COUNTRY[s.shop_country] || DEFAULT_OPERATORS;
+    setShopMethods(null);
+    const initialMethod = ["automatic", "online", "auto"].includes(s.payment_method)
+      ? "automatic"
+      : s.payment_method === "mobile"
+        ? "mobile"
+        : "espece";
     setDeliverForm({
       sale: s,
       delivery_fee: "",
-      payment_method: ["automatic", "online", "auto"].includes(s.payment_method)
-        ? "automatic"
-        : s.payment_method === "mobile"
-          ? "mobile"
-          : "espece",
+      payment_method: initialMethod,
       client_code: "",
       operator: operators[0] || "ORANGE",
       phone: s.buyer_phone || "",
     });
+    if (initialMethod === "mobile") loadShopMethods(s.shop_id);
   };
 
   const removeDelivered = async (s) => {
@@ -434,9 +459,10 @@ export default function LivreurDashboard() {
                     name="payment"
                     value="mobile"
                     checked={deliverForm.payment_method === "mobile"}
-                    onChange={(e) =>
-                      setDeliverForm({ ...deliverForm, payment_method: e.target.value })
-                    }
+                    onChange={(e) => {
+                      setDeliverForm({ ...deliverForm, payment_method: e.target.value });
+                      if (e.target.value === "mobile") loadShopMethods(deliverForm.sale.shop_id);
+                    }}
                   />
                   <span>📱 {t("Par Mobile")}</span>
                 </label>
@@ -487,6 +513,54 @@ export default function LivreurDashboard() {
                     )}
                   </p>
                 </>
+              )}
+              {deliverForm.payment_method === "mobile" && (
+                <div className="shop-methods-box" style={{ marginTop: 12 }}>
+                  <p className="hint" style={{ margin: 0, fontWeight: 700, color: "var(--primary)" }}>
+                    💳 {t("Moyens de paiement")} — {deliverForm.sale.shop_name || ""}
+                  </p>
+                  {shopMethodsLoading ? (
+                    <p className="hint" style={{ marginTop: 8 }}>{t("Chargement…")}</p>
+                  ) : shopMethods ? (
+                    <>
+                      {shopMethods.full_name && (
+                        <p className="hint" style={{ margin: "6px 0 8px" }}>
+                          <strong>{shopMethods.full_name}</strong>
+                        </p>
+                      )}
+                      {Array.isArray(shopMethods.wallets) && shopMethods.wallets.length > 0 ? (
+                        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                          {shopMethods.wallets.map((w, idx) => (
+                            <li
+                              key={idx}
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                gap: 10,
+                                padding: "8px 10px",
+                                marginBottom: 6,
+                                border: "1px solid var(--border)",
+                                borderRadius: 8,
+                                fontSize: "0.92rem",
+                              }}
+                            >
+                              <strong>{w.name}</strong>
+                              <span style={{ wordBreak: "break-all" }}>{w.value}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="hint" style={{ marginTop: 8 }}>
+                          {t("La boutique n'a pas configuré de portefeuille.")}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="hint" style={{ marginTop: 8 }}>
+                      {t("La boutique n'a pas configuré de portefeuille.")}
+                    </p>
+                  )}
+                </div>
               )}
               <p className="hint" style={{ marginTop: 10 }}>
                 {t(
