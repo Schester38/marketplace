@@ -405,12 +405,17 @@ router.post(
         "UPDATE donations SET status = 'completed', completed_at = COALESCE(completed_at, now()) WHERE id = $1",
         [donation.id]
       );
-      const payout = await payoutPlatformShare({
-        kind: "donation",
-        sourceId: donation.id,
-        amount: Number(donation.amount),
-        currency: donation.currency,
-      });
+      let payout;
+      try {
+        payout = await payoutPlatformShare({
+          kind: "donation",
+          sourceId: donation.id,
+          amount: Number(donation.amount),
+          currency: donation.currency,
+        });
+      } catch (pErr) {
+        payout = { ok: false, error: pErr.message };
+      }
       return res.json({ ok: true, donation: donation.id, payout });
     }
 
@@ -421,7 +426,10 @@ router.post(
     if (membership) {
       if (membership.status === "completed")
         return res.json({ ok: true, already: true });
-      const result = await completeMembershipPayment(membership.id, null);
+      const result = await completeMembershipPayment(membership.id, null).catch((mErr) => ({
+        ok: false,
+        error: mErr.message,
+      }));
       return res.json({ ok: true, ...result });
     }
 
@@ -435,7 +443,12 @@ router.post(
         "UPDATE sales SET payment_status = 'paid', paid = TRUE, paid_at = COALESCE(paid_at, now()) WHERE id = $1",
         [sale.id]
       );
-      const payouts = await paySaleAutomatically(sale.id);
+      let payouts;
+      try {
+        payouts = await paySaleAutomatically(sale.id);
+      } catch (pErr) {
+        payouts = { ok: false, error: pErr.message };
+      }
       return res.json({ ok: true, sale: sale.id, payouts });
     }
 

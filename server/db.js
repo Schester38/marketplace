@@ -433,6 +433,7 @@ export async function initDb() {
       id BIGSERIAL PRIMARY KEY,
       external_reference TEXT NOT NULL UNIQUE,
       amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+      fee NUMERIC(14,2) NOT NULL DEFAULT 0,
       currency TEXT NOT NULL DEFAULT 'XAF',
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
       provider_reference TEXT,
@@ -474,7 +475,9 @@ export async function initDb() {
     ["membership_payments", "payment_link", "TEXT"],
     ["membership_payments", "error", "TEXT"],
     ["membership_payments", "completed_at", "TIMESTAMPTZ"],
+    ["platform_payouts", "external_reference", "TEXT"],
     ["platform_payouts", "provider_reference", "TEXT"],
+    ["platform_payouts", "fee", "NUMERIC(14,2) NOT NULL DEFAULT 0"],
     ["platform_payouts", "error", "TEXT"],
     ["platform_payouts", "completed_at", "TIMESTAMPTZ"],
   ];
