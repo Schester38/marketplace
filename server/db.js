@@ -455,6 +455,29 @@ export async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       completed_at TIMESTAMPTZ
     );
+    -- Masquages doux admin (vue admin uniquement, utilisateurs non affectés).
+    -- Ces tables sont utilisées par /admin/transactions et par les boutons
+    -- « Supprimer » du panneau admin (masquage, jamais de vraie suppression).
+    CREATE TABLE IF NOT EXISTS admin_hidden_sales (
+      sale_id BIGINT PRIMARY KEY,
+      hidden_by INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS admin_hidden_statuses (
+      status TEXT PRIMARY KEY,
+      hidden_by INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS admin_hidden_shops (
+      shop_id BIGINT PRIMARY KEY,
+      hidden_by INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS admin_hidden_sellers (
+      seller_id BIGINT PRIMARY KEY,
+      hidden_by INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
     CREATE INDEX IF NOT EXISTS idx_membership_payments_user ON membership_payments(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_provider ON payment_webhook_logs(provider, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_order ON payment_webhook_logs(provider_order_id);
