@@ -319,7 +319,7 @@ router.delete(
     const sale = (await q("SELECT id FROM sales WHERE id = $1", [id]))[0];
     if (!sale) return res.status(404).json({ error: "Transaction introuvable" });
     await q(
-      "INSERT INTO admin_hidden_sales (sale_id, hidden_by) VALUES ($1, $2) ON CONFLICT (sale_id) DO NOTHING",
+      "INSERT INTO admin_hidden_sales (sale_id, hidden_by) VALUES ($1, $2) ON CONFLICT DO NOTHING",
       [id, req.user.id]
     );
     await logAudit(
@@ -356,7 +356,7 @@ router.delete(
     const status = String(req.params.status || "");
     if (!SALE_STATUSES.includes(status)) return res.status(400).json({ error: "Statut invalide" });
     await q(
-      "INSERT INTO admin_hidden_statuses (status, hidden_by) VALUES ($1, $2) ON CONFLICT (status) DO NOTHING",
+      "INSERT INTO admin_hidden_statuses (status, hidden_by) VALUES ($1, $2) ON CONFLICT DO NOTHING",
       [status, req.user.id]
     );
     await logAudit(
@@ -393,7 +393,7 @@ router.delete(
     const shop = (await q("SELECT id FROM users WHERE id = $1", [id]))[0];
     if (!shop) return res.status(404).json({ error: "Boutique introuvable" });
     await q(
-      "INSERT INTO admin_hidden_shops (shop_id, hidden_by) VALUES ($1, $2) ON CONFLICT (shop_id) DO NOTHING",
+      "INSERT INTO admin_hidden_shops (shop_id, hidden_by) VALUES ($1, $2) ON CONFLICT DO NOTHING",
       [id, req.user.id]
     );
     await logAudit(req.user.id, "admin.hide_shop", `shop=${id} masquee de la vue admin`, req.ip);
@@ -429,7 +429,7 @@ router.delete(
     const seller = id === 0 ? true : (await q("SELECT id FROM users WHERE id = $1", [id]))[0];
     if (!seller) return res.status(404).json({ error: "Vendeur introuvable" });
     await q(
-      "INSERT INTO admin_hidden_sellers (seller_id, hidden_by) VALUES ($1, $2) ON CONFLICT (seller_id) DO NOTHING",
+      "INSERT INTO admin_hidden_sellers (seller_id, hidden_by) VALUES ($1, $2) ON CONFLICT DO NOTHING",
       [id, req.user.id]
     );
     await logAudit(req.user.id, "admin.hide_seller", `seller=${id} masque de la vue admin`, req.ip);
