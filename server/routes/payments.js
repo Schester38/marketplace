@@ -160,10 +160,18 @@ router.post(
     const saleId = Number(req.body?.sale_id);
     const sale = (await q("SELECT * FROM sales WHERE id = $1", [saleId]))[0];
     if (!sale) return res.status(404).json({ error: "Vente introuvable" });
-    if (sale.buyer_id && (!req.user || sale.buyer_id !== req.user.id))
+    // Le livreur qui a confirmé la livraison peut initier le payin au nom de
+    // son client (flux « En ligne (iKeePay) » du formulaire de livraison).
+    const isLivreurForSale =
+      req.user &&
+      req.user.role === "livreur" &&
+      sale.delivered_by &&
+      Number(sale.delivered_by) === Number(req.user.id);
+    if (sale.buyer_id && (!req.user || (sale.buyer_id !== req.user.id && !isLivreurForSale)))
       return res.status(403).json({ error: "Cette commande ne vous appartient pas" });
     if (
       !sale.buyer_id &&
+      !isLivreurForSale &&
       String(req.body?.confirm_code || "")
         .trim()
         .toUpperCase() !== String(sale.confirm_code || "").toUpperCase()
