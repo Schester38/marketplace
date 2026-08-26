@@ -40,11 +40,27 @@ export default function MembershipPage() {
 
   const handleConfirmed = async () => {
     setPaymentLink("");
+    let fresh = null;
     try {
-      const refreshed = await api.me();
-      login(refreshed.user, localStorage.getItem("token"));
-    } catch {}
-    navigate("/dashboard");
+      const r = await api.me();
+      login(r.user, localStorage.getItem("token"));
+      fresh = r.user;
+    } catch {
+      fresh = user;
+    }
+    // Aiguiller vers l'espace du rôle (pas de route /dashboard dans le router).
+    const role = fresh?.role || user?.role || "client";
+    const target =
+      role === "shop"
+        ? "/shop"
+        : role === "seller"
+          ? "/seller"
+          : role === "creator"
+            ? "/creator"
+            : role === "livreur"
+              ? "/livreur"
+              : "/client";
+    navigate(target);
   };
 
   return (
