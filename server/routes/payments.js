@@ -1,6 +1,6 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
-import { q } from "../db.js";
+import { ensureDonationPaymentColumns, q } from "../db.js";
 import { authRequired } from "../auth.js";
 import {
   countryCode,
@@ -271,6 +271,11 @@ router.post(
 router.post(
   "/ikeepay/webhook",
   ah(async (req, res) => {
+    // Auto-réparation schéma : le webhook met à jour donations.provider_reference
+    // et completed_at, absents des bases au schéma ancien.
+    try {
+      await ensureDonationPaymentColumns();
+    } catch {}
     const data = req.body?.data || {};
     const external = String(data.external_reference || "").trim();
     if (!external) return res.status(400).json({ error: "Référence externe manquante" });

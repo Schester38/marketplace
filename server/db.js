@@ -34,6 +34,16 @@ export async function ensureColumn(table, column, definition) {
   }
 }
 
+// Auto-réparation : garantit les colonnes iKeePay de la table donations,
+// même si initDb a échoué partiellement sur une base au schéma ancien.
+export async function ensureDonationPaymentColumns() {
+  await pool.query(`
+    ALTER TABLE donations ADD COLUMN IF NOT EXISTS provider_reference TEXT;
+    ALTER TABLE donations ADD COLUMN IF NOT EXISTS payment_link TEXT;
+    ALTER TABLE donations ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+  `);
+}
+
 export async function withTransaction(fn) {
   const client = await getPool().connect();
   try {
@@ -448,26 +458,35 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_provider ON payment_webhook_logs(provider, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_order ON payment_webhook_logs(provider_order_id);
 
-    -- Migrations idempotentes : CREATE TABLE IF NOT EXISTS n'ajoute pas les
-    -- colonnes aux tables déjà existantes en production. Sans ces ALTER, la
-    -- table donations (créée avant l'arrivée d'iKeePay) manque de colonnes
-    -- (provider_reference, payment_link, completed_at) et le webhook renvoie
-    -- « column does not exist ».
-    ALTER TABLE donations ADD COLUMN IF NOT EXISTS external_reference TEXT;
-    ALTER TABLE donations ADD COLUMN IF NOT EXISTS provider_reference TEXT;
-    ALTER TABLE donations ADD COLUMN IF NOT EXISTS payment_link TEXT;
-    ALTER TABLE donations ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
-    ALTER TABLE membership_payments ADD COLUMN IF NOT EXISTS provider_reference TEXT;
-    ALTER TABLE membership_payments ADD COLUMN IF NOT EXISTS payment_link TEXT;
-    ALTER TABLE membership_payments ADD COLUMN IF NOT EXISTS error TEXT;
-    ALTER TABLE membership_payments ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
-    ALTER TABLE platform_payouts ADD COLUMN IF NOT EXISTS provider_reference TEXT;
-    ALTER TABLE platform_payouts ADD COLUMN IF NOT EXISTS error TEXT;
-    ALTER TABLE platform_payouts ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
-
     ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_transaction_type_check;
     ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_transaction_type_check CHECK (transaction_type IN ('commission_credit','referral_credit','payout_debit','adjustment','online_collect','online_payout'));
   `);
+
+  // Migrations de colonnes exécutées UNE PAR UNE : le gros batch ci-dessus
+  // s'arrête à la première instruction en échec sur une base au schéma ancien,
+  // ce qui empêchait l'ajout des colonnes iKeePay sur la table donations.
+  const COLUMN_MIGRATIONS = [
+    ["donations", "external_reference", "TEXT"],
+    ["donations", "provider_reference", "TEXT"],
+    ["donations", "payment_link", "TEXT"],
+    ["donations", "completed_at", "TIMESTAMPTZ"],
+    ["membership_payments", "provider_reference", "TEXT"],
+    ["membership_payments", "payment_link", "TEXT"],
+    ["membership_payments", "error", "TEXT"],
+    ["membership_payments", "completed_at", "TIMESTAMPTZ"],
+    ["platform_payouts", "provider_reference", "TEXT"],
+    ["platform_payouts", "error", "TEXT"],
+    ["platform_payouts", "completed_at", "TIMESTAMPTZ"],
+  ];
+  for (const [migTable, migColumn, migDefinition] of COLUMN_MIGRATIONS) {
+    try {
+      await pool.query(
+        `ALTER TABLE ${migTable} ADD COLUMN IF NOT EXISTS ${migColumn} ${migDefinition}`
+      );
+    } catch (err) {
+      console.error(`[migrations] ${migTable}.${migColumn} :`, err.message);
+    }
+  }
 
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_sales_buyer ON sales(buyer_id) WHERE buyer_id IS NOT NULL;

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { q } from "../db.js";
+import { ensureDonationPaymentColumns, q } from "../db.js";
 import {
   countryCode,
   currencyForCountry,
@@ -60,6 +60,13 @@ router.post(
   validate(donationIkeepaySchema),
   ah(async (req, res) => {
     const { amount, country, operator, phone_number } = req.body;
+    // Auto-réparation schéma : garantit les colonnes iKeePay de la table
+    // donations même si initDb a échoué partiellement sur une base ancienne.
+    try {
+      await ensureDonationPaymentColumns();
+    } catch (schemaError) {
+      console.error("[ikeepay] auto-réparation dons :", schemaError.message);
+    }
     const amt = Math.round(Number(amount || 0) * 100) / 100;
     const countryCodeVal = countryCode(country || "CM");
     const operatorCode = String(operator).trim().toUpperCase();
