@@ -34,6 +34,10 @@ export default function LivreurDashboard() {
   // règle dans la modale lightbox, pas de manière silencieuse.
   const [payLink, setPayLink] = useState("");
   const [payRef, setPayRef] = useState("");
+  // Pour le paiement en ligne, on garde les infos de livraison en attente :
+  // la livraison n'est CONFIRMÉE (notifications + facture) qu'après la
+  // confirmation du paiement dans la lightbox, jamais avant.
+  const [pendingOnline, setPendingOnline] = useState(null);
   // Moyens de paiement de la boutique, affichés quand on choisit « Par Mobile ».
   const [shopMethods, setShopMethods] = useState(null);
   const [shopMethodsLoading, setShopMethodsLoading] = useState(false);
@@ -164,35 +168,48 @@ export default function LivreurDashboard() {
     const isOnline = (deliverForm.payment_method || "") === "automatic";
     const saleId = deliverForm.sale.id;
     try {
-      const d = await api.deliverSale(saleId, {
-        delivery_fee: Number(deliverForm.delivery_fee || 0),
-        payment_method: deliverForm.payment_method,
-        client_code: (deliverForm.client_code || "").trim().toUpperCase(),
-        shop_code: code,
-      });
-      setPending((prev) => prev.filter((s) => s.id !== saleId));
-      setDelivered((prev) => [d.sale, ...prev]);
-      downloadInvoice(d.sale, t, countrySymbol(d.sale.shop_country));
-
+      // Paiement manuel (espèce / mobile) : on confirme tout de suite la
+      // livraison (notifications + facture). C'est le comportement normal.
       if (!isOnline) {
+        const d = await api.deliverSale(saleId, {
+          delivery_fee: Number(deliverForm.delivery_fee || 0),
+          payment_method: deliverForm.payment_method,
+          client_code: (deliverForm.client_code || "").trim().toUpperCase(),
+          shop_code: code,
+        });
+        setPending((prev) => prev.filter((s) => s.id !== saleId));
+        setDelivered((prev) => [d.sale, ...prev]);
+        downloadInvoice(d.sale, t, countrySymbol(d.sale.shop_country));
         setSuccess(t("Achat confirmé ! La facture a été téléchargée."));
         setDeliverForm(null);
         return;
       }
-      // Paiement en ligne iKeePay via la lightbox (flux identique aux dons) :
-      // on garde la livraison confirmée, on récupère le lien de paiement et on
-      // ouvre la lightbox pour que le client règle (débité à 100 %).
-      setDeliverForm(null);
+
+      // Paiement en ligne iKeePay : on initialise le payin pour ouvrir la
+      // lightbox, SANS confirmer la livraison. Aucune notification, aucune
+      // facture tant que le paiement n'est pas confirmé dans la lightbox.
+      const deliveryFee = Number(deliverForm.delivery_fee || 0);
       const pay = await api.ikeepayPayin({
         sale_id: saleId,
+        delivery_fee: deliveryFee,
         operator: (deliverForm.operator || "ORANGE").trim().toUpperCase(),
         phone: (deliverForm.phone || deliverForm.sale.buyer_phone || "").trim(),
         country: deliverForm.sale.shop_country || "Cameroun",
       });
-      setPayRef(pay.external_reference || "");
       const link = pay.payment_link || pay.data?.payment_link || "";
+      if (!link) {
+        throw new Error(t("Impossible d'ouvrir le paiement en ligne. Réessayez."));
+      }
+      setPayRef(pay.external_reference || "");
       setPayLink(link);
-      if (!link) setSuccess(t("Demande de paiement envoyée !"));
+      // La livraison ne sera confirmée qu'après le paiement réussi.
+      setPendingOnline({
+        saleId,
+        deliveryFee,
+        clientCode: (deliverForm.client_code || "").trim().toUpperCase(),
+        shopCode: code,
+      });
+      setDeliverForm(null);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -588,13 +605,50 @@ export default function LivreurDashboard() {
           link={payLink}
           externalReference={payRef}
           label={t("Paiement de la commande")}
-          onConfirmed={() => {
+          onConfirmed={async () => {
+            const finalise = pendingOnline;
             setPayLink("");
             setPayRef("");
-            setSuccess(t("Paiement confirmé !"));
+            setPendingOnline(null);
+            if (!finalise) {
+              setSuccess(t("Paiement confirmé !"));
+              load(true);
+              return;
+            }
+            // Paiement réussi : on confirme MAINTENANT la livraison
+            // (notifications + facture) et on déclenche les reversements.
+            try {
+              const d = await api.deliverSale(finalise.saleId, {
+                delivery_fee: finalise.deliveryFee,
+                payment_method: "automatic",
+                client_code: finalise.clientCode,
+                shop_code: finalise.shopCode,
+              });
+              setPending((prev) => prev.filter((s) => s.id !== finalise.saleId));
+              setDelivered((prev) => [d.sale, ...prev]);
+              downloadInvoice(d.sale, t, countrySymbol(d.sale.shop_country));
+              setSuccess(t("Achat confirmé ! La facture a été téléchargée."));
+            } catch (err) {
+              // Paiement réussi mais livraison non finalisée : on le signale.
+              setError(err.message);
+            } finally {
+              load(true);
+            }
+          }}
+          onClose={() => {
+            // Paiement abandonné / non finalisé : la vente n'est PAS confirmée,
+            // elle reste en attente et le livreur peut la finaliser en manuel
+            // (espèces / mobile) en la rouvrant depuis la liste.
+            setPayLink("");
+            setPayRef("");
+            setPendingOnline(null);
+            setSuccess(
+              t(
+                "Paiement non finalisé. La livraison n'est pas confirmée : vous pouvez réessayer ou régler en espèces / mobile."
+              )
+            );
             load(true);
           }}
-          onClose={() => setPayLink("")}
         />
       )}
     </main>

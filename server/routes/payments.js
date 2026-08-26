@@ -160,13 +160,10 @@ router.post(
     const saleId = Number(req.body?.sale_id);
     const sale = (await q("SELECT * FROM sales WHERE id = $1", [saleId]))[0];
     if (!sale) return res.status(404).json({ error: "Vente introuvable" });
-    // Le livreur qui a confirmé la livraison peut initier le payin au nom de
-    // son client (flux « En ligne (iKeePay) » du formulaire de livraison).
-    const isLivreurForSale =
-      req.user &&
-      req.user.role === "livreur" &&
-      sale.delivered_by &&
-      Number(sale.delivered_by) === Number(req.user.id);
+    // Le livreur peut initier le payin au nom de son client (flux « En ligne
+    // (iKeePay) » du formulaire de livraison). Le payin précède désormais la
+    // confirmation de la livraison, donc delivered_by peut ne pas être posé.
+    const isLivreurForSale = req.user && req.user.role === "livreur";
     if (sale.buyer_id && (!req.user || (sale.buyer_id !== req.user.id && !isLivreurForSale)))
       return res.status(403).json({ error: "Cette commande ne vous appartient pas" });
     if (
@@ -194,7 +191,15 @@ router.post(
     if (!country || !operator || !phone)
       return res.status(400).json({ error: "Pays, opérateur et numéro Mobile Money requis" });
     const externalReference = `SALE:${sale.id}:${Date.now()}`;
-    const saleAmount = Number(sale.total_price) + Number(sale.delivery_fee || 0);
+    // Le delivery_fee peut être fourni par le livreur (il précède la livraison)
+    // car au moment du payin la vente n'est pas encore marquée livrée.
+    const deliveryFee =
+      req.body?.delivery_fee != null
+        ? Number(req.body.delivery_fee)
+        : Number(sale.delivery_fee || 0);
+    const saleAmount = Math.round(
+      (Number(sale.total_price) + deliveryFee) * 100
+    ) / 100;
     const saleCurrency = sale.currency || currencyForCountry(country);
     let result;
     try {
