@@ -124,7 +124,7 @@ export default function About() {
             <h3>{t("L'argent, en toute transparence")}</h3>
             <p>
               {t(
-                "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire, sans frais. Pour les paiements en ligne via Ikeepay, l'acheteur paie le prix normal et un taux de traitement de 10 % s'applique sur les reversements aux bénéficiaires."
+                "Pour les paiements manuels (espèces à la livraison, Mobile Money ou virement bancaire), aucun frais n'est appliqué. Pour les paiements en ligne via Ikeepay, l'acheteur paie le prix normal et un taux de traitement de 10 % s'applique sur les reversements aux bénéficiaires."
               )}
             </p>
           </div>

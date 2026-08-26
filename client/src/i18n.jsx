@@ -4130,6 +4130,8 @@ const RICH_EN = {
     "The seller commission is displayed before the sale. Customer referrals represent 2% for the referring seller, and delivery fees are entered at delivery. No platform fee is added to amounts paid out.",
   "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire. Mboppi ne prélève aucun frais de plateforme.":
     "Payments are manual and direct: cash on delivery, Mobile Money or bank transfer. Mboppi charges no platform fees.",
+  "Pour les paiements manuels (espèces à la livraison, Mobile Money ou virement bancaire), aucun frais n'est appliqué. Pour les paiements en ligne via Ikeepay, l'acheteur paie le prix normal et un taux de traitement de 10 % s'applique sur les reversements aux bénéficiaires.":
+    "For manual payments (cash on delivery, Mobile Money or bank transfer), no fee is applied. For online payments via iKeePay, the buyer pays the normal price and a 10% processing rate applies to payouts to beneficiaries.",
   "Qu’est-ce qu’une promotion éclair ?": "What is a flash promotion?",
   "Une boutique peut proposer un produit à prix réduit pendant une durée limitée, au maximum 24 heures et une fois par semaine. Le produit est alors retiré des catalogues publics, mais reste accessible par son lien direct. La commission vendeur est de 0 % pendant la promotion.":
     "A shop can offer a product at a reduced price for a limited time, up to 24 hours and once per week. The product is removed from public catalogs but remains accessible through its direct link. The seller commission is 0% during the promotion.",
@@ -4201,6 +4203,8 @@ const RICH_ES = {
     "Crear una cuenta y usar el espacio de vendedor es gratis. Debes proteger tus credenciales y avisar de cualquier uso no autorizado. Una cuenta puede limitarse o suspenderse si supone un riesgo.",
   "Le paiement est manuel et direct : espèces à la livraison, virement Mobile Money ou virement bancaire. Mboppi ne collecte aucun paiement et ne prélève aucun frais de plateforme.":
     "El pago es manual y directo: efectivo a la entrega, transferencia Mobile Money o transferencia bancaria. Mboppi no cobra pagos ni comisiones de plataforma.",
+"Pour les paiements manuels (espèces à la livraison, Mobile Money ou virement bancaire), aucun frais n'est appliqué. Pour les paiements en ligne via Ikeepay, l'acheteur paie le prix normal et un taux de traitement de 10 % s'applique sur les reversements aux bénéficiaires.":
+    "Para los pagos manuales (efectivo a la entrega, Mobile Money o transferencia bancaria) no se aplica ninguna comisión. Para los pagos en línea a través de iKeePay, el comprador paga el precio normal y se aplica una tasa de procesamiento del 10 % a los pagos a los beneficiarios.",
   "La boutique définit la commission affichée sur chaque produit. Le vendeur reçoit la commission liée à une vente réalisée avec son code. Le parrainage concerne un client affilié et représente 2 % du montant de ses achats livrés ; le cumul est versé à partir de 1 500 XAF. Les paiements aux bénéficiaires sont effectués manuellement par la boutique, sans frais de plateforme.":
     "La tienda define la comisión mostrada en cada producto. El vendedor recibe la comisión de una venta realizada con su código. Un cliente afiliado genera un 2 % sobre sus compras entregadas, pagado desde 1.500 XAF. La tienda paga manualmente, sin comisiones de plataforma.",
   "Le paiement se fait directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne collecte pas les paiements et ne prélève aucun frais de plateforme. Les frais de livraison sont indiqués sur chaque produit.":
@@ -4234,6 +4238,8 @@ const RICH_AR = {
     "تظهر عمولة البائع قبل البيع. تمنح إحالة العميل 2٪ للبائع المُحيل، وتُسجل رسوم التوصيل عند التسليم. لا تُضاف أي رسوم للمنصة.",
   "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire. Mboppi ne prélève aucun frais de plateforme.":
     "المدفوعات يدوية ومباشرة: نقداً عند التسليم أو عبر Mobile Money أو التحويل البنكي. لا تفرض Mboppi أي رسوم منصة.",
+"Pour les paiements manuels (espèces à la livraison, Mobile Money ou virement bancaire), aucun frais n'est appliqué. Pour les paiements en ligne via Ikeepay, l'acheteur paie le prix normal et un taux de traitement de 10 % s'applique sur les reversements aux bénéficiaires.":
+    "بالنسبة للمدفوعات اليدوية (نقداً عند التسليم، أو عبر Mobile Money أو التحويل البنكي) لا تُطبق أي رسوم. أما بالنسبة للمدفوعات عبر الإنترنت عبر iKeePay، فيدفع المشتري السعر العادي وتُطبق رسوم معالجة 10٪ على المبالغ المحوّلة إلى المستفيدين.",
   "Le stock est vérifié et réservé au moment de la commande. Si la quantité disponible est insuffisante, la commande est refusée afin d’éviter de vendre un article indisponible.":
     "يتم التحقق من المخزون وحجزه عند الطلب. إذا لم تكن الكمية كافية، يُرفض الطلب لتجنب بيع منتج غير متوفر.",
   "Quels moyens de paiement sont acceptés ?": "ما طرق الدفع المقبولة؟",

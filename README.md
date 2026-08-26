@@ -21,7 +21,16 @@ Règle financière Mboppi : **tout ce qui entre est encaissé à 100 %** — l'a
 - virement Mobile Money direct ;
 - virement bancaire.
 
-Après livraison, la boutique règle manuellement le vendeur et le parrain depuis son espace (preuve photo/vidéo obligatoire), ou les reversements Ikeepay sont déclenchés après un Payin confirmé. Tous les montants sont suivis dans les wallets internes et versés sur les moyens de paiement Mobile Money enregistrés par chacun (boutique, vendeur, parrain, livreur).
+Deux types de paiement sont possibles :
+
+**1. Paiement manuel** (direct, sans frais) :
+- espèces à la livraison ;
+- Mobile Money direct ;
+- virement bancaire.
+
+**2. Paiement en ligne via iKeePay** (au moment de la livraison) : le livreur choisit « En ligne (iKeePay) » sur son formulaire (opérateur + numéro du client), une **lightbox** iKeePay s'ouvre pour que le client paie le prix normal (`total_price + delivery_fee`, encaissé à 100 %), et ce **n'est qu'après la confirmation du paiement dans la lightbox** que la livraison est enregistrée (notifications + facture) puis que les reversements sont déclenchés (net 90 %). Si le paiement échoue ou est abandonné, la commande reste en attente et peut être réglée en espèces / mobile.
+
+Après paiement confirmé, Mboppi reverse automatiquement à chaque bénéficiaire sa part sur le moyen de paiement Mobile Money enregistré (boutique, vendeur, parrain, livreur), **net de 10 % de frais de traitement** pour les paiements en ligne ; les paiements manuels réglés par la boutique avec preuve sont crédités à 100 % sans frais. Tous les montants sont suivis dans les wallets internes et les reversements Ikeepay dans `automatic_payouts`.
 
 Les adhésions, valables 30 jours, donnent accès aux espaces professionnels : 2 500 XAF pour une boutique, 1 500 XAF pour un vendeur, 2 500 XAF pour un créateur. Un compte validé par l'administrateur accède à son espace sans paiement. Lorsqu'un vendeur ou créateur inscrit avec le code d'un vendeur paie son adhésion, le parrain reçoit 1 000 XAF et 500 XAF de part plateforme reviennent à Mboppi — chaque reversement part net de frais (90 %).
 
