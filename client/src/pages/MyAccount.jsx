@@ -236,6 +236,17 @@ export default function MyAccount() {
   const [delPassword, setDelPassword] = useState("");
   const [delError, setDelError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [refCopied, setRefCopied] = useState(false);
+
+  const copyReference = async () => {
+    try {
+      await navigator.clipboard.writeText(String(user?.reference_number || ""));
+      setRefCopied(true);
+      setTimeout(() => setRefCopied(false), 2000);
+    } catch {
+      /* presse-papier indisponible */
+    }
+  };
 
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
   const roleLabel =
@@ -338,6 +349,21 @@ export default function MyAccount() {
               </span>
             )}
           </p>
+          {user?.reference_number && (
+            <p className="account-reference">
+              <span style={{ opacity: 0.7 }}>{t("Votre référence")} :</span>{" "}
+              <code className="ref-code">{user.reference_number}</code>{" "}
+              <button
+                type="button"
+                className="copy-ref-btn"
+                onClick={copyReference}
+                aria-label={t("Copier la référence")}
+                title={t("Copier la référence")}
+              >
+                {refCopied ? "✓" : "⧉"}
+              </button>
+            </p>
+          )}
         </div>
       </div>
 

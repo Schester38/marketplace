@@ -219,10 +219,28 @@ router.get(
       `SELECT id, name, email, role, country, location, phone, verified, admin_approved, seller_code, shop_code, reference_number, membership_fee, membership_paid_at, membership_expires_at, created_at
      FROM users
      WHERE $1 = '' OR name ILIKE $2 OR email ILIKE $2
+        OR reference_number ILIKE $2 OR seller_code ILIKE $2 OR shop_code ILIKE $2
      ORDER BY created_at DESC LIMIT 100`,
       [search, `%${search}%`]
     );
     res.json({ users });
+  })
+);
+
+router.patch(
+  "/users/:id/verify",
+  ah(async (req, res) => {
+    await ensureColumn("users", "verified", "BOOLEAN NOT NULL DEFAULT FALSE");
+    const id = Number(req.params.id);
+    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
+    const verified = Boolean(req.body && req.body.verified);
+    const updated = await q("UPDATE users SET verified = $1 WHERE id = $2 RETURNING id", [
+      verified,
+      id,
+    ]);
+    if (!updated.length) return res.status(404).json({ error: "Utilisateur introuvable" });
+    await logAudit(req.user.id, "admin.set_verified", `user=${id} verified=${verified}`, req.ip);
+    res.json({ ok: true, verified });
   })
 );
 

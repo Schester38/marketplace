@@ -195,6 +195,11 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ admin_approved: adminApproved }),
     }),
+  adminSetVerified: (id, verified) =>
+    adminRequest(`/admin/users/${id}/verify`, {
+      method: "PATCH",
+      body: JSON.stringify({ verified }),
+    }),
   // NB : pas de suppression de comptes utilisateurs (boutons « Supprimer »
   // sans effet sur les utilisateurs) — seule la suppression des produits
   // publiés est réelle.

@@ -1096,6 +1096,15 @@ export default function Navbar({ onLogout }) {
           </Link>
           <span className="user-chip">
             {user.name} ({roleLabel})
+            {user.verified && (
+              <span
+                className="badge badge-verified"
+                title={t("Compte vérifié")}
+                style={{ marginLeft: 6 }}
+              >
+                ✓
+              </span>
+            )}
           </span>
         </>
       )}

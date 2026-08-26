@@ -172,6 +172,17 @@ export default function Admin() {
     }
   };
 
+  const toggleVerified = async (u) => {
+    try {
+      await api.adminSetVerified(u.id, !u.verified);
+      setUsers((us) =>
+        us.map((x) => (x.id === u.id ? { ...x, verified: !x.verified } : x))
+      );
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   const removeProduct = async (p) => {
     if (!window.confirm(t("Supprimer « {name} » ?", { name: p.name }))) return;
     try {
@@ -798,7 +809,7 @@ export default function Admin() {
         </span>
         <input
           type="search"
-          placeholder={t("Rechercher un utilisateur (nom ou email)…")}
+          placeholder={t("Rechercher un utilisateur (nom, email ou référence)…")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -820,19 +831,20 @@ export default function Admin() {
               <th>{t("Code boutique")}</th>
               <th>{t("Inscription")}</th>
               <th>{t("Adhésion")}</th>
+              <th>{t("Vérifié")}</th>
               <th>{t("Accès")}</th>
             </tr>
           </thead>
           <tbody>
             {users === null ? (
               <tr>
-                <td colSpan="11">
+                <td colSpan="12">
                   <div className="skeleton-block" style={{ height: 30 }}></div>
                 </td>
               </tr>
             ) : users.length === 0 ? (
               <tr>
-                <td colSpan="11" className="empty">
+                <td colSpan="12" className="empty">
                   {t("Aucun utilisateur")}
                 </td>
               </tr>
@@ -860,6 +872,15 @@ export default function Admin() {
                     {u.membership_fee
                       ? `${u.membership_fee} · ${u.membership_expires_at ? new Date(u.membership_expires_at).toLocaleDateString() : t("Non payée")}`
                       : t("Non requise")}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className={`btn btn-small ${u.verified ? "btn-primary" : "btn-outline"}`}
+                      onClick={() => toggleVerified(u)}
+                    >
+                      {u.verified ? `✓ ${t("Vérifié")}` : t("Vérifier")}
+                    </button>
                   </td>
                   <td>
                     {"shop" === u.role || "seller" === u.role || "creator" === u.role ? (

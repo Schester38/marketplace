@@ -109,6 +109,7 @@ Le frontend est disponible sur http://localhost:5173 et l'API sur http://localho
 | GET | `/api/messages/popup` | connecté | Message admin non lu (popup) |
 | GET/POST | `/api/flash-promotions` | public / shop | Consulter ou créer une promotion |
 | PATCH | `/api/admin/users/:id/admin-approved` | admin | Ouvrir/Fermer l'accès d'un compte |
+| PATCH | `/api/admin/users/:id/verify` | admin | Vérifier / dé-vérifier un compte (badge vert) |
 | POST | `/api/admin/pass` | public | Ouvrir la session admin |
 
 ## Build et déploiement

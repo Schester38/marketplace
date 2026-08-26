@@ -210,6 +210,7 @@ export function AuthProvider({ children }) {
           u.name,
           u.email,
           !!u.admin_approved,
+          !!u.verified,
           u.membership_expires_at || "",
         ]);
         if (sig === lastSig) return;

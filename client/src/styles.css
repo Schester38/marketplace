@@ -5213,6 +5213,39 @@ tr.tr-hidden td {
   background: #dcfce7;
   color: #15803d;
 }
+.account-reference {
+  margin: 6px 0 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.account-reference .ref-code {
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--soft, #f0f3f7);
+  color: var(--text);
+}
+.copy-ref-btn {
+  background: var(--soft, #f0f3f7);
+  border: 1px solid var(--border, #dcdce0);
+  color: var(--muted, #555);
+  border-radius: 8px;
+  min-width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.copy-ref-btn:hover {
+  color: var(--primary, #0b7a3e);
+  border-color: var(--primary, #0b7a3e);
+}
 .card-shop {
   margin: 1px 0;
   font-size: 0.7rem;
