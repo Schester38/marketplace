@@ -6,6 +6,7 @@ import {
   inlineCheckoutUrl,
   normalizePhone as normalizeIkeepayPhone,
   payin,
+  publicBaseUrl,
 } from "../ikeepay.js";
 import { donationSchema, donationIkeepaySchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
@@ -99,7 +100,12 @@ router.post(
       );
       let link = null;
       try {
-        link = inlineCheckoutUrl({ amount: amt, currency, orderId: reference });
+        link = inlineCheckoutUrl({
+          amount: amt,
+          currency,
+          orderId: reference,
+          redirectUrl: `${publicBaseUrl()}/`,
+        });
         if (link) {
           await q("UPDATE donations SET payment_link = $1 WHERE id = $2", [link, created.id]);
         }

@@ -2,7 +2,14 @@ import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { q } from "../db.js";
 import { authRequired } from "../auth.js";
-import { countryCode, currencyForCountry, inlineCheckoutUrl, normalizePhone, payin } from "../ikeepay.js";
+import {
+  countryCode,
+  currencyForCountry,
+  inlineCheckoutUrl,
+  normalizePhone,
+  payin,
+  publicBaseUrl,
+} from "../ikeepay.js";
 import {
   completeAutomaticPayout,
   completeMembershipPayment,
@@ -102,6 +109,7 @@ router.post(
           currency: user.country === "Côte d'Ivoire" ? "XOF" : currencyForCountry(country),
           orderId: external,
           email: user.email,
+          redirectUrl: `${publicBaseUrl()}/`,
         });
         if (fallbackLink) {
           await q("UPDATE membership_payments SET payment_link = $1 WHERE id = $2", [
@@ -206,6 +214,7 @@ router.post(
           currency: saleCurrency,
           orderId: externalReference,
           email: req.user?.email,
+          redirectUrl: `${publicBaseUrl()}/suivi/${sale.id}`,
         });
       } catch (fallbackError) {
         console.error("[ikeepay] repli vente en échec :", fallbackError.message);
