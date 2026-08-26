@@ -5601,9 +5601,9 @@ tr.tr-hidden td {
 .chat-bubble-logo {
   width: 34px;
   height: 34px;
-  border-radius: 9px;
+  border-radius: 50%;
   display: block;
-  object-fit: contain;
+  object-fit: cover;
 }
 .chat-badge {
   position: absolute;
@@ -5675,10 +5675,10 @@ tr.tr-hidden td {
   flex-shrink: 0;
 }
 .chat-avatar-logo {
-  width: 27px;
-  height: 27px;
-  border-radius: 7px;
-  object-fit: contain;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 .chat-header-title div {
   display: flex;

@@ -17,7 +17,7 @@ export default function ChatWidget() {
   const langKey = lang === "en" ? "en" : lang === "ar" ? "ar" : "fr";
 
   const greeting = t(
-    "Bonjour 👋 Je suis l'assistant Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !"
+    "Bonjour 👋 Je suis Vérone, l'assistante Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !"
   );
 
   useEffect(() => {
@@ -80,14 +80,14 @@ export default function ChatWidget() {
   return (
     <>
       {open && (
-        <div className="chat-panel" role="dialog" aria-label={t("Assistant Mboppi")}>
+        <div className="chat-panel" role="dialog" aria-label={t("Vérone · Assistante Mboppi")}>
           <div className="chat-header">
             <div className="chat-header-title">
               <span className="chat-avatar">
-                <img src="/navbar-logo.png" alt="Mboppi" className="chat-avatar-logo" />
+                <img src="/assistant-avatar.webp" alt={t("Vérone · Assistante Mboppi")} className="chat-avatar-logo" />
               </span>
               <div>
-                <strong>{t("Assistant Mboppi")}</strong>
+                <strong>{t("Vérone · Assistante Mboppi")}</strong>
                 <span className="chat-status">● {t("En ligne")}</span>
               </div>
             </div>
@@ -159,9 +159,9 @@ export default function ChatWidget() {
         type="button"
         className={`chat-bubble ${open ? "chat-bubble-open" : ""}`}
         onClick={toggle}
-        aria-label={t("Assistant Mboppi")}
+        aria-label={t("Vérone · Assistante Mboppi")}
       >
-        {open ? "✕" : <img src="/navbar-logo.png" alt="Mboppi" className="chat-bubble-logo" />}
+        {open ? "✕" : <img src="/assistant-avatar.webp" alt={t("Vérone · Assistante Mboppi")} className="chat-bubble-logo" />}
         {!open && unread > 0 && <span className="chat-badge">{unread}</span>}
       </button>
     </>

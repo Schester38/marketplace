@@ -947,11 +947,11 @@ const EN = {
     "The shop has not set up its payment wallets yet. Cash on delivery recommended.",
   "Moyens de paiement": "Payment methods",
   "La boutique n'a pas configuré de portefeuille.": "The shop has not set up a wallet.",
-  "Assistant Mboppi": "Mboppi Assistant",
+  "Vérone · Assistante Mboppi": "Vérone · Mboppi Assistant",
   "En ligne": "Online",
   "Écrivez votre question…": "Type your question…",
-  "Bonjour 👋 Je suis l'assistant Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
-    "Hello 👋 I am the Mboppi assistant. Ask me anything about the shop, orders, payments or delivery!",
+  "Bonjour 👋 Je suis Vérone, l'assistante Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
+    "Hello 👋 I am Vérone, the Mboppi assistant. Ask me anything about the shop, orders, payments or delivery!",
   "Une erreur est survenue. Réessayez ou contactez-nous via la page Contact.":
     "An error occurred. Try again or contact us via the Contact page.",
   "Le chatbot n'est pas encore configuré (clé IA manquante côté serveur).":
@@ -2310,11 +2310,11 @@ const AR = {
     "لم يقم المتجر بعد بإعداد محافظ الدفع الخاصة به. يُنصح بالدفع عند التوصيل.",
   "Moyens de paiement": "وسائل الدفع",
   "La boutique n'a pas configuré de portefeuille.": "لم يقم المتجر بإعداد أي محفظة.",
-  "Assistant Mboppi": "مساعد مبوّي",
+  "Vérone · Assistante Mboppi": "فيرون · مساعدة مبوّي",
   "En ligne": "متصل",
   "Écrivez votre question…": "اكتب سؤالك…",
-  "Bonjour 👋 Je suis l'assistant Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
-    "مرحباً 👋 أنا مساعد مبوّي. اسألني عن المتجر أو الطلبات أو الدفع أو التوصيل!",
+  "Bonjour 👋 Je suis Vérone, l'assistante Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
+    "مرحباً 👋 أنا فيرون، مساعدة مبوّي. اسأليني عن المتجر أو الطلبات أو الدفع أو التوصيل!",
   "Une erreur est survenue. Réessayez ou contactez-nous via la page Contact.":
     "حدث خطأ. حاول مجدداً أو تواصل معنا عبر صفحة الاتصال.",
   "Le chatbot n'est pas encore configuré (clé IA manquante côté serveur).":
@@ -3641,11 +3641,11 @@ const ES = {
     "La tienda aún no ha configurado sus billeteras de pago. Se recomienda el pago a la entrega.",
   "Moyens de paiement": "Medios de pago",
   "La boutique n'a pas configuré de portefeuille.": "La tienda no ha configurado una billetera.",
-  "Assistant Mboppi": "Asistente Mboppi",
+  "Vérone · Assistante Mboppi": "Vérone · Asistente Mboppi",
   "En ligne": "En línea",
   "Écrivez votre question…": "Escribe tu pregunta…",
-  "Bonjour 👋 Je suis l'assistant Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
-    "¡Hola 👋 Soy el asistente de Mboppi. Pregúntame sobre la tienda, los pedidos, los pagos o la entrega!",
+  "Bonjour 👋 Je suis Vérone, l'assistante Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
+    "¡Hola 👋 Soy Vérone, la asistente de Mboppi. Pregúntame sobre la tienda, los pedidos, los pagos o la entrega!",
   "Une erreur est survenue. Réessayez ou contactez-nous via la page Contact.":
     "Se produjo un error. Inténtalo de nuevo o contáctanos a través de la página de Contacto.",
   "Le chatbot n'est pas encore configuré (clé IA manquante côté serveur).":
