@@ -416,6 +416,24 @@ router.post(
       } catch (pErr) {
         payout = { ok: false, error: pErr.message };
       }
+      // Traçabilité du reversement sur la ligne donation (colonnes
+      // payout_status / payout_error présentes sur la table réelle).
+      try {
+        await q(
+          "UPDATE donations SET payout_status = $1, payout_error = $2, payout_provider_transaction_id = COALESCE($3, payout_provider_transaction_id) WHERE id = $4",
+          [
+            payout?.ok ? (payout.pending ? "pending" : "completed") : "failed",
+            payout?.ok ? null : payout?.error || null,
+            payout?.provider_reference ||
+              payout?.provider?.provider_reference ||
+              payout?.provider?.data?.provider_reference ||
+              null,
+            donation.id,
+          ]
+        );
+      } catch (traceErr) {
+        console.error("[ikeepay] trace payout donation échouée :", traceErr.message);
+      }
       return res.json({ ok: true, donation: donation.id, payout });
     }
 

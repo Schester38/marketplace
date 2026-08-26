@@ -265,9 +265,15 @@ export async function payoutPlatformShare({ kind, sourceId, amount, currency }) 
   if (existing?.status === "completed") return { ok: true, already: true };
 
   if (!existing) {
+    // NOTE : ne PAS insérer la colonne `fee` ici : la table réellement
+    // déployée sur Supabase n'a pas cette colonne (id, external_reference,
+    // amount, currency, status, provider_reference, error, created_at,
+    // completed_at). Un INSERT avec `fee` lèverait `column "fee" does not
+    // exist` et avalerait le reversement. Le fee reste calculé localement
+    // pour déterminer le net à envoyer.
     await q(
-      "INSERT INTO platform_payouts (external_reference, amount, currency, fee) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING",
-      [reference, amt, targetCurrency, fee]
+      "INSERT INTO platform_payouts (external_reference, amount, currency) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+      [reference, amt, targetCurrency]
     );
   }
   try {
