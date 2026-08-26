@@ -245,5 +245,11 @@ export const api = {
     request("/payments/ikeepay/payin", { method: "POST", body: JSON.stringify(payload) }),
   membershipPayin: (payload) =>
     request("/payments/ikeepay/membership", { method: "POST", body: JSON.stringify(payload) }),
+  // Confirmé côté client : le checkout hébergé iKeePay ne déclenche pas de
+  // webhook serveur (le plugin officiel confirme par postMessage). Cette
+  // méthode remonte la confirmation pour marquer le paiement payé et lancer
+  // les reversements (90 %).
+  ikeepayConfirm: (payload) =>
+    request("/payments/ikeepay/confirm", { method: "POST", body: JSON.stringify(payload) }),
   trackViews: (items) => request("/views", { method: "POST", body: JSON.stringify({ items }) }),
 };

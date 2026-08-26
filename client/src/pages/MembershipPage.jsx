@@ -1,18 +1,21 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
+import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 
 import { OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
 
 export default function MembershipPage() {
   const { user, login } = useAuth();
   const { t } = useLang();
+  const navigate = useNavigate();
   const [operator, setOperator] = useState("ORANGE");
   const [phone, setPhone] = useState(user?.phone || "");
   const [paymentLink, setPaymentLink] = useState("");
+  const [paymentRef, setPaymentRef] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -23,6 +26,7 @@ export default function MembershipPage() {
     try {
       const result = await api.membershipPayin({ operator, phone, country: user.country });
       setPaymentLink(result.payment_link || "");
+      setPaymentRef(result.external_reference || "");
       if (result.active) {
         const refreshed = await api.me();
         login(refreshed.user, localStorage.getItem("token"));
@@ -32,6 +36,15 @@ export default function MembershipPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleConfirmed = async () => {
+    setPaymentLink("");
+    try {
+      const refreshed = await api.me();
+      login(refreshed.user, localStorage.getItem("token"));
+    } catch {}
+    navigate("/dashboard");
   };
 
   return (
@@ -93,14 +106,13 @@ export default function MembershipPage() {
           </button>
         </form>
         {paymentLink && (
-          <a
-            className="btn btn-primary btn-block"
-            href={paymentLink}
-            target="_blank"
-            rel="noreferrer"
-          >
-            🔗 {t("Ouvrir le paiement")}
-          </a>
+          <IkeepayCheckout
+            link={paymentLink}
+            externalReference={paymentRef}
+            label={t("Paiement de l'adhésion")}
+            onConfirmed={handleConfirmed}
+            onClose={() => setPaymentLink("")}
+          />
         )}
         <p className="hint">
           {t(

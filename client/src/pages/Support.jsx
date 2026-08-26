@@ -4,6 +4,7 @@ import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
 import { OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
+import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 
 function OrangeLogo() {
   return (
@@ -151,6 +152,8 @@ export default function Support() {
   const [phone, setPhone] = useState("");
   const [operator, setOperator] = useState("ORANGE");
   const [paymentLink, setPaymentLink] = useState("");
+  const [paymentRef, setPaymentRef] = useState("");
+  const [paymentDone, setPaymentDone] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [paying, setPaying] = useState(false);
 
@@ -168,6 +171,8 @@ export default function Support() {
         country: user?.country || "Cameroun",
       });
       setPaymentLink(result.payment_link || "");
+      setPaymentRef(result.external_reference || "");
+      setPaymentDone(false);
     } catch (error) {
       setPaymentError(error.message);
     } finally {
@@ -281,15 +286,17 @@ export default function Support() {
                 {paying ? "…" : t("Payer avec Ikeepay")}
               </button>
             </form>
+            {paymentDone && (
+              <p className="success">{t("Merci ! Votre don a bien été confirmé. 💛")}</p>
+            )}
             {paymentLink && (
-              <a
-                className="btn btn-primary btn-block"
-                href={paymentLink}
-                target="_blank"
-                rel="noreferrer"
-              >
-                🔗 {t("Ouvrir le paiement")}
-              </a>
+              <IkeepayCheckout
+                link={paymentLink}
+                externalReference={paymentRef}
+                label={t("Paiement du don")}
+                onConfirmed={() => setPaymentDone(true)}
+                onClose={() => setPaymentLink("")}
+              />
             )}
           </div>
         </section>

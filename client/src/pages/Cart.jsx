@@ -8,6 +8,7 @@ import { useAuth } from "../App.jsx";
 import { useCart } from "../store.jsx";
 import { useLang } from "../i18n.jsx";
 import CopyCode from "../components/CopyCode.jsx";
+import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 
 export default function Cart() {
   const { user } = useAuth();
@@ -93,15 +94,16 @@ export default function Cart() {
           </p>
           {paymentLinks.map((payment) =>
             payment.payment_link ? (
-              <a
+              <IkeepayCheckout
                 key={payment.saleId}
-                className="btn btn-primary"
-                href={payment.payment_link}
-                target="_blank"
-                rel="noreferrer"
-              >
-                🔗 {t("Ouvrir le paiement automatique")} #{payment.saleId}
-              </a>
+                link={payment.payment_link}
+                externalReference={payment.external_reference}
+                label={`${t("Paiement automatique")} #${payment.saleId}`}
+                onConfirmed={() => {
+                  /* la répartition est lancée côté serveur */
+                }}
+                onClose={() => {}}
+              />
             ) : null
           )}
           {paymentError && (

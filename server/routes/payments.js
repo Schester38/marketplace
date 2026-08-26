@@ -381,4 +381,66 @@ router.post(
   })
 );
 
+// Le checkout hébergé iKeePay ne notifie PAS notre serveur via webhook :
+// iKeePay confirme le paiement UNIQUEMENT côté client (postMessage
+// « ikeepay-success »), comme le fait le plugin WooCommerce officiel. Ce
+// endpoint permet au client de remonter la confirmation une fois le paiement
+// réussi, afin qu'on marque le paiement « completed » et qu'on déclenche les
+// reversements (90 % vers les portefeuilles Mboppi pour les dons).
+// Cette route est idempotente : appelée plusieurs fois, elle ne re-paye pas.
+router.post(
+  "/ikeepay/confirm",
+  ah(async (req, res) => {
+    const external = String(req.body?.external_reference || "").trim();
+    if (!external) return res.status(400).json({ error: "Référence externe manquante" });
+
+    // 1) Donation
+    const donation = (
+      await q("SELECT * FROM donations WHERE external_reference = $1", [external])
+    )[0];
+    if (donation) {
+      if (donation.status === "completed")
+        return res.json({ ok: true, already: true });
+      await q(
+        "UPDATE donations SET status = 'completed', completed_at = COALESCE(completed_at, now()) WHERE id = $1",
+        [donation.id]
+      );
+      const payout = await payoutPlatformShare({
+        kind: "donation",
+        sourceId: donation.id,
+        amount: Number(donation.amount),
+        currency: donation.currency,
+      });
+      return res.json({ ok: true, donation: donation.id, payout });
+    }
+
+    // 2) Adhésion (paiement d'adhésion)
+    const membership = (
+      await q("SELECT * FROM membership_payments WHERE external_reference = $1", [external])
+    )[0];
+    if (membership) {
+      if (membership.status === "completed")
+        return res.json({ ok: true, already: true });
+      const result = await completeMembershipPayment(membership.id, null);
+      return res.json({ ok: true, ...result });
+    }
+
+    // 3) Vente (paiement automatique d'une commande)
+    const sale = (
+      await q("SELECT * FROM sales WHERE payment_external_reference = $1", [external])
+    )[0];
+    if (sale) {
+      if (sale.payment_status === "paid") return res.json({ ok: true, already: true });
+      await q(
+        "UPDATE sales SET payment_status = 'paid', paid = TRUE, paid_at = COALESCE(paid_at, now()) WHERE id = $1",
+        [sale.id]
+      );
+      const payouts = await paySaleAutomatically(sale.id);
+      return res.json({ ok: true, sale: sale.id, payouts });
+    }
+
+    return res.status(404).json({ error: "Aucun paiement en attente pour cette référence" });
+  })
+);
+
 export default router;
