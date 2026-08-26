@@ -798,7 +798,7 @@ router.post(
       )
     )[0];
 
-    if (full.payment_status === "paid" && !full.online_payment) {
+    if (full.payment_status === "paid") {
       await paySaleAutomatically(full.id);
     }
 

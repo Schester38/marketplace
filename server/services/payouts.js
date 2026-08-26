@@ -345,6 +345,17 @@ export async function paySaleAutomatically(saleId) {
         amount: computeRedistribution(sale).sellerAmount,
       });
   }
+  // Parrain (2 % — client affilié) : versé immédiatement au moment de la
+  // confirmation du paiement, comme les autres acteurs, via iKeePay sur SON
+  // moyen de paiement configuré (seller_payment_methods).
+  if (sale.referred_by) {
+    const referrer = (
+      await q("SELECT id, name, country FROM users WHERE id = $1", [sale.referred_by])
+    )[0];
+    const refAmount = computeRedistribution(sale).referrerAmount;
+    if (referrer && refAmount > 0)
+      targets.push({ user: referrer, kind: "referral", amount: refAmount });
+  }
   if (sale.delivered_by) {
     const livreur = (
       await q("SELECT id, name, country FROM users WHERE id = $1", [sale.delivered_by])
@@ -372,9 +383,14 @@ export async function paySaleAutomatically(saleId) {
       await q("UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()) WHERE id = $1", [
         saleId,
       ]);
+    // Parrain payé par cette vente : le marquer pour éviter tout re-paiement
+    // via l'ancien cumul (payReferralAutomatically).
+    if (result.ok && target.kind === "referral")
+      await q(
+        "UPDATE sales SET referral_paid = TRUE, referral_paid_at = COALESCE(referral_paid_at, now()) WHERE id = $1",
+        [saleId]
+      );
   }
-  if (sale.referred_by && sale.status === "delivered")
-    results.push(await payReferralAutomatically(sale.referred_by));
   return { ok: results.every((item) => item.ok), results };
 }
 
