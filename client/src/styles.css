@@ -8270,6 +8270,21 @@ tr.tr-hidden td {
   border-radius: 10px;
 }
 
+/* Le menu des notifications dans le DRAWER ne doit pas déborder à gauche :
+   ancré sur la cloche (44px, relative), le panneau (320px) `right:0`
+   dépassait de l'autre côté du drawer (~340px) et hors de l'écran. On le
+   centre sur la fenêtre comme sur mobile, toujours visible. */
+.drawer-tools .notif-panel,
+[dir="rtl"] .drawer-tools .notif-panel {
+  position: fixed;
+  top: 58px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: min(360px, 92vw);
+  max-width: 92vw;
+}
+
 /* Menus 🌐 langue et 👥 réseaux : contenu CENTRÉ (largeur naturelle bornée ;
    plus de max-width:100% qui écrasait le panneau dans sa cellule de grille) */
 .drawer-tools .lang-menu,
