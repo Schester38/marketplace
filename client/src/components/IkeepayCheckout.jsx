@@ -25,6 +25,12 @@ export default function IkeepayCheckout({
   const [done, setDone] = useState(false);
   const iframeRef = useRef(null);
   const refCalled = useRef(null);
+  // Sur mobile, l'iframe iKeePay rend souvent une page vide : on bascule sur
+  // l'ouverture en nouvel onglet + confirmation manuelle.
+  const isMobile =
+    typeof window !== "undefined" &&
+    (typeof window.innerWidth === "number" ? window.innerWidth < 820 : false) ||
+    window?.matchMedia?.("(pointer: coarse)")?.matches === true;
 
   const confirmPayment = async (via) => {
     if (!externalReference || refCalled.current) return;
@@ -87,6 +93,39 @@ export default function IkeepayCheckout({
             <p className="hint">{t("La confirmation a été enregistrée.")}</p>
             <button className="btn btn-primary" onClick={onClose}>
               {t("Fermer")}
+            </button>
+          </div>
+        ) : isMobile ? (
+          // Mobile : l'iframe iKeePay est souvent vide. On ouvre le checkout en
+          // plein écran (nouvel onglet, geste utilisateur => non bloqué) puis le
+          // client revient ici confirmer manuellement.
+          <div style={{ textAlign: "center", padding: 6 }}>
+            <p className="hint">
+              {t(
+                "La page de paiement s’ouvre dans un nouvel onglet. Après le règlement, revenez ici et confirmez."
+              )}
+            </p>
+            <a className="btn btn-primary btn-block" href={link} target="_blank" rel="noreferrer">
+              {t("Ouvrir la page de paiement")} ↗
+            </a>
+            {confirming && <p className="hint">{t("Confirmation en cours…")}</p>}
+            {error && <p className="error">{error}</p>}
+            <div className="row2" style={{ marginTop: 12 }}>
+              <button
+                className="btn btn-primary btn-block"
+                disabled={confirming}
+                onClick={() => confirmPayment("manual")}
+              >
+                ✓ {t("J’ai payé, confirmer")}
+              </button>
+            </div>
+            <button
+              type="button"
+              className="btn btn-outline btn-block"
+              style={{ marginTop: 8 }}
+              onClick={onClose}
+            >
+              {t("Annuler")}
             </button>
           </div>
         ) : (
