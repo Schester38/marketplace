@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
@@ -15,6 +15,11 @@ export default function Cart() {
   const navigate = useNavigate();
   const { cart, setQty, removeFromCart, clearCart, cartCount, cartTotal } = useCart();
   const [buyerName, setBuyerName] = useState(user ? user.name : "");
+  // La session est restaurée de façon asynchrone : si l'utilisateur arrive
+  // après coup (rafraîchissement de la page), on pré-remplit le nom.
+  useEffect(() => {
+    if (user && user.name && !buyerName.trim()) setBuyerName(user.name);
+  }, [user, buyerName]);
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
@@ -45,7 +50,11 @@ export default function Cart() {
         // le livreur choisit le mode (espèces / mobile) sur son formulaire.
         payment_method: "espece",
       });
-      setSales(data.sales);
+      const created = Array.isArray(data && data.sales) ? data.sales : [];
+      if (!created.length) {
+        throw new Error(t("Aucune commande n'a pu être enregistrée. Veuillez réessayer."));
+      }
+      setSales(created);
       clearCart();
     } catch (err) {
       setError(err.message);
@@ -161,6 +170,11 @@ export default function Cart() {
                     </Link>
                     <span className="cart-item-price">
                       {formatMoney(i.price)} {symbol}
+                      {i.old_price != null && Number(i.old_price) > Number(i.price) && (
+                        <span className="old-price" style={{ marginLeft: 6 }}>
+                          {formatMoney(i.old_price)} {symbol}
+                        </span>
+                      )}
                     </span>
                     <div className="cart-item-actions">
                       <div className="qty-stepper">
@@ -201,7 +215,7 @@ export default function Cart() {
             <div className="info-row">
               <span className="label">{t("Articles ({n})", { n: cartCount })}</span>
               <strong>
-                {formatMoney(cartTotal)} {countrySymbol(cart[0] && cart[0].country)}
+                {formatMoney(cartTotal)} {countrySymbol(cart[0] ? cart[0].country : null)}
               </strong>
             </div>
             <p className="hint">{t("Les frais de livraison sont confirmés avec la boutique.")}</p>

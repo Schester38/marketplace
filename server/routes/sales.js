@@ -655,15 +655,23 @@ router.post(
     if (!Number.isFinite(fee) || fee < 0) {
       return res.status(400).json({ error: "Frais de livraison invalides" });
     }
+    const onlineMethods = ["automatic", "auto", "online", "en_ligne", "ikeepay"];
+    const lowerMethod = String(payment_method || "")
+      .trim()
+      .toLowerCase();
     if (
-      !["espèce", "mobile", "espece", "mobile_money"].includes(
-        String(payment_method || "").toLowerCase()
-      )
+      !["espèce", "espece", "espe", "mobile", "mobile_money"].includes(lowerMethod) &&
+      !onlineMethods.includes(lowerMethod)
     ) {
-      return res.status(400).json({ error: "Type de paiement invalide (espèce ou mobile)" });
+      return res
+        .status(400)
+        .json({ error: "Type de paiement invalide (espèce, mobile ou en ligne)" });
     }
-    const lowerMethod = String(payment_method).toLowerCase();
-    const cleanMethod = lowerMethod.startsWith("m") ? "mobile" : "espèce";
+    const cleanMethod = onlineMethods.includes(lowerMethod)
+      ? "automatic"
+      : lowerMethod.startsWith("m")
+        ? "mobile"
+        : "espèce";
 
     const sale = (await q("SELECT * FROM sales WHERE id = $1", [Number(req.params.id)]))[0];
     if (!sale) return res.status(404).json({ error: "Vente introuvable" });
@@ -721,6 +729,7 @@ router.post(
       const updated = (
         await tx.query(
           `UPDATE sales SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3,
+        online_payment = CASE WHEN $2 = 'automatic' THEN TRUE ELSE online_payment END,
         payment_status = CASE WHEN payment_status = 'paid' THEN payment_status ELSE 'pending' END
         WHERE id = $4 RETURNING id`,
           [fee, cleanMethod, req.user ? req.user.id : null, lockedSale.id]

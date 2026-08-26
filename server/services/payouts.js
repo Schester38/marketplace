@@ -73,8 +73,34 @@ export async function methodsFor(userId, kind) {
 
 export async function providerPayout({ user, methods, amount, saleId, kind, reference }) {
   const target = paymentTarget(methods, user.country);
-  if (!target || !target.country || !target.phoneNumber)
+  if (!target || !target.country || !target.phoneNumber) {
+    // GAP : jusqu'ici l'acteur était ignoré sans aucune trace ni notification :
+    // il croyait recevoir l'argent mais n'avait aucun moyen de paiement valide.
+    // On enregistre l'échec et on le notifie pour qu'il configure son opérateur.
+    try {
+      await q(
+        `INSERT INTO automatic_payouts (external_reference, user_id, sale_id, kind, amount, currency, status, error)
+         VALUES ($1, $2, $3, $4, $5, $6, 'failed', $7) ON CONFLICT (external_reference) DO NOTHING`,
+        [
+          reference,
+          user.id,
+          saleId || null,
+          kind,
+          amount,
+          currencyForCountry(user.country),
+          "Moyen de paiement automatique non configuré",
+        ]
+      );
+      await sendPush(user.id, {
+        type: "payout_method_missing",
+        title: "Paiement non reçu",
+        body: `Votre reversement de ${amount} ${currencyForCountry(user.country)} n'a pas pu être envoyé : configurez votre opérateur Mobile Money pour recevoir vos gains.`,
+      });
+    } catch (logError) {
+      console.error("[payout] échec de traçage du moyen manquant :", logError.message);
+    }
     return { ok: false, error: "Moyen de paiement automatique non configuré" };
+  }
   const existing = (
     await q("SELECT * FROM automatic_payouts WHERE external_reference = $1", [reference])
   )[0];

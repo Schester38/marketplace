@@ -48,9 +48,21 @@ export const createSaleSchema = z.object({
 
 export const deliverSaleSchema = z.object({
   delivery_fee: z.coerce.number().min(0, "Frais de livraison invalides").default(0),
-  payment_method: z.enum(["espèce", "mobile", "espece", "mobile_money"], {
-    errorMap: () => ({ message: "Type de paiement invalide (espèce ou mobile)" }),
-  }),
+  payment_method: z.enum(
+    [
+      "espèce",
+      "espece",
+      "esp",
+      "mobile",
+      "mobile_money",
+      "automatic",
+      "auto",
+      "online",
+      "en_ligne",
+      "ikeepay",
+    ],
+    { errorMap: () => ({ message: "Type de paiement invalide (espèce, mobile ou en ligne)" }) }
+  ),
   client_code: z.string().max(20).optional(),
   shop_code: z.string().min(1, "Code boutique requis").max(20),
 });
