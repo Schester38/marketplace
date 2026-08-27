@@ -78,7 +78,7 @@ export default function MembershipPage() {
             "Votre adhésion de 30 jours est nécessaire pour accéder à votre tableau de bord professionnel."
           )}
         </p>
-        <div className="card" style={{ background: "#fff7ed", borderColor: "#fed7aa" }}>
+        <div className="card fee-card" style={{ borderColor: "var(--border)" }}>
           <strong>
             {t(
               user?.role === "shop"

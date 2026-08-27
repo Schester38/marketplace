@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { q, ensureColumn } from "../db.js";
+import { q, ensureColumn, ensureAdminHiddenTables } from "../db.js";
 import { authRequired, roleRequired, signToken } from "../auth.js";
 import { logAudit } from "../security.js";
 import { migrateImages } from "../migrate-images.js";
@@ -314,6 +314,7 @@ router.delete(
 router.delete(
   "/sales/:id",
   ah(async (req, res) => {
+    await ensureAdminHiddenTables();
     const id = Number(req.params.id);
     if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
     const sale = (await q("SELECT id FROM sales WHERE id = $1", [id]))[0];
@@ -335,6 +336,7 @@ router.delete(
 router.post(
   "/sales/:id/restore",
   ah(async (req, res) => {
+    await ensureAdminHiddenTables();
     const id = Number(req.params.id);
     if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
     await q("DELETE FROM admin_hidden_sales WHERE sale_id = $1", [id]);
@@ -353,6 +355,7 @@ const SALE_STATUSES = ["pending", "bought", "confirmed", "delivered", "cancelled
 router.delete(
   "/statuses/:status",
   ah(async (req, res) => {
+    await ensureAdminHiddenTables();
     const status = String(req.params.status || "");
     if (!SALE_STATUSES.includes(status)) return res.status(400).json({ error: "Statut invalide" });
     await q(
@@ -372,6 +375,7 @@ router.delete(
 router.post(
   "/statuses/:status/restore",
   ah(async (req, res) => {
+    await ensureAdminHiddenTables();
     const status = String(req.params.status || "");
     if (!SALE_STATUSES.includes(status)) return res.status(400).json({ error: "Statut invalide" });
     await q("DELETE FROM admin_hidden_statuses WHERE status = $1", [status]);
@@ -388,6 +392,7 @@ router.post(
 router.delete(
   "/shops/:id",
   ah(async (req, res) => {
+    await ensureAdminHiddenTables();
     const id = Number(req.params.id);
     if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
     const shop = (await q("SELECT id FROM users WHERE id = $1", [id]))[0];
@@ -404,6 +409,7 @@ router.delete(
 router.post(
   "/shops/:id/restore",
   ah(async (req, res) => {
+    await ensureAdminHiddenTables();
     const id = Number(req.params.id);
     if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
     await q("DELETE FROM admin_hidden_shops WHERE shop_id = $1", [id]);
@@ -420,6 +426,7 @@ router.post(
 router.delete(
   "/sellers/:id",
   ah(async (req, res) => {
+    await ensureAdminHiddenTables();
     const id = Number(req.params.id);
     // id 0 = ligne « ventes sans vendeur » (parrain/vendeur non renseigné) :
     // c'est une pseudo-ligne masquable, pas un vrai utilisateur.
@@ -440,6 +447,7 @@ router.delete(
 router.post(
   "/sellers/:id/restore",
   ah(async (req, res) => {
+    await ensureAdminHiddenTables();
     const id = Number(req.params.id);
     if ((!isId(id) && id !== 0) || Number.isNaN(id)) {
       return res.status(400).json({ error: "Identifiant invalide" });
@@ -458,6 +466,7 @@ router.post(
 router.get(
   "/transactions",
   ah(async (req, res) => {
+    await ensureAdminHiddenTables();
     const rows = await q(
       `SELECT s.id, s.status, s.created_at, s.quantity, s.total_price, s.commission,
             s.referral_commission, s.paid, s.referral_paid, s.delivered_at, s.payment_method,

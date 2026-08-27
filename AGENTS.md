@@ -62,8 +62,10 @@ Il existe aussi le **parrainage d'activation vendeur/créateur** (distinct) : un
 
 ### Adhésions (accès aux espaces pro)
 
+> **⚠️ Gratuit pour l'instant (accès direct après inscription)** : depuis v1.47.38, les comptes **shop / seller / creator** s'inscrivent avec `admin_approved = TRUE` (`server/routes/auth.js`, inserts email + Google) → accès immédiat et indéfini à leur espace, **sans payer les frais d'adhésion**. Tout le code de l'adhésion (déblocage via paiement / adhésion payante) reste en place mais est inopérant pour ces nouveaux comptes tant qu'ils restent approuvés. **Pour « bloquer après »** : l'admin utilise le bouton « Fermer » sur /admin (passe `admin_approved` à `FALSE`), ce qui déclenche le blocage 402 tant que le compte n'a pas d'adhésion active. (Les comptes pro existants déjà bloqués et non approuvés ne sont **pas** modifiés par ce changement — l'admin peut les « Ouvrir » individuellement.)
+
 - Tarifs (`server/auth.js` `MEMBERSHIP_FEES`) : **shop 2 500 · seller 1 500 · creator 2 500 XAF**, valables **30 jours**. Livreur/client : pas d'adhésion.
-- Un compte validé par l'admin (« Ouvrir » sur /admin, colonne `admin_approved`) accède sans paiement ; « Fermer » coupe l'accès.
+- Accès accordé si `admin_approved = TRUE` (« Ouvrir » sur /admin — désormais activé d'office à l'inscription des rôles pro) **ou** adhésion active (`membership_expires_at` dans le futur). « Fermer » (admin_approved = FALSE) coupe l'accès sauf si une adhésion active existe.
 - Sinon accès bloqué : `roleRequired` renvoie **402 MEMBERSHIP_REQUIRED** → le client intercepte ce code (événement `membership-required` dans `client/src/api.js`), rafraîchit la session et redirige vers `/adhesion` (page de paiement).
 - Paiement : `POST /api/payments/ikeepay/membership` → webhook completed → `completeMembershipPayment` active 30 jours puis **balaye 90 % du frais vers les portefeuilles Mboppi** (`MBOPPI_SHARE:membership:{paymentId}`).
 
@@ -104,6 +106,12 @@ Il existe aussi le **parrainage d'activation vendeur/créateur** (distinct) : un
 - **Paiement d'une vente** : manuel avec preuve (`POST /api/sales/:id/pay`, wallet crédité 100 %) **ou** en ligne Ikeepay à la livraison (`POST /api/payments/ikeepay/payin` déclenché par le livreur → lightbox → confirmation → reversements nets 90 % — voir « Commission et argent »).
 - **Suppression de livraison** : bloquée si commission vendeur (`paid`) ou parrainage (`referral_paid`) non payés. Paiement groupé des commissions par la boutique : `/:id/claim` et `/:id/pay-referral`.
 - **Facture PDF** : `client/src/components/Invoice.jsx` — jspdf **v4.2.1** importé dynamiquement, `doc.save('facture-{id}.pdf')`, logo `/navbar-logo.png`, boutons dans Shop/Seller/Livreur dashboards.
+
+### Suppressions sur /admin — deux types bien distincts
+
+- **Masquages doux (N'AFFECTENT PAS l'utilisateur)** : les boutons « Supprimer » des sections **Par statut, Par boutique, Par vendeur, Dernières transactions** insèrent dans les tables `admin_hidden_sales` / `admin_hidden_statuses` / `admin_hidden_shops` / `admin_hidden_sellers` — la ligne disparaît **uniquement de la vue admin** (statut « masqué », bouton « Restaurer » la réaffiche). Les données restent intactes pour les utilisateurs (ventes toujours actives, comptes visibles). Tables garanties à la volée par `ensureAdminHiddenTables()` (`server/db.js`), appelée au début de chaque route concernée (`server/routes/admin.js`) pour ne pas dépendre d'`initDb`.
+- **Vraie suppression de produit (AFFECTE l'utilisateur)** : le bouton « Supprimer » du bloc **Produits** (en haut de /admin) fait un `DELETE FROM products` réel + notification + push à la boutique concernée (`router.delete('/products/:id')`). Le produit disparaît définitivement du catalogue et de l'espace de la boutique.
+- La **suppression de comptes utilisateurs est désactivée** (`DELETE /admin/users/:id` → 403 « Fermez pour couper l'accès »).
 
 ## Tableaux principaux (créés dans `server/db.js` initDb)
 

@@ -243,7 +243,7 @@ export default function Register() {
           />
 
           {(form.role === "shop" || form.role === "seller" || form.role === "creator") && (
-            <div className="card" style={{ margin: "16px 0", background: "#f8fafc" }}>
+            <div className="card" style={{ margin: "16px 0", background: "var(--soft)" }}>
               <strong>{t("Moyen de paiement")}</strong>
               <p className="hint">
                 {t(

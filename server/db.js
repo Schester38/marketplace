@@ -34,6 +34,36 @@ export async function ensureColumn(table, column, definition) {
   }
 }
 
+// Garantit l'existence des tables de masquage doux admin, même si initDb a
+// échoué SILENCIEUSEMENT à les créer (le bloc isolé d'initDb est enveloppé
+// d'un try/catch qui avale l'erreur). Appelée avant chaque opération qui
+// les utilise (boutons « Supprimer » / « Restaurer » des sections Par
+// statut / Par boutique / Par vendeur / Dernières transactions, + /transactions).
+export async function ensureAdminHiddenTables() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_hidden_sales (
+      sale_id BIGINT PRIMARY KEY,
+      hidden_by INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS admin_hidden_statuses (
+      status TEXT PRIMARY KEY,
+      hidden_by INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS admin_hidden_shops (
+      shop_id BIGINT PRIMARY KEY,
+      hidden_by INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS admin_hidden_sellers (
+      seller_id BIGINT PRIMARY KEY,
+      hidden_by INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+}
+
 // Auto-réparation : garantit les colonnes iKeePay de la table donations,
 // même si initDb a échoué partiellement sur une base au schéma ancien.
 export async function ensureDonationPaymentColumns() {

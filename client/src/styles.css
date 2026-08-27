@@ -97,6 +97,7 @@
   --warn: var(--warn-500);
 
   /* Gradients */
+  --grad: linear-gradient(135deg, var(--primary-500), var(--primary-600));
   --grad-primary: linear-gradient(135deg, var(--primary-500), var(--primary-600));
   --grad-primary-hover: linear-gradient(135deg, var(--primary-600), var(--primary-700));
   --grad-secondary: linear-gradient(135deg, var(--secondary-500), var(--secondary-600));
@@ -231,6 +232,7 @@
   --soft-2: #273244;
   --input-bg: #111827;
   --thumb-grad: linear-gradient(135deg, #1f2937, #111827);
+  --select-active-bg: #33291c;
 }
 
 * {
@@ -2218,10 +2220,7 @@ textarea {
 }
 .stats-row strong {
   font-size: 1.45rem;
-  background: var(--grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--text);
 }
 
 .stats-extra {
@@ -5260,6 +5259,12 @@ tr.tr-hidden td {
 .card-shop span {
   color: #15803d;
   font-weight: 700;
+}
+.fee-card {
+  background: var(--soft);
+}
+[data-theme="dark"] .fee-card {
+  background: linear-gradient(135deg, #33291c, #2a2118);
 }
 
 /* Suivi de commande */
