@@ -210,17 +210,6 @@ export const api = {
     adminRequest("/admin/messages", { method: "POST", body: JSON.stringify(payload) }),
   adminDeleteMessage: (id) => adminRequest(`/admin/messages/${id}`, { method: "DELETE" }),
   adminResendMessage: (id) => adminRequest(`/admin/messages/${id}/resend`, { method: "POST" }),
-  // Masquages doux (vue admin uniquement, utilisateurs non affectés)
-  adminHideSale: (id) => adminRequest(`/admin/sales/${id}`, { method: "DELETE" }),
-  adminRestoreSale: (id) => adminRequest(`/admin/sales/${id}/restore`, { method: "POST" }),
-  adminHideStatus: (status) =>
-    adminRequest(`/admin/statuses/${encodeURIComponent(status)}`, { method: "DELETE" }),
-  adminRestoreStatus: (status) =>
-    adminRequest(`/admin/statuses/${encodeURIComponent(status)}/restore`, { method: "POST" }),
-  adminHideShop: (id) => adminRequest(`/admin/shops/${id}`, { method: "DELETE" }),
-  adminRestoreShop: (id) => adminRequest(`/admin/shops/${id}/restore`, { method: "POST" }),
-  adminHideSeller: (id) => adminRequest(`/admin/sellers/${id}`, { method: "DELETE" }),
-  adminRestoreSeller: (id) => adminRequest(`/admin/sellers/${id}/restore`, { method: "POST" }),
   adminLogs: (limit = 100) => adminRequest(`/logs/list?limit=${limit}`),
   adminVisits: (days = 30, country = "") =>
     adminRequest(

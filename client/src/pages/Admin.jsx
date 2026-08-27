@@ -45,10 +45,6 @@ export default function Admin() {
   const [visits, setVisits] = useState(null);
   const [visitDays, setVisitDays] = useState(30);
   const [visitCountry, setVisitCountry] = useState("");
-  const [showHidden, setShowHidden] = useState(false);
-  const [showHiddenStatus, setShowHiddenStatus] = useState(false);
-  const [showHiddenShop, setShowHiddenShop] = useState(false);
-  const [showHiddenSeller, setShowHiddenSeller] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(
@@ -257,132 +253,6 @@ export default function Admin() {
     try {
       await api.adminResendMessage(m.id);
       setError("");
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const hideSale = async (s) => {
-    if (
-      !window.confirm(
-        t("Masquer cette transaction de la vue admin ? Les utilisateurs ne sont pas affectés.")
-      )
-    )
-      return;
-    try {
-      await api.adminHideSale(s.id);
-      setTransactions((tr) => ({
-        ...tr,
-        hidden_count: tr.hidden_count + 1,
-        rows: tr.rows.map((r) => (r.id === s.id ? { ...r, hidden: true } : r)),
-      }));
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const restoreSale = async (s) => {
-    try {
-      await api.adminRestoreSale(s.id);
-      setTransactions((tr) => ({
-        ...tr,
-        hidden_count: Math.max(0, tr.hidden_count - 1),
-        rows: tr.rows.map((r) => (r.id === s.id ? { ...r, hidden: false } : r)),
-      }));
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const hideStatus = async (row) => {
-    if (
-      !window.confirm(
-        t("Masquer ce statut de la vue admin ? Les utilisateurs ne sont pas affectés.")
-      )
-    )
-      return;
-    try {
-      await api.adminHideStatus(row.status);
-      setTransactions((tr) => ({
-        ...tr,
-        by_status: tr.by_status.map((r) => (r.status === row.status ? { ...r, hidden: true } : r)),
-      }));
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const restoreStatus = async (row) => {
-    try {
-      await api.adminRestoreStatus(row.status);
-      setTransactions((tr) => ({
-        ...tr,
-        by_status: tr.by_status.map((r) => (r.status === row.status ? { ...r, hidden: false } : r)),
-      }));
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const hideShop = async (row) => {
-    if (
-      !window.confirm(
-        t("Masquer cette boutique de la vue admin ? Les utilisateurs ne sont pas affectés.")
-      )
-    )
-      return;
-    try {
-      await api.adminHideShop(row.shop_id);
-      setTransactions((tr) => ({
-        ...tr,
-        by_shop: tr.by_shop.map((r) => (r.shop_id === row.shop_id ? { ...r, hidden: true } : r)),
-      }));
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const restoreShop = async (row) => {
-    try {
-      await api.adminRestoreShop(row.shop_id);
-      setTransactions((tr) => ({
-        ...tr,
-        by_shop: tr.by_shop.map((r) => (r.shop_id === row.shop_id ? { ...r, hidden: false } : r)),
-      }));
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const hideSeller = async (row) => {
-    if (
-      !window.confirm(
-        t("Masquer ce vendeur de la vue admin ? Les utilisateurs ne sont pas affectés.")
-      )
-    )
-      return;
-    try {
-      await api.adminHideSeller(row.seller_id);
-      setTransactions((tr) => ({
-        ...tr,
-        by_seller: tr.by_seller.map((r) =>
-          r.seller_id === row.seller_id ? { ...r, hidden: true } : r
-        ),
-      }));
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const restoreSeller = async (row) => {
-    try {
-      await api.adminRestoreSeller(row.seller_id);
-      setTransactions((tr) => ({
-        ...tr,
-        by_seller: tr.by_seller.map((r) =>
-          r.seller_id === row.seller_id ? { ...r, hidden: false } : r
-        ),
-      }));
     } catch (err) {
       setError(err.message);
     }
@@ -987,13 +857,6 @@ export default function Admin() {
 
           <div className="transactions-head">
             <h3>{t("Par statut")}</h3>
-            <button
-              type="button"
-              className={`btn btn-small ${showHiddenStatus ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setShowHiddenStatus((v) => !v)}
-            >
-              {t("Masqués")} ({transactions.by_status.filter((r) => r.hidden).length})
-            </button>
           </div>
           <div className="table-wrap">
             <table className="table">
@@ -1002,51 +865,26 @@ export default function Admin() {
                   <th>{t("Statut")}</th>
                   <th>{t("Nombre")}</th>
                   <th>{t("Total")}</th>
-                  <th>{t("Actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {(() => {
-                  const rows = transactions.by_status.filter((r) =>
-                    showHiddenStatus ? r.hidden : !r.hidden
-                  );
+                  const rows = transactions.by_status;
                   if (rows.length === 0) {
                     return (
                       <tr>
-                        <td colSpan="4" className="empty">
+                        <td colSpan="3" className="empty">
                           {t("Aucune transaction")}
                         </td>
                       </tr>
                     );
                   }
                   return rows.map((r) => (
-                    <tr key={r.status} className={r.hidden ? "tr-hidden" : undefined}>
+                    <tr key={r.status}>
                       <td>{statusBadge(r.status)}</td>
                       <td>{r.count}</td>
                       <td>
                         {formatMoney(r.total)} {countrySymbol("")}
-                      </td>
-                      <td>
-                        {r.hidden ? (
-                          <>
-                            <span className="badge badge-cancelled">{t("masqué")}</span>{" "}
-                            <button
-                              type="button"
-                              className="btn btn-small btn-outline"
-                              onClick={() => restoreStatus(r)}
-                            >
-                              {t("Restaurer")}
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-small"
-                            onClick={() => hideStatus(r)}
-                          >
-                            {t("Supprimer")}
-                          </button>
-                        )}
                       </td>
                     </tr>
                   ));
@@ -1057,13 +895,6 @@ export default function Admin() {
 
           <div className="transactions-head">
             <h3>{t("Par boutique")}</h3>
-            <button
-              type="button"
-              className={`btn btn-small ${showHiddenShop ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setShowHiddenShop((v) => !v)}
-            >
-              {t("Masquées")} ({transactions.by_shop.filter((r) => r.hidden).length})
-            </button>
           </div>
           <div className="table-wrap">
             <table className="table">
@@ -1074,25 +905,22 @@ export default function Admin() {
                   <th>{t("Ventes")}</th>
                   <th>{t("Chiffre d'affaires")}</th>
                   <th>{t("Commissions")}</th>
-                  <th>{t("Actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {(() => {
-                  const rows = transactions.by_shop.filter((r) =>
-                    showHiddenShop ? r.hidden : !r.hidden
-                  );
+                  const rows = transactions.by_shop;
                   if (rows.length === 0) {
                     return (
                       <tr>
-                        <td colSpan="6" className="empty">
+                        <td colSpan="5" className="empty">
                           {t("Aucune transaction")}
                         </td>
                       </tr>
                     );
                   }
                   return rows.map((r) => (
-                    <tr key={r.shop_id} className={r.hidden ? "tr-hidden" : undefined}>
+                    <tr key={r.shop_id}>
                       <td>{r.shop_name}</td>
                       <td>{r.country || "—"}</td>
                       <td>{r.count}</td>
@@ -1101,28 +929,6 @@ export default function Admin() {
                       </td>
                       <td>
                         {formatMoney(r.commission)} {countrySymbol("")}
-                      </td>
-                      <td>
-                        {r.hidden ? (
-                          <>
-                            <span className="badge badge-cancelled">{t("masquée")}</span>{" "}
-                            <button
-                              type="button"
-                              className="btn btn-small btn-outline"
-                              onClick={() => restoreShop(r)}
-                            >
-                              {t("Restaurer")}
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-small"
-                            onClick={() => hideShop(r)}
-                          >
-                            {t("Supprimer")}
-                          </button>
-                        )}
                       </td>
                     </tr>
                   ));
@@ -1133,13 +939,6 @@ export default function Admin() {
 
           <div className="transactions-head">
             <h3>{t("Par vendeur")}</h3>
-            <button
-              type="button"
-              className={`btn btn-small ${showHiddenSeller ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setShowHiddenSeller((v) => !v)}
-            >
-              {t("Masqués")} ({transactions.by_seller.filter((r) => r.hidden).length})
-            </button>
           </div>
           <div className="table-wrap">
             <table className="table">
@@ -1150,25 +949,22 @@ export default function Admin() {
                   <th>{t("Ventes")}</th>
                   <th>{t("Commissions")}</th>
                   <th>{t("Payées")}</th>
-                  <th>{t("Actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {(() => {
-                  const rows = transactions.by_seller.filter((r) =>
-                    showHiddenSeller ? r.hidden : !r.hidden
-                  );
+                  const rows = transactions.by_seller;
                   if (rows.length === 0) {
                     return (
                       <tr>
-                        <td colSpan="6" className="empty">
+                        <td colSpan="5" className="empty">
                           {t("Aucune transaction")}
                         </td>
                       </tr>
                     );
                   }
                   return rows.map((r) => (
-                    <tr key={r.seller_id} className={r.hidden ? "tr-hidden" : undefined}>
+                    <tr key={r.seller_id}>
                       <td>{r.seller_name}</td>
                       <td>
                         <code className="seller-code-inline">{r.seller_code || "—"}</code>
@@ -1180,28 +976,6 @@ export default function Admin() {
                       <td>
                         {formatMoney(r.paid)} {countrySymbol("")}
                       </td>
-                      <td>
-                        {r.hidden ? (
-                          <>
-                            <span className="badge badge-cancelled">{t("masqué")}</span>{" "}
-                            <button
-                              type="button"
-                              className="btn btn-small btn-outline"
-                              onClick={() => restoreSeller(r)}
-                            >
-                              {t("Restaurer")}
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-small"
-                            onClick={() => hideSeller(r)}
-                          >
-                            {t("Supprimer")}
-                          </button>
-                        )}
-                      </td>
                     </tr>
                   ));
                 })()}
@@ -1211,13 +985,6 @@ export default function Admin() {
 
           <div className="transactions-head">
             <h3 className="section-title">{t("Dernières transactions")}</h3>
-            <button
-              type="button"
-              className={`btn btn-small ${showHidden ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setShowHidden((v) => !v)}
-            >
-              {t("Masquées")} ({transactions.hidden_count || 0})
-            </button>
           </div>
           <div className="table-wrap">
             <table className="table">
@@ -1233,25 +1000,22 @@ export default function Admin() {
                   <th>{t("Paiement")}</th>
                   <th>{t("Statut")}</th>
                   <th>{t("Date")}</th>
-                  <th>{t("Actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {(() => {
-                  const visible = (transactions.rows || []).filter((r) =>
-                    showHidden ? r.hidden : !r.hidden
-                  );
+                  const visible = transactions.rows || [];
                   if (visible.length === 0) {
                     return (
                       <tr>
-                        <td colSpan="11" className="empty">
+                        <td colSpan="10" className="empty">
                           {t("Aucune transaction")}
                         </td>
                       </tr>
                     );
                   }
                   return visible.map((r) => (
-                    <tr key={r.id} className={r.hidden ? "tr-hidden" : undefined}>
+                    <tr key={r.id}>
                       <td>{r.product_name}</td>
                       <td>{r.shop_name}</td>
                       <td>{r.seller_name}</td>
@@ -1294,28 +1058,6 @@ export default function Admin() {
                       </td>
                       <td>{statusBadge(r.status)}</td>
                       <td className="hint">{new Date(r.created_at).toLocaleDateString()}</td>
-                      <td>
-                        {r.hidden ? (
-                          <>
-                            <span className="badge badge-cancelled">{t("masquée")}</span>{" "}
-                            <button
-                              type="button"
-                              className="btn btn-small btn-outline"
-                              onClick={() => restoreSale(r)}
-                            >
-                              {t("Restaurer")}
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-small"
-                            onClick={() => hideSale(r)}
-                          >
-                            {t("Supprimer")}
-                          </button>
-                        )}
-                      </td>
                     </tr>
                   ));
                 })()}

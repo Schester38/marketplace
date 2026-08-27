@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { q, ensureColumn, ensureAdminHiddenTables } from "../db.js";
+import { q, ensureColumn } from "../db.js";
 import { authRequired, roleRequired, signToken } from "../auth.js";
 import { logAudit } from "../security.js";
 import { migrateImages } from "../migrate-images.js";
@@ -311,162 +311,9 @@ router.delete(
   })
 );
 
-router.delete(
-  "/sales/:id",
-  ah(async (req, res) => {
-    await ensureAdminHiddenTables();
-    const id = Number(req.params.id);
-    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
-    const sale = (await q("SELECT id FROM sales WHERE id = $1", [id]))[0];
-    if (!sale) return res.status(404).json({ error: "Transaction introuvable" });
-    await q(
-      "INSERT INTO admin_hidden_sales (sale_id, hidden_by) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-      [id, req.user.id]
-    );
-    await logAudit(
-      req.user.id,
-      "admin.hide_sale",
-      `sale=${id} masquee de la vue admin (utilisateurs non affectes)`,
-      req.ip
-    );
-    res.json({ ok: true });
-  })
-);
-
-router.post(
-  "/sales/:id/restore",
-  ah(async (req, res) => {
-    await ensureAdminHiddenTables();
-    const id = Number(req.params.id);
-    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
-    await q("DELETE FROM admin_hidden_sales WHERE sale_id = $1", [id]);
-    await logAudit(
-      req.user.id,
-      "admin.restore_sale",
-      `sale=${id} restauree dans la vue admin`,
-      req.ip
-    );
-    res.json({ ok: true });
-  })
-);
-
-const SALE_STATUSES = ["pending", "bought", "confirmed", "delivered", "cancelled"];
-
-router.delete(
-  "/statuses/:status",
-  ah(async (req, res) => {
-    await ensureAdminHiddenTables();
-    const status = String(req.params.status || "");
-    if (!SALE_STATUSES.includes(status)) return res.status(400).json({ error: "Statut invalide" });
-    await q(
-      "INSERT INTO admin_hidden_statuses (status, hidden_by) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-      [status, req.user.id]
-    );
-    await logAudit(
-      req.user.id,
-      "admin.hide_status",
-      `status=${status} masque de la vue admin`,
-      req.ip
-    );
-    res.json({ ok: true });
-  })
-);
-
-router.post(
-  "/statuses/:status/restore",
-  ah(async (req, res) => {
-    await ensureAdminHiddenTables();
-    const status = String(req.params.status || "");
-    if (!SALE_STATUSES.includes(status)) return res.status(400).json({ error: "Statut invalide" });
-    await q("DELETE FROM admin_hidden_statuses WHERE status = $1", [status]);
-    await logAudit(
-      req.user.id,
-      "admin.restore_status",
-      `status=${status} restauree dans la vue admin`,
-      req.ip
-    );
-    res.json({ ok: true });
-  })
-);
-
-router.delete(
-  "/shops/:id",
-  ah(async (req, res) => {
-    await ensureAdminHiddenTables();
-    const id = Number(req.params.id);
-    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
-    const shop = (await q("SELECT id FROM users WHERE id = $1", [id]))[0];
-    if (!shop) return res.status(404).json({ error: "Boutique introuvable" });
-    await q(
-      "INSERT INTO admin_hidden_shops (shop_id, hidden_by) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-      [id, req.user.id]
-    );
-    await logAudit(req.user.id, "admin.hide_shop", `shop=${id} masquee de la vue admin`, req.ip);
-    res.json({ ok: true });
-  })
-);
-
-router.post(
-  "/shops/:id/restore",
-  ah(async (req, res) => {
-    await ensureAdminHiddenTables();
-    const id = Number(req.params.id);
-    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
-    await q("DELETE FROM admin_hidden_shops WHERE shop_id = $1", [id]);
-    await logAudit(
-      req.user.id,
-      "admin.restore_shop",
-      `shop=${id} restauree dans la vue admin`,
-      req.ip
-    );
-    res.json({ ok: true });
-  })
-);
-
-router.delete(
-  "/sellers/:id",
-  ah(async (req, res) => {
-    await ensureAdminHiddenTables();
-    const id = Number(req.params.id);
-    // id 0 = ligne « ventes sans vendeur » (parrain/vendeur non renseigné) :
-    // c'est une pseudo-ligne masquable, pas un vrai utilisateur.
-    if ((!isId(id) && id !== 0) || Number.isNaN(id)) {
-      return res.status(400).json({ error: "Identifiant invalide" });
-    }
-    const seller = id === 0 ? true : (await q("SELECT id FROM users WHERE id = $1", [id]))[0];
-    if (!seller) return res.status(404).json({ error: "Vendeur introuvable" });
-    await q(
-      "INSERT INTO admin_hidden_sellers (seller_id, hidden_by) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-      [id, req.user.id]
-    );
-    await logAudit(req.user.id, "admin.hide_seller", `seller=${id} masque de la vue admin`, req.ip);
-    res.json({ ok: true });
-  })
-);
-
-router.post(
-  "/sellers/:id/restore",
-  ah(async (req, res) => {
-    await ensureAdminHiddenTables();
-    const id = Number(req.params.id);
-    if ((!isId(id) && id !== 0) || Number.isNaN(id)) {
-      return res.status(400).json({ error: "Identifiant invalide" });
-    }
-    await q("DELETE FROM admin_hidden_sellers WHERE seller_id = $1", [id]);
-    await logAudit(
-      req.user.id,
-      "admin.restore_seller",
-      `seller=${id} restaure dans la vue admin`,
-      req.ip
-    );
-    res.json({ ok: true });
-  })
-);
-
 router.get(
   "/transactions",
   ah(async (req, res) => {
-    await ensureAdminHiddenTables();
     const rows = await q(
       `SELECT s.id, s.status, s.created_at, s.quantity, s.total_price, s.commission,
             s.referral_commission, s.paid, s.referral_paid, s.delivered_at, s.payment_method,
@@ -475,8 +322,7 @@ router.get(
             p.name AS product_name, p.shop_id,
             shop.name AS shop_name, shop.country AS shop_country,
             COALESCE(u.name, '—') AS seller_name, u.seller_code,
-            COALESCE(parrain.name, '—') AS parrain_name,
-            EXISTS (SELECT 1 FROM admin_hidden_sales h WHERE h.sale_id = s.id) AS hidden
+            COALESCE(parrain.name, '—') AS parrain_name
      FROM sales s
      JOIN products p ON p.id = s.product_id
      JOIN users shop ON shop.id = p.shop_id
@@ -485,17 +331,14 @@ router.get(
      ORDER BY s.created_at DESC
      LIMIT 300`
     );
-    const [hiddenCount] = await q("SELECT COUNT(*) AS cnt FROM admin_hidden_sales");
     const byStatus = await q(
-      `SELECT s.status, COUNT(*) AS cnt, COALESCE(SUM(s.total_price), 0) AS total,
-            EXISTS (SELECT 1 FROM admin_hidden_statuses hs WHERE hs.status = s.status) AS hidden
+      `SELECT s.status, COUNT(*) AS cnt, COALESCE(SUM(s.total_price), 0) AS total
      FROM sales s GROUP BY s.status ORDER BY cnt DESC`
     );
     const byShop = await q(
       `SELECT shop.id AS shop_id, shop.name AS shop_name, shop.country AS shop_country, COUNT(*) AS cnt,
             COALESCE(SUM(s.total_price), 0) AS revenue,
-            COALESCE(SUM(s.commission), 0) + COALESCE(SUM(s.referral_commission), 0) AS commission,
-            EXISTS (SELECT 1 FROM admin_hidden_shops hs WHERE hs.shop_id = shop.id) AS hidden
+            COALESCE(SUM(s.commission), 0) + COALESCE(SUM(s.referral_commission), 0) AS commission
      FROM sales s
      JOIN products p ON p.id = s.product_id
      JOIN users shop ON shop.id = p.shop_id
@@ -505,8 +348,7 @@ router.get(
     const bySeller = await q(
       `SELECT COALESCE(u.id, 0) AS seller_id, COALESCE(u.name, '—') AS seller_name, u.seller_code, COUNT(*) AS cnt,
             COALESCE(SUM(s.commission), 0) AS commission,
-            COALESCE(SUM(CASE WHEN s.paid THEN s.commission ELSE 0 END), 0) AS paid,
-            EXISTS (SELECT 1 FROM admin_hidden_sellers hs WHERE hs.seller_id = COALESCE(u.id, 0)) AS hidden
+            COALESCE(SUM(CASE WHEN s.paid THEN s.commission ELSE 0 END), 0) AS paid
      FROM sales s
      LEFT JOIN users u ON u.id = s.seller_id
      GROUP BY u.id, u.name, u.seller_code
@@ -521,7 +363,6 @@ router.get(
     res.json({
       rows: rows.map((r) => ({
         ...r,
-        hidden: Boolean(r.hidden),
         total_price: Number(r.total_price),
         commission: Number(r.commission),
         referral_commission: Number(r.referral_commission),
@@ -530,7 +371,6 @@ router.get(
         status: r.status,
         count: Number(r.cnt),
         total: Number(r.total),
-        hidden: Boolean(r.hidden),
       })),
       by_shop: byShop.map((r) => ({
         shop_id: Number(r.shop_id),
@@ -539,7 +379,6 @@ router.get(
         count: Number(r.cnt),
         revenue: Number(r.revenue),
         commission: Number(r.commission),
-        hidden: Boolean(r.hidden),
       })),
       by_seller: bySeller.map((r) => ({
         seller_id: Number(r.seller_id),
@@ -548,11 +387,9 @@ router.get(
         count: Number(r.cnt),
         commission: Number(r.commission),
         paid: Number(r.paid),
-        hidden: Boolean(r.hidden),
       })),
       direct: { count: Number(direct.cnt), total: Number(direct.total) },
       with_seller: { count: Number(withSeller.cnt), total: Number(withSeller.total) },
-      hidden_count: Number(hiddenCount.cnt),
     });
   })
 );

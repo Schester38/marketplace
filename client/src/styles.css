@@ -3991,9 +3991,6 @@ a.step {
 .transactions-head .section-title {
   margin: 0;
 }
-tr.tr-hidden td {
-  opacity: 0.55;
-}
 .visits-panel .table-card {
   overflow-x: auto;
 }
