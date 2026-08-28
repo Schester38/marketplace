@@ -1999,6 +1999,34 @@ textarea {
   word-break: break-all;
   max-width: 100%;
 }
+/* Sur mobile, les liens de parrainage sont longs : on force une seule ligne
+   horizontale pour le lien, puis les boutons dessous (pas de passage en
+   vertical et pas de débordement). */
+@media (max-width: 640px) {
+  .seller-code-actions {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .seller-code-actions > .seller-code {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+    padding: 8px 14px;
+  }
+  .seller-code-actions > .referral-link {
+    flex-basis: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+  }
+  .seller-code-actions > .btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+}
 .referral-comm {
   font-size: 0.78rem;
   line-height: 1.5;
@@ -5619,12 +5647,12 @@ a.step {
   height: 58px;
   border: none;
   border-radius: 50%;
-  background: var(--grad);
+  background: transparent;
   color: #fff;
   font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
-  box-shadow: var(--shadow-lg);
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5633,9 +5661,15 @@ a.step {
 .chat-bubble:hover {
   transform: scale(1.06);
 }
+/* Quand le panneau est ouvert, la croix "✕" remplace la photo : on lui
+   redonne un fond pour rester bien visible. */
+.chat-bubble-open {
+  background: var(--grad);
+  box-shadow: var(--shadow-lg);
+}
 .chat-bubble-logo {
-  width: 34px;
-  height: 34px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   display: block;
   object-fit: cover;
