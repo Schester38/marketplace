@@ -4,6 +4,7 @@ import { api } from "../api.js";
 import { GoogleIcon } from "../components/icons.jsx";
 import Seo from "../components/Seo.jsx";
 import SearchSelect from "../components/SearchSelect.jsx";
+import PasswordInput from "../components/PasswordInput.jsx";
 import Logo from "../components/Logo.jsx";
 import { COUNTRIES, OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
 import { useLang } from "../i18n.jsx";
@@ -17,6 +18,7 @@ export default function Register() {
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
     role: refCode ? "client" : "seller",
     country: "",
     operator: "",
@@ -55,6 +57,10 @@ export default function Register() {
     setError("");
     if (!form.country) {
       setError(t("Veuillez remplir tous les champs."));
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setError(t("Les mots de passe ne correspondent pas."));
       return;
     }
     if (!ensureAccepted()) return;
@@ -233,13 +239,22 @@ export default function Register() {
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
           <label>{t("Mot de passe (8 caractères minimum)")}</label>
-          <input
+          <PasswordInput
             className="input"
-            type="password"
             required
             minLength={8}
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
+            autoComplete="new-password"
+          />
+          <label>{t("Confirmer le mot de passe")}</label>
+          <PasswordInput
+            className="input"
+            required
+            minLength={8}
+            value={form.confirmPassword}
+            onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+            autoComplete="new-password"
           />
 
           {(form.role === "shop" || form.role === "seller" || form.role === "creator") && (

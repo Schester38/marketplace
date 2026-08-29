@@ -173,6 +173,7 @@ export default {
     "Puedes cambiar tu contraseña en cualquier momento.",
   "Mot de passe actuel": "Contraseña actual",
   "Nouveau mot de passe": "Nueva contraseña",
+  "Confirmer le mot de passe": "Confirmar la contraseña",
   "Confirmer le nouveau mot de passe": "Confirmar la nueva contraseña",
   "Changer le mot de passe": "Cambiar la contraseña",
   "Mot de passe modifié !": "¡Contraseña modificada!",

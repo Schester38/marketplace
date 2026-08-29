@@ -8,6 +8,7 @@ import { COUNTRIES } from "../config.js";
 import { CITIES } from "../cities.js";
 import { useLang } from "../i18n.jsx";
 import { formatMoney } from "../components/ProductCard.jsx";
+import PasswordInput from "../components/PasswordInput.jsx";
 
 function todayStr() {
   const d = new Date();
@@ -230,6 +231,7 @@ export default function MyAccount() {
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [pwMsg, setPwMsg] = useState("");
   const [pwError, setPwError] = useState("");
 
@@ -286,13 +288,18 @@ export default function MyAccount() {
 
   const changePassword = async (e) => {
     e.preventDefault();
+    setPwError("");
+    if (newPassword !== confirmNewPassword) {
+      setPwError(t("Les mots de passe ne correspondent pas."));
+      return;
+    }
     setBusy(true);
     setPwMsg("");
-    setPwError("");
     try {
       await api.changePassword({ currentPassword, newPassword });
       setCurrentPassword("");
       setNewPassword("");
+      setConfirmNewPassword("");
       setPwMsg(t("Mot de passe modifié avec succès."));
     } catch (err) {
       setPwError(err.message);
@@ -502,8 +509,7 @@ export default function MyAccount() {
             {user?.has_password && (
               <label className="field">
                 <span>{t("Mot de passe actuel")}</span>
-                <input
-                  type="password"
+                <PasswordInput
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   autoComplete="current-password"
@@ -513,11 +519,20 @@ export default function MyAccount() {
             )}
             <label className="field">
               <span>{t("Nouveau mot de passe")}</span>
-              <input
-                type="password"
+              <PasswordInput
                 minLength={6}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+            </label>
+            <label className="field">
+              <span>{t("Confirmer le nouveau mot de passe")}</span>
+              <PasswordInput
+                minLength={6}
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
                 autoComplete="new-password"
                 required
               />
@@ -541,8 +556,7 @@ export default function MyAccount() {
             {user?.has_password && (
               <label className="field">
                 <span>{t("Votre mot de passe")}</span>
-                <input
-                  type="password"
+                <PasswordInput
                   value={delPassword}
                   onChange={(e) => setDelPassword(e.target.value)}
                   autoComplete="current-password"

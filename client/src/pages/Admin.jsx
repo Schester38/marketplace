@@ -8,6 +8,7 @@ import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { formatMoney } from "../components/ProductCard.jsx";
 import { countrySymbol } from "../config.js";
 import MiniChart from "../components/MiniChart.jsx";
+import PasswordInput from "../components/PasswordInput.jsx";
 
 const VISIT_RANGES = [
   { days: 1, label: "1 jour" },
@@ -319,8 +320,7 @@ export default function Admin() {
           <PwaInstallButton />
         </section>
         <form onSubmit={submitGate} className="card admin-login">
-          <input
-            type="password"
+          <PasswordInput
             className="admin-login-input"
             placeholder={t("Mot de passe")}
             value={password}

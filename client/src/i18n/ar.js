@@ -193,6 +193,7 @@ export default {
   "Vous pouvez changer votre mot de passe à tout moment.": "يمكنك تغيير كلمة المرور في أي وقت.",
   "Mot de passe actuel": "كلمة المرور الحالية",
   "Nouveau mot de passe": "كلمة المرور الجديدة",
+  "Confirmer le mot de passe": "تأكيد كلمة المرور",
   "Confirmer le nouveau mot de passe": "تأكيد كلمة المرور الجديدة",
   "Changer le mot de passe": "تغيير كلمة المرور",
   "Mot de passe modifié !": "تم تغيير كلمة المرور!",

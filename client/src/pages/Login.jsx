@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth, postLoginPath } from "../App.jsx";
 import { GoogleIcon } from "../components/icons.jsx";
+import PasswordInput from "../components/PasswordInput.jsx";
 import Seo from "../components/Seo.jsx";
 import Logo from "../components/Logo.jsx";
 import { useLang } from "../i18n.jsx";
@@ -93,12 +94,12 @@ export default function Login() {
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
           <label>{t("Mot de passe")}</label>
-          <input
+          <PasswordInput
             className="input"
-            type="password"
             required
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
+            autoComplete="current-password"
           />
           {error && <p className="error">{error}</p>}
           <button className="btn btn-primary btn-block">{t("Se connecter")}</button>

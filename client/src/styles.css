@@ -1103,6 +1103,43 @@ textarea.input {
   resize: vertical;
 }
 
+/* Champ mot de passe avec bouton œil (afficher / masquer) */
+.password-field {
+  display: block;
+  position: relative;
+}
+.password-field .input,
+.password-field input {
+  padding-right: 44px;
+}
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 0;
+}
+.password-toggle:hover {
+  color: var(--primary);
+}
+[dir="rtl"] .password-toggle {
+  right: auto;
+  left: 8px;
+}
+[dir="rtl"] .password-field .input {
+  padding-right: 14px;
+  padding-left: 44px;
+}
+
 .wallet-list {
   display: flex;
   flex-direction: column;

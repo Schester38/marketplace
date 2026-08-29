@@ -222,6 +222,7 @@ export default {
     "You can change your password at any time.",
   "Mot de passe actuel": "Current password",
   "Nouveau mot de passe": "New password",
+  "Confirmer le mot de passe": "Confirm password",
   "Confirmer le nouveau mot de passe": "Confirm new password",
   "Changer le mot de passe": "Change password",
   "Mot de passe modifié !": "Password changed!",
@@ -601,6 +602,18 @@ export default {
   Payée: "Paid",
   "Mes filleuls — commissions de parrainage (2%)":
     "My referred clients — referral commissions (2%)",
+  "Commissions de parrainage vendeur": "Seller referral commissions",
+  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F (net 900 F après frais) ; 500 F sont reversés à Mboppi.":
+    "Each seller or creator who signs up through your link and pays their membership (1,500 F) earns you 1,000 F (net 900 F after fees); 500 F is paid to Mboppi.",
+  "Membre": "Member",
+  "Rôle": "Role",
+  "Adhésion": "Membership",
+  "Commission": "Commission",
+  "Statut": "Status",
+  "Versée": "Paid out",
+  "En cours": "In progress",
+  "En attente d'adhésion": "Awaiting membership payment",
+  "Non payée": "Not paid",
   "Chaque commande passée par un client inscrit avec votre lien vous rapporte 2% du montant, payés par la boutique après livraison.":
     "Each order placed by a client registered with your link earns you 2% of the amount, paid by the shop after delivery.",
   "Chaque commande passée par un client inscrit avec votre lien vous rapporte 2% du montant. Le versement est automatique : vos commissions s'accumulent et sont payées sur votre portefeuille dès qu'elles atteignent 1500 F.":

@@ -44,6 +44,7 @@ export default function SellerDashboard() {
   const [sales, setSales] = useState([]);
   const [stats, setStats] = useState(null);
   const [referred, setReferred] = useState([]);
+  const [activationReferrals, setActivationReferrals] = useState([]);
   const [sellerCode, setSellerCode] = useState(null);
   const [codeLoading, setCodeLoading] = useState(false);
   const [error, setError] = useState("");
@@ -60,7 +61,7 @@ export default function SellerDashboard() {
       }),
       api.mySales().catch((e) => {
         setError(e.message);
-        return { sales: [], stats: {}, referred: [] };
+        return { sales: [], stats: {}, referred: [], activationReferrals: [] };
       }),
       api.getSellerCode().catch(() => ({ seller_code: null })),
     ]);
@@ -68,6 +69,7 @@ export default function SellerDashboard() {
     setSales(saleData.sales);
     setStats(saleData.stats);
     setReferred(saleData.referred || []);
+    setActivationReferrals(saleData.activationReferrals || []);
     setSellerCode(codeData.seller_code);
   };
 
@@ -401,6 +403,70 @@ export default function SellerDashboard() {
                 {formatMoney(stats.referral_earned)} {countrySymbol(user?.country)}
               </strong>
             </div>
+          </div>
+        </section>
+      )}
+
+      {activationReferrals.length > 0 && (
+        <section className="card" style={{ marginBottom: 14 }}>
+          <h2>🤝 {t("Commissions de parrainage vendeur")}</h2>
+          <p className="hint" style={{ marginTop: 0 }}>
+            {t(
+              "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F (net 900 F après frais) ; 500 F sont reversés à Mboppi."
+            )}
+          </p>
+          <div className="table-wrap" style={{ marginTop: 12 }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t("Membre")}</th>
+                  <th>{t("Rôle")}</th>
+                  <th>{t("Adhésion")}</th>
+                  <th>{t("Commission")}</th>
+                  <th>{t("Statut")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activationReferrals.map((r) => {
+                  const paidMembership = !!r.membership_paid_at;
+                  const completed = r.payout_status === "completed";
+                  const failed = r.payout_status === "failed";
+                  const pending = !!r.payout_status && !completed && !failed;
+                  const net = r.net_amount || r.commission_amount;
+                  return (
+                    <tr key={r.user_id}>
+                      <td>{r.name}</td>
+                      <td>{r.role === "creator" ? t("Créateur") : t("Vendeur")}</td>
+                      <td>
+                        {paidMembership ? (
+                          <span className="badge badge-paid">{t("Payée")}</span>
+                        ) : (
+                          <span className="badge badge-pending">{t("Non payée")}</span>
+                        )}
+                      </td>
+                      <td>
+                        {formatMoney(net)} {r.commission_currency}
+                      </td>
+                      <td>
+                        {completed ? (
+                          <span className="badge badge-paid" title={r.payout_error || undefined}>
+                            {t("Versée")}
+                          </span>
+                        ) : failed ? (
+                          <span className="badge badge-cancelled" title={r.payout_error || undefined}>
+                            {t("Échec")}
+                          </span>
+                        ) : pending ? (
+                          <span className="badge badge-warn">{t("En cours")}</span>
+                        ) : (
+                          <span className="badge badge-pending">{t("En attente d'adhésion")}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </section>
       )}
