@@ -46,6 +46,22 @@ export async function ensureDonationPaymentColumns() {
   `);
 }
 
+// Auto-réparation : garantit les colonnes essentielles de `automatic_payouts`
+// (utilisées par l'affichage des commissions de parrainage vendeur) même si
+// initDb a échoué partiellement sur une base au schéma ancien (cf. le cas
+// similaire de la colonne `fee` manquante sur `platform_payouts` en production).
+export async function ensureAutomaticPayoutColumns() {
+  await pool.query(`
+    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS kind TEXT;
+    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS amount NUMERIC(14,2) NOT NULL DEFAULT 0;
+    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
+    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS fee NUMERIC(14,2) DEFAULT 0;
+    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS error TEXT;
+    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+                    `);
+}
+
 export async function withTransaction(fn) {
   const client = await getPool().connect();
   try {

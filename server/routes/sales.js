@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { q, withTransaction } from "../db.js";
+import { q, withTransaction, ensureAutomaticPayoutColumns } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { sendPush } from "../push.js";
 import { paySaleAutomatically } from "../services/payouts.js";
@@ -180,46 +180,56 @@ FROM sales s
     // adhésion, le vendeur parrain reçoit 1 000 XAF (net 90 % = 900) de
     // commission d'activation, tracée dans automatic_payouts
     // (`kind='activation_referral'`, référence `ACTIVATION_REFERRAL:{userId}`).
-    const activationReferrals = (
-      await q(
-        `SELECT
-              u.id AS user_id,
-              u.name,
-              u.role,
-              u.created_at AS member_created_at,
-              u.membership_paid_at,
-              u.membership_expires_at,
-              ap.id AS payout_id,
-              ap.amount AS commission_amount,
-              ap.currency AS commission_currency,
-              ap.fee AS commission_fee,
-              ap.status AS payout_status,
-              ap.error AS payout_error,
-              ap.created_at AS payout_created_at,
-              ap.completed_at AS payout_completed_at
-       FROM users u
-       LEFT JOIN automatic_payouts ap
-         ON ap.external_reference = 'ACTIVATION_REFERRAL:' || u.id
-       WHERE u.referred_by = $1 AND u.role IN ('seller', 'creator')
-       ORDER BY COALESCE(ap.created_at, u.created_at) DESC`,
-        [req.user.id]
-      )
-    ).map((r) => ({
-      user_id: Number(r.user_id),
-      name: r.name,
-      role: r.role,
-      member_created_at: r.member_created_at,
-      membership_paid_at: r.membership_paid_at,
-      membership_expires_at: r.membership_expires_at,
-      commission_amount: Number(r.commission_amount || 1000),
-      commission_currency: r.commission_currency || "XAF",
-      commission_fee: Number(r.commission_fee || 0),
-      net_amount: Math.round((Number(r.commission_amount || 1000) - Number(r.commission_fee || 0)) * 100) / 100,
-      payout_status: r.payout_status || null,
-      payout_error: r.payout_error || null,
-      payout_created_at: r.payout_created_at,
-      payout_completed_at: r.payout_completed_at,
-    }));
+    // Ce bloc est purement informatif : on auto-répare le schéma (comme pour
+    // donations) et on ne fait JAMAIS échouer tout l'espace vendeur en cas de
+    // problème (base ancienne, colonne manquante…) — on retourne simplement [].
+    let activationReferrals = [];
+    try {
+      await ensureAutomaticPayoutColumns();
+      activationReferrals = (
+        await q(
+          `SELECT
+                u.id AS user_id,
+                u.name,
+                u.role,
+                u.created_at AS member_created_at,
+                u.membership_paid_at,
+                u.membership_expires_at,
+                ap.id AS payout_id,
+                ap.amount AS commission_amount,
+                ap.currency AS commission_currency,
+                ap.fee AS commission_fee,
+                ap.status AS payout_status,
+                ap.error AS payout_error,
+                ap.created_at AS payout_created_at,
+                ap.completed_at AS payout_completed_at
+         FROM users u
+         LEFT JOIN automatic_payouts ap
+           ON ap.external_reference = 'ACTIVATION_REFERRAL:' || u.id
+         WHERE u.referred_by = $1 AND u.role IN ('seller', 'creator')
+         ORDER BY COALESCE(ap.created_at, u.created_at) DESC`,
+          [req.user.id]
+        )
+      ).map((r) => ({
+        user_id: Number(r.user_id),
+        name: r.name,
+        role: r.role,
+        member_created_at: r.member_created_at,
+        membership_paid_at: r.membership_paid_at,
+        membership_expires_at: r.membership_expires_at,
+        commission_amount: Number(r.commission_amount || 1000),
+        commission_currency: r.commission_currency || "XAF",
+        commission_fee: Number(r.commission_fee || 0),
+        net_amount:
+          Math.round((Number(r.commission_amount || 1000) - Number(r.commission_fee || 0)) * 100) / 100,
+        payout_status: r.payout_status || null,
+        payout_error: r.payout_error || null,
+        payout_created_at: r.payout_created_at,
+        payout_completed_at: r.payout_completed_at,
+      }));
+    } catch (err) {
+      console.error("[sales/my] commissions de parrainage vendeur indisponibles :", err.message);
+    }
     res.json({
       sales,
       stats: {
