@@ -296,6 +296,34 @@ class ErrorBoundary extends React.Component {
   static getDerivedStateFromError(error) {
     return { error };
   }
+  componentDidCatch(error, info) {
+    // Journalisation obligatoire : les erreurs captées par un ErrorBoundary
+    // React ne parviennent PAS à window.onerror, donc le logging global de
+    // main.jsx ne les voit pas. On les remonte ici (console + /api/logs)
+    // pour pouvoir diagnostiquer la cause réelle.
+    try {
+      console.error("[ErrorBoundary]", error, info);
+      const payload = {
+        message: String((error && error.message) || error || "Erreur de rendu"),
+        stack: (error && error.stack) || "",
+        info: (info && info.componentStack) || "",
+        url: window.location.href,
+        username: (() => {
+          try {
+            return JSON.parse(localStorage.getItem("user") || "null")?.name || "";
+          } catch {
+            return "";
+          }
+        })(),
+      };
+      navigator.sendBeacon(
+        "/api/logs",
+        new Blob([JSON.stringify(payload)], { type: "application/json" })
+      );
+    } catch {
+      /* best effort */
+    }
+  }
   render() {
     const { t } = this.props;
     if (this.state.error) {
@@ -307,6 +335,26 @@ class ErrorBoundary extends React.Component {
             <p className="hint">
               {t("Réessayez ou rechargez la page. Vos données sont en sécurité.")}
             </p>
+            <details style={{ textAlign: "left", margin: "16px auto", maxWidth: 480 }}>
+              <summary style={{ cursor: "pointer", color: "var(--text-secondary)" }}>
+                Détails techniques
+              </summary>
+              <pre
+                style={{
+                  fontSize: 12,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  background: "var(--soft)",
+                  padding: 10,
+                  borderRadius: 8,
+                  maxHeight: 200,
+                  overflow: "auto",
+                  margin: "8px 0 0",
+                }}
+              >
+                {String((this.state.error && this.state.error.stack) || this.state.error)}
+              </pre>
+            </details>
             <button
               type="button"
               className="btn btn-primary"
