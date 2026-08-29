@@ -6,6 +6,7 @@ import { formatMoney } from "../components/ProductCard.jsx";
 import { downloadInvoice } from "../components/Invoice.jsx";
 import SignaturePad from "../components/SignaturePad.jsx";
 import { countrySymbol, OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
+import { Link } from "react-router-dom";
 import { useLang } from "../i18n.jsx";
 import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
@@ -45,6 +46,10 @@ export default function LivreurDashboard() {
   // Wallet / transactions de fonds du livreur (reversements en ligne).
   const [wallet, setWallet] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
+  // Échec du chargement des fonds : "auth" = non connecté / session expirée,
+  // sinon on garde le message d'erreur réel à afficher.
+  const [walletError, setWalletError] = useState("");
+  const [walletNeedsAuth, setWalletNeedsAuth] = useState(false);
 
   const load = useCallback(
     async (silent) => {
@@ -91,11 +96,18 @@ export default function LivreurDashboard() {
   // "online_payout"). Indépendant du code boutique — lié à l'utilisateur.
   const loadWallet = useCallback(async () => {
     setWalletLoading(true);
+    setWalletError("");
+    setWalletNeedsAuth(false);
     try {
       const d = await api.walletMe();
       setWallet(d);
-    } catch {
-      /* wallet indisponible — on laisse discret */
+    } catch (e) {
+      setWallet(null);
+      if (e && (e.status === 401 || e.status === 403)) {
+        setWalletNeedsAuth(true);
+      } else {
+        setWalletError(e?.message || "");
+      }
     } finally {
       setWalletLoading(false);
     }
@@ -747,8 +759,17 @@ export default function LivreurDashboard() {
               <p className="empty">{t("Aucune transaction de fonds pour le moment.")}</p>
             )}
           </>
+        ) : walletNeedsAuth ? (
+          <p className="hint" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span>🔐 {t("Connectez-vous avec votre compte livreur pour voir vos fonds.")}</span>
+            <Link to="/login" className="btn btn-outline btn-sm">
+              {t("Se connecter")}
+            </Link>
+          </p>
         ) : (
-          <p className="hint">{t("Fonds indisponibles pour le moment.")}</p>
+          <p className="hint">
+            {walletError || t("Fonds indisponibles pour le moment.")}
+          </p>
         )}
       </section>
     </main>

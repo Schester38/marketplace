@@ -1053,6 +1053,8 @@ export default {
   "Faites signer le client à la livraison — la signature apparaîtra sur la facture.":
     "Have the customer sign at delivery — the signature will appear on the invoice.",
   Effacer: "Clear",
+  "Connectez-vous avec votre compte livreur pour voir vos fonds.":
+    "Log in with your courier account to see your funds.",
   "Payer le Vendeur": "Pay the Seller",
   "Payer le vendeur": "Pay the seller",
   "Vendeur payé": "Seller paid",
