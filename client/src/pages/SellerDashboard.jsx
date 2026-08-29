@@ -801,7 +801,7 @@ export default function SellerDashboard() {
             </div>
             <p className="hint" style={{ marginTop: 0 }}>
               {t(
-                "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F (net 900 F après frais) ; 500 F sont reversés à Mboppi. Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission n'est donc versée que lorsqu'un affilié paie réellement son adhésion."
+                "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F"
               )}
             </p>
             <div className="table-wrap">

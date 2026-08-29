@@ -618,8 +618,10 @@ const EN = {
     "Currently everyone has free access (including referred members) as long as the administrator does not close the account: the 1,000 F commission is therefore only paid out when a referred member actually pays their membership.",
   "Vendeurs / créateurs parrainés — commission de 1 000 F":
     "Referred sellers / creators — 1,000 F commission",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F (net 900 F après frais) ; 500 F sont reversés à Mboppi. Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
+  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F. Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
     "Each seller or creator who signs up through your link and pays their membership (1,500 F) earns you 1,000 F (net 900 F after fees); 500 F is paid to Mboppi. Currently everyone has free access (including referred members) as long as the administrator does not close the account: the commission is only paid out when a referred member actually pays their membership.",
+  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F":
+    "Each seller or creator who signs up through your link and pays their membership (1,500 F) earns you 1,000 F",
   "Membre": "Member",
   "Rôle": "Role",
   "Adhésion": "Membership",
@@ -2008,8 +2010,10 @@ const AR = {
     "حالياً يحصل الجميع على الدخول مجاناً (حتى المكفولين) ما لم يُغلق المسؤول الحساب: لذلك لا تُدفع عمولة 1000 ف إلا عندما يدفع المكفول اشتراكه فعلياً.",
   "Vendeurs / créateurs parrainés — commission de 1 000 F":
     "البائعون / المبدعون المكفولون — عمولة 1000 ف",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F (net 900 F après frais) ; 500 F sont reversés à Mboppi. Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
+  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F. Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
     "كل بائع أو مبدع يسجل عبر رابطك ويدفع اشتراكه (1500 ف) يكسبك 1000 ف (صافي 900 ف بعد الرسوم)؛ ويُحوَّل 500 ف إلى Mboppi. حالياً يحصل الجميع على الدخول مجاناً (حتى المكفولين) ما لم يُغلق المسؤول الحساب: لذلك لا تُدفع العمولة إلا عندما يدفع المكفول اشتراكه فعلياً.",
+  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F":
+    "كل بائع أو مبدع يسجل عبر رابطك ويدفع اشتراكه (1500 ف) يكسبك 1000 ف",
   "Membre": "عضو",
   "Rôle": "الدور",
   "Adhésion": "الاشتراك",
@@ -3351,8 +3355,10 @@ const ES = {
     "Actualmente todo el mundo tiene acceso gratuito (incluso los referidos) mientras el administrador no cierre la cuenta: la comisión de 1.000 F solo se paga cuando un referido paga realmente su membresía.",
   "Vendeurs / créateurs parrainés — commission de 1 000 F":
     "Vendedores / creadores referidos — comisión de 1.000 F",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F (net 900 F après frais) ; 500 F sont reversés à Mboppi. Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
+  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F. Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
     "Cada vendedor o creador que se registre con tu enlace y pague su membresía (1.500 F) te hace ganar 1.000 F (neto 900 F tras gastos); 500 F se devuelven a Mboppi. Actualmente todo el mundo tiene acceso gratuito (incluso los referidos) mientras el administrador no cierre la cuenta: la comisión solo se paga cuando un referido paga realmente su membresía.",
+  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F":
+    "Cada vendedor o creador que se registre con tu enlace y pague su membresía (1.500 F) te hace ganar 1.000 F",
   "Membre": "Miembro",
   "Rôle": "Rol",
   "Adhésion": "Membresía",
