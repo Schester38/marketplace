@@ -27,8 +27,27 @@ const lazyRetry = (importer) =>
     try {
       return await importer();
     } catch (_err) {
+      // 1re retente après un court délai (réseau qui fluctue).
       await new Promise((r) => setTimeout(r, 1200));
-      return importer();
+      try {
+        return await importer();
+      } catch (_err2) {
+        // Échec persistant d'un chunk : souvent un index.html PÉRIMÉ servi par
+        // le service worker qui référence d'anciens hachages retirés du serveur
+        // après un déploiement ("Failed to fetch dynamically imported module").
+        // On force un rechargement complet (une fois par session) pour que le
+        // SW ravive "/" et récupère le nouveau bundle. Guard anti-boucle.
+        try {
+          if (!sessionStorage.getItem("reload_chunk")) {
+            sessionStorage.setItem("reload_chunk", "1");
+            window.location.reload();
+            return new Promise(() => {});
+          }
+        } catch {
+          /* stockage indisponible */
+        }
+        throw _err2;
+      }
     }
   });
 
