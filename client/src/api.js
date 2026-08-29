@@ -159,6 +159,7 @@ export const api = {
   getLivreurPaymentMethods: () => request("/livreur/payment-methods"),
   updateLivreurPaymentMethods: (payload) =>
     request("/livreur/payment-methods", { method: "PUT", body: JSON.stringify(payload) }),
+  walletMe: () => request("/wallet/me"),
   purchaseCreate: (payload) =>
     request("/purchases", { method: "POST", body: JSON.stringify(payload) }),
   purchasesMy: () => request("/purchases/my"),

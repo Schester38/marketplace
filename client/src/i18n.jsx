@@ -453,6 +453,14 @@ const EN = {
   "Pas de connexion internet": "No internet connection",
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "You are currently offline. Check your connection and try again.",
+  "Mes fonds & transactions": "My funds & transactions",
+  "Solde": "Balance",
+  "Reçus": "Received",
+  "Sortis": "Paid out",
+  "Reversement en ligne": "Online payout",
+  "Encaissement en ligne": "Online collection",
+  "Aucune transaction de fonds pour le moment.": "No fund transactions yet.",
+  "Fonds indisponibles pour le moment.": "Funds currently unavailable.",
   "Erreurs récentes (client)": "Recent errors (client)",
   "Journal des erreurs de rendu remontées par les navigateurs. Si l'écran « Oups, une erreur est survenue » apparaît, sa cause exacte (message + pile) est enregistrée ici.":
     "Rendering errors reported by browsers. If the “Oops, something went wrong” screen appears, its exact cause (message + stack) is recorded here.",
@@ -1866,6 +1874,14 @@ const AR = {
   "Pas de connexion internet": "لا يوجد اتصال بالإنترنت",
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "أنت غير متصل حالياً. تحقق من اتصالك ثم أعد المحاولة.",
+  "Mes fonds & transactions": "أموالي ومعاملاتي",
+  "Solde": "الرصيد",
+  "Reçus": "المستلمة",
+  "Sortis": "المدفوعة",
+  "Reversement en ligne": "تحويل عبر الإنترنت",
+  "Encaissement en ligne": "تحصيل عبر الإنترنت",
+  "Aucune transaction de fonds pour le moment.": "لا توجد معاملات أموال حالياً.",
+  "Fonds indisponibles pour le moment.": "الأموال غير متاحة حالياً.",
   "Erreurs récentes (client)": "الأخطاء الأخيرة (العميل)",
   "Journal des erreurs de rendu remontées par les navigateurs. Si l'écran « Oups, une erreur est survenue » apparaît, sa cause exacte (message + pile) est enregistrée ici.":
     "أخطاء العرض المبلَّغ عنها من المتصفحات. إذا ظهرت شاشة «عذراً، حدث خطأ»، يُسجَّل سببها الدقيق (الرسالة + الأثر) هنا.",
@@ -3220,6 +3236,14 @@ const ES = {
   "Pas de connexion internet": "Sin conexión a internet",
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "Estás sin conexión. Verifica tu conexión y vuelve a intentarlo.",
+  "Mes fonds & transactions": "Mis fondos y transacciones",
+  "Solde": "Saldo",
+  "Reçus": "Recibidos",
+  "Sortis": "Pagados",
+  "Reversement en ligne": "Pago en línea",
+  "Encaissement en ligne": "Cobro en línea",
+  "Aucune transaction de fonds pour le moment.": "No hay transacciones de fondos por el momento.",
+  "Fonds indisponibles pour le moment.": "Fondos no disponibles por el momento.",
   "Erreurs récentes (client)": "Errores recientes (cliente)",
   "Journal des erreurs de rendu remontées par les navigateurs. Si l'écran « Oups, une erreur est survenue » apparaît, sa cause exacte (message + pile) est enregistrée ici.":
     "Errores de renderizado informados por los navegadores. Si aparece la pantalla “Oops, ocurrió un error”, su causa exacta (mensaje + pila) queda registrada aquí.",

@@ -41,6 +41,9 @@ export default function LivreurDashboard() {
   // Moyens de paiement de la boutique, affichés quand on choisit « Par Mobile ».
   const [shopMethods, setShopMethods] = useState(null);
   const [shopMethodsLoading, setShopMethodsLoading] = useState(false);
+  // Wallet / transactions de fonds du livreur (reversements en ligne).
+  const [wallet, setWallet] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(false);
 
   const load = useCallback(
     async (silent) => {
@@ -78,7 +81,28 @@ export default function LivreurDashboard() {
     load(true);
   }, [code, load]);
 
-  useRefreshOnFocus(() => load(true));
+  useRefreshOnFocus(() => {
+    load(true);
+    loadWallet();
+  });
+
+  // Wallet du livreur : solde + transactions de fonds (reversements en ligne
+  // "online_payout"). Indépendant du code boutique — lié à l'utilisateur.
+  const loadWallet = useCallback(async () => {
+    setWalletLoading(true);
+    try {
+      const d = await api.walletMe();
+      setWallet(d);
+    } catch {
+      /* wallet indisponible — on laisse discret */
+    } finally {
+      setWalletLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadWallet();
+  }, [loadWallet]);
 
   // Charge les moyens de paiement de la boutique (full_name + portefeuilles).
   const loadShopMethods = useCallback(async (shopId) => {
@@ -651,6 +675,83 @@ export default function LivreurDashboard() {
           }}
         />
       )}
+
+      <section className="card stats" style={{ marginTop: 18 }}>
+        <div className="stats-head">
+          <h2>💰 {t("Mes fonds & transactions")}</h2>
+        </div>
+        {walletLoading ? (
+          <div className="skeleton-block" style={{ height: 40, maxWidth: 300 }}></div>
+        ) : wallet ? (
+          <>
+            <div className="stats-row" style={{ marginBottom: 12 }}>
+              <div>
+                <span className="label">{t("Solde")}</span>
+                <strong>{formatMoney(wallet.balance)} {wallet.currency}</strong>
+              </div>
+              <div>
+                <span className="label">{t("Reçus")}</span>
+                <strong>{formatMoney(wallet.credits)} {wallet.currency}</strong>
+              </div>
+              <div>
+                <span className="label">{t("Sortis")}</span>
+                <strong>{formatMoney(wallet.debits)} {wallet.currency}</strong>
+              </div>
+            </div>
+            {wallet.transactions && wallet.transactions.length > 0 ? (
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>{t("Date")}</th>
+                      <th>{t("Description")}</th>
+                      <th>{t("Type")}</th>
+                      <th>{t("Montant")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {wallet.transactions.map((x) => (
+                      <tr key={x.id}>
+                        <td className="hint">
+                          {new Date(x.created_at).toLocaleString()}
+                        </td>
+                        <td>{x.description || "—"}</td>
+                        <td>
+                          <span className="badge">{labelTxn(x.transaction_type, t)}</span>
+                        </td>
+                        <td
+                          className={
+                            Number(x.amount) > 0 ? "text-success" : "text-warn"
+                          }
+                        >
+                          {Number(x.amount) > 0 ? "+" : ""}
+                          {formatMoney(x.amount)} {x.currency}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="empty">{t("Aucune transaction de fonds pour le moment.")}</p>
+            )}
+          </>
+        ) : (
+          <p className="hint">{t("Fonds indisponibles pour le moment.")}</p>
+        )}
+      </section>
     </main>
   );
+}
+
+function labelTxn(type, t) {
+  const map = {
+    online_payout: t("Reversement en ligne"),
+    commission_credit: t("Commission"),
+    referral_credit: t("Parrainage"),
+    payout_debit: t("Retrait"),
+    online_collect: t("Encaissement en ligne"),
+    adjustment: t("Ajustement"),
+  };
+  return map[type] || type;
 }

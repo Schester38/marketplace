@@ -8,7 +8,7 @@ const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 router.get(
   "/me",
   authRequired,
-  roleRequired("seller", "creator"),
+  roleRequired("seller", "creator", "livreur"),
   ah(async (req, res) => {
     const summary = (
       await q(
