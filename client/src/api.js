@@ -216,6 +216,8 @@ export const api = {
       `/admin/visits?days=${days}${country ? `&country=${encodeURIComponent(country)}` : ""}`
     ),
   adminVisitsReset: () => adminRequest("/admin/visits/reset", { method: "POST" }),
+  adminReferrals: (search = "") =>
+    adminRequest("/admin/referrals" + (search ? `?search=${encodeURIComponent(search)}` : "")),
   popupMessage: () => request("/messages/popup"),
   ackMessage: (id) => request(`/messages/${id}/ack`, { method: "POST" }),
   chat: (payload) => request("/chat", { method: "POST", body: JSON.stringify(payload) }),

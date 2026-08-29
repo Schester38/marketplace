@@ -526,4 +526,72 @@ router.get(
   })
 );
 
+// Parrainages d'activation : vendeurs/créateurs inscrits via le code d'un
+// vendeur (`ref_seller` → `referred_by`). L'admin voit chaque parrainé, son
+// parrain, les numéros des deux, et si le parrainé a payé son adhésion
+// (payé / non payé). Recherche par numéro de référence (du parrainé OU du
+// parrain).
+router.get(
+  "/referrals",
+  ah(async (req, res) => {
+    const rawSearch = String(req.query.search || "").trim();
+    const search = rawSearch ? rawSearch.toUpperCase() : "";
+    const rows = await q(
+      `SELECT
+        p.id AS parraine_id,
+        p.name AS parraine_name,
+        p.email AS parraine_email,
+        p.phone AS parraine_phone,
+        p.reference_number AS parraine_ref,
+        p.role AS parraine_role,
+        p.created_at AS parraine_created_at,
+        p.membership_paid_at AS parraine_membership_paid,
+        p.membership_expires_at AS parraine_membership_expires,
+        par.id AS parrain_id,
+        par.name AS parrain_name,
+        par.email AS parrain_email,
+        par.phone AS parrain_phone,
+        par.reference_number AS parrain_ref
+       FROM users p
+       JOIN users par ON par.id = p.referred_by
+       WHERE p.referred_by IS NOT NULL
+         AND p.role IN ('seller', 'creator')
+         AND ($1 = '' OR UPPER(p.reference_number) = $1 OR UPPER(par.reference_number) = $1)
+       ORDER BY p.created_at DESC
+       LIMIT 300`,
+      [search]
+    );
+    await logAudit(
+      req.user.id,
+      "admin.referrals",
+      search ? `recherche=${search}` : "liste parrainages",
+      req.ip
+    );
+    res.json({
+      referrals: rows.map((r) => ({
+        parraine: {
+          id: Number(r.parraine_id),
+          name: r.parraine_name,
+          email: r.parraine_email,
+          phone: r.parraine_phone,
+          reference_number: r.parraine_ref,
+          role: r.parraine_role,
+          created_at: r.parraine_created_at,
+          membership_paid: !!r.parraine_membership_paid,
+          membership_paid_at: r.parraine_membership_paid,
+          membership_expires_at: r.parraine_membership_expires,
+        },
+        parrain: {
+          id: Number(r.parrain_id),
+          name: r.parrain_name,
+          email: r.parrain_email,
+          phone: r.parrain_phone,
+          reference_number: r.parrain_ref,
+        },
+      })),
+    });
+  })
+);
+
+
 export default router;

@@ -47,6 +47,9 @@ export default function Admin() {
   const [visitDays, setVisitDays] = useState(30);
   const [visitCountry, setVisitCountry] = useState("");
   const [loading, setLoading] = useState(false);
+  const [referrals, setReferrals] = useState(null);
+  const [refSearch, setRefSearch] = useState("");
+  const [refError, setRefError] = useState("");
 
   const load = useCallback(
     (silent) => {
@@ -86,6 +89,10 @@ export default function Admin() {
       api
         .adminNewsletter()
         .then((d) => setNewsletter(d))
+        .catch(() => {});
+      api
+        .adminReferrals()
+        .then((d) => setReferrals(d.referrals))
         .catch(() => {});
     },
     [t]
@@ -155,6 +162,17 @@ export default function Admin() {
       setUsers(d.users);
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const searchReferrals = async (e) => {
+    e.preventDefault();
+    setRefError("");
+    try {
+      const d = await api.adminReferrals(refSearch.trim());
+      setReferrals(d.referrals);
+    } catch (err) {
+      setRefError(err.message);
     }
   };
 
@@ -765,6 +783,79 @@ export default function Admin() {
                       <span className="hint">—</span>
                     )}
                   </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="section-title">🤝 {t("Parrainages (vendeurs / créateurs)")}</h2>
+      <form onSubmit={searchReferrals} className="hero-search" role="search">
+        <span className="emoji" aria-hidden="true">
+          🔍
+        </span>
+        <input
+          type="search"
+          placeholder={t("Rechercher par numéro de référence (parrainé ou parrain)…")}
+          value={refSearch}
+          onChange={(e) => setRefSearch(e.target.value)}
+        />
+        <button type="submit" className="btn btn-primary">
+          {t("Rechercher")}
+        </button>
+      </form>
+      {refError && <p className="error">{refError}</p>}
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t("Parrainé")}</th>
+              <th>{t("Rôle")}</th>
+              <th>{t("Référence parrainé")}</th>
+              <th>{t("Téléphone parrainé")}</th>
+              <th>{t("Adhésion")}</th>
+              <th>{t("Son parrain")}</th>
+              <th>{t("Référence parrain")}</th>
+              <th>{t("Téléphone parrain")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {referrals === null ? (
+              <tr>
+                <td colSpan="8">
+                  <div className="skeleton-block" style={{ height: 30 }}></div>
+                </td>
+              </tr>
+            ) : referrals.length === 0 ? (
+              <tr>
+                <td colSpan="8" className="empty">
+                  {t("Aucun parrainage")}
+                </td>
+              </tr>
+            ) : (
+              referrals.map((r) => (
+                <tr key={r.parraine.id}>
+                  <td>{r.parraine.name}</td>
+                  <td>
+                    <span className="badge">{t(r.parraine.role)}</span>
+                  </td>
+                  <td>
+                    <code>{r.parraine.reference_number || "—"}</code>
+                  </td>
+                  <td>{r.parraine.phone || "—"}</td>
+                  <td>
+                    {r.parraine.membership_paid ? (
+                      <span className="badge badge-paid">{t("Payée")}</span>
+                    ) : (
+                      <span className="badge badge-pending">{t("Non payée")}</span>
+                    )}
+                  </td>
+                  <td>{r.parrain.name}</td>
+                  <td>
+                    <code>{r.parrain.reference_number || "—"}</code>
+                  </td>
+                  <td>{r.parrain.phone || "—"}</td>
                 </tr>
               ))
             )}

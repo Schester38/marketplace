@@ -810,6 +810,7 @@ export default function SellerDashboard() {
                   <tr>
                     <th>{t("Membre")}</th>
                     <th>{t("Rôle")}</th>
+                    <th>{t("Référence")}</th>
                     <th>{t("Adhésion")}</th>
                     <th>{t("Commission")}</th>
                     <th>{t("Statut")}</th>
@@ -822,10 +823,26 @@ export default function SellerDashboard() {
                     const failed = r.payout_status === "failed";
                     const pending = !!r.payout_status && !completed && !failed;
                     const net = r.net_amount || r.commission_amount;
+                    const refCopied = copied === "refmember-" + r.user_id;
                     return (
                       <tr key={r.user_id}>
                         <td>{r.name}</td>
                         <td>{r.role === "creator" ? t("Créateur") : t("Vendeur")}</td>
+                        <td>
+                          {r.reference_number ? (
+                            <span className="row2" style={{ justifyContent: "flex-start", gap: 6 }}>
+                              <code className="ref-code">{r.reference_number}</code>
+                              <button
+                                className="btn btn-small"
+                                onClick={() => copy("refmember-" + r.user_id, r.reference_number)}
+                              >
+                                {refCopied ? t("Copié !") : t("Copier")}
+                              </button>
+                            </span>
+                          ) : (
+                            <span className="muted">—</span>
+                          )}
+                        </td>
                         <td>
                           {paidMembership ? (
                             <span className="badge badge-paid">{t("Payée")}</span>
