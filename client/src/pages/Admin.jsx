@@ -29,7 +29,6 @@ export default function Admin() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState(null);
   const [products, setProducts] = useState(null);
-  const [transactions, setTransactions] = useState(null);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
   const [messages, setMessages] = useState(null);
@@ -81,7 +80,6 @@ export default function Admin() {
         .adminProducts()
         .then((d) => setProducts(d.products))
         .catch(onErr);
-      api.adminTransactions().then(setTransactions).catch(onErr);
       api
         .adminMessages()
         .then((d) => setMessages(d.messages))
@@ -148,7 +146,6 @@ export default function Admin() {
     setStats(null);
     setUsers(null);
     setProducts(null);
-    setTransactions(null);
     setMessages(null);
     setNewsletter(null);
     setVisits(null);
