@@ -49,6 +49,7 @@ export default function Admin() {
   const [referrals, setReferrals] = useState(null);
   const [refSearch, setRefSearch] = useState("");
   const [refError, setRefError] = useState("");
+  const [clientLogs, setClientLogs] = useState(null);
 
   const load = useCallback(
     (silent) => {
@@ -91,6 +92,10 @@ export default function Admin() {
       api
         .adminReferrals()
         .then((d) => setReferrals(d.referrals))
+        .catch(() => {});
+      api
+        .adminLogs(60)
+        .then((d) => setClientLogs(d.logs))
         .catch(() => {});
     },
     [t]
@@ -914,6 +919,67 @@ export default function Admin() {
                     >
                       {t("Supprimer")}
                     </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="section-title">🩺 {t("Erreurs récentes (client)")}</h2>
+      <p className="hint">
+        {t(
+          "Journal des erreurs de rendu remontées par les navigateurs. Si l'écran « Oups, une erreur est survenue » apparaît, sa cause exacte (message + pile) est enregistrée ici."
+        )}
+      </p>
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t("Date")}</th>
+              <th>{t("Utilisateur")}</th>
+              <th>{t("Message")}</th>
+              <th>{t("Pile (début)")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {clientLogs === null ? (
+              <tr>
+                <td colSpan="4">
+                  <div className="skeleton-block" style={{ height: 30 }}></div>
+                </td>
+              </tr>
+            ) : clientLogs.length === 0 ? (
+              <tr>
+                <td colSpan="4" className="empty">
+                  {t("Aucune erreur enregistrée")}
+                </td>
+              </tr>
+            ) : (
+              clientLogs.map((l) => (
+                <tr key={l.id}>
+                  <td className="hint">
+                    {l.created_at ? new Date(l.created_at).toLocaleString() : "—"}
+                  </td>
+                  <td>{l.username || "—"}</td>
+                  <td style={{ maxWidth: 260 }}>
+                    <code style={{ wordBreak: "break-word" }}>{l.message}</code>
+                  </td>
+                  <td style={{ maxWidth: 300 }}>
+                    <code
+                      style={{
+                        display: "block",
+                        whiteSpace: "pre-wrap",
+                        wordBreak: "break-word",
+                        fontSize: 11,
+                        color: "var(--text-secondary)",
+                        maxHeight: 60,
+                        overflow: "hidden",
+                      }}
+                    >
+                      {l.stack || "—"}
+                    </code>
                   </td>
                 </tr>
               ))

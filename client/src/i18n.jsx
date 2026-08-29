@@ -453,6 +453,11 @@ const EN = {
   "Pas de connexion internet": "No internet connection",
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "You are currently offline. Check your connection and try again.",
+  "Erreurs récentes (client)": "Recent errors (client)",
+  "Journal des erreurs de rendu remontées par les navigateurs. Si l'écran « Oups, une erreur est survenue » apparaît, sa cause exacte (message + pile) est enregistrée ici.":
+    "Rendering errors reported by browsers. If the “Oops, something went wrong” screen appears, its exact cause (message + stack) is recorded here.",
+  "Pile (début)": "Stack (start)",
+  "Aucune erreur enregistrée": "No errors recorded",
   Réessayer: "Retry",
   "Désolé, Mboppi ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
     "Sorry, Mboppi cannot connect to the internet right now. Check your network (Wi-Fi or mobile data) and try again.",
@@ -1861,6 +1866,11 @@ const AR = {
   "Pas de connexion internet": "لا يوجد اتصال بالإنترنت",
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "أنت غير متصل حالياً. تحقق من اتصالك ثم أعد المحاولة.",
+  "Erreurs récentes (client)": "الأخطاء الأخيرة (العميل)",
+  "Journal des erreurs de rendu remontées par les navigateurs. Si l'écran « Oups, une erreur est survenue » apparaît, sa cause exacte (message + pile) est enregistrée ici.":
+    "أخطاء العرض المبلَّغ عنها من المتصفحات. إذا ظهرت شاشة «عذراً، حدث خطأ»، يُسجَّل سببها الدقيق (الرسالة + الأثر) هنا.",
+  "Pile (début)": "الأثر (البداية)",
+  "Aucune erreur enregistrée": "لا توجد أخطاء مسجلة",
   Réessayer: "إعادة المحاولة",
   "Désolé, Mboppi ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
     "عذراً، لا يستطيع Mboppi الاتصال بالإنترنت حالياً. تحقق من شبكتك (Wi-Fi أو بيانات الجوال) ثم أعد المحاولة.",
@@ -3210,6 +3220,11 @@ const ES = {
   "Pas de connexion internet": "Sin conexión a internet",
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "Estás sin conexión. Verifica tu conexión y vuelve a intentarlo.",
+  "Erreurs récentes (client)": "Errores recientes (cliente)",
+  "Journal des erreurs de rendu remontées par les navigateurs. Si l'écran « Oups, une erreur est survenue » apparaît, sa cause exacte (message + pile) est enregistrée ici.":
+    "Errores de renderizado informados por los navegadores. Si aparece la pantalla “Oops, ocurrió un error”, su causa exacta (mensaje + pila) queda registrada aquí.",
+  "Pile (début)": "Pila (inicio)",
+  "Aucune erreur enregistrée": "No hay errores registrados",
   Réessayer: "Reintentar",
   "Désolé, Mboppi ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
     "Lo sentimos, Mboppi no puede conectarse a internet en este momento. Verifica tu red (Wi-Fi o datos móviles) y vuelve a intentarlo.",
