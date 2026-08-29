@@ -188,9 +188,10 @@ export async function completeAutomaticPayout(reference, providerReference) {
     ]
   );
   if (completed.kind === "seller" && completed.sale_id)
-    await q("UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()) WHERE id = $1", [
-      completed.sale_id,
-    ]);
+    await q(
+      "UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()), commission_claimed_at = NULL WHERE id = $1",
+      [completed.sale_id]
+    );
   if (completed.kind === "referral")
     await q(
       "UPDATE sales SET referral_paid = TRUE, referral_paid_at = now() WHERE referred_by = $1 AND status = 'delivered' AND payment_status = 'paid' AND referral_paid = FALSE",
@@ -406,9 +407,10 @@ export async function paySaleAutomatically(saleId) {
     });
     results.push({ kind: target.kind, amount: target.amount, ...result });
     if (result.ok && target.kind === "seller")
-      await q("UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()) WHERE id = $1", [
-        saleId,
-      ]);
+      await q(
+        "UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()), commission_claimed_at = NULL WHERE id = $1",
+        [saleId]
+      );
     // Parrain payé par cette vente : le marquer pour éviter tout re-paiement
     // via l'ancien cumul (payReferralAutomatically).
     if (result.ok && target.kind === "referral")
@@ -547,7 +549,8 @@ export async function markSalePaid(saleId, { transactionId, payload, receivedBy 
 
   await q(
     `UPDATE sales SET paid = TRUE, paid_at = COALESCE(paid_at, now()), payment_status = 'paid',
-       payment_received_by = COALESCE(payment_received_by, $1)
+       payment_received_by = COALESCE(payment_received_by, $1),
+       commission_claimed_at = NULL
        WHERE id = $2`,
     [receivedBy || null, saleId]
   );

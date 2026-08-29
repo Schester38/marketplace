@@ -711,8 +711,10 @@ export default function ShopDashboard() {
                       });
                     const g = sellerGroups.get(key);
                     g.items.push(s);
-                    if (!s.paid) g.pending += Number(s.commission || 0);
-                    if (s.commission_claimed_at) g.anyClaimed = true;
+                    if (!s.paid) {
+                      g.pending += Number(s.commission || 0);
+                      if (s.commission_claimed_at) g.anyClaimed = true;
+                    }
                   }
                   if (s.referred_by) {
                     const key = "r" + s.referred_by;
@@ -726,8 +728,10 @@ export default function ShopDashboard() {
                       });
                     const g = referralGroups.get(key);
                     g.items.push(s);
-                    if (!s.referral_paid) g.pending += Number(s.referral_commission || 0);
-                    if (s.referral_claimed_at) g.anyClaimed = true;
+                    if (!s.referral_paid) {
+                      g.pending += Number(s.referral_commission || 0);
+                      if (s.referral_claimed_at) g.anyClaimed = true;
+                    }
                   }
                 }
                 const sgs = [...sellerGroups.values()]

@@ -998,7 +998,7 @@ router.post(
     }
     const updated = await withTransaction(async (tx) => {
       const changed = await tx.query(
-        `UPDATE sales SET paid = TRUE, paid_at = now(), payment_proof = $1
+        `UPDATE sales SET paid = TRUE, paid_at = now(), payment_proof = $1, commission_claimed_at = NULL
        WHERE id = $2 AND paid = FALSE RETURNING id, commission`,
         [String(proof).slice(0, 12000000), sale.id]
       );
@@ -1159,7 +1159,7 @@ router.post(
     }
     await withTransaction(async (tx) => {
       const changed = await tx.query(
-        `UPDATE sales SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1
+        `UPDATE sales SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1, referral_claimed_at = NULL
        WHERE id = $2 AND referral_paid = FALSE RETURNING id, referral_commission`,
         [String(proof).slice(0, 12000000), sale.id]
       );
@@ -1301,14 +1301,14 @@ router.post(
     await withTransaction(async (tx) => {
       if (isSeller) {
         await tx.query(
-          `UPDATE sales s SET paid = TRUE, paid_at = now(), payment_proof = $1
+          `UPDATE sales s SET paid = TRUE, paid_at = now(), payment_proof = $1, commission_claimed_at = NULL
          FROM products p
         WHERE p.id = s.product_id AND s.seller_id = $2 AND p.shop_id = $3 AND s.status = 'delivered' AND NOT s.paid`,
           [proofShort, sellerId, req.user.id]
         );
       } else {
         await tx.query(
-          `UPDATE sales s SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1
+          `UPDATE sales s SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1, referral_claimed_at = NULL
          FROM products p
         WHERE p.id = s.product_id AND s.referred_by = $2 AND p.shop_id = $3 AND s.status = 'delivered' AND NOT s.referral_paid`,
           [proofShort, sellerId, req.user.id]
