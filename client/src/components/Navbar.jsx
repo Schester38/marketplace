@@ -5,6 +5,7 @@ import { useAuth } from "../App.jsx";
 import { LANGS, useLang } from "../i18n.jsx";
 import { useCart, useFavs } from "../store.jsx";
 import { api } from "../api.js";
+import { setAppBadge } from "../app-badge.js";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { urlBase64ToUint8Array } from "../utils.js";
 import { formatMoney } from "./ProductCard.jsx";
@@ -244,6 +245,8 @@ function NotifBell() {
       const d = await api.notifications();
       setNotifs(d.notifications);
       setUnread(d.unread_count);
+      // Badge de compteur sur l'icône installée (Android/desktop), iOS exclu.
+      setAppBadge(d.unread_count);
       const news = d.notifications.filter((n) => !n.read && !seenRef.current.has(n.id));
       if (firstLoadRef.current) {
         firstLoadRef.current = false;
@@ -263,6 +266,7 @@ function NotifBell() {
               icon: "/icon-192.png",
               tag: "mboppi-" + n.id,
               renotify: true,
+              sound: "/notification.wav",
             });
           } catch {
             /* silencieux */
@@ -312,7 +316,11 @@ function NotifBell() {
   };
 
   useEffect(() => {
-    if (user) loadNotifs();
+    if (user) {
+      loadNotifs();
+    } else {
+      setAppBadge(0);
+    }
     const iv = setInterval(loadNotifs, 30000);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -336,6 +344,7 @@ function NotifBell() {
       await api.notificationsRead();
       setUnread(0);
       setNotifs((ns) => ns.map((n) => ({ ...n, read: true })));
+      setAppBadge(0);
     } catch {
       /* silencieux */
     }
@@ -345,6 +354,7 @@ function NotifBell() {
     setNotifs((ns) => ns.filter((x) => x.id !== n.id));
     try {
       await api.deleteNotification(n.id);
+      setAppBadge(Math.max(0, unread - 1));
     } catch {
       loadNotifs();
     }

@@ -26,6 +26,8 @@ export async function sendPush(userId, payload) {
     badge: "/favicon-32x32.png",
     tag: payload.tag,
     renotify: true,
+    // Son de notification (le service worker s'en sert dans sw.js).
+    sound: "/notification.wav",
     vibrate: [200, 100, 200],
     data: { url: payload.url || "/" },
   };

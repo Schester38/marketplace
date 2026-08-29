@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v159';
+const CACHE_NAME = 'mboppi-v160';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/assistant-avatar.webp', '/og-image.svg', '/og-image.png', '/robots.txt', '/sitemap.xml', '/splash.js'];
 
 // Endpoints GET publics : servis depuis le cache quand le reseau est lent ou coupe,
@@ -68,6 +68,9 @@ self.addEventListener('push', (event) => {
     badge: data.badge || '/favicon-32x32.png',
     tag: data.tag,
     renotify: true,
+    // Son de notification (supporté surtout sur Android/Chrome ; Chrome
+    // desktop ignore le champ "sound" comme documenté).
+    sound: data.sound || '/notification.wav',
     vibrate: data.vibrate || [200, 100, 200],
     data: { url: data.data && data.data.url ? data.data.url : '/' },
   };
