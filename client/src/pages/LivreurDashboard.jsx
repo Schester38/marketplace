@@ -24,6 +24,11 @@ export default function LivreurDashboard() {
     setCode(localStorage.getItem(CODE_KEY) || "");
   }, []);
   const [shopName, setShopName] = useState(null);
+  // Stats des frais de livraison (comme boutique/vendeur) : calculées côté
+  // serveur UNIQUEMENT quand le livreur est connecté (`authenticated`).
+  const [stats, setStats] = useState(null);
+  const [statsAuthed, setStatsAuthed] = useState(false);
+  const [shopCountry, setShopCountry] = useState(null);
   const [pending, setPending] = useState([]);
   const [delivered, setDelivered] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -57,6 +62,9 @@ export default function LivreurDashboard() {
         setPending([]);
         setDelivered([]);
         setShopName(null);
+        setStats(null);
+        setStatsAuthed(false);
+        setShopCountry(null);
         return;
       }
       if (!silent) setLoading(true);
@@ -66,6 +74,9 @@ export default function LivreurDashboard() {
         setPending(d.pending);
         setDelivered(d.delivered);
         setShopName(d.shop_name);
+        setShopCountry(d.shop_country || null);
+        setStats(d.stats || null);
+        setStatsAuthed(Boolean(d.authenticated));
         setCodeError("");
       } catch (e) {
         if (e.message && /code boutique invalide/i.test(e.message)) {
@@ -162,6 +173,9 @@ export default function LivreurDashboard() {
     setPending([]);
     setDelivered([]);
     setShopName(null);
+    setShopCountry(null);
+    setStats(null);
+    setStatsAuthed(false);
   };
 
   const openDeliver = (s) => {
@@ -258,6 +272,7 @@ export default function LivreurDashboard() {
   };
 
   const symbol = (s) => countrySymbol(s.shop_country);
+  const statsSymbol = countrySymbol(shopCountry);
 
   return (
     <main className="container">
@@ -323,6 +338,50 @@ export default function LivreurDashboard() {
           {success && <p className="success">{success}</p>}
           {error && <p className="error">{error}</p>}
           {codeError && <p className="error">{codeError}</p>}
+
+          <section className="card stats">
+            <div className="stats-head">
+              <h2>📊 {t("Mes statistiques (frais de livraison)")}</h2>
+            </div>
+            {stats && statsAuthed ? (
+              <div className="stats-row">
+                <div>
+                  <span className="label">{t("Livraisons effectuées")}</span>
+                  <strong>{stats.total_deliveries}</strong>
+                </div>
+                <div>
+                  <span className="label">{t("Frais de livraison gagnés")}</span>
+                  <strong>
+                    {formatMoney(stats.delivery_earned)} {statsSymbol}
+                  </strong>
+                </div>
+                <div>
+                  <span className="label">✅ {t("Paiements en ligne (iKeePay)")}</span>
+                  <strong className="text-success">
+                    {formatMoney(stats.online_earned)} {statsSymbol}
+                  </strong>
+                </div>
+                <div>
+                  <span className="label">💵 {t("Paiements manuels (espèces / mobile)")}</span>
+                  <strong>
+                    {formatMoney(stats.manual_earned)} {statsSymbol}
+                  </strong>
+                </div>
+              </div>
+            ) : statsAuthed ? (
+              <p className="empty">{t("Aucune statistique pour le moment.")}</p>
+            ) : (
+              <p
+                className="hint"
+                style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", margin: 0 }}
+              >
+                <span>🔐 {t("Connectez-vous avec votre compte livreur pour voir vos statistiques.")}</span>
+                <Link to="/login" className="btn btn-outline btn-sm">
+                  {t("Se connecter")}
+                </Link>
+              </p>
+            )}
+          </section>
 
           <section className="card stats">
             <h2>📦 {t("Articles en attente de vente")}</h2>
