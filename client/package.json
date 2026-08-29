@@ -1,7 +1,7 @@
 {
   "name": "marketplace-client",
   "private": true,
-  "version": "1.47.51",
+  "version": "1.47.52",
   "type": "module",
   "scripts": {
     "dev": "vite",

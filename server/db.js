@@ -187,7 +187,12 @@ export async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS shop_code TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_approved BOOLEAN NOT NULL DEFAULT FALSE;
-    UPDATE users SET admin_approved = COALESCE(verified, FALSE) WHERE admin_approved IS DISTINCT FROM verified;
+    // NB : ne PAS recoupler admin_approved à verified ici. Depuis v1.47.38
+    // (accès gratuit), l'approbation admin (Ouvrir/Fermer) est indépendante du
+    // badge « Vérifié ». L'ancienne ligne
+    //   UPDATE users SET admin_approved = COALESCE(verified, FALSE) ...
+    // refermait les comptes pro à chaque initDb (déploiement / cold start) :
+    // admin_approved repassait à FALSE pour tout vendeur non « vérifié ».
     ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_attempts INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT TRUE;
