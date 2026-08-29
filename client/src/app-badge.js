@@ -17,3 +17,27 @@ export function setAppBadge(count) {
 export function clearAppBadge() {
   setAppBadge(0);
 }
+
+// Joue le son de notification côté client quand l'application est OUVERTE.
+// Limites honnêtes :
+//  - Chrome Android ignore le champ `sound` de showNotification()/Notification :
+//    quand l'app est FERMÉE, seul le son du canal système de la PWA retentit
+//    (impossible à forcer en web). On compense ici en jouant réellement un
+//    <audio> quand l'app est au premier plan (fonctionne sur tous les appareils).
+//  - Un geste de l'utilisateur sur la page est parfois requis (autoplay policy)
+//    pour la lecture audio ; on se calme sur l'échec sans crasher.
+let _audio = null;
+export function playNotificationSound() {
+  try {
+    if (typeof Audio === "undefined") return;
+    if (!_audio) {
+      _audio = new Audio("/notification.wav");
+      _audio.preload = "auto";
+    }
+    _audio.currentTime = 0;
+    const p = _audio.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  } catch {
+    /* silencieux — politique autoplay ou navigateur sans audio */
+  }
+}

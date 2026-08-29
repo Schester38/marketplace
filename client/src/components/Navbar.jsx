@@ -5,7 +5,7 @@ import { useAuth } from "../App.jsx";
 import { LANGS, useLang } from "../i18n.jsx";
 import { useCart, useFavs } from "../store.jsx";
 import { api } from "../api.js";
-import { setAppBadge } from "../app-badge.js";
+import { setAppBadge, playNotificationSound } from "../app-badge.js";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { urlBase64ToUint8Array } from "../utils.js";
 import { formatMoney } from "./ProductCard.jsx";
@@ -272,6 +272,9 @@ function NotifBell() {
             /* silencieux */
           }
         });
+        // Son réel côté client quand l'app est ouverte (la vibration + le
+        // "sound" des notifications web sont ignorés sur certains appareils).
+        if (document.visibilityState === "visible") playNotificationSound();
         if (navigator.vibrate) {
           try {
             navigator.vibrate([200, 100, 200]);
