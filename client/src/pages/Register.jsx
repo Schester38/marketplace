@@ -140,15 +140,13 @@ export default function Register() {
                   ? t("Parrainage client détecté : votre rôle sera « Client ».")
                   : t("Parrainage vendeur détecté : votre rôle sera « Vendeur ».")}
               </p>
-              <p className="hint" style={{ margin: "4px 0 0" }}>
-                {refCode
-                  ? t(
-                      "Ce lien vous a été partagé par un vendeur Mboppi. L'inscription est gratuite et votre compte sera créé en tant que client affilié."
-                    )
-                  : t(
-                      "Ce lien vous a été partagé par un vendeur Mboppi. Votre compte sera créé en tant que vendeur et vous devrez payer l'adhésion."
-                    )}
-              </p>
+              {refCode && (
+                <p className="hint" style={{ margin: "4px 0 0" }}>
+                  {t(
+                    "Ce lien vous a été partagé par un vendeur Mboppi. L'inscription est gratuite et votre compte sera créé en tant que client affilié."
+                  )}
+                </p>
+              )}
             </div>
           )}
           {!refCode && !refSeller && (
