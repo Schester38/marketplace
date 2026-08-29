@@ -415,6 +415,11 @@ export default function SellerDashboard() {
               "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F (net 900 F après frais) ; 500 F sont reversés à Mboppi."
             )}
           </p>
+          <p className="hint" style={{ marginTop: 0 }}>
+            {t(
+              "Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission de 1 000 F n'est donc versée que lorsqu'un affilié paie réellement son adhésion."
+            )}
+          </p>
           <div className="table-wrap" style={{ marginTop: 12 }}>
             <table className="table">
               <thead>
