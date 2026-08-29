@@ -295,6 +295,44 @@ suite("validators: deliverSaleSchema", () => {
       "cash delivery"
     );
   });
+
+  test("accepte une signature client PNG valide", () => {
+    assertValid(
+      deliverSaleSchema,
+      {
+        delivery_fee: 1000,
+        payment_method: "espèce",
+        shop_code: "ABC123",
+        signature: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==",
+      },
+      "delivery with valid signature"
+    );
+  });
+
+  test("accepte une livraison sans signature (champ optionnel)", () => {
+    assertValid(
+      deliverSaleSchema,
+      {
+        delivery_fee: 0,
+        payment_method: "mobile",
+        shop_code: "ABC123",
+      },
+      "delivery without signature"
+    );
+  });
+
+  test("rejette une signature qui n'est pas un PNG data URI", () => {
+    assertInvalid(
+      deliverSaleSchema,
+      {
+        delivery_fee: 0,
+        payment_method: "mobile",
+        shop_code: "ABC123",
+        signature: "data:text/html;base64,PHNjcmlwdD4=",
+      },
+      "delivery with non-PNG signature"
+    );
+  });
 });
 
 suite("validators: proofSchema", () => {

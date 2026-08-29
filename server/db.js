@@ -269,6 +269,8 @@ export async function initDb() {
 
     ALTER TABLE products ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
+    // Signature du client (PNG data URI) capturée par le livreur à la livraison.
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS signature TEXT;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
 

@@ -65,6 +65,12 @@ export const deliverSaleSchema = z.object({
   ),
   client_code: z.string().max(20).optional(),
   shop_code: z.string().min(1, "Code boutique requis").max(20),
+  signature: z
+    .string()
+    .startsWith("data:image/png;base64,", "Signature invalide : image PNG requise")
+    .max(300000, "Signature trop volumineuse (max 300 Ko)")
+    .optional()
+    .nullable(),
 });
 
 export const proofSchema = z

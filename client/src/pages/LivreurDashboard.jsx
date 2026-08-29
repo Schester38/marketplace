@@ -4,6 +4,7 @@ import Seo from "../components/Seo.jsx";
 import PwaInstallButton from "../components/PwaInstallButton.jsx";
 import { formatMoney } from "../components/ProductCard.jsx";
 import { downloadInvoice } from "../components/Invoice.jsx";
+import SignaturePad from "../components/SignaturePad.jsx";
 import { countrySymbol, OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
@@ -164,6 +165,7 @@ export default function LivreurDashboard() {
       delivery_fee: "",
       payment_method: initialMethod,
       client_code: "",
+      signature: "",
       operator: operators[0] || "ORANGE",
       phone: s.buyer_phone || "",
     });
@@ -200,6 +202,7 @@ export default function LivreurDashboard() {
           payment_method: deliverForm.payment_method,
           client_code: (deliverForm.client_code || "").trim().toUpperCase(),
           shop_code: code,
+          signature: deliverForm.signature || undefined,
         });
         setPending((prev) => prev.filter((s) => s.id !== saleId));
         setDelivered((prev) => [d.sale, ...prev]);
@@ -232,6 +235,7 @@ export default function LivreurDashboard() {
         deliveryFee,
         clientCode: (deliverForm.client_code || "").trim().toUpperCase(),
         shopCode: code,
+        signature: deliverForm.signature || "",
       });
       setDeliverForm(null);
     } catch (err) {
@@ -603,6 +607,12 @@ export default function LivreurDashboard() {
                   )}
                 </div>
               )}
+              <SignaturePad
+                label={t("Signature du client (facultative)")}
+                hint={t("Faites signer le client à la livraison — la signature apparaîtra sur la facture.")}
+                clearLabel={t("Effacer")}
+                onChange={(v) => setDeliverForm((f) => (f ? { ...f, signature: v } : f))}
+              />
               <p className="hint" style={{ marginTop: 10 }}>
                 {t(
                   "Les paiements en ligne sont traités via Ikeepay. Vos gains vous sont versés nets de 10 % de frais de traitement sur chaque reversement."
@@ -647,6 +657,7 @@ export default function LivreurDashboard() {
                 payment_method: "automatic",
                 client_code: finalise.clientCode,
                 shop_code: finalise.shopCode,
+                signature: finalise.signature || undefined,
               });
               setPending((prev) => prev.filter((s) => s.id !== finalise.saleId));
               setDelivered((prev) => [d.sale, ...prev]);
