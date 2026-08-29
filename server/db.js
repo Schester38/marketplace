@@ -505,6 +505,14 @@ export async function initDb() {
     ["platform_payouts", "fee", "NUMERIC(14,2) NOT NULL DEFAULT 0"],
     ["platform_payouts", "error", "TEXT"],
     ["platform_payouts", "completed_at", "TIMESTAMPTZ"],
+    // wallet_transactions : `fee` (+ garde-fous) ajouté au CREATE TABLE par le
+    // refactor iKeepay mais jamais appliqué aux tables existantes → /wallet/me
+    // renvoyait 500 (« column fee does not exist ») pour tous les rôles.
+    ["wallet_transactions", "fee", "NUMERIC(14,2) DEFAULT 0"],
+    ["wallet_transactions", "reference_type", "TEXT"],
+    ["wallet_transactions", "reference_id", "INTEGER"],
+    ["wallet_transactions", "description", "TEXT"],
+    ["wallet_transactions", "currency", "TEXT NOT NULL DEFAULT 'XAF'"],
     ["sales", "signature", "TEXT"],
   ];
   for (const [migTable, migColumn, migDefinition] of COLUMN_MIGRATIONS) {
