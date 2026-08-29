@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v153';
+const CACHE_NAME = 'mboppi-v154';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/assistant-avatar.webp', '/og-image.svg', '/og-image.png', '/robots.txt', '/sitemap.xml', '/splash.js'];
 
 // Endpoints GET publics : servis depuis le cache quand le reseau est lent ou coupe,
