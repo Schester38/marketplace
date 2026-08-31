@@ -623,4 +623,41 @@ suite("moyen de paiement principal (prévention reversement vers ancien numéro)
   });
 });
 
+suite("repli checkout iKeePay (le paiement en ligne ne doit jamais renvoyer un lien vide)", () => {
+  const API_PATH = join(ROOT, "server", "routes", "payments.js");
+  const DONATIONS_PATH = join(ROOT, "server", "routes", "donations.js");
+  const apiSource = existsSync(API_PATH) ? readFileSync(API_PATH, "utf8") : "";
+  const donationsSource = existsSync(DONATIONS_PATH) ? readFileSync(DONATIONS_PATH, "utf8") : "";
+
+  test("payin vente : repli checkout hébergé si la réponse iKeePay n'a pas de payment_link", () => {
+    // Après un payin réussi, si le lien est absent on bascule sur le checkout
+    // hébergé (le client choisit son opérateur) au lieu de renvoyer un lien vide.
+    assertTrue(
+      apiSource.includes('payment_link = $2, payment_country = $3, payment_operator = $4'),
+      "payin vente met à jour la vente"
+    );
+    // Le client du payin renvoie payment_link ; le fallback (catch) existe déjà.
+    assertTrue(apiSource.includes("fallbackLink"), "repli checkout vente présent");
+    // Le champ renvoyé au client ne doit jamais être indéfini sans repli.
+    assertTrue(
+      apiSource.includes("inlineCheckoutUrl({"),
+      "inlineCheckoutUrl disponible pour le repli"
+    );
+  });
+
+  test("adhésion : repli checkout hébergé si la réponse iKeePay n'a pas de payment_link", () => {
+    assertTrue(
+      apiSource.includes('fallbackLink = inlineCheckoutUrl({'),
+      "repli adhésion présent (catch)"
+    );
+  });
+
+  test("don : repli checkout hébergé si la réponse iKeePay n'a pas de payment_link", () => {
+    assertTrue(
+      donationsSource.includes("inlineCheckoutUrl({"),
+      "repli don présent"
+    );
+  });
+});
+
 console.warn("\n✅ Tests payouts terminés");

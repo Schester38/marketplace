@@ -94,7 +94,22 @@ router.post(
         external_reference: external,
         customer_email: user.email,
       });
-      const link = result.payment_link || result.data?.payment_link || null;
+      let link = result.payment_link || result.data?.payment_link || null;
+      // Certains opérateurs ne renvoient pas de payment_link : repli sur le
+      // checkout hébergé iKeePay (le client choisit son opérateur).
+      if (!link) {
+        try {
+          link = inlineCheckoutUrl({
+            amount: fee,
+            currency: user.country === "Côte d'Ivoire" ? "XOF" : currencyForCountry(country),
+            orderId: external,
+            email: user.email,
+            redirectUrl: `${publicBaseUrl()}/`,
+          });
+        } catch (fallbackError) {
+          console.error("[ikeepay] repli checkout adhésion en échec :", fallbackError.message);
+        }
+      }
       await q("UPDATE membership_payments SET payment_link = $1 WHERE id = $2", [link, created.id]);
       return res
         .status(201)
@@ -270,7 +285,24 @@ router.post(
         fallback_reason: fallbackReason,
       });
     }
-    const paymentLink = result.payment_link || result.data?.payment_link || null;
+    let paymentLink = result.payment_link || result.data?.payment_link || null;
+    // Certains opérateurs (ex. MTN) ne renvoient PAS de payment_link dans la
+    // réponse H2H : sans lien, on bascule sur le checkout hébergé iKeePay comme
+    // le client peut choisir son opérateur et régler. Sans cela, le client reçoit
+    // « Impossible d'ouvrir le paiement en ligne ».
+    if (!paymentLink) {
+      try {
+        paymentLink = inlineCheckoutUrl({
+          amount: saleAmount,
+          currency: saleCurrency,
+          orderId: sale.id,
+          email: req.user?.email,
+          redirectUrl: `${publicBaseUrl()}/suivi/${sale.id}`,
+        });
+      } catch (fallbackError) {
+        console.error("[ikeepay] repli checkout vente en échec :", fallbackError.message);
+      }
+    }
     await q(
       `UPDATE sales SET online_payment = TRUE, payment_status = 'pending', payment_provider = 'ikeepay',
        payment_external_reference = $1, payment_link = $2, payment_country = $3, payment_operator = $4,

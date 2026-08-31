@@ -90,7 +90,21 @@ router.post(
         operator,
         external_reference: reference,
       });
-      const link = result.payment_link || result.data?.payment_link || null;
+      let link = result.payment_link || result.data?.payment_link || null;
+      // Certains opérateurs ne renvoient pas de payment_link : repli sur le
+      // checkout hébergé iKeePay (le donateur choisit son opérateur).
+      if (!link) {
+        try {
+          link = inlineCheckoutUrl({
+            amount: amt,
+            currency,
+            orderId: reference,
+            redirectUrl: `${publicBaseUrl()}/`,
+          });
+        } catch (fallbackError) {
+          console.error("[ikeepay] repli checkout don en échec :", fallbackError.message);
+        }
+      }
       await q("UPDATE donations SET payment_link = $1 WHERE id = $2", [link, created.id]);
       res.status(201).json({
         ok: true,
