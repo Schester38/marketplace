@@ -153,6 +153,7 @@ export default function Support() {
   const [operator, setOperator] = useState("ORANGE");
   const [paymentLink, setPaymentLink] = useState("");
   const [paymentRef, setPaymentRef] = useState("");
+  const [paymentToken, setPaymentToken] = useState("");
   const [paymentDone, setPaymentDone] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [paying, setPaying] = useState(false);
@@ -172,6 +173,7 @@ export default function Support() {
       });
       setPaymentLink(result.payment_link || "");
       setPaymentRef(result.external_reference || "");
+      setPaymentToken(result.confirm_token || "");
       setPaymentDone(false);
     } catch (error) {
       setPaymentError(error.message);
@@ -293,6 +295,7 @@ export default function Support() {
               <IkeepayCheckout
                 link={paymentLink}
                 externalReference={paymentRef}
+                confirmToken={paymentToken}
                 label={t("Paiement du don")}
                 onConfirmed={() => setPaymentDone(true)}
                 onClose={() => setPaymentLink("")}

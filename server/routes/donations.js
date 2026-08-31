@@ -10,6 +10,7 @@ import {
 } from "../ikeepay.js";
 import { donationSchema, donationIkeepaySchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
+import { generateToken } from "../services/paymentSecurity.js";
 
 const router = Router();
 
@@ -73,10 +74,11 @@ router.post(
     const phone = normalizeIkeepayPhone(phone_number, countryCodeVal);
     const currency = currencyForCountry(country);
     const reference = `DONATION:${Date.now()}:${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const confirmToken = generateToken();
     const created = (
       await q(
-        "INSERT INTO donations (amount, currency, country, donor_phone, operator, external_reference) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
-        [amount, currency, country, phone, operator, reference]
+        "INSERT INTO donations (amount, currency, country, donor_phone, operator, external_reference, confirm_token) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
+        [amount, currency, country, phone, operator, reference, confirmToken]
       )
     )[0];
     try {
@@ -95,6 +97,7 @@ router.post(
         donation_id: created.id,
         payment_link: link,
         external_reference: reference,
+        confirm_token: confirmToken,
         provider: result,
       });
     } catch (error) {
@@ -126,6 +129,7 @@ router.post(
           donation_id: created.id,
           payment_link: link,
           external_reference: reference,
+          confirm_token: confirmToken,
           fallback: true,
         });
       }

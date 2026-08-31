@@ -43,6 +43,7 @@ export async function ensureDonationPaymentColumns() {
     ALTER TABLE donations ADD COLUMN IF NOT EXISTS provider_reference TEXT;
     ALTER TABLE donations ADD COLUMN IF NOT EXISTS payment_link TEXT;
     ALTER TABLE donations ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+    ALTER TABLE donations ADD COLUMN IF NOT EXISTS confirm_token TEXT;
   `);
 }
 
@@ -446,6 +447,7 @@ export async function initDb() {
       status TEXT,
       sale_id INTEGER REFERENCES sales(id) ON DELETE SET NULL,
       handled BOOLEAN NOT NULL DEFAULT FALSE,
+      authenticated BOOLEAN NOT NULL DEFAULT FALSE,
       error TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
@@ -485,6 +487,7 @@ export async function initDb() {
       external_reference TEXT UNIQUE,
       provider_reference TEXT,
       payment_link TEXT,
+      confirm_token TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       completed_at TIMESTAMPTZ
     );
@@ -526,6 +529,10 @@ export async function initDb() {
     ["automatic_payouts", "attempts", "INTEGER NOT NULL DEFAULT 0"],
     ["automatic_payouts", "retryable", "BOOLEAN NOT NULL DEFAULT FALSE"],
     ["automatic_payouts", "updated_at", "TIMESTAMPTZ NOT NULL DEFAULT now()"],
+    // Sécurité paiements : trace d'authentification des webhooks + jeton de
+    // confirmation des dons (Phase 2 — fail-closed webhook, non destructif).
+    ["payment_webhook_logs", "authenticated", "BOOLEAN NOT NULL DEFAULT FALSE"],
+    ["donations", "confirm_token", "TEXT"],
   ];
   for (const [migTable, migColumn, migDefinition] of COLUMN_MIGRATIONS) {
     try {

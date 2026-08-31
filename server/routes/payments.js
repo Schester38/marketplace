@@ -1,6 +1,10 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { ensureDonationPaymentColumns, q } from "../db.js";
+import {
+  authorizeConfirm,
+  verifyIkeepayWebhookAuth,
+} from "../services/paymentSecurity.js";
 import { authRequired } from "../auth.js";
 import {
   countryCode,
@@ -284,25 +288,51 @@ router.post(
 router.post(
   "/ikeepay/webhook",
   ah(async (req, res) => {
-    // Auto-réparation schéma : le webhook met à jour donations.provider_reference
-    // et completed_at, absents des bases au schéma ancien.
+    // Journalisation systématique (avant tout traitement).
+    const data = (req.body && req.body.data) || {};
+    const external = String(data.external_reference || "").trim();
+    let logged = null;
+    try {
+      const ins = await q(
+        `INSERT INTO payment_webhook_logs (provider, provider_transaction_id, provider_order_id, event, payload, status, authenticated, error)
+         VALUES ('ikeepay', $1, $2, $3, $4, $5, FALSE, 'IKEEPAY_WEBHOOK_AUTH_FAILED reason=auth_unconfirmed_no_mechanism') RETURNING id`,
+        [
+          data.provider_reference || null,
+          external || null,
+          req.body?.event || null,
+          req.body,
+          data.status || null,
+        ]
+      );
+      logged = ins[0];
+    } catch (logErr) {
+      console.error("[ikeepay] journalisation webhook échouée :", logErr.message);
+    }
+
+    // ── SÉCURITÉ — authentification fail-closed du webhook entrant ─────────
+    // iKeePay ne documente aucun secret/signature sur les callbacks entrants :
+    // aucun webhook n'est traité (aucun payout, aucune mutation de statut).
+    // Le flux nominal continue via /ikeepay/confirm (JWT / jeton de transaction).
+    // Réactivation : implémenter la vérification dans verifyIkeepayWebhookAuth()
+    // une fois le mécanisme réel confirmé par iKeePay.
+    const auth = verifyIkeepayWebhookAuth();
+    if (!auth.ok) {
+      console.error(`[ikeepay] IKEEPAY_WEBHOOK_AUTH_FAILED reason=${auth.reason}`);
+      if (logged) {
+        await q(
+          "UPDATE payment_webhook_logs SET handled = FALSE, error = $1 WHERE id = $2",
+          [`IKEEPAY_WEBHOOK_AUTH_FAILED reason=${auth.reason}`, logged.id]
+        ).catch(() => {});
+      }
+      return res.status(401).json({ error: "Webhook non authentifié" });
+    }
+
+    // ── Traitement (non atteignable tant que le mécanisme n'est pas confirmé) ──
+    // Auto-réparation schéma : donations.provider_reference / completed_at sur
+    // les bases au schéma ancien.
     try {
       await ensureDonationPaymentColumns();
     } catch {}
-    const data = req.body?.data || {};
-    const external = String(data.external_reference || "").trim();
-    if (!external) return res.status(400).json({ error: "Référence externe manquante" });
-    const logged = await q(
-      `INSERT INTO payment_webhook_logs (provider, provider_transaction_id, provider_order_id, event, payload, status)
-     VALUES ('ikeepay', $1, $2, $3, $4, $5) RETURNING id`,
-      [
-        data.provider_reference || null,
-        external,
-        req.body?.event || null,
-        req.body,
-        data.status || null,
-      ]
-    );
     const sale = (
       await q("SELECT * FROM sales WHERE payment_external_reference = $1", [external])
     )[0];
@@ -403,15 +433,23 @@ router.post(
 // Cette route est idempotente : appelée plusieurs fois, elle ne re-paye pas.
 router.post(
   "/ikeepay/confirm",
+  optionalAuth,
   ah(async (req, res) => {
     const external = String(req.body?.external_reference || "").trim();
     if (!external) return res.status(400).json({ error: "Référence externe manquante" });
 
-    // 1) Donation
+    // 1) Donation (protégée par jeton de transaction — permet les dons d'invités)
     const donation = (
       await q("SELECT * FROM donations WHERE external_reference = $1", [external])
     )[0];
     if (donation) {
+      const authz = authorizeConfirm({
+        kind: "donation",
+        record: donation,
+        user: req.user || null,
+        token: req.body?.confirm_token || null,
+      });
+      if (!authz.ok) return res.status(authz.code).json({ error: authz.error });
       if (donation.status === "completed")
         return res.json({ ok: true, already: true });
       await q(
@@ -450,11 +488,18 @@ router.post(
       return res.json({ ok: true, donation: donation.id, payout });
     }
 
-    // 2) Adhésion (paiement d'adhésion)
+    // 2) Adhésion (paiement d'adhésion) — réservée à son propriétaire (JWT)
     const membership = (
       await q("SELECT * FROM membership_payments WHERE external_reference = $1", [external])
     )[0];
     if (membership) {
+      const authz = authorizeConfirm({
+        kind: "membership",
+        record: membership,
+        user: req.user || null,
+        token: null,
+      });
+      if (!authz.ok) return res.status(authz.code).json({ error: authz.error });
       if (membership.status === "completed")
         return res.json({ ok: true, already: true });
       const result = await completeMembershipPayment(membership.id, null).catch((mErr) => ({
@@ -464,11 +509,18 @@ router.post(
       return res.json({ ok: true, ...result });
     }
 
-    // 3) Vente (paiement automatique d'une commande)
+    // 3) Vente (paiement automatique d'une commande) — acheteur (JWT) ou livreur (JWT)
     const sale = (
       await q("SELECT * FROM sales WHERE payment_external_reference = $1", [external])
     )[0];
     if (sale) {
+      const authz = authorizeConfirm({
+        kind: "sale",
+        record: sale,
+        user: req.user || null,
+        token: null,
+      });
+      if (!authz.ok) return res.status(authz.code).json({ error: authz.error });
       // markSalePaid est atomique et idempotent : il verrouille la vente
       // (payout_initiated FALSE -> TRUE) et déclenche UN SEUL jeu de
       // reversements. Une confirmation déjà traitée retourne already:true.

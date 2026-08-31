@@ -9,6 +9,11 @@ import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { computeRedistribution, planSalePayouts } from "../services/payouts.js";
+import {
+  authorizeConfirm,
+  safeEqual,
+  verifyIkeepayWebhookAuth,
+} from "../services/paymentSecurity.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..", "..");
@@ -230,6 +235,36 @@ suite("régressions (chemin unique)", () => {
     );
     assertTrue(salesSource.includes("markSalePaid("), "sales.js appelle markSalePaid");
   });
+
+  test("Le webhook iKeePay est fail-closed (jamais traité sans authentification confirmée)", () => {
+    assertTrue(
+      apiSource.includes("verifyIkeepayWebhookAuth("),
+      "verifyIkeepayWebhookAuth présent dans payments.js"
+    );
+    assertTrue(
+      apiSource.includes('"Webhook non authentifié"'),
+      "réponse 401 webhook présent"
+    );
+    assertTrue(
+      apiSource.includes("authenticated, error"),
+      "log webhook trace authenticated"
+    );
+  });
+
+  test("La confirmation /confirm exige une autorisation par type", () => {
+    assertTrue(
+      apiSource.includes("optionalAuth,"),
+      "/confirm passe par optionalAuth"
+    );
+    assertTrue(
+      apiSource.includes("authorizeConfirm("),
+      "authorizeConfirm utilisé dans /confirm"
+    );
+    assertTrue(
+      apiSource.includes("confirm_token"),
+      "confirm_token (dons) présent dans payments.js"
+    );
+  });
 });
 
 suite("computeRedistribution (socle financier)", () => {
@@ -244,6 +279,77 @@ suite("computeRedistribution (socle financier)", () => {
     const sum = r.shopAmount + r.sellerAmount + r.referrerAmount + r.livreurAmount;
     // Le montant payé par le client = total_price + delivery_fee.
     assertEqual(sum, 10500, "shop+commission+parrain+livraison");
+  });
+});
+
+suite("paymentSecurity (sécurité paiements iKeePay)", () => {
+  test("safeEqual : vraie égalité", () => {
+    assertTrue(safeEqual("SECRET-ABC", "SECRET-ABC"), "mêmes valeurs");
+  });
+
+  test("safeEqual : différences rejetées (longueurs identiques)", () => {
+    assertFalse(safeEqual("SECRET-ABC", "SECRET-ABD"), "1 char diff");
+  });
+
+  test("safeEqual : différences de longueur sans exception", () => {
+    assertFalse(safeEqual("abc", "a-longer-value"), "longueurs différentes");
+    assertFalse(safeEqual("", "abc"), "vide vs valeur");
+  });
+
+  test("verifyIkeepayWebhookAuth : fail-closed (aucun mécanisme confirmé)", () => {
+    const auth = verifyIkeepayWebhookAuth();
+    assertFalse(auth.ok, "webhook toujours refusé");
+    assertEqual(auth.reason, "auth_unconfirmed_no_mechanism", "raison explicite");
+  });
+
+  test("authorizeConfirm donation : sans jeton → refusé (401)", () => {
+    const r = authorizeConfirm({ kind: "donation", record: { id: 1, confirm_token: "abc" }, user: null, token: null });
+    assertFalse(r.ok, "refusé");
+    assertEqual(r.code, 401, "code");
+  });
+
+  test("authorizeConfirm donation : mauvais jeton → refusé (401)", () => {
+    const r = authorizeConfirm({ kind: "donation", record: { id: 1, confirm_token: "abc" }, user: null, token: "wrong" });
+    assertFalse(r.ok, "refusé");
+    assertEqual(r.code, 401, "code");
+  });
+
+  test("authorizeConfirm donation : bon jeton → OK (don d'invité)", () => {
+    const r = authorizeConfirm({ kind: "donation", record: { id: 1, confirm_token: "abc" }, user: null, token: "abc" });
+    assertTrue(r.ok, "autorisé");
+  });
+
+  test("authorizeConfirm membership : non-propriétaire → refusé (403)", () => {
+    const r = authorizeConfirm({ kind: "membership", record: { id: 1, user_id: 10 }, user: { id: 99 }, token: null });
+    assertFalse(r.ok, "refusé");
+    assertEqual(r.code, 403, "code");
+  });
+
+  test("authorizeConfirm membership : propriétaire → OK", () => {
+    const r = authorizeConfirm({ kind: "membership", record: { id: 1, user_id: 10 }, user: { id: 10 }, token: null });
+    assertTrue(r.ok, "autorisé");
+  });
+
+  test("authorizeConfirm sale : ni acheteur ni livreur → refusé (403)", () => {
+    const r = authorizeConfirm({ kind: "sale", record: { id: 1, buyer_id: 10 }, user: { id: 99, role: "client" }, token: null });
+    assertFalse(r.ok, "refusé");
+    assertEqual(r.code, 403, "code");
+  });
+
+  test("authorizeConfirm sale : acheteur → OK", () => {
+    const r = authorizeConfirm({ kind: "sale", record: { id: 1, buyer_id: 10 }, user: { id: 10, role: "client" }, token: null });
+    assertTrue(r.ok, "acheteur autorisé");
+  });
+
+  test("authorizeConfirm sale : livreur → OK", () => {
+    const r = authorizeConfirm({ kind: "sale", record: { id: 1, buyer_id: 10 }, user: { id: 7, role: "livreur" }, token: null });
+    assertTrue(r.ok, "livreur autorisé");
+  });
+
+  test("authorizeConfirm : enregistrement inconnu → 404", () => {
+    const r = authorizeConfirm({ kind: "sale", record: null, user: { id: 1, role: "livreur" }, token: null });
+    assertFalse(r.ok, "refusé");
+    assertEqual(r.code, 404, "code");
   });
 });
 

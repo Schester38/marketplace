@@ -15,6 +15,7 @@ const IKEEPAY_ORIGIN = "https://ikeepay.com";
 export default function IkeepayCheckout({
   link,
   externalReference,
+  confirmToken,
   onClose,
   onConfirmed,
   label,
@@ -32,7 +33,10 @@ export default function IkeepayCheckout({
     setConfirming(true);
     setError("");
     try {
-      const result = await api.ikeepayConfirm({ external_reference: externalReference });
+      const result = await api.ikeepayConfirm({
+        external_reference: externalReference,
+        ...(confirmToken ? { confirm_token: confirmToken } : {}),
+      });
       setDone(true);
       if (onConfirmed) onConfirmed(result);
     } catch (err) {
