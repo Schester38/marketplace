@@ -268,54 +268,10 @@ export default function PurchasePage() {
                 </button>
               </div>
 
-              {paymentMethod === "mobile" && (
-                <div className="card wallet-card">
-                  {shopWallets && shopWallets.wallets.length > 0 ? (
-                    <>
-                      <p className="hint" style={{ marginTop: 0 }}>
-                        {t("Envoyez le paiement à la boutique sur l'un de ces portefeuilles :")}
-                      </p>
-                      {shopWallets.full_name && (
-                        <p className="hint">
-                          {t("Titulaire : {name}", { name: shopWallets.full_name })}
-                        </p>
-                      )}
-                      <div className="wallet-list">
-                        {shopWallets.wallets.map((w) => (
-                          <div className="wallet-row" key={w.name}>
-                            <span className="wallet-name">{w.name}</span>
-                            <span className="wallet-value">{w.value}</span>
-                            <button
-                              type="button"
-                              className="btn btn-outline btn-sm"
-                              onClick={() => copyWallet(w.value)}
-                            >
-                              {copiedWallet === w.value ? t("Copié !") : t("Copier")}
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="hint">
-                        {t(
-                          "Indiquez votre nom et votre numéro lors du transfert pour faciliter la livraison."
-                        )}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="hint" style={{ marginTop: 0 }}>
-                      {t(
-                        "La boutique n'a pas encore configuré ses portefeuilles de paiement. Paiement à la livraison recommandé."
-                      )}
-                    </p>
-                  )}
-                </div>
-              )}
               {error && <p className="error">{error}</p>}
               {paymentMethod === "mobile" && product && (
                 <p className="hint" style={{ marginTop: 8 }}>
-                  {t(
-                    "Paiement manuel : espèces ou virement Mobile Money direct. Aucun frais de plateforme."
-                  )}
+                  {t("Paiement à la Livraison. Aucun frais de plateforme.")}
                 </p>
               )}
             </>
