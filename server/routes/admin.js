@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { q, ensureColumn } from "../db.js";
+import { q, ensureColumn, withTransaction } from "../db.js";
 import { authRequired, roleRequired, signToken } from "../auth.js";
 import { logAudit } from "../security.js";
 import { migrateImages } from "../migrate-images.js";
@@ -639,6 +639,152 @@ router.post(
       req.ip
     );
     res.json({ ok: true, membership_paid_at: updated[0].membership_paid_at });
+  })
+);
+
+// Demande de retrait des commissions d'activation : l'admin voit la demande,
+// le parrain, les références des parrainés et l'état de leurs adhésions.
+router.get(
+  "/activation-withdrawals",
+  ah(async (req, res) => {
+    const rows = await q(
+      `SELECT w.id, w.amount, w.status, w.comment, w.email, w.created_at, w.paid_at,
+              u.id AS seller_id, u.name AS seller_name,
+              u.reference_number AS seller_ref, u.phone AS seller_phone
+         FROM activation_withdrawals w
+         JOIN users u ON u.id = w.seller_id
+         ORDER BY w.created_at DESC
+         LIMIT 300`
+    );
+    const withdrawals = [];
+    for (const w of rows) {
+      const items = await q(
+        `SELECT u.id AS member_id, u.name AS member_name, u.role AS member_role,
+                u.reference_number AS member_ref, u.membership_paid_at
+           FROM activation_withdrawal_items wi
+           JOIN users u ON u.id = wi.member_id
+           WHERE wi.withdrawal_id = $1
+           ORDER BY wi.id`,
+        [w.id]
+      );
+      // Moyens de paiement configurés par le parrain (transfert direct).
+      const pm = (
+        await q(
+          `SELECT full_name, wallets FROM seller_payment_methods WHERE seller_id = $1`,
+          [w.seller_id]
+        )
+      )[0];
+      withdrawals.push({
+        id: Number(w.id),
+        amount: Number(w.amount),
+        status: w.status,
+        comment: w.comment,
+        email: w.email,
+        created_at: w.created_at,
+        paid_at: w.paid_at,
+        seller: {
+          id: Number(w.seller_id),
+          name: w.seller_name,
+          reference_number: w.seller_ref,
+          phone: w.seller_phone,
+          paymentMethods: pm
+            ? {
+                full_name: pm.full_name,
+                wallets: Array.isArray(pm.wallets) ? pm.wallets : [],
+              }
+            : null,
+        },
+        items: items.map((i) => ({
+          member_id: Number(i.member_id),
+          name: i.member_name,
+          role: i.member_role,
+          reference_number: i.member_ref,
+          membership_paid_at: i.membership_paid_at,
+          membership_paid: !!i.membership_paid_at,
+        })),
+      });
+    }
+    res.json({ withdrawals });
+  })
+);
+
+// Payer une demande de retrait : crédit annulé (montant retiré du solde via
+// wallet_transactions), notification + push + email au vendeur parrain.
+router.post(
+  "/activation-withdrawals/:id/pay",
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
+    const w = (
+      await q(
+        `SELECT w.*, u.name AS seller_name, u.email AS seller_email, u.phone AS seller_phone
+           FROM activation_withdrawals w
+           JOIN users u ON u.id = w.seller_id
+           WHERE w.id = $1`,
+        [id]
+      )
+    )[0];
+    if (!w) return res.status(404).json({ error: "Demande introuvable" });
+    if (w.status === "paid") {
+      return res.status(409).json({ error: "Cette demande a déjà été payée" });
+    }
+    const amount = Number(w.amount);
+    await withTransaction(async (tx) => {
+      await tx.query(
+        `UPDATE activation_withdrawals SET status = 'paid', paid_at = now(), paid_by = $2
+         WHERE id = $1`,
+        [id, req.user.id]
+      );
+      await tx.query(
+        `INSERT INTO wallet_transactions
+           (user_id, amount, transaction_type, reference_type, reference_id, description)
+         VALUES ($1, $2, 'payout_debit', 'activation_withdrawal', $3, $4)`,
+        [
+          w.seller_id,
+          -amount,
+          id,
+          "Retrait commissions d'activation (adhésions parrainées)",
+        ]
+      );
+    });
+    await q(
+      `INSERT INTO notifications (user_id, type, amount) VALUES ($1, 'activation_withdrawal_paid', $2)`,
+      [w.seller_id, amount]
+    );
+    try {
+      const { sendPush } = await import("../push.js");
+      await sendPush(w.seller_id, {
+        title: "Retrait payé 💰",
+        body: `Votre demande de retrait de ${amount} F a été payée.`,
+        url: "/seller",
+      });
+    } catch (err) {
+      console.error("[admin] push activation_withdrawal_paid impossible :", err.message);
+    }
+    const mailTo = (w.email || w.seller_email || "").trim();
+    if (mailTo) {
+      try {
+        const { sendMail } = await import("../mailer.js");
+        await sendMail({
+          to: mailTo,
+          subject: "Votre retrait a été payé — Mboppi",
+          text:
+            `Bonjour ${w.seller_name},\n\n` +
+            `Votre demande de retrait de ${amount} F a été traitée et payée par l'équipe Mboppi.\n` +
+            `Le montant a été retiré de vos statistiques et la transaction a été enregistrée.\n\n` +
+            `Merci de votre confiance,\nL'équipe Mboppi`,
+        });
+      } catch (err) {
+        console.error("[admin] email activation_withdrawal_paid impossible :", err.message);
+      }
+    }
+    await logAudit(
+      req.user.id,
+      "admin.activation_withdrawal_paid",
+      `withdrawal=${id} seller=${w.seller_id} (${w.seller_name}) amount=${amount}`,
+      req.ip
+    );
+    res.json({ ok: true });
   })
 );
 

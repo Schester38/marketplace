@@ -650,6 +650,32 @@ const EN = {
   Payé: "Paid",
   "Marquer l'adhésion de {name} comme payée et avertir son parrain ?":
     "Mark {name}'s membership as paid and notify their referrer?",
+  "Montant disponible": "Available amount",
+  "Demande de retrait": "Withdrawal request",
+  "Références des parrainés (adhésion confirmée)": "Referred members' references (confirmed membership)",
+  "Montant à retirer": "Amount to withdraw",
+  "Le montant doit être inférieur ou égal à votre solde disponible (multiple de 1 000 F).":
+    "The amount must be less than or equal to your available balance (multiple of 1,000 F).",
+  "Aucun moyen de paiement configuré": "No payment method configured",
+  "Moyen de paiement parrain": "Referrer payment method",
+  "Commentaire (optionnel)": "Comment (optional)",
+  "Un petit commentaire…": "A short comment…",
+  "Confirmer le retrait": "Confirm withdrawal",
+  "Demande reçue": "Request received",
+  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Elle sera traitée dans un délai maximum de 24 h.":
+    "Your withdrawal request of {amount} F has been received by the Mboppi team. It will be processed within 24 hours.",
+  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F, validé par l'administration. Retrait possible dès 5 000 F.":
+    "Each seller or creator who signs up through your link and pays their membership (1,500 F) earns you 1,000 F, validated by the administration. Withdrawal possible from 5,000 F.",
+  "Demandes de retrait (commissions d'activation)": "Withdrawal requests (activation commissions)",
+  "Parrainés (adhésion confirmée)": "Referred members (confirmed membership)",
+  Commentaire: "Comment",
+  "Aucune demande de retrait": "No withdrawal requests",
+  Payer: "Pay",
+  "Payer la demande de retrait de {amount} F pour {name} ?": "Pay the withdrawal request of {amount} F for {name}?",
+  "Votre demande de retrait de {amount} F a bien été reçue. Elle sera traitée dans un délai maximum de 24 h.":
+    "Your withdrawal request of {amount} F has been received. It will be processed within 24 hours.",
+  "Votre demande de retrait de {amount} F a été payée par l'équipe Mboppi.":
+    "Your withdrawal request of {amount} F has been paid by the Mboppi team.",
   "Un de vos filleuls a payé son adhésion — votre commission de 1 000 F est en attente de versement.":
     "One of your referred members has paid their membership — your 1,000 F commission is awaiting payout.",
   "Parrainages (vendeurs / créateurs)": "Referrals (sellers / creators)",
@@ -2074,6 +2100,32 @@ const AR = {
   Payé: "مدفوع",
   "Marquer l'adhésion de {name} comme payée et avertir son parrain ?":
     "هل تريد تحديد اشتراك {name} كمدفوع وإشعار الكفيل؟",
+  "Montant disponible": "المبلغ المتاح",
+  "Demande de retrait": "طلب السحب",
+  "Références des parrainés (adhésion confirmée)": "مراجع المكفولين (بعد تأكيد الاشتراك)",
+  "Montant à retirer": "المبلغ المراد سحبه",
+  "Le montant doit être inférieur ou égal à votre solde disponible (multiple de 1 000 F).":
+    "يجب أن يكون المبلغ أصغر أو يساوي رصيدك المتاح (مضاعف 1000 ف).",
+  "Aucun moyen de paiement configuré": "لا توجد وسيلة دفع مُعدّة",
+  "Moyen de paiement parrain": "وسيلة دفع الكفيل",
+  "Commentaire (optionnel)": "تعليق (اختياري)",
+  "Un petit commentaire…": "تعليق قصير…",
+  "Confirmer le retrait": "تأكيد السحب",
+  "Demande reçue": "تم استلام الطلب",
+  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Elle sera traitée dans un délai maximum de 24 h.":
+    "تم استلام طلب السحب الخاص بك بمبلغ {amount} ف من طرف فريق Mboppi. سيتم معالجته في غضون 24 ساعة كحد أقصى.",
+  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F, validé par l'administration. Retrait possible dès 5 000 F.":
+    "كل بائع أو مبدع يسجل عبر رابطك ويدفع اشتراكه (1500 ف) يكسبك 1000 ف، بعد تأكيد الإدارة. يمكنك السحب ابتداءً من 5000 ف.",
+  "Demandes de retrait (commissions d'activation)": "طلبات السحب (عمولات التفعيل)",
+  "Parrainés (adhésion confirmée)": "المكفولون (بعد تأكيد الاشتراك)",
+  Commentaire: "تعليق",
+  "Aucune demande de retrait": "لا توجد طلبات سحب",
+  Payer: "الدفع",
+  "Payer la demande de retrait de {amount} F pour {name} ?": "دفع طلب السحب بمبلغ {amount} ف لـ {name}؟",
+  "Votre demande de retrait de {amount} F a bien été reçue. Elle sera traitée dans un délai maximum de 24 h.":
+    "تم استلام طلب السحب الخاص بك بمبلغ {amount} ف. سيتم معالجته في غضون 24 ساعة كحد أقصى.",
+  "Votre demande de retrait de {amount} F a été payée par l'équipe Mboppi.":
+    "تم دفع طلب السحب الخاص بك بمبلغ {amount} ف من طرف فريق Mboppi.",
   "Un de vos filleuls a payé son adhésion — votre commission de 1 000 F est en attente de versement.":
     "أحد المكفولين لديك دفع اشتراكه — عمولتك البالغة 1000 ف في انتظار التحويل.",
   "Parrainages (vendeurs / créateurs)": "الإحالات (بائعون / مبدعون)",
@@ -3451,6 +3503,32 @@ const ES = {
   Payé: "Pagado",
   "Marquer l'adhésion de {name} comme payée et avertir son parrain ?":
     "¿Marcar la membresía de {name} como pagada y notificar a su referidor?",
+  "Montant disponible": "Importe disponible",
+  "Demande de retrait": "Solicitud de retiro",
+  "Références des parrainés (adhésion confirmée)": "Referencias de los referidos (membresía confirmada)",
+  "Montant à retirer": "Importe a retirar",
+  "Le montant doit être inférieur ou égal à votre solde disponible (multiple de 1 000 F).":
+    "El importe debe ser menor o igual a su saldo disponible (múltiplo de 1.000 F).",
+  "Aucun moyen de paiement configuré": "Ningún método de pago configurado",
+  "Moyen de paiement parrain": "Método de pago del referidor",
+  "Commentaire (optionnel)": "Comentario (opcional)",
+  "Un petit commentaire…": "Un comentario breve…",
+  "Confirmer le retrait": "Confirmar el retiro",
+  "Demande reçue": "Solicitud recibida",
+  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Elle sera traitée dans un délai maximum de 24 h.":
+    "Hemos recibido su solicitud de retiro de {amount} F. El equipo de Mboppi la procesará en un plazo máximo de 24 h.",
+  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F, validé par l'administration. Retrait possible dès 5 000 F.":
+    "Cada vendedor o creador que se registre con tu enlace y pague su membresía (1.500 F) te hace ganar 1.000 F, validado por la administración. Retiro posible desde 5.000 F.",
+  "Demandes de retrait (commissions d'activation)": "Solicitudes de retiro (comisiones de activación)",
+  "Parrainés (adhésion confirmée)": "Referidos (membresía confirmada)",
+  Commentaire: "Comentario",
+  "Aucune demande de retrait": "Sin solicitudes de retiro",
+  Payer: "Pagar",
+  "Payer la demande de retrait de {amount} F pour {name} ?": "¿Pagar la solicitud de retiro de {amount} F para {name}?",
+  "Votre demande de retrait de {amount} F a bien été reçue. Elle sera traitée dans un délai maximum de 24 h.":
+    "Hemos recibido su solicitud de retiro de {amount} F. Se tramitará en un plazo máximo de 24 h.",
+  "Votre demande de retrait de {amount} F a été payée par l'équipe Mboppi.":
+    "El equipo de Mboppi ha pagado su solicitud de retiro de {amount} F.",
   "Un de vos filleuls a payé son adhésion — votre commission de 1 000 F est en attente de versement.":
     "Uno de tus referidos ha pagado su membresía — tu comisión de 1.000 F está pendiente de transferencia.",
   "Parrainages (vendeurs / créateurs)": "Referidos (vendedores / creadores)",

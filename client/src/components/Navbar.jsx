@@ -561,6 +561,18 @@ function NotifBell() {
         "Un de vos filleuls a payé son adhésion — votre commission de 1 000 F est en attente de versement."
       );
     }
+    if (n.type === "activation_withdrawal_requested") {
+      return t(
+        "Votre demande de retrait de {amount} F a bien été reçue. Elle sera traitée dans un délai maximum de 24 h.",
+        { amount: formatMoney(n.amount) }
+      );
+    }
+    if (n.type === "activation_withdrawal_paid") {
+      return t(
+        "Votre demande de retrait de {amount} F a été payée par l'équipe Mboppi.",
+        { amount: formatMoney(n.amount) }
+      );
+    }
     if (user.id === n.seller_id) {
       return t("Votre vente de « {product} » a été achetée par {buyer}.", {
         product: n.product_name,

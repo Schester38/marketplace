@@ -49,6 +49,8 @@ export default function Admin() {
   const [referrals, setReferrals] = useState(null);
   const [refSearch, setRefSearch] = useState("");
   const [refError, setRefError] = useState("");
+  const [withdrawals, setWithdrawals] = useState(null);
+  const [wdError, setWdError] = useState("");
   const [clientLogs, setClientLogs] = useState(null);
 
   const load = useCallback(
@@ -92,6 +94,10 @@ export default function Admin() {
       api
         .adminReferrals()
         .then((d) => setReferrals(d.referrals))
+        .catch(() => {});
+      api
+        .adminWithdrawals()
+        .then((d) => setWithdrawals(d.withdrawals))
         .catch(() => {});
       api
         .adminLogs(60)
@@ -199,6 +205,29 @@ export default function Admin() {
       );
     } catch (err) {
       setRefError(err.message);
+    }
+  };
+
+  const payWithdrawal = async (w) => {
+    setWdError("");
+    if (
+      !window.confirm(
+        t("Payer la demande de retrait de {amount} F pour {name} ?", {
+          amount: formatMoney(w.amount),
+          name: w.seller.name,
+        })
+      )
+    )
+      return;
+    try {
+      await api.adminPayWithdrawal(w.id);
+      setWithdrawals((ws) =>
+        ws.map((x) =>
+          x.id === w.id ? { ...x, status: "paid", paid_at: new Date().toISOString() } : x
+        )
+      );
+    } catch (err) {
+      setWdError(err.message);
     }
   };
 
@@ -887,6 +916,121 @@ export default function Admin() {
                     <code>{r.parrain.reference_number || "—"}</code>
                   </td>
                   <td>{r.parrain.phone || "—"}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="section-title">💸 {t("Demandes de retrait (commissions d'activation)")}</h2>
+      {wdError && <p className="error">{wdError}</p>}
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>{t("Parrain")}</th>
+              <th>{t("Référence parrain")}</th>
+              <th>{t("Parrainés (adhésion confirmée)")}</th>
+              <th>{t("Montant")}</th>
+              <th>{t("Moyen de paiement parrain")}</th>
+              <th>{t("Email")}</th>
+              <th>{t("Commentaire")}</th>
+              <th>{t("Date")}</th>
+              <th>{t("Statut")}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {withdrawals === null ? (
+              <tr>
+                <td colSpan="10">
+                  <div className="skeleton-block" style={{ height: 30 }}></div>
+                </td>
+              </tr>
+            ) : withdrawals.length === 0 ? (
+              <tr>
+                <td colSpan="10" className="empty">
+                  {t("Aucune demande de retrait")}
+                </td>
+              </tr>
+            ) : (
+              withdrawals.map((w) => (
+                <tr key={w.id}>
+                  <td>{w.seller.name}</td>
+                  <td>
+                    <code>{w.seller.reference_number || "—"}</code>
+                  </td>
+                  <td>
+                    <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+                      {w.items.map((it) => (
+                        <li key={it.member_id}>
+                          {it.name} — <code>{it.reference_number || "—"}</code>{" "}
+                          {it.membership_paid ? (
+                            <span className="badge badge-paid">{t("Payée")}</span>
+                          ) : (
+                            <span className="badge badge-pending">{t("Non payée")}</span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td>
+                    <strong>{formatMoney(w.amount)} F</strong>
+                  </td>
+                  <td style={{ fontSize: 13 }}>
+                    {w.seller.paymentMethods ? (
+                      <>
+                        {w.seller.paymentMethods.full_name && (
+                          <div>
+                            <strong>{w.seller.paymentMethods.full_name}</strong>
+                          </div>
+                        )}
+                        {(w.seller.paymentMethods.wallets || []).length > 0 ? (
+                          <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>
+                            {(w.seller.paymentMethods.wallets || []).map((wlt, i) => (
+                              <li key={i}>
+                                {wlt.name || "—"}:{" "}
+                                <code>
+                                  {wlt.value || "—"}
+                                  {wlt.primary ? " ⭐" : ""}
+                                </code>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="hint">{t("Aucun moyen de paiement configuré")}</span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="hint">{t("Aucun moyen de paiement configuré")}</span>
+                    )}
+                  </td>
+                  <td className="hint">{w.email || "—"}</td>
+                  <td className="hint" style={{ maxWidth: 200 }}>
+                    {w.comment || "—"}
+                  </td>
+                  <td className="hint">
+                    {w.created_at ? new Date(w.created_at).toLocaleDateString() : "—"}
+                  </td>
+                  <td>
+                    {w.status === "paid" ? (
+                      <span className="badge badge-paid">{t("Payé")}</span>
+                    ) : (
+                      <span className="badge badge-warn">{t("En attente")}</span>
+                    )}
+                  </td>
+                  <td>
+                    {w.status === "pending" && (
+                      <button
+                        type="button"
+                        className="btn btn-small btn-primary"
+                        onClick={() => payWithdrawal(w)}
+                      >
+                        💰 {t("Payer")}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))
             )}

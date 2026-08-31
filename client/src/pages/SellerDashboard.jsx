@@ -43,6 +43,15 @@ export default function SellerDashboard() {
   const [stats, setStats] = useState(null);
   const [referred, setReferred] = useState([]);
   const [activationReferrals, setActivationReferrals] = useState([]);
+  const [actWithdrawal, setActWithdrawal] = useState({
+    available: 0,
+    available_count: 0,
+    min_amount: 5000,
+    withdrawals: [],
+  });
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawForm, setWithdrawForm] = useState({ amount: "", comment: "", email: "" });
+  const [withdrawDone, setWithdrawDone] = useState(null);
   const [sellerCode, setSellerCode] = useState(null);
   const [codeLoading, setCodeLoading] = useState(false);
   const [error, setError] = useState("");
@@ -52,7 +61,7 @@ export default function SellerDashboard() {
   const [proofLoading, setProofLoading] = useState(false);
 
   const load = async () => {
-    const [prodData, saleData, codeData] = await Promise.all([
+    const [prodData, saleData, codeData, actData] = await Promise.all([
       api.listProducts().catch((e) => {
         setError(e.message);
         return { products: [] };
@@ -62,6 +71,12 @@ export default function SellerDashboard() {
         return { sales: [], stats: {}, referred: [] };
       }),
       api.getSellerCode().catch(() => ({ seller_code: null })),
+      api.activationWithdrawalMe().catch(() => ({
+        available: 0,
+        available_count: 0,
+        min_amount: 5000,
+        withdrawals: [],
+      })),
     ]);
     setProducts(prodData.products);
     setSales(saleData.sales);
@@ -69,6 +84,7 @@ export default function SellerDashboard() {
     setReferred(saleData.referred || []);
     setActivationReferrals(saleData.activationReferrals || []);
     setSellerCode(codeData.seller_code);
+    setActWithdrawal(actData || { available: 0, available_count: 0, min_amount: 5000, withdrawals: [] });
   };
 
   useEffect(() => {
@@ -201,6 +217,34 @@ export default function SellerDashboard() {
     try {
       await api.groupedClaim(kind, group.shop_id);
       setSuccess(t("Paiement réclamé ! La boutique a été notifiée."));
+      load();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const openWithdraw = () => {
+    setError("");
+    setWithdrawForm({
+      amount: String(actWithdrawal.available || ""),
+      comment: "",
+      email: user?.email || "",
+    });
+    setWithdrawOpen(true);
+  };
+
+  const submitWithdraw = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    try {
+      const d = await api.createActivationWithdrawal({
+        amount: Number(withdrawForm.amount),
+        comment: withdrawForm.comment,
+        email: withdrawForm.email,
+      });
+      setWithdrawOpen(false);
+      setWithdrawDone({ amount: d.amount || Number(withdrawForm.amount) });
       load();
     } catch (err) {
       setError(err.message);
@@ -776,17 +820,51 @@ export default function SellerDashboard() {
         )}
       </section>
 
-      {activationReferrals.length > 0 && (
+      {activationReferrals.length > 0 || actWithdrawal.available > 0 ? (
         <section className="card stats" style={{ marginTop: 14 }}>
-          <div className="stats-head">
-            <h2>🤝 {t("Vendeurs / créateurs parrainés — commission de 1 000 F")}</h2>
+          <div
+            className="stats-head"
+            style={{ flexWrap: "wrap", gap: 12, alignItems: "center" }}
+          >
+            <div style={{ flex: "1 1 260px" }}>
+              <h2>🤝 {t("Vendeurs / créateurs parrainés — commission de 1 000 F")}</h2>
+              <p className="hint" style={{ marginTop: 4 }}>
+                {t(
+                  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F, validé par l'administration. Retrait possible dès 5 000 F."
+                )}
+              </p>
+            </div>
+            <div
+              className="withdraw-box"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                flexWrap: "wrap",
+                padding: "10px 14px",
+                borderRadius: 12,
+                border: "1px solid var(--border, rgba(0,0,0,.1))",
+                background: "var(--card-bg, #fff)",
+              }}
+            >
+              <div>
+                <span className="hint" style={{ display: "block", fontSize: 12 }}>
+                  {t("Montant disponible")}
+                </span>
+                <strong style={{ fontSize: 20 }}>
+                  {formatMoney(actWithdrawal.available)} {countrySymbol(user?.country)}
+                </strong>
+              </div>
+              <button
+                className="btn btn-primary"
+                disabled={actWithdrawal.available < (actWithdrawal.min_amount || 5000)}
+                onClick={openWithdraw}
+              >
+                💰 {t("Retirer")}
+              </button>
+            </div>
           </div>
-          <p className="hint" style={{ marginTop: 0 }}>
-            {t(
-              "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F. La commission est versée manuellement par l'administration."
-            )}
-          </p>
-          <div className="table-wrap">
+          <div className="table-wrap" style={{ marginTop: 10 }}>
             <table className="table">
               <thead>
                 <tr>
@@ -813,7 +891,7 @@ export default function SellerDashboard() {
                       <td>{r.role === "creator" ? t("Créateur") : t("Vendeur")}</td>
                       <td>
                         {paidMembership ? (
-                          <span className="badge badge-paid">{t("Adhésion payée")}</span>
+                          <span className="badge badge-paid">{t("Payée")}</span>
                         ) : (
                           <span className="badge badge-pending">{t("Non payée")}</span>
                         )}
@@ -823,7 +901,7 @@ export default function SellerDashboard() {
                       </td>
                       <td>
                         {paidMembership ? (
-                          <span className="badge badge-warn">{t("En attente")}</span>
+                          <span className="badge badge-paid">{t("Adhésion payée")}</span>
                         ) : (
                           <span className="badge badge-pending">{t("En attente d'adhésion")}</span>
                         )}
@@ -835,6 +913,132 @@ export default function SellerDashboard() {
             </table>
           </div>
         </section>
+      ) : null}
+
+      {withdrawOpen && (
+        <div className="modal-overlay" onClick={() => setWithdrawOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>💰 {t("Demande de retrait")}</h3>
+              <button className="drawer-close" onClick={() => setWithdrawOpen(false)}>
+                ✕
+              </button>
+            </div>
+            <form onSubmit={submitWithdraw}>
+              <div className="info-row">
+                <span className="label">{t("Votre référence")}</span>
+                <strong>
+                  <code>{user?.reference_number || "—"}</code>
+                </strong>
+              </div>
+              <div className="info-row">
+                <span className="label">{t("Références des parrainés (adhésion confirmée)")}</span>
+                <strong>
+                  {activationReferrals.filter((r) => !!r.membership_paid_at).length > 0 ? (
+                    <span style={{ wordBreak: "break-word" }}>
+                      {activationReferrals
+                        .filter((r) => !!r.membership_paid_at)
+                        .map((r) => r.reference_number)
+                        .filter(Boolean)
+                        .join(", ") || "—"}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </strong>
+              </div>
+              <label className="label" style={{ display: "block", marginTop: 12 }}>
+                {t("Montant à retirer")} *
+              </label>
+              <input
+                type="number"
+                min="5000"
+                step="1000"
+                className="input"
+                value={withdrawForm.amount}
+                onChange={(e) => setWithdrawForm((f) => ({ ...f, amount: e.target.value }))}
+                required
+              />
+              {withdrawForm.amount &&
+                (Number(withdrawForm.amount) > actWithdrawal.available ||
+                  (Number(withdrawForm.amount) % 1000 !== 0 && Number(withdrawForm.amount) !== 0)) && (
+                  <p className="error">
+                    {t("Le montant doit être inférieur ou égal à votre solde disponible (multiple de 1 000 F).")}
+                  </p>
+                )}
+              <label className="label" style={{ display: "block", marginTop: 12 }}>
+                {t("Commentaire (optionnel)")}
+              </label>
+              <textarea
+                className="input"
+                rows="3"
+                maxLength="500"
+                placeholder={t("Un petit commentaire…")}
+                value={withdrawForm.comment}
+                onChange={(e) => setWithdrawForm((f) => ({ ...f, comment: e.target.value }))}
+              />
+              <label className="label" style={{ display: "block", marginTop: 12 }}>
+                {t("Email")} *
+              </label>
+              <input
+                type="email"
+                className="input"
+                required
+                value={withdrawForm.email}
+                onChange={(e) => setWithdrawForm((f) => ({ ...f, email: e.target.value }))}
+              />
+              <div className="row2" style={{ justifyContent: "space-between", marginTop: 16 }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setWithdrawOpen(false)}
+                >
+                  {t("Annuler")}
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={
+                    !withdrawForm.amount ||
+                    Number(withdrawForm.amount) <= 0 ||
+                    Number(withdrawForm.amount) > actWithdrawal.available ||
+                    (Number(withdrawForm.amount) % 1000 !== 0 &&
+                      Number(withdrawForm.amount) !== 0) ||
+                    !withdrawForm.email
+                  }
+                >
+                  {t("Confirmer le retrait")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {withdrawDone && (
+        <div className="modal-overlay" onClick={() => setWithdrawDone(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🎉 {t("Demande reçue")}</h3>
+              <button className="drawer-close" onClick={() => setWithdrawDone(null)}>
+                ✕
+              </button>
+            </div>
+            <p style={{ lineHeight: 1.6 }}>
+              {t(
+                "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Elle sera traitée dans un délai maximum de 24 h.",
+                { amount: formatMoney(withdrawDone.amount) }
+              )}
+            </p>
+            <button
+              className="btn btn-primary btn-block"
+              style={{ marginTop: 16 }}
+              onClick={() => setWithdrawDone(null)}
+            >
+              {t("Fermer")}
+            </button>
+          </div>
+        </div>
       )}
 
       {proofSale && (

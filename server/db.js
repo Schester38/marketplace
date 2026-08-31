@@ -394,6 +394,26 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created ON wallet_transactions(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_wallet_transactions_reference ON wallet_transactions(reference_type, reference_id);
 
+    CREATE TABLE IF NOT EXISTS activation_withdrawals (
+      id SERIAL PRIMARY KEY,
+      seller_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount NUMERIC(14,2) NOT NULL,
+      comment TEXT,
+      email TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      paid_at TIMESTAMPTZ,
+      paid_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_activation_withdrawals_seller ON activation_withdrawals(seller_id);
+    CREATE TABLE IF NOT EXISTS activation_withdrawal_items (
+      id SERIAL PRIMARY KEY,
+      withdrawal_id INTEGER NOT NULL REFERENCES activation_withdrawals(id) ON DELETE CASCADE,
+      member_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE (withdrawal_id, member_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_activation_withdrawal_items_member ON activation_withdrawal_items(member_id);
+
     CREATE TABLE IF NOT EXISTS automatic_payouts (
       id BIGSERIAL PRIMARY KEY,
       external_reference TEXT NOT NULL UNIQUE,

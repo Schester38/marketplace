@@ -208,8 +208,14 @@ export const api = {
     request("/donations", { method: "POST", body: JSON.stringify(payload) }),
   trackViews: (items) => request("/views", { method: "POST", body: JSON.stringify({ items }) }),
   myFlashPromotions: () => request("/flash-promotions/mine"),
+  activationWithdrawalMe: () => request("/activation-withdrawals/me"),
+  createActivationWithdrawal: (payload) =>
+    request("/activation-withdrawals", { method: "POST", body: JSON.stringify(payload) }),
   adminReferrals: (search) =>
     adminRequest(`/admin/referrals${search ? `?search=${encodeURIComponent(search)}` : ""}`),
   adminMarkReferralPaid: (id) =>
     adminRequest(`/admin/referrals/${id}/pay`, { method: "POST" }),
+  adminWithdrawals: () => adminRequest("/admin/activation-withdrawals"),
+  adminPayWithdrawal: (id) =>
+    adminRequest(`/admin/activation-withdrawals/${id}/pay`, { method: "POST" }),
 };
