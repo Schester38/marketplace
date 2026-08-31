@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import Seo from "../components/Seo.jsx";
 import { useLang } from "../i18n.jsx";
 
