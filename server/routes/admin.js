@@ -5,6 +5,11 @@ import { logAudit } from "../security.js";
 import { migrateImages } from "../migrate-images.js";
 import { cleanupOutOfStock, cleanupOldStats, dbUsageReport } from "../cleanup.js";
 import { storageUsage } from "../storage.js";
+import {
+  listPendingPayouts,
+  resolvePayout,
+  retryPayout,
+} from "../services/payouts.js";
 
 const router = Router();
 
@@ -593,5 +598,78 @@ router.get(
   })
 );
 
+
+// ── Réconciliation des reversements iKeePay (sortir de `processing`) ────────
+// Un payout peut rester en `processing` (résultat inconnu : iKeePay a accepté
+// mais la réponse HTTP a été perdue). Ces endpoints admin permettent de :
+//  1. Lister les reversements bloqués (GET /payouts?status=&older_than_minutes=)
+//  2. Les résoudre manuellement (POST /payouts/:reference/resolve)
+//     → resolution='completed' (transfert vérifié effectué) ou 'failed'
+//       (transfert vérifié NON effectué — rend alors le retry possible).
+//  3. Les retenter (POST /payouts/:reference/retry) UNIQUEMENT après résolution
+//     en `failed` (jamais directement depuis `processing` : double transfert).
+// Toute action est journalisée (audit_log) et idempotente côté ledger.
+
+router.get(
+  "/payouts",
+  ah(async (req, res) => {
+    const rawStatus = String(req.query.status || "").trim();
+    const status = rawStatus ? rawStatus.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
+    const rows = await listPendingPayouts({
+      status,
+      olderThanMinutes: Number(req.query.older_than_minutes || 0),
+      limit: Number(req.query.limit || 100),
+    });
+    await logAudit(
+      req.user.id,
+      "admin.payouts.list",
+      `status=${status ? status.join(",") : "pending,processing,failed"} count=${rows.length}`,
+      req.ip
+    );
+    res.json({ ok: true, payouts: rows });
+  })
+);
+
+router.post(
+  "/payouts/:reference/resolve",
+  ah(async (req, res) => {
+    const reference = String(req.params.reference || "").trim();
+    const resolution = String(req.body?.resolution || "").trim();
+    if (!reference) return res.status(400).json({ error: "Référence requise" });
+    if (!["completed", "failed"].includes(resolution))
+      return res.status(400).json({ error: "Résolution invalide (completed|failed)" });
+    const result = await resolvePayout(reference, {
+      resolution,
+      note: String(req.body?.note || "").trim() || null,
+    });
+    await logAudit(
+      req.user.id,
+      "admin.payout.resolve",
+      `ref=${reference} resolution=${resolution} ok=${result.ok}`,
+      req.ip
+    );
+    if (!result.ok) return res.status(409).json({ error: result.error });
+    res.json({ ok: true, ...result });
+  })
+);
+
+router.post(
+  "/payouts/:reference/retry",
+  ah(async (req, res) => {
+    const reference = String(req.params.reference || "").trim();
+    if (!reference) return res.status(400).json({ error: "Référence requise" });
+    const result = await retryPayout(reference, {
+      note: String(req.body?.note || "").trim() || null,
+    });
+    await logAudit(
+      req.user.id,
+      "admin.payout.retry",
+      `ref=${reference} ok=${result.ok}`,
+      req.ip
+    );
+    if (!result.ok) return res.status(409).json({ error: result.error });
+    res.json({ ok: true, ...result });
+  })
+);
 
 export default router;

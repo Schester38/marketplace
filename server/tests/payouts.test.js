@@ -8,7 +8,7 @@
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { computeRedistribution, planSalePayouts, payoutErrorCategory } from "../services/payouts.js";
+import { computeRedistribution, planSalePayouts, payoutErrorCategory, resolveGuard, retryGuard } from "../services/payouts.js";
 import {
   authorizeConfirm,
   safeEqual,
@@ -462,6 +462,84 @@ suite("paymentSecurity (sécurité paiements iKeePay)", () => {
     const r = authorizeConfirm({ kind: "sale", record: null, user: { id: 1, role: "livreur" }, token: null });
     assertFalse(r.ok, "refusé");
     assertEqual(r.code, 404, "code");
+  });
+});
+
+suite("réconciliation des payouts bloqués (sortir de processing)", () => {
+  const ADMIN_PATH = join(ROOT, "server", "routes", "admin.js");
+  const PAYOUTS_PATH2 = join(ROOT, "server", "services", "payouts.js");
+  const adminSource = existsSync(ADMIN_PATH) ? readFileSync(ADMIN_PATH, "utf8") : "";
+  const payoutsSource2 = existsSync(PAYOUTS_PATH2) ? readFileSync(PAYOUTS_PATH2, "utf8") : "";
+
+  test("resolveGuard : processing+completed → autorisé (sortie sûre)", () => {
+    const g = resolveGuard("processing", "completed");
+    assertTrue(g.ok, "processing → completed autorisé");
+  });
+
+  test("resolveGuard : processing+failed → autorisé", () => {
+    const g = resolveGuard("processing", "failed");
+    assertTrue(g.ok, "processing → failed autorisé");
+  });
+
+  test("resolveGuard : pending+completed → autorisé", () => {
+    const g = resolveGuard("pending", "completed");
+    assertTrue(g.ok, "pending → completed autorisé");
+  });
+
+  test("resolveGuard : completed → refusé (jamais rétrograder)", () => {
+    const g = resolveGuard("completed", "failed");
+    assertFalse(g.ok, "completed → failed refusé");
+    assertEqual(g.reason, "already_completed", "reason");
+  });
+
+  test("resolveGuard : résolution invalide → refusé", () => {
+    const g = resolveGuard("processing", "annuler");
+    assertFalse(g.ok, "résolution invalide");
+    assertEqual(g.reason, "invalid_resolution", "reason");
+  });
+
+  test("retryGuard : failed → autorisé (retry après échec explicite)", () => {
+    const g = retryGuard("failed");
+    assertTrue(g.ok, "failed → retry autorisé");
+  });
+
+  test("retryGuard : processing → REFUSÉ (il faut d'abord résoudre en failed)", () => {
+    const g = retryGuard("processing");
+    assertFalse(g.ok, "processing → retry refusé");
+    assertEqual(g.reason, "must_resolve_failed_first", "reason");
+  });
+
+  test("retryGuard : pending → REFUSÉ (résultat inconnu)", () => {
+    const g = retryGuard("pending");
+    assertFalse(g.ok, "pending → retry refusé");
+    assertEqual(g.reason, "must_resolve_failed_first", "reason");
+  });
+
+  test("retryGuard : completed → refusé", () => {
+    const g = retryGuard("completed");
+    assertFalse(g.ok, "completed → retry refusé");
+    assertEqual(g.reason, "not_retryable", "reason");
+  });
+
+  test("Les fonctions de réconciliation sont exportées par payouts.js", () => {
+    assertTrue(payoutsSource2.includes("export async function listPendingPayouts"), "listPendingPayouts exportée");
+    assertTrue(payoutsSource2.includes("export async function resolvePayout"), "resolvePayout exportée");
+    assertTrue(payoutsSource2.includes("export async function retryPayout"), "retryPayout exportée");
+    assertTrue(payoutsSource2.includes("export function resolveGuard"), "resolveGuard exportée");
+    assertTrue(payoutsSource2.includes("export function retryGuard"), "retryGuard exportée");
+  });
+
+  test("Les endpoints admin de réconciliation existent", () => {
+    assertTrue(adminSource.includes('"/payouts"'), "GET /admin/payouts");
+    assertTrue(adminSource.includes("/payouts/:reference/resolve"), "resolve endpoint");
+    assertTrue(adminSource.includes("/payouts/:reference/retry"), "retry endpoint");
+    assertTrue(adminSource.includes("admin.payout.resolve"), "audit resolve");
+    assertTrue(adminSource.includes("admin.payout.retry"), "audit retry");
+  });
+
+  test("Un retry ne peut JAMAIS partir directement de processing (pas de contournement)", () => {
+    // La garde retryGuard ET le SQL de retryPayout exigent status='failed'.
+    assertFalse(payoutsSource2.includes("WHERE external_reference = $2 AND status IN ('processing'"), "pas de retry depuis processing");
   });
 });
 

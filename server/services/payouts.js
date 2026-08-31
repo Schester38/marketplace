@@ -144,10 +144,29 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
     return { ok: false, retryable: existing.status === "failed", already: true };
   }
 
+  // Nous avons gagné la réservation → envoyer le payout (logique centralisée).
+  return executePayout({
+    reference,
+    amount,
+    fee,
+    netAmount,
+    currency: target.currency,
+    target,
+    user,
+  });
+}
+
+/**
+ * Envoie réellement le payout iKeePay et met à jour le statut automatique.
+ * Logique CENTRALISÉE partagée par providerPayout (premier envoi) et
+ * retryPayout (renvoi contrôlé) — une seule source de vérité pour la gestion
+ * des résultats (completed / failed / unknown).
+ */
+async function executePayout({ reference, amount, fee, netAmount, currency, target, user }) {
   try {
     const result = await payout({
       amount: netAmount,
-      currency: target.currency,
+      currency,
       country: target.country,
       phoneNumber: target.phoneNumber,
       operator: target.operator,
@@ -155,7 +174,6 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
     });
     const status = providerStatus(result);
     if (status === "failed") {
-      // Refus EXPLICITE du prestataire (il a répondu) : échec définitif retryable.
       await q(
         "UPDATE automatic_payouts SET status = 'failed', error = $1, attempts = attempts + 1, retryable = TRUE, updated_at = now() WHERE external_reference = $2",
         ["Le prestataire a refusé le retrait", reference]
@@ -163,7 +181,7 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
       await sendPush(user.id, {
         type: "payout_failed",
         title: "Paiement échoué",
-        body: `Le reversement de ${amount} ${target.currency} a échoué : le prestataire a refusé le retrait.`,
+        body: `Le reversement de ${amount} ${currency} a échoué : le prestataire a refusé le retrait.`,
       });
       return { ok: false, error: "Le prestataire a refusé le retrait", retryable: true };
     }
@@ -182,18 +200,12 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
   } catch (error) {
     const category = payoutErrorCategory(error);
     if (category === "unknown") {
-      // Résultat INCONNU (timeout, réseau, 5xx, réponse perdue) : iKeePay a
-      // peut-être déjà effectué le transfert. On NE marque PAS failed définitif,
-      // on ne renvoie PAS l'argent, on ne relance PAS automatiquement. Le payout
-      // reste `processing` en attente de réconciliation (webhook payout ou
-      // manuelle).
       await q(
         "UPDATE automatic_payouts SET status = 'processing', error = $1, attempts = attempts + 1, retryable = FALSE, updated_at = now() WHERE external_reference = $2",
         ["payout_result_unknown", reference]
       );
       return { ok: false, error: "payout_result_unknown", pending: true, retryable: false };
     }
-    // Échec explicite (refus 4xx) : retryable.
     await q(
       "UPDATE automatic_payouts SET status = 'failed', error = $1, attempts = attempts + 1, retryable = TRUE, updated_at = now() WHERE external_reference = $2",
       [error.message, reference]
@@ -201,10 +213,152 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
     await sendPush(user.id, {
       type: "payout_failed",
       title: "Paiement échoué",
-      body: `Le reversement de ${amount} ${target.currency} a échoué : ${error.message}`,
+      body: `Le reversement de ${amount} ${currency} a échoué : ${error.message}`,
     });
     return { ok: false, error: error.message, retryable: true };
   }
+}
+
+/**
+ * Garde de résolution (pure, testable) — transitions autorisées pour sortir de
+ * `processing` / `pending` / `failed`.
+ *  - completed : autorisé tant que le payout n'est pas déjà completed
+ *    (completeAutomaticPayout est idempotent : ledger créé UNE seule fois).
+ *  - failed    : autorisé tant que le payout n'est pas déjà completed.
+ */
+export function resolveGuard(status, resolution) {
+  if (status === "completed") return { ok: false, reason: "already_completed" };
+  if (resolution === "completed" || resolution === "failed") return { ok: true };
+  return { ok: false, reason: "invalid_resolution" };
+}
+
+/**
+ * Garde de retry (pure, testable). RÈGLE FINANCIÈRE : le renvoi n'est autorisé
+ * QUE depuis un échec EXPLICITE (`failed`). Depuis `processing`/`pending`
+ * (résultat inconnu), il faut d'abord résoudre explicitement en `failed`
+ * (resolvePayout) pour confirmer que le transfert n'a pas eu lieu — sinon on
+ * risquerait un double transfert.
+ */
+export function retryGuard(status) {
+  if (status === "failed") return { ok: true };
+  if (status === "processing" || status === "pending")
+    return { ok: false, reason: "must_resolve_failed_first" };
+  return { ok: false, reason: "not_retryable" };
+}
+
+/**
+ * Liste les reversements en attente / bloqués (admin) pour réconciliation.
+ * @param {{status?:string[], olderThanMinutes?:number, limit?:number}} opts
+ */
+export async function listPendingPayouts({ status, olderThanMinutes = 0, limit = 100 } = {}) {
+  const statuses = Array.isArray(status) && status.length
+    ? status
+    : ["processing", "pending", "failed"];
+  const params = [];
+  const where = [];
+  where.push(`status = ANY($${params.length + 1}::text[])`);
+  params.push(statuses);
+  if (Number(olderThanMinutes) > 0) {
+    where.push(`updated_at < now() - make_interval(mins => $${params.length + 1}::int)`);
+    params.push(Number(olderThanMinutes));
+  }
+  const rows = await q(
+    `SELECT p.*, u.name AS user_name, u.email AS user_email, u.country AS user_country
+     FROM automatic_payouts p
+     LEFT JOIN users u ON u.id = p.user_id
+     WHERE ${where.join(" AND ")}
+     ORDER BY p.updated_at ASC
+     LIMIT ${Math.min(Number(limit) || 100, 500)}`,
+    params
+  );
+  return rows.map((r) => ({ ...r, amount: Number(r.amount), fee: Number(r.fee || 0) }));
+}
+
+/**
+ * Résolution MANUELLE (admin) d'un reversement bloqué — permet de sortir de
+ * `processing` / `pending` / `failed`.
+ *  - resolution='completed' : le transfert a été vérifié effectué (dashboard
+ *    iKeePay) → on finalise via completeAutomaticPayout (idempotent).
+ *  - resolution='failed'    : le transfert a été vérifié NON effectué → on
+ *    marque failed + retryable (le retry devient alors possible).
+ */
+export async function resolvePayout(reference, { resolution, note } = {}) {
+  const row = (
+    await q("SELECT * FROM automatic_payouts WHERE external_reference = $1", [reference])
+  )[0];
+  if (!row) return { ok: false, error: "Reversement introuvable" };
+  const guard = resolveGuard(row.status, resolution);
+  if (!guard.ok) return { ok: false, error: guard.reason };
+  if (resolution === "completed") {
+    const res = await completeAutomaticPayout(reference, row.provider_reference || null);
+    return { ok: true, ...res, note: note || null };
+  }
+  await q(
+    `UPDATE automatic_payouts SET status = 'failed', error = $1, attempts = attempts + 1, retryable = TRUE, updated_at = now()
+     WHERE external_reference = $2 AND status <> 'completed' RETURNING id`,
+    [note || "Résolution manuelle : transfert non effectué", reference]
+  );
+  await sendPush(row.user_id, {
+    type: "payout_failed",
+    title: "Paiement échoué",
+    body: `Votre reversement de ${Number(row.amount)} ${row.currency} a été marqué échoué après vérification manuelle.`,
+  });
+  return {
+    ok: true,
+    payout: { ...row, status: "failed", retryable: true, error: note || null },
+  };
+}
+
+/**
+ * Retry CONTRÔLÉ (admin) d'un reversement — UNIQUEMENT depuis `failed`
+ * (l'admin a d'abord résolu en `failed`, confirmant que le transfert n'a pas eu
+ * lieu). Réservation atomique : un seul retry gagne. Réutilise la MÊME
+ * external_reference (idempotence) et la logique centralisée executePayout.
+ */
+export async function retryPayout(reference, { note } = {}) {
+  // Réclamer atomiquement : le second retry concurrent ne matche plus car le
+  // statut passe à 'processing'.
+  const claimed = (
+    await q(
+      `UPDATE automatic_payouts SET status = 'processing', error = $1, retryable = FALSE, updated_at = now()
+       WHERE external_reference = $2 AND status = 'failed' AND retryable = TRUE RETURNING *`,
+      [note || "retry manuel admin", reference]
+    )
+  )[0];
+  if (!claimed) {
+    const row = (
+      await q("SELECT * FROM automatic_payouts WHERE external_reference = $1", [reference])
+    )[0];
+    if (!row) return { ok: false, error: "Reversement introuvable" };
+    const guard = retryGuard(row.status);
+    if (!guard.ok) return { ok: false, error: guard.reason };
+    return { ok: false, error: "Un retry est déjà en cours ou déjà résolu" };
+  }
+  const user = (
+    await q("SELECT id, name, country FROM users WHERE id = $1", [claimed.user_id])
+  )[0];
+  if (!user) return { ok: false, error: "Bénéficiaire introuvable" };
+  const methods = await methodsFor(user.id, claimed.kind);
+  const target = paymentTarget(methods, user.country);
+  if (!target || !target.country || !target.phoneNumber) {
+    await q(
+      "UPDATE automatic_payouts SET status = 'failed', error = $1, retryable = TRUE, updated_at = now() WHERE external_reference = $2",
+      ["Moyen de paiement automatique non configuré", reference]
+    );
+    return { ok: false, error: "Moyen de paiement automatique non configuré", retryable: true };
+  }
+  const amount = Number(claimed.amount);
+  const fee = Math.round(amount * IKEEPAY_FEE_RATE * 100) / 100;
+  const netAmount = Math.round((amount - fee) * 100) / 100;
+  return executePayout({
+    reference,
+    amount,
+    fee,
+    netAmount,
+    currency: target.currency,
+    target,
+    user,
+  });
 }
 
 export async function completeAutomaticPayout(reference, providerReference) {
