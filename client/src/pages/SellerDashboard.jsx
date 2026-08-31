@@ -834,26 +834,20 @@ export default function SellerDashboard() {
                 )}
               </p>
             </div>
-            <div
-              className="withdraw-box"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                flexWrap: "wrap",
-                padding: "10px 14px",
-                borderRadius: 12,
-                border: "1px solid var(--border, rgba(0,0,0,.1))",
-                background: "var(--card-bg, #fff)",
-              }}
-            >
-              <div>
-                <span className="hint" style={{ display: "block", fontSize: 12 }}>
-                  {t("Montant disponible")}
-                </span>
-                <strong style={{ fontSize: 20 }}>
+            <div className="withdraw-box">
+              <div style={{ textAlign: "right" }}>
+                <span className="stat-label">{t("Montant disponible")}</span>
+                <strong className="stat-value">
                   {formatMoney(actWithdrawal.available)} {countrySymbol(user?.country)}
                 </strong>
+                {actWithdrawal.available_count > 0 && (
+                  <span
+                    className="hint"
+                    style={{ display: "block", fontSize: 11, marginTop: 2 }}
+                  >
+                    {actWithdrawal.available_count} × {t("Adhésion payée")}
+                  </span>
+                )}
               </div>
               <button
                 className="btn btn-primary"

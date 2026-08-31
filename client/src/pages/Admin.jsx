@@ -51,7 +51,6 @@ export default function Admin() {
   const [refError, setRefError] = useState("");
   const [withdrawals, setWithdrawals] = useState(null);
   const [wdError, setWdError] = useState("");
-  const [clientLogs, setClientLogs] = useState(null);
 
   const load = useCallback(
     (silent) => {
@@ -98,10 +97,6 @@ export default function Admin() {
       api
         .adminWithdrawals()
         .then((d) => setWithdrawals(d.withdrawals))
-        .catch(() => {});
-      api
-        .adminLogs(60)
-        .then((d) => setClientLogs(d.logs))
         .catch(() => {});
     },
     [t]
@@ -923,10 +918,12 @@ export default function Admin() {
         </table>
       </div>
 
-      <h2 className="section-title">💸 {t("Demandes de retrait (commissions d'activation)")}</h2>
-      {wdError && <p className="error">{wdError}</p>}
-      <div className="table-wrap">
-        <table className="table">
+      {withdrawals && withdrawals.length > 0 && (
+        <>
+          <h2 className="section-title">💸 {t("Demandes de retrait (commissions d'activation)")}</h2>
+          {wdError && <p className="error">{wdError}</p>}
+          <div className="table-wrap">
+            <table className="table">
           <thead>
             <tr>
               <th>{t("Parrain")}</th>
@@ -1035,8 +1032,10 @@ export default function Admin() {
               ))
             )}
           </tbody>
-        </table>
-      </div>
+          </table>
+        </div>
+        </>
+      )}
 
       <h2 className="section-title">
         <Logo className="logo-inline" /> {t("Produits")}
@@ -1092,67 +1091,6 @@ export default function Admin() {
                     >
                       {t("Supprimer")}
                     </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <h2 className="section-title">🩺 {t("Erreurs récentes (client)")}</h2>
-      <p className="hint">
-        {t(
-          "Journal des erreurs de rendu remontées par les navigateurs. Si l'écran « Oups, une erreur est survenue » apparaît, sa cause exacte (message + pile) est enregistrée ici."
-        )}
-      </p>
-      <div className="table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>{t("Date")}</th>
-              <th>{t("Utilisateur")}</th>
-              <th>{t("Message")}</th>
-              <th>{t("Pile (début)")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clientLogs === null ? (
-              <tr>
-                <td colSpan="4">
-                  <div className="skeleton-block" style={{ height: 30 }}></div>
-                </td>
-              </tr>
-            ) : clientLogs.length === 0 ? (
-              <tr>
-                <td colSpan="4" className="empty">
-                  {t("Aucune erreur enregistrée")}
-                </td>
-              </tr>
-            ) : (
-              clientLogs.map((l) => (
-                <tr key={l.id}>
-                  <td className="hint">
-                    {l.created_at ? new Date(l.created_at).toLocaleString() : "—"}
-                  </td>
-                  <td>{l.username || "—"}</td>
-                  <td style={{ maxWidth: 260 }}>
-                    <code style={{ wordBreak: "break-word" }}>{l.message}</code>
-                  </td>
-                  <td style={{ maxWidth: 300 }}>
-                    <code
-                      style={{
-                        display: "block",
-                        whiteSpace: "pre-wrap",
-                        wordBreak: "break-word",
-                        fontSize: 11,
-                        color: "var(--text-secondary)",
-                        maxHeight: 60,
-                        overflow: "hidden",
-                      }}
-                    >
-                      {l.stack || "—"}
-                    </code>
                   </td>
                 </tr>
               ))

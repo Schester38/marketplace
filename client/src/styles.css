@@ -5585,6 +5585,31 @@ a.step {
 .stats-head h2 {
   margin: 0;
 }
+.withdraw-box {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.withdraw-box .stat-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--success-600, #16a34a);
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.withdraw-box .stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
 .filter-price {
   max-width: 120px;
 }

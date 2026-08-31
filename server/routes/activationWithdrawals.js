@@ -8,42 +8,55 @@ const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 
 const UNIT_COMMISSION = 1000;
 
+// Base commune : tous les parrainés dont l'adhésion est payée (même avant la
+// création des tables de retrait). Utilisée aussi en fallback si les tables
+// `activation_withdrawals` n'existent pas encore en base (bascule progressive).
+const BASE_SQL = `SELECT u.id, u.name, u.role, u.reference_number
+   FROM users u
+   WHERE u.referred_by = $1 AND u.role IN ('seller', 'creator')
+     AND u.membership_paid_at IS NOT NULL`;
+
 // Parrainés dont l'adhésion est payée et qui ne font partie d'aucune demande
 // PAYÉE. Ils définissent le « solde disponible » affiché : tant que la demande
 // est en attente, le montant reste visible et ne disparaît qu'au paiement par
-// l'admin.
+// l'admin. Fallback : si les tables de retrait sont absentes, on affiche tous
+// les parrainés payés (aucune demande n'a pu être créée de toute façon).
 async function displayMembers(sellerId) {
-  return q(
-    `SELECT u.id, u.name, u.role, u.reference_number
-       FROM users u
-       WHERE u.referred_by = $1 AND u.role IN ('seller', 'creator')
-         AND u.membership_paid_at IS NOT NULL
+  try {
+    return await q(
+      `${BASE_SQL}
          AND u.id NOT IN (
            SELECT wi.member_id FROM activation_withdrawal_items wi
            JOIN activation_withdrawals w ON w.id = wi.withdrawal_id
            WHERE w.seller_id = $1 AND w.status = 'paid'
          )
        ORDER BY u.created_at DESC`,
-    [sellerId]
-  );
+      [sellerId]
+    );
+  } catch (err) {
+    console.error("[activation-withdrawals/me] tables absentes, fallback :", err.message);
+    return q(`${BASE_SQL} ORDER BY u.created_at DESC`, [sellerId]);
+  }
 }
 
-// Parrainés éligibles pour UNE NOUVELLE demande : plus restrictif, exclut ceux
-// déjà verrouillés par une demande en attente OU payée (pas de double retrait).
+// Parrainés éligibles pour UNE NOUVELLE demande : exclut ceux déjà verrouillés
+// par une demande en attente OU payée (pas de double retrait).
 async function lockableMembers(sellerId) {
-  return q(
-    `SELECT u.id, u.name, u.role, u.reference_number
-       FROM users u
-       WHERE u.referred_by = $1 AND u.role IN ('seller', 'creator')
-         AND u.membership_paid_at IS NOT NULL
+  try {
+    return await q(
+      `${BASE_SQL}
          AND u.id NOT IN (
            SELECT wi.member_id FROM activation_withdrawal_items wi
            JOIN activation_withdrawals w ON w.id = wi.withdrawal_id
            WHERE w.seller_id = $1
          )
        ORDER BY u.created_at DESC`,
-    [sellerId]
-  );
+      [sellerId]
+    );
+  } catch (err) {
+    console.error("[activation-withdrawals/me] tables absentes, fallback lockable :", err.message);
+    return q(`${BASE_SQL} ORDER BY u.created_at DESC`, [sellerId]);
+  }
 }
 
 // Solde disponible + historique des demandes du vendeur courant.
@@ -52,21 +65,32 @@ router.get(
   authRequired,
   roleRequired("seller"),
   ah(async (req, res) => {
-    const [display, lockable, withdrawals] = await Promise.all([
-      displayMembers(req.user.id),
-      lockableMembers(req.user.id),
-      q(
+    let display = [];
+    let lockable = [];
+    let withdrawals = [];
+    try {
+      [display, lockable] = await Promise.all([
+        displayMembers(req.user.id),
+        lockableMembers(req.user.id),
+      ]);
+    } catch (err) {
+      console.error("[activation-withdrawals/me] indisponible :", err.message);
+    }
+    try {
+      withdrawals = await q(
         `SELECT id, amount, status, comment, email, created_at, paid_at
            FROM activation_withdrawals WHERE seller_id = $1
            ORDER BY created_at DESC`,
         [req.user.id]
-      ),
-    ]);
+      );
+    } catch (err) {
+      console.error("[activation-withdrawals/me] historique indisponible :", err.message);
+    }
     res.json({
-      available: display.length * UNIT_COMMISSION,
-      available_count: display.length,
+      available: (display || []).length * UNIT_COMMISSION,
+      available_count: (display || []).length,
       min_amount: 5000,
-      locked_by_pending: display.length - lockable.length,
+      locked_by_pending: ((display || []).length - (lockable || []).length),
       withdrawals: (withdrawals || []).map((w) => ({
         ...w,
         amount: Number(w.amount),
