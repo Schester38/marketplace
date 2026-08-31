@@ -4,6 +4,7 @@ import { authRequired, roleRequired } from "../auth.js";
 import { listPhotos } from "../photo.js";
 import { updatePaymentMethodsSchema, shopListQuerySchema } from "../validators.js";
 import { validate, validateQuery } from "../middlewares/validate.js";
+import { normalizeWalletPrimary } from "../services/payouts.js";
 
 const router = Router();
 
@@ -41,12 +42,7 @@ router.put(
   ah(async (req, res) => {
     const { full_name, wallets } = req.body;
     const name = full_name ? String(full_name).trim() : null;
-    const list = Array.isArray(wallets)
-      ? wallets.map((w) => ({
-          name: String(w.name).trim(),
-          value: String(w.value).trim(),
-        }))
-      : [];
+    const list = normalizeWalletPrimary(wallets);
     const updated = (
       await q(
         `INSERT INTO shop_payment_methods (shop_id, full_name, wallets, updated_at)

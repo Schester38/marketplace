@@ -3,6 +3,7 @@ import { q } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { updatePaymentMethodsSchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
+import { normalizeWalletPrimary } from "../services/payouts.js";
 
 const router = Router();
 
@@ -40,12 +41,7 @@ router.put(
   ah(async (req, res) => {
     const { full_name, wallets } = req.body;
     const name = full_name ? String(full_name).trim() : null;
-    const list = Array.isArray(wallets)
-      ? wallets.map((w) => ({
-          name: String(w.name).trim(),
-          value: String(w.value).trim(),
-        }))
-      : [];
+    const list = normalizeWalletPrimary(wallets);
     const updated = (
       await q(
         `INSERT INTO livreur_payment_methods (livreur_id, full_name, wallets, updated_at)

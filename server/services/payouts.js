@@ -30,10 +30,15 @@ const OPERATOR_MAP = [
   ["moniepoint", "MONIEPOINT"],
 ];
 
-function paymentTarget(methods, country) {
-  const wallet = Array.isArray(methods?.wallets)
-    ? methods.wallets.find((item) => item?.value && item?.name)
-    : null;
+export function paymentTarget(methods, country) {
+  const list = Array.isArray(methods?.wallets) ? methods.wallets : [];
+  // Sélection du moyen de paiement PRINCIPAL :
+  //  1. le wallet marqué `primary: true` s'il est valide (nom + valeur) et
+  //     correspond à un opérateur connu ;
+  //  2. sinon le premier wallet valide (rétrocompatibilité avec les données
+  //     déjà enregistrées avant l'introduction de `primary`).
+  const byPrimary = list.find((item) => item?.primary === true && item?.value && item?.name);
+  const wallet = byPrimary || list.find((item) => item?.value && item?.name);
   if (!wallet) return null;
   const name = String(wallet.name).trim().toLowerCase();
   const found = OPERATOR_MAP.find(([label]) => name.includes(label));
@@ -44,6 +49,34 @@ function paymentTarget(methods, country) {
     country: countryCode(country),
     currency: currencyForCountry(country),
   };
+}
+
+/**
+ * Normalise une liste de moyens de paiement : garantit qu'AU PLUS UN wallet est
+ * marqué `primary`. Si aucun n'est marqué, le premier wallet valide devient le
+ * principal par défaut. Nettoie aussi les champs (name/value trimmés, primary
+ * booléen). Rétrocompat : les anciens {name,value} sans primary restent valides.
+ */
+export function normalizeWalletPrimary(list) {
+  if (!Array.isArray(list)) return [];
+  const cleaned = list
+    .map((w) => ({
+      name: String(w?.name || "").trim(),
+      value: String(w?.value || "").trim(),
+      primary: w?.primary === true,
+    }))
+    .filter((w) => w.name && w.value);
+  const anyPrimary = cleaned.some((w) => w.primary);
+  if (!anyPrimary && cleaned.length > 0) {
+    cleaned[0].primary = true;
+  }
+  // Au plus un primary : garder uniquement le premier marqué.
+  let seen = false;
+  return cleaned.map((w) => {
+    if (w.primary && seen) return { ...w, primary: false };
+    if (w.primary) seen = true;
+    return w;
+  });
 }
 
 export async function methodsFor(userId, kind) {

@@ -8,7 +8,7 @@
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { computeRedistribution, planSalePayouts, payoutErrorCategory, resolveGuard, retryGuard } from "../services/payouts.js";
+import { computeRedistribution, normalizeWalletPrimary, paymentTarget, planSalePayouts, payoutErrorCategory, resolveGuard, retryGuard } from "../services/payouts.js";
 import {
   authorizeConfirm,
   safeEqual,
@@ -540,6 +540,86 @@ suite("réconciliation des payouts bloqués (sortir de processing)", () => {
   test("Un retry ne peut JAMAIS partir directement de processing (pas de contournement)", () => {
     // La garde retryGuard ET le SQL de retryPayout exigent status='failed'.
     assertFalse(payoutsSource2.includes("WHERE external_reference = $2 AND status IN ('processing'"), "pas de retry depuis processing");
+  });
+});
+
+suite("moyen de paiement principal (prévention reversement vers ancien numéro)", () => {
+  test("paymentTarget : privilégie le wallet `primary`, pas le premier du tableau", () => {
+    const methods = {
+      wallets: [
+        { name: "MTN Mobile Money", value: "670000001", primary: false },
+        { name: "Orange Money", value: "690000002", primary: true },
+        { name: "Wave", value: "770000003", primary: false },
+      ],
+    };
+    const target = paymentTarget(methods, "Cameroun");
+    assertEqual(target.phoneNumber, "237690000002", "le primary est choisi");
+  });
+
+  test("paymentTarget : sans primary, garde le 1er valide (rétrocompat)", () => {
+    const methods = {
+      wallets: [
+        { name: "Orange Money", value: "690000001" },
+        { name: "MTN Mobile Money", value: "670000002" },
+      ],
+    };
+    const target = paymentTarget(methods, "Cameroun");
+    assertEqual(target.phoneNumber, "237690000001", "1er wallet valide");
+  });
+
+  test("paymentTarget : primary sur opérateur inconnu → ignore et prend le 1er valide connu", () => {
+    const methods = {
+      wallets: [
+        { name: "Virement bancaire", value: "12345", primary: true },
+        { name: "Orange Money", value: "690000001", primary: false },
+      ],
+    };
+    const target = paymentTarget(methods, "Cameroun");
+    assertEqual(target.phoneNumber, "237690000001", "repli sur le connu");
+  });
+
+  test("paymentTarget : aucun wallet → null", () => {
+    assertEqual(paymentTarget({ wallets: [] }, "Cameroun"), null, "null");
+    assertEqual(paymentTarget(null, "Cameroun"), null, "null methods");
+  });
+
+  test("normalizeWalletPrimary : marque le 1er comme primary si aucun", () => {
+    const out = normalizeWalletPrimary([
+      { name: "A", value: "1" },
+      { name: "B", value: "2" },
+    ]);
+    assertEqual(out.length, 2, "2 wallets");
+    assertEqual(out.filter((w) => w.primary).length, 1, "un seul primary");
+    assertEqual(out[0].primary, true, "1er marqué");
+    assertEqual(out[1].primary, false, "2e non marqué");
+  });
+
+  test("normalizeWalletPrimary : au plus un primary, même si plusieurs cochés", () => {
+    const out = normalizeWalletPrimary([
+      { name: "A", value: "1", primary: true },
+      { name: "B", value: "2", primary: true },
+      { name: "C", value: "3", primary: true },
+    ]);
+    assertEqual(out.filter((w) => w.primary).length, 1, "un seul primary");
+    assertEqual(out[0].primary, true, "le 1er primary reste");
+  });
+
+  test("normalizeWalletPrimary : ignore les wallets sans valeur", () => {
+    const out = normalizeWalletPrimary([
+      { name: "A", value: "" },
+      { name: "B", value: "2", primary: true },
+    ]);
+    assertEqual(out.length, 1, "seul B conserve");
+    assertEqual(out[0].name, "B", "B");
+  });
+
+  test("normalizeWalletPrimary : préserve un primary déjà défini (pas le 1er)", () => {
+    const out = normalizeWalletPrimary([
+      { name: "A", value: "1" },
+      { name: "B", value: "2", primary: true },
+      { name: "C", value: "3" },
+    ]);
+    assertEqual(out.find((w) => w.primary).name, "B", "B reste principal");
   });
 });
 

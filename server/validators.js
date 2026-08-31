@@ -136,6 +136,7 @@ export const createOrderSchema = z.object({
 const walletSchema = z.object({
   name: z.string().min(1, "Nom du moyen requis").max(40),
   value: z.string().min(1, "Valeur requise").max(30),
+  primary: z.boolean().optional(),
 });
 
 export const updatePaymentMethodsSchema = z.object({

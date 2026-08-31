@@ -30,10 +30,17 @@ export default function CreatorPayments() {
         saved.forEach((w) => {
           if (!unique.includes(w.name)) unique.push(w.name);
         });
+        // Respecte le moyen principal déjà enregistré ; sinon le premier moyen
+        // sauvegardé devient le principal (rétrocompatibilité).
+        const anyPrimary = saved.some((w) => w.primary === true);
+        const firstSaved = saved[0] ? saved[0].name : null;
         setWallets(
           unique.map((name) => {
             const prev = saved.find((w) => w.name === name);
-            return { name, value: prev ? prev.value : "", checked: !!prev };
+            const isPrimary = prev
+              ? prev.primary === true || (!anyPrimary && name === firstSaved)
+              : false;
+            return { name, value: prev ? prev.value : "", checked: !!prev, primary: isPrimary };
           })
         );
         setSavedCount(saved.length);
@@ -60,7 +67,15 @@ export default function CreatorPayments() {
         setSaving(false);
         return;
       }
-      const d = await api.updateShopPaymentMethods({ full_name: fullName, wallets: list });
+      // Moyen principal : au plus un wallet `primary`.
+      let seen = false;
+      const safe = list.map((w, i, arr) => {
+        const isPrimary = arr.length === 1 || w.primary === true || (!seen && !arr.some((x) => x.primary === true) && i === 0);
+        if (w.primary && seen) return { name: w.name, value: w.value.trim(), primary: false };
+        if (isPrimary) seen = true;
+        return { name: w.name, value: w.value.trim(), primary: isPrimary };
+      });
+      const d = await api.updateShopPaymentMethods({ full_name: fullName, wallets: safe });
       setSavedCount(d.methods.wallets.length);
       setSuccess(t("Moyens de paiement enregistrés !"));
     } catch (err) {
@@ -146,6 +161,20 @@ export default function CreatorPayments() {
                         )
                       }
                     />
+                  )}
+                  {w.checked && String(w.value || "").trim() && (
+                    <button
+                      type="button"
+                      className={w.primary ? "btn btn-primary btn-small" : "btn btn-outline btn-small"}
+                      style={{ marginTop: 6, fontSize: 12 }}
+                      onClick={() =>
+                        setWallets((prev) =>
+                          prev.map((x) => ({ ...x, primary: x.name === w.name }))
+                        )
+                      }
+                    >
+                      {w.primary ? "⭐ " + t("Principal") : t("Définir principal")}
+                    </button>
                   )}
                 </div>
               ))}
