@@ -4,7 +4,6 @@ import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
 import { OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
-import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 
 function OrangeLogo() {
   return (
@@ -151,30 +150,26 @@ export default function Support() {
   const [amount, setAmount] = useState("");
   const [phone, setPhone] = useState("");
   const [operator, setOperator] = useState("ORANGE");
-  const [paymentLink, setPaymentLink] = useState("");
-  const [paymentRef, setPaymentRef] = useState("");
-  const [paymentToken, setPaymentToken] = useState("");
-  const [paymentDone, setPaymentDone] = useState(false);
+  const [donationInfo, setDonationInfo] = useState(null);
   const [paymentError, setPaymentError] = useState("");
   const [paying, setPaying] = useState(false);
 
   const operators = OPERATORS_BY_COUNTRY[user?.country] || DEFAULT_OPERATORS;
 
+  // Don manuel : enregistre l'intention de don, le donateur effectue ensuite un
+  // virement direct (Mobile Money / PayPal / UBA) et l'équipe Mboppi valide.
   const startDonation = async (event) => {
     event.preventDefault();
     setPaying(true);
     setPaymentError("");
     try {
-      const result = await api.ikeepayDonation({
+      const result = await api.createDonation({
         amount,
         phone_number: phone,
         operator,
         country: user?.country || "Cameroun",
       });
-      setPaymentLink(result.payment_link || "");
-      setPaymentRef(result.external_reference || "");
-      setPaymentToken(result.confirm_token || "");
-      setPaymentDone(false);
+      setDonationInfo(result);
     } catch (error) {
       setPaymentError(error.message);
     } finally {
@@ -247,10 +242,10 @@ export default function Support() {
 
         <section className="section">
           <div className="card form-card support-donate">
-            <h3>💛 {t("Donner en ligne")}</h3>
+            <h3>💛 {t("Je soutiens Mboppi")}</h3>
             <p className="hint">
               {t(
-                "Payez votre soutien avec Ikeepay. Selon l’opérateur, un lien de paiement peut être ouvert. Votre contribution est destinée au fonctionnement de Mboppi."
+                "Enregistrez votre don, puis effectuez le virement via l'un des moyens ci-dessous (Orange Money, MTN, PayPal, UBA). L'équipe Mboppi valide ensuite votre contribution."
               )}
             </p>
             <form onSubmit={startDonation}>
@@ -285,21 +280,16 @@ export default function Support() {
               />
               {paymentError && <p className="error">{paymentError}</p>}
               <button className="btn btn-primary btn-block" disabled={paying}>
-                {paying ? "…" : t("Payer avec Ikeepay")}
+                {paying ? "…" : t("Enregistrer mon don (manuel)")}
               </button>
             </form>
-            {paymentDone && (
-              <p className="success">{t("Merci ! Votre don a bien été confirmé. 💛")}</p>
-            )}
-            {paymentLink && (
-              <IkeepayCheckout
-                link={paymentLink}
-                externalReference={paymentRef}
-                confirmToken={paymentToken}
-                label={t("Paiement du don")}
-                onConfirmed={() => setPaymentDone(true)}
-                onClose={() => setPaymentLink("")}
-              />
+            {donationInfo && (
+              <div className="deliver-recap" style={{ marginTop: 12 }}>
+                <p className="success">{t("Merci ! Votre don a bien été enregistré. 💛")}</p>
+                {donationInfo.instructions && (
+                  <p className="hint">{donationInfo.instructions}</p>
+                )}
+              </div>
             )}
           </div>
         </section>

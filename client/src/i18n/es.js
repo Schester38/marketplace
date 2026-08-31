@@ -936,17 +936,10 @@ export default {
   "En Espèce": "En Efectivo",
   "Par Mobile": "Por Móvil",
   "En ligne (auto)": "En línea (auto)",
-  "Paiement à la livraison via iKeePay (Mobile Money)":
-    "Pago a la entrega vía iKeePay (Dinero Móvil)",
   "Le livreur enverra une demande de paiement sur votre numéro mobile money à la livraison. Aucune carte bancaire n'est nécessaire.":
     "El repartidor enviará una solicitud de pago a tu número de dinero móvil en la entrega. No se necesita ninguna tarjeta bancaria.",
-  "Paiement en ligne iKeePay indisponible actuellement. Contactez l'administration.":
-    "El pago en línea iKeePay no está disponible actualmente. Contacta con la administración.",
-  "En ligne (iKeePay)": "En línea (iKeePay)",
   "Le client recevra une demande de paiement mobile money sur son téléphone. Confirmez l'opérateur et son numéro.":
     "El cliente recibirá una solicitud de pago por dinero móvil en su teléfono. Confirma su operador y número.",
-  "Paiement sécurisé par iKeePay. Le client recevra une demande de paiement mobile money sur son téléphone. Confirmez l'opérateur et son numéro.":
-    "Pago seguro con iKeePay. El cliente recibirá una solicitud de pago por dinero móvil en su teléfono. Confirma su operador y número.",
   Opérateur: "Operador",
   "Numéro du client": "Número del cliente",
   "Demande de paiement envoyée !": "¡Solicitud de pago enviada!",
@@ -1360,18 +1353,12 @@ export default {
     "Las reglas para usar Mboppi como tienda, vendedor, cliente, repartidor o creador.",
   "Mboppi met en relation des boutiques, des vendeurs, des clients, des livreurs et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander, livrer ou créer.":
     "Mboppi conecta tiendas, vendedores, clientes, repartidores y creadores. Cada cuenta tiene un rol que determina las funciones disponibles: publicar productos, vender, pedir, repartir o crear.",
-  "Le paiement s'effectue uniquement à la livraison du colis, par mobile money (Orange Money, MTN Mobile Money, etc.), via notre prestataire iKeePay. Le paiement est encaissé par iKeePay pour le compte de la boutique et du vendeur, puis Mboppi reverse automatiquement à chacun le montant qui lui revient.":
-    "El pago se realiza únicamente a la entrega del paquete, por dinero móvil (Orange Money, MTN Mobile Money, etc.) a través de nuestro proveedor iKeePay. El pago lo cobra iKeePay por cuenta de la tienda y el vendedor, y luego Mboppi transfiere automáticamente a cada uno la cantidad que le corresponde.",
   "5. Paiement en ligne, reversements et délais": "5. Pago en línea, transferencias y plazos",
-  "Pour recevoir un paiement en ligne, chaque acteur doit enregistrer un numéro de mobile money valide depuis son espace. Après confirmation du paiement par iKeePay, Mboppi reverse automatiquement la part de chacun : la boutique reçoit le prix, le vendeur sa commission, le parrain son pourcentage et le livreur ses frais de livraison. Les montants et l'état des versements sont visibles dans chaque espace.":
-    "Para recibir un pago en línea, cada actor debe registrar un número de dinero móvil válido desde su espacio. Una vez que iKeePay confirma el pago, Mboppi transfiere automáticamente la parte de cada uno: la tienda recibe el precio, el vendedor su comisión, el padrino su porcentaje y el repartidor sus gastos de entrega. Los importes y el estado de los pagos son visibles en cada espacio.",
   "6. Commissions et parrainage": "6. Comisiones y padrinazgo",
   "Les boutiques rémunèrent les vendeurs et les parrains par des commissions enregistrées sur la plateforme. Ces commissions sont reversées automatiquement sur le portefeuille mobile enregistré par chaque acteur. Les montants et les modalités de réclamation sont affichés dans les espaces vendeur, boutique et client.":
     "Las tiendas remuneran a los vendedores y padrinos con comisiones registradas en la plataforma. Estas comisiones se transfieren automáticamente a la cuenta de dinero móvil registrada por cada actor. Los importes y los procedimientos de reclamación se muestran en los espacios de vendedor, tienda y cliente.",
   "7. Contenu publié": "7. Contenido publicado",
   "8. Livraison": "8. Reparto",
-  "La livraison est assurée par la boutique ou par un livreur Mboppi. Les délais et les frais sont indiqués sur chaque produit et convenus lors de la commande. Le client paie à la livraison via iKeePay, et chaque acteur reçoit instantanément sa part sur son portefeuille mobile : la boutique le prix, le vendeur sa commission, le parrain son pourcentage et le livreur ses frais de livraison.":
-    "El reparto lo realiza la tienda o un repartidor de Mboppi. Los plazos y gastos se indican en cada producto y se acuerdan al hacer el pedido. El cliente paga a la entrega vía iKeePay, y cada actor recibe al instante su parte en su cuenta de dinero móvil: la tienda el precio, el vendedor su comisión, el padrino su porcentaje y el repartidor sus gastos de entrega.",
   "9. Dons et soutien": "9. Donaciones y apoyo",
   "La page « Soutenir Mboppi » permet de faire un don à la plateforme. Les dons par Orange Money et MTN Mobile Money sont traités automatiquement en ligne. Les dons par PayPal ou par virement UBA se font manuellement, en suivant les instructions de la page. Aucun don n'est obligatoire pour utiliser Mboppi.":
     "La página «Apoyar a Mboppi» permite donar a la plataforma. Las donaciones por Orange Money y MTN Mobile Money se procesan automáticamente en línea. Las donaciones por PayPal o transferencia UBA se hacen manualmente, siguiendo las instrucciones de la página. No es obligatorio donar para usar Mboppi.",
@@ -1385,12 +1372,8 @@ export default {
     "Mboppi conecta tiendas, creadores, vendedores, repartidores y clientes. Las ventas se concluyen directamente entre el comprador y el vendedor o la tienda. Mboppi no es dueño de los productos; para los pagos en línea, la plataforma recibe el dinero por cuenta de los vendedores y lo transfiere automáticamente.",
   "Une commande est enregistrée avec le nom et le code de l'acheteur. L'état de la commande (en attente, confirmée, livrée) peut être suivi sur la page de suivi. Une commande annulée avant paiement ne donne lieu à aucun paiement ; une commande payée en ligne puis annulée est remboursée automatiquement sur le portefeuille mobile de l'acheteur.":
     "Un pedido se registra con el nombre y el código del comprador. El estado del pedido (pendiente, confirmado, entregado) puede seguirse en la página de seguimiento. Un pedido cancelado antes del pago no genera ningún pago; un pedido pagado en línea y luego cancelado se reembolsa automáticamente a la cuenta de dinero móvil del comprador.",
-  "Le paiement s'effectue uniquement à la livraison du colis, par mobile money via notre prestataire iKeePay (Orange Money, MTN Mobile Money, etc.). Mboppi ne collecte jamais de numéro de carte bancaire et reverse automatiquement et instantanément à chaque acteur le montant qui lui revient. Les frais de livraison sont indiqués sur chaque produit.":
-    "El pago se realiza únicamente a la entrega del paquete, por dinero móvil a través de nuestro proveedor iKeePay (Orange Money, MTN Mobile Money, etc.). Mboppi nunca recoge un número de tarjeta bancaria y transfiere automática e instantáneamente a cada actor la cantidad que le corresponde. Los gastos de envío se indican en cada producto.",
   "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige portant sur un paiement en ligne, Mboppi reverse le montant au vendeur ou rembourse l'acheteur selon la résolution. Mboppi peut servir d'intermédiaire de médiation.":
     "Las garantías eventuales se indican en cada producto. Las devoluciones se gestionan directamente con la tienda o el vendedor. En caso de litigio sobre un pago en línea, Mboppi transfiere el importe al vendedor o reembolsa al comprador según la resolución. Mboppi puede actuar como intermediario de mediación.",
-  "Mboppi ne peut être tenu responsable des produits vendus par les boutiques et vendeurs, ni des retards de livraison imputables aux livreurs. Les paiements en ligne sont exécutés par iKeePay, prestataire de paiement indépendant. Les informations publiées le sont par les vendeurs eux-mêmes.":
-    "Mboppi no puede ser considerado responsable de los productos vendidos por tiendas y vendedores, ni de los retrasos de entrega atribuibles a los repartidores. Los pagos en línea los ejecuta iKeePay, un proveedor de pago independiente. La información publicada la aportan los propios vendedores.",
 
   // Privacy
   "Lors de votre inscription : votre nom, votre e-mail et votre rôle (boutique, vendeur, client, livreur ou créateur). Si vous vous connectez avec Google, seul votre e-mail Google est utilisé. Selon votre rôle, vous pouvez publier des produits, des offres avec photos, et vos ventes sont enregistrées dans votre espace. Pour les paiements en ligne, nous n'utilisons que votre numéro de mobile money et votre opérateur, le temps du règlement.":
@@ -1398,23 +1381,13 @@ export default {
   "Seule la personne concernée accède à son espace : une boutique voit ses produits, un vendeur ses ventes et commissions. Les montants de vos paiements et versements ne sont visibles que dans votre espace. Les offres de la vitrine sont publiquement visibles par les visiteurs, mais sans vos informations de compte.":
     "Solo la persona interesada accede a su espacio: una tienda ve sus productos, un vendedor sus ventas y comisiones. Los importes de tus pagos y transferencias solo son visibles en tu espacio. Las ofertas de la vitrina son visibles públicamente para los visitantes, pero sin tu información de cuenta.",
   "🔒 Paiement en ligne et données bancaires": "🔒 Pago en línea y datos bancarios",
-  "Mboppi ne demande jamais de numéro de carte bancaire. Les paiements en ligne se font uniquement par mobile money via notre prestataire iKeePay : votre numéro de téléphone et votre opérateur sont transmis à ce prestataire le temps du règlement, et Mboppi ne conserve que le montant et la référence du paiement. Les gains perçus sont reversés automatiquement sur le portefeuille mobile enregistré par chaque acteur. Pour un don, seul votre numéro de mobile money est utilisé pour le règlement.":
-    "Mboppi nunca pide un número de tarjeta bancaria. Los pagos en línea se hacen solo por dinero móvil a través de nuestro proveedor iKeePay: tu número de teléfono y tu operador se transmiten a este proveedor durante el tiempo del pago, y Mboppi solo conserva el importe y la referencia del pago. Las ganancias recibidas se transfieren automáticamente a la cuenta de dinero móvil registrada por cada actor. Para una donación, solo se usa tu número de dinero móvil para el pago.",
-
-  // Mentions légales
-  "Les paiements en ligne sont traités par iKeePay, prestataire de paiement mobile money. Ses conditions d'utilisation et sa politique de confidentialité s'appliquent au traitement des paiements effectués sur Mboppi.":
-    "Los pagos en línea los procesa iKeePay, un proveedor de pago por dinero móvil. Sus términos de uso y su política de privacidad se aplican al procesamiento de los pagos realizados en Mboppi.",
 
   // About
   "L'argent, en toute transparence": "El dinero, con total transparencia",
-  "Le paiement en ligne par mobile money est traité via notre prestataire iKeePay et reversé automatiquement à chaque acteur.":
-    "El pago en línea por dinero móvil se procesa a través de nuestro proveedor iKeePay y se transfiere automáticamente a cada actor.",
 
   // FAQ
   "Créez un compte gratuitement en moins d'une minute : choisissez votre rôle (boutique, vendeur, client, livreur ou créateur), renseignez votre nom et votre e-mail. Vous pouvez aussi vous connecter avec Google.":
     "Crea una cuenta gratis en menos de un minuto: elige tu rol (tienda, vendedor, cliente, repartidor o creador), introduce tu nombre y tu correo. También puedes iniciar sesión con Google.",
-  "Aucune carte bancaire n'est nécessaire. Le paiement se fait uniquement à la livraison du colis, via iKeePay : le livreur envoie une demande de paiement sur votre numéro de mobile money (Orange Money, MTN Mobile Money, etc.). Mboppi reverse ensuite automatiquement le bon montant à la boutique, au vendeur, au parrain et au livreur.":
-    "No se necesita ninguna tarjeta bancaria. El pago se realiza únicamente a la entrega del paquete, vía iKeePay: el repartidor envía una solicitud de pago a tu número de dinero móvil (Orange Money, MTN Mobile Money, etc.). Mboppi transfiere después automáticamente la cantidad correcta a la tienda, al vendedor, al padrino y al repartidor.",
   "La boutique choisit un pourcentage de commission pour chaque produit. Ce pourcentage est affiché sur la fiche produit. Le vendeur reçoit le montant total moins la commission de la boutique. Votre commission est reversée automatiquement sur le numéro de mobile money enregistré dans votre espace.":
     "La tienda elige un porcentaje de comisión para cada producto. Este porcentaje se muestra en la ficha del producto. El vendedor recibe el importe total menos la comisión de la tienda. Tu comisión se transfiere automáticamente al número de dinero móvil registrado en tu espacio.",
   "Comment recevoir mes gains ?": "¿Cómo recibo mis ganancias?",
@@ -1456,8 +1429,6 @@ export default {
   // Activation vendedor
   "Votre portefeuille Mobile Money": "Tu monedero de dinero móvil",
   "Choisir un opérateur…": "Elegir un operador…",
-  "Aucun opérateur iKeePay disponible pour ce pays":
-    "Ningún operador de iKeePay disponible para este país",
   "Numéro du portefeuille": "Número del monedero",
   "Ce portefeuille servira à régler vos frais d'activation et à recevoir vos commissions.":
     "Este monedero se usará para pagar tu tarifa de activación y para recibir tus comisiones.",

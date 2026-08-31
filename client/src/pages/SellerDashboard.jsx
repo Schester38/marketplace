@@ -44,7 +44,6 @@ export default function SellerDashboard() {
   const [sales, setSales] = useState([]);
   const [stats, setStats] = useState(null);
   const [referred, setReferred] = useState([]);
-  const [activationReferrals, setActivationReferrals] = useState([]);
   const [sellerCode, setSellerCode] = useState(null);
   const [codeLoading, setCodeLoading] = useState(false);
   const [error, setError] = useState("");
@@ -61,7 +60,7 @@ export default function SellerDashboard() {
       }),
       api.mySales().catch((e) => {
         setError(e.message);
-        return { sales: [], stats: {}, referred: [], activationReferrals: [] };
+        return { sales: [], stats: {}, referred: [] };
       }),
       api.getSellerCode().catch(() => ({ seller_code: null })),
     ]);
@@ -69,7 +68,6 @@ export default function SellerDashboard() {
     setSales(saleData.sales);
     setStats(saleData.stats);
     setReferred(saleData.referred || []);
-    setActivationReferrals(saleData.activationReferrals || []);
     setSellerCode(codeData.seller_code);
   };
 
@@ -791,95 +789,6 @@ export default function SellerDashboard() {
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-
-        {activationReferrals.length > 0 && (
-          <>
-            <div
-              className="divider"
-              style={{ margin: "28px 0 18px" }}
-            >
-              <span>🤝 {t("Vendeurs / créateurs parrainés — commission de 1 000 F")}</span>
-            </div>
-            <p className="hint" style={{ marginTop: 0 }}>
-              {t(
-                "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F"
-              )}
-            </p>
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>{t("Membre")}</th>
-                    <th>{t("Rôle")}</th>
-                    <th>{t("Référence")}</th>
-                    <th>{t("Adhésion")}</th>
-                    <th>{t("Commission")}</th>
-                    <th>{t("Statut")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activationReferrals.map((r) => {
-                    const paidMembership = !!r.membership_paid_at;
-                    const completed = r.payout_status === "completed";
-                    const failed = r.payout_status === "failed";
-                    const pending = !!r.payout_status && !completed && !failed;
-                    const net = r.net_amount || r.commission_amount;
-                    const refCopied = copied === "refmember-" + r.user_id;
-                    return (
-                      <tr key={r.user_id}>
-                        <td>{r.name}</td>
-                        <td>{r.role === "creator" ? t("Créateur") : t("Vendeur")}</td>
-                        <td>
-                          {r.reference_number ? (
-                            <span className="row2" style={{ justifyContent: "flex-start", gap: 6 }}>
-                              <code className="ref-code">{r.reference_number}</code>
-                              <button
-                                className="btn btn-small"
-                                onClick={() => copy("refmember-" + r.user_id, r.reference_number)}
-                              >
-                                {refCopied ? t("Copié !") : t("Copier")}
-                              </button>
-                            </span>
-                          ) : (
-                            <span className="muted">—</span>
-                          )}
-                        </td>
-                        <td>
-                          {paidMembership ? (
-                            <span className="badge badge-paid">{t("Payée")}</span>
-                          ) : (
-                            <span className="badge badge-pending">{t("Non payée")}</span>
-                          )}
-                        </td>
-                        <td>
-                          {formatMoney(net)} {r.commission_currency}
-                        </td>
-                        <td>
-                          {completed ? (
-                            <span className="badge badge-paid" title={r.payout_error || undefined}>
-                              {t("Versée")}
-                            </span>
-                          ) : failed ? (
-                            <span
-                              className="badge badge-cancelled"
-                              title={r.payout_error || undefined}
-                            >
-                              {t("Échec")}
-                            </span>
-                          ) : pending ? (
-                            <span className="badge badge-warn">{t("En cours")}</span>
-                          ) : (
-                            <span className="badge badge-pending">{t("En attente d'adhésion")}</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
                 </tbody>
               </table>
             </div>

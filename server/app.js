@@ -28,7 +28,6 @@ import flashPromoRoutes from "./routes/flashPromotions.js";
 import metricsRoutes from "./routes/metrics.js";
 import donationsRoutes from "./routes/donations.js";
 import logRoutes from "./routes/logs.js";
-import paymentRoutes from "./routes/payments.js";
 import seoRoutes from "./routes/seo.js";
 import presentationRoutes, { pageRouter, imageRouter } from "./routes/presentation.js";
 import { authRequired } from "./auth.js";
@@ -139,7 +138,8 @@ app.use("/api/metrics", metricsRoutes);
 app.use("/api/donations", donationsRoutes);
 app.use("/api/logs", limiter(60 * 1000, 8));
 app.use("/api/logs", logRoutes);
-app.use("/api/payments", paymentRoutes);
+// NOTE : le montage /api/payments (routes iKeePay) a été supprimé avec le
+// système iKeePay. Les paiements sont désormais exclusivement manuels.
 app.use("/api/admin", adminRoutes);
 app.use("/api/img", imageRouter);
 app.use("/p", pageRouter);

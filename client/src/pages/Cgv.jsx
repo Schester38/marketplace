@@ -37,7 +37,7 @@ export default function Cgv() {
           <h2>{t("3. Paiement et livraison")}</h2>
           <p>
             {t(
-              "Le paiement se fait directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne prélève aucun frais sur les paiements directs. Les paiements en ligne sont effectués via Ikeepay pour les adhésions, les dons et les ventes : l'acheteur paie le prix normal et les reversements aux bénéficiaires sont nets de 10 % de frais de traitement. Les frais de livraison sont indiqués sur chaque produit."
+              "Le paiement se fait directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne prélève aucun frais sur les paiements et ne propose pas de paiement en ligne : l'acheteur paie le prix affiché, sans supplément. Les frais de livraison sont indiqués sur chaque produit."
             )}
           </p>
         </div>

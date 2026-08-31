@@ -57,7 +57,7 @@ export default function Cgu() {
           <h2>{t("4. Commandes et paiement")}</h2>
           <p>
             {t(
-              "Le paiement peut être effectué directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne collecte pas les paiements et ne prélève aucun frais de plateforme sur les transactions directes. Les paiements en ligne passent par le prestataire Ikeepay : l'acheteur paie le prix normal et les reversements aux bénéficiaires sont nets de 10 % de frais de traitement."
+              "Le paiement peut être effectué directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne collecte pas les paiements et ne prélève aucun frais de plateforme sur les transactions directes. Aucun paiement en ligne n'est proposé : l'acheteur paie le prix affiché, sans supplément."
             )}
           </p>
         </div>
@@ -65,7 +65,7 @@ export default function Cgu() {
           <h2>{t("5. Paiements directs et commissions")}</h2>
           <p>
             {t(
-              "Les paiements directs sont convenus entre le client et la boutique, le vendeur ou le livreur. Les commissions sont enregistrées sur la plateforme et réglées manuellement par la boutique, sans frais. Pour les paiements automatiques via Ikeepay, un taux de traitement de 10 % est appliqué : chaque bénéficiaire reçoit 90 % de sa part, versée sur son moyen de paiement Mobile Money enregistré."
+              "Les paiements directs sont convenus entre le client et la boutique, le vendeur ou le livreur. Les commissions sont enregistrées sur la plateforme et réglées manuellement par la boutique, sans frais, sur le moyen de paiement Mobile Money enregistré de chaque bénéficiaire."
             )}
           </p>
         </div>

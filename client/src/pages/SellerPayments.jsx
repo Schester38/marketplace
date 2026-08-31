@@ -148,7 +148,7 @@ export default function SellerPayments() {
           </p>
           <p className="hint" style={{ marginTop: 8 }}>
             {t(
-              "Les paiements automatiques sont traités via Ikeepay. Ikeepay prélève 10% de frais de traitement sur chaque transaction. Les montants que vous recevez correspondent aux commissions calculées par Mboppi, nettes des frais Ikeepay."
+              "Les paiements sont manuels : la boutique vous règle directement vos commissions en espèces ou par Mobile Money, sans frais, avec une preuve enregistrée sur la vente."
             )}
           </p>
         </div>

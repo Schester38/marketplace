@@ -1,8 +1,7 @@
 import { Router } from "express";
-import { q, withTransaction, ensureAutomaticPayoutColumns } from "../db.js";
+import { q, withTransaction } from "../db.js";
 import { authRequired, roleRequired, authOptional } from "../auth.js";
 import { sendPush } from "../push.js";
-import { markSalePaid } from "../services/payouts.js";
 
 const router = Router();
 
@@ -175,67 +174,9 @@ FROM sales s
         [req.user.id]
       )
     ).map(saleRow);
-    // Commissions d'activation : vendeurs/créateurs inscrits via le code du
-    // vendeur courant (`ref_seller` → `referred_by`). Quand l'un d'eux paie son
-    // adhésion, le vendeur parrain reçoit 1 000 XAF (net 90 % = 900) de
-    // commission d'activation, tracée dans automatic_payouts
-    // (`kind='activation_referral'`, référence `ACTIVATION_REFERRAL:{userId}`).
-    // Ce bloc est purement informatif : on auto-répare le schéma (comme pour
-    // donations) et on ne fait JAMAIS échouer tout l'espace vendeur en cas de
-    // problème (base ancienne, colonne manquante…) — on retourne simplement [].
-    let activationReferrals = [];
-    try {
-      await ensureAutomaticPayoutColumns();
-      activationReferrals = (
-        await q(
-          `SELECT
-                u.id AS user_id,
-                u.name,
-                u.role,
-                u.email AS member_email,
-                u.phone AS member_phone,
-                u.reference_number,
-                u.created_at AS member_created_at,
-                u.membership_paid_at,
-                u.membership_expires_at,
-                ap.id AS payout_id,
-                ap.amount AS commission_amount,
-                ap.currency AS commission_currency,
-                ap.fee AS commission_fee,
-                ap.status AS payout_status,
-                ap.error AS payout_error,
-                ap.created_at AS payout_created_at,
-                ap.completed_at AS payout_completed_at
-         FROM users u
-         LEFT JOIN automatic_payouts ap
-           ON ap.external_reference = 'ACTIVATION_REFERRAL:' || u.id
-         WHERE u.referred_by = $1 AND u.role IN ('seller', 'creator')
-         ORDER BY COALESCE(ap.created_at, u.created_at) DESC`,
-          [req.user.id]
-        )
-      ).map((r) => ({
-        user_id: Number(r.user_id),
-        name: r.name,
-        role: r.role,
-        member_email: r.member_email,
-        member_phone: r.member_phone,
-        reference_number: r.reference_number,
-        member_created_at: r.member_created_at,
-        membership_paid_at: r.membership_paid_at,
-        membership_expires_at: r.membership_expires_at,
-        commission_amount: Number(r.commission_amount || 1000),
-        commission_currency: r.commission_currency || "XAF",
-        commission_fee: Number(r.commission_fee || 0),
-        net_amount:
-          Math.round((Number(r.commission_amount || 1000) - Number(r.commission_fee || 0)) * 100) / 100,
-        payout_status: r.payout_status || null,
-        payout_error: r.payout_error || null,
-        payout_created_at: r.payout_created_at,
-        payout_completed_at: r.payout_completed_at,
-      }));
-    } catch (err) {
-      console.error("[sales/my] commissions de parrainage vendeur indisponibles :", err.message);
-    }
+    // Commissions d'activation : la lecture historique des reversements iKeePay
+    // (`automatic_payouts`) a été retirée avec le système iKeePay. Le
+    // parrainage d'activation n'est plus versé automatiquement.
     res.json({
       sales,
       stats: {
@@ -247,7 +188,6 @@ FROM sales s
         referral_earned: Number(referralStats.referral_earned),
       },
       referred,
-      activationReferrals,
     });
   })
 );
@@ -527,9 +467,8 @@ router.get(
       )
     ).map(saleRow);
     // Statistiques des frais de livraison du livreur — le livreur ne gagne que
-    // la delivery_fee : reversée net 90 % en ligne (iKeePay, payment_status
-    // 'paid' / online_payment TRUE) ou encaissée directement en espèces / mobile.
-    // Même patron que les stats boutique/vendeur (agrégation SQL + series).
+    // la delivery_fee, encaissée directement en espèces / mobile (iKeePay
+    // supprimé). Même patron que les stats boutique/vendeur (agrégation SQL + series).
     let stats = null;
     let series = [];
     if (me) {
@@ -753,23 +692,16 @@ router.post(
     if (!Number.isFinite(fee) || fee < 0) {
       return res.status(400).json({ error: "Frais de livraison invalides" });
     }
-    const onlineMethods = ["automatic", "auto", "online", "en_ligne", "ikeepay"];
+    // Paiement exclusivement manuel : espèce ou mobile (iKeePay supprimé).
     const lowerMethod = String(payment_method || "")
       .trim()
       .toLowerCase();
-    if (
-      !["espèce", "espece", "espe", "mobile", "mobile_money"].includes(lowerMethod) &&
-      !onlineMethods.includes(lowerMethod)
-    ) {
+    if (!["espèce", "espece", "espe", "mobile", "mobile_money"].includes(lowerMethod)) {
       return res
         .status(400)
-        .json({ error: "Type de paiement invalide (espèce, mobile ou en ligne)" });
+        .json({ error: "Type de paiement invalide (espèce ou mobile)" });
     }
-    const cleanMethod = onlineMethods.includes(lowerMethod)
-      ? "automatic"
-      : lowerMethod.startsWith("m")
-        ? "mobile"
-        : "espèce";
+    const cleanMethod = lowerMethod.startsWith("m") ? "mobile" : "espèce";
 
     // Signature du client (optionnelle) : PNG data URI capturé sur l'écran
     // du livreur à la livraison, réaffiché sur la facture PDF.
@@ -840,7 +772,6 @@ router.post(
       const updated = (
         await tx.query(
           `UPDATE sales SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3,
-        online_payment = CASE WHEN $2 = 'automatic' THEN TRUE ELSE online_payment END,
         payment_status = CASE WHEN payment_status = 'paid' THEN payment_status ELSE 'pending' END,
         signature = COALESCE($5, signature)
         WHERE id = $4 RETURNING id`,
@@ -919,9 +850,9 @@ router.post(
       )
     )[0];
 
-    if (full.payment_status === "paid") {
-      await markSalePaid(full.id, {});
-    }
+    // NOTE : l'appel à markSalePaid (reversement automatique iKeePay) a été
+    // supprimé. Les commissions sont payées manuellement par la boutique
+    // (POST /api/sales/:id/pay avec preuve) et le parrain via /pay-referral.
 
     res.json({ sale: saleRow(full), ok: true });
   })

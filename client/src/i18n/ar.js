@@ -956,17 +956,10 @@ export default {
   "En Espèce": "نقداً",
   "Par Mobile": "عبر الهاتف المحمول",
   "En ligne (auto)": "عبر الإنترنت (تلقائي)",
-  "Paiement à la livraison via iKeePay (Mobile Money)":
-    "الدفع عند التوصيل عبر iKeePay (المال المحمول)",
   "Le livreur enverra une demande de paiement sur votre numéro mobile money à la livraison. Aucune carte bancaire n'est nécessaire.":
     "سيُرسل الموصّل طلب دفع إلى رقم المال المحمول الخاص بك عند التسليم. لا حاجة لأي بطاقة مصرفية.",
-  "Paiement en ligne iKeePay indisponible actuellement. Contactez l'administration.":
-    "الدفع عبر الإنترنت عبر iKeePay غير متاح حالياً. تواصل مع الإدارة.",
-  "En ligne (iKeePay)": "عبر الإنترنت (iKeePay)",
   "Le client recevra une demande de paiement mobile money sur son téléphone. Confirmez l'opérateur et son numéro.":
     "سيستلم العميل طلب دفع عبر الهاتف المحمول على هاتفه. أكد المشغل ورقمه.",
-  "Paiement sécurisé par iKeePay. Le client recevra une demande de paiement mobile money sur son téléphone. Confirmez l'opérateur et son numéro.":
-    "دفع آمن عبر iKeePay. سيستلم العميل طلب دفع عبر الهاتف المحمول على هاتفه. أكد المشغل ورقمه.",
   Opérateur: "المشغل",
   "Numéro du client": "رقم العميل",
   "Demande de paiement envoyée !": "تم إرسال طلب الدفع!",
@@ -1373,18 +1366,12 @@ export default {
     "القواعد لاستخدام Mboppi كمتجر أو بائع أو عميل أو موصّل أو مبدع.",
   "Mboppi met en relation des boutiques, des vendeurs, des clients, des livreurs et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander, livrer ou créer.":
     "يربط Mboppi المتاجر والبائعين والعملاء والموصّلين والمبدعين. يرتبط كل حساب بدور يحدد الوظائف المتاحة: نشر منتجات، بيع، طلب، توصيل أو إبداع.",
-  "Le paiement s'effectue uniquement à la livraison du colis, par mobile money (Orange Money, MTN Mobile Money, etc.), via notre prestataire iKeePay. Le paiement est encaissé par iKeePay pour le compte de la boutique et du vendeur, puis Mboppi reverse automatiquement à chacun le montant qui lui revient.":
-    "يتم الدفع فقط عند تسليم الطرد بالمال المحمول (Orange Money، MTN Mobile Money، إلخ) عبر مزودنا iKeePay. يتحصل iKeePay على الدفع لحساب المتجر والبائع ثم يحول Mboppi تلقائياً لكل طرف المبلغ المستحق له.",
   "5. Paiement en ligne, reversements et délais": "5. الدفع عبر الإنترنت والتحويلات والآجال",
-  "Pour recevoir un paiement en ligne, chaque acteur doit enregistrer un numéro de mobile money valide depuis son espace. Après confirmation du paiement par iKeePay, Mboppi reverse automatiquement la part de chacun : la boutique reçoit le prix, le vendeur sa commission, le parrain son pourcentage et le livreur ses frais de livraison. Les montants et l'état des versements sont visibles dans chaque espace.":
-    "لتلقي دفعة عبر الإنترنت، يجب على كل طرف تسجيل رقم مال محمول صالح من مساحته. بعد تأكيد الدفع من iKeePay، يحول Mboppi تلقائياً نصيب كل طرف: يتسلم المتجر الثمن، والبائع عمولته، والكفيل نسبته، والموصّل أجور التوصيل. تظهر المبالغ وحالة التحويلات في كل مساحة.",
   "6. Commissions et parrainage": "6. العمولات والكفالة",
   "Les boutiques rémunèrent les vendeurs et les parrains par des commissions enregistrées sur la plateforme. Ces commissions sont reversées automatiquement sur le portefeuille mobile enregistré par chaque acteur. Les montants et les modalités de réclamation sont affichés dans les espaces vendeur, boutique et client.":
     "تكافئ المتاجر البائعين والكفلاء بعمولات مسجلة على المنصة. تُحوّل هذه العمولات تلقائياً إلى حساب المال المحمول المسجل لكل طرف. تُعرض المبالغ وشروط المطالبة في مساحات البائع والمتجر والعميل.",
   "7. Contenu publié": "7. المحتوى المنشور",
   "8. Livraison": "8. التوصيل",
-  "La livraison est assurée par la boutique ou par un livreur Mboppi. Les délais et les frais sont indiqués sur chaque produit et convenus lors de la commande. Le client paie à la livraison via iKeePay, et chaque acteur reçoit instantanément sa part sur son portefeuille mobile : la boutique le prix, le vendeur sa commission, le parrain son pourcentage et le livreur ses frais de livraison.":
-    "يتكفل بالتوصيل المتجر أو موصّل من Mboppi. تُعرض الآجال والرسوم على كل منتج وتُتفق عند الطلب. يدفع العميل عند التسليم عبر iKeePay، وكل طرف يستلم فوراً نصيبه في حساب المال المحمول: المتجر الثمن، والبائع عمولته، والكفيل نسبته، والموصّل أجور التوصيل.",
   "9. Dons et soutien": "9. التبرعات والدعم",
   "La page « Soutenir Mboppi » permet de faire un don à la plateforme. Les dons par Orange Money et MTN Mobile Money sont traités automatiquement en ligne. Les dons par PayPal ou par virement UBA se font manuellement, en suivant les instructions de la page. Aucun don n'est obligatoire pour utiliser Mboppi.":
     "تتيح صفحة «ادعم Mboppi» التبرع للمنصة. تُعالج التبرعات عبر Orange Money وMTN Mobile Money تلقائياً عبر الإنترنت. التبرعات عبر PayPal أو تحويل UBA تتم يدوياً باتباع تعليمات الصفحة. لا يوجد أي تبرع إلزامي لاستخدام Mboppi.",
@@ -1398,12 +1385,8 @@ export default {
     "يربط Mboppi المتاجر والمبدعين والبائعين والموصّلين والعملاء. تُبرم البيعات مباشرة بين المشتري والبائع أو المتجر. لا يملك Mboppi المنتجات؛ بالنسبة للدفعات عبر الإنترنت، تتحصل المنصة على المال لحساب البائعين وتحوله تلقائياً.",
   "Une commande est enregistrée avec le nom et le code de l'acheteur. L'état de la commande (en attente, confirmée, livrée) peut être suivi sur la page de suivi. Une commande annulée avant paiement ne donne lieu à aucun paiement ; une commande payée en ligne puis annulée est remboursée automatiquement sur le portefeuille mobile de l'acheteur.":
     "يُسجل الطلب باسم المشتري وكوده. يمكن تتبع حالة الطلب (قيد الانتظار، مؤكد، تم تسليمه) على صفحة التتبع. الطلب الملغى قبل الدفع لا يترتب عليه أي دفع؛ والطلب المدفوع عبر الإنترنت ثم الملغى يُسترجع تلقائياً إلى حساب المال المحمول للمشتري.",
-  "Le paiement s'effectue uniquement à la livraison du colis, par mobile money via notre prestataire iKeePay (Orange Money, MTN Mobile Money, etc.). Mboppi ne collecte jamais de numéro de carte bancaire et reverse automatiquement et instantanément à chaque acteur le montant qui lui revient. Les frais de livraison sont indiqués sur chaque produit.":
-    "يتم الدفع فقط عند تسليم الطرد عبر المال المحمول وبواسطة مزودنا iKeePay (Orange Money، MTN Mobile Money، إلخ). لا يجمع Mboppi أبداً رقم بطاقة مصرفية ويحول تلقائياً وفوراً لكل طرف المبلغ المستحق له. تُعرض رسوم التوصيل على كل منتج.",
   "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige portant sur un paiement en ligne, Mboppi reverse le montant au vendeur ou rembourse l'acheteur selon la résolution. Mboppi peut servir d'intermédiaire de médiation.":
     "تُذكر الضمانات المحتملة على كل منتج. تُعالج الإرجاعات مباشرة مع المتجر أو البائع. في حالة نزاع حول دفع عبر الإنترنت، يحول Mboppi المبلغ للبائع أو يعيد المال للمشتري حسب الحل. يمكن لـ Mboppi العمل كوسيط في التوفيق.",
-  "Mboppi ne peut être tenu responsable des produits vendus par les boutiques et vendeurs, ni des retards de livraison imputables aux livreurs. Les paiements en ligne sont exécutés par iKeePay, prestataire de paiement indépendant. Les informations publiées le sont par les vendeurs eux-mêmes.":
-    "لا يمكن اعتبار Mboppi مسؤولاً عن المنتجات المباعة من المتاجر والبائعين، ولا عن تأخيرات التوصيل المنسوبة للموصّلين. تُنفذ الدفعات عبر الإنترنت بواسطة iKeePay، مزود دفع مستقل. المعلومات المنشورة يقدمها البائعون أنفسهم.",
 
   // Privacy
   "Lors de votre inscription : votre nom, votre e-mail et votre rôle (boutique, vendeur, client, livreur ou créateur). Si vous vous connectez avec Google, seul votre e-mail Google est utilisé. Selon votre rôle, vous pouvez publier des produits, des offres avec photos, et vos ventes sont enregistrées dans votre espace. Pour les paiements en ligne, nous n'utilisons que votre numéro de mobile money et votre opérateur, le temps du règlement.":
@@ -1411,23 +1394,13 @@ export default {
   "Seule la personne concernée accède à son espace : une boutique voit ses produits, un vendeur ses ventes et commissions. Les montants de vos paiements et versements ne sont visibles que dans votre espace. Les offres de la vitrine sont publiquement visibles par les visiteurs, mais sans vos informations de compte.":
     "لا يصل إلى المساحة إلا الشخص المعني: يرى المتجر منتجاته، والبائع مبيعاته وعمولاته. لا تظهر مبالغ دفعاتك وتحويلاتك إلا في مساحتك. عروض الواجهة مرئية للزوار علناً، لكن دون معلومات حسابك.",
   "🔒 Paiement en ligne et données bancaires": "🔒 الدفع عبر الإنترنت والبيانات المصرفية",
-  "Mboppi ne demande jamais de numéro de carte bancaire. Les paiements en ligne se font uniquement par mobile money via notre prestataire iKeePay : votre numéro de téléphone et votre opérateur sont transmis à ce prestataire le temps du règlement, et Mboppi ne conserve que le montant et la référence du paiement. Les gains perçus sont reversés automatiquement sur le portefeuille mobile enregistré par chaque acteur. Pour un don, seul votre numéro de mobile money est utilisé pour le règlement.":
-    "لا تطلب Mboppi أبداً رقم بطاقة مصرفية. تتم الدفعات عبر الإنترنت فقط بالمال المحمول عبر مزودنا iKeePay: يُمرر رقم هاتفك ومشغلك إلى هذا المزود طوال مدة التسوية، ولا يحتفظ Mboppi إلا بالمبلغ ومرجع الدفع. تُحول الأرباح المحصلة تلقائياً إلى حساب المال المحمول المسجل لكل طرف. بالنسبة للتبرع، يُستخدم رقم المال المحمول فقط للتسوية.",
-
-  // Mentions légales
-  "Les paiements en ligne sont traités par iKeePay, prestataire de paiement mobile money. Ses conditions d'utilisation et sa politique de confidentialité s'appliquent au traitement des paiements effectués sur Mboppi.":
-    "تُعالج الدفعات عبر الإنترنت بواسطة iKeePay، مزود دفع بالمال المحمول. تنطبق شروط الاستخدام وسياسة الخصوصية الخاصة به على معالجة الدفعات المنجزة على Mboppi.",
 
   // About
   "L'argent, en toute transparence": "المال، بشفافية كاملة",
-  "Le paiement en ligne par mobile money est traité via notre prestataire iKeePay et reversé automatiquement à chaque acteur.":
-    "يتم معالجة الدفع عبر الإنترنت بالمال المحمول عبر مزودنا iKeePay وتحويله تلقائياً إلى كل طرف.",
 
   // FAQ
   "Créez un compte gratuitement en moins d'une minute : choisissez votre rôle (boutique, vendeur, client, livreur ou créateur), renseignez votre nom et votre e-mail. Vous pouvez aussi vous connecter avec Google.":
     "أنشئ حساباً مجانياً في أقل من دقيقة: اختر دورك (متجر، بائع، عميل، موصّل أو مبدع)، أدخل اسمك وبريدك. يمكنك أيضاً الدخول عبر Google.",
-  "Aucune carte bancaire n'est nécessaire. Le paiement se fait uniquement à la livraison du colis, via iKeePay : le livreur envoie une demande de paiement sur votre numéro de mobile money (Orange Money, MTN Mobile Money, etc.). Mboppi reverse ensuite automatiquement le bon montant à la boutique, au vendeur, au parrain et au livreur.":
-    "لا حاجة لأي بطاقة مصرفية. يتم الدفع فقط عند تسليم الطرد عبر iKeePay: يرسل الموصّل طلب دفع إلى رقم المال المحمول الخاص بك (Orange Money، MTN Mobile Money، إلخ). يحول Mboppi بعد ذلك تلقائياً المبلغ الصحيح إلى المتجر والبائع والكفيل والموصّل.",
   "La boutique choisit un pourcentage de commission pour chaque produit. Ce pourcentage est affiché sur la fiche produit. Le vendeur reçoit le montant total moins la commission de la boutique. Votre commission est reversée automatiquement sur le numéro de mobile money enregistré dans votre espace.":
     "يختار المتجر نسبة عمولة لكل منتج. تُعرض هذه النسبة على صفحة المنتج. يتسلم البائع المبلغ الإجمالي ناقص عمولة المتجر. تُحول عمولتك تلقائياً إلى رقم المال المحمول المسجل في مساحتك.",
   "Comment recevoir mes gains ?": "كيف أستلم أرباحي؟",
@@ -1468,7 +1441,6 @@ export default {
   // Activation vendeur
   "Votre portefeuille Mobile Money": "محفظتك للدفع عبر الهاتف",
   "Choisir un opérateur…": "اختر مشغلاً…",
-  "Aucun opérateur iKeePay disponible pour ce pays": "لا يتوفر مشغل iKeePay لهذا البلد",
   "Numéro du portefeuille": "رقم المحفظة",
   "Ce portefeuille servira à régler vos frais d'activation et à recevoir vos commissions.":
     "ستُستخدم هذه المحفظة لدفع رسوم التفعيل ولتلقي عمولاتك.",

@@ -8,7 +8,6 @@ import SignaturePad from "../components/SignaturePad.jsx";
 import { countrySymbol, OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
 import { Link } from "react-router-dom";
 import { useLang } from "../i18n.jsx";
-import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import MiniChart from "../components/MiniChart.jsx";
 import { dailyBuckets } from "../utils.js";
@@ -37,14 +36,6 @@ export default function LivreurDashboard() {
   const [success, setSuccess] = useState("");
   const [deliverForm, setDeliverForm] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  // État de la lightbox iKeePay (comme le flux des dons) : le paiement se
-  // règle dans la modale lightbox, pas de manière silencieuse.
-  const [payLink, setPayLink] = useState("");
-  const [payRef, setPayRef] = useState("");
-  // Pour le paiement en ligne, on garde les infos de livraison en attente :
-  // la livraison n'est CONFIRMÉE (notifications + facture) qu'après la
-  // confirmation du paiement dans la lightbox, jamais avant.
-  const [pendingOnline, setPendingOnline] = useState(null);
   // Moyens de paiement de la boutique, affichés quand on choisit « Par Mobile ».
   const [shopMethods, setShopMethods] = useState(null);
   const [shopMethodsLoading, setShopMethodsLoading] = useState(false);
@@ -148,11 +139,7 @@ export default function LivreurDashboard() {
   const openDeliver = (s) => {
     const operators = OPERATORS_BY_COUNTRY[s.shop_country] || DEFAULT_OPERATORS;
     setShopMethods(null);
-    const initialMethod = ["automatic", "online", "auto"].includes(s.payment_method)
-      ? "automatic"
-      : s.payment_method === "mobile"
-        ? "mobile"
-        : "espece";
+    const initialMethod = s.payment_method === "mobile" ? "mobile" : "espece";
     setDeliverForm({
       sale: s,
       delivery_fee: "",
@@ -184,52 +171,21 @@ export default function LivreurDashboard() {
     setError("");
     setSuccess("");
     setSubmitting(true);
-    const isOnline = (deliverForm.payment_method || "") === "automatic";
     const saleId = deliverForm.sale.id;
     try {
-      // Paiement manuel (espèce / mobile) : on confirme tout de suite la
-      // livraison (notifications + facture). C'est le comportement normal.
-      if (!isOnline) {
-        const d = await api.deliverSale(saleId, {
-          delivery_fee: Number(deliverForm.delivery_fee || 0),
-          payment_method: deliverForm.payment_method,
-          client_code: (deliverForm.client_code || "").trim().toUpperCase(),
-          shop_code: code,
-          signature: deliverForm.signature || undefined,
-        });
-        setPending((prev) => prev.filter((s) => s.id !== saleId));
-        setDelivered((prev) => [d.sale, ...prev]);
-        downloadInvoice(d.sale, t, countrySymbol(d.sale.shop_country));
-        setSuccess(t("Achat confirmé ! La facture a été téléchargée."));
-        setDeliverForm(null);
-        return;
-      }
-
-      // Paiement en ligne iKeePay : on initialise le payin pour ouvrir la
-      // lightbox, SANS confirmer la livraison. Aucune notification, aucune
-      // facture tant que le paiement n'est pas confirmé dans la lightbox.
-      const deliveryFee = Number(deliverForm.delivery_fee || 0);
-      const pay = await api.ikeepayPayin({
-        sale_id: saleId,
-        delivery_fee: deliveryFee,
-        operator: (deliverForm.operator || "ORANGE").trim().toUpperCase(),
-        phone: (deliverForm.phone || deliverForm.sale.buyer_phone || "").trim(),
-        country: deliverForm.sale.shop_country || "Cameroun",
+      // Paiement manuel (espèce / mobile) : on confirme la livraison
+      // (notifications + facture). C'est le seul mode de paiement.
+      const d = await api.deliverSale(saleId, {
+        delivery_fee: Number(deliverForm.delivery_fee || 0),
+        payment_method: deliverForm.payment_method,
+        client_code: (deliverForm.client_code || "").trim().toUpperCase(),
+        shop_code: code,
+        signature: deliverForm.signature || undefined,
       });
-      const link = pay.payment_link || pay.data?.payment_link || "";
-      if (!link) {
-        throw new Error(t("Impossible d'ouvrir le paiement en ligne. Réessayez."));
-      }
-      setPayRef(pay.external_reference || "");
-      setPayLink(link);
-      // La livraison ne sera confirmée qu'après le paiement réussi.
-      setPendingOnline({
-        saleId,
-        deliveryFee,
-        clientCode: (deliverForm.client_code || "").trim().toUpperCase(),
-        shopCode: code,
-        signature: deliverForm.signature || "",
-      });
+      setPending((prev) => prev.filter((s) => s.id !== saleId));
+      setDelivered((prev) => [d.sale, ...prev]);
+      downloadInvoice(d.sale, t, countrySymbol(d.sale.shop_country));
+      setSuccess(t("Achat confirmé ! La facture a été téléchargée."));
       setDeliverForm(null);
     } catch (err) {
       setError(err.message);
@@ -323,7 +279,7 @@ export default function LivreurDashboard() {
                   </strong>
                 </div>
                 <div>
-                  <span className="label">✅ {t("Paiements en ligne (iKeePay)")}</span>
+                  <span className="label">✅ {t("Paiements en ligne (historique)")}</span>
                   <strong className="text-success">
                     {formatMoney(stats.online_earned)} {statsSymbol}
                   </strong>
@@ -549,54 +505,7 @@ export default function LivreurDashboard() {
                   />
                   <span>📱 {t("Par Mobile")}</span>
                 </label>
-                <label
-                  className={`payment-option ${deliverForm.payment_method === "automatic" ? "selected" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="automatic"
-                    checked={deliverForm.payment_method === "automatic"}
-                    onChange={(e) =>
-                      setDeliverForm({ ...deliverForm, payment_method: e.target.value })
-                    }
-                  />
-                  <span>💳 {t("En ligne (iKeePay)")}</span>
-                </label>
               </div>
-              {deliverForm.payment_method === "automatic" && (
-                <>
-                  <label style={{ marginTop: 12 }}>{t("Opérateur")} *</label>
-                  <select
-                    className="input"
-                    value={(deliverForm.operator || "").toUpperCase()}
-                    onChange={(e) => setDeliverForm({ ...deliverForm, operator: e.target.value })}
-                  >
-                    {(OPERATORS_BY_COUNTRY[deliverForm.sale.shop_country] || DEFAULT_OPERATORS).map(
-                      (item) => (
-                        <option key={item} value={item}>
-                          {item}
-                        </option>
-                      )
-                    )}
-                  </select>
-                  <label style={{ marginTop: 12 }}>{t("Numéro du client")} *</label>
-                  <input
-                    className="input"
-                    type="tel"
-                    required
-                    inputMode="tel"
-                    value={deliverForm.phone || ""}
-                    onChange={(e) => setDeliverForm({ ...deliverForm, phone: e.target.value })}
-                    placeholder="+237 6XX XX XX XX"
-                  />
-                  <p className="hint">
-                    {t(
-                      "Le client recevra une demande de paiement mobile money sur son téléphone. Confirmez l'opérateur et son numéro."
-                    )}
-                  </p>
-                </>
-              )}
               {deliverForm.payment_method === "mobile" && (
                 <div className="shop-methods-box" style={{ marginTop: 12 }}>
                   <p className="hint" style={{ margin: 0, fontWeight: 700, color: "var(--primary)" }}>
@@ -651,11 +560,6 @@ export default function LivreurDashboard() {
                 clearLabel={t("Effacer")}
                 onChange={(v) => setDeliverForm((f) => (f ? { ...f, signature: v } : f))}
               />
-              <p className="hint" style={{ marginTop: 10 }}>
-                {t(
-                  "Les paiements en ligne sont traités via Ikeepay. Vos gains vous sont versés nets de 10 % de frais de traitement sur chaque reversement."
-                )}
-              </p>
               <div className="row2" style={{ marginTop: 14 }}>
                 <button className="btn btn-primary" disabled={submitting}>
                   {submitting ? "…" : `✅ ${t("Confirmer l'Achat")}`}
@@ -671,58 +575,6 @@ export default function LivreurDashboard() {
             </form>
           </div>
         </div>
-      )}
-      {payLink && (
-        <IkeepayCheckout
-          link={payLink}
-          externalReference={payRef}
-          label={t("Paiement de la commande")}
-          onConfirmed={async () => {
-            const finalise = pendingOnline;
-            setPayLink("");
-            setPayRef("");
-            setPendingOnline(null);
-            if (!finalise) {
-              setSuccess(t("Paiement confirmé !"));
-              load(true);
-              return;
-            }
-            // Paiement réussi : on confirme MAINTENANT la livraison
-            // (notifications + facture) et on déclenche les reversements.
-            try {
-              const d = await api.deliverSale(finalise.saleId, {
-                delivery_fee: finalise.deliveryFee,
-                payment_method: "automatic",
-                client_code: finalise.clientCode,
-                shop_code: finalise.shopCode,
-                signature: finalise.signature || undefined,
-              });
-              setPending((prev) => prev.filter((s) => s.id !== finalise.saleId));
-              setDelivered((prev) => [d.sale, ...prev]);
-              downloadInvoice(d.sale, t, countrySymbol(d.sale.shop_country));
-              setSuccess(t("Achat confirmé ! La facture a été téléchargée."));
-            } catch (err) {
-              // Paiement réussi mais livraison non finalisée : on le signale.
-              setError(err.message);
-            } finally {
-              load(true);
-            }
-          }}
-          onClose={() => {
-            // Paiement abandonné / non finalisé : la vente n'est PAS confirmée,
-            // elle reste en attente et le livreur peut la finaliser en manuel
-            // (espèces / mobile) en la rouvrant depuis la liste.
-            setPayLink("");
-            setPayRef("");
-            setPendingOnline(null);
-            setSuccess(
-              t(
-                "Paiement non finalisé. La livraison n'est pas confirmée : vous pouvez réessayer ou régler en espèces / mobile."
-              )
-            );
-            load(true);
-          }}
-        />
       )}
 
     </main>

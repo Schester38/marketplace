@@ -61,7 +61,7 @@ export default function Privacy() {
           <h2>{t("🔒 Paiements directs")}</h2>
           <p>
             {t(
-              "Mboppi ne demande jamais de numéro de carte bancaire pour les paiements directs. Les paiements peuvent être réalisés directement entre les parties par espèces, Mobile Money ou virement bancaire, ou via Ikeepay pour les adhésions, les dons et les ventes. Les moyens de paiement enregistrés par les bénéficiaires servent à recevoir leurs règlements. Pour les paiements en ligne, l'acheteur paie le prix normal via Ikeepay et les bénéficiaires reçoivent leurs montants nets de 10 % de frais de traitement."
+              "Mboppi ne demande jamais de numéro de carte bancaire pour les paiements directs. Les paiements peuvent être réalisés directement entre les parties par espèces, Mobile Money ou virement bancaire. Les moyens de paiement enregistrés par les bénéficiaires servent à recevoir leurs règlements. Aucun paiement en ligne n'est traité par la plateforme : l'acheteur paie le prix affiché, sans frais de traitement."
             )}
           </p>
         </div>

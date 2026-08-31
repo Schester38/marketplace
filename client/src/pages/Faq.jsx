@@ -13,7 +13,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment payer ?",
-    a: "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le bénéficiaire : en espèces à la livraison, par virement Mobile Money direct ou par virement bancaire. Un paiement en ligne est aussi possible via Ikeepay pour les adhésions, les dons et les ventes : vous payez alors le prix normal, sans supplément.",
+    a: "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le bénéficiaire : en espèces à la livraison, par virement Mobile Money direct ou par virement bancaire. Aucun paiement en ligne n'est demandé : vous payez le prix affiché, sans supplément.",
   },
   {
     q: "Comment devenir vendeur ?",
@@ -21,11 +21,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment est calculée ma commission ?",
-    a: "La boutique choisit un pourcentage de commission pour chaque produit. Ce pourcentage est affiché sur la fiche produit. Le vendeur reçoit le montant total moins la commission de la boutique. Votre commission est reversée automatiquement sur le numéro de mobile money enregistré dans votre espace. Pour les paiements en ligne, les frais de traitement Ikeepay (10%) sont déduits des reversements.",
+    a: "La boutique choisit un pourcentage de commission pour chaque produit. Ce pourcentage est affiché sur la fiche produit. Le vendeur reçoit le montant total moins la commission de la boutique. Votre commission est réglée manuellement par la boutique, sans frais, sur le numéro de mobile money enregistré dans votre espace.",
   },
   {
     q: "Comment recevoir mes gains ?",
-    a: "Enregistrez vos coordonnées de réception dans votre espace « Paiements ». Les paiements des commissions sont réalisés manuellement par la boutique, sans frais, avec une preuve enregistrée sur la vente. Pour les paiements automatiques en ligne via Ikeepay, un taux de traitement de 10 % s'applique : vous recevez votre part nette (90 %) sur votre numéro Mobile Money enregistré.",
+    a: "Enregistrez vos coordonnées de réception dans votre espace « Paiements ». Les paiements des commissions sont réalisés manuellement par la boutique, sans frais, avec une preuve enregistrée sur la vente.",
   },
   {
     q: "Comment suivre ma commande ?",
@@ -65,7 +65,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Quels moyens de paiement sont acceptés ?",
-    a: "Deux options : manuel (espèces à la livraison, transfert Mobile Money direct ou virement bancaire, convenu avec le bénéficiaire — aucune carte bancaire n'est demandée), ou en ligne via Ikeepay pour les adhésions, les dons et les ventes : l'acheteur y paie le prix normal et les bénéficiaires reçoivent leurs parts nettes de 10 % de frais de traitement.",
+    a: "Paiement manuel uniquement : espèces à la livraison, transfert Mobile Money direct ou virement bancaire, convenu avec le bénéficiaire — aucune carte bancaire n'est demandée et aucun frais de traitement ne s'applique.",
   },
   {
     q: "Comment contacter un livreur ?",

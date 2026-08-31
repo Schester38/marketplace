@@ -99,12 +99,12 @@ export default function LivreurPayments() {
           <h1>💳 {t("Mes moyens de paiement")}</h1>
           <p>
             {t(
-              "C'est sur ce portefeuille que vos frais de livraison seront reversés automatiquement après chaque livraison payée en ligne."
+              "C'est sur ce portefeuille que la boutique vous verse les frais de livraison convenus, en espèces ou par Mobile Money."
             )}
           </p>
           <p className="hint" style={{ marginTop: 8 }}>
             {t(
-              "Les paiements automatiques sont traités via Ikeepay. Ikeepay prélève 10% de frais de traitement sur chaque transaction. Les montants que vous recevez correspondent aux frais calculés par Mboppi, nettes des frais Ikeepay."
+              "Les paiements sont manuels : vous recevez vos frais de livraison directement du client ou de la boutique, sans frais, en espèces ou par Mobile Money."
             )}
           </p>
         </div>

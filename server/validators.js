@@ -55,13 +55,8 @@ export const deliverSaleSchema = z.object({
       "esp",
       "mobile",
       "mobile_money",
-      "automatic",
-      "auto",
-      "online",
-      "en_ligne",
-      "ikeepay",
     ],
-    { errorMap: () => ({ message: "Type de paiement invalide (espèce, mobile ou en ligne)" }) }
+    { errorMap: () => ({ message: "Type de paiement invalide (espèce ou mobile)" }) }
   ),
   client_code: z.string().max(20).optional(),
   shop_code: z.string().min(1, "Code boutique requis").max(20),
@@ -184,12 +179,7 @@ export const donationSchema = z.object({
   country: z.string().max(60).optional(),
 });
 
-export const donationIkeepaySchema = z.object({
-  amount: z.coerce.number().positive("Montant invalide"),
-  country: z.string().max(60).optional(),
-  operator: z.string().min(1, "Opérateur requis").max(40),
-  phone_number: z.string().min(1, "Numéro requis").max(30),
-});
+// NOTE : donationIkeepaySchema a été supprimé avec le système iKeePay.
 
 export const productListQuerySchema = z.object({
   search: z.string().max(200).optional(),
