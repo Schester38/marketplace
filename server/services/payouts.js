@@ -66,6 +66,24 @@ export async function methodsFor(userId, kind) {
   );
 }
 
+/**
+ * Classe une erreur de payout iKeePay :
+ *  - 'rejected' : échec EXPLICITE (le provider a répondu — refus 4xx / status failed)
+ *  - 'unknown'  : résultat INCONNU (timeout, réseau, 5xx, réponse perdue)
+ * Règle financière : UNKNOWN ≠ FAILED. Un résultat inconnu ne doit PAS être
+ * traité comme un échec définitif (le transfert a pu être effectué) et ne doit
+ * PAS déclencher de renvoi automatique.
+ */
+export function payoutErrorCategory(error) {
+  const code = Number(error?.statusCode || 0);
+  const message = String(error?.message || "").toLowerCase();
+  if (code >= 400 && code < 500) return "rejected";
+  if (code >= 500) return "unknown";
+  if (message.includes("injoignable")) return "unknown";
+  // Par prudence financière : toute autre erreur est considérée inconnue.
+  return "unknown";
+}
+
 export async function providerPayout({ user, methods, amount, saleId, kind, reference }) {
   const target = paymentTarget(methods, user.country);
   if (!target || !target.country || !target.phoneNumber) {
@@ -136,7 +154,19 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
       external_reference: reference,
     });
     const status = providerStatus(result);
-    if (status === "failed") throw new Error("Le prestataire a refusé le retrait");
+    if (status === "failed") {
+      // Refus EXPLICITE du prestataire (il a répondu) : échec définitif retryable.
+      await q(
+        "UPDATE automatic_payouts SET status = 'failed', error = $1, attempts = attempts + 1, retryable = TRUE, updated_at = now() WHERE external_reference = $2",
+        ["Le prestataire a refusé le retrait", reference]
+      );
+      await sendPush(user.id, {
+        type: "payout_failed",
+        title: "Paiement échoué",
+        body: `Le reversement de ${amount} ${target.currency} a échoué : le prestataire a refusé le retrait.`,
+      });
+      return { ok: false, error: "Le prestataire a refusé le retrait", retryable: true };
+    }
     if (status !== "completed") {
       await q(
         "UPDATE automatic_payouts SET status = 'pending', provider_reference = $1, error = NULL, attempts = attempts + 1, updated_at = now() WHERE external_reference = $2",
@@ -150,6 +180,20 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
     );
     return { ok: true, provider: result, amount, fee };
   } catch (error) {
+    const category = payoutErrorCategory(error);
+    if (category === "unknown") {
+      // Résultat INCONNU (timeout, réseau, 5xx, réponse perdue) : iKeePay a
+      // peut-être déjà effectué le transfert. On NE marque PAS failed définitif,
+      // on ne renvoie PAS l'argent, on ne relance PAS automatiquement. Le payout
+      // reste `processing` en attente de réconciliation (webhook payout ou
+      // manuelle).
+      await q(
+        "UPDATE automatic_payouts SET status = 'processing', error = $1, attempts = attempts + 1, retryable = FALSE, updated_at = now() WHERE external_reference = $2",
+        ["payout_result_unknown", reference]
+      );
+      return { ok: false, error: "payout_result_unknown", pending: true, retryable: false };
+    }
+    // Échec explicite (refus 4xx) : retryable.
     await q(
       "UPDATE automatic_payouts SET status = 'failed', error = $1, attempts = attempts + 1, retryable = TRUE, updated_at = now() WHERE external_reference = $2",
       [error.message, reference]
@@ -164,13 +208,32 @@ export async function providerPayout({ user, methods, amount, saleId, kind, refe
 }
 
 export async function completeAutomaticPayout(reference, providerReference) {
+  // IDEMPOTENCE EXPLICITE : si le payout est déjà completed, on ne recrée aucun
+  // mouvement ledger et on ne renvoie aucune notification.
+  const existing = (
+    await q("SELECT * FROM automatic_payouts WHERE external_reference = $1", [reference])
+  )[0];
+  if (!existing) return { ok: false, error: "Reversement introuvable" };
+  if (existing.status === "completed")
+    return { ok: true, already: true, payout: existing };
+
+  // Transition atomique processing/pending/failed -> completed. La clause
+  // `status <> 'completed'` garantit qu'un second appel concurrent ne passe pas.
   const completed = (
     await q(
-      "UPDATE automatic_payouts SET status = 'completed', provider_reference = COALESCE($1, provider_reference), completed_at = COALESCE(completed_at, now()), error = NULL, updated_at = now() WHERE external_reference = $2 RETURNING *",
+      "UPDATE automatic_payouts SET status = 'completed', provider_reference = COALESCE($1, provider_reference), completed_at = COALESCE(completed_at, now()), error = NULL, updated_at = now() WHERE external_reference = $2 AND status <> 'completed' RETURNING *",
       [providerReference || null, reference]
     )
   )[0];
-  if (!completed) return { ok: false, error: "Reversement introuvable" };
+  if (!completed) {
+    // Course : un autre appel l'a déjà passé à completed entre-temps.
+    const again = (
+      await q("SELECT * FROM automatic_payouts WHERE external_reference = $1", [reference])
+    )[0];
+    return again && again.status === "completed"
+      ? { ok: true, already: true, payout: again }
+      : { ok: false, error: "Reversement introuvable" };
+  }
   const transactionType =
     completed.kind === "referral" || completed.kind === "activation_referral"
       ? "referral_credit"

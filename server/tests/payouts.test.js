@@ -8,11 +8,12 @@
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
-import { computeRedistribution, planSalePayouts } from "../services/payouts.js";
+import { computeRedistribution, planSalePayouts, payoutErrorCategory } from "../services/payouts.js";
 import {
   authorizeConfirm,
   safeEqual,
-  verifyIkeepayWebhookAuth,
+  validateWebhookAmount,
+  verifyIkeepayWebhook,
 } from "../services/paymentSecurity.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -238,8 +239,8 @@ suite("régressions (chemin unique)", () => {
 
   test("Le webhook iKeePay est fail-closed (jamais traité sans authentification confirmée)", () => {
     assertTrue(
-      apiSource.includes("verifyIkeepayWebhookAuth("),
-      "verifyIkeepayWebhookAuth présent dans payments.js"
+      apiSource.includes("verifyIkeepayWebhook("),
+      "verifyIkeepayWebhook présent dans payments.js"
     );
     assertTrue(
       apiSource.includes('"Webhook non authentifié"'),
@@ -248,6 +249,10 @@ suite("régressions (chemin unique)", () => {
     assertTrue(
       apiSource.includes("authenticated, error"),
       "log webhook trace authenticated"
+    );
+    assertTrue(
+      apiSource.includes("validateWebhookAmount("),
+      "validation montant/devise du webhook"
     );
   });
 
@@ -296,10 +301,117 @@ suite("paymentSecurity (sécurité paiements iKeePay)", () => {
     assertFalse(safeEqual("", "abc"), "vide vs valeur");
   });
 
-  test("verifyIkeepayWebhookAuth : fail-closed (aucun mécanisme confirmé)", () => {
-    const auth = verifyIkeepayWebhookAuth();
-    assertFalse(auth.ok, "webhook toujours refusé");
-    assertEqual(auth.reason, "auth_unconfirmed_no_mechanism", "raison explicite");
+  test("verifyIkeepayWebhook : fail-closed sans secret (aucun mécanisme confirmé)", () => {
+    const prev = process.env.IKEEPAY_WEBHOOK_SECRET;
+    delete process.env.IKEEPAY_WEBHOOK_SECRET;
+    try {
+      const auth = verifyIkeepayWebhook({ headers: { "x-api-key": "nimporte" } });
+      assertFalse(auth.ok, "webhook toujours refusé");
+      assertEqual(auth.reason, "no_mechanism", "raison explicite");
+    } finally {
+      if (prev !== undefined) process.env.IKEEPAY_WEBHOOK_SECRET = prev;
+    }
+  });
+
+  test("verifyIkeepayWebhook : secret configuré + bon header → OK", () => {
+    const prev = process.env.IKEEPAY_WEBHOOK_SECRET;
+    process.env.IKEEPAY_WEBHOOK_SECRET = "TEST_SECRET_123";
+    try {
+      const auth = verifyIkeepayWebhook({ headers: { "x-api-key": "TEST_SECRET_123" } });
+      assertTrue(auth.ok, "webhook authentifié");
+    } finally {
+      if (prev !== undefined) process.env.IKEEPAY_WEBHOOK_SECRET = prev;
+      else delete process.env.IKEEPAY_WEBHOOK_SECRET;
+    }
+  });
+
+  test("verifyIkeepayWebhook : secret configuré + mauvais header → invalid_auth", () => {
+    const prev = process.env.IKEEPAY_WEBHOOK_SECRET;
+    process.env.IKEEPAY_WEBHOOK_SECRET = "TEST_SECRET_123";
+    try {
+      const auth = verifyIkeepayWebhook({ headers: { "x-api-key": "MAUVAIS_SECRET" } });
+      assertFalse(auth.ok, "webhook refusé");
+      assertEqual(auth.reason, "invalid_auth", "raison invalid_auth");
+    } finally {
+      if (prev !== undefined) process.env.IKEEPAY_WEBHOOK_SECRET = prev;
+      else delete process.env.IKEEPAY_WEBHOOK_SECRET;
+    }
+  });
+
+  test("verifyIkeepayWebhook : secret configuré + header absent → missing_auth", () => {
+    const prev = process.env.IKEEPAY_WEBHOOK_SECRET;
+    process.env.IKEEPAY_WEBHOOK_SECRET = "TEST_SECRET_123";
+    try {
+      const auth = verifyIkeepayWebhook({ headers: {} });
+      assertFalse(auth.ok, "webhook refusé");
+      assertEqual(auth.reason, "missing_auth", "raison missing_auth");
+    } finally {
+      if (prev !== undefined) process.env.IKEEPAY_WEBHOOK_SECRET = prev;
+      else delete process.env.IKEEPAY_WEBHOOK_SECRET;
+    }
+  });
+
+  test("validateWebhookAmount : montant cohérent → OK", () => {
+    const v = validateWebhookAmount(
+      { amount: 10500, currency: "XAF" },
+      { expectedAmount: 10500, expectedCurrency: "XAF" }
+    );
+    assertTrue(v.ok, "valide");
+  });
+
+  test("validateWebhookAmount : montant incohérent → amount_mismatch", () => {
+    const v = validateWebhookAmount(
+      { amount: 9999, currency: "XAF" },
+      { expectedAmount: 10500, expectedCurrency: "XAF" }
+    );
+    assertFalse(v.ok, "refusé");
+    assertEqual(v.reason, "amount_mismatch", "reason");
+  });
+
+  test("validateWebhookAmount : devise incohérente → currency_mismatch", () => {
+    const v = validateWebhookAmount(
+      { amount: 10500, currency: "XOF" },
+      { expectedAmount: 10500, expectedCurrency: "XAF" }
+    );
+    assertFalse(v.ok, "refusé");
+    assertEqual(v.reason, "currency_mismatch", "reason");
+  });
+
+  test("payoutErrorCategory : refus 4xx → rejected", () => {
+    const err = new Error("validation");
+    err.statusCode = 400;
+    assertEqual(payoutErrorCategory(err), "rejected", "4xx = refus explicite");
+  });
+
+  test("payoutErrorCategory : timeout/réseau/5xx → unknown (UNKNOWN ≠ FAILED)", () => {
+    const err = new Error("fetch failed");
+    err.statusCode = 502;
+    assertEqual(payoutErrorCategory(err), "unknown", "5xx = résultat inconnu");
+    assertEqual(payoutErrorCategory(new Error("iKeePay est momentanément injoignable")), "unknown", "injoignable");
+    assertEqual(payoutErrorCategory(new Error("autre erreur")), "unknown", "par prudence");
+  });
+
+  test("authorizeConfirm sale : sans authentification → 401", () => {
+    const r = authorizeConfirm({ kind: "sale", record: { id: 1, buyer_id: 10 }, user: null, token: null });
+    assertFalse(r.ok, "refusé");
+    assertEqual(r.code, 401, "code");
+  });
+
+  test("authorizeConfirm membership : sans authentification → 401", () => {
+    const r = authorizeConfirm({ kind: "membership", record: { id: 1, user_id: 10 }, user: null, token: null });
+    assertFalse(r.ok, "refusé");
+    assertEqual(r.code, 401, "code");
+  });
+
+  test("authorizeConfirm donation avec propriétaire : autre utilisateur → 403", () => {
+    const r = authorizeConfirm({ kind: "donation", record: { id: 1, user_id: 10, confirm_token: "abc" }, user: { id: 99 }, token: "abc" });
+    assertFalse(r.ok, "refusé");
+    assertEqual(r.code, 403, "code");
+  });
+
+  test("authorizeConfirm donation avec propriétaire : propriétaire → OK", () => {
+    const r = authorizeConfirm({ kind: "donation", record: { id: 1, user_id: 10 }, user: { id: 10 }, token: null });
+    assertTrue(r.ok, "autorisé");
   });
 
   test("authorizeConfirm donation : sans jeton → refusé (401)", () => {

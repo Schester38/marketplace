@@ -3,7 +3,8 @@ import jwt from "jsonwebtoken";
 import { ensureDonationPaymentColumns, q } from "../db.js";
 import {
   authorizeConfirm,
-  verifyIkeepayWebhookAuth,
+  validateWebhookAmount,
+  verifyIkeepayWebhook,
 } from "../services/paymentSecurity.js";
 import { authRequired } from "../auth.js";
 import {
@@ -295,7 +296,7 @@ router.post(
     try {
       const ins = await q(
         `INSERT INTO payment_webhook_logs (provider, provider_transaction_id, provider_order_id, event, payload, status, authenticated, error)
-         VALUES ('ikeepay', $1, $2, $3, $4, $5, FALSE, 'IKEEPAY_WEBHOOK_AUTH_FAILED reason=auth_unconfirmed_no_mechanism') RETURNING id`,
+         VALUES ('ikeepay', $1, $2, $3, $4, $5, FALSE, NULL) RETURNING id`,
         [
           data.provider_reference || null,
           external || null,
@@ -310,13 +311,14 @@ router.post(
     }
 
     // ── SÉCURITÉ — authentification fail-closed du webhook entrant ─────────
-    // iKeePay ne documente aucun secret/signature sur les callbacks entrants :
-    // aucun webhook n'est traité (aucun payout, aucune mutation de statut).
-    // Le flux nominal continue via /ikeepay/confirm (JWT / jeton de transaction).
-    // Réactivation : implémenter la vérification dans verifyIkeepayWebhookAuth()
-    // une fois le mécanisme réel confirmé par iKeePay.
-    const auth = verifyIkeepayWebhookAuth();
+    // Si IKEEPAY_WEBHOOK_SECRET est configuré, le header `x-api-key` est vérifié
+    // en temps constant. Sinon, aucun mécanisme n'étant confirmé par iKeePay,
+    // on ne réutilise PAS IKEEPAY_API_KEY : le webhook est refusé (401) sans
+    // aucun traitement ni payout. La confirmation continue via /ikeepay/confirm.
+    const auth = verifyIkeepayWebhook(req);
     if (!auth.ok) {
+      // Raison générique (jamais la valeur du secret) : missing_auth /
+      // invalid_auth / no_mechanism.
       console.error(`[ikeepay] IKEEPAY_WEBHOOK_AUTH_FAILED reason=${auth.reason}`);
       if (logged) {
         await q(
@@ -326,8 +328,13 @@ router.post(
       }
       return res.status(401).json({ error: "Webhook non authentifié" });
     }
+    if (logged) {
+      await q("UPDATE payment_webhook_logs SET authenticated = TRUE WHERE id = $1", [
+        logged.id,
+      ]).catch(() => {});
+    }
 
-    // ── Traitement (non atteignable tant que le mécanisme n'est pas confirmé) ──
+    // ── Traitement (n'accepte que des événements authentifiés) ─────────────
     // Auto-réparation schéma : donations.provider_reference / completed_at sur
     // les bases au schéma ancien.
     try {
@@ -375,6 +382,18 @@ router.post(
       ]);
     } else if (donation && String(data.type || "").toLowerCase() === "payin") {
       const status = String(data.status || "").toLowerCase();
+      // Validation montant / devise (source de vérité = enregistrement serveur).
+      const valid = validateWebhookAmount(data, {
+        expectedAmount: Number(donation.amount),
+        expectedCurrency: donation.currency,
+      });
+      if (!valid.ok) {
+        await q(
+          "UPDATE payment_webhook_logs SET handled = FALSE, error = $1 WHERE id = $2",
+          [`IKEEPAY_WEBHOOK_REJECTED reason=${valid.reason}`, logged.id]
+        ).catch(() => {});
+        return res.status(400).json({ error: `Webhook rejeté (${valid.reason})` });
+      }
       await q(
         "UPDATE donations SET status = $1, provider_reference = COALESCE($2, provider_reference), completed_at = CASE WHEN $1 = 'completed' THEN COALESCE(completed_at, now()) ELSE completed_at END WHERE id = $3",
         [
@@ -396,6 +415,18 @@ router.post(
       await q("UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1", [logged[0].id]);
     } else if (membership && String(data.type || "").toLowerCase() === "payin") {
       const status = String(data.status || "").toLowerCase();
+      // Validation montant / devise (source de vérité = enregistrement serveur).
+      const valid = validateWebhookAmount(data, {
+        expectedAmount: Number(membership.amount),
+        expectedCurrency: membership.currency,
+      });
+      if (!valid.ok) {
+        await q(
+          "UPDATE payment_webhook_logs SET handled = FALSE, error = $1 WHERE id = $2",
+          [`IKEEPAY_WEBHOOK_REJECTED reason=${valid.reason}`, logged.id]
+        ).catch(() => {});
+        return res.status(400).json({ error: `Webhook rejeté (${valid.reason})` });
+      }
       if (status === "completed")
         await completeMembershipPayment(membership.id, data.provider_reference || null);
       else if (status === "failed")
@@ -406,6 +437,19 @@ router.post(
       await q("UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1", [logged[0].id]);
     } else if (sale && String(data.type || "").toLowerCase() === "payin") {
       const status = String(data.status || "").toLowerCase();
+      // Validation montant / devise (source de vérité = enregistrement serveur) :
+      // le montant attendu est total_price + delivery_fee (même calcul qu'au payin).
+      const valid = validateWebhookAmount(data, {
+        expectedAmount: Math.round((Number(sale.total_price) + Number(sale.delivery_fee || 0)) * 100) / 100,
+        expectedCurrency: sale.currency,
+      });
+      if (!valid.ok) {
+        await q(
+          "UPDATE payment_webhook_logs SET handled = FALSE, error = $1 WHERE id = $2",
+          [`IKEEPAY_WEBHOOK_REJECTED reason=${valid.reason}`, logged.id]
+        ).catch(() => {});
+        return res.status(400).json({ error: `Webhook rejeté (${valid.reason})` });
+      }
       const next = status === "completed" ? "paid" : status === "failed" ? "failed" : "pending";
       await q(
         `UPDATE sales SET payment_status = $1, payment_provider_reference = COALESCE($2, payment_provider_reference),
@@ -450,6 +494,15 @@ router.post(
         token: req.body?.confirm_token || null,
       });
       if (!authz.ok) return res.status(authz.code).json({ error: authz.error });
+      // Défense en profondeur : si le client fournit montant/devise, ils doivent
+      // correspondre à l'enregistrement serveur.
+      if (req.body?.amount != null || req.body?.currency != null) {
+        const v = validateWebhookAmount(
+          { amount: req.body.amount, currency: req.body.currency },
+          { expectedAmount: Number(donation.amount), expectedCurrency: donation.currency }
+        );
+        if (!v.ok) return res.status(400).json({ error: `Montant ou devise incohérent (${v.reason})` });
+      }
       if (donation.status === "completed")
         return res.json({ ok: true, already: true });
       await q(
@@ -500,6 +553,14 @@ router.post(
         token: null,
       });
       if (!authz.ok) return res.status(authz.code).json({ error: authz.error });
+      // Défense en profondeur : montant/devise cohérents avec l'adhésion.
+      if (req.body?.amount != null || req.body?.currency != null) {
+        const v = validateWebhookAmount(
+          { amount: req.body.amount, currency: req.body.currency },
+          { expectedAmount: Number(membership.amount), expectedCurrency: membership.currency }
+        );
+        if (!v.ok) return res.status(400).json({ error: `Montant ou devise incohérent (${v.reason})` });
+      }
       if (membership.status === "completed")
         return res.json({ ok: true, already: true });
       const result = await completeMembershipPayment(membership.id, null).catch((mErr) => ({
@@ -521,6 +582,18 @@ router.post(
         token: null,
       });
       if (!authz.ok) return res.status(authz.code).json({ error: authz.error });
+      // Défense en profondeur : montant/devise cohérents avec la vente
+      // (total_price + delivery_fee, même calcul qu'au payin).
+      if (req.body?.amount != null || req.body?.currency != null) {
+        const v = validateWebhookAmount(
+          { amount: req.body.amount, currency: req.body.currency },
+          {
+            expectedAmount: Math.round((Number(sale.total_price) + Number(sale.delivery_fee || 0)) * 100) / 100,
+            expectedCurrency: sale.currency,
+          }
+        );
+        if (!v.ok) return res.status(400).json({ error: `Montant ou devise incohérent (${v.reason})` });
+      }
       // markSalePaid est atomique et idempotent : il verrouille la vente
       // (payout_initiated FALSE -> TRUE) et déclenche UN SEUL jeu de
       // reversements. Une confirmation déjà traitée retourne already:true.
