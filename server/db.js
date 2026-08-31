@@ -36,37 +36,14 @@ export async function ensureColumn(table, column, definition) {
 
 
 
-// Auto-réparation : garantit les colonnes iKeePay de la table donations,
-// même si initDb a échoué partiellement sur une base au schéma ancien.
-export async function ensureDonationPaymentColumns() {
-  await pool.query(`
-    ALTER TABLE donations ADD COLUMN IF NOT EXISTS provider_reference TEXT;
-    ALTER TABLE donations ADD COLUMN IF NOT EXISTS payment_link TEXT;
-    ALTER TABLE donations ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
-    ALTER TABLE donations ADD COLUMN IF NOT EXISTS confirm_token TEXT;
-  `);
-}
 
-// Auto-réparation : garantit les colonnes essentielles de `automatic_payouts`
-// (utilisées par l'affichage des commissions de parrainage vendeur) même si
-// initDb a échoué partiellement sur une base au schéma ancien (cf. le cas
-// similaire de la colonne `fee` manquante sur `platform_payouts` en production).
-export async function ensureAutomaticPayoutColumns() {
-  await pool.query(`
-    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS kind TEXT;
-    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS amount NUMERIC(14,2) NOT NULL DEFAULT 0;
-    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
-    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS fee NUMERIC(14,2) DEFAULT 0;
-    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
-    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS error TEXT;
-    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
-    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
-    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS retryable BOOLEAN NOT NULL DEFAULT FALSE;
-    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
-    ALTER TABLE automatic_payouts DROP CONSTRAINT IF EXISTS automatic_payouts_status_check;
-    ALTER TABLE automatic_payouts ADD CONSTRAINT automatic_payouts_status_check CHECK (status IN ('pending', 'processing', 'completed', 'failed'));
-  `);
-}
+// NOTE : les anciennes fonctions ensureDonationPaymentColumns() et
+// ensureAutomaticPayoutColumns() (auto-réparation des colonnes iKeePay) ont été
+// supprimées avec le système iKeePay. Les tables `automatic_payouts`,
+// `platform_payouts` et `payment_webhook_logs` sont conservées dans initDb()
+// ci-dessous pour préserver les données financières historiques, mais n'ont
+// plus aucune fonctionnalité active.
+
 
 export async function withTransaction(fn) {
   const client = await getPool().connect();

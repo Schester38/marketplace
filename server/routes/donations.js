@@ -35,13 +35,10 @@ router.post(
       )
     )[0];
 
-    res.json({
+        res.json({
       ok: true,
       donation_id: created.id,
-      external_reference: `DON:${created.id}`,
-      payment_link: null,
-      requires_otp: false,
-      provider_transaction: null,
+      reference: `DON:${created.id}`,
       manual: true,
       instructions: `Effectuez un virement de ${amt} XAF sur le compte ${operator} du projet Mboppi, puis envoyez la capture d'écran à l'équipe Mboppi pour validation.`,
     });

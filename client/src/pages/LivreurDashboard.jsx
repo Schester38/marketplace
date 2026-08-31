@@ -272,22 +272,10 @@ export default function LivreurDashboard() {
                   <span className="label">{t("Livraisons effectuées")}</span>
                   <strong>{stats.total_deliveries}</strong>
                 </div>
-                <div>
+                                <div>
                   <span className="label">{t("Frais de livraison gagnés")}</span>
                   <strong>
                     {formatMoney(stats.delivery_earned)} {statsSymbol}
-                  </strong>
-                </div>
-                <div>
-                  <span className="label">✅ {t("Paiements en ligne (historique)")}</span>
-                  <strong className="text-success">
-                    {formatMoney(stats.online_earned)} {statsSymbol}
-                  </strong>
-                </div>
-                <div>
-                  <span className="label">💵 {t("Paiements manuels (espèces / mobile)")}</span>
-                  <strong>
-                    {formatMoney(stats.manual_earned)} {statsSymbol}
                   </strong>
                 </div>
               </div>

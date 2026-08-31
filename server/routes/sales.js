@@ -466,9 +466,8 @@ router.get(
         deliveredParams
       )
     ).map(saleRow);
-    // Statistiques des frais de livraison du livreur — le livreur ne gagne que
-    // la delivery_fee, encaissée directement en espèces / mobile (iKeePay
-    // supprimé). Même patron que les stats boutique/vendeur (agrégation SQL + series).
+        // Statistiques des frais de livraison du livreur — le livreur ne gagne que
+    // la delivery_fee, encaissée directement en espèces / mobile.
     let stats = null;
     let series = [];
     if (me) {
@@ -476,9 +475,7 @@ router.get(
         await q(
           `SELECT
              COUNT(*) AS total_deliveries,
-             COALESCE(SUM(s.delivery_fee), 0) AS delivery_earned,
-             COALESCE(SUM(CASE WHEN s.online_payment OR s.payment_method = 'automatic' THEN s.delivery_fee ELSE 0 END), 0) AS online_earned,
-             COALESCE(SUM(CASE WHEN NOT (s.online_payment OR s.payment_method = 'automatic') THEN s.delivery_fee ELSE 0 END), 0) AS manual_earned
+             COALESCE(SUM(s.delivery_fee), 0) AS delivery_earned
            FROM sales s
            JOIN products p ON p.id = s.product_id
            WHERE ${deliveredFilter}`,
@@ -488,8 +485,6 @@ router.get(
       stats = {
         total_deliveries: Number(srow.total_deliveries),
         delivery_earned: Number(srow.delivery_earned),
-        online_earned: Number(srow.online_earned),
-        manual_earned: Number(srow.manual_earned),
       };
       series = (
         await q(

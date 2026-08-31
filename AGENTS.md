@@ -115,6 +115,6 @@ Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau v
 - **1.10.0 / v51** : refonte promotion éclair (masquage catalogue, règles serveur, UI shop).
 - **1.11.0 / v52** : masquage SEO complet, blocage sellers côté serveur, commission promo 0, partage promo, offres Verone dans l'accueil (rail), suppression commission duo.
 - **1.12.0 / v53** : popup promos superposées sur un même cadre avec rotation 5 s et titre « PROMOTION DU JOUR » centré (X ferme tout) ; correctif ancrage `bottom: 0` des cartes (popup cachée hors écran) ; retrait des emojis 🎨/🎓 du menu.
-- **1.13.0** : commission activation vendeur 1 000 XAF + part Mboppi 500 XAF lors de l'adhésion Ikeepay d'un vendeur parrainé ; seuil parrainage client automatique remonté à 5 000 XAF.
-- **1.14.0** : suppression complète du système iKeePay (paiements en ligne, webhooks, reversements automatiques) ; passage au paiement manuel exclusif ; le parrainage et les commissions sont versés manuellement par la boutique.
+- **1.13.0** : commission activation vendeur 1 000 XAF + part Mboppi 500 XAF lors de l'adhésion d'un vendeur parrainé ; seuil parrainage client automatique remonté à 5 000 XAF.
+- **1.14.0** : suppression du système iKeePay (paiements en ligne, webhooks, reversements automatiques) ; passage au paiement manuel exclusif ; le parrainage et les commissions sont versés manuellement par la boutique.
 - Facture PDF : parfaitement fonctionnelle (vérifié — téléchargement jsPDF OK).
