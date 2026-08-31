@@ -94,7 +94,13 @@ function parsePhotos(raw, fallback) {
     try {
       const arr = JSON.parse(raw);
       if (Array.isArray(arr)) {
-        const urls = arr.map((x) => (typeof x === "string" ? x : x?.url)).filter(Boolean);
+        const urls = arr
+          .map((x) => {
+            if (typeof x === "string") return x;
+            // Nouveau format {thumb, medium, large} / ancien {thumb, full}.
+            return x?.large || x?.medium || x?.full || x?.thumb || x?.url || null;
+          })
+          .filter(Boolean);
         if (urls.length) return urls;
       }
     } catch {

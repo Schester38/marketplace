@@ -1,3 +1,7 @@
+import { compressImage, thumbFromDataUrl } from "./imageKit.js";
+
+export { compressImage, thumbFromDataUrl };
+
 export function downloadCsv(filename, header, rows) {
   const esc = (v) => {
     const s = String(v ?? "");
@@ -21,53 +25,8 @@ export function urlBase64ToUint8Array(base64String) {
   return output;
 }
 
-// Encodage WebP quand le navigateur le supporte (Chrome, Firefox, Edge, Safari 17+).
-// Sinon repli silencieux sur JPEG (canvas.toDataURL renvoie du PNG si le format n'est pas pris en charge).
-function canvasDataUrl(canvas, type, quality) {
-  const out = canvas.toDataURL(type, quality);
-  return out.startsWith("data:" + type) ? out : canvas.toDataURL("image/jpeg", quality);
-}
-
-export function thumbFromDataUrl(dataUrl, maxDim = 320, quality = 0.62) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-      resolve(canvasDataUrl(canvas, "image/webp", quality));
-    };
-    img.onerror = reject;
-    img.src = dataUrl;
-  });
-}
-
-export function compressImage(file, maxDim = 800, quality = 0.72) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        const canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        resolve(canvasDataUrl(canvas, "image/webp", quality));
-      };
-      img.onerror = reject;
-      img.src = reader.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+// Note : compression d'images gérée par `imageKit.js` (pipeline intelligente :
+// détection « déjà optimisée », redimensionnement, conversion WebP, transparence).
 
 // Agrège des éléments par jour sur N jours : [{key,label,value}] chronologiques.
 // Utilisé par les courbes des espaces boutique/vendeur/créateur/livreur.

@@ -166,6 +166,16 @@ export default function ProductDetail() {
   }, [productId, flashPromoEndsAt, product]);
 
   const photos = product ? product.photos || [] : [];
+  // Zoom (lightbox) : version « large » si disponible, sinon repli medium.
+  const largePhotos =
+    product && Array.isArray(product.photos_large) && product.photos_large.length
+      ? product.photos_large
+      : photos;
+  // Vignettes de la galerie : thumbnails uniquement (jamais la version full).
+  const thumbPhotos =
+    product && Array.isArray(product.photos_thumb) && product.photos_thumb.length
+      ? product.photos_thumb
+      : photos;
   useEffect(() => {
     if (!lightbox) return;
     const onKey = (e) => {
@@ -304,7 +314,7 @@ export default function ProductDetail() {
                   aria-label={`${t("Photo")} ${i + 1}`}
                   aria-current={i === lightboxIndex}
                 >
-                  <img src={photo} alt="" loading="lazy" decoding="async" />
+                  <img src={thumbPhotos[i] || photo} alt="" loading="lazy" decoding="async" />
                 </button>
               ))}
             </div>
@@ -589,7 +599,7 @@ export default function ProductDetail() {
           )}
           <img
             className="lightbox-img"
-            src={photos[lightboxIndex]}
+            src={largePhotos[lightboxIndex] || photos[lightboxIndex]}
             alt={product.name}
             onClick={(e) => e.stopPropagation()}
           />

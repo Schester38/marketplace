@@ -8,7 +8,8 @@ import FlashPromoCard from "../components/FlashPromo.jsx";
 import { downloadInvoice } from "../components/Invoice.jsx";
 import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
-import { compressImage, thumbFromDataUrl } from "../utils.js";
+import { compressImage } from "../utils.js";
+import { smartProcessImageFile, formatBytes } from "../imageKit.js";
 import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
@@ -105,16 +106,20 @@ export default function ShopDashboard() {
     const list = Array.from(files || []);
     if (!list.length) return;
     setPicking(true);
+    setError("");
     try {
       const remaining = MAX_PHOTOS - form.photos.length;
       const batch = list.slice(0, remaining);
-      const compressed = await Promise.all(
-        batch.map(async (f) => {
-          const full = await compressImage(f);
-          return { thumb: await thumbFromDataUrl(full), full };
-        })
-      );
-      setForm((f) => ({ ...f, photos: [...f.photos, ...compressed].slice(0, MAX_PHOTOS) }));
+      const processed = await Promise.allSettled(batch.map((f) => smartProcessImageFile(f)));
+      const entries = [];
+      for (const p of processed) {
+        if (p.status === "fulfilled") {
+          entries.push(p.value.entry);
+        } else if (p.reason) {
+          setError(p.reason.message || t("Impossible de traiter une image"));
+        }
+      }
+      setForm((f) => ({ ...f, photos: [...f.photos, ...entries].slice(0, MAX_PHOTOS) }));
     } finally {
       setPicking(false);
     }
@@ -209,10 +214,21 @@ export default function ShopDashboard() {
     let photos = Array.isArray(p.photos) && p.photos.length ? p.photos : p.image ? [p.image] : [];
     try {
       const detail = await api.getProduct(p.id);
-      const fulls = detail.product.photos || [];
-      if (fulls.length) {
-        const thumbs = Array.isArray(p.photos) ? p.photos : [];
-        photos = fulls.map((full, i) => ({ thumb: thumbs[i] || full, full }));
+      const dp = detail.product || {};
+      const mediums = Array.isArray(dp.photos) ? dp.photos : [];
+      if (mediums.length) {
+        const thumbs =
+          Array.isArray(dp.photos_thumb) && dp.photos_thumb.length
+            ? dp.photos_thumb
+            : Array.isArray(p.photos)
+              ? p.photos
+              : [];
+        const larges = Array.isArray(dp.photos_large) ? dp.photos_large : [];
+        photos = mediums.map((medium, i) => ({
+          thumb: thumbs[i] || medium,
+          medium,
+          large: larges[i] || medium,
+        }));
       }
     } catch {
       /* silencieux */
@@ -942,6 +958,19 @@ export default function ShopDashboard() {
                     {form.photos.map((photo, i) => (
                       <div key={i} className="photo-thumb">
                         <img src={photo.thumb || photo} alt={`${t("Photo")} ${i + 1}`} />
+                        {photo.meta && photo.meta.original_bytes ? (
+                          <span
+                            className="photo-saved"
+                            title={`${photo.meta.strategy || "optimisée"} — ${formatBytes(photo.meta.original_bytes)} → ${formatBytes(photo.meta.bytes)} · ${photo.meta.original_width}×${photo.meta.original_height}px`}
+                          >
+                            {formatBytes(photo.meta.bytes)} · -
+                            {Math.max(
+                              0,
+                              Math.round((1 - photo.meta.bytes / photo.meta.original_bytes) * 100)
+                            )}
+                            %
+                          </span>
+                        ) : null}
                         <button
                           type="button"
                           className="photo-remove"

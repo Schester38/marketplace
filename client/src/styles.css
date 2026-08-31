@@ -2734,6 +2734,25 @@ textarea {
   color: #fff;
   font-size: 0.7rem;
   cursor: pointer;
+  z-index: 2;
+}
+/* Badge « gain d'optimisation » affiché sous chaque aperçu photo */
+.photo-saved {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  text-align: center;
+  color: #fff;
+  background: rgba(2, 90, 60, 0.88);
+  border-radius: 6px;
+  padding: 1px 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 
 .price-old {

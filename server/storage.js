@@ -1,9 +1,14 @@
 import crypto from "crypto";
+import { q } from "./db.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "photos";
+
+// Les URLs produites sont immuables (hash du contenu + uuid) : elles peuvent
+// être servies par le CDN / cache navigateur « pour toujours ».
+const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 // Le Storage valide l'Authorization Bearer comme JWT.
 // - Clé legacy (eyJ...) : utilisée telle quelle.
@@ -37,14 +42,6 @@ export function isStoredUrl(s) {
 export function isBase64Photo(s) {
   return typeof s === "string" && /^data:image\//.test(s);
 }
-
-const EXT_BY_TYPE = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/webp": "webp",
-  "image/gif": "gif",
-};
-
 export function dataUriParts(uri) {
   const m = /^data:(image\/[a-z+]+);base64,(.+)$/.exec(String(uri || ""));
   if (!m) return null;
@@ -89,39 +86,91 @@ export async function ensureBucket() {
   throw new Error(`Création du bucket ${BUCKET} échouée (${res.status}) : ${text.slice(0, 160)}`);
 }
 
-export async function uploadBuffer(buffer, type, folder = "products") {
+const EXT_BY_TYPE = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/avif": "avif",
+  "image/gif": "gif",
+  "image/heic": "heic",
+  "image/heif": "heif",
+};
+
+/** Empreinte courte (48 bits) d'un buffer — déduplication des doublons exacts. */
+function contentHash(buffer) {
+  return crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12);
+}
+
+/**
+ * Upload un buffer vers Storage, sous `{folder}/{hash}/{variant}.{ext}`.
+ * - Le dossier par hash permet de DÉDUPLIQUER : un contenu identique importé
+ *   deux fois partage le même fichier (aucune copie en double).
+ * - `HEAD` avant l'upload : si le fichier existe déjà, on réutilise son URL
+ *   (zéro octet transféré, aucune fuite de fichiers orphelins).
+ * - Cache-Control immutable : les URLs sont versionnées par contenu/uuids.
+ */
+export async function uploadBuffer(buffer, type, folder = "products", variant = "auto") {
   const ext = EXT_BY_TYPE[type] || "bin";
-  const path = `${folder}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-  const res = await request(`object/${BUCKET}/${path}`, {
+  const path = `${folder}/${contentHash(buffer)}/${variant}.${ext}`;
+  const fullPath = `object/${BUCKET}/${path}`;
+
+  const head = await request(fullPath, { method: "HEAD" });
+  if (head.ok || head.status === 200) return publicUrl(path);
+
+  const res = await request(fullPath, {
     method: "POST",
-    headers: { "Content-Type": type },
+    headers: {
+      "Content-Type": type,
+      "Cache-Control": IMMUTABLE_CACHE_CONTROL,
+    },
     body: buffer,
   });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Upload Storage échoué (${res.status}) : ${text.slice(0, 160)}`);
-  }
-  return publicUrl(path);
+  if (res.ok || res.status === 409) return publicUrl(path);
+  const text = await res.text().catch(() => "");
+  throw new Error(`Upload Storage échoué (${res.status}) : ${text.slice(0, 160)}`);
 }
 
-export async function uploadPhoto(dataUri, folder = "products") {
+export async function uploadPhoto(dataUri, folder = "products", variant = "auto") {
   const parts = dataUriParts(dataUri);
   if (!parts) return null;
-  return uploadBuffer(parts.buffer, parts.type, folder);
+  return uploadBuffer(parts.buffer, parts.type, folder, variant);
 }
 
-// photoList : [{thumb, full}] avec des data URIs et/ou des URLs déjà stockées.
-// Les URLs existantes sont conservées telles quelles (édition sans re-upload).
+/**
+ * Enregistre les photos d'un produit/offre.
+ * Format d'entrée : liste d'entrées { thumb?, medium?, large?, full?, meta? }
+ * dont les valeurs sont des data-URIs (à uploader) ou des URLs déjà stockées
+ * (conservées telles quelles — édition sans re-upload).
+ * Rétrocompatible : l'ancien format { thumb, full } est accepté (full est alors
+ * mappé sur medium/large comme avant).
+ */
 export async function storePhotos(photoList, folder = "products") {
   const out = [];
   for (const ph of photoList || []) {
-    if (!ph) continue;
+    if (!ph || typeof ph !== "object") continue;
     const entry = {};
-    if (isStoredUrl(ph.thumb)) entry.thumb = ph.thumb;
-    else if (isBase64Photo(ph.thumb)) entry.thumb = await uploadPhoto(ph.thumb, folder);
-    if (isStoredUrl(ph.full)) entry.full = ph.full;
-    else if (isBase64Photo(ph.full)) entry.full = await uploadPhoto(ph.full, folder);
-    if (entry.thumb || entry.full) out.push(entry);
+    const variants = [
+      ["thumb", ph.thumb],
+      ["medium", ph.medium],
+      ["large", ph.large],
+      ["full", ph.full],
+    ];
+    for (const [name, value] of variants) {
+      if (typeof value !== "string" || !value) continue;
+      if (isStoredUrl(value)) {
+        entry[name] = value;
+      } else if (isBase64Photo(value)) {
+        const url = await uploadPhoto(value, folder, name === "full" ? "full" : name);
+        if (url) entry[name] = url;
+      }
+    }
+    // Rétrocompat : un `full` legacy se comporte comme le « large » de l'époque.
+    if (!entry.medium && entry.full) entry.medium = entry.full;
+    if (!entry.large && entry.full) entry.large = entry.full;
+    if (entry.thumb || entry.medium || entry.large) {
+      if (ph.meta && typeof ph.meta === "object") entry.meta = ph.meta;
+      out.push(entry);
+    }
   }
   return out.slice(0, 3);
 }
@@ -146,7 +195,8 @@ function storageKeyOf(value) {
   return decodeURIComponent(value.slice(OBJECT_PREFIX.length));
 }
 
-// Extrait les clés Storage d'un photos JSON : [{thumb, full}] ou tableau de strings.
+// Extrait les clés Storage d'un photos JSON : [{thumb, medium, large, full}]
+// ou tableau de strings.
 export function collectStorageKeys(photosJson) {
   let entries = [];
   try {
@@ -160,7 +210,7 @@ export function collectStorageKeys(photosJson) {
       const k = storageKeyOf(e);
       if (k) keys.push(k);
     } else if (e && typeof e === "object") {
-      for (const field of ["thumb", "full"]) {
+      for (const field of ["thumb", "medium", "large", "full"]) {
         const k = storageKeyOf(e[field]);
         if (k) keys.push(k);
       }
@@ -169,13 +219,51 @@ export function collectStorageKeys(photosJson) {
   return [...new Set(keys)];
 }
 
-// Supprime les fichiers du bucket (best-effort). Ne touche que les objets de CE projet.
-export async function deleteStorageKeys(keys) {
+/** Échappe les jokers LIKE (% _ \). */
+function likeEscaped(key) {
+  return key.replace(/[\\%_]/g, (c) => `\\${c}`);
+}
+
+/**
+ * Vrai si la clé Storage est toujours référencée par un autre produit, une
+ * offre ou une commande (sauf le produit en cours d'édition). Évite de
+ * supprimer un fichier partagé (déduplication) ou cité dans des commandes.
+ */
+async function isKeyStillUsed(key, excludeProductId) {
+  const pat = `%${likeEscaped(key)}%`;
+  const rows = await q(
+    `SELECT 1 FROM products WHERE id <> $1 AND (photos LIKE $2 OR image LIKE $2)
+     UNION ALL SELECT 1 FROM offers WHERE photos LIKE $2
+     UNION ALL SELECT 1 FROM orders WHERE items::text LIKE $2
+     LIMIT 1`,
+    [excludeProductId ?? -1, pat]
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Supprime les fichiers du bucket (best-effort). Ne touche que les objets de CE
+ * projet et seulement ceux qui ne sont plus référencés (sûreté : déduplication,
+ * commandes historiques). Passe `force: true` pour tout supprimer.
+ */
+export async function deleteStorageKeys(keys, { excludeProductId, force = false } = {}) {
   if (!keys || !keys.length) return 0;
+  if (!force) {
+    const unused = [];
+    for (const key of keys) {
+      if (typeof key !== "string") continue;
+      try {
+        if (!(await isKeyStillUsed(key, excludeProductId))) unused.push(key);
+      } catch (err) {
+        console.error("[storage] vérification de référence échouée, fichier conservé :", err.message);
+      }
+    }
+    keys = unused;
+  }
+  if (!keys.length) return 0;
   const token = apiToken();
   let deleted = 0;
   for (const key of keys) {
-    if (typeof key !== "string") continue;
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${key}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}`, apikey: token },

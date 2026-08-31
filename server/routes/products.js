@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { q } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
-import { listPhotos, fullPhotos, normalizeUploadPhotos } from "../photo.js";
+import { listPhotos, mediumPhotos, fullPhotos, normalizeUploadPhotos } from "../photo.js";
 import { defaultCurrencyFor, validCurrency } from "../currency.js";
 import { storePhotos, collectStorageKeys, deleteStorageKeys } from "../storage.js";
 import { createProductSchema, productListQuerySchema, citiesQuerySchema } from "../validators.js";
@@ -31,9 +31,12 @@ function cachePublic(res, sMaxAge = 60) {
 }
 
 function productRow(p, mode = "list") {
-  const photos = mode === "detail" ? fullPhotos(p.photos) : listPhotos(p.photos);
-  const image =
-    (mode === "detail" ? fullPhotos(p.photos) : listPhotos(p.photos))[0] || p.image || null;
+  const thumbs = listPhotos(p.photos);
+  const mediums = mediumPhotos(p.photos);
+  const larges = fullPhotos(p.photos);
+  // Catalogue/rails → thumb ; fiche produit → medium (zoom large dispo à part).
+  const photos = mode === "detail" ? mediums : thumbs;
+  const image = photos[0] || p.image || null;
   const {
     n,
     n_month,
@@ -53,6 +56,7 @@ function productRow(p, mode = "list") {
     ...rest,
     photos,
     image,
+    ...(mode === "detail" ? { photos_thumb: thumbs, photos_large: larges } : {}),
     rating_avg: Number(rating_avg || 0),
     review_count: Number(review_count || 0),
     price,
@@ -346,7 +350,7 @@ router.delete("/:id", authRequired, roleRequired(...OWNER_ROLES), async (req, re
   const storageKeys = collectStorageKeys(product.photos);
   await q("DELETE FROM products WHERE id = $1", [product.id]);
   try {
-    const removed = await deleteStorageKeys(storageKeys);
+    const removed = await deleteStorageKeys(storageKeys, { excludeProductId: product.id });
     if (removed)
       console.warn(`[storage] ${removed} fichier(s) supprimé(s) pour le produit ${product.id}`);
   } catch (err) {
@@ -404,6 +408,7 @@ router.put(
     if (product.shop_id !== req.user.id) {
       return res.status(403).json({ error: "Ce produit ne vous appartient pas" });
     }
+    const oldKeys = collectStorageKeys(product.photos);
     const {
       name,
       description,
@@ -450,6 +455,20 @@ router.put(
     const updatedProduct = productRow(
       (await q(SELECT_PRODUCT + " WHERE p.id = $1", [updated[0].id]))[0]
     );
+    // Nettoyage des fichiers remplacés : on supprime les anciennes clés Storage
+    // qui ne sont plus référencées par ce produit (ni par un autre produit, une
+    // offre ou une commande). Best-effort, n'empêche jamais la réponse.
+    const newKeys = collectStorageKeys(JSON.stringify(photoList));
+    const orphanKeys = oldKeys.filter((k) => !newKeys.includes(k));
+    if (orphanKeys.length) {
+      try {
+        const removed = await deleteStorageKeys(orphanKeys, { excludeProductId: product.id });
+        if (removed)
+          console.warn(`[storage] ${removed} ancien(s) fichier(s) nettoyé(s) pour le produit ${product.id}`);
+      } catch (err) {
+        console.error("[storage] nettoyage après édition échoué :", err.message);
+      }
+    }
     res.json({ product: updatedProduct });
   }
 );

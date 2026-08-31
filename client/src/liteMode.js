@@ -47,6 +47,6 @@ export function useLite() {
 export function pickPhoto(entry, lite) {
   if (!entry) return null;
   if (typeof entry === "string") return entry;
-  if (lite) return entry.thumb || entry.full || null;
-  return entry.full || entry.thumb || null;
+  if (lite) return entry.thumb || entry.medium || entry.full || entry.large || null;
+  return entry.large || entry.medium || entry.full || entry.thumb || null;
 }
