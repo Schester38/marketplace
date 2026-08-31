@@ -23,21 +23,6 @@ export function signToken(user) {
   );
 }
 
-// Comme authRequired, mais ne rejette jamais : si un Bearer token valide est
-// présent, req.user est rempli, sinon la requête continue « non connectée ».
-// Utilisé sur les routes publiques qui gèrent du contenu connecté (ex :
-// /api/sales/livreur qui filtre les livraisons du livreur quand il est connecté).
-export function authOptional(req, res, next) {
-  const header = req.headers.authorization;
-  if (!header || !header.startsWith("Bearer ")) return next();
-  try {
-    req.user = jwt.verify(header.slice(7), SECRET);
-  } catch {
-    /* session invalide ou expirée : on considère l'utilisateur non connecté */
-  }
-  next();
-}
-
 export function authRequired(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith("Bearer ")) {

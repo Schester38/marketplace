@@ -1,13 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
-import { countrySymbol, categoryEmoji } from "../config.js";
+import {
+  countrySymbol,
+  categoryEmoji,
+  OPERATORS_BY_COUNTRY,
+  DEFAULT_OPERATORS,
+} from "../config.js";
 import Seo from "../components/Seo.jsx";
 import Logo from "../components/Logo.jsx";
 import { formatMoney } from "../components/ProductCard.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
+import { addIkeepayFee, formatIkeepayFee } from "../utils.js";
+
 export default function PurchasePage() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -18,6 +25,7 @@ export default function PurchasePage() {
   const linkCode = (params.get("code") || "").trim().toUpperCase();
   const [product, setProduct] = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [shopWallets, setShopWallets] = useState(null);
   const [form, setForm] = useState({
     seller_code: linkCode,
     buyer_name: "",
@@ -25,6 +33,11 @@ export default function PurchasePage() {
     buyer_address: "",
     buyer_phone: "",
   });
+  const [paymentMethod, setPaymentMethod] = useState("mobile");
+  const [automaticOperator, setAutomaticOperator] = useState("ORANGE");
+  const [paymentLink, setPaymentLink] = useState(null);
+  const [paymentError, setPaymentError] = useState("");
+  const [copiedWallet, setCopiedWallet] = useState(null);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [purchase, setPurchase] = useState(null);
@@ -33,9 +46,25 @@ export default function PurchasePage() {
   useEffect(() => {
     api
       .getProduct(id)
-      .then((d) => setProduct(d.product))
+      .then((d) => {
+        setProduct(d.product);
+        if (d.product && d.product.shop_id) {
+          api
+            .shopPaymentMethods(d.product.shop_id)
+            .then((r) => setShopWallets(r.methods))
+            .catch(() => {});
+        }
+      })
       .catch(() => setNotFound(true));
   }, [id]);
+
+  const copyWallet = async (value) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedWallet(value);
+      setTimeout(() => setCopiedWallet(null), 1500);
+    } catch {}
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -49,10 +78,23 @@ export default function PurchasePage() {
         buyer_city: form.buyer_city,
         buyer_address: form.buyer_address,
         buyer_phone: form.buyer_phone,
-        // Le paiement se règle à la livraison auprès du livreur.
-        payment_method: "espece",
+        payment_method: paymentMethod,
       });
       setPurchase(d.sale || null);
+      if (paymentMethod === "automatic" && d.sale) {
+        try {
+          const payment = await api.ikeepayPayin({
+            sale_id: d.sale.id,
+            confirm_code: d.sale.confirm_code,
+            country: user?.country || d.sale.shop_country || product.shop_country,
+            phone: form.buyer_phone,
+            operator: automaticOperator,
+          });
+          setPaymentLink(payment.payment_link || null);
+        } catch (paymentErr) {
+          setPaymentError(paymentErr.message);
+        }
+      }
       setDone(true);
     } catch (err) {
       setError(err.message);
@@ -159,6 +201,19 @@ export default function PurchasePage() {
               <CopyCode code={purchase.confirm_code || purchase.buyer_code} />
             </div>
           )}
+          {paymentLink && (
+            <a className="btn btn-primary" href={paymentLink} target="_blank" rel="noreferrer">
+              🔗 {t("Ouvrir le paiement automatique")}
+            </a>
+          )}
+          {paymentError && (
+            <p className="error">
+              {t(
+                "Commande enregistrée, mais le paiement automatique n’a pas pu être lancé : {error}",
+                { error: paymentError }
+              )}
+            </p>
+          )}
           {purchase && purchase.id && (
             <Link
               className="btn btn-primary"
@@ -226,14 +281,122 @@ export default function PurchasePage() {
             />
 
             <>
-              <div className="wallet-card">
-                <p className="hint" style={{ marginTop: 0 }}>
+              <div className="payment-options">
+                <button
+                  type="button"
+                  className={`payment-option ${paymentMethod === "espece" ? "active" : ""}`}
+                  onClick={() => setPaymentMethod("espece")}
+                >
+                  💵 {t("En espèces (à la livraison)")}
+                </button>
+                <button
+                  type="button"
+                  className={`payment-option ${paymentMethod === "mobile" ? "active" : ""}`}
+                  onClick={() => setPaymentMethod("mobile")}
+                >
+                  📱 {t("Virement Mobile Money direct")}
+                </button>
+                <button
+                  type="button"
+                  className={`payment-option ${paymentMethod === "automatic" ? "active" : ""}`}
+                  onClick={() => setPaymentMethod("automatic")}
+                >
+                  ⚡ {t("Paiement automatique")}
+                </button>
+              </div>
+
+              {paymentMethod === "automatic" && (
+                <div className="wallet-card">
+                  <label>{t("Opérateur de paiement")}</label>
+                  <select
+                    className="input"
+                    value={automaticOperator}
+                    onChange={(e) => setAutomaticOperator(e.target.value)}
+                  >
+                    {(OPERATORS_BY_COUNTRY[user?.country] || DEFAULT_OPERATORS).map((operator) => (
+                      <option key={operator} value={operator}>
+                        {operator}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="fee-summary" style={{ marginTop: 10 }}>
+                    <p>
+                      <span className="label">{t("Montant article")} :</span>{" "}
+                      <strong>
+                        {formatMoney(displayPrice)} {symbol}
+                      </strong>
+                    </p>
+                    <p className="hint">
+                      {t("Frais Ikeepay (6%)")} :{" "}
+                      <strong>
+                        {formatMoney(formatIkeepayFee(displayPrice))} {symbol}
+                      </strong>
+                    </p>
+                    <p>
+                      <span className="label">{t("Total à payer")} :</span>{" "}
+                      <strong className="price-total">
+                        {formatMoney(addIkeepayFee(displayPrice))} {symbol}
+                      </strong>
+                    </p>
+                  </div>
+                  <p className="hint">
+                    {t(
+                      "Le paiement est encaissé par l’agrégateur. Selon l’opérateur, un lien de paiement peut être ouvert."
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {paymentMethod === "mobile" && (
+                <div className="card wallet-card">
+                  {shopWallets && shopWallets.wallets.length > 0 ? (
+                    <>
+                      <p className="hint" style={{ marginTop: 0 }}>
+                        {t("Envoyez le paiement à la boutique sur l'un de ces portefeuilles :")}
+                      </p>
+                      {shopWallets.full_name && (
+                        <p className="hint">
+                          {t("Titulaire : {name}", { name: shopWallets.full_name })}
+                        </p>
+                      )}
+                      <div className="wallet-list">
+                        {shopWallets.wallets.map((w) => (
+                          <div className="wallet-row" key={w.name}>
+                            <span className="wallet-name">{w.name}</span>
+                            <span className="wallet-value">{w.value}</span>
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              onClick={() => copyWallet(w.value)}
+                            >
+                              {copiedWallet === w.value ? t("Copié !") : t("Copier")}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="hint">
+                        {t(
+                          "Indiquez votre nom et votre numéro lors du transfert pour faciliter la livraison."
+                        )}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="hint" style={{ marginTop: 0 }}>
+                      {t(
+                        "La boutique n'a pas encore configuré ses portefeuilles de paiement. Paiement à la livraison recommandé."
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
+              {error && <p className="error">{error}</p>}
+              {paymentMethod === "mobile" && product && (
+                <p className="hint" style={{ marginTop: 8 }}>
                   {t(
-                    "💵 Paiement à la livraison : réglez la commande au livreur en espèces ou par Mobile Money, selon ce qui est convenu avec la boutique."
+                    "Paiement manuel : espèces ou virement Mobile Money direct. Aucun frais de plateforme."
                   )}
                 </p>
-              </div>
-              {error && <p className="error">{error}</p>}
+              )}
             </>
             <button className="btn btn-primary btn-block" disabled={submitting}>
               {submitting ? "…" : `✅ ${t("Confirmer la Commande")}`}

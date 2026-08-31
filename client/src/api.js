@@ -9,11 +9,6 @@ async function request(path, options = {}, retries = 1) {
     const res = await fetch(API + path, { ...options, headers });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      // Accès fermé par l'admin (« Fermer ») ou adhésion expirée : signaler
-      // globalement pour que AuthProvider redirige vers /adhesion.
-      if (res.status === 402 && data.code === "MEMBERSHIP_REQUIRED") {
-        window.dispatchEvent(new CustomEvent("membership-required"));
-      }
       const err = new Error(data.error || `Erreur ${res.status}`);
       err.status = res.status;
       err.code = data.code;
@@ -112,16 +107,6 @@ export const api = {
     request(`/sales/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }),
   livreurSales: (shopCode) =>
     request("/sales/livreur" + (shopCode ? `?shop_code=${encodeURIComponent(shopCode)}` : "")),
-  // Annuaire des livreurs pour les boutiques (/shop/livreurs)
-  listLivreurs: (params = {}) => {
-    const qs = new URLSearchParams(
-      Object.fromEntries(
-        Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
-      )
-    ).toString();
-    return request("/livreurs" + (qs ? `?${qs}` : ""));
-  },
-  livreurOptions: () => request("/livreurs/options"),
   deliverSale: (id, payload) =>
     request(`/sales/${id}/deliver`, { method: "POST", body: JSON.stringify(payload) }),
   deleteDeliveredSale: (id) => request(`/sales/${id}/delivered`, { method: "DELETE" }),
@@ -159,7 +144,6 @@ export const api = {
   getLivreurPaymentMethods: () => request("/livreur/payment-methods"),
   updateLivreurPaymentMethods: (payload) =>
     request("/livreur/payment-methods", { method: "PUT", body: JSON.stringify(payload) }),
-  walletMe: () => request("/wallet/me"),
   purchaseCreate: (payload) =>
     request("/purchases", { method: "POST", body: JSON.stringify(payload) }),
   purchasesMy: () => request("/purchases/my"),
@@ -196,29 +180,18 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ admin_approved: adminApproved }),
     }),
-  adminSetVerified: (id, verified) =>
-    adminRequest(`/admin/users/${id}/verify`, {
-      method: "PATCH",
-      body: JSON.stringify({ verified }),
-    }),
-  // NB : pas de suppression de comptes utilisateurs (boutons « Supprimer »
-  // sans effet sur les utilisateurs) — seule la suppression des produits
-  // publiés est réelle.
+  adminDeleteUser: (id) => adminRequest(`/admin/users/${id}`, { method: "DELETE" }),
   adminProducts: () => adminRequest("/admin/products"),
   adminDeleteProduct: (id) => adminRequest(`/admin/products/${id}`, { method: "DELETE" }),
   adminMessages: () => adminRequest("/admin/messages"),
   adminSendMessage: (payload) =>
     adminRequest("/admin/messages", { method: "POST", body: JSON.stringify(payload) }),
-  adminDeleteMessage: (id) => adminRequest(`/admin/messages/${id}`, { method: "DELETE" }),
-  adminResendMessage: (id) => adminRequest(`/admin/messages/${id}/resend`, { method: "POST" }),
   adminLogs: (limit = 100) => adminRequest(`/logs/list?limit=${limit}`),
   adminVisits: (days = 30, country = "") =>
     adminRequest(
       `/admin/visits?days=${days}${country ? `&country=${encodeURIComponent(country)}` : ""}`
     ),
   adminVisitsReset: () => adminRequest("/admin/visits/reset", { method: "POST" }),
-  adminReferrals: (search = "") =>
-    adminRequest("/admin/referrals" + (search ? `?search=${encodeURIComponent(search)}` : "")),
   popupMessage: () => request("/messages/popup"),
   ackMessage: (id) => request(`/messages/${id}/ack`, { method: "POST" }),
   chat: (payload) => request("/chat", { method: "POST", body: JSON.stringify(payload) }),
@@ -228,16 +201,16 @@ export const api = {
   adminSendNewsletter: (payload) =>
     adminRequest("/newsletter/send", { method: "POST", body: JSON.stringify(payload) }),
   flashPromotions: () => request("/flash-promotions"),
-  myFlashPromotions: () => request("/flash-promotions/mine"),
   createFlashPromotion: (payload) =>
     request("/flash-promotions", { method: "POST", body: JSON.stringify(payload) }),
-  deleteFlashPromotion: (id) =>
-    request(`/flash-promotions/${id}`, { method: "DELETE" }),
   trending: () => request("/metrics/trending"),
   createDonation: (payload) =>
     request("/donations", { method: "POST", body: JSON.stringify(payload) }),
-  // NOTE : les fonctions iKeePay (ikeepayDonation, ikeepayPayin,
-  // membershipPayin, ikeepayConfirm) ont été supprimées avec le système
-  // iKeePay. Les paiements sont exclusivement manuels.
+  ikeepayDonation: (payload) =>
+    request("/donations/ikeepay", { method: "POST", body: JSON.stringify(payload) }),
+  ikeepayPayin: (payload) =>
+    request("/payments/ikeepay/payin", { method: "POST", body: JSON.stringify(payload) }),
+  membershipPayin: (payload) =>
+    request("/payments/ikeepay/membership", { method: "POST", body: JSON.stringify(payload) }),
   trackViews: (items) => request("/views", { method: "POST", body: JSON.stringify({ items }) }),
 };

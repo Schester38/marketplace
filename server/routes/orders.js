@@ -62,9 +62,12 @@ router.post("/", optionalAuth, async (req, res, next) => {
     const rawMethod = String(payment_method || "")
       .trim()
       .toLowerCase();
-    // Paiement exclusivement manuel : mobile ou espèce (iKeePay supprimé).
     const method =
-      rawMethod === "mobile" || rawMethod === "mobile_money" ? "mobile" : "espece";
+      rawMethod === "mobile" || rawMethod === "mobile_money"
+        ? "mobile"
+        : rawMethod === "automatic"
+          ? "automatic"
+          : "espece";
 
     const result = await withTransaction(async (tx) => {
       const createdSales = [];

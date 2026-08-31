@@ -8,8 +8,6 @@ import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
-import MiniChart from "../components/MiniChart.jsx";
-import { dailyBuckets } from "../utils.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 
 const SALE_STATUS = {
@@ -76,12 +74,6 @@ export default function SellerDashboard() {
   }, []);
 
   useRefreshOnFocus(load);
-
-  // Temps réel : rafraîchit ventes et commissions toutes les 30 s
-  useEffect(() => {
-    const id = setInterval(() => load(), 30000);
-    return () => clearInterval(id);
-  }, []);
 
   const generateCode = async () => {
     setCodeLoading(true);
@@ -405,19 +397,6 @@ export default function SellerDashboard() {
         </section>
       )}
 
-      <section className="card" style={{ marginBottom: 14 }}>
-        <h2>📈 {t("Commissions des 14 derniers jours")}</h2>
-        <MiniChart
-          label={t("Commission")}
-          valueSuffix={` ${countrySymbol(user?.country)}`}
-          data={dailyBuckets(sales, {
-            days: 14,
-            dateKey: "created_at",
-            valueFn: (s) => Number(s.commission || 0),
-          })}
-        />
-      </section>
-
       {success && <p className="success">{success}</p>}
       {error && <p className="error">{error}</p>}
 
@@ -479,13 +458,8 @@ export default function SellerDashboard() {
               });
             const g = groups.get(key);
             g.items.push(s);
-            if (s.status === "delivered" && !s.paid) {
-              g.pending += Number(s.commission || 0);
-              // « Réclamé » uniquement si une commission ENCORE EN ATTENTE a
-              // été réclamée — un badge sur une vente déjà payée ferait croire
-              // que la nouvelle commission a été réclamée automatiquement.
-              if (s.commission_claimed_at) g.anyClaimed = true;
-            }
+            if (s.status === "delivered" && !s.paid) g.pending += Number(s.commission || 0);
+            if (s.commission_claimed_at) g.anyClaimed = true;
           }
           const gs = [...groups.values()]
             .filter((g) => g.pending > 0)
@@ -694,10 +668,9 @@ export default function SellerDashboard() {
                   });
                 const g = groups.get(shopId);
                 g.items.push(s);
-                if (s.status === "delivered" && !s.referral_paid) {
+                if (s.status === "delivered" && !s.referral_paid)
                   g.pending += Number(s.referral_commission || 0);
-                  if (s.referral_claimed_at) g.anyClaimed = true;
-                }
+                if (s.referral_claimed_at) g.anyClaimed = true;
               }
               const gs = [...groups.values()]
                 .filter((g) => g.pending > 0)

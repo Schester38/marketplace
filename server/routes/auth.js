@@ -166,14 +166,8 @@ router.post(
       if (!collision.length) break;
       referenceNumber = `MBP-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
     }
-    // Accès direct après inscription pour les rôles pro (boutique / vendeur /
-    // créateur) : le compte est approuvé d'office (admin_approved = TRUE) et
-    // accède immédiatement à son espace, sans payer les frais d'adhésion.
-    // L'admin peut toujours bloquer plus tard via le bouton « Fermer »
-    // (admin_approved = FALSE).
-    const proApproved = ["shop", "seller", "creator"].includes(finalRole);
     const created = await q(
-      `INSERT INTO users (name, email, password, role, country, phone, referred_by, accepted_terms_at, email_verified, reference_number, membership_fee, admin_approved) VALUES ($1, $2, $3, $4, $5, $6, $7, now(), FALSE, $8, $9, $10) RETURNING id`,
+      "INSERT INTO users (name, email, password, role, country, phone, referred_by, accepted_terms_at, email_verified, reference_number, membership_fee) VALUES ($1, $2, $3, $4, $5, $6, $7, now(), FALSE, $8, $9) RETURNING id",
       [
         String(name).trim(),
         emailNorm,
@@ -184,7 +178,6 @@ router.post(
         referredBy,
         referenceNumber,
         MEMBERSHIP_FEES[finalRole] || null,
-        proApproved,
       ]
     );
     const user = (await q("SELECT * FROM users WHERE id = $1", [created[0].id]))[0];
@@ -404,11 +397,8 @@ router.get(
             cleanRole = "seller";
           }
         }
-        // idem inscription classique : les rôles pro accèdent directement,
-        // sans adhésion pour l'instant (l'admin peut bloquer via « Fermer »).
-        const googleProApproved = ["shop", "seller", "creator"].includes(cleanRole);
         const created = await q(
-          `INSERT INTO users (name, email, password, provider, role, country, referred_by, accepted_terms_at, email_verified, email_verified_at, reference_number, membership_fee, admin_approved) VALUES ($1, $2, NULL, 'google', $3, $4, $5, now(), TRUE, now(), $6, $7, $8) RETURNING id`,
+          "INSERT INTO users (name, email, password, provider, role, country, referred_by, accepted_terms_at, email_verified, email_verified_at, reference_number, membership_fee) VALUES ($1, $2, NULL, 'google', $3, $4, $5, now(), TRUE, now(), $6, $7) RETURNING id",
           [
             profile.name,
             profile.email,
@@ -417,7 +407,6 @@ router.get(
             referredBy,
             `MBP-${crypto.randomBytes(5).toString("hex").toUpperCase()}`,
             MEMBERSHIP_FEES[cleanRole] || null,
-            googleProApproved,
           ]
         );
         user = (await q("SELECT * FROM users WHERE id = $1", [created[0].id]))[0];

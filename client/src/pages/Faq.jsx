@@ -13,7 +13,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment payer ?",
-    a: "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le bénéficiaire : en espèces à la livraison, par virement Mobile Money direct ou par virement bancaire. Aucun paiement en ligne n'est demandé : vous payez le prix affiché, sans supplément.",
+    a: "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le bénéficiaire : en espèces à la livraison, par virement Mobile Money direct ou par virement bancaire. Un paiement en ligne est aussi possible via Ikeepay pour les adhésions, les dons et les ventes ; dans ce cas, Ikeepay prélève environ 6% de frais de traitement.",
   },
   {
     q: "Comment devenir vendeur ?",
@@ -21,11 +21,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment est calculée ma commission ?",
-    a: "La boutique choisit un pourcentage de commission pour chaque produit. Ce pourcentage est affiché sur la fiche produit. Le vendeur reçoit le montant total moins la commission de la boutique. Votre commission est réglée manuellement par la boutique, sans frais, sur le numéro de mobile money enregistré dans votre espace.",
+    a: "La boutique choisit un pourcentage de commission pour chaque produit. Ce pourcentage est affiché sur la fiche produit. Le vendeur reçoit le montant total moins la commission de la boutique. Votre commission est reversée automatiquement sur le numéro de mobile money enregistré dans votre espace. Pour les paiements en ligne, les frais Ikeepay (environ 6%) sont déduits par le prestataire.",
   },
   {
     q: "Comment recevoir mes gains ?",
-    a: "Enregistrez vos coordonnées de réception dans votre espace « Paiements ». Les paiements des commissions sont réalisés manuellement par la boutique, sans frais, avec une preuve enregistrée sur la vente.",
+    a: "Enregistrez vos coordonnées de réception dans votre espace « Paiements ». Les paiements des commissions sont réalisés manuellement par la boutique, avec une preuve enregistrée sur la vente. Pour les paiements automatiques en ligne via Ikeepay, les frais de traitement d'environ 6% sont déduits par Ikeepay ; vous recevez le montant net calculé par Mboppi.",
   },
   {
     q: "Comment suivre ma commande ?",
@@ -65,7 +65,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Quels moyens de paiement sont acceptés ?",
-    a: "Paiement manuel uniquement : espèces à la livraison, transfert Mobile Money direct ou virement bancaire, convenu avec le bénéficiaire — aucune carte bancaire n'est demandée et aucun frais de traitement ne s'applique.",
+    a: "Les paiements sont directs et manuels : espèces à la livraison, transfert Mobile Money direct ou virement bancaire, selon ce qui est convenu avec le bénéficiaire. Mboppi ne demande jamais de carte bancaire et ne collecte pas les paiements. Un paiement en ligne via Ikeepay est également possible pour les adhésions, les dons et les ventes ; Ikeepay prélève alors environ 6% de frais de traitement.",
   },
   {
     q: "Comment contacter un livreur ?",
