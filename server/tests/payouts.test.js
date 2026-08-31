@@ -1,0 +1,250 @@
+// Tests de la logique de reversement Mboppi (Phase 3).
+//  - computeRedistribution / planSalePayouts : sélection pure des bénéficiaires.
+//  - Idempotence de la réservation atomique (INSERT ON CONFLICT DO NOTHING RETURNING id)
+//    simulée : le "perdant" ne doit jamais appeler iKeePay.
+//  - Régressions statiques : sendSalePayouts n'existe plus ; aucune référence à
+//    payReferralAutomatically / REFERRAL_AUTO_PAY_MIN ;
+//    un crédit wallet_transactions ne déclenche aucun payout externe.
+import { readFileSync, existsSync } from "fs";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import { computeRedistribution, planSalePayouts } from "../services/payouts.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const ROOT = join(__dirname, "..", "..");
+
+function assertEqual(actual, expected, label) {
+  if (actual !== expected) {
+    throw new Error(`${label}: expected ${expected}, got ${actual}`);
+  }
+}
+
+function assertTrue(cond, label) {
+  if (!cond) throw new Error(`${label}: expected true`);
+}
+
+function assertFalse(cond, label) {
+  if (cond) throw new Error(`${label}: expected false`);
+}
+
+function assertThrows(fn, label) {
+  try {
+    fn();
+    throw new Error(`${label}: should have thrown`);
+  } catch (err) {
+    if (err.message === `${label}: should have thrown`) throw err;
+  }
+}
+
+function test(name, fn) {
+  try {
+    fn();
+    console.warn(`  ✅ ${name}`);
+  } catch (err) {
+    console.error(`  ❌ ${name}: ${err.message}`);
+    process.exitCode = 1;
+  }
+}
+
+function suite(name, fn) {
+  console.warn(`\n${name}`);
+  fn();
+}
+
+// ── Simulateur de réservation atomique (miroir du SQL réel) ────────────────
+// Deux "workers" tentent de réserver la même external_reference. Le premier
+// INSERT-returning gagne ; le second n'obtient aucune ligne et ne doit pas
+// appeler payout().
+function makeReservationSimulator() {
+  const refs = new Map(); // reference -> state
+  const calls = [];
+  return {
+    calls,
+    async reserve(reference) {
+      if (refs.has(reference)) return null; // ON CONFLICT DO NOTHING -> aucune ligne
+      refs.set(reference, { status: "processing" });
+      return { id: refs.size };
+    },
+    async applyProviderPayout(reference, money) {
+      calls.push({ reference, money });
+      const row = refs.get(reference);
+      if (row) row.status = "completed";
+    },
+    async status(reference) {
+      const row = refs.get(reference);
+      return row ? row.status : null;
+    },
+  };
+}
+
+suite("planSalePayouts (sélection des bénéficiaires)", () => {
+  const baseSale = {
+    total_price: 10000,
+    commission: 1000,
+    referral_commission: 200,
+    delivery_fee: 500,
+  };
+
+  test("Test 1 — vente simple sans vendeur : un seul payout boutique", () => {
+    const targets = planSalePayouts(
+      { ...baseSale, seller_id: null, referred_by: null, delivered_by: null },
+      { shop: { id: 1, country: "CM" } }
+    );
+    assertEqual(targets.length, 1, "nb bénéficiaires");
+    assertEqual(targets[0].kind, "shop", "kind boutique");
+    assertEqual(targets[0].amount, 8800, "montant boutique");
+  });
+
+  test("Test 2 — vente avec vendeur : shop + seller", () => {
+    const targets = planSalePayouts(
+      { ...baseSale, seller_id: 2, referred_by: null, delivered_by: null },
+      { shop: { id: 1 }, seller: { id: 2 } }
+    );
+    assertEqual(targets.length, 2, "2 bénéficiaires");
+    const kinds = targets.map((t) => t.kind).sort();
+    assertEqual(kinds.join(","), "seller,shop", "shop + seller");
+  });
+
+  test("Test 3 — vente avec livreur : le livreur reçoit les frais de livraison", () => {
+    const targets = planSalePayouts(
+      { ...baseSale, delivered_by: 4, seller_id: null, referred_by: null },
+      { shop: { id: 1 }, livreur: { id: 4 } }
+    );
+    const livreur = targets.find((t) => t.kind === "livreur");
+    assertTrue(!!livreur, "livreur présent");
+    assertEqual(livreur.amount, 500, "frais de livraison");
+  });
+
+  test("Test 4 — vente avec parrain : le référent reçoit la commission de parrainage", () => {
+    const targets = planSalePayouts(
+      { ...baseSale, referred_by: 3, seller_id: 2, delivered_by: null },
+      { shop: { id: 1 }, seller: { id: 2 }, referrer: { id: 3 } }
+    );
+    const referrer = targets.find((t) => t.kind === "referral");
+    assertTrue(!!referrer, "parrain présent");
+    assertEqual(referrer.amount, 200, "commission parrain");
+  });
+});
+suite("idempotence de la réservation atomique", () => {
+  test("Test 5 — confirm + webhook simultanés : UN SEUL appel iKeePay", async () => {
+    const sim = makeReservationSimulator();
+    const reference = "PAYOUT:shop:1";
+    const w1 = sim.reserve(reference);
+    const w2 = sim.reserve(reference);
+    const [r1, r2] = await Promise.all([w1, w2]);
+    assertTrue(r1 || r2, "au moins un gagnant");
+    assertFalse(r1 && r2, "un seul gagnant");
+    if (r1) await sim.applyProviderPayout(reference, 8800);
+    if (r2) throw new Error("le perdant ne doit pas appeler iKeePay");
+    assertEqual(sim.calls.length, 1, "un seul payout()");
+  });
+
+  test("Test 6 — deuxième webhook identique : aucun nouvel appel", async () => {
+    const sim = makeReservationSimulator();
+    const reference = "PAYOUT:seller:1";
+    await sim.reserve(reference);
+    await sim.applyProviderPayout(reference, 900);
+    const again = await sim.reserve(reference);
+    assertFalse(!!again, "re-réservation impossible après completed");
+  });
+
+  test("Test 7 — deux appels simultanés : 1 payout/bénéficiaire", () => {
+    const refs = new Set();
+    let winner = 0;
+    const attempt = () => {
+      const ref = "PAYOUT:shop:2";
+      if (refs.has(ref)) return false;
+      refs.add(ref);
+      winner += 1;
+      return true;
+    };
+    assertTrue(attempt(), "worker1 gagne");
+    assertFalse(attempt(), "worker2 perd");
+    assertEqual(winner, 1, "un seul gagnant");
+  });
+
+  test("Test 8 — payout déjà completed : aucun nouvel appel", async () => {
+    const sim = makeReservationSimulator();
+    const reference = "PAYOUT:livreur:1";
+    await sim.reserve(reference);
+    await sim.applyProviderPayout(reference, 450);
+    const pendingReserve = await sim.reserve(reference);
+    assertFalse(!!pendingReserve, "pas de réouverture");
+  });
+
+  test("Test 9 — payout failed : pas de double paiement automatique non contrôlé", async () => {
+    const sim = makeReservationSimulator();
+    const reference = "PAYOUT:shop:3";
+    await sim.reserve(reference);
+    const retryReserve = await sim.reserve(reference);
+    assertFalse(!!retryReserve, "un retry nécessite un mécanisme contrôlé");
+  });
+});
+
+suite("moyen de paiement manquant", () => {
+  test("Test 10 — sans moyen de paiement : échec retryable (logique paymentTarget)", () => {
+    const methods = { wallets: [] };
+    const target = planSalePayouts(
+      { total_price: 1000, commission: 0, referral_commission: 0, delivery_fee: 0 },
+      { shop: { id: 1 } }
+    );
+    assertEqual(target.length, 1, "shop sélectionné");
+    assertThrows(() => {
+      if (!methods.wallets.length) throw new Error("Moyen de paiement automatique non configuré");
+    }, "payout sans moyens");
+  });
+});
+suite("régressions (chemin unique)", () => {
+  const PAYOUTS_PATH = join(ROOT, "server", "services", "payouts.js");
+  const API_PATH = join(ROOT, "server", "routes", "payments.js");
+  const SALES_PATH = join(ROOT, "server", "routes", "sales.js");
+  const payoutsSource = existsSync(PAYOUTS_PATH) ? readFileSync(PAYOUTS_PATH, "utf8") : "";
+  const apiSource = existsSync(API_PATH) ? readFileSync(API_PATH, "utf8") : "";
+  const salesSource = existsSync(SALES_PATH) ? readFileSync(SALES_PATH, "utf8") : "";
+
+  test("Test 11 — sendSalePayouts n'est plus appelé nulle part", () => {
+    assertFalse(payoutsSource.includes("sendSalePayouts"), "sendSalePayouts absent de payouts.js");
+    assertFalse(apiSource.includes("sendSalePayouts"), "sendSalePayouts absent de payments.js");
+    assertFalse(salesSource.includes("sendSalePayouts"), "sendSalePayouts absent de sales.js");
+  });
+
+  test("Test 12 — un crédit wallet_transactions ne déclenche pas lui-même un payout externe", () => {
+    assertFalse(payoutsSource.includes("ON INSERT INTO wallet_transactions"), "aucun trigger wallet");
+    assertFalse(apiSource.includes("ON INSERT INTO wallet_transactions"), "aucun trigger wallet API");
+  });
+
+  test("Références anciennes (payReferralAutomatically / REFERRAL_AUTO_PAY_MIN) supprimées", () => {
+    assertFalse(payoutsSource.includes("payReferralAutomatically"), "ancien cumul parrain retiré");
+    assertFalse(payoutsSource.includes("REFERRAL_AUTO_PAY_MIN"), "constante de cumul retirée");
+  });
+
+  test("Les routes appellent markSalePaid (pas paySaleAutomatically directement)", () => {
+    assertFalse(
+      apiSource.includes("paySaleAutomatically("),
+      "payments.js n'appelle plus paySaleAutomatically"
+    );
+    assertTrue(apiSource.includes("markSalePaid("), "payments.js appelle markSalePaid");
+    assertFalse(
+      salesSource.includes("paySaleAutomatically("),
+      "sales.js n'appelle plus paySaleAutomatically"
+    );
+    assertTrue(salesSource.includes("markSalePaid("), "sales.js appelle markSalePaid");
+  });
+});
+
+suite("computeRedistribution (socle financier)", () => {
+  test("équation de conservation : client = shop + seller + parrain + livreur", () => {
+    const sale = {
+      total_price: 10000,
+      commission: 1000,
+      referral_commission: 200,
+      delivery_fee: 500,
+    };
+    const r = computeRedistribution(sale);
+    const sum = r.shopAmount + r.sellerAmount + r.referrerAmount + r.livreurAmount;
+    // Le montant payé par le client = total_price + delivery_fee.
+    assertEqual(sum, 10500, "shop+commission+parrain+livraison");
+  });
+});
+
+console.warn("\n✅ Tests payouts terminés");

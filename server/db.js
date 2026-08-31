@@ -59,7 +59,12 @@ export async function ensureAutomaticPayoutColumns() {
     ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
     ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS error TEXT;
     ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
-                    `);
+    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS retryable BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE automatic_payouts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT now();
+    ALTER TABLE automatic_payouts DROP CONSTRAINT IF EXISTS automatic_payouts_status_check;
+    ALTER TABLE automatic_payouts ADD CONSTRAINT automatic_payouts_status_check CHECK (status IN ('pending', 'processing', 'completed', 'failed'));
+  `);
 }
 
 export async function withTransaction(fn) {
@@ -420,10 +425,13 @@ export async function initDb() {
       amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
       currency TEXT NOT NULL DEFAULT 'XAF',
       fee NUMERIC(14,2) DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
       provider_reference TEXT,
       error TEXT,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      retryable BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       completed_at TIMESTAMPTZ
     );
     CREATE INDEX IF NOT EXISTS idx_automatic_payouts_user ON automatic_payouts(user_id, created_at DESC);
@@ -514,6 +522,10 @@ export async function initDb() {
     ["wallet_transactions", "description", "TEXT"],
     ["wallet_transactions", "currency", "TEXT NOT NULL DEFAULT 'XAF'"],
     ["sales", "signature", "TEXT"],
+    // Phase 3 — états du reversement automatique (non destructif) :
+    ["automatic_payouts", "attempts", "INTEGER NOT NULL DEFAULT 0"],
+    ["automatic_payouts", "retryable", "BOOLEAN NOT NULL DEFAULT FALSE"],
+    ["automatic_payouts", "updated_at", "TIMESTAMPTZ NOT NULL DEFAULT now()"],
   ];
   for (const [migTable, migColumn, migDefinition] of COLUMN_MIGRATIONS) {
     try {

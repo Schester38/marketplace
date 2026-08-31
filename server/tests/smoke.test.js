@@ -1,4 +1,4 @@
-import { computeRedistribution, REFERRAL_AUTO_PAY_MIN } from "../services/payouts.js";
+import { computeRedistribution } from "../services/payouts.js";
 import {
   registerSchema,
   loginSchema,
@@ -497,30 +497,6 @@ suite("validators: salesListQuerySchema", () => {
 
   test("rejette un limit > 200", () => {
     assertInvalid(salesListQuerySchema, { limit: 999 }, "limit too high");
-  });
-});
-
-suite("referral auto-pay threshold", () => {
-  test("REFERRAL_AUTO_PAY_MIN vaut 5000 XAF", () => {
-    assertEqual(REFERRAL_AUTO_PAY_MIN, 5000, "referral threshold");
-  });
-
-  test("montant 4999 ne déclenche pas le paiement automatique", () => {
-    const amount = 4999;
-    const shouldPay = amount >= REFERRAL_AUTO_PAY_MIN;
-    assertEqual(shouldPay, false, "below threshold");
-  });
-
-  test("montant 5000 déclenche le paiement automatique", () => {
-    const amount = 5000;
-    const shouldPay = amount >= REFERRAL_AUTO_PAY_MIN;
-    assertEqual(shouldPay, true, "at threshold");
-  });
-
-  test("montant 10000 déclenche le paiement automatique", () => {
-    const amount = 10000;
-    const shouldPay = amount >= REFERRAL_AUTO_PAY_MIN;
-    assertEqual(shouldPay, true, "above threshold");
   });
 });
 

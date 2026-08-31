@@ -2,7 +2,7 @@ import { Router } from "express";
 import { q, withTransaction, ensureAutomaticPayoutColumns } from "../db.js";
 import { authRequired, roleRequired, authOptional } from "../auth.js";
 import { sendPush } from "../push.js";
-import { paySaleAutomatically } from "../services/payouts.js";
+import { markSalePaid } from "../services/payouts.js";
 
 const router = Router();
 
@@ -920,7 +920,7 @@ router.post(
     )[0];
 
     if (full.payment_status === "paid") {
-      await paySaleAutomatically(full.id);
+      await markSalePaid(full.id, {});
     }
 
     res.json({ sale: saleRow(full), ok: true });

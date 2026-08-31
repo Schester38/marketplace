@@ -14,7 +14,7 @@ import {
   completeAutomaticPayout,
   completeMembershipPayment,
   completePlatformPayout,
-  paySaleAutomatically,
+  markSalePaid,
   payoutPlatformShare,
 } from "../services/payouts.js";
 
@@ -384,7 +384,7 @@ router.post(
        WHERE id = $4`,
         [next, data.provider_reference || null, data.status || null, sale.id]
       );
-      if (next === "paid") await paySaleAutomatically(sale.id);
+      if (next === "paid") await markSalePaid(sale.id, {});
       await q("UPDATE payment_webhook_logs SET sale_id = $1, handled = TRUE WHERE id = $2", [
         sale.id,
         logged[0].id,
@@ -469,18 +469,16 @@ router.post(
       await q("SELECT * FROM sales WHERE payment_external_reference = $1", [external])
     )[0];
     if (sale) {
-      if (sale.payment_status === "paid") return res.json({ ok: true, already: true });
-      await q(
-        "UPDATE sales SET payment_status = 'paid', paid = TRUE, paid_at = COALESCE(paid_at, now()) WHERE id = $1",
-        [sale.id]
-      );
+      // markSalePaid est atomique et idempotent : il verrouille la vente
+      // (payout_initiated FALSE -> TRUE) et déclenche UN SEUL jeu de
+      // reversements. Une confirmation déjà traitée retourne already:true.
       let payouts;
       try {
-        payouts = await paySaleAutomatically(sale.id);
+        payouts = await markSalePaid(sale.id, {});
       } catch (pErr) {
         payouts = { ok: false, error: pErr.message };
       }
-      return res.json({ ok: true, sale: sale.id, payouts });
+      return res.json({ ok: true, sale: sale.id, ...payouts });
     }
 
     return res.status(404).json({ error: "Aucun paiement en attente pour cette référence" });
