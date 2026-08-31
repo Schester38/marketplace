@@ -24,20 +24,28 @@ export function generateToken() {
 /**
  * Vérification d'authenticité d'un webhook iKeePay ENTRANT.
  *
- * RÈGLE (Phase 4) :
- *  - Si `IKEEPAY_WEBHOOK_SECRET` est explicitement configuré → on vérifie le
- *    header `x-api-key` en temps constant (le secret n'est jamais loggé).
- *  - Sinon → FAIL-CLOSED. On ne réutilise JAMAIS `IKEEPAY_API_KEY` (clé des
- *    appels SORTANTS) comme secret entrant en prétendant qu'iKeePay l'envoie,
- *    car ce n'est pas documenté.
- *  - Un webhook non authentifié ne peut donc JAMAIS, à lui seul, marquer une
- *    vente payée ni déclencher un payout. Le flux nominal continue via
- *    `/ikeepay/confirm` (JWT propriétaire / jeton de transaction).
+ * FAIT CONFIRMÉ : iKeePay ne fournit AUCUN secret / signature sur les callbacks
+ * entrants. Il n'existe donc pas de mécanisme d'authentification fiable → le
+ * webhook est VOLONTAIREMENT INACTIF (fail-closed). On ne réutilise JAMAIS
+ * `IKEEPAY_API_KEY` (clé des appels SORTANTS) comme secret entrant.
+ *
+ * Conséquence : `verifyIkeepayWebhook` retourne toujours { ok: false } ; chaque
+ * webhook reçu est journalisé (`payment_webhook_logs.authenticated=false`) puis
+ * rejeté en 401 sans aucun traitement ni payout. La confirmation de paiement
+ * se fait EXCLUSIVEMENT via `/ikeepay/confirm` (JWT propriétaire pour
+ * vente/adhésion ; `confirm_token` lié à la transaction pour les dons).
+ *
+ * La structure ci-dessous préserve la possibilité d'activer une vérification
+ * SI un jour iKeePay documente un mécanisme réel — mais tant que ce n'est pas
+ * le cas, rien n'est jamais traité.
  *
  * @param {object} req requête Express (req.headers['x-api-key'])
  * @returns {{ok:boolean, reason?:'ok'|'missing_auth'|'invalid_auth'|'no_mechanism'}}
  */
 export function verifyIkeepayWebhook(req) {
+  // iKeePay ne fournit aucun secret webhook (fait confirmé) → aucune variable
+  // n'est utilisée. On garde un point de branchement explicite pour l'avenir,
+  // mais par défaut le webhook est toujours refusé.
   const secret = process.env.IKEEPAY_WEBHOOK_SECRET;
   if (!secret) {
     return { ok: false, reason: "no_mechanism" };
