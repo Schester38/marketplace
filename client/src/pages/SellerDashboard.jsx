@@ -42,6 +42,7 @@ export default function SellerDashboard() {
   const [sales, setSales] = useState([]);
   const [stats, setStats] = useState(null);
   const [referred, setReferred] = useState([]);
+  const [activationReferrals, setActivationReferrals] = useState([]);
   const [sellerCode, setSellerCode] = useState(null);
   const [codeLoading, setCodeLoading] = useState(false);
   const [error, setError] = useState("");
@@ -66,6 +67,7 @@ export default function SellerDashboard() {
     setSales(saleData.sales);
     setStats(saleData.stats);
     setReferred(saleData.referred || []);
+    setActivationReferrals(saleData.activationReferrals || []);
     setSellerCode(codeData.seller_code);
   };
 
@@ -773,6 +775,67 @@ export default function SellerDashboard() {
           </>
         )}
       </section>
+
+      {activationReferrals.length > 0 && (
+        <section className="card stats" style={{ marginTop: 14 }}>
+          <div className="stats-head">
+            <h2>🤝 {t("Vendeurs / créateurs parrainés — commission de 1 000 F")}</h2>
+          </div>
+          <p className="hint" style={{ marginTop: 0 }}>
+            {t(
+              "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F. La commission est versée manuellement par l'administration."
+            )}
+          </p>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t("Membre")}</th>
+                  <th>{t("Rôle")}</th>
+                  <th>{t("Adhésion")}</th>
+                  <th>{t("Commission")}</th>
+                  <th>{t("Statut")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activationReferrals.map((r) => {
+                  const paidMembership = !!r.membership_paid_at;
+                  return (
+                    <tr key={r.user_id}>
+                      <td>
+                        {r.name}
+                        {r.reference_number ? (
+                          <small className="hint" style={{ display: "block" }}>
+                            {t("Référence")} : {r.reference_number}
+                          </small>
+                        ) : null}
+                      </td>
+                      <td>{r.role === "creator" ? t("Créateur") : t("Vendeur")}</td>
+                      <td>
+                        {paidMembership ? (
+                          <span className="badge badge-paid">{t("Payée")}</span>
+                        ) : (
+                          <span className="badge badge-pending">{t("Non payée")}</span>
+                        )}
+                      </td>
+                      <td>
+                        {formatMoney(r.commission_amount || 1000)} {r.commission_currency || "XAF"}
+                      </td>
+                      <td>
+                        {paidMembership ? (
+                          <span className="badge badge-warn">{t("En attente")}</span>
+                        ) : (
+                          <span className="badge badge-pending">{t("En attente d'adhésion")}</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {proofSale && (
         <div className="modal-overlay" onClick={() => setProofSale(null)}>

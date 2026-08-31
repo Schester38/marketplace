@@ -174,9 +174,37 @@ FROM sales s
         [req.user.id]
       )
     ).map(saleRow);
-    // Commissions d'activation : la lecture historique des reversements iKeePay
-    // (`automatic_payouts`) a été retirée avec le système iKeePay. Le
-    // parrainage d'activation n'est plus versé automatiquement.
+    // Parrainage d'activation vendeur : vendeurs/créateurs inscrits via le
+    // `seller_code` du vendeur courant (`ref_seller` → `users.referred_by`).
+    // Quand l'un d'eux paie son adhésion, le parrain reçoit 1 000 XAF versés
+    // manuellement par l'administration (aucun reversement automatique).
+    // Liste purement informative — aucune dépendance à iKeePay.
+    let activationReferrals = [];
+    try {
+      activationReferrals = (
+        await q(
+          `SELECT u.id AS user_id, u.name, u.role, u.phone, u.reference_number,
+                 u.membership_paid_at, u.membership_expires_at, u.created_at
+           FROM users u
+           WHERE u.referred_by = $1 AND u.role IN ('seller', 'creator')
+           ORDER BY u.created_at DESC`,
+          [req.user.id]
+        )
+      ).map((r) => ({
+        user_id: Number(r.user_id),
+        name: r.name,
+        role: r.role,
+        phone: r.phone,
+        reference_number: r.reference_number,
+        membership_paid_at: r.membership_paid_at,
+        membership_expires_at: r.membership_expires_at,
+        created_at: r.created_at,
+        commission_amount: 1000,
+        commission_currency: "XAF",
+      }));
+    } catch (err) {
+      console.error("[sales/my] commissions de parrainage vendeur indisponibles :", err.message);
+    }
     res.json({
       sales,
       stats: {
@@ -188,6 +216,7 @@ FROM sales s
         referral_earned: Number(referralStats.referral_earned),
       },
       referred,
+      activationReferrals,
     });
   })
 );
