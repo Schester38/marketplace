@@ -825,11 +825,24 @@ export default function ShopDashboard() {
                                   {formatMoney(g.pending)} {countrySymbol(g.items[0]?.shop_country)}
                                 </td>
                                 <td>
-                                  <span className="badge badge-warn">
-                                    {t("Versement auto dès 5000 F")}
-                                  </span>
+                                  {g.anyClaimed ? (
+                                    <span className="badge badge-confirmed">
+                                      {t("Paiement réclamé")}
+                                    </span>
+                                  ) : (
+                                    <span className="badge badge-pending">
+                                      {t("En attente")}
+                                    </span>
+                                  )}
                                 </td>
-                                <td></td>
+                                <td>
+                                  <button
+                                    className="btn btn-small btn-danger"
+                                    onClick={() => openPayGrouped("referral", g)}
+                                  >
+                                    💰 {t("Payer le parrain")} ({formatMoney(g.pending)})
+                                  </button>
+                                </td>
                               </tr>
                             ))}
                           </tbody>

@@ -486,18 +486,17 @@ export default function SellerDashboard() {
                       <td>
                         {formatMoney(g.pending)} {countrySymbol(user?.country)}
                       </td>
-                      <td>
-                        {g.anyClaimed && (
+                      <td colSpan={2}>
+                        {g.anyClaimed ? (
                           <span className="badge badge-confirmed">{t("Paiement réclamé")}</span>
+                        ) : (
+                          <button
+                            className="btn btn-small btn-primary"
+                            onClick={() => claimGrouped("sale", g)}
+                          >
+                            💰 {t("Réclamer")} ({formatMoney(g.pending)})
+                          </button>
                         )}
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-small btn-primary"
-                          onClick={() => claimGrouped("sale", g)}
-                        >
-                          💰 {t("Réclamer")} ({formatMoney(g.pending)})
-                        </button>
                       </td>
                     </tr>
                   ))}
@@ -647,7 +646,7 @@ export default function SellerDashboard() {
         </div>
         <p className="hint" style={{ marginTop: 0 }}>
           {t(
-            "Chaque commande passée par un client inscrit avec votre lien vous rapporte 2% du montant. Le versement est automatique : vos commissions s'accumulent et sont payées sur votre portefeuille dès qu'elles atteignent 5000 F."
+            "Chaque commande passée par un client inscrit avec votre lien vous rapporte 2% du montant. Les commissions s'accumulent chez la boutique ; cliquez sur « Réclamer » pour signaler votre commission, puis la boutique vous la verse manuellement."
           )}
         </p>
         {referred.length === 0 ? (
@@ -697,12 +696,18 @@ export default function SellerDashboard() {
                           <td>
                             {formatMoney(g.pending)} {countrySymbol(g.items[0]?.shop_country)}
                           </td>
-                          <td>
-                            <span className="badge badge-warn">
-                              {t("En attente — versement auto dès 5000 F")}
-                            </span>
-                          </td>
-                          <td></td>
+                          <td colSpan={2}>
+                          {g.anyClaimed ? (
+                            <span className="badge badge-confirmed">{t("Paiement réclamé")}</span>
+                          ) : (
+                            <button
+                              className="btn btn-small btn-primary"
+                              onClick={() => claimGrouped("referral", g)}
+                            >
+                              💰 {t("Réclamer")} ({formatMoney(g.pending)})
+                            </button>
+                          )}
+                        </td>
                         </tr>
                       ))}
                     </tbody>
