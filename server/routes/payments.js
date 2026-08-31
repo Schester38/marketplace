@@ -198,8 +198,69 @@ router.post(
       return res.status(409).json({ error: "Cette commande est annulée" });
     if (sale.payment_status === "paid" || sale.payment_status === "completed")
       return res.json({ ok: true, already_paid: true });
-    if (sale.payment_external_reference)
-      return res.json({ ok: true, pending: true, payment_link: sale.payment_link });
+    if (sale.payment_external_reference && sale.payment_link)
+      return res.json({
+        ok: true,
+        pending: true,
+        payment_link: sale.payment_link,
+        external_reference: sale.payment_external_reference,
+      });
+
+    // Une tentative antérieure peut avoir stocké une référence externe SANS
+    // lien exploitable (tentatives d'avant le repli checkout hébergé, ou payin
+    // H2H sans payment_link retourné). Au lieu de bloquer définitivement le
+    // livreur sur « Impossible d'ouvrir le paiement en ligne », on régénère un
+    // lien de checkout avec la MÊME référence externe (idempotence conservée :
+    // la confirmation continuera de porter sur cette référence).
+    if (sale.payment_external_reference && !sale.payment_link) {
+      const retryDeliveryFee =
+        req.body?.delivery_fee != null
+          ? Number(req.body.delivery_fee)
+          : Number(sale.delivery_fee || 0);
+      const retryAmount =
+        Math.round((Number(sale.total_price) + retryDeliveryFee) * 100) / 100;
+      const retryCurrency =
+        sale.currency ||
+        currencyForCountry(
+          countryCode(req.body?.country || sale.payment_country || req.user?.country)
+        );
+      let retryLink = null;
+      try {
+        retryLink = inlineCheckoutUrl({
+          amount: retryAmount,
+          currency: retryCurrency,
+          orderId: sale.payment_external_reference,
+          email: req.user?.email,
+          redirectUrl: `${publicBaseUrl()}/suivi/${sale.id}`,
+        });
+      } catch (retryError) {
+        console.error("[ikeepay] régénération lien vente échouée :", retryError.message);
+      }
+      if (!retryLink)
+        return res.status(502).json({
+          error:
+            "Paiement en ligne momentanément indisponible. Réessayez, ou finalisez la livraison en espèces/mobile.",
+          fallback_reason:
+            process.env.IKEEPAY_PUBLIC_KEY || process.env.IKE_PUBLIC_KEY
+              ? "Construction du lien impossible"
+              : "Clé publique iKeePay absente du déploiement (variable IKEEPAY_PUBLIC_KEY)",
+        });
+      try {
+        await q(
+          `UPDATE sales SET online_payment = TRUE, payment_status = 'pending', payment_provider = 'ikeepay',
+           payment_link = $1, payment_error = NULL WHERE id = $2`,
+          [retryLink, sale.id]
+        );
+      } catch (dbError) {
+        console.error("[ikeepay] mise à jour vente (régénération) échouée :", dbError.message);
+      }
+      return res.status(201).json({
+        ok: true,
+        external_reference: sale.payment_external_reference,
+        payment_link: retryLink,
+        fallback: true,
+      });
+    }
 
     const country = countryCode(
       req.body?.country || sale.payment_country || req.user?.country || sale.payment_country

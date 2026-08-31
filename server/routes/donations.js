@@ -30,8 +30,9 @@ router.post(
     }
 
     const rawPhone = String(phone_number || "").replace(/[^\d]/g, "");
-    const normalized = info.prefix + normalizePhone(rawPhone, countryName);
-    if (normalized === info.prefix) {
+    const local = normalizePhone(rawPhone, countryName);
+    const normalized = local ? `237${local}` : "";
+    if (!local) {
       return res.status(400).json({ error: "Numéro de téléphone du donateur requis" });
     }
 
@@ -81,90 +82,66 @@ router.post(
         [amount, currency, country, phone, operator, reference, confirmToken]
       )
     )[0];
+    // Le don doit s'effectuer dans la lightbox : le paiement n'est initié QUE
+    // quand le donateur agit dans le checkout hébergé iKeePay. On construit
+    // donc le lien checkout D'ABORD, SANS appeler payin() H2H (qui envoyait
+    // une demande de paiement sur le téléphone avant même l'ouverture de la
+    // lightbox — double déclenchement possible pour le donateur).
+    let link = null;
     try {
-      const result = await payin({
+      link = inlineCheckoutUrl({
         amount: amt,
         currency,
-        country: countryCodeVal,
-        phoneNumber: phone,
-        operator,
-        external_reference: reference,
+        orderId: reference,
+        redirectUrl: `${publicBaseUrl()}/`,
       });
-      let link = result.payment_link || result.data?.payment_link || null;
-      // Certains opérateurs ne renvoient pas de payment_link : repli sur le
-      // checkout hébergé iKeePay (le donateur choisit son opérateur).
-      if (!link) {
-        try {
-          link = inlineCheckoutUrl({
-            amount: amt,
-            currency,
-            orderId: reference,
-            redirectUrl: `${publicBaseUrl()}/`,
-          });
-        } catch (fallbackError) {
-          console.error("[ikeepay] repli checkout don en échec :", fallbackError.message);
-        }
-      }
-      await q("UPDATE donations SET payment_link = $1 WHERE id = $2", [link, created.id]);
-      res.status(201).json({
-        ok: true,
-        donation_id: created.id,
-        payment_link: link,
-        external_reference: reference,
-        confirm_token: confirmToken,
-        provider: result,
-      });
-    } catch (error) {
-      // Repli : checkout hébergé iKeePay (le client choisit son opérateur).
-      console.error(
-        "[ikeepay] payin dons rejeté :",
-        error.statusCode,
-        error.message,
-        JSON.stringify(error.providerPayload || null)
-      );
-      let link = null;
+    } catch (checkoutError) {
+      console.error("[ikeepay] construction checkout don échouée :", checkoutError.message);
+    }
+    let provider = null;
+    if (!link) {
+      // Repli : sans clé publique iKeePay (pas de lightbox possible), on tente
+      // le payin H2H — le donateur valide alors directement sur son téléphone.
       try {
-        link = inlineCheckoutUrl({
+        const result = await payin({
           amount: amt,
           currency,
-          orderId: reference,
-          redirectUrl: `${publicBaseUrl()}/`,
-        });
-        if (link) {
-          await q("UPDATE donations SET payment_link = $1 WHERE id = $2", [link, created.id]);
-        }
-      } catch (fallbackError) {
-        console.error("[ikeepay] repli dons en échec :", fallbackError.message);
-        link = null;
-      }
-      if (link) {
-        return res.status(201).json({
-          ok: true,
-          donation_id: created.id,
-          payment_link: link,
+          country: countryCodeVal,
+          phoneNumber: phone,
+          operator,
           external_reference: reference,
-          confirm_token: confirmToken,
-          fallback: true,
+        });
+        provider = result;
+        link = result.payment_link || result.data?.payment_link || null;
+      } catch (error) {
+        console.error(
+          "[ikeepay] payin dons rejeté :",
+          error.statusCode,
+          error.message,
+          JSON.stringify(error.providerPayload || null)
+        );
+        try {
+          await q("UPDATE donations SET status = 'failed' WHERE id = $1", [created.id]);
+        } catch {}
+        const status =
+          Number(error.statusCode) >= 400 && Number(error.statusCode) < 600
+            ? Number(error.statusCode)
+            : 502;
+        return res.status(status).json({
+          error: `${error.message || "Initialisation du paiement impossible"} · Repli indisponible : Clé publique iKeePay absente du déploiement (variable IKEEPAY_PUBLIC_KEY)`,
+          detail: error.providerPayload || null,
         });
       }
-      const fallbackReason =
-        process.env.IKEEPAY_PUBLIC_KEY || process.env.IKE_PUBLIC_KEY
-          ? "Construction du lien impossible"
-          : "Clé publique iKeePay absente du déploiement (variable IKEEPAY_PUBLIC_KEY)";
-      console.error("[ikeepay] repli dons indisponible :", fallbackReason);
-      try {
-        await q("UPDATE donations SET status = 'failed' WHERE id = $1", [created.id]);
-      } catch {}
-      const status =
-        Number(error.statusCode) >= 400 && Number(error.statusCode) < 600
-          ? Number(error.statusCode)
-          : 502;
-      return res.status(status).json({
-        error: `${error.message || "Initialisation du paiement impossible"} · Repli indisponible : ${fallbackReason}`,
-        detail: error.providerPayload || null,
-        fallback_reason: fallbackReason,
-      });
     }
+    await q("UPDATE donations SET payment_link = $1 WHERE id = $2", [link, created.id]);
+    return res.status(201).json({
+      ok: true,
+      donation_id: created.id,
+      payment_link: link,
+      external_reference: reference,
+      confirm_token: confirmToken,
+      ...(provider ? { provider } : { checkout: true }),
+    });
   })
 );
 
