@@ -1,9 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import Seo from "../components/Seo.jsx";
 import { useLang } from "../i18n.jsx";
-import { api } from "../api.js";
-import { useAuth } from "../App.jsx";
-import { OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
 
 function OrangeLogo() {
   return (
@@ -145,37 +142,7 @@ function InfoRow({ label, value, copyable }) {
 }
 
 export default function Support() {
-  const { user } = useAuth();
   const { t } = useLang();
-  const [amount, setAmount] = useState("");
-  const [phone, setPhone] = useState("");
-  const [operator, setOperator] = useState("ORANGE");
-  const [donationInfo, setDonationInfo] = useState(null);
-  const [paymentError, setPaymentError] = useState("");
-  const [paying, setPaying] = useState(false);
-
-  const operators = OPERATORS_BY_COUNTRY[user?.country] || DEFAULT_OPERATORS;
-
-  // Don manuel : enregistre l'intention de don, le donateur effectue ensuite un
-  // virement direct (Mobile Money / PayPal / UBA) et l'équipe Mboppi valide.
-  const startDonation = async (event) => {
-    event.preventDefault();
-    setPaying(true);
-    setPaymentError("");
-    try {
-      const result = await api.createDonation({
-        amount,
-        phone_number: phone,
-        operator,
-        country: user?.country || "Cameroun",
-      });
-      setDonationInfo(result);
-    } catch (error) {
-      setPaymentError(error.message);
-    } finally {
-      setPaying(false);
-    }
-  };
 
   const methods = [
     {
@@ -239,60 +206,6 @@ export default function Support() {
           <h2>{t("Comment pouvez-vous soutenir le projet ?")}</h2>
           <p>{t("Choisissez le moyen qui vous convient.")}</p>
         </div>
-
-        <section className="section">
-          <div className="card form-card support-donate">
-            <h3>💛 {t("Je soutiens Mboppi")}</h3>
-            <p className="hint">
-              {t(
-                "Enregistrez votre don, puis effectuez le virement via l'un des moyens ci-dessous (Orange Money, MTN, PayPal, UBA). L'équipe Mboppi valide ensuite votre contribution."
-              )}
-            </p>
-            <form onSubmit={startDonation}>
-              <label>{t("Montant (XAF)")}</label>
-              <input
-                className="input"
-                type="number"
-                min="1"
-                required
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-              />
-              <label>{t("Opérateur")}</label>
-              <select
-                className="input"
-                value={operator}
-                onChange={(event) => setOperator(event.target.value)}
-              >
-                {operators.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-              <label>{t("Numéro Mobile Money")}</label>
-              <input
-                className="input"
-                type="tel"
-                required
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-              />
-              {paymentError && <p className="error">{paymentError}</p>}
-              <button className="btn btn-primary btn-block" disabled={paying}>
-                {paying ? "…" : t("Enregistrer mon don (manuel)")}
-              </button>
-            </form>
-            {donationInfo && (
-              <div className="deliver-recap" style={{ marginTop: 12 }}>
-                <p className="success">{t("Merci ! Votre don a bien été enregistré. 💛")}</p>
-                {donationInfo.instructions && (
-                  <p className="hint">{donationInfo.instructions}</p>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
 
         <div className="support-grid">
           {methods.map((m) => (
