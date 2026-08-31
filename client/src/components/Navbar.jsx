@@ -556,6 +556,11 @@ function NotifBell() {
         }
       );
     }
+    if (n.type === "activation_referral_paid") {
+      return t(
+        "Un de vos filleuls a payé son adhésion — votre commission de 1 000 F est en attente de versement."
+      );
+    }
     if (user.id === n.seller_id) {
       return t("Votre vente de « {product} » a été achetée par {buyer}.", {
         product: n.product_name,

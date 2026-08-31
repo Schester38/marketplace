@@ -210,4 +210,6 @@ export const api = {
   myFlashPromotions: () => request("/flash-promotions/mine"),
   adminReferrals: (search) =>
     adminRequest(`/admin/referrals${search ? `?search=${encodeURIComponent(search)}` : ""}`),
+  adminMarkReferralPaid: (id) =>
+    adminRequest(`/admin/referrals/${id}/pay`, { method: "POST" }),
 };

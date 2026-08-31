@@ -646,6 +646,12 @@ const EN = {
   "En cours": "In progress",
   "En attente d'adhésion": "Awaiting membership payment",
   "Non payée": "Not paid",
+  "Adhésion payée": "Membership paid",
+  Payé: "Paid",
+  "Marquer l'adhésion de {name} comme payée et avertir son parrain ?":
+    "Mark {name}'s membership as paid and notify their referrer?",
+  "Un de vos filleuls a payé son adhésion — votre commission de 1 000 F est en attente de versement.":
+    "One of your referred members has paid their membership — your 1,000 F commission is awaiting payout.",
   "Parrainages (vendeurs / créateurs)": "Referrals (sellers / creators)",
   "Rechercher par numéro de référence (parrainé ou parrain)…":
     "Search by reference number (referred member or referrer)…",
@@ -2064,6 +2070,12 @@ const AR = {
   "En cours": "قيد التنفيذ",
   "En attente d'adhésion": "في انتظار دفع الاشتراك",
   "Non payée": "غير مدفوعة",
+  "Adhésion payée": "تم دفع الاشتراك",
+  Payé: "مدفوع",
+  "Marquer l'adhésion de {name} comme payée et avertir son parrain ?":
+    "هل تريد تحديد اشتراك {name} كمدفوع وإشعار الكفيل؟",
+  "Un de vos filleuls a payé son adhésion — votre commission de 1 000 F est en attente de versement.":
+    "أحد المكفولين لديك دفع اشتراكه — عمولتك البالغة 1000 ف في انتظار التحويل.",
   "Parrainages (vendeurs / créateurs)": "الإحالات (بائعون / مبدعون)",
   "Rechercher par numéro de référence (parrainé ou parrain)…":
     "ابحث برقم المرجع (المكفول أو الكفيل)…",
@@ -3435,6 +3447,12 @@ const ES = {
   "En cours": "En curso",
   "En attente d'adhésion": "En espera del pago de la membresía",
   "Non payée": "No pagada",
+  "Adhésion payée": "Membresía pagada",
+  Payé: "Pagado",
+  "Marquer l'adhésion de {name} comme payée et avertir son parrain ?":
+    "¿Marcar la membresía de {name} como pagada y notificar a su referidor?",
+  "Un de vos filleuls a payé son adhésion — votre commission de 1 000 F est en attente de versement.":
+    "Uno de tus referidos ha pagado su membresía — tu comisión de 1.000 F está pendiente de transferencia.",
   "Parrainages (vendeurs / créateurs)": "Referidos (vendedores / creadores)",
   "Rechercher par numéro de référence (parrainé ou parrain)…":
     "Buscar por número de referencia (referido o referidor)…",

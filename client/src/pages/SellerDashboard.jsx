@@ -813,7 +813,7 @@ export default function SellerDashboard() {
                       <td>{r.role === "creator" ? t("Créateur") : t("Vendeur")}</td>
                       <td>
                         {paidMembership ? (
-                          <span className="badge badge-paid">{t("Payée")}</span>
+                          <span className="badge badge-paid">{t("Adhésion payée")}</span>
                         ) : (
                           <span className="badge badge-pending">{t("Non payée")}</span>
                         )}

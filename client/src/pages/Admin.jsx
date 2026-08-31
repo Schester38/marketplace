@@ -178,6 +178,30 @@ export default function Admin() {
     }
   };
 
+  const markReferralPaid = async (r) => {
+    if (
+      !window.confirm(
+        t("Marquer l'adhésion de {name} comme payée et avertir son parrain ?", {
+          name: r.parraine.name,
+        })
+      )
+    )
+      return;
+    setRefError("");
+    try {
+      await api.adminMarkReferralPaid(r.parraine.id);
+      setReferrals((rs) =>
+        rs.map((x) =>
+          x.parraine.id === r.parraine.id
+            ? { ...x, parraine: { ...x.parraine, membership_paid: true } }
+            : x
+        )
+      );
+    } catch (err) {
+      setRefError(err.message);
+    }
+  };
+
   const toggleAdminApproved = async (u) => {
     try {
       await api.adminSetAdminApproved(u.id, !u.admin_approved);
@@ -848,9 +872,14 @@ export default function Admin() {
                   <td>{r.parraine.phone || "—"}</td>
                   <td>
                     {r.parraine.membership_paid ? (
-                      <span className="badge badge-paid">{t("Payée")}</span>
+                      <span className="badge badge-paid">{t("Adhésion payée")}</span>
                     ) : (
-                      <span className="badge badge-pending">{t("Non payée")}</span>
+                      <button
+                        className="btn btn-small btn-primary"
+                        onClick={() => markReferralPaid(r)}
+                      >
+                        ✓ {t("Payé")}
+                      </button>
                     )}
                   </td>
                   <td>{r.parrain.name}</td>

@@ -593,6 +593,55 @@ router.get(
   })
 );
 
+// Marque l'adhésion d'un parrainé comme payée et en informe son parrain.
+// La commission d'activation (1 000 F) reste versée manuellement par
+// l'administration à son initiative.
+router.post(
+  "/referrals/:id/pay",
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
+    const user = (
+      await q("SELECT id, name, referred_by FROM users WHERE id = $1", [id])
+    )[0];
+    if (!user) return res.status(404).json({ error: "Utilisateur introuvable" });
+    if (!user.referred_by) {
+      return res
+        .status(400)
+        .json({ error: "Cet utilisateur n'a pas de parrain (parrainage introuvable)" });
+    }
+    if (user.referred_by === user.id) {
+      return res.status(400).json({ error: "Parrain invalide" });
+    }
+    const updated = await q(
+      `UPDATE users SET membership_paid_at = COALESCE(membership_paid_at, now())
+       WHERE id = $1 RETURNING membership_paid_at`,
+      [id]
+    );
+    await q(
+      `INSERT INTO notifications (user_id, type, amount) VALUES ($1, 'activation_referral_paid', $2)`,
+      [user.referred_by, 1000]
+    );
+    try {
+      const { sendPush } = await import("../push.js");
+      await sendPush(user.referred_by, {
+        title: "Adhésion payée ✅",
+        body: `${user.name} a payé son adhésion — votre commission de 1 000 F est en attente.`,
+        url: "/seller",
+      });
+    } catch (err) {
+      console.error("[admin] push activation_referral_paid impossible :", err.message);
+    }
+    await logAudit(
+      req.user.id,
+      "admin.referral_paid",
+      `parrainé=${id} (${user.name}) parrain=${user.referred_by} adhésion marquée payée`,
+      req.ip
+    );
+    res.json({ ok: true, membership_paid_at: updated[0].membership_paid_at });
+  })
+);
+
 
 // NOTE : les endpoints de réconciliation des reversements iKeePay
 // (GET /payouts, POST /payouts/:ref/resolve, POST /payouts/:ref/retry) ont été
