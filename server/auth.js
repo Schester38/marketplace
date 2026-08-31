@@ -36,6 +36,18 @@ export function authRequired(req, res, next) {
   }
 }
 
+export function authOptional(req, res, next) {
+  const header = req.headers.authorization;
+  if (header && header.startsWith("Bearer ")) {
+    try {
+      req.user = jwt.verify(header.slice(7), SECRET);
+    } catch {
+      // token invalide → on continue sans user
+    }
+  }
+  next();
+}
+
 export function roleRequired(...roles) {
   return async (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
