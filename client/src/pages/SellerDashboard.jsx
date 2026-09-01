@@ -846,10 +846,10 @@ export default function SellerDashboard() {
             style={{ flexWrap: "wrap", gap: 12, alignItems: "center" }}
           >
             <div style={{ flex: "1 1 260px" }}>
-              <h2>🤝 {t("Vendeurs / créateurs parrainés — commission de 1 000 F")}</h2>
+              <h2>🤝 {t("Vendeurs parrainés — commission de 1 000 F")}</h2>
               <p className="hint" style={{ marginTop: 4 }}>
                 {t(
-                  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F, validé par l'administration. Retrait possible dès 5 000 F."
+                  "Chaque vendeur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F, validé par l'administration. Retrait possible dès 5 000 F."
                 )}
               </p>
             </div>

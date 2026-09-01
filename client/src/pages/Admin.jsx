@@ -1019,11 +1019,11 @@ export default function Admin() {
                           <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>
                             {(w.seller.paymentMethods.wallets || []).map((wlt, i) => (
                               <li key={i}>
-                                {wlt.name || "—"}:{" "}
-                                <code>
-                                  {wlt.value || "—"}
+                                <div>
+                                  <strong>{wlt.name || t("Opérateur")}</strong>
                                   {wlt.primary ? " ⭐" : ""}
-                                </code>
+                                </div>
+                                <code>{wlt.value || "—"}</code>
                               </li>
                             ))}
                           </ul>
