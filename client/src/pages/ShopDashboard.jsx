@@ -23,6 +23,8 @@ import {
   IconStore,
 } from "../components/icons.jsx";
 
+const COMMISSION_CLAIM_THRESHOLD = 5000;
+
 const EMPTY_FORM = {
   name: "",
   description: "",
@@ -773,32 +775,41 @@ export default function ShopDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {sgs.map((g) => (
-                              <tr key={g.seller_id}>
-                                <td>
-                                  {g.seller_name} ({g.seller_code || "—"})
-                                </td>
-                                <td>{g.items.length}</td>
-                                <td>
-                                  {formatMoney(g.pending)} {countrySymbol(g.items[0]?.shop_country)}
-                                </td>
-                                <td>
-                                  {g.anyClaimed && (
-                                    <span className="badge badge-confirmed">
-                                      {t("Paiement réclamé")}
-                                    </span>
-                                  )}
-                                </td>
-                                <td>
-                                  <button
-                                    className="btn btn-small btn-danger"
-                                    onClick={() => openPayGrouped("seller", g)}
-                                  >
-                                    💰 {t("Payer le Vendeur")} ({formatMoney(g.pending)})
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
+                            {sgs.map((g) => {
+                              const canPay = Number(g.pending || 0) >= COMMISSION_CLAIM_THRESHOLD;
+                              return (
+                                <tr key={g.seller_id}>
+                                  <td>
+                                    {g.seller_name} ({g.seller_code || "—"})
+                                  </td>
+                                  <td>{g.items.length}</td>
+                                  <td>
+                                    {formatMoney(g.pending)} {countrySymbol(g.items[0]?.shop_country)}
+                                  </td>
+                                  <td>
+                                    {g.anyClaimed && (
+                                      <span className="badge badge-confirmed">
+                                        {t("Paiement réclamé")}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <button
+                                      className="btn btn-small btn-danger"
+                                      disabled={!canPay}
+                                      onClick={() => canPay && openPayGrouped("seller", g)}
+                                      title={
+                                        canPay
+                                          ? ""
+                                          : `Cumul requis : ${formatMoney(COMMISSION_CLAIM_THRESHOLD)} ${countrySymbol(g.items[0]?.shop_country)}`
+                                      }
+                                    >
+                                      💰 {canPay ? `${t("Payer le Vendeur")} (${formatMoney(g.pending)})` : `⏳ ${t("Cumul")}: ${formatMoney(COMMISSION_CLAIM_THRESHOLD)}`}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -818,7 +829,7 @@ export default function ShopDashboard() {
                           </thead>
                           <tbody>
                             {rgs.map((g) => {
-                              const canPay = Number(g.pending || 0) >= REFERRAL_CLAIM_THRESHOLD;
+                              const canPay = Number(g.pending || 0) >= COMMISSION_CLAIM_THRESHOLD;
                               return (
                                 <tr key={g.parrain_id}>
                                   <td>{g.parrain_name}</td>
@@ -845,10 +856,10 @@ export default function ShopDashboard() {
                                       title={
                                         canPay
                                           ? ""
-                                          : `Cumul requis : ${formatMoney(REFERRAL_CLAIM_THRESHOLD)} ${countrySymbol(g.items[0]?.shop_country)}`
+                                          : `Cumul requis : ${formatMoney(COMMISSION_CLAIM_THRESHOLD)} ${countrySymbol(g.items[0]?.shop_country)}`
                                       }
                                     >
-                                      💰 {canPay ? `${t("Payer le parrain")} (${formatMoney(g.pending)})` : `⏳ ${t("Cumul")}: ${formatMoney(REFERRAL_CLAIM_THRESHOLD)}`}
+                                      💰 {canPay ? `${t("Payer le parrain")} (${formatMoney(g.pending)})` : `⏳ ${t("Cumul")}: ${formatMoney(COMMISSION_CLAIM_THRESHOLD)}`}
                                     </button>
                                   </td>
                                 </tr>

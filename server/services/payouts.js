@@ -38,9 +38,14 @@ export function normalizeWalletPrimary(list) {
 
 
 export const REFERRAL_CLAIM_THRESHOLD = 5000;
+export const COMMISSION_CLAIM_THRESHOLD = REFERRAL_CLAIM_THRESHOLD;
 
 export function referralThresholdReached(amount) {
   return Number(amount || 0) >= REFERRAL_CLAIM_THRESHOLD;
+}
+
+export function commissionThresholdReached(amount) {
+  return Number(amount || 0) >= COMMISSION_CLAIM_THRESHOLD;
 }
 
 export function computeRedistribution(sale) {

@@ -17,7 +17,7 @@ const SALE_STATUS = {
   delivered: { key: "Livré", cls: "badge-bought" },
   cancelled: { key: "Annulée", cls: "badge-cancelled" },
 };
-const REFERRAL_CLAIM_THRESHOLD = 5000;
+const COMMISSION_CLAIM_THRESHOLD = 5000;
 
 async function copyText(text) {
   try {
@@ -526,27 +526,36 @@ export default function SellerDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {gs.map((g) => (
-                    <tr key={g.shop_id}>
-                      <td>{g.shop_name}</td>
-                      <td>{g.items.length}</td>
-                      <td>
-                        {formatMoney(g.pending)} {countrySymbol(user?.country)}
-                      </td>
-                      <td colSpan={2}>
-                        {g.anyClaimed ? (
-                          <span className="badge badge-confirmed">{t("Paiement réclamé")}</span>
-                        ) : (
-                          <button
-                            className="btn btn-small btn-primary"
-                            onClick={() => claimGrouped("sale", g)}
-                          >
-                            💰 {t("Réclamer")} ({formatMoney(g.pending)})
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {gs.map((g) => {
+                    const canClaim = Number(g.pending || 0) >= COMMISSION_CLAIM_THRESHOLD;
+                    return (
+                      <tr key={g.shop_id}>
+                        <td>{g.shop_name}</td>
+                        <td>{g.items.length}</td>
+                        <td>
+                          {formatMoney(g.pending)} {countrySymbol(user?.country)}
+                        </td>
+                        <td colSpan={2}>
+                          {g.anyClaimed ? (
+                            <span className="badge badge-confirmed">{t("Paiement réclamé")}</span>
+                          ) : (
+                            <button
+                              className="btn btn-small btn-primary"
+                              disabled={!canClaim}
+                              onClick={() => canClaim && claimGrouped("sale", g)}
+                              title={
+                                canClaim
+                                  ? ""
+                                  : `Cumul requis : ${formatMoney(COMMISSION_CLAIM_THRESHOLD)} ${countrySymbol(user?.country)}`
+                              }
+                            >
+                              💰 {canClaim ? `${t("Réclamer")} (${formatMoney(g.pending)})` : `⏳ ${t("Cumul")}: ${formatMoney(COMMISSION_CLAIM_THRESHOLD)}`}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -737,7 +746,7 @@ export default function SellerDashboard() {
                     </thead>
                     <tbody>
                       {gs.map((g) => {
-                        const canClaim = Number(g.pending || 0) >= REFERRAL_CLAIM_THRESHOLD;
+                        const canClaim = Number(g.pending || 0) >= COMMISSION_CLAIM_THRESHOLD;
                         return (
                           <tr key={g.shop_id}>
                             <td>{g.shop_name}</td>
@@ -756,10 +765,10 @@ export default function SellerDashboard() {
                                   title={
                                     canClaim
                                       ? ""
-                                      : `Cumul requis : ${formatMoney(REFERRAL_CLAIM_THRESHOLD)} ${countrySymbol(g.items[0]?.shop_country)}`
+                                      : `Cumul requis : ${formatMoney(COMMISSION_CLAIM_THRESHOLD)} ${countrySymbol(g.items[0]?.shop_country)}`
                                   }
                                 >
-                                  💰 {canClaim ? `${t("Réclamer")} (${formatMoney(g.pending)})` : `⏳ ${t("Cumul")}: ${formatMoney(REFERRAL_CLAIM_THRESHOLD)}`}
+                                  💰 {canClaim ? `${t("Réclamer")} (${formatMoney(g.pending)})` : `⏳ ${t("Cumul")}: ${formatMoney(COMMISSION_CLAIM_THRESHOLD)}`}
                                 </button>
                               )}
                             </td>

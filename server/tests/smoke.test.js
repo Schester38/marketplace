@@ -1,6 +1,7 @@
 import {
   computeRedistribution,
   referralThresholdReached,
+  commissionThresholdReached,
   REFERRAL_CLAIM_THRESHOLD,
 } from "../services/payouts.js";
 import {
@@ -129,6 +130,12 @@ suite("referral threshold", () => {
     assertEqual(referralThresholdReached(5000), true, "at threshold");
     assertEqual(referralThresholdReached(15000), true, "above threshold");
     assertEqual(REFERRAL_CLAIM_THRESHOLD, 5000, "threshold value");
+  });
+
+  test("applique le même seuil aux commissions de vente produit", () => {
+    assertEqual(commissionThresholdReached(4999), false, "product commission below threshold");
+    assertEqual(commissionThresholdReached(5000), true, "product commission at threshold");
+    assertEqual(commissionThresholdReached(15000), true, "product commission above threshold");
   });
 });
 

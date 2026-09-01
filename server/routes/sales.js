@@ -5,6 +5,7 @@ import { sendPush } from "../push.js";
 import {
   paySaleAutomatically,
   referralThresholdReached,
+  commissionThresholdReached,
   REFERRAL_CLAIM_THRESHOLD,
 } from "../services/payouts.js";
 
@@ -874,6 +875,11 @@ router.post(
     if (sale.paid) {
       return res.status(409).json({ error: "Le vendeur a déjà été payé pour cette vente" });
     }
+    if (!commissionThresholdReached(Number(sale.commission || 0))) {
+      return res.status(409).json({
+        error: `Le cumul de commission produit doit atteindre ${REFERRAL_CLAIM_THRESHOLD} F avant paiement`,
+      });
+    }
     if (!proof || !String(proof).startsWith("data:")) {
       return res
         .status(400)
@@ -952,6 +958,11 @@ router.post(
     }
     if (sale.paid) {
       return res.status(409).json({ error: "Cette commission a déjà été payée" });
+    }
+    if (!commissionThresholdReached(Number(sale.commission || 0))) {
+      return res.status(409).json({
+        error: `Le cumul de commission produit doit atteindre ${REFERRAL_CLAIM_THRESHOLD} F avant réclamation`,
+      });
     }
     if (sale.commission_claimed_at) {
       return res.status(409).json({ error: "Paiement déjà réclamé, la boutique a été notifiée" });
@@ -1128,6 +1139,11 @@ router.post(
       return res.status(409).json({ error: "Aucune commission à réclamer chez cette boutique" });
     }
     const total = Math.round(rows.reduce((a, r) => a + Number(r.amt || 0), 0) * 100) / 100;
+    if (isSale && !commissionThresholdReached(total)) {
+      return res.status(409).json({
+        error: `Le cumul de commission produit doit atteindre ${REFERRAL_CLAIM_THRESHOLD} F avant réclamation`,
+      });
+    }
     if (!isSale && !referralThresholdReached(total)) {
       return res.status(409).json({
         error: `Le cumul de commission de parrainage doit atteindre ${REFERRAL_CLAIM_THRESHOLD} F avant réclamation`,
@@ -1190,6 +1206,11 @@ router.post(
       return res.status(409).json({ error: "Aucune commission à payer" });
     }
     const total = Math.round(rows.reduce((a, r) => a + Number(r.amt || 0), 0) * 100) / 100;
+    if (isSeller && !commissionThresholdReached(total)) {
+      return res.status(409).json({
+        error: `Le cumul de commission produit doit atteindre ${REFERRAL_CLAIM_THRESHOLD} F avant paiement`,
+      });
+    }
     if (!isSeller && !referralThresholdReached(total)) {
       return res.status(409).json({
         error: `Le cumul de commission de parrainage doit atteindre ${REFERRAL_CLAIM_THRESHOLD} F avant paiement`,
