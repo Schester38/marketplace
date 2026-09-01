@@ -16,6 +16,28 @@ const VISIT_RANGES = [
   { days: 30, label: "1 mois" },
 ];
 
+function getMembershipCountdownState(expiresAt) {
+  if (!expiresAt) {
+    return { label: "—", tone: "neutral", daysLeft: null, blinking: false };
+  }
+  const expires = new Date(expiresAt);
+  const diffMs = expires.getTime() - Date.now();
+  const daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  if (diffMs <= 0) {
+    return { label: "Expiré", tone: "danger", daysLeft: 0, blinking: false };
+  }
+  if (daysLeft <= 1) {
+    return { label: `${daysLeft} jour restant`, tone: "danger", daysLeft, blinking: true };
+  }
+  if (daysLeft <= 3) {
+    return { label: `${daysLeft} jours restants`, tone: "danger", daysLeft, blinking: false };
+  }
+  if (daysLeft <= 7) {
+    return { label: `${daysLeft} jours restants`, tone: "warning", daysLeft, blinking: false };
+  }
+  return { label: `${daysLeft} jours restants`, tone: "success", daysLeft, blinking: false };
+}
+
 export default function Admin() {
   const { t } = useLang();
   const [gate, setGate] = useState(true);
@@ -807,9 +829,19 @@ export default function Admin() {
                   </td>
                   <td className="hint">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="hint">
-                    {u.membership_fee
-                      ? `${u.membership_fee} · ${u.membership_expires_at ? new Date(u.membership_expires_at).toLocaleDateString() : t("Non payée")}`
-                      : t("Non requise")}
+                    {u.membership_fee ? (
+                      <span
+                        className={`membership-badge membership-badge--${getMembershipCountdownState(u.membership_expires_at).tone}${
+                          getMembershipCountdownState(u.membership_expires_at).blinking
+                            ? " membership-badge--blink"
+                            : ""
+                        }`}
+                      >
+                        {getMembershipCountdownState(u.membership_expires_at).label}
+                      </span>
+                    ) : (
+                      t("Non requise")
+                    )}
                   </td>
                   <td>
                     <button

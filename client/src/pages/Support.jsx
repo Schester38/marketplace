@@ -190,7 +190,6 @@ export default function Support() {
     {
       logo: <UbaLogo />,
       name: t("Virement bancaire (UBA)"),
-      manual: true,
       rows: [
         { label: "SWIFT", value: "UNAFCMCX", copyable: "UNAFCMCX" },
         {

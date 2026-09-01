@@ -251,18 +251,26 @@ router.patch(
     const id = Number(req.params.id);
     if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
     const admin_approved = Boolean(req.body && req.body.admin_approved);
-    const updated = await q("UPDATE users SET admin_approved = $1 WHERE id = $2 RETURNING id", [
-      admin_approved,
-      id,
-    ]);
+    const updated = await q(
+      `UPDATE users
+       SET admin_approved = $1,
+           membership_paid_at = COALESCE(membership_paid_at, now()),
+           membership_expires_at = CASE
+             WHEN $1 THEN now() + interval '30 days'
+             ELSE membership_expires_at
+           END
+       WHERE id = $2
+       RETURNING id, membership_expires_at`,
+      [admin_approved, id]
+    );
     if (!updated.length) return res.status(404).json({ error: "Utilisateur introuvable" });
     await logAudit(
       req.user.id,
       "admin.set_admin_approved",
-      `user=${id} admin_approved=${admin_approved}`,
+      `user=${id} admin_approved=${admin_approved} membership_expires_at=${updated[0].membership_expires_at || "null"}`,
       req.ip
     );
-    res.json({ ok: true, admin_approved });
+    res.json({ ok: true, admin_approved, membership_expires_at: updated[0].membership_expires_at });
   })
 );
 

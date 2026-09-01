@@ -44,6 +44,28 @@ function downloadCsv(filename, header, rows) {
   URL.revokeObjectURL(url);
 }
 
+function getMembershipCountdownState(expiresAt) {
+  if (!expiresAt) {
+    return { label: "Aucune adhésion active", tone: "neutral", daysLeft: null, blinking: false };
+  }
+  const expires = new Date(expiresAt);
+  const diffMs = expires.getTime() - Date.now();
+  const daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  if (diffMs <= 0) {
+    return { label: "Adhésion expirée", tone: "danger", daysLeft: 0, blinking: false };
+  }
+  if (daysLeft <= 1) {
+    return { label: `${daysLeft} jour restant`, tone: "danger", daysLeft, blinking: true };
+  }
+  if (daysLeft <= 3) {
+    return { label: `${daysLeft} jours restants`, tone: "danger", daysLeft, blinking: false };
+  }
+  if (daysLeft <= 7) {
+    return { label: `${daysLeft} jours restants`, tone: "warning", daysLeft, blinking: false };
+  }
+  return { label: `${daysLeft} jours restants`, tone: "success", daysLeft, blinking: false };
+}
+
 const PERIODS = [
   { value: "daily", label: "Journalier" },
   { value: "weekly", label: "Hebdomadaire" },
@@ -373,6 +395,19 @@ export default function MyAccount() {
           )}
         </div>
       </div>
+
+      {user && ["shop", "seller", "creator"].includes(user.role) && user.membership_expires_at && (
+        <div
+          className={`membership-badge membership-badge--${getMembershipCountdownState(user.membership_expires_at).tone}${
+            getMembershipCountdownState(user.membership_expires_at).blinking
+              ? " membership-badge--blink"
+              : ""
+          }`}
+          style={{ marginBottom: 20 }}
+        >
+          <strong>{t("Abonnement")}</strong> : {getMembershipCountdownState(user.membership_expires_at).label}
+        </div>
+      )}
 
       <div className="account-grid">
         <div className="card">
