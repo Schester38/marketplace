@@ -167,7 +167,7 @@ router.post(
       referenceNumber = `MBP-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
     }
     const created = await q(
-      "INSERT INTO users (name, email, password, role, country, phone, referred_by, accepted_terms_at, email_verified, reference_number, membership_fee) VALUES ($1, $2, $3, $4, $5, $6, $7, now(), FALSE, $8, $9) RETURNING id",
+      "INSERT INTO users (name, email, password, role, country, phone, referred_by, accepted_terms_at, email_verified, admin_approved, membership_expires_at, reference_number, membership_fee) VALUES ($1, $2, $3, $4, $5, $6, $7, now(), FALSE, FALSE, NULL, $8, $9) RETURNING id",
       [
         String(name).trim(),
         emailNorm,
@@ -398,7 +398,7 @@ router.get(
           }
         }
         const created = await q(
-          "INSERT INTO users (name, email, password, provider, role, country, referred_by, accepted_terms_at, email_verified, email_verified_at, reference_number, membership_fee) VALUES ($1, $2, NULL, 'google', $3, $4, $5, now(), TRUE, now(), $6, $7) RETURNING id",
+          "INSERT INTO users (name, email, password, provider, role, country, referred_by, accepted_terms_at, email_verified, email_verified_at, admin_approved, membership_expires_at, reference_number, membership_fee) VALUES ($1, $2, NULL, 'google', $3, $4, $5, now(), TRUE, now(), FALSE, NULL, $6, $7) RETURNING id",
           [
             profile.name,
             profile.email,
