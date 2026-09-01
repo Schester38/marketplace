@@ -148,23 +148,32 @@ export default function Support() {
     {
       logo: <OrangeLogo />,
       name: t("Orange Money"),
-      rows: [{ label: t("Numéro"), value: "+237 699 48 61 46", copyable: "+237699486146" }],
+      rows: [
+        { label: t("Numéro"), value: "+237 699 48 61 46", copyable: "+237699486146" },
+        { label: t("Nom du compte"), value: "Ndjoum Jean Arthur" },
+      ],
     },
     {
       logo: <MtnLogo />,
       name: t("MTN Mobile Money"),
-      rows: [{ label: t("Numéro"), value: "+237 672 88 63 48", copyable: "+237672886348" }],
+      rows: [
+        { label: t("Numéro"), value: "+237 672 88 63 48", copyable: "+237672886348" },
+        { label: t("Nom du compte"), value: "Ndjoum Jean Arthur" },
+      ],
     },
     {
-      logo: <PaypalLogo />,
-      name: t("PayPal"),
-      manual: true,
+      logo: <div className="support-moneyfusion">MoneyFusion</div>,
+      name: t("MoneyFusion"),
       rows: [
-        {
-          label: t("E-mail"),
-          value: "ndjoumjeanarthur@gmail.com",
-          copyable: "ndjoumjeanarthur@gmail.com",
-        },
+        { label: t("Application"), value: "Google Play" },
+        { label: t("Numéro"), value: "+237 672 88 63 48", copyable: "+237672886348" },
+        { label: t("Nom du compte"), value: "Ndjoum Jean Arthur" },
+      ],
+      procedure: [
+        t("Téléchargez l'application MoneyFusion."),
+        t("Sélectionnez le pays Cameroun."),
+        t("Envoyez le transfert au numéro +237 672 88 63 48."),
+        t("Conservez la preuve de paiement pour validation."),
       ],
     },
     {
@@ -178,6 +187,7 @@ export default function Support() {
           value: "CM21 10033 05207 07002026857 58",
           copyable: "CM2110033052070700202685758",
         },
+        { label: t("Nom du compte"), value: "Ndjoum Jean Arthur" },
       ],
     },
   ];
@@ -252,6 +262,20 @@ export default function Support() {
               {m.rows.map((r) => (
                 <InfoRow key={r.label} label={r.label} value={r.value} copyable={!!r.copyable} />
               ))}
+              {m.procedure && (
+                <div style={{ marginTop: 12, textAlign: "left" }}>
+                  <strong style={{ display: "block", marginBottom: 8, fontSize: 13 }}>
+                    {t("Procédure :")}
+                  </strong>
+                  <ol style={{ margin: 0, paddingLeft: 18, color: "var(--text-muted)" }}>
+                    {m.procedure.map((step) => (
+                      <li key={step} style={{ marginBottom: 6 }}>
+                        {step}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
             </div>
           ))}
         </div>
