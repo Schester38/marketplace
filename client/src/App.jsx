@@ -482,7 +482,7 @@ export default function App() {
         keepalive: true,
       }).catch(() => {});
     } catch {
-      api.trackVisit(pathKey, (user && user.country) || "CM").catch(() => {});
+      /* stockage local indisponible : la visite n'est pas comptabilisée */
     }
   }, [pathKey, online, user]);
 

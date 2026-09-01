@@ -40,7 +40,7 @@ export default function MentionsLegales() {
           <h2>{t("Prestataire de paiement")}</h2>
           <p>
             {t(
-              "Les paiements peuvent être réalisés directement entre les parties par espèces, Mobile Money ou virement bancaire, ou via le prestataire Ikeepay pour les adhésions, les dons et les ventes. Ikeepay prélève environ 6% de frais de traitement sur chaque transaction en ligne. Mboppi ne prélève aucun frais de plateforme sur les transactions ; les montants reçus par les bénéficiaires sont nets des frais Ikeepay."
+              "Les paiements sont réalisés directement entre les parties par espèces, Mobile Money ou virement bancaire. Mboppi ne collecte pas les paiements, ne prélève aucun frais de plateforme et ne perçoit aucune commission sur les transactions."
             )}
           </p>
         </div>
@@ -48,7 +48,7 @@ export default function MentionsLegales() {
           <h2>{t("Rôle de l’éditeur")}</h2>
           <p>
             {t(
-              "Mboppi fournit un outil de présentation, de mise en relation, de suivi des commandes et de coordination de livraison. Les contrats de vente, paiements directs ou via Ikeepay, garanties, retours et litiges relèvent d’abord des parties concernées."
+              "Mboppi fournit un outil de présentation, de mise en relation, de suivi des commandes et de coordination de livraison. Les contrats de vente, paiements directs, garanties, retours et litiges relèvent d’abord des parties concernées."
             )}
           </p>
         </div>

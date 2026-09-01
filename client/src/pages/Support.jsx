@@ -53,35 +53,6 @@ function MtnLogo() {
   );
 }
 
-function PaypalLogo() {
-  return (
-    <svg viewBox="0 0 120 44" className="support-logo" role="img" aria-label="PayPal">
-      <rect x="2" y="2" width="36" height="36" rx="8" fill="#003087" />
-      <text
-        x="20"
-        y="29"
-        fontFamily="Arial, Helvetica, sans-serif"
-        fontSize="20"
-        fontWeight="800"
-        fill="#fff"
-        textAnchor="middle"
-      >
-        P
-      </text>
-      <text
-        x="46"
-        y="29"
-        fontFamily="Arial, Helvetica, sans-serif"
-        fontSize="21"
-        fontWeight="700"
-        fill="#009cde"
-      >
-        PayPal
-      </text>
-    </svg>
-  );
-}
-
 function UbaLogo() {
   return (
     <svg viewBox="0 0 120 44" className="support-logo" role="img" aria-label="UBA">
