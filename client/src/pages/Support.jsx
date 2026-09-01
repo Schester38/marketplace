@@ -162,10 +162,22 @@ export default function Support() {
       ],
     },
     {
-      logo: <div className="support-moneyfusion">MoneyFusion</div>,
-      name: t("MoneyFusion"),
+      logo: <div className="support-moneyfusion">Transfert international</div>,
+      name: t("Transfert international"),
       rows: [
-        { label: t("Application"), value: "Google Play" },
+        {
+          label: t("Application"),
+          value: (
+            <a
+              href="https://play.google.com/store/apps/details?id=com.moneyfusion"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "var(--primary)", textDecoration: "underline" }}
+            >
+              Google Play
+            </a>
+          ),
+        },
         { label: t("Numéro"), value: "+237 672 88 63 48", copyable: "+237672886348" },
         { label: t("Nom du compte"), value: "Ndjoum Jean Arthur" },
       ],
@@ -173,7 +185,6 @@ export default function Support() {
         t("Téléchargez l'application MoneyFusion."),
         t("Sélectionnez le pays Cameroun."),
         t("Envoyez le transfert au numéro +237 672 88 63 48."),
-        t("Conservez la preuve de paiement pour validation."),
       ],
     },
     {
@@ -197,7 +208,7 @@ export default function Support() {
       <Seo
         title={t("Je soutiens Mboppi") + " — Mboppi"}
         description={t(
-          "Soutenez Mboppi : Orange Money, MTN Mobile Money, PayPal ou virement bancaire UBA."
+          "Soutenez Mboppi : Orange Money, MTN Mobile Money, transfert international ou virement bancaire UBA."
         )}
         noindex
       />
