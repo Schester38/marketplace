@@ -37,53 +37,6 @@ export default function MembershipPage() {
           )}
         </p>
 
-        {/* Tableau des prix */}
-        <div className="pricing-table" style={{ marginTop: 24, marginBottom: 24 }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              border: "2px solid var(--border)",
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  backgroundColor: "var(--bg-secondary)",
-                  borderBottom: "2px solid var(--border)",
-                }}
-              >
-                <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>
-                  {t("Rôle")}
-                </th>
-                <th style={{ padding: 12, textAlign: "center", fontWeight: 600 }}>
-                  {t("Montant (30 jours)")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                <td style={{ padding: 12 }}>{t("Vendeur")}</td>
-                <td style={{ padding: 12, textAlign: "center", fontWeight: 600 }}>
-                  1,500 {symbol}
-                </td>
-              </tr>
-              <tr style={{ borderBottom: "1px solid var(--border)" }}>
-                <td style={{ padding: 12 }}>{t("Boutique")}</td>
-                <td style={{ padding: 12, textAlign: "center", fontWeight: 600 }}>
-                  2,500 {symbol}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ padding: 12 }}>{t("Créateur")}</td>
-                <td style={{ padding: 12, textAlign: "center", fontWeight: 600 }}>
-                  2,500 {symbol}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
         {/* Votre tarif */}
         <div
           className="card"
@@ -105,114 +58,109 @@ export default function MembershipPage() {
           </p>
         </div>
 
-        {/* Instructions selon le pays */}
-        {isCameroon ? (
-          <>
-            <h3 style={{ marginTop: 24, marginBottom: 12 }}>📱 {t("CAMEROUN")}</h3>
-            <p className="hint">
-              {t("Faites le dépôt sur l'un des numéros suivants :")}
-            </p>
+        {/* Instructions Cameroun */}
+        <h3 style={{ marginTop: 24, marginBottom: 12 }}>🇨🇲 {t("CAMEROUN")}</h3>
+        <p className="hint">
+          {t("Faites le dépôt sur l'un des numéros suivants :")}
+        </p>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-                marginBottom: 24,
-              }}
-            >
-              <div
-                style={{
-                  borderRadius: 8,
-                  border: "2px solid var(--border)",
-                  padding: 16,
-                  textAlign: "center",
-                  backgroundColor: "var(--bg-secondary)",
-                }}
-              >
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
-                  🟠 Orange Money
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "var(--primary)" }}>
-                  699486146
-                </div>
-              </div>
-              <div
-                style={{
-                  borderRadius: 8,
-                  border: "2px solid var(--border)",
-                  padding: 16,
-                  textAlign: "center",
-                  backgroundColor: "var(--bg-secondary)",
-                }}
-              >
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
-                  🟡 MTN Mobile Money
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "var(--primary)" }}>
-                  672886348
-                </div>
-              </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 12,
+            marginBottom: 24,
+          }}
+        >
+          <div
+            style={{
+              borderRadius: 8,
+              border: "2px solid var(--border)",
+              padding: 16,
+              textAlign: "center",
+              backgroundColor: "var(--bg-secondary)",
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+              🟠 Orange Money
             </div>
-
-            <div
-              style={{
-                backgroundColor: "var(--bg-secondary)",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                padding: 12,
-                marginBottom: 24,
-                fontSize: 14,
-              }}
-            >
-              <strong>{t("Nom du compte :")}</strong> Ndjoum Jean Arthur
+            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--primary)" }}>
+              699486146
             </div>
-          </>
-        ) : (
-          <>
-            <h3 style={{ marginTop: 24, marginBottom: 12 }}>🌍 {t("AUTRE PAYS")}</h3>
-            <p className="hint">
-              {t(
-                "Téléchargez l'application MoneyFusion pour effectuer votre transfert international."
-              )}
-            </p>
-
-            <a
-              href="https://play.google.com/store/apps/details?id=com.moneyfusion"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-primary btn-block"
-              style={{ marginBottom: 24 }}
-            >
-              📱 MoneyFusion — {t("Télécharger")}
-            </a>
-
-            <div
-              style={{
-                backgroundColor: "var(--bg-secondary)",
-                border: "1px solid var(--border)",
-                borderRadius: 8,
-                padding: 16,
-                marginBottom: 24,
-              }}
-            >
-              <strong style={{ display: "block", marginBottom: 8 }}>
-                {t("Étapes du transfert :")}
-              </strong>
-              <ol style={{ marginBottom: 0, paddingLeft: 20 }}>
-                <li>{t("Téléchargez et configurez MoneyFusion")}</li>
-                <li>
-                  {t("Sélectionnez le pays")} <strong>Cameroun</strong>
-                </li>
-                <li>
-                  {t("Effectuez un transfert MoneyFusion vers MoneyFusion au numéro")}{" "}
-                  <strong>672886348</strong>
-                </li>
-                <li>{t("Faites une capture de la transaction")}</li>
-              </ol>
+          </div>
+          <div
+            style={{
+              borderRadius: 8,
+              border: "2px solid var(--border)",
+              padding: 16,
+              textAlign: "center",
+              backgroundColor: "var(--bg-secondary)",
+            }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+              🟡 MTN Mobile Money
             </div>
-          </>
-        )}
+            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--primary)" }}>
+              672886348
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            backgroundColor: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            padding: 12,
+            marginBottom: 24,
+            fontSize: 14,
+          }}
+        >
+          <strong>{t("Nom du compte :")}</strong> Ndjoum Jean Arthur
+        </div>
+
+        {/* Instructions Autre pays */}
+        <h3 style={{ marginTop: 24, marginBottom: 12 }}>🌍 {t("AUTRE PAYS")}</h3>
+        <p className="hint">
+          {t(
+            "Téléchargez l'application MoneyFusion pour effectuer votre transfert international."
+          )}
+        </p>
+
+        <a
+          href="https://play.google.com/store/apps/details?id=com.moneyfusion"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-primary btn-block"
+          style={{ marginBottom: 24 }}
+        >
+          📱 MoneyFusion — {t("Télécharger")}
+        </a>
+
+        <div
+          style={{
+            backgroundColor: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            padding: 16,
+            marginBottom: 24,
+          }}
+        >
+          <strong style={{ display: "block", marginBottom: 8 }}>
+            {t("Étapes du transfert :")}
+          </strong>
+          <ol style={{ marginBottom: 0, paddingLeft: 20 }}>
+            <li>{t("Téléchargez et configurez MoneyFusion")}</li>
+            <li>
+              {t("Sélectionnez le pays")} <strong>Cameroun</strong>
+            </li>
+            <li>
+              {t("Effectuez un transfert MoneyFusion vers MoneyFusion au numéro")}{" "}
+              <strong>672886348</strong>
+            </li>
+            <li>{t("Faites une capture de la transaction")}</li>
+          </ol>
+        </div>
 
         {/* Instructions générales de paiement */}
         <h3 style={{ marginTop: 24, marginBottom: 12 }}>✅ {t("APRÈS VOTRE TRANSFERT")}</h3>
