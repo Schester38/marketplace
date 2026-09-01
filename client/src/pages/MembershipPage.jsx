@@ -43,17 +43,33 @@ export default function MembershipPage() {
           style={{
             borderColor: "var(--primary)",
             backgroundColor: "rgba(var(--primary-rgb), 0.05)",
-            padding: 16,
+            padding: 20,
             marginBottom: 24,
+            textAlign: "center",
           }}
         >
-          <strong style={{ fontSize: 16 }}>
-            {t("Votre adhésion :")}{" "}
-            <span style={{ color: "var(--primary)", fontSize: 18 }}>
+          <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5 }}>
+            {t("Votre adhésion :")} {" "}
+            <span
+              style={{
+                color: "var(--primary)",
+                fontSize: 30,
+                fontWeight: 800,
+                display: "inline-block",
+              }}
+            >
               {userPrice.toLocaleString()} {symbol}
             </span>
-          </strong>
-          <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
+          </div>
+          <p
+            className="hint"
+            style={{
+              marginTop: 10,
+              marginBottom: 0,
+              fontSize: 14,
+              textAlign: "center",
+            }}
+          >
             {t("pour 30 jours d'accès à votre espace professionnel")}
           </p>
         </div>
