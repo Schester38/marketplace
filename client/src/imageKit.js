@@ -23,6 +23,20 @@
  * Les seuils ci-dessous sont VOLONTAIREMENT centralisés et modifiables.
  */
 
+export const PAYMENT_PROOF_CONFIG = {
+  acceptedTypes: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
+  maxSourceFileBytes: 1 * 1024 * 1024,
+  alreadyOptimized: {
+    formats: ["image/webp", "image/jpeg", "image/png"],
+    maxBytes: 800 * 1024,
+    maxDim: 1800,
+  },
+  resize: {
+    maxDim: 1800,
+    quality: 0.82,
+  },
+};
+
 export const IMAGE_CONFIG = {
   /** Variantes générées : dimensions max + qualité d'encodage WebP. */
   variants: {
@@ -192,6 +206,35 @@ export function pickImageStrategy({ format, bytes, width, height }) {
     reason: `${format} · ${formatBytes(bytes)} · ${width}×${height} → conversion + compression`,
   };
 }
+
+export function pickPaymentProofStrategy({ format, bytes, width, height }) {
+  const accepted = PAYMENT_PROOF_CONFIG.acceptedTypes.includes(format);
+  const smallEnough =
+    Math.max(width, height) <= PAYMENT_PROOF_CONFIG.alreadyOptimized.maxDim &&
+    bytes <= PAYMENT_PROOF_CONFIG.alreadyOptimized.maxBytes;
+
+  if (!accepted) {
+    return {
+      action: "reject",
+      label: "format non supporté",
+      reason: `${format} · ${formatBytes(bytes)} → format de preuve refusé`,
+    };
+  }
+
+  if (smallEnough) {
+    return {
+      action: "keep",
+      label: "déjà lisible",
+      reason: `${format} · ${formatBytes(bytes)} · ${width}×${height} → conservée sans recompression inutile`,
+    };
+  }
+
+  return {
+    action: "optimize",
+    label: "redimensionnement conservateur",
+    reason: `${format} · ${formatBytes(bytes)} · ${width}×${height} → réduction ciblée pour garder la lisibilité du justificatif`,
+  };
+}
 /* ------------------------------------------------------------------ */
 /* Pipeline principale                                                */
 /* ------------------------------------------------------------------ */
@@ -311,4 +354,44 @@ export function compressImage(file, maxDim = 800, quality = 0.72) {
   return blobToDataUrl(file)
     .then((dataUrl) => decodeSource(dataUrl, file.name || "image"))
     .then(({ img }) => renderVariant(img, maxDim, quality).dataUrl);
+}
+
+export async function optimizePaymentProof(file) {
+  if (!file) throw new Error("Aucun fichier de preuve sélectionné");
+
+  if (!file.type?.startsWith("image/")) {
+    throw new Error(`Seules les images sont acceptées comme preuve de paiement. Format reçu : ${file.type || "inconnu"}`);
+  }
+
+  const okType = PAYMENT_PROOF_CONFIG.acceptedTypes.includes(file.type) || file.type.startsWith("image/");
+  if (!okType) {
+    throw new Error(`Format de preuve non supporté : ${file.type || "inconnu"}`);
+  }
+
+  if (file.size > PAYMENT_PROOF_CONFIG.maxSourceFileBytes) {
+    throw new Error(
+      `Preuve trop lourde (${formatBytes(file.size)}) : max ${formatBytes(PAYMENT_PROOF_CONFIG.maxSourceFileBytes)}`
+    );
+  }
+
+  const dataUrl = await blobToDataUrl(file);
+  const { img, width, height } = await decodeSource(dataUrl, file.name || "preuve");
+
+  const strategy = pickPaymentProofStrategy({
+    format: file.type || "image/jpeg",
+    bytes: file.size,
+    width,
+    height,
+  });
+
+  if (strategy.action === "keep") return dataUrl;
+  if (strategy.action === "reject") {
+    throw new Error("Format de preuve non supporté ; choisissez une image JPG/PNG/WebP lisible.");
+  }
+
+  const { canvas } = renderCanvas(img, PAYMENT_PROOF_CONFIG.resize.maxDim);
+  const targetType = file.type === "image/png" ? "image/png" : "image/jpeg";
+  const quality = targetType === "image/png" ? 0.95 : PAYMENT_PROOF_CONFIG.resize.quality;
+
+  return canvas.toDataURL(targetType, quality);
 }

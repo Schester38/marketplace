@@ -526,19 +526,13 @@ export default function CreatorDashboard() {
                 ✕
               </button>
             </div>
-            {String(proofSale.proof).startsWith("data:video") ? (
-              <video
-                src={proofSale.proof}
-                controls
-                style={{ width: "100%", borderRadius: 10, maxHeight: 420 }}
-              />
-            ) : (
+            {String(proofSale.proof).startsWith("data:") || proofSale.proof?.startsWith("http") ? (
               <img
                 src={proofSale.proof}
                 alt={t("Preuve de paiement")}
                 style={{ width: "100%", borderRadius: 10, maxHeight: 420, objectFit: "contain" }}
               />
-            )}
+            ) : null}
             <p className="hint" style={{ marginBottom: 0 }}>
               {t("Preuve fournie par la boutique lors du paiement de la commission.")}
             </p>

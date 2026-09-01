@@ -369,7 +369,7 @@ suite("validators: proofSchema", () => {
   });
 
   test("rejette une data URI trop longue", () => {
-    const longData = "data:image/png;base64," + "a".repeat(12000001);
+    const longData = "data:image/png;base64," + "a".repeat(1048577);
     assertInvalid(proofSchema, longData, "too long proof");
   });
 });

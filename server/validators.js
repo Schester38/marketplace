@@ -71,7 +71,7 @@ export const deliverSaleSchema = z.object({
 export const proofSchema = z
   .string()
   .startsWith("data:", "Preuve invalide : format data URI requis")
-  .max(12000000, "Preuve trop volumineuse (max 12 MB)");
+  .max(1048576, "Preuve trop volumineuse (max 1 Mo)");
 
 export const createFlashPromoSchema = z.object({
   product_id: z.coerce.number().int().positive("Produit requis"),

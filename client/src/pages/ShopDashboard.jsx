@@ -9,7 +9,7 @@ import { downloadInvoice } from "../components/Invoice.jsx";
 import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { compressImage } from "../utils.js";
-import { smartProcessImageFile, formatBytes } from "../imageKit.js";
+import { smartProcessImageFile, formatBytes, optimizePaymentProof } from "../imageKit.js";
 import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
@@ -389,18 +389,15 @@ export default function ShopDashboard() {
 
   const addProof = async (file) => {
     if (!file) return;
-    const isVideo = file.type.startsWith("video/");
-    if (isVideo) {
-      if (file.size > 10 * 1024 * 1024) {
-        setError(t("Vidéo trop lourde : limite 10 Mo."));
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => setPayForm((f) => ({ ...f, proof: reader.result }));
-      reader.readAsDataURL(file);
-    } else {
-      const compressed = await compressImage(file);
-      setPayForm((f) => ({ ...f, proof: compressed }));
+    if (!file.type.startsWith("image/")) {
+      setError(t("Seules les images sont acceptées comme preuve de paiement (JPG, PNG, WebP, HEIC)."));
+      return;
+    }
+    try {
+      const optimized = await optimizePaymentProof(file);
+      setPayForm((f) => ({ ...f, proof: optimized }));
+    } catch (err) {
+      setError(err.message || t("Impossible d'optimiser la preuve de paiement."));
     }
   };
 
@@ -1470,22 +1467,22 @@ export default function ShopDashboard() {
                   </div>
                 )}
                 <form onSubmit={submitPay}>
-                  <label>{t("Preuve du paiement (photo ou vidéo) *")}</label>
+                  <label>{t("Preuve du paiement (photo) *")}</label>
                   <div className="photo-input">
                     <label className="photo-picker">
                       <input
                         type="file"
-                        accept="image/*,video/*"
+                        accept="image/*"
                         capture="environment"
                         hidden
                         onChange={(e) => addProof(e.target.files[0])}
                       />
                       {payForm.proof
-                        ? t("Preuve ajoutée ✓ (cliquez pour changer)")
-                        : t("📷 Ajouter une photo ou une vidéo")}
+                        ? t("Photo ajoutée ✓ (cliquez pour changer)")
+                        : t("📷 Ajouter une photo")}
                     </label>
                   </div>
-                  {payForm.proof && !payForm.proof.startsWith("data:video/") && (
+                  {payForm.proof && (
                     <img src={payForm.proof} alt={t("Preuve")} className="proof-preview" />
                   )}
                   <div className="row2" style={{ marginTop: 14 }}>

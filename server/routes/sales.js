@@ -2,6 +2,7 @@ import { Router } from "express";
 import { q, withTransaction } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { sendPush } from "../push.js";
+import { uploadPaymentProof } from "../storage.js";
 import {
   paySaleAutomatically,
   referralThresholdReached,
@@ -885,11 +886,12 @@ router.post(
         .status(400)
         .json({ error: "Joignez une photo ou une vidéo de preuve du paiement" });
     }
+    const storedProof = await uploadPaymentProof(String(proof));
     const updated = await withTransaction(async (tx) => {
       const changed = await tx.query(
         `UPDATE sales SET paid = TRUE, paid_at = now(), payment_proof = $1
        WHERE id = $2 AND paid = FALSE RETURNING id, commission`,
-        [String(proof).slice(0, 12000000), sale.id]
+        [storedProof || String(proof).slice(0, 1048576), sale.id]
       );
       if (!changed.length) {
         const error = new Error("Le vendeur a déjà été payé pour cette vente");
@@ -1056,11 +1058,12 @@ router.post(
         .status(400)
         .json({ error: "Joignez une photo ou une vidéo de preuve du paiement" });
     }
+    const storedProof = await uploadPaymentProof(String(proof));
     await withTransaction(async (tx) => {
       const changed = await tx.query(
         `UPDATE sales SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1
        WHERE id = $2 AND referral_paid = FALSE RETURNING id, referral_commission`,
-        [String(proof).slice(0, 12000000), sale.id]
+        [storedProof || String(proof).slice(0, 1048576), sale.id]
       );
       if (!changed.length) {
         const error = new Error("Le parrain a déjà été payé pour cette vente");
@@ -1216,21 +1219,21 @@ router.post(
         error: `Le cumul de commission de parrainage doit atteindre ${REFERRAL_CLAIM_THRESHOLD} F avant paiement`,
       });
     }
-    const proofShort = String(proof).slice(0, 12000000);
+    const proofShort = await uploadPaymentProof(String(proof));
     await withTransaction(async (tx) => {
       if (isSeller) {
         await tx.query(
           `UPDATE sales s SET paid = TRUE, paid_at = now(), payment_proof = $1
          FROM products p
         WHERE p.id = s.product_id AND s.seller_id = $2 AND p.shop_id = $3 AND s.status = 'delivered' AND NOT s.paid`,
-          [proofShort, sellerId, req.user.id]
+          [proofShort || String(proof).slice(0, 1048576), sellerId, req.user.id]
         );
       } else {
         await tx.query(
           `UPDATE sales s SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1
          FROM products p
         WHERE p.id = s.product_id AND s.referred_by = $2 AND p.shop_id = $3 AND s.status = 'delivered' AND NOT s.referral_paid`,
-          [proofShort, sellerId, req.user.id]
+          [proofShort || String(proof).slice(0, 1048576), sellerId, req.user.id]
         );
       }
       await tx.query(

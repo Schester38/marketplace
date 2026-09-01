@@ -981,12 +981,12 @@ export default {
   "Moyens de paiement du vendeur": "Medios de pago del vendedor",
   "Le vendeur n'a pas encore enregistré de moyen de paiement.":
     "El vendedor aún no ha registrado un medio de pago.",
-  "Preuve du paiement (photo ou vidéo) *": "Comprobante de pago (foto o video) *",
+  "Preuve du paiement (photo) *": "Comprobante de pago (foto) *",
   "Preuve ajoutée ✓ (cliquez pour changer)": "Comprobante agregado ✓ (haz clic para cambiar)",
   Preuve: "Comprobante",
   "Confirmer le Paiement": "Confirmar el Pago",
   "Vendeur payé ! La preuve a été enregistrée.": "¡Vendedor pagado! Se ha guardado el comprobante.",
-  "Vidéo trop lourde : limite 10 Mo.": "Video demasiado pesado: límite 10 MB.",
+  "Seules les images sont acceptées comme preuve de paiement (JPG, PNG, WebP, HEIC).": "Solo se aceptan imágenes como comprobante de pago (JPG, PNG, WebP, HEIC).",
   Article: "Artículo",
   "Votre commission pour « {product} » a été payée par {shop}.":
     "Tu comisión por « {product} » ha sido pagada por {shop}.",
@@ -1039,7 +1039,7 @@ export default {
   "Livré le": "Entregado el",
   "ex : 5000 (s'affiche barré)": "p. ej.: 5000 (se muestra tachado)",
   "ex : 3500 (s'affiche en vert)": "p. ej.: 3500 (se muestra en verde)",
-  "📷 Ajouter une photo ou une vidéo": "📷 Agregar una foto o un video",
+  "📷 Ajouter une photo": "📷 Agregar una foto",
   "🔍 Rechercher une offre…": "🔍 Buscar una oferta…",
   Installer: "Instalar",
   "Installer l'application": "Instalar la aplicación",

@@ -5,6 +5,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || "photos";
+const PAYMENT_PROOF_BUCKET = process.env.SUPABASE_PAYMENT_PROOF_BUCKET || "payment-proofs";
 
 // Les URLs produites sont immuables (hash du contenu + uuid) : elles peuvent
 // être servies par le CDN / cache navigateur « pour toujours ».
@@ -52,18 +53,18 @@ export function dataUriParts(uri) {
   };
 }
 
-export function publicUrl(path) {
-  return `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+export function publicUrl(path, bucketName = BUCKET) {
+  return `${SUPABASE_URL}/storage/v1/object/public/${bucketName}/${path}`;
 }
 
-async function request(path, options = {}) {
+async function request(path, options = {}, bucketName = BUCKET) {
   if (!SUPABASE_URL || !SERVICE_KEY) {
     throw new Error(
       "Supabase Storage non configuré : variables SUPABASE_URL / SUPABASE_SERVICE_KEY absentes"
     );
   }
   const token = apiToken();
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/${path}`, {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/${path.replace(/^\//, "")}`, {
     ...options,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -74,16 +75,16 @@ async function request(path, options = {}) {
   return res;
 }
 
-export async function ensureBucket() {
+export async function ensureBucket(bucketName = BUCKET) {
   const res = await request("bucket", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id: BUCKET, name: BUCKET, public: true }),
-  });
+    body: JSON.stringify({ id: bucketName, name: bucketName, public: true }),
+  }, bucketName);
   if (res.ok || res.status === 409) return;
   const text = await res.text().catch(() => "");
   if (/BucketAlreadyExists/i.test(text)) return;
-  throw new Error(`Création du bucket ${BUCKET} échouée (${res.status}) : ${text.slice(0, 160)}`);
+  throw new Error(`Création du bucket ${bucketName} échouée (${res.status}) : ${text.slice(0, 160)}`);
 }
 
 const EXT_BY_TYPE = {
@@ -109,13 +110,13 @@ function contentHash(buffer) {
  *   (zéro octet transféré, aucune fuite de fichiers orphelins).
  * - Cache-Control immutable : les URLs sont versionnées par contenu/uuids.
  */
-export async function uploadBuffer(buffer, type, folder = "products", variant = "auto") {
+export async function uploadBuffer(buffer, type, folder = "products", variant = "auto", bucketName = BUCKET) {
   const ext = EXT_BY_TYPE[type] || "bin";
   const path = `${folder}/${contentHash(buffer)}/${variant}.${ext}`;
-  const fullPath = `object/${BUCKET}/${path}`;
+  const fullPath = `object/${bucketName}/${path}`;
 
-  const head = await request(fullPath, { method: "HEAD" });
-  if (head.ok || head.status === 200) return publicUrl(path);
+  const head = await request(fullPath, { method: "HEAD" }, bucketName);
+  if (head.ok || head.status === 200) return publicUrl(path, bucketName);
 
   const res = await request(fullPath, {
     method: "POST",
@@ -124,8 +125,8 @@ export async function uploadBuffer(buffer, type, folder = "products", variant = 
       "Cache-Control": IMMUTABLE_CACHE_CONTROL,
     },
     body: buffer,
-  });
-  if (res.ok || res.status === 409) return publicUrl(path);
+  }, bucketName);
+  if (res.ok || res.status === 409) return publicUrl(path, bucketName);
   const text = await res.text().catch(() => "");
   throw new Error(`Upload Storage échoué (${res.status}) : ${text.slice(0, 160)}`);
 }
@@ -134,6 +135,19 @@ export async function uploadPhoto(dataUri, folder = "products", variant = "auto"
   const parts = dataUriParts(dataUri);
   if (!parts) return null;
   return uploadBuffer(parts.buffer, parts.type, folder, variant);
+}
+
+export async function uploadPaymentProof(dataUri, folder = "payments") {
+  const parts = dataUriParts(dataUri);
+  if (!parts) return null;
+  if (!SUPABASE_URL || !SERVICE_KEY) return dataUri;
+  try {
+    await ensureBucket(PAYMENT_PROOF_BUCKET);
+    return await uploadBuffer(parts.buffer, parts.type, folder, "proof", PAYMENT_PROOF_BUCKET);
+  } catch (err) {
+    console.warn("[storage] upload preuve paiement fallback base64 :", err.message);
+    return dataUri;
+  }
 }
 
 /**

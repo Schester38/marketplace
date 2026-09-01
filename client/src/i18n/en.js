@@ -1072,12 +1072,12 @@ export default {
   "Moyens de paiement du vendeur": "Seller payment methods",
   "Le vendeur n'a pas encore enregistré de moyen de paiement.":
     "The seller has not registered a payment method yet.",
-  "Preuve du paiement (photo ou vidéo) *": "Payment proof (photo or video) *",
+  "Preuve du paiement (photo) *": "Payment proof (photo) *",
   "Preuve ajoutée ✓ (cliquez pour changer)": "Proof added ✓ (click to change)",
   Preuve: "Proof",
   "Confirmer le Paiement": "Confirm Payment",
   "Vendeur payé ! La preuve a été enregistrée.": "Seller paid! The proof has been recorded.",
-  "Vidéo trop lourde : limite 10 Mo.": "Video too heavy: 10 MB limit.",
+  "Seules les images sont acceptées comme preuve de paiement (JPG, PNG, WebP, HEIC).": "Only images are accepted as payment proof (JPG, PNG, WebP, HEIC).",
   Article: "Item",
   "Votre commission pour « {product} » a été payée par {shop}.":
     "Your commission for « {product} » has been paid by {shop}.",
@@ -1130,7 +1130,7 @@ export default {
   "Livré le": "Delivered on",
   "ex : 5000 (s'affiche barré)": "e.g.: 5000 (shown strikethrough)",
   "ex : 3500 (s'affiche en vert)": "e.g.: 3500 (shown in green)",
-  "📷 Ajouter une photo ou une vidéo": "📷 Add a photo or a video",
+  "📷 Ajouter une photo": "📷 Add a photo",
   "🔍 Rechercher une offre…": "🔍 Search for an offer…",
   Installer: "Install",
   "Installer l'application": "Install the app",
