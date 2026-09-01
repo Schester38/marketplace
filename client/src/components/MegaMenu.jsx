@@ -87,7 +87,14 @@ function MegaMenuTrigger({
       leaveTimer.current = null;
     }
   };
-  const delayedLeave = () => {
+  const delayedLeave = (event) => {
+    const nextTarget = event?.relatedTarget;
+    if (
+      (panelRef.current && nextTarget && panelRef.current.contains(nextTarget)) ||
+      (triggerRef.current && nextTarget && triggerRef.current.contains(nextTarget))
+    ) {
+      return;
+    }
     cancelLeave();
     leaveTimer.current = setTimeout(() => handleMegaMenuLeave(), 220);
   };
@@ -155,7 +162,7 @@ function MegaMenuTrigger({
           cancelLeave();
           handleMegaMenuEnter(cat.label);
         }}
-        onMouseLeave={delayedLeave}
+        onMouseLeave={(e) => delayedLeave(e)}
       >
         <Link
           ref={triggerRef}
@@ -233,7 +240,7 @@ function MegaMenuTrigger({
               cancelLeave();
               handleMegaMenuEnter(cat.label);
             }}
-            onMouseLeave={delayedLeave}
+            onMouseLeave={(e) => delayedLeave(e)}
           >
             <MegaMenuContent cat={cat} t={t} closeMegaMenu={closeMegaMenu} />
           </div>,
