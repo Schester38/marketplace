@@ -202,6 +202,42 @@ export default function Support() {
       </section>
 
       <section className="section">
+        <div
+          className="card"
+          style={{
+            borderColor: "var(--primary)",
+            backgroundColor: "rgba(var(--primary-rgb), 0.05)",
+            padding: 20,
+            marginBottom: 24,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.5 }}>
+            {t("Votre soutien :")}{" "}
+            <span
+              style={{
+                color: "var(--primary)",
+                fontSize: 30,
+                fontWeight: 800,
+                display: "inline-block",
+              }}
+            >
+              {t("Montant libre")}
+            </span>
+          </div>
+          <p
+            className="hint"
+            style={{
+              marginTop: 10,
+              marginBottom: 0,
+              fontSize: 14,
+              textAlign: "center",
+            }}
+          >
+            {t("Choisissez le moyen de paiement ci-dessous et envoyez la contribution qui vous convient.")}
+          </p>
+        </div>
+
         <div className="section-head">
           <h2>{t("Comment pouvez-vous soutenir le projet ?")}</h2>
           <p>{t("Choisissez le moyen qui vous convient.")}</p>
