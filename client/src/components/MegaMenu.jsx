@@ -88,15 +88,19 @@ function MegaMenuTrigger({
     }
   };
   const delayedLeave = (event) => {
-    const nextTarget = event?.relatedTarget;
-    if (
-      (panelRef.current && nextTarget && panelRef.current.contains(nextTarget)) ||
-      (triggerRef.current && nextTarget && triggerRef.current.contains(nextTarget))
-    ) {
-      return;
+    if (touchMode) {
+      const nextTarget = event?.relatedTarget;
+      if (
+        (panelRef.current && nextTarget && panelRef.current.contains(nextTarget)) ||
+        (triggerRef.current && nextTarget && triggerRef.current.contains(nextTarget))
+      ) {
+        return;
+      }
     }
     cancelLeave();
-    leaveTimer.current = setTimeout(() => handleMegaMenuLeave(), 220);
+    if (touchMode) {
+      leaveTimer.current = setTimeout(() => handleMegaMenuLeave(), 220);
+    }
   };
   useEffect(() => () => cancelLeave(), []);
 
@@ -137,12 +141,20 @@ function MegaMenuTrigger({
         document.removeEventListener("pointerdown", onDocDown);
       };
     }
+    const closeOnDocClick = (e) => {
+      const tgt = e.target;
+      if (panelRef.current && panelRef.current.contains(tgt)) return;
+      if (triggerRef.current && triggerRef.current.contains(tgt)) return;
+      handleMegaMenuLeave();
+    };
     const closeOnMove = () => handleMegaMenuLeave();
     window.addEventListener("resize", closeOnMove);
     window.addEventListener("scroll", closeOnMove, true);
+    document.addEventListener("pointerdown", closeOnDocClick);
     return () => {
       window.removeEventListener("resize", closeOnMove);
       window.removeEventListener("scroll", closeOnMove, true);
+      document.removeEventListener("pointerdown", closeOnDocClick);
     };
   }, [isOpen, touchMode, handleMegaMenuLeave]);
 
