@@ -2,7 +2,11 @@ import { Router } from "express";
 import { q, withTransaction } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { sendPush } from "../push.js";
-import { paySaleAutomatically } from "../services/payouts.js";
+import {
+  paySaleAutomatically,
+  referralThresholdReached,
+  REFERRAL_CLAIM_THRESHOLD,
+} from "../services/payouts.js";
 
 const router = Router();
 
@@ -989,6 +993,11 @@ router.post(
     if (sale.referral_paid) {
       return res.status(409).json({ error: "Cette commission a déjà été payée" });
     }
+    if (!referralThresholdReached(Number(sale.referral_commission || 0))) {
+      return res.status(409).json({
+        error: `Le cumul de commission de parrainage doit atteindre ${REFERRAL_CLAIM_THRESHOLD} F avant réclamation`,
+      });
+    }
     if (sale.referral_claimed_at) {
       return res.status(409).json({ error: "Paiement déjà réclamé, la boutique a été notifiée" });
     }
@@ -1119,6 +1128,11 @@ router.post(
       return res.status(409).json({ error: "Aucune commission à réclamer chez cette boutique" });
     }
     const total = Math.round(rows.reduce((a, r) => a + Number(r.amt || 0), 0) * 100) / 100;
+    if (!isSale && !referralThresholdReached(total)) {
+      return res.status(409).json({
+        error: `Le cumul de commission de parrainage doit atteindre ${REFERRAL_CLAIM_THRESHOLD} F avant réclamation`,
+      });
+    }
     await q(
       `UPDATE sales s SET ${col} = now()
        FROM products p
@@ -1176,6 +1190,11 @@ router.post(
       return res.status(409).json({ error: "Aucune commission à payer" });
     }
     const total = Math.round(rows.reduce((a, r) => a + Number(r.amt || 0), 0) * 100) / 100;
+    if (!isSeller && !referralThresholdReached(total)) {
+      return res.status(409).json({
+        error: `Le cumul de commission de parrainage doit atteindre ${REFERRAL_CLAIM_THRESHOLD} F avant paiement`,
+      });
+    }
     const proofShort = String(proof).slice(0, 12000000);
     await withTransaction(async (tx) => {
       if (isSeller) {

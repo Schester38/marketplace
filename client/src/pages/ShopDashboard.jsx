@@ -817,34 +817,43 @@ export default function ShopDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {rgs.map((g) => (
-                              <tr key={g.parrain_id}>
-                                <td>{g.parrain_name}</td>
-                                <td>{g.items.length}</td>
-                                <td>
-                                  {formatMoney(g.pending)} {countrySymbol(g.items[0]?.shop_country)}
-                                </td>
-                                <td>
-                                  {g.anyClaimed ? (
-                                    <span className="badge badge-confirmed">
-                                      {t("Paiement réclamé")}
-                                    </span>
-                                  ) : (
-                                    <span className="badge badge-pending">
-                                      {t("En attente")}
-                                    </span>
-                                  )}
-                                </td>
-                                <td>
-                                  <button
-                                    className="btn btn-small btn-danger"
-                                    onClick={() => openPayGrouped("referral", g)}
-                                  >
-                                    💰 {t("Payer le parrain")} ({formatMoney(g.pending)})
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
+                            {rgs.map((g) => {
+                              const canPay = Number(g.pending || 0) >= REFERRAL_CLAIM_THRESHOLD;
+                              return (
+                                <tr key={g.parrain_id}>
+                                  <td>{g.parrain_name}</td>
+                                  <td>{g.items.length}</td>
+                                  <td>
+                                    {formatMoney(g.pending)} {countrySymbol(g.items[0]?.shop_country)}
+                                  </td>
+                                  <td>
+                                    {g.anyClaimed ? (
+                                      <span className="badge badge-confirmed">
+                                        {t("Paiement réclamé")}
+                                      </span>
+                                    ) : (
+                                      <span className="badge badge-pending">
+                                        {t("En attente")}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td>
+                                    <button
+                                      className="btn btn-small btn-danger"
+                                      disabled={!canPay}
+                                      onClick={() => canPay && openPayGrouped("referral", g)}
+                                      title={
+                                        canPay
+                                          ? ""
+                                          : `Cumul requis : ${formatMoney(REFERRAL_CLAIM_THRESHOLD)} ${countrySymbol(g.items[0]?.shop_country)}`
+                                      }
+                                    >
+                                      💰 {canPay ? `${t("Payer le parrain")} (${formatMoney(g.pending)})` : `⏳ ${t("Cumul")}: ${formatMoney(REFERRAL_CLAIM_THRESHOLD)}`}
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>

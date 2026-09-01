@@ -1,4 +1,8 @@
-import { computeRedistribution } from "../services/payouts.js";
+import {
+  computeRedistribution,
+  referralThresholdReached,
+  REFERRAL_CLAIM_THRESHOLD,
+} from "../services/payouts.js";
 import {
   registerSchema,
   loginSchema,
@@ -116,6 +120,15 @@ suite("computeRedistribution", () => {
     const r = computeRedistribution(sale);
     assertEqual(r.shopAmount, -500, "shopAmount");
     assertEqual(r.sellerAmount, 1500, "sellerAmount");
+  });
+});
+
+suite("referral threshold", () => {
+  test("active le cumul à 5000 XAF pour les commissions de parrainage", () => {
+    assertEqual(referralThresholdReached(4999), false, "below threshold");
+    assertEqual(referralThresholdReached(5000), true, "at threshold");
+    assertEqual(referralThresholdReached(15000), true, "above threshold");
+    assertEqual(REFERRAL_CLAIM_THRESHOLD, 5000, "threshold value");
   });
 });
 
