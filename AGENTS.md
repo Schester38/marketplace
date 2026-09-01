@@ -24,7 +24,7 @@ Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiqu
 
 ### Frais de service — 0 %
 
-Les paiements sont **manuellement** : espèces à la livraison, Mobile Money direct, virement bancaire ou PayPal/UBA. Mboppi ne collecte aucun paiement et ne prélève aucun frais de plateforme. Les moyens de paiement sont enregistrés par chaque espace pour permettre les transferts directs entre parties.
+Les paiements sont **manuellement** : espèces à la livraison, Mobile Money direct, virement bancaire ou PayPal/UBA. Mboppi ne collecte aucun paiement et ne prélève aucun frais de plateforme. Les moyens de paiement sont enregistrés par chaque espace pour permettre les transferts directs entre parties. 
 
 ### Répartition d'une vente — `server/finance.js` `computeRedistribution`
 
@@ -80,7 +80,7 @@ Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau v
 - `purchases.js` : `POST /` avec `product_id, seller_code (uppercasé), purchase_price, quantity, buyer_*, payment_method ('mobile'|'espece')`; auth optionnelle. Le **prix de référence** est celui du catalogue OU de la promo active (`purchases.js:75`), jamais le prix client.
 - `orders.js` : panier multi-articles (code 6 chars).
 - **Livraison** (`sales.js:540` `/:id/deliver`) : le livreur saisit `delivery_fee` + `payment_method` (`espèce`/`mobile`/`en ligne`), doit fournir le `shop_code` de la boutique et le `confirm_code` du client ; décrémente le stock (ou `reserved_quantity` si `stock_reserved`). À la livraison : déclenche `maybeAutoPayReferrals` pour le parrain (`sales.js:609-615`).
-- **Paiement d'une vente** : **manuel uniquement** (espèces, mobile money direct, virement). Validation manuelle via `POST /sales/:id/pay` (boutique paie vendeur) et `POST /sales/:id/pay-referral` (boutique paie parrain).
+- **Paiement d'une vente** : maintenant **manuel uniquement** (espèces, mobile money direct, virement). Plus de `POST /api/payments/payin` ni webhook iKeePay. Validation manuelle via `POST /sales/:id/pay` (boutique paie vendeur) et `POST /sales/:id/pay-referral` (boutique paie parrain).
 - **Suppression de livraison** : bloquée si commission vendeur (`paid`) ou parrainage (`referral_paid`) non payés (`sales.js:436-444`). Paiement groupé des commissions par la boutique : `/:id/claim` et `/:id/pay-referral` (`sales.js:782-917`).
 - **Facture PDF** : `client/src/components/Invoice.jsx` — jspdf **v4.2.1** importé dynamiquement, `doc.save('facture-{id}.pdf')`, logo `/navbar-logo.png`, boutons dans Shop/Seller/Livreur dashboards.
 
@@ -115,6 +115,6 @@ Il existe aussi le **parrainage d'activation vendeur** (distinct) : un nouveau v
 - **1.10.0 / v51** : refonte promotion éclair (masquage catalogue, règles serveur, UI shop).
 - **1.11.0 / v52** : masquage SEO complet, blocage sellers côté serveur, commission promo 0, partage promo, offres Verone dans l'accueil (rail), suppression commission duo.
 - **1.12.0 / v53** : popup promos superposées sur un même cadre avec rotation 5 s et titre « PROMOTION DU JOUR » centré (X ferme tout) ; correctif ancrage `bottom: 0` des cartes (popup cachée hors écran) ; retrait des emojis 🎨/🎓 du menu.
-- **1.13.0** : commission activation vendeur 1 000 XAF + part Mboppi 500 XAF lors de l'adhésion d'un vendeur parrainé ; seuil parrainage client automatique remonté à 5 000 XAF.
-- **1.14.0** : suppression du système de paiement en ligne (iKeePay : payin, checkout, webhook, payout, automatic_payouts, intégration) ; passage au paiement manuel exclusif ; le parrainage et les commissions sont versés manuellement par la boutique.
+- **1.13.0** : commission activation vendeur 1 000 XAF + part Mboppi 500 XAF lors de l'adhésion Ikeepay d'un vendeur parrainé ; seuil parrainage client automatique remonté à 5 000 XAF.
+- **1.14.0** : suppression complète du système iKeePay (paiements en ligne, webhooks, reversements automatiques) ; passage au paiement manuel exclusif ; le parrainage et les commissions sont versés manuellement par la boutique.
 - Facture PDF : parfaitement fonctionnelle (vérifié — téléchargement jsPDF OK).

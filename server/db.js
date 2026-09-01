@@ -34,17 +34,6 @@ export async function ensureColumn(table, column, definition) {
   }
 }
 
-
-
-
-// NOTE : les anciennes fonctions ensureDonationPaymentColumns() et
-// ensureAutomaticPayoutColumns() (auto-réparation des colonnes iKeePay) ont été
-// supprimées avec le système iKeePay. Les tables `automatic_payouts`,
-// `platform_payouts` et `payment_webhook_logs` sont conservées dans initDb()
-// ci-dessous pour préserver les données financières historiques, mais n'ont
-// plus aucune fonctionnalité active.
-
-
 export async function withTransaction(fn) {
   const client = await getPool().connect();
   try {
@@ -170,12 +159,7 @@ export async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS shop_code TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_approved BOOLEAN NOT NULL DEFAULT FALSE;
-    -- NB : ne PAS recoupler admin_approved à verified ici. Depuis v1.47.38
-    -- (accès gratuit), l'approbation admin (Ouvrir/Fermer) est indépendante du
-    -- badge « Vérifié ». L'ancienne ligne
-    --   UPDATE users SET admin_approved = COALESCE(verified, FALSE) ...
-    -- refermait les comptes pro à chaque initDb (déploiement / cold start) :
-    -- admin_approved repassait à FALSE pour tout vendeur non « vérifié ».
+    UPDATE users SET admin_approved = COALESCE(verified, FALSE) WHERE admin_approved IS DISTINCT FROM verified;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_attempts INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT TRUE;
@@ -252,8 +236,6 @@ export async function initDb() {
 
     ALTER TABLE products ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
-    -- Signature du client (PNG data URI) capturée par le livreur à la livraison.
-    ALTER TABLE sales ADD COLUMN IF NOT EXISTS signature TEXT;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
 
@@ -394,26 +376,6 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created ON wallet_transactions(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_wallet_transactions_reference ON wallet_transactions(reference_type, reference_id);
 
-    CREATE TABLE IF NOT EXISTS activation_withdrawals (
-      id SERIAL PRIMARY KEY,
-      seller_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      amount NUMERIC(14,2) NOT NULL,
-      comment TEXT,
-      email TEXT,
-      status TEXT NOT NULL DEFAULT 'pending',
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      paid_at TIMESTAMPTZ,
-      paid_by INTEGER REFERENCES users(id) ON DELETE SET NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_activation_withdrawals_seller ON activation_withdrawals(seller_id);
-    CREATE TABLE IF NOT EXISTS activation_withdrawal_items (
-      id SERIAL PRIMARY KEY,
-      withdrawal_id INTEGER NOT NULL REFERENCES activation_withdrawals(id) ON DELETE CASCADE,
-      member_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      UNIQUE (withdrawal_id, member_id)
-    );
-    CREATE INDEX IF NOT EXISTS idx_activation_withdrawal_items_member ON activation_withdrawal_items(member_id);
-
     CREATE TABLE IF NOT EXISTS automatic_payouts (
       id BIGSERIAL PRIMARY KEY,
       external_reference TEXT NOT NULL UNIQUE,
@@ -423,13 +385,10 @@ export async function initDb() {
       amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
       currency TEXT NOT NULL DEFAULT 'XAF',
       fee NUMERIC(14,2) DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
       provider_reference TEXT,
       error TEXT,
-      attempts INTEGER NOT NULL DEFAULT 0,
-      retryable BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       completed_at TIMESTAMPTZ
     );
     CREATE INDEX IF NOT EXISTS idx_automatic_payouts_user ON automatic_payouts(user_id, created_at DESC);
@@ -444,7 +403,6 @@ export async function initDb() {
       status TEXT,
       sale_id INTEGER REFERENCES sales(id) ON DELETE SET NULL,
       handled BOOLEAN NOT NULL DEFAULT FALSE,
-      authenticated BOOLEAN NOT NULL DEFAULT FALSE,
       error TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
@@ -465,7 +423,6 @@ export async function initDb() {
       id BIGSERIAL PRIMARY KEY,
       external_reference TEXT NOT NULL UNIQUE,
       amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
-      fee NUMERIC(14,2) NOT NULL DEFAULT 0,
       currency TEXT NOT NULL DEFAULT 'XAF',
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
       provider_reference TEXT,
@@ -484,7 +441,6 @@ export async function initDb() {
       external_reference TEXT UNIQUE,
       provider_reference TEXT,
       payment_link TEXT,
-      confirm_token TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       completed_at TIMESTAMPTZ
     );
@@ -495,51 +451,6 @@ export async function initDb() {
     ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_transaction_type_check;
     ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_transaction_type_check CHECK (transaction_type IN ('commission_credit','referral_credit','payout_debit','adjustment','online_collect','online_payout'));
   `);
-
-  // Migrations de colonnes exécutées UNE PAR UNE : le gros batch ci-dessus
-  // s'arrête à la première instruction en échec sur une base au schéma ancien,
-  // ce qui empêchait l'ajout des colonnes iKeePay sur la table donations.
-  const COLUMN_MIGRATIONS = [
-    ["donations", "external_reference", "TEXT"],
-    ["donations", "provider_reference", "TEXT"],
-    ["donations", "payment_link", "TEXT"],
-    ["donations", "completed_at", "TIMESTAMPTZ"],
-    ["membership_payments", "provider_reference", "TEXT"],
-    ["membership_payments", "payment_link", "TEXT"],
-    ["membership_payments", "error", "TEXT"],
-    ["membership_payments", "completed_at", "TIMESTAMPTZ"],
-    ["platform_payouts", "external_reference", "TEXT"],
-    ["platform_payouts", "provider_reference", "TEXT"],
-    ["platform_payouts", "fee", "NUMERIC(14,2) NOT NULL DEFAULT 0"],
-    ["platform_payouts", "error", "TEXT"],
-    ["platform_payouts", "completed_at", "TIMESTAMPTZ"],
-    // wallet_transactions : `fee` (+ garde-fous) ajouté au CREATE TABLE par le
-    // refactor iKeepay mais jamais appliqué aux tables existantes → /wallet/me
-    // renvoyait 500 (« column fee does not exist ») pour tous les rôles.
-    ["wallet_transactions", "fee", "NUMERIC(14,2) DEFAULT 0"],
-    ["wallet_transactions", "reference_type", "TEXT"],
-    ["wallet_transactions", "reference_id", "INTEGER"],
-    ["wallet_transactions", "description", "TEXT"],
-    ["wallet_transactions", "currency", "TEXT NOT NULL DEFAULT 'XAF'"],
-    ["sales", "signature", "TEXT"],
-    // Phase 3 — états du reversement automatique (non destructif) :
-    ["automatic_payouts", "attempts", "INTEGER NOT NULL DEFAULT 0"],
-    ["automatic_payouts", "retryable", "BOOLEAN NOT NULL DEFAULT FALSE"],
-    ["automatic_payouts", "updated_at", "TIMESTAMPTZ NOT NULL DEFAULT now()"],
-    // Sécurité paiements : trace d'authentification des webhooks + jeton de
-    // confirmation des dons (Phase 2 — fail-closed webhook, non destructif).
-    ["payment_webhook_logs", "authenticated", "BOOLEAN NOT NULL DEFAULT FALSE"],
-    ["donations", "confirm_token", "TEXT"],
-  ];
-  for (const [migTable, migColumn, migDefinition] of COLUMN_MIGRATIONS) {
-    try {
-      await pool.query(
-        `ALTER TABLE ${migTable} ADD COLUMN IF NOT EXISTS ${migColumn} ${migDefinition}`
-      );
-    } catch (err) {
-      console.error(`[migrations] ${migTable}.${migColumn} :`, err.message);
-    }
-  }
 
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_sales_buyer ON sales(buyer_id) WHERE buyer_id IS NOT NULL;

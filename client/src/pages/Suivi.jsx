@@ -202,15 +202,15 @@ export default function Suivi() {
             )}
 
             <div className="suivi-actions">
-              {sale.seller_phone && (
+              {(sale.shop_contact || sale.shop_phone || sale.seller_phone) && (
                 <a
                   className="btn btn-primary"
                   href={waLink(
-                    sale.seller_phone,
+                    sale.shop_contact || sale.shop_phone || sale.seller_phone,
                     t(
-                      "Bonjour {seller}, je suis {buyer}, je vous contacte à propos de ma commande « {product} » sur Mboppi.",
+                      "Bonjour {shop}, je suis {buyer}, je vous contacte à propos de ma commande « {product} » sur Mboppi.",
                       {
-                        seller: sale.seller_name,
+                        shop: sale.shop_name || sale.seller_name || t("la boutique"),
                         buyer: sale.buyer_name || t("un client"),
                         product: sale.product_name,
                       }
@@ -219,7 +219,7 @@ export default function Suivi() {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  💬 {t("Contacter le vendeur")}
+                  💬 {t("Contacter la Boutique")}
                 </a>
               )}
               <button

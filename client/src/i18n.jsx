@@ -244,7 +244,6 @@ const EN = {
     "You can change your password at any time.",
   "Mot de passe actuel": "Current password",
   "Nouveau mot de passe": "New password",
-  "Confirmer le mot de passe": "Confirm password",
   "Confirmer le nouveau mot de passe": "Confirm new password",
   "Changer le mot de passe": "Change password",
   "Mot de passe modifié !": "Password changed!",
@@ -453,19 +452,6 @@ const EN = {
   "Pas de connexion internet": "No internet connection",
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "You are currently offline. Check your connection and try again.",
-  "Mes fonds & transactions": "My funds & transactions",
-  "Solde": "Balance",
-  "Reçus": "Received",
-  "Sortis": "Paid out",
-  "Reversement en ligne": "Online payout",
-  "Encaissement en ligne": "Online collection",
-  "Aucune transaction de fonds pour le moment.": "No fund transactions yet.",
-  "Fonds indisponibles pour le moment.": "Funds currently unavailable.",
-  "Erreurs récentes (client)": "Recent errors (client)",
-  "Journal des erreurs de rendu remontées par les navigateurs. Si l'écran « Oups, une erreur est survenue » apparaît, sa cause exacte (message + pile) est enregistrée ici.":
-    "Rendering errors reported by browsers. If the “Oops, something went wrong” screen appears, its exact cause (message + stack) is recorded here.",
-  "Pile (début)": "Stack (start)",
-  "Aucune erreur enregistrée": "No errors recorded",
   Réessayer: "Retry",
   "Désolé, Mboppi ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
     "Sorry, Mboppi cannot connect to the internet right now. Check your network (Wi-Fi or mobile data) and try again.",
@@ -624,71 +610,6 @@ const EN = {
   "Parrainage payé": "Referral paid",
   "Mes filleuls — commissions de parrainage (2%)":
     "My referred clients — referral commissions (2%)",
-  "Commissions de parrainage vendeur": "Seller referral commissions",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F (net 900 F après frais) ; 500 F sont reversés à Mboppi.":
-    "Each seller or creator who signs up through your link and pays their membership (1,500 F) earns you 1,000 F (net 900 F after fees); 500 F is paid to Mboppi.",
-  "Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission de 1 000 F n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
-    "Currently everyone has free access (including referred members) as long as the administrator does not close the account: the 1,000 F commission is therefore only paid out when a referred member actually pays their membership.",
-  "Vendeurs / créateurs parrainés — commission de 1 000 F":
-    "Referred sellers / creators — 1,000 F commission",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F. Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
-    "Each seller or creator who signs up through your link and pays their membership (1,500 F) earns you 1,000 F (net 900 F after fees); 500 F is paid to Mboppi. Currently everyone has free access (including referred members) as long as the administrator does not close the account: the commission is only paid out when a referred member actually pays their membership.",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F":
-    "Each seller or creator who signs up through your link and pays their membership (1,500 F) earns you 1,000 F",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F. La commission est versée manuellement par l'administration.":
-    "Each seller or creator who signs up through your link and pays their membership (1,500 F) earns you 1,000 F. The commission is paid out manually by the administration.",
-  "Membre": "Member",
-  "Rôle": "Role",
-  "Adhésion": "Membership",
-  "Commission": "Commission",
-  "Statut": "Status",
-  "Versée": "Paid out",
-  "En cours": "In progress",
-  "En attente d'adhésion": "Awaiting membership payment",
-  "Non payée": "Not paid",
-  "Adhésion payée": "Membership paid",
-  Payé: "Paid",
-  "Marquer l'adhésion de {name} comme payée et avertir son parrain ?":
-    "Mark {name}'s membership as paid and notify their referrer?",
-  "Montant disponible": "Available amount",
-  "Demande de retrait": "Withdrawal request",
-  "Références des parrainés (adhésion confirmée)": "Referred members' references (confirmed membership)",
-  "Montant à retirer": "Amount to withdraw",
-  "Le montant doit être inférieur ou égal à votre solde disponible (multiple de 1 000 F).":
-    "The amount must be less than or equal to your available balance (multiple of 1,000 F).",
-  "Aucun moyen de paiement configuré": "No payment method configured",
-  "Moyen de paiement parrain": "Referrer payment method",
-  "Commentaire (optionnel)": "Comment (optional)",
-  "Un petit commentaire…": "A short comment…",
-  "Confirmer le retrait": "Confirm withdrawal",
-  "Demande reçue": "Request received",
-  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Elle sera traitée dans un délai maximum de 24 h.":
-    "Your withdrawal request of {amount} F has been received by the Mboppi team. It will be processed within 24 hours.",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F, validé par l'administration. Retrait possible dès 5 000 F.":
-    "Each seller or creator who signs up through your link and pays their membership (1,500 F) earns you 1,000 F, validated by the administration. Withdrawal possible from 5,000 F.",
-  "Demandes de retrait (commissions d'activation)": "Withdrawal requests (activation commissions)",
-  "Parrainés (adhésion confirmée)": "Referred members (confirmed membership)",
-  Commentaire: "Comment",
-  "Aucune demande de retrait": "No withdrawal requests",
-  Payer: "Pay",
-  "Payer la demande de retrait de {amount} F pour {name} ?": "Pay the withdrawal request of {amount} F for {name}?",
-  "Votre demande de retrait de {amount} F a bien été reçue. Elle sera traitée dans un délai maximum de 24 h.":
-    "Your withdrawal request of {amount} F has been received. It will be processed within 24 hours.",
-  "Votre demande de retrait de {amount} F a été payée par l'équipe Mboppi.":
-    "Your withdrawal request of {amount} F has been paid by the Mboppi team.",
-  "Un de vos filleuls a payé son adhésion — votre commission de 1 000 F est en attente de versement.":
-    "One of your referred members has paid their membership — your 1,000 F commission is awaiting payout.",
-  "Parrainages (vendeurs / créateurs)": "Referrals (sellers / creators)",
-  "Rechercher par numéro de référence (parrainé ou parrain)…":
-    "Search by reference number (referred member or referrer)…",
-  "Parrainé": "Referred member",
-  "Référence": "Reference",
-  "Référence parrainé": "Referred member reference",
-  "Téléphone parrainé": "Referred member phone",
-  "Son parrain": "Their referrer",
-  "Référence parrain": "Referrer reference",
-  "Téléphone parrain": "Referrer phone",
-  "Aucun parrainage": "No referrals",
   "Chaque commande passée par un client inscrit avec votre lien vous rapporte 2% du montant, payés par la boutique après livraison.":
     "Each order placed by a client registered with your link earns you 2% of the amount, paid by the shop after delivery.",
   "Aucune commande de filleul pour le moment.": "No referred client order yet.",
@@ -1026,11 +947,11 @@ const EN = {
     "The shop has not set up its payment wallets yet. Cash on delivery recommended.",
   "Moyens de paiement": "Payment methods",
   "La boutique n'a pas configuré de portefeuille.": "The shop has not set up a wallet.",
-  "Vérone · Assistante Mboppi": "Vérone · Mboppi Assistant",
+  "Assistant Mboppi": "Mboppi Assistant",
   "En ligne": "Online",
   "Écrivez votre question…": "Type your question…",
-  "Bonjour 👋 Je suis Vérone, l'assistante Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
-    "Hello 👋 I am Vérone, the Mboppi assistant. Ask me anything about the shop, orders, payments or delivery!",
+  "Bonjour 👋 Je suis l'assistant Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
+    "Hello 👋 I am the Mboppi assistant. Ask me anything about the shop, orders, payments or delivery!",
   "Une erreur est survenue. Réessayez ou contactez-nous via la page Contact.":
     "An error occurred. Try again or contact us via the Contact page.",
   "Le chatbot n'est pas encore configuré (clé IA manquante côté serveur).":
@@ -1706,7 +1627,6 @@ const AR = {
   "Vous pouvez changer votre mot de passe à tout moment.": "يمكنك تغيير كلمة المرور في أي وقت.",
   "Mot de passe actuel": "كلمة المرور الحالية",
   "Nouveau mot de passe": "كلمة المرور الجديدة",
-  "Confirmer le mot de passe": "تأكيد كلمة المرور",
   "Confirmer le nouveau mot de passe": "تأكيد كلمة المرور الجديدة",
   "Changer le mot de passe": "تغيير كلمة المرور",
   "Mot de passe modifié !": "تم تغيير كلمة المرور!",
@@ -1908,19 +1828,6 @@ const AR = {
   "Pas de connexion internet": "لا يوجد اتصال بالإنترنت",
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "أنت غير متصل حالياً. تحقق من اتصالك ثم أعد المحاولة.",
-  "Mes fonds & transactions": "أموالي ومعاملاتي",
-  "Solde": "الرصيد",
-  "Reçus": "المستلمة",
-  "Sortis": "المدفوعة",
-  "Reversement en ligne": "تحويل عبر الإنترنت",
-  "Encaissement en ligne": "تحصيل عبر الإنترنت",
-  "Aucune transaction de fonds pour le moment.": "لا توجد معاملات أموال حالياً.",
-  "Fonds indisponibles pour le moment.": "الأموال غير متاحة حالياً.",
-  "Erreurs récentes (client)": "الأخطاء الأخيرة (العميل)",
-  "Journal des erreurs de rendu remontées par les navigateurs. Si l'écran « Oups, une erreur est survenue » apparaît, sa cause exacte (message + pile) est enregistrée ici.":
-    "أخطاء العرض المبلَّغ عنها من المتصفحات. إذا ظهرت شاشة «عذراً، حدث خطأ»، يُسجَّل سببها الدقيق (الرسالة + الأثر) هنا.",
-  "Pile (début)": "الأثر (البداية)",
-  "Aucune erreur enregistrée": "لا توجد أخطاء مسجلة",
   Réessayer: "إعادة المحاولة",
   "Désolé, Mboppi ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
     "عذراً، لا يستطيع Mboppi الاتصال بالإنترنت حالياً. تحقق من شبكتك (Wi-Fi أو بيانات الجوال) ثم أعد المحاولة.",
@@ -2074,71 +1981,6 @@ const AR = {
   "Parrainage en attente": "الكفالة معلقة",
   "Parrainage payé": "الكفالة مدفوعة",
   "Mes filleuls — commissions de parrainage (2%)": "المكفولون لدي — عمولات الكفالة (2%)",
-  "Commissions de parrainage vendeur": "عمولات كفالة البائع",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F (net 900 F après frais) ; 500 F sont reversés à Mboppi.":
-    "كل بائع أو مبدع يسجل عبر رابطك ويدفع اشتراكه (1500 ف) يكسبك 1000 ف (صافي 900 ف بعد الرسوم)؛ ويُحوَّل 500 ف إلى Mboppi.",
-  "Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission de 1 000 F n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
-    "حالياً يحصل الجميع على الدخول مجاناً (حتى المكفولين) ما لم يُغلق المسؤول الحساب: لذلك لا تُدفع عمولة 1000 ف إلا عندما يدفع المكفول اشتراكه فعلياً.",
-  "Vendeurs / créateurs parrainés — commission de 1 000 F":
-    "البائعون / المبدعون المكفولون — عمولة 1000 ف",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F. Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
-    "كل بائع أو مبدع يسجل عبر رابطك ويدفع اشتراكه (1500 ف) يكسبك 1000 ف (صافي 900 ف بعد الرسوم)؛ ويُحوَّل 500 ف إلى Mboppi. حالياً يحصل الجميع على الدخول مجاناً (حتى المكفولين) ما لم يُغلق المسؤول الحساب: لذلك لا تُدفع العمولة إلا عندما يدفع المكفول اشتراكه فعلياً.",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F":
-    "كل بائع أو مبدع يسجل عبر رابطك ويدفع اشتراكه (1500 ف) يكسبك 1000 ف",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F. La commission est versée manuellement par l'administration.":
-    "كل بائع أو مبدع يسجل عبر رابطك ويدفع اشتراكه (1500 ف) يكسبك 1000 ف. تُدفع العمولة يدوياً من طرف الإدارة.",
-  "Membre": "عضو",
-  "Rôle": "الدور",
-  "Adhésion": "الاشتراك",
-  "Commission": "العمولة",
-  "Statut": "الحالة",
-  "Versée": "محولة",
-  "En cours": "قيد التنفيذ",
-  "En attente d'adhésion": "في انتظار دفع الاشتراك",
-  "Non payée": "غير مدفوعة",
-  "Adhésion payée": "تم دفع الاشتراك",
-  Payé: "مدفوع",
-  "Marquer l'adhésion de {name} comme payée et avertir son parrain ?":
-    "هل تريد تحديد اشتراك {name} كمدفوع وإشعار الكفيل؟",
-  "Montant disponible": "المبلغ المتاح",
-  "Demande de retrait": "طلب السحب",
-  "Références des parrainés (adhésion confirmée)": "مراجع المكفولين (بعد تأكيد الاشتراك)",
-  "Montant à retirer": "المبلغ المراد سحبه",
-  "Le montant doit être inférieur ou égal à votre solde disponible (multiple de 1 000 F).":
-    "يجب أن يكون المبلغ أصغر أو يساوي رصيدك المتاح (مضاعف 1000 ف).",
-  "Aucun moyen de paiement configuré": "لا توجد وسيلة دفع مُعدّة",
-  "Moyen de paiement parrain": "وسيلة دفع الكفيل",
-  "Commentaire (optionnel)": "تعليق (اختياري)",
-  "Un petit commentaire…": "تعليق قصير…",
-  "Confirmer le retrait": "تأكيد السحب",
-  "Demande reçue": "تم استلام الطلب",
-  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Elle sera traitée dans un délai maximum de 24 h.":
-    "تم استلام طلب السحب الخاص بك بمبلغ {amount} ف من طرف فريق Mboppi. سيتم معالجته في غضون 24 ساعة كحد أقصى.",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F, validé par l'administration. Retrait possible dès 5 000 F.":
-    "كل بائع أو مبدع يسجل عبر رابطك ويدفع اشتراكه (1500 ف) يكسبك 1000 ف، بعد تأكيد الإدارة. يمكنك السحب ابتداءً من 5000 ف.",
-  "Demandes de retrait (commissions d'activation)": "طلبات السحب (عمولات التفعيل)",
-  "Parrainés (adhésion confirmée)": "المكفولون (بعد تأكيد الاشتراك)",
-  Commentaire: "تعليق",
-  "Aucune demande de retrait": "لا توجد طلبات سحب",
-  Payer: "الدفع",
-  "Payer la demande de retrait de {amount} F pour {name} ?": "دفع طلب السحب بمبلغ {amount} ف لـ {name}؟",
-  "Votre demande de retrait de {amount} F a bien été reçue. Elle sera traitée dans un délai maximum de 24 h.":
-    "تم استلام طلب السحب الخاص بك بمبلغ {amount} ف. سيتم معالجته في غضون 24 ساعة كحد أقصى.",
-  "Votre demande de retrait de {amount} F a été payée par l'équipe Mboppi.":
-    "تم دفع طلب السحب الخاص بك بمبلغ {amount} ف من طرف فريق Mboppi.",
-  "Un de vos filleuls a payé son adhésion — votre commission de 1 000 F est en attente de versement.":
-    "أحد المكفولين لديك دفع اشتراكه — عمولتك البالغة 1000 ف في انتظار التحويل.",
-  "Parrainages (vendeurs / créateurs)": "الإحالات (بائعون / مبدعون)",
-  "Rechercher par numéro de référence (parrainé ou parrain)…":
-    "ابحث برقم المرجع (المكفول أو الكفيل)…",
-  "Parrainé": "المكفول",
-  "Référence": "المرجع",
-  "Référence parrainé": "مرجع المكفول",
-  "Téléphone parrainé": "هاتف المكفول",
-  "Son parrain": "الكفيل الخاص به",
-  "Référence parrain": "مرجع الكفيل",
-  "Téléphone parrain": "هاتف الكفيل",
-  "Aucun parrainage": "لا توجد إحالات",
   "Chaque commande passée par un client inscrit avec votre lien vous rapporte 2% du montant, payés par la boutique après livraison.":
     "كل طلب يقدمه عميل سجل عبر رابطك يمنحك 2% من المبلغ، تدفعه البوتيك بعد التوصيل.",
   "Aucune commande de filleul pour le moment.": "لا توجد طلبات للمكفولين حالياً.",
@@ -2468,11 +2310,11 @@ const AR = {
     "لم يقم المتجر بعد بإعداد محافظ الدفع الخاصة به. يُنصح بالدفع عند التوصيل.",
   "Moyens de paiement": "وسائل الدفع",
   "La boutique n'a pas configuré de portefeuille.": "لم يقم المتجر بإعداد أي محفظة.",
-  "Vérone · Assistante Mboppi": "فيرون · مساعدة مبوّي",
+  "Assistant Mboppi": "مساعد مبوّي",
   "En ligne": "متصل",
   "Écrivez votre question…": "اكتب سؤالك…",
-  "Bonjour 👋 Je suis Vérone, l'assistante Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
-    "مرحباً 👋 أنا فيرون، مساعدة مبوّي. اسأليني عن المتجر أو الطلبات أو الدفع أو التوصيل!",
+  "Bonjour 👋 Je suis l'assistant Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
+    "مرحباً 👋 أنا مساعد مبوّي. اسألني عن المتجر أو الطلبات أو الدفع أو التوصيل!",
   "Une erreur est survenue. Réessayez ou contactez-nous via la page Contact.":
     "حدث خطأ. حاول مجدداً أو تواصل معنا عبر صفحة الاتصال.",
   "Le chatbot n'est pas encore configuré (clé IA manquante côté serveur).":
@@ -3118,7 +2960,6 @@ const ES = {
     "Puedes cambiar tu contraseña en cualquier momento.",
   "Mot de passe actuel": "Contraseña actual",
   "Nouveau mot de passe": "Nueva contraseña",
-  "Confirmer le mot de passe": "Confirmar la contraseña",
   "Confirmer le nouveau mot de passe": "Confirmar la nueva contraseña",
   "Changer le mot de passe": "Cambiar la contraseña",
   "Mot de passe modifié !": "¡Contraseña modificada!",
@@ -3304,19 +3145,6 @@ const ES = {
   "Pas de connexion internet": "Sin conexión a internet",
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "Estás sin conexión. Verifica tu conexión y vuelve a intentarlo.",
-  "Mes fonds & transactions": "Mis fondos y transacciones",
-  "Solde": "Saldo",
-  "Reçus": "Recibidos",
-  "Sortis": "Pagados",
-  "Reversement en ligne": "Pago en línea",
-  "Encaissement en ligne": "Cobro en línea",
-  "Aucune transaction de fonds pour le moment.": "No hay transacciones de fondos por el momento.",
-  "Fonds indisponibles pour le moment.": "Fondos no disponibles por el momento.",
-  "Erreurs récentes (client)": "Errores recientes (cliente)",
-  "Journal des erreurs de rendu remontées par les navigateurs. Si l'écran « Oups, une erreur est survenue » apparaît, sa cause exacte (message + pile) est enregistrée ici.":
-    "Errores de renderizado informados por los navegadores. Si aparece la pantalla “Oops, ocurrió un error”, su causa exacta (mensaje + pila) queda registrada aquí.",
-  "Pile (début)": "Pila (inicio)",
-  "Aucune erreur enregistrée": "No hay errores registrados",
   Réessayer: "Reintentar",
   "Désolé, Mboppi ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
     "Lo sentimos, Mboppi no puede conectarse a internet en este momento. Verifica tu red (Wi-Fi o datos móviles) y vuelve a intentarlo.",
@@ -3477,71 +3305,6 @@ const ES = {
   "Parrainage en attente": "Referido pendiente",
   "Parrainage payé": "Referido pagado",
   "Mes filleuls — commissions de parrainage (2%)": "Mis referidos — comisiones de referidos (2%)",
-  "Commissions de parrainage vendeur": "Comisiones de referido de vendedores",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F (net 900 F après frais) ; 500 F sont reversés à Mboppi.":
-    "Cada vendedor o creador que se registre con tu enlace y pague su membresía (1.500 F) te hace ganar 1.000 F (neto 900 F tras gastos); 500 F se devuelven a Mboppi.",
-  "Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission de 1 000 F n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
-    "Actualmente todo el mundo tiene acceso gratuito (incluso los referidos) mientras el administrador no cierre la cuenta: la comisión de 1.000 F solo se paga cuando un referido paga realmente su membresía.",
-  "Vendeurs / créateurs parrainés — commission de 1 000 F":
-    "Vendedores / creadores referidos — comisión de 1.000 F",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F. Actuellement tout le monde a accès gratuitement (même les parrainés) tant que l'administrateur ne ferme pas le compte : la commission n'est donc versée que lorsqu'un affilié paie réellement son adhésion.":
-    "Cada vendedor o creador que se registre con tu enlace y pague su membresía (1.500 F) te hace ganar 1.000 F (neto 900 F tras gastos); 500 F se devuelven a Mboppi. Actualmente todo el mundo tiene acceso gratuito (incluso los referidos) mientras el administrador no cierre la cuenta: la comisión solo se paga cuando un referido paga realmente su membresía.",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F":
-    "Cada vendedor o creador que se registre con tu enlace y pague su membresía (1.500 F) te hace ganar 1.000 F",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F. La commission est versée manuellement par l'administration.":
-    "Cada vendedor o creador que se registre con tu enlace y pague su membresía (1.500 F) te hace ganar 1.000 F. La comisión se paga manualmente por la administración.",
-  "Membre": "Miembro",
-  "Rôle": "Rol",
-  "Adhésion": "Membresía",
-  "Commission": "Comisión",
-  "Statut": "Estado",
-  "Versée": "Abonada",
-  "En cours": "En curso",
-  "En attente d'adhésion": "En espera del pago de la membresía",
-  "Non payée": "No pagada",
-  "Adhésion payée": "Membresía pagada",
-  Payé: "Pagado",
-  "Marquer l'adhésion de {name} comme payée et avertir son parrain ?":
-    "¿Marcar la membresía de {name} como pagada y notificar a su referidor?",
-  "Montant disponible": "Importe disponible",
-  "Demande de retrait": "Solicitud de retiro",
-  "Références des parrainés (adhésion confirmée)": "Referencias de los referidos (membresía confirmada)",
-  "Montant à retirer": "Importe a retirar",
-  "Le montant doit être inférieur ou égal à votre solde disponible (multiple de 1 000 F).":
-    "El importe debe ser menor o igual a su saldo disponible (múltiplo de 1.000 F).",
-  "Aucun moyen de paiement configuré": "Ningún método de pago configurado",
-  "Moyen de paiement parrain": "Método de pago del referidor",
-  "Commentaire (optionnel)": "Comentario (opcional)",
-  "Un petit commentaire…": "Un comentario breve…",
-  "Confirmer le retrait": "Confirmar el retiro",
-  "Demande reçue": "Solicitud recibida",
-  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Elle sera traitée dans un délai maximum de 24 h.":
-    "Hemos recibido su solicitud de retiro de {amount} F. El equipo de Mboppi la procesará en un plazo máximo de 24 h.",
-  "Chaque vendeur ou créateur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F, validé par l'administration. Retrait possible dès 5 000 F.":
-    "Cada vendedor o creador que se registre con tu enlace y pague su membresía (1.500 F) te hace ganar 1.000 F, validado por la administración. Retiro posible desde 5.000 F.",
-  "Demandes de retrait (commissions d'activation)": "Solicitudes de retiro (comisiones de activación)",
-  "Parrainés (adhésion confirmée)": "Referidos (membresía confirmada)",
-  Commentaire: "Comentario",
-  "Aucune demande de retrait": "Sin solicitudes de retiro",
-  Payer: "Pagar",
-  "Payer la demande de retrait de {amount} F pour {name} ?": "¿Pagar la solicitud de retiro de {amount} F para {name}?",
-  "Votre demande de retrait de {amount} F a bien été reçue. Elle sera traitée dans un délai maximum de 24 h.":
-    "Hemos recibido su solicitud de retiro de {amount} F. Se tramitará en un plazo máximo de 24 h.",
-  "Votre demande de retrait de {amount} F a été payée par l'équipe Mboppi.":
-    "El equipo de Mboppi ha pagado su solicitud de retiro de {amount} F.",
-  "Un de vos filleuls a payé son adhésion — votre commission de 1 000 F est en attente de versement.":
-    "Uno de tus referidos ha pagado su membresía — tu comisión de 1.000 F está pendiente de transferencia.",
-  "Parrainages (vendeurs / créateurs)": "Referidos (vendedores / creadores)",
-  "Rechercher par numéro de référence (parrainé ou parrain)…":
-    "Buscar por número de referencia (referido o referidor)…",
-  "Parrainé": "Referido",
-  "Référence": "Referencia",
-  "Référence parrainé": "Referencia del referido",
-  "Téléphone parrainé": "Teléfono del referido",
-  "Son parrain": "Su referidor",
-  "Référence parrain": "Referencia del referidor",
-  "Téléphone parrain": "Teléfono del referidor",
-  "Aucun parrainage": "Sin referidos",
   "Chaque commande passée par un client inscrit avec votre lien vous rapporte 2% du montant, payés par la boutique après livraison.":
     "Cada pedido hecho por un cliente registrado con tu enlace te reporta el 2% del importe, pagado por la tienda después de la entrega.",
   "Aucune commande de filleul pour le moment.": "No hay pedidos de referidos por el momento.",
@@ -3878,11 +3641,11 @@ const ES = {
     "La tienda aún no ha configurado sus billeteras de pago. Se recomienda el pago a la entrega.",
   "Moyens de paiement": "Medios de pago",
   "La boutique n'a pas configuré de portefeuille.": "La tienda no ha configurado una billetera.",
-  "Vérone · Assistante Mboppi": "Vérone · Asistente Mboppi",
+  "Assistant Mboppi": "Asistente Mboppi",
   "En ligne": "En línea",
   "Écrivez votre question…": "Escribe tu pregunta…",
-  "Bonjour 👋 Je suis Vérone, l'assistante Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
-    "¡Hola 👋 Soy Vérone, la asistente de Mboppi. Pregúntame sobre la tienda, los pedidos, los pagos o la entrega!",
+  "Bonjour 👋 Je suis l'assistant Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
+    "¡Hola 👋 Soy el asistente de Mboppi. Pregúntame sobre la tienda, los pedidos, los pagos o la entrega!",
   "Une erreur est survenue. Réessayez ou contactez-nous via la page Contact.":
     "Se produjo un error. Inténtalo de nuevo o contáctanos a través de la página de Contacto.",
   "Le chatbot n'est pas encore configuré (clé IA manquante côté serveur).":
@@ -4367,8 +4130,6 @@ const RICH_EN = {
     "The seller commission is displayed before the sale. Customer referrals represent 2% for the referring seller, and delivery fees are entered at delivery. No platform fee is added to amounts paid out.",
   "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire. Mboppi ne prélève aucun frais de plateforme.":
     "Payments are manual and direct: cash on delivery, Mobile Money or bank transfer. Mboppi charges no platform fees.",
-  "Pour les paiements manuels (espèces à la livraison, Mobile Money ou virement bancaire), aucun frais n'est appliqué.":
-    "For manual payments (cash on delivery, Mobile Money or bank transfer), no fee is applied.",
   "Qu’est-ce qu’une promotion éclair ?": "What is a flash promotion?",
   "Une boutique peut proposer un produit à prix réduit pendant une durée limitée, au maximum 24 heures et une fois par semaine. Le produit est alors retiré des catalogues publics, mais reste accessible par son lien direct. La commission vendeur est de 0 % pendant la promotion.":
     "A shop can offer a product at a reduced price for a limited time, up to 24 hours and once per week. The product is removed from public catalogs but remains accessible through its direct link. The seller commission is 0% during the promotion.",
@@ -4440,8 +4201,6 @@ const RICH_ES = {
     "Crear una cuenta y usar el espacio de vendedor es gratis. Debes proteger tus credenciales y avisar de cualquier uso no autorizado. Una cuenta puede limitarse o suspenderse si supone un riesgo.",
   "Le paiement est manuel et direct : espèces à la livraison, virement Mobile Money ou virement bancaire. Mboppi ne collecte aucun paiement et ne prélève aucun frais de plateforme.":
     "El pago es manual y directo: efectivo a la entrega, transferencia Mobile Money o transferencia bancaria. Mboppi no cobra pagos ni comisiones de plataforma.",
-"Pour les paiements manuels (espèces à la livraison, Mobile Money ou virement bancaire), aucun frais n'est appliqué.":
-    "Para los pagos manuales (efectivo a la entrega, Mobile Money o transferencia bancaria) no se aplica ninguna comisión.",
   "La boutique définit la commission affichée sur chaque produit. Le vendeur reçoit la commission liée à une vente réalisée avec son code. Le parrainage concerne un client affilié et représente 2 % du montant de ses achats livrés ; le cumul est versé à partir de 1 500 XAF. Les paiements aux bénéficiaires sont effectués manuellement par la boutique, sans frais de plateforme.":
     "La tienda define la comisión mostrada en cada producto. El vendedor recibe la comisión de una venta realizada con su código. Un cliente afiliado genera un 2 % sobre sus compras entregadas, pagado desde 1.500 XAF. La tienda paga manualmente, sin comisiones de plataforma.",
   "Le paiement se fait directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne collecte pas les paiements et ne prélève aucun frais de plateforme. Les frais de livraison sont indiqués sur chaque produit.":
@@ -4475,8 +4234,6 @@ const RICH_AR = {
     "تظهر عمولة البائع قبل البيع. تمنح إحالة العميل 2٪ للبائع المُحيل، وتُسجل رسوم التوصيل عند التسليم. لا تُضاف أي رسوم للمنصة.",
   "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire. Mboppi ne prélève aucun frais de plateforme.":
     "المدفوعات يدوية ومباشرة: نقداً عند التسليم أو عبر Mobile Money أو التحويل البنكي. لا تفرض Mboppi أي رسوم منصة.",
-"Pour les paiements manuels (espèces à la livraison, Mobile Money ou virement bancaire), aucun frais n'est appliqué.":
-    "بالنسبة للمدفوعات اليدوية (نقداً عند التسليم، أو عبر Mobile Money أو التحويل البنكي) لا تُطبق أي رسوم.",
   "Le stock est vérifié et réservé au moment de la commande. Si la quantité disponible est insuffisante, la commande est refusée afin d’éviter de vendre un article indisponible.":
     "يتم التحقق من المخزون وحجزه عند الطلب. إذا لم تكن الكمية كافية، يُرفض الطلب لتجنب بيع منتج غير متوفر.",
   "Quels moyens de paiement sont acceptés ?": "ما طرق الدفع المقبولة؟",

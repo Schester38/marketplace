@@ -30,7 +30,8 @@ export default function Register() {
   const [resending, setResending] = useState(false);
 
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
-  const operators = OPERATORS_BY_COUNTRY[form.country] || DEFAULT_OPERATORS;
+  const operators = OPERATORS_BY_COUNTRY[form.country] || [];
+  const hasOperators = operators.length > 0;
 
   const ensureAccepted = () => {
     if (!accepted) {
@@ -133,22 +134,6 @@ export default function Register() {
             emptyLabel={t("Aucun résultat")}
           />
 
-          {(refCode || refSeller) && (
-            <div className="card" style={{ marginBottom: 16, padding: 16, background: "#e8f5e9" }}>
-              <p style={{ margin: 0, fontWeight: 600 }}>
-                {refCode
-                  ? t("Parrainage client détecté : votre rôle sera « Client ».")
-                  : t("Parrainage vendeur détecté : votre rôle sera « Vendeur ».")}
-              </p>
-              {refCode && (
-                <p className="hint" style={{ margin: "4px 0 0" }}>
-                  {t(
-                    "Ce lien vous a été partagé par un vendeur Mboppi. L'inscription est gratuite et votre compte sera créé en tant que client affilié."
-                  )}
-                </p>
-              )}
-            </div>
-          )}
           {!refCode && !refSeller && (
             <>
               <label>{t("Je veux m'inscrire en tant que :")}</label>
@@ -263,20 +248,24 @@ export default function Register() {
                   "Ce numéro servira à payer les frais d’adhésion et à recevoir automatiquement vos paiements."
                 )}
               </p>
-              <label>{t("Opérateur *")}</label>
-              <select
-                className="input"
-                required
-                value={form.operator}
-                onChange={(e) => setForm({ ...form, operator: e.target.value })}
-              >
-                <option value="">{t("Choisir un opérateur…")}</option>
-                {operators.map((operator) => (
-                  <option key={operator} value={operator}>
-                    {operator}
-                  </option>
-                ))}
-              </select>
+              {hasOperators && (
+                <>
+                  <label>{t("Opérateur *")}</label>
+                  <select
+                    className="input"
+                    required={hasOperators}
+                    value={form.operator}
+                    onChange={(e) => setForm({ ...form, operator: e.target.value })}
+                  >
+                    <option value="">{t("Choisir un opérateur…")}</option>
+                    {operators.map((operator) => (
+                      <option key={operator} value={operator}>
+                        {operator}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
               <label>{t("Numéro de paiement *")}</label>
               <input
                 className="input"

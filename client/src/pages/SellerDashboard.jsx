@@ -107,7 +107,7 @@ export default function SellerDashboard() {
     }
   };
 
-  const productLink = (p) => `${window.location.origin}/p/${p.id}`;
+  const productLink = (p) => `${window.location.origin}/produit/${p.id}`;
   const saleLink = (p) => `${window.location.origin}/acheter/${p.id}?code=${sellerCode}`;
 
   const copy = async (kind, text) => {

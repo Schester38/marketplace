@@ -180,6 +180,11 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ admin_approved: adminApproved }),
     }),
+  adminSetVerified: (id, verified) =>
+    adminRequest(`/admin/users/${id}/verify`, {
+      method: "PATCH",
+      body: JSON.stringify({ verified }),
+    }),
   adminDeleteUser: (id) => adminRequest(`/admin/users/${id}`, { method: "DELETE" }),
   adminProducts: () => adminRequest("/admin/products"),
   adminDeleteProduct: (id) => adminRequest(`/admin/products/${id}`, { method: "DELETE" }),

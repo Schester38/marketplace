@@ -32,6 +32,7 @@ export default function PurchasePage() {
     buyer_city: "",
     buyer_address: "",
     buyer_phone: "",
+    quantity: 1,
   });
   const [paymentMethod, setPaymentMethod] = useState("mobile");
   const [copiedWallet, setCopiedWallet] = useState(null);
@@ -68,6 +69,7 @@ export default function PurchasePage() {
     setError("");
     setSubmitting(true);
     try {
+      const qty = Number(form.quantity) || 1;
       const d = await api.purchaseCreate({
         product_id: id,
         seller_code: form.seller_code,
@@ -75,6 +77,7 @@ export default function PurchasePage() {
         buyer_city: form.buyer_city,
         buyer_address: form.buyer_address,
         buyer_phone: form.buyer_phone,
+        quantity: qty,
         payment_method: paymentMethod,
       });
       setPurchase(d.sale || null);
@@ -238,6 +241,20 @@ export default function PurchasePage() {
               required
               value={form.buyer_phone}
               onChange={(e) => setForm({ ...form, buyer_phone: e.target.value })}
+            />
+            <label>{t("Quantité *")}</label>
+            <input
+              className="input"
+              type="number"
+              min={1}
+              required
+              value={form.quantity}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  quantity: Math.max(1, Number(e.target.value) || 1),
+                })
+              }
             />
             <label>{t("Code du vendeur *")}</label>
             <input

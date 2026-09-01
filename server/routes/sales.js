@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { q, withTransaction } from "../db.js";
-import { authRequired, roleRequired, authOptional } from "../auth.js";
+import { authRequired, roleRequired } from "../auth.js";
 import { sendPush } from "../push.js";
+import { paySaleAutomatically } from "../services/payouts.js";
 
 const router = Router();
 
@@ -174,37 +175,6 @@ FROM sales s
         [req.user.id]
       )
     ).map(saleRow);
-    // Parrainage d'activation vendeur : vendeurs/créateurs inscrits via le
-    // `seller_code` du vendeur courant (`ref_seller` → `users.referred_by`).
-    // Quand l'un d'eux paie son adhésion, le parrain reçoit 1 000 XAF versés
-    // manuellement par l'administration (aucun reversement automatique).
-    // Liste purement informative — aucune dépendance à iKeePay.
-    let activationReferrals = [];
-    try {
-      activationReferrals = (
-        await q(
-          `SELECT u.id AS user_id, u.name, u.role, u.phone, u.reference_number,
-                 u.membership_paid_at, u.membership_expires_at, u.created_at
-           FROM users u
-           WHERE u.referred_by = $1 AND u.role IN ('seller', 'creator')
-           ORDER BY u.created_at DESC`,
-          [req.user.id]
-        )
-      ).map((r) => ({
-        user_id: Number(r.user_id),
-        name: r.name,
-        role: r.role,
-        phone: r.phone,
-        reference_number: r.reference_number,
-        membership_paid_at: r.membership_paid_at,
-        membership_expires_at: r.membership_expires_at,
-        created_at: r.created_at,
-        commission_amount: 1000,
-        commission_currency: "XAF",
-      }));
-    } catch (err) {
-      console.error("[sales/my] commissions de parrainage vendeur indisponibles :", err.message);
-    }
     res.json({
       sales,
       stats: {
@@ -216,7 +186,6 @@ FROM sales s
         referral_earned: Number(referralStats.referral_earned),
       },
       referred,
-      activationReferrals,
     });
   })
 );
@@ -451,14 +420,13 @@ router.delete(
 
 router.get(
   "/livreur",
-  // Route publique (un livreur peut livrer sans être connecté) mais si le
-  // livreur est connecté, on filtre ses livraisons ET on calcule ses stats.
-  authOptional,
   ah(async (req, res) => {
     const shopCode = req.query.shop_code ? String(req.query.shop_code).trim().toUpperCase() : "";
     if (!shopCode) return res.status(400).json({ error: "Code boutique requis" });
-    const shop = (await q("SELECT id, name, country FROM users WHERE shop_code = $1", [shopCode]))[0];
+    const shop = (await q("SELECT id FROM users WHERE shop_code = $1", [shopCode]))[0];
     if (!shop) return res.status(404).json({ error: "Code boutique invalide" });
+    const shopFilter = shop ? " AND p.shop_id = $1" : " AND FALSE";
+    const shopParam = shop ? [shop.id] : [];
     const pending = (
       await q(
         `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
@@ -468,74 +436,45 @@ router.get(
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
-       WHERE s.status IN ('pending', 'confirmed') AND p.shop_id = $1
+       WHERE s.status IN ('pending', 'confirmed')${shopFilter}
        ORDER BY s.created_at DESC`,
-        [shop.id]
+        shopParam
       )
     ).map(saleRow);
-    // Livraisons du livreur connecté uniquement (session présente + rôle
-    // livreur), sinon (visiteur non connecté) on garde l'historique complet
-    // de la boutique.
-    const me = req.user && req.user.role === "livreur" ? req.user.id : null;
-    const deliveredFilter = me
-      ? "s.status = 'delivered' AND s.delivered_by = $1 AND p.shop_id = $2 AND NOT ($1 = ANY(s.hidden_for))"
-      : "s.status = 'delivered' AND p.shop_id = $1";
-    const deliveredParams = me ? [me, shop.id] : [shop.id];
-    const delivered = (
-      await q(
-        `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
+    const me = req.user ? req.user.id : null;
+    const delivered = me
+      ? (
+          await q(
+            `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
               u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
               shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
-       WHERE ${deliveredFilter}
+       WHERE s.status = 'delivered' AND s.delivered_by = $1 AND p.shop_id = $2 AND NOT ($1 = ANY(s.hidden_for))
        ORDER BY s.delivered_at DESC`,
-        deliveredParams
-      )
-    ).map(saleRow);
-        // Statistiques des frais de livraison du livreur — le livreur ne gagne que
-    // la delivery_fee, encaissée directement en espèces / mobile.
-    let stats = null;
-    let series = [];
-    if (me) {
-      const srow = (
-        await q(
-          `SELECT
-             COUNT(*) AS total_deliveries,
-             COALESCE(SUM(s.delivery_fee), 0) AS delivery_earned
-           FROM sales s
-           JOIN products p ON p.id = s.product_id
-           WHERE ${deliveredFilter}`,
-          deliveredParams
-        )
-      )[0];
-      stats = {
-        total_deliveries: Number(srow.total_deliveries),
-        delivery_earned: Number(srow.delivery_earned),
-      };
-      series = (
-        await q(
-          `SELECT to_char(date_trunc('day', s.delivered_at), 'YYYY-MM-DD') AS day,
-                  COUNT(*) AS cnt,
-                  COALESCE(SUM(s.delivery_fee), 0) AS rev
-           FROM sales s
-           JOIN products p ON p.id = s.product_id
-           WHERE ${deliveredFilter} AND s.delivered_at >= now() - interval '13 days'
-           GROUP BY 1 ORDER BY 1`,
-          deliveredParams
-        )
-      ).map((r) => ({ day: r.day, cnt: Number(r.cnt), rev: Number(r.rev) }));
-    }
+            [me, shop.id]
+          )
+        ).map(saleRow)
+      : (
+          await q(
+            `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
+              u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
+              shop.name AS shop_name, shop.country AS shop_country
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       LEFT JOIN users u ON u.id = s.seller_id
+       JOIN users shop ON shop.id = p.shop_id
+       WHERE s.status = 'delivered' AND p.shop_id = $1
+       ORDER BY s.delivered_at DESC`,
+            [shop.id]
+          )
+        ).map(saleRow);
     res.json({
       pending,
       delivered,
-      shop_name: shop.name,
-      shop_country: shop.country,
-      authenticated: Boolean(me),
-      stats,
-      series,
+      shop_name: shop ? (await q("SELECT name FROM users WHERE id = $1", [shop.id]))[0].name : null,
     });
   })
 );
@@ -707,7 +646,7 @@ router.post(
   authRequired,
   roleRequired("livreur"),
   ah(async (req, res) => {
-    const { delivery_fee, payment_method, client_code, shop_code, signature } = req.body || {};
+    const { delivery_fee, payment_method, client_code, shop_code } = req.body || {};
     const shopCode = String(shop_code || "")
       .trim()
       .toUpperCase();
@@ -716,29 +655,15 @@ router.post(
     if (!Number.isFinite(fee) || fee < 0) {
       return res.status(400).json({ error: "Frais de livraison invalides" });
     }
-    // Paiement exclusivement manuel : espèce ou mobile (iKeePay supprimé).
-    const lowerMethod = String(payment_method || "")
-      .trim()
-      .toLowerCase();
-    if (!["espèce", "espece", "espe", "mobile", "mobile_money"].includes(lowerMethod)) {
-      return res
-        .status(400)
-        .json({ error: "Type de paiement invalide (espèce ou mobile)" });
+    if (
+      !["espèce", "mobile", "espece", "mobile_money"].includes(
+        String(payment_method || "").toLowerCase()
+      )
+    ) {
+      return res.status(400).json({ error: "Type de paiement invalide (espèce ou mobile)" });
     }
+    const lowerMethod = String(payment_method).toLowerCase();
     const cleanMethod = lowerMethod.startsWith("m") ? "mobile" : "espèce";
-
-    // Signature du client (optionnelle) : PNG data URI capturé sur l'écran
-    // du livreur à la livraison, réaffiché sur la facture PDF.
-    let cleanSignature = null;
-    if (signature != null && signature !== "") {
-      if (typeof signature !== "string" || !signature.startsWith("data:image/png;base64,")) {
-        return res.status(400).json({ error: "Signature invalide (image PNG attendue)" });
-      }
-      if (signature.length > 300000) {
-        return res.status(400).json({ error: "Signature trop volumineuse" });
-      }
-      cleanSignature = signature;
-    }
 
     const sale = (await q("SELECT * FROM sales WHERE id = $1", [Number(req.params.id)]))[0];
     if (!sale) return res.status(404).json({ error: "Vente introuvable" });
@@ -796,10 +721,9 @@ router.post(
       const updated = (
         await tx.query(
           `UPDATE sales SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3,
-        payment_status = CASE WHEN payment_status = 'paid' THEN payment_status ELSE 'pending' END,
-        signature = COALESCE($5, signature)
+        payment_status = CASE WHEN payment_status = 'paid' THEN payment_status ELSE 'pending' END
         WHERE id = $4 RETURNING id`,
-          [fee, cleanMethod, req.user ? req.user.id : null, lockedSale.id, cleanSignature]
+          [fee, cleanMethod, req.user ? req.user.id : null, lockedSale.id]
         )
       )[0];
       // Les nouvelles ventes ont déjà réservé leur stock. Pour les anciennes ventes,
@@ -874,9 +798,9 @@ router.post(
       )
     )[0];
 
-    // NOTE : l'appel à markSalePaid (reversement automatique iKeePay) a été
-    // supprimé. Les commissions sont payées manuellement par la boutique
-    // (POST /api/sales/:id/pay avec preuve) et le parrain via /pay-referral.
+    if (full.payment_status === "paid" && !full.online_payment) {
+      await paySaleAutomatically(full.id);
+    }
 
     res.json({ sale: saleRow(full), ok: true });
   })
@@ -953,7 +877,7 @@ router.post(
     }
     const updated = await withTransaction(async (tx) => {
       const changed = await tx.query(
-        `UPDATE sales SET paid = TRUE, paid_at = now(), payment_proof = $1, commission_claimed_at = NULL
+        `UPDATE sales SET paid = TRUE, paid_at = now(), payment_proof = $1
        WHERE id = $2 AND paid = FALSE RETURNING id, commission`,
         [String(proof).slice(0, 12000000), sale.id]
       );
@@ -1114,7 +1038,7 @@ router.post(
     }
     await withTransaction(async (tx) => {
       const changed = await tx.query(
-        `UPDATE sales SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1, referral_claimed_at = NULL
+        `UPDATE sales SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1
        WHERE id = $2 AND referral_paid = FALSE RETURNING id, referral_commission`,
         [String(proof).slice(0, 12000000), sale.id]
       );
@@ -1256,14 +1180,14 @@ router.post(
     await withTransaction(async (tx) => {
       if (isSeller) {
         await tx.query(
-          `UPDATE sales s SET paid = TRUE, paid_at = now(), payment_proof = $1, commission_claimed_at = NULL
+          `UPDATE sales s SET paid = TRUE, paid_at = now(), payment_proof = $1
          FROM products p
         WHERE p.id = s.product_id AND s.seller_id = $2 AND p.shop_id = $3 AND s.status = 'delivered' AND NOT s.paid`,
           [proofShort, sellerId, req.user.id]
         );
       } else {
         await tx.query(
-          `UPDATE sales s SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1, referral_claimed_at = NULL
+          `UPDATE sales s SET referral_paid = TRUE, referral_paid_at = now(), referral_payment_proof = $1
          FROM products p
         WHERE p.id = s.product_id AND s.referred_by = $2 AND p.shop_id = $3 AND s.status = 'delivered' AND NOT s.referral_paid`,
           [proofShort, sellerId, req.user.id]
