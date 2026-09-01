@@ -215,7 +215,7 @@ export default function MembershipPage() {
 
         {/* Liens d'action */}
         <div className="row2" style={{ gap: 12 }}>
-          <Link to="/my-account" className="btn btn-outline btn-block">
+          <Link to="/compte" className="btn btn-outline btn-block">
             👤 {t("Mon Compte")} ({t("N° de référence")})
           </Link>
           <a
