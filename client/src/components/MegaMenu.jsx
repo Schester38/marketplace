@@ -69,7 +69,12 @@ function MegaMenuTrigger({
   // toucher, pas au mouseenter (événements souris synthétiques sur tactile).
   const [touchMode] = useState(() => {
     try {
-      return typeof window !== "undefined" && window.matchMedia("(hover: none)").matches;
+      if (typeof window === "undefined") return false;
+      const hasTouch =
+        "ontouchstart" in window ||
+        navigator.maxTouchPoints > 0 ||
+        navigator.msMaxTouchPoints > 0;
+      return hasTouch || window.matchMedia("(hover: none)").matches;
     } catch {
       return false;
     }
