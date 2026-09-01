@@ -134,6 +134,11 @@ export default function HeroCarousel({ onExplore }) {
             aria-hidden={i !== index || undefined}
             aria-label={`${i + 1} / ${count}`}
           >
+            <div
+              className="hero-slide-bg"
+              style={{ backgroundImage: `url(${s.img})` }}
+              aria-hidden="true"
+            />
             <img
               className="hero-slide-img"
               src={s.img}
@@ -148,8 +153,7 @@ export default function HeroCarousel({ onExplore }) {
               <span className="hero-slide-kicker">{s.kicker}</span>
               <h2>{s.title}</h2>
               <p>{s.text}</p>
-            </div>
-            {s.to.startsWith("#") ? (
+              {s.to.startsWith("#") ? (
                 <button
                   type="button"
                   className="btn btn-light hero-slide-cta"
@@ -167,6 +171,7 @@ export default function HeroCarousel({ onExplore }) {
                   {s.cta} →
                 </Link>
               )}
+            </div>
           </div>
         ))}
       </div>
