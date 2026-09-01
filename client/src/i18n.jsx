@@ -1419,6 +1419,41 @@ const EN = {
   "ex : +237 6 00 00 00 00": "e.g. +237 6 00 00 00 00",
   "Votre nom, votre adresse e-mail, votre numéro de téléphone et votre pays.":
     "Your name, email, phone number and country.",
+  
+  // Adhésion
+  "Adhésion Mboppi": "Mboppi Membership",
+  "Payez votre adhésion Mboppi et accédez à votre espace professionnel.":
+    "Pay your Mboppi membership and access your professional space.",
+  "Après votre inscription, l'accès à votre tableau de bord professionnel est accordé dès paiement de votre adhésion. Suivez les instructions ci-dessous pour effectuer votre paiement.":
+    "After registration, access to your professional dashboard is granted once your membership payment is made. Follow the instructions below to make your payment.",
+  "Rôle": "Role",
+  "Montant (30 jours)": "Amount (30 days)",
+  "Votre adhésion :": "Your membership:",
+  "pour 30 jours d'accès à votre espace professionnel": "for 30 days access to your professional space",
+  "CAMEROUN": "CAMEROON",
+  "Faites le dépôt sur l'un des numéros suivants :": "Make the deposit to one of these numbers:",
+  "Nom du compte :": "Account name:",
+  "AUTRE PAYS": "OTHER COUNTRIES",
+  "Téléchargez l'application MoneyFusion pour effectuer votre transfert international.":
+    "Download the MoneyFusion app to make your international transfer.",
+  "Télécharger": "Download",
+  "Étapes du transfert :": "Transfer steps:",
+  "Sélectionnez le pays": "Select the country",
+  "Effectuez un transfert MoneyFusion vers MoneyFusion au numéro": "Make a MoneyFusion to MoneyFusion transfer to the number",
+  "Faites une capture de la transaction": "Take a screenshot of the transaction",
+  "APRÈS VOTRE TRANSFERT": "AFTER YOUR TRANSFER",
+  "Cliquez sur": "Click on",
+  "ci-dessous": "below",
+  "Envoyez :": "Send:",
+  "Votre preuve de paiement (capture d'écran)": "Your payment proof (screenshot)",
+  "Votre N° de référence depuis": "Your reference number from",
+  "Votre tableau de bord sera activé dans les minutes qui suivent": "Your dashboard will be activated within minutes",
+  "Vendeur : Configuration des moyens de paiement": "Seller: Payment Method Configuration",
+  "Configurez vos moyens de paiement par lesquels vous recevrez vos commissions (1 000 F) de parrainage vendeur. Accédez à vos paramètres de compte pour les ajouter.":
+    "Configure your payment methods to receive your seller referral commissions (1,000 F). Access your account settings to add them.",
+  "N° de référence": "Reference number",
+  "Contacter le support": "Contact support",
+  "Télécharger et configurez MoneyFusion": "Download and set up MoneyFusion",
 };
 
 const AR = {

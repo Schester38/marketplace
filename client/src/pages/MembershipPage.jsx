@@ -3,55 +3,282 @@ import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
-
-// NOTE : le paiement d'adhésion en ligne (iKeePay) a été supprimé. Cette page
-// est désormais purement informative : l'accès aux espaces professionnels est
-// accordé à l'inscription (admin_approved) et l'administration peut « Ouvrir »
-// ou « Fermer » un compte. En cas de blocage, l'utilisateur contacte le support.
+import { countrySymbol, getCountry } from "../config.js";
 
 export default function MembershipPage() {
   const { user } = useAuth();
   const { t } = useLang();
 
+  const isCameroon = user?.country === "Cameroun";
+  const country = getCountry(user?.country || "Cameroun");
+  const symbol = country?.symbol || "XAF";
+
+  const prices = {
+    seller: 1500,
+    shop: 2500,
+    creator: 2500,
+  };
+
+  const userPrice = prices[user?.role] || 2500;
+
   return (
     <main className="container narrow">
       <Seo
         title={t("Adhésion Mboppi") + " — Mboppi"}
-        description={t("Accédez à votre espace professionnel Mboppi.")}
+        description={t("Payez votre adhésion Mboppi et accédez à votre espace professionnel.")}
         noindex
       />
       <div className="card form-card">
         <div className="auth-brand">💳</div>
-        <h1>{t("Votre espace professionnel")}</h1>
+        <h1>{t("Adhésion Mboppi")}</h1>
         <p className="hint">
           {t(
-            "L'accès à votre tableau de bord professionnel est accordé dès l'inscription de votre compte. Aucun paiement en ligne n'est demandé."
+            "Après votre inscription, l'accès à votre tableau de bord professionnel est accordé dès paiement de votre adhésion. Suivez les instructions ci-dessous pour effectuer votre paiement."
           )}
         </p>
-        <div className="card fee-card" style={{ borderColor: "var(--border)" }}>
-          <strong>
-            {t(
-              user?.role === "shop"
-                ? "Espace boutique"
-                : user?.role === "creator"
-                  ? "Espace créateur"
-                  : "Espace vendeur"
-            )}
+
+        {/* Tableau des prix */}
+        <div className="pricing-table" style={{ marginTop: 24, marginBottom: 24 }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              border: "2px solid var(--border)",
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  backgroundColor: "var(--bg-secondary)",
+                  borderBottom: "2px solid var(--border)",
+                }}
+              >
+                <th style={{ padding: 12, textAlign: "left", fontWeight: 600 }}>
+                  {t("Rôle")}
+                </th>
+                <th style={{ padding: 12, textAlign: "center", fontWeight: 600 }}>
+                  {t("Montant (30 jours)")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                <td style={{ padding: 12 }}>{t("Vendeur")}</td>
+                <td style={{ padding: 12, textAlign: "center", fontWeight: 600 }}>
+                  1,500 {symbol}
+                </td>
+              </tr>
+              <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                <td style={{ padding: 12 }}>{t("Boutique")}</td>
+                <td style={{ padding: 12, textAlign: "center", fontWeight: 600 }}>
+                  2,500 {symbol}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ padding: 12 }}>{t("Créateur")}</td>
+                <td style={{ padding: 12, textAlign: "center", fontWeight: 600 }}>
+                  2,500 {symbol}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Votre tarif */}
+        <div
+          className="card"
+          style={{
+            borderColor: "var(--primary)",
+            backgroundColor: "rgba(var(--primary-rgb), 0.05)",
+            padding: 16,
+            marginBottom: 24,
+          }}
+        >
+          <strong style={{ fontSize: 16 }}>
+            {t("Votre adhésion :")}{" "}
+            <span style={{ color: "var(--primary)", fontSize: 18 }}>
+              {userPrice.toLocaleString()} {symbol}
+            </span>
           </strong>
-          <p className="hint">
-            {t(
-              "Si votre accès est fermé, contactez le support : l'équipe Mboppi peut réactiver votre compte après vérification."
-            )}
+          <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
+            {t("pour 30 jours d'accès à votre espace professionnel")}
           </p>
         </div>
-        <p className="hint">
-          {t(
-            "Les paiements sur Mboppi sont manuels : espèces à la livraison ou Mobile Money direct entre le client et la boutique. Aucun frais de paiement en ligne ne s'applique."
-          )}
-        </p>
-        <Link to="/contact" className="btn btn-outline btn-block">
-          {t("Contacter le support")}
-        </Link>
+
+        {/* Instructions selon le pays */}
+        {isCameroon ? (
+          <>
+            <h3 style={{ marginTop: 24, marginBottom: 12 }}>📱 {t("CAMEROUN")}</h3>
+            <p className="hint">
+              {t("Faites le dépôt sur l'un des numéros suivants :")}
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                marginBottom: 24,
+              }}
+            >
+              <div
+                style={{
+                  borderRadius: 8,
+                  border: "2px solid var(--border)",
+                  padding: 16,
+                  textAlign: "center",
+                  backgroundColor: "var(--bg-secondary)",
+                }}
+              >
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+                  🟠 Orange Money
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "var(--primary)" }}>
+                  699486146
+                </div>
+              </div>
+              <div
+                style={{
+                  borderRadius: 8,
+                  border: "2px solid var(--border)",
+                  padding: 16,
+                  textAlign: "center",
+                  backgroundColor: "var(--bg-secondary)",
+                }}
+              >
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>
+                  🟡 MTN Mobile Money
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "var(--primary)" }}>
+                  672886348
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 24,
+                fontSize: 14,
+              }}
+            >
+              <strong>{t("Nom du compte :")}</strong> Ndjoum Jean Arthur
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 style={{ marginTop: 24, marginBottom: 12 }}>🌍 {t("AUTRE PAYS")}</h3>
+            <p className="hint">
+              {t(
+                "Téléchargez l'application MoneyFusion pour effectuer votre transfert international."
+              )}
+            </p>
+
+            <a
+              href="https://play.google.com/store/apps/details?id=com.moneyfusion"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary btn-block"
+              style={{ marginBottom: 24 }}
+            >
+              📱 MoneyFusion — {t("Télécharger")}
+            </a>
+
+            <div
+              style={{
+                backgroundColor: "var(--bg-secondary)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: 16,
+                marginBottom: 24,
+              }}
+            >
+              <strong style={{ display: "block", marginBottom: 8 }}>
+                {t("Étapes du transfert :")}
+              </strong>
+              <ol style={{ marginBottom: 0, paddingLeft: 20 }}>
+                <li>{t("Téléchargez et configurez MoneyFusion")}</li>
+                <li>
+                  {t("Sélectionnez le pays")} <strong>Cameroun</strong>
+                </li>
+                <li>
+                  {t("Effectuez un transfert MoneyFusion vers MoneyFusion au numéro")}{" "}
+                  <strong>672886348</strong>
+                </li>
+                <li>{t("Faites une capture de la transaction")}</li>
+              </ol>
+            </div>
+          </>
+        )}
+
+        {/* Instructions générales de paiement */}
+        <h3 style={{ marginTop: 24, marginBottom: 12 }}>✅ {t("APRÈS VOTRE TRANSFERT")}</h3>
+        <div
+          style={{
+            backgroundColor: "var(--bg-secondary)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            padding: 16,
+            marginBottom: 24,
+          }}
+        >
+          <ol style={{ marginBottom: 0, paddingLeft: 20 }}>
+            <li>
+              {t("Cliquez sur")} <strong>{t("Contacter le support")}</strong>{" "}
+              {t("ci-dessous")}
+            </li>
+            <li>
+              {t("Envoyez :")}
+              <ul style={{ marginTop: 8 }}>
+                <li>{t("Votre preuve de paiement (capture d'écran)")}</li>
+                <li>
+                  {t("Votre N° de référence depuis")} <strong>{t("Mon Compte")}</strong>
+                </li>
+              </ul>
+            </li>
+            <li>{t("Votre tableau de bord sera activé dans les minutes qui suivent")}</li>
+          </ol>
+        </div>
+
+        {/* Info pour vendeurs sur les moyens de paiement */}
+        {user?.role === "seller" && (
+          <div
+            style={{
+              backgroundColor: "rgba(255, 193, 7, 0.1)",
+              border: "2px solid #FFC107",
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 24,
+            }}
+          >
+            <strong style={{ display: "block", marginBottom: 8 }}>
+              💳 {t("Vendeur : Configuration des moyens de paiement")}
+            </strong>
+            <p className="hint" style={{ marginBottom: 0 }}>
+              {t(
+                "Configurez vos moyens de paiement par lesquels vous recevrez vos commissions (1 000 F) de parrainage vendeur. Accédez à vos paramètres de compte pour les ajouter."
+              )}
+            </p>
+          </div>
+        )}
+
+        {/* Liens d'action */}
+        <div className="row2" style={{ gap: 12 }}>
+          <Link to="/my-account" className="btn btn-outline btn-block">
+            👤 {t("Mon Compte")} ({t("N° de référence")})
+          </Link>
+          <a
+            href="https://wa.me/237672886348"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary btn-block"
+          >
+            💬 {t("Contacter le support")}
+          </a>
+        </div>
       </div>
     </main>
   );
