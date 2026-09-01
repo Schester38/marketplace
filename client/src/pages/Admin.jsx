@@ -545,24 +545,7 @@ export default function Admin() {
             {card(t("Visiteurs uniques"), formatMoney(visits.unique_visitors))}
             {card(t("Jours actifs"), visits.active_days)}
           </div>
-          <div className="card" style={{ marginTop: 14 }}>
-            <h3 className="section-title" style={{ marginTop: 0 }}>
-              📈 {t("Vues par jour")}
-            </h3>
-            <MiniChart
-              label={t("Pages vues")}
-              data={[...(visits.daily || [])]
-                .reverse()
-                .map((d) => ({
-                  label: new Date(d.date).toLocaleDateString("fr-FR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                  }),
-                  value: d.views,
-                  tip: `${new Date(d.date).toLocaleDateString("fr-FR")} — Vues : ${d.views} · Visiteurs : ${d.visitors}`,
-                }))}
-            />
-          </div>
+
         </section>
       )}
 
