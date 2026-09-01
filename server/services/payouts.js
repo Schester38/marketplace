@@ -51,6 +51,18 @@ export function computeRedistribution(sale) {
   return { totalPrice, shopAmount, sellerAmount, referrerAmount, livreurAmount };
 }
 
+// Compatibilité historique : les routes conservées peuvent encore appeler ce
+// helper pendant la transition vers le paiement manuel exclusif. Le reversement
+// automatique n'existe plus depuis la suppression d'iKeePay, donc on laisse un
+// no-op explicite au lieu d'échouer au démarrage.
+export async function paySaleAutomatically(saleId) {
+  return {
+    saleId,
+    status: "manual_only",
+    paid: false,
+  };
+}
+
 // Note : la répartition ci-dessus est purement comptable (tests + affichage).
 // Le paiement des commissions est manuel :
 //   — vendeur payé par la boutique via POST /api/sales/:id/pay (preuve obligatoire) ;
