@@ -166,21 +166,27 @@ function MegaMenuTrigger({
           aria-selected={false}
           aria-haspopup="true"
           aria-expanded={isOpen}
-          onClick={(e) => {
-            if (!touchMode) {
-              close();
-              return;
-            } // Desktop : navigation directe
-            // Tactile : 1ᵉʳ appui = OUVRIR le panneau (sans naviguer),
-            // 2ᵉ appui = refermer. La navigation passe par les sous-catégories
-            // ou le lien « Voir tout » du panneau.
+          onPointerDown={(e) => {
+            if (!touchMode) return;
+            if (e.pointerType === "mouse") return;
             e.preventDefault();
+            e.stopPropagation();
             if (isOpen) {
               handleMegaMenuLeave();
             } else {
               cancelLeave();
               handleMegaMenuEnter(cat.label);
             }
+          }}
+          onClick={(e) => {
+            if (!touchMode) {
+              close();
+              return;
+            }
+            // Sur tactile, le panneau est piloté au pointerdown pour éviter le
+            // besoin d'un 2ᵉ appui. Le click ne doit pas naviguer tant que le
+            // menu n'a pas été explicitement choisi via le sous-menu / « Voir tout ».
+            e.preventDefault();
           }}
           onFocus={() => {
             cancelLeave();
