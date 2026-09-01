@@ -7129,10 +7129,10 @@ a.step {
 .hero-slide {
   min-width: 100%;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: clamp(320px, 44vw, 480px) minmax(0, 1fr) auto;
   align-items: center;
-  gap: clamp(14px, 3vw, 30px);
-  padding: clamp(22px, 4vw, 42px) clamp(18px, 4vw, 46px) clamp(30px, 4vw, 42px);
+  gap: clamp(12px, 2vw, 20px);
+  padding: clamp(6px, 1.4vw, 12px) clamp(14px, 3vw, 32px) clamp(12px, 1.8vw, 16px);
   color: #fff;
 }
 .hc-navy {
@@ -7144,35 +7144,40 @@ a.step {
 .hc-violet {
   background: linear-gradient(120deg, #7c3aed 0%, #5b21b6 100%);
 }
-.hero-slide-icon {
-  width: clamp(48px, 7vw, 66px);
-  height: clamp(48px, 7vw, 66px);
+.hero-slide-img {
+  width: auto;
+  height: min(300px, 64vw);
+  justify-self: center;
+  object-fit: contain;
+  object-position: center;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
+  user-select: none;
 }
 .hero-slide-kicker {
   display: inline-block;
-  font-size: 0.68rem;
+  font-size: 0.5rem;
   font-weight: 800;
   letter-spacing: 0.14em;
   background: rgba(255, 255, 255, 0.18);
-  padding: 4px 10px;
+  padding: 2px 7px;
   border-radius: 999px;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 .hero-slide h2 {
-  font-size: clamp(1.15rem, 2.6vw, 1.8rem);
+  font-size: clamp(0.78rem, 1.5vw, 1.05rem);
   letter-spacing: -0.02em;
-  margin-bottom: 6px;
+  margin-bottom: 3px;
 }
 .hero-slide p {
   opacity: 0.92;
-  font-size: clamp(0.82rem, 1.4vw, 0.95rem);
+  font-size: clamp(0.6rem, 0.95vw, 0.7rem);
   max-width: 56ch;
+}
+.hero-slide-cta {
+  font-size: 0.7rem;
+  padding: 5px 12px;
 }
 .btn.btn-light {
   background: #fff;
@@ -7256,13 +7261,29 @@ a.step {
 }
 @media (max-width: 640px) {
   .hero-slide {
-    grid-template-columns: 1fr;
-    text-align: center;
-    justify-items: center;
-    gap: 10px;
+    grid-template-columns: clamp(220px, 52vw, 280px) minmax(0, 1fr);
+    text-align: start;
+    gap: 6px 10px;
+    padding: 6px 10px 12px;
+  }
+  .hero-slide-img {
+    height: min(230px, 56vw);
+    justify-self: center;
   }
   .hero-slide p {
     max-width: none;
+  }
+  .hero-slide h2 {
+    font-size: 0.82rem;
+  }
+  .hero-slide p {
+    font-size: 0.62rem;
+  }
+  .hero-slide-cta {
+    grid-column: 1 / -1;
+    justify-self: center;
+    white-space: nowrap;
+    margin-top: 6px;
   }
 }
 /* == fin carousel == */

@@ -2,6 +2,7 @@ node_modules/
 dist/
 *.db
 *.log
+buildlog.txt
 .env
 .env.*
 !.env.example

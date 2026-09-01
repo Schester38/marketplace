@@ -1,21 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLang } from "../i18n.jsx";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconBolt,
-  IconStore,
-  IconGift,
-  IconUsers,
-} from "./icons.jsx";
+import { IconChevronLeft, IconChevronRight } from "./icons.jsx";
 
 const AUTOPLAY_MS = 6000;
 const SWIPE_PX = 42;
 
 /**
- * Bandeau carrousel de la page d'accueil : mise en avant boutiques,
- * promotions éclair, parrainage 2 %, devenir vendeur.
+ * Bandeau carrousel de la page d'accueil : visuels MboppiShop (paiement à la
+ * livraison, vendeurs, parrainage 2 %, boutique en ligne).
  * Indicateurs de pagination + flèches + défilement tactile, compatible RTL.
  */
 export default function HeroCarousel({ onExplore }) {
@@ -31,22 +24,13 @@ export default function HeroCarousel({ onExplore }) {
       cls: "hc-orange",
       kicker: t("BIENVENUE SUR MBOPPI"),
       title: t("Le marché de votre quartier, en ligne"),
-      text: t("Produits des boutiques, créations des créateurs, livraison près de chez vous."),
+      text: t(
+        "Commandez dans les boutiques Mboppi et payez à la livraison, en espèces ou par Mobile Money."
+      ),
       cta: t("Découvrir les produits"),
       to: "#produits",
-      icon: <IconUsers size={26} />,
-    },
-    {
-      id: "flash",
-      cls: "hc-navy",
-      kicker: t("PROMOTIONS DU JOUR"),
-      title: t("Offres éclair à durée limitée"),
-      text: t(
-        "Jusqu'à -50 % sur une sélection de produits. Une seule semaine par boutique : unique !"
-      ),
-      cta: t("Voir les promotions"),
-      to: "/?rail=promos",
-      icon: <IconBolt size={26} />,
+      img: "/diapo/MboppiShop_Paiement_a_la_livraison_1x1.webp",
+      alt: t("Paiement à la livraison Mboppi"),
     },
     {
       id: "seller",
@@ -58,7 +42,8 @@ export default function HeroCarousel({ onExplore }) {
       ),
       cta: t("Devenir vendeur"),
       to: "/register",
-      icon: <IconStore size={26} />,
+      img: "/diapo/MboppiShop_Developpez_votre_boutique.webp",
+      alt: t("Développez votre boutique sur MboppiShop"),
     },
     {
       id: "referral",
@@ -70,7 +55,21 @@ export default function HeroCarousel({ onExplore }) {
       ),
       cta: t("Créer mon compte gratuit"),
       to: "/register",
-      icon: <IconGift size={26} />,
+      img: "/diapo/MboppiShop_Gagner_telephone_connexion.webp",
+      alt: t("Gagnez de l'argent depuis votre téléphone"),
+    },
+    {
+      id: "shop",
+      cls: "hc-navy",
+      kicker: t("MBOPPISHOP"),
+      title: t("Votre boutique en ligne, simple et optimisée"),
+      text: t(
+        "Une vitrine moderne et rapide pour vos produits, pensée pour les achats sur mobile."
+      ),
+      cta: t("Créer ma boutique"),
+      to: "/register",
+      img: "/diapo/MboppiShop_Shopify_optimise.webp",
+      alt: t("MboppiShop : votre boutique optimisée"),
     },
   ];
 
@@ -135,32 +134,39 @@ export default function HeroCarousel({ onExplore }) {
             aria-hidden={i !== index || undefined}
             aria-label={`${i + 1} / ${count}`}
           >
-            <span className="hero-slide-icon" aria-hidden="true">
-              {s.icon}
-            </span>
+            <img
+              className="hero-slide-img"
+              src={s.img}
+              alt={s.alt}
+              width={1000}
+              height={1000}
+              loading={i === 0 ? "eager" : "lazy"}
+              decoding="async"
+              draggable={false}
+            />
             <div className="hero-slide-body">
               <span className="hero-slide-kicker">{s.kicker}</span>
               <h2>{s.title}</h2>
               <p>{s.text}</p>
             </div>
             {s.to.startsWith("#") ? (
-              <button
-                type="button"
-                className="btn btn-light hero-slide-cta"
-                tabIndex={i === index ? 0 : -1}
-                onClick={onExplore}
-              >
-                {s.cta} →
-              </button>
-            ) : (
-              <Link
-                className="btn btn-light hero-slide-cta"
-                to={s.to}
-                tabIndex={i === index ? 0 : -1}
-              >
-                {s.cta} →
-              </Link>
-            )}
+                <button
+                  type="button"
+                  className="btn btn-light hero-slide-cta"
+                  tabIndex={i === index ? 0 : -1}
+                  onClick={onExplore}
+                >
+                  {s.cta} →
+                </button>
+              ) : (
+                <Link
+                  className="btn btn-light hero-slide-cta"
+                  to={s.to}
+                  tabIndex={i === index ? 0 : -1}
+                >
+                  {s.cta} →
+                </Link>
+              )}
           </div>
         ))}
       </div>
