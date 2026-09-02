@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { q, withTransaction } from "../db.js";
-import { authRequired, roleRequired } from "../auth.js";
+import { authRequired, roleRequired, authOptional } from "../auth.js";
 import { sendPush } from "../push.js";
 import { uploadPaymentProof } from "../storage.js";
 import {
@@ -426,13 +426,16 @@ router.delete(
 
 router.get(
   "/livreur",
+  // Route publique (un livreur peut livrer sans être connecté) mais si le
+  // livreur est connecté, on filtre ses livraisons ET on calcule ses stats.
+  authOptional,
   ah(async (req, res) => {
     const shopCode = req.query.shop_code ? String(req.query.shop_code).trim().toUpperCase() : "";
     if (!shopCode) return res.status(400).json({ error: "Code boutique requis" });
-    const shop = (await q("SELECT id FROM users WHERE shop_code = $1", [shopCode]))[0];
+    const shop = (
+      await q("SELECT id, name, country FROM users WHERE shop_code = $1", [shopCode])
+    )[0];
     if (!shop) return res.status(404).json({ error: "Code boutique invalide" });
-    const shopFilter = shop ? " AND p.shop_id = $1" : " AND FALSE";
-    const shopParam = shop ? [shop.id] : [];
     const pending = (
       await q(
         `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
@@ -442,45 +445,74 @@ router.get(
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
-       WHERE s.status IN ('pending', 'confirmed')${shopFilter}
+       WHERE s.status IN ('pending', 'confirmed') AND p.shop_id = $1
        ORDER BY s.created_at DESC`,
-        shopParam
+        [shop.id]
       )
     ).map(saleRow);
-    const me = req.user ? req.user.id : null;
-    const delivered = me
-      ? (
-          await q(
-            `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
+    // Livraisons du livreur connecté uniquement (session présente + rôle
+    // livreur), sinon (visiteur non connecté) on garde l'historique complet
+    // de la boutique.
+    const me = req.user && req.user.role === "livreur" ? req.user.id : null;
+    const deliveredFilter = me
+      ? "s.status = 'delivered' AND s.delivered_by = $1 AND p.shop_id = $2 AND NOT ($1 = ANY(s.hidden_for))"
+      : "s.status = 'delivered' AND p.shop_id = $1";
+    const deliveredParams = me ? [me, shop.id] : [shop.id];
+    const delivered = (
+      await q(
+        `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
               u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
               shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
-       WHERE s.status = 'delivered' AND s.delivered_by = $1 AND p.shop_id = $2 AND NOT ($1 = ANY(s.hidden_for))
+       WHERE ${deliveredFilter}
        ORDER BY s.delivered_at DESC`,
-            [me, shop.id]
-          )
-        ).map(saleRow)
-      : (
-          await q(
-            `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
-              u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
-              shop.name AS shop_name, shop.country AS shop_country
-       FROM sales s
-       JOIN products p ON p.id = s.product_id
-       LEFT JOIN users u ON u.id = s.seller_id
-       JOIN users shop ON shop.id = p.shop_id
-       WHERE s.status = 'delivered' AND p.shop_id = $1
-       ORDER BY s.delivered_at DESC`,
-            [shop.id]
-          )
-        ).map(saleRow);
+        deliveredParams
+      )
+    ).map(saleRow);
+    // Statistiques des frais de livraison du livreur — le livreur ne gagne que
+    // la delivery_fee, encaissée directement en espèces / mobile.
+    let stats = null;
+    let series = [];
+    if (me) {
+      const srow = (
+        await q(
+          `SELECT
+             COUNT(*) AS total_deliveries,
+             COALESCE(SUM(s.delivery_fee), 0) AS delivery_earned
+           FROM sales s
+           JOIN products p ON p.id = s.product_id
+           WHERE ${deliveredFilter}`,
+          deliveredParams
+        )
+      )[0];
+      stats = {
+        total_deliveries: Number(srow.total_deliveries),
+        delivery_earned: Number(srow.delivery_earned),
+      };
+      series = (
+        await q(
+          `SELECT to_char(date_trunc('day', s.delivered_at), 'YYYY-MM-DD') AS day,
+                  COUNT(*) AS cnt,
+                  COALESCE(SUM(s.delivery_fee), 0) AS rev
+           FROM sales s
+           JOIN products p ON p.id = s.product_id
+           WHERE ${deliveredFilter} AND s.delivered_at >= now() - interval '13 days'
+           GROUP BY 1 ORDER BY 1`,
+          deliveredParams
+        )
+      ).map((r) => ({ day: r.day, cnt: Number(r.cnt), rev: Number(r.rev) }));
+    }
     res.json({
       pending,
       delivered,
-      shop_name: shop ? (await q("SELECT name FROM users WHERE id = $1", [shop.id]))[0].name : null,
+      shop_name: shop.name,
+      shop_country: shop.country,
+      authenticated: Boolean(me),
+      stats,
+      series,
     });
   })
 );
