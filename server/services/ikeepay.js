@@ -446,7 +446,7 @@ async function handleWebhook(body, normalized) {
             AND lower(u.email) = $2
             AND mp.created_at >= now() - interval '24 hours'
           ORDER BY mp.created_at DESC LIMIT 1`,
-        [amount, email || "\u0000no-email"]
+        [amount, String(email || "").toLowerCase()]
       )
     )[0] ||
     (
@@ -475,7 +475,7 @@ async function handleWebhook(body, normalized) {
            AND lower(donor_email) = $2
            AND created_at >= now() - interval '24 hours'
          ORDER BY created_at DESC LIMIT 1`,
-        [amount, email || "\u0000no-email"]
+        [amount, String(email || "").toLowerCase()]
       )
     )[0] ||
     (
