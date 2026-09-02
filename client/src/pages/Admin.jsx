@@ -1000,10 +1000,9 @@ export default function Admin() {
         </div>
       )}
 
-      {/* Mode manuel : sections d'administration manuelles (adhésions, parrainages, retraits) */}
-      {isManual && (
-        <>
-          <h2 className="section-title">👥 {t("Utilisateurs")}</h2>
+      {/* Utilisateurs : toujours visibles, quel que soit le mode (l'admin doit
+          vérifier les comptes : ouvrir/fermer, vérifier, adhésion). */}
+      <h2 className="section-title">👥 {t("Utilisateurs")}</h2>
           <form onSubmit={searchUsers} className="hero-search" role="search">
         <span className="emoji" aria-hidden="true">
           🔍
@@ -1113,6 +1112,10 @@ export default function Admin() {
         </table>
       </div>
 
+      {/* Parrainages : actions manuelles de l'admin (mode manuel). En automatique,
+          les adhésions parrainées se confirment via le webhook iKeePay. */}
+      {isManual && (
+        <>
       <h2 className="section-title">🤝 {t("Parrainages (vendeurs / créateurs)")}</h2>
       <form onSubmit={searchReferrals} className="hero-search" role="search">
         <span className="emoji" aria-hidden="true">
@@ -1190,7 +1193,10 @@ export default function Admin() {
           </tbody>
         </table>
       </div>
+        </>
+      )}
 
+      {/* Retraits d'activation : payés manuellement par l'admin dans les deux modes */}
       {withdrawals && withdrawals.length > 0 && (
         <>
           <h2 className="section-title">💸 {t("Demandes de retrait (commissions d'activation)")}</h2>
@@ -1308,10 +1314,6 @@ export default function Admin() {
           </table>
         </div>
         </>
-      )}
-
-      {/* Fin des sections manuelles (masquées en mode automatique) */}
-      </>
       )}
 
       <h2 className="section-title">

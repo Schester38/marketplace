@@ -56,7 +56,9 @@ export function roleRequired(...roles) {
     if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({ error: "Accès réservé aux " + roles.join(" / ") });
     }
-    if (["shop", "seller", "creator"].includes(req.user.role)) {
+    // Seul le vendeur est soumis à l'adhésion. Boutiques et créateurs ont un
+    // accès direct (l'admin vérifie les comptes via le panneau, pas de 402).
+    if (["seller"].includes(req.user.role)) {
       const current = (
         await q("SELECT admin_approved, membership_expires_at FROM users WHERE id = $1", [
           req.user.id,

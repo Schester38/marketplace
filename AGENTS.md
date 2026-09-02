@@ -6,7 +6,7 @@ Contexte de travail pour toute session IA sur ce dépôt. Lire ce fichier avant 
 
 Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiques, vendeurs indépendants, créateurs, livreurs, commandes par téléphone/WhatsApp et paiement mobile.
 
-- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.50.1`.
+- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.50.2`.
 - **Serveur** : Express 4 (`server/`, port 4000), PostgreSQL via Supabase (`server/db.js` : `DATABASE_URL_POOLED`, fallback `DATABASE_URL`, `ssl rejectUnauthorized: false` ; exports `q()`, `withTransaction()`, `initDb()`).
 - **Finance** : `server/services/payouts.js` — `computeRedistribution`, `normalizeWalletPrimary`, seuils de commission. Il n'existe **pas** de `server/finance.js`.
 - **Déploiement** : Vercel, entrée serverless `api/index.js` → `server/app.js` + `initDb()`. `vercel.json` route `/api/*`, `/produit/:id`, `/boutique/:id`, `/createur/:id`, `/ville/:x`, `/offre/:id`, `/sitemap.xml`, `/` vers l'API, le reste vers le SPA.
@@ -20,7 +20,7 @@ Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiqu
 - **seller** : vendeur indépendant, code vendeur 6 caractères, commissions de vente et de parrainage.
 - **creator** : crée des créations/offres et publie des produits (catégorie forcée « Arts & Artisanat »). Moyens de paiement partagés avec les boutiques (`shop_payment_methods`).
 - **client / livreur** : espaces distincts ; le livreur confirme les livraisons (`/:id/deliver`).
-- **Adhésion** : boutique 2 500 XAF, vendeur 1 500 XAF, créateur 2 500 XAF, valable **30 jours** (`MEMBERSHIP_FEES`/`MEMBERSHIP_DAYS` définis dans `server/fees.js`, re-exportés par `server/auth.js`). `roleRequired` renvoie **402 MEMBERSHIP_REQUIRED** pour shop/seller/creator tant que `admin_approved` est faux et `membership_expires_at` n'est pas dans le futur. Un compte validé par l'admin accède sans paiement.
+- **Adhésion** : **seul le vendeur paie** (1 500 XAF / 30 jours ; `MEMBERSHIP_FEES`/`MEMBERSHIP_DAYS` définis dans `server/fees.js`, re-exportés par `server/auth.js`). `roleRequired` renvoie **402 MEMBERSHIP_REQUIRED** pour le `seller` tant que `admin_approved` est faux et `membership_expires_at` n'est pas dans le futur. Boutiques, créateurs, clients et livreurs accèdent **directement** à leur espace (aucun frais), quel que soit le mode de paiement — l'admin vérifie les comptes dans le panneau.
 - Auth : JWT (`JWT_SECRET` **requis, min 32 caractères** sinon le serveur refuse de démarrer), 24 h. Email verification (24 h TTL, `SITE_URL`), Google OAuth optionnel.
 
 ## Commission et argent
@@ -30,10 +30,12 @@ Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiqu
 L'admin bascule entre les deux systèmes via le panneau **Administration → Système de paiement** (bouton « Basculer vers le manuel / automatique »). Le mode est stocké dans `platform_settings` (clés `payment_mode`, `ikeepay_public_key`, `ikeepay_secret_key`) et le **serveur fait autorité** : les routes de payin sont refusées en mode manuel.
 
 - **Mode manuel (défaut)** : adhésions et dons payés hors plateforme (Mobile Money direct, virement UBA, MoneyFusion) ; l'admin valide chaque adhésion (`PATCH /api/admin/users/:id/admin-approved`, `POST /api/admin/referrals/:id/pay`) et la page d'adhésion affiche les instructions de virement.
-- **Mode automatique (iKeePay — PAYIN uniquement, pas de payout)** : l'adhésion (`POST /api/payments/membership-payin`) et le don (`POST /api/payments/donation-payin`) sont payés en ligne via le checkout inline `https://ikeepay.com/checkout/v1/inline` (iframe + `postMessage`). Un **webhook** `POST /api/ikeepay/webhook` (deux formats gérés : `payment.success` et `transaction.updated/created` avec `data.status`/`data.type`) confirme la transaction → activation immédiate du compte (`admin_approved = TRUE`, 30 jours) et notification du parrain si adhésion parrainée. **Les versements vendeur/parrain restent manuels** dans les deux modes.
+- **Mode automatique (iKeePay — PAYIN uniquement, pas de payout)** : l'adhésion **vendeur** (`POST /api/payments/membership-payin`) et le don (`POST /api/payments/donation-payin`) sont payés en ligne via le checkout inline `https://ikeepay.com/checkout/v1/inline` (iframe + `postMessage`). Un **webhook** `POST /api/ikeepay/webhook` (deux formats gérés : `payment.success` et `transaction.updated/created` avec `data.status`/`data.type`) confirme la transaction → activation immédiate du compte (`admin_approved = TRUE`, 30 jours) et notification du parrain si adhésion parrainée. **Les versements vendeur/parrain restent manuels** dans les deux modes.
 - **Sécurité** : la clé secrète iKeePay ne quitte jamais le serveur ; origine iKeePay autorisée (`originCheck` + CSP `frame-src`/`form-action`) ; montant + devise vérifiés au webhook (XAF/XOF tolérés, parité CFA).
 
 Les moyens de paiement sont enregistrés par chaque espace pour permettre les transferts directs entre parties.
+
+**Panneau admin (quel que soit le mode)** : la section **Utilisateurs** (recherche, ouvrir/fermer, vérifier, adhésion) et la section **Retraits d'activation** sont **toujours visibles** pour que l'admin puisse vérifier les comptes et payer les retraits (qui restent manuels dans les deux modes). Seule la section **Parrainages** (marquage « payé » manuel) est propre au mode manuel ; en mode automatique, elle est remplacée par le suivi des paiements en ligne iKeePay.
 
 ### Répartition d'une vente — `server/services/payouts.js` `computeRedistribution`
 
@@ -126,7 +128,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 - **Verone / Vitrine** (`server/routes/offers.js`, `server/routes/presentation.js`) : `GET /api/offers` public ; `POST /api/offers` et `DELETE /api/offers/:id` **non authentifiés** (état actuel — la protection documentée en V2 n'existe plus) ; `GET /api/offers/mine` renvoie toutes les offres. `pageRouter` → `/p`, `imageRouter` → `/api/img`. Pages Verone.jsx, VitrineOffre.jsx, OfferDetail.jsx.
 - **Métriques** : `POST /api/metrics/views`, `POST /api/metrics/visit` (X-Visitor-Id), `GET /api/metrics/trending` (exclut les promos, cache s-maxage 120).
 - **i18n** : toutes les traductions (fr/en/es/ar) dans `client/src/i18n.jsx` (`I18N = { fr: {}, en: {...EN, ...RICH_EN}, ar: {...AR, ...RICH_AR}, es: {...ES, ...RICH_ES} }`), clés françaises. `client/src/i18n/{en,es,ar}.js` supprimés (jamais importés). RTL pour ar.
-- **PWA** : `client/public/sw.js`, cache `mboppi-v196`, app shell + API_SWR + push + 4 manifests.
+- **PWA** : `client/public/sw.js`, cache `mboppi-v197`, app shell + API_SWR + push + 4 manifests.
 - **Audit/sécurité** : `server/security.js`, rate limits, originCheck, CSP.
 - **Photos** : `server/storage.js` — buckets publics `photos` et `payment-proofs` ; clé `sb_secret_...` signée HS256 (`SUPABASE_JWT_SECRET`) ; fallback base64. `server/photo.js` : `{thumb, medium, large}`.
 - **Menu** (Navbar.jsx) : Produits, Créateurs, Je soutiens, Formations et Digital (chariow.pics), Formation Mboppi (YouTube), espaces par rôle, Administration 🛡️.
@@ -136,7 +138,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 ## Conventions de dev (IMPORTANT)
 
 1. **Ne jamais committer sans demande explicite.** Quand le user demande « deployer » / « mettre en ligne » : bump + commit + push.
-2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.50.1 / mboppi-v196**.
+2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.50.2 / mboppi-v197**.
 3. **Build** : `npm run build` dans `client/` (le hash du JS local diffère de celui de Vercel pour des raisons d'environnement ; vérifier le déploiement via le CSS hash ou en cherchant une chaîne caractéristique du nouveau code dans le JS servi).
 4. **Vérifier le déploiement** : attendre ~75–90 s après push, puis `curl` sur `https://mboppi-mboppi.vercel.app/` (header `Accept: text/html` pour le HTML SEO) et chercher le hash CSS/JS du build local ; tester les API concernées.
 5. Commandes utiles : `node --check server/routes/*.js` pour la syntaxe serveur.
@@ -145,7 +147,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 
 ## Historique récent des modifications
 
-(Changelog partiel — version courante **1.50.1** / cache PWA **v196**.)
+(Changelog partiel — version courante **1.50.2** / cache PWA **v197**.)
 
 - **1.10.0 / v51** : refonte promotion éclair (masquage catalogue, règles serveur, UI shop).
 - **1.11.0 / v52** : masquage SEO complet, commission promo 0, partage promo, offres Verone dans l'accueil (rail), suppression commission duo.
@@ -155,4 +157,5 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 - **1.49.1 / v194** : activation automatique des parrainés marqués « payés » + push commission au parrain via l'onglet Utilisateurs ; correction COALESCE (désapprobation ne marque plus l'adhésion payée).
 - **1.50.0 / v195** : retour d'iKeePay en **PAYIN uniquement** (adhésion + don) avec **bascule admin manuel ↔ automatique** (`platform_settings`, panneau Admin → Système de paiement). En mode auto : checkout inline `ikeepay.com/checkout/v1/inline`, webhook `POST /api/ikeepay/webhook` (formats `payment.success` / `transaction.updated|created`), activation immédiate de l'adhésion + notification du parrain ; les versements (retraits d'activation, commissions) restent manuels. `server/fees.js` extrait les frais d'adhésion ; CSP Vercel (`vercel.json`) autorise l'origine iKeePay.
 - **1.50.1 / v196** : correctif 500 sur l'enregistrement des clés iKeePay — le stockage des réglages devient **auto-réparant** (`setSetting` crée la table `platform_settings` à la volée si elle manque ; `donor_email` garanti dans `GET /api/admin/payments`).
+- **1.50.2 / v197** : **accès direct à l'espace pour tous les rôles sauf le vendeur** (boutique, créateur, client, livreur — aucun frais, quel que soit le mode de paiement) ; panneau admin : sections **Utilisateurs** et **Retraits d'activation** toujours visibles dans les deux modes, seule la section **Parrainages** reste propre au mode manuel.
 - Après 1.14.0 : correctifs méga-menu et catégories mobiles, retrait de PayPal de la page de soutien (remplacement par MoneyFusion), compteur d'adhésion 30 jours, libellés parrainage/admin, etc.
