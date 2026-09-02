@@ -924,13 +924,16 @@ router.get(
            FROM membership_payments mp
            JOIN users u ON u.id = mp.user_id
            LEFT JOIN users par ON par.id = u.referred_by
+           WHERE mp.status IN ('pending', 'completed')
            ORDER BY mp.created_at DESC LIMIT $1`,
         [limit]
       ),
       q(
         `SELECT id, amount, currency, status, external_reference, provider_reference,
                 donor_email, donor_phone, operator, created_at, completed_at
-           FROM donations ORDER BY created_at DESC LIMIT $1`,
+           FROM donations
+           WHERE status IN ('pending', 'completed')
+           ORDER BY created_at DESC LIMIT $1`,
         [limit]
       ),
     ]);
@@ -991,7 +994,7 @@ router.post(
     if (!donation) return res.status(404).json({ error: "Don introuvable" });
     await q(
       `UPDATE donations SET status = 'completed', completed_at = now()
-       WHERE id = $1 AND status = 'pending'`,
+       WHERE id = $1 AND status IN ('pending','expired')`,
       [id]
     );
     await logAudit(
@@ -1055,7 +1058,7 @@ router.post(
       )
     )[0];
     if (!mp) return res.status(404).json({ error: "Paiement d'adhésion introuvable" });
-    if (mp.status !== "pending") {
+    if (mp.status !== "pending" && mp.status !== "expired") {
       return res.status(409).json({ error: "Cette adhésion n'est pas en attente" });
     }
     // Active le compte (mêmes effets que le webhook : 30 jours + admin_approved).

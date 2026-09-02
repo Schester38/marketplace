@@ -187,6 +187,11 @@ export function normalizeWebhook(body) {
         body.amount != null ? body.amount : d.amount != null ? d.amount : dd.amount
       ),
       currency: String(body.currency || d.currency || dd.currency || ""),
+      email: firstString(
+        body.email, body.customer_email, body.payer_email,
+        d.email, d.customer_email, d.payer_email,
+        dd.email, dd.customer_email, dd.payer_email
+      ).toLowerCase(),
       providerRef: firstString(
         body.ikeepay_ref,
         body.provider_reference,
@@ -208,6 +213,10 @@ export function normalizeWebhook(body) {
       orderId: pickReference(d, dd),
       amount: Number(d.amount != null ? d.amount : dd.amount),
       currency: String(d.currency || dd.currency || ""),
+      email: firstString(
+        d.email, d.customer_email, d.payer_email,
+        dd.email, dd.customer_email, dd.payer_email
+      ).toLowerCase(),
       providerRef: firstString(
         d.provider_reference,
         d.ikeepay_ref,
@@ -243,7 +252,7 @@ async function completeMembershipPayment(payment, providerRef) {
       `UPDATE membership_payments
        SET status = 'completed', completed_at = now(),
            provider_reference = COALESCE(provider_reference, $2)
-       WHERE id = $1 AND status = 'pending'
+       WHERE id = $1 AND status IN ('pending','expired')
        RETURNING user_id, amount, currency`,
       [payment.id, providerRef]
     );
@@ -324,7 +333,7 @@ export async function processWebhook(body) {
     await logWebhook({ body, normalized: null, result });
     return result;
   }
-  const { orderId, amount, currency, providerRef } = normalized;
+  const { orderId, amount, currency, providerRef, email } = normalized;
   if (!orderId) {
     result = { ok: false, reason: "missing_reference" };
     await logWebhook({ body, normalized, result });
@@ -345,7 +354,7 @@ export async function processWebhook(body) {
       await logWebhook({ body, normalized, result });
       return result;
     }
-    if (membership.status === "pending") {
+    if (membership.status === "pending" || membership.status === "expired") {
       await completeMembershipPayment(membership, providerRef);
     }
     result = { ok: true, kind: "membership", id: membership.id };
@@ -366,7 +375,7 @@ export async function processWebhook(body) {
       await logWebhook({ body, normalized, result });
       return result;
     }
-    if (donation.status === "pending") {
+    if (donation.status === "pending" || donation.status === "expired") {
       await completeDonation(donation, providerRef);
     }
     result = { ok: true, kind: "donation", id: donation.id };
@@ -381,8 +390,22 @@ export async function processWebhook(body) {
   if (amount > 0) {
     const recentMembership = (
       await q(
+        // 1) Correspondance par email (le plus fiable) sur 24 h.
+        `SELECT mp.id, mp.user_id, mp.amount, mp.currency, mp.status
+           FROM membership_payments mp
+           JOIN users u ON u.id = mp.user_id
+          WHERE mp.status IN ('pending','expired') AND mp.amount = $1
+            AND lower(u.email) = $2
+            AND mp.created_at >= now() - interval '24 hours'
+          ORDER BY mp.created_at DESC LIMIT 1`,
+        [amount, email || "\u0000no-email"]
+      )
+    )[0] ||
+    (
+      await q(
+        // 2) Secours : mÃªme montant sur 24 h (comme avant, fenÃªtre Ã©largie).
         `SELECT id, user_id, amount, currency, status FROM membership_payments
-         WHERE status = 'pending' AND amount = $1 AND created_at >= now() - interval '30 minutes'
+         WHERE status IN ('pending','expired') AND amount = $1 AND created_at >= now() - interval '24 hours'
          ORDER BY created_at DESC LIMIT 1`,
         [amount]
       )
@@ -400,8 +423,20 @@ export async function processWebhook(body) {
     }
     const recentDonation = (
       await q(
+        // 1) Correspondance par email (le plus fiable) sur 24 h.
         `SELECT id, amount, currency, status FROM donations
-         WHERE status = 'pending' AND amount = $1 AND created_at >= now() - interval '30 minutes'
+         WHERE status IN ('pending','expired') AND amount = $1
+           AND lower(donor_email) = $2
+           AND created_at >= now() - interval '24 hours'
+         ORDER BY created_at DESC LIMIT 1`,
+        [amount, email || "\u0000no-email"]
+      )
+    )[0] ||
+    (
+      await q(
+        // 2) Secours : mÃªme montant sur 24 h (fenÃªtre Ã©largie).
+        `SELECT id, amount, currency, status FROM donations
+         WHERE status IN ('pending','expired') AND amount = $1 AND created_at >= now() - interval '24 hours'
          ORDER BY created_at DESC LIMIT 1`,
         [amount]
       )
@@ -432,17 +467,70 @@ const PENDING_MAX_AGE_MS = 30 * 60 * 1000;
 
 export async function purgePendingPayments() {
   const cutoff = new Date(Date.now() - PENDING_MAX_AGE_MS).toISOString();
+  // On archive (status='expired') au lieu de supprimer : un webhook tardif
+  // peut ainsi encore completer le paiement (reconciliation par reference).
   const [donations, memberships] = await Promise.all([
     q(
-      `DELETE FROM donations WHERE status = 'pending' AND created_at < $1 RETURNING id`,
+      `UPDATE donations SET status = 'expired'
+       WHERE status = 'pending' AND created_at < $1 RETURNING id`,
       [cutoff]
     ),
     q(
-      `DELETE FROM membership_payments WHERE status = 'pending' AND created_at < $1 RETURNING id`,
+      `UPDATE membership_payments SET status = 'expired'
+       WHERE status = 'pending' AND created_at < $1 RETURNING id`,
       [cutoff]
     ),
   ]);
   return { donations: donations.length, memberships: memberships.length };
+}
+
+// Auto-rÃ©paration : retrouve dans le journal des webhooks un
+// Â« payment.success Â» non rattachÃ© (rÃ©fÃ©rence que nous ne connaissons pas) du
+// mÃªme montant, et complete l'adhÃ©sion de l'utilisateur. AppelÃ© par le
+// polling client (GET /api/payments/membership-status) : mÃªme si la
+// rÃ©fÃ©rence renvoyÃ©e par iKeePay diffÃ¨re de la nÃ´tre, l'adhÃ©sion est
+// confirmÃ©e et le compte activÃ© automatiquement.
+export async function reconcileMembershipFromWebhookLog({ userId, email, amount }) {
+  const logs = await q(
+    `SELECT id, payload, provider_order_id, created_at FROM payment_webhook_logs
+     WHERE handled = FALSE AND created_at >= now() - interval '24 hours'
+     ORDER BY created_at DESC LIMIT 50`
+  );
+  for (const log of logs) {
+    let body = log.payload;
+    if (typeof body === "string") {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        continue;
+      }
+    }
+    const n = normalizeWebhook(body);
+    if (!n || !n.orderId) continue;
+    if (!amountMatches(n.amount, amount)) continue;
+    if (!currencyMatches(n.currency, "XAF")) continue;
+    // Si le webhook porte un email, il doit correspondre Ã  celui du compte.
+    if (n.email && email && n.email !== String(email).toLowerCase()) continue;
+    // La rÃ©fÃ©rence ne doit appartenir Ã  aucun paiement dÃ©jÃ  connu.
+    const [m, d] = await Promise.all([
+      q(`SELECT id FROM membership_payments WHERE external_reference = $1`, [n.orderId]),
+      q(`SELECT id FROM donations WHERE external_reference = $1`, [n.orderId]),
+    ]);
+    if (m.length || d.length) continue;
+    // ComplÃ¨te l'adhÃ©sion pending/expired la plus rÃ©cente de cet utilisateur.
+    const payment = (
+      await q(
+        `SELECT id, user_id, amount, currency, status FROM membership_payments
+         WHERE user_id = $1 AND status IN ('pending','expired') AND amount = $2
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId, amount]
+      )
+    )[0];
+    if (!payment) return { ok: false, reason: "no_pending_membership" };
+    await completeMembershipPayment(payment, n.providerRef || log.provider_order_id || null);
+    return { ok: true, id: payment.id, reconciled: true };
+  }
+  return { ok: false, reason: "no_unmatched_webhook" };
 }
 
 export { MEMBERSHIP_FEES };

@@ -11,6 +11,7 @@ import {
   addPublicKey,
   genExternalRef,
   processWebhook,
+  reconcileMembershipFromWebhookLog,
 } from "../services/ikeepay.js";
 
 const router = Router();
@@ -25,6 +26,41 @@ router.get(
   "/settings",
   ah(async (req, res) => {
     res.json(await getPublicPaymentSettings());
+  })
+);
+
+// Statut de l'adhÃ©sion de l'utilisateur courant + auto-rÃ©paration. S'il
+// existe un webhook Â« payment.success Â» non rattachÃ© (rÃ©fÃ©rence non
+// reconnue) du mÃªme montant, on complete l'adhÃ©sion Ã  la volÃ©e : le client
+// qui sonde ce endpoint aprÃ¨s le checkout obtient l'activation mÃªme si la
+// rÃ©fÃ©rence renvoyÃ©e par iKeePay diffÃ¨re. C'est ce qui rend la redirection
+// vers l'espace de travail 100 % automatique, sans intervention admin.
+router.get(
+  "/membership-status",
+  authRequired,
+  ah(async (req, res) => {
+    const fee = MEMBERSHIP_FEES[req.user.role];
+    if (!fee) return res.json({ active: true, reconciled: false });
+    const user = (
+      await q(
+        `SELECT id, email, admin_approved, membership_expires_at
+           FROM users WHERE id = $1`,
+        [req.user.id]
+      )
+    )[0];
+    if (!user) return res.status(401).json({ error: "Session invalide" });
+    const active = Boolean(
+      user.admin_approved &&
+        user.membership_expires_at &&
+        new Date(user.membership_expires_at) > new Date()
+    );
+    if (active) return res.json({ active: true, reconciled: false });
+    const r = await reconcileMembershipFromWebhookLog({
+      userId: user.id,
+      email: user.email,
+      amount: fee,
+    }).catch(() => null);
+    res.json({ active: Boolean(r && r.ok), reconciled: Boolean(r && r.ok) });
   })
 );
 

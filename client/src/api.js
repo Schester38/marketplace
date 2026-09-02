@@ -218,6 +218,7 @@ export const api = {
     request("/activation-withdrawals", { method: "POST", body: JSON.stringify(payload) }),
   // Paiements en ligne (iKeePay — PAYIN uniquement : adhésion + don)
   paymentSettings: () => request("/payments/settings"),
+  membershipStatus: () => request("/payments/membership-status"),
   membershipPayin: () => request("/payments/membership-payin", { method: "POST" }),
   donationPayin: (payload) =>
     request("/payments/donation-payin", { method: "POST", body: JSON.stringify(payload) }),

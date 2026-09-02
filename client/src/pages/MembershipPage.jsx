@@ -14,6 +14,7 @@ export default function MembershipPage() {
   const [checkout, setCheckout] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [confirming, setConfirming] = useState(false);
 
   useEffect(() => {
     api
@@ -24,6 +25,48 @@ export default function MembershipPage() {
 
   const isManual = settings.mode !== "auto";
   const isAutoReady = settings.mode === "auto" && settings.ikeepay_configured;
+
+  // Confirmation automatique : tant que l'adhÃ©sion n'est pas active, la page
+  // sonde le serveur toutes les 4 s (max 6 min). Le serveur y vÃ©rifie l'Ã©tat
+  // ET rÃ©pare au besoin (webhook restÃ© non rattachÃ©) â†’ dÃ¨s que `active`
+  // repasse Ã  true, la session est rechargÃ©e et l'utilisateur est redirigÃ©
+  // vers son espace par App.jsx. Aucune intervention admin nÃ©cessaire.
+  useEffect(() => {
+    if (!isAutoReady) return undefined;
+    let stopped = false;
+    const startedAt = Date.now();
+    const tick = async () => {
+      if (stopped) return;
+      try {
+        const d = await api.membershipStatus();
+        if (d && d.active) {
+          stopped = true;
+          clearInterval(id);
+          try {
+            const me = await api.me();
+            if (me?.user) localStorage.setItem("user", JSON.stringify(me.user));
+          } catch {
+            /* la session se synchronisera au rechargement */
+          }
+          window.location.reload();
+          return;
+        }
+      } catch {
+        /* rÃ©seau indisponible : on retentera */
+      }
+      if (Date.now() - startedAt > 6 * 60 * 1000) {
+        stopped = true;
+        clearInterval(id);
+        setConfirming(false);
+      }
+    };
+    const id = setInterval(tick, 4000);
+    setConfirming(true);
+    return () => {
+      stopped = true;
+      clearInterval(id);
+    };
+  }, [isAutoReady]);
 
   const payOnline = async () => {
     setError("");
@@ -139,6 +182,14 @@ export default function MembershipPage() {
                   )}
                 </p>
                 {error && <p className="error">{error}</p>}
+                {confirming && (
+                  <p
+                    className="hint"
+                    style={{ textAlign: "center", marginBottom: 10, fontWeight: 600 }}
+                  >
+                    âŒ› {t("Confirmation du paiement en coursâ€¦ Votre espace sera activÃ© automatiquement.")}
+                  </p>
+                )}
                 <button
                   type="button"
                   className="btn btn-primary btn-block"
