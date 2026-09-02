@@ -984,14 +984,50 @@ export default function Admin() {
         </form>
         {paySettings?.ikeepay_configured ? (
           <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
-            ✅ {t("iKeePay configuré.")} {t("Webhook à enregistrer côté iKeePay :")}{" "}
-            <code>https://mboppi-mboppi.vercel.app/api/ikeepay/webhook</code>
+            ✅ {t("iKeePay configuré.")}
           </p>
         ) : (
           <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
             ⚠️ {t("iKeePay non configuré : le mode automatique restera indisponible.")}
           </p>
         )}
+        {paySettings?.webhook_url ? (
+          <div style={{ marginTop: 10 }}>
+            <p className="hint" style={{ marginBottom: 6 }}>
+              🔐 {t("Webhook à enregistrer chez iKeePay (URL protégée par un token secret) :")}
+            </p>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <code
+                style={{
+                  background: "rgba(0,0,0,.05)",
+                  padding: "6px 8px",
+                  borderRadius: 6,
+                  wordBreak: "break-all",
+                  flex: "1 1 240px",
+                }}
+              >
+                {paySettings.webhook_url}
+              </code>
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() => {
+                  try {
+                    navigator.clipboard.writeText(paySettings.webhook_url);
+                    setPayOk(t("URL du webhook copiée."));
+                  } catch {
+                    /* clipboard indisponible */
+                  }
+                }}
+              >
+                📋 {t("Copier")}
+              </button>
+            </div>
+            <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>
+              ⚠️ {t("Sans ce token dans l'URL, iKeePay ne peut plus confirmer les paiements.")}
+            </p>
+          </div>
+        ) : null}
       </div>
 
       {/* Mode automatique : suivi des paiements en ligne (sections manuelles masquées) */}

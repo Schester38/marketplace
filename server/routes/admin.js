@@ -847,12 +847,18 @@ router.post(
 router.get(
   "/settings/payments",
   ah(async (req, res) => {
-    const [mode, keys, configured, publicSettings] = await Promise.all([
-      getPaymentMode(),
-      getIkeepayKeys(),
-      isIkeepayConfigured(),
-      getPublicPaymentSettings(),
-    ]);
+    const [mode, keys, configured, publicSettings, webhookSecret] =
+      await Promise.all([
+        getPaymentMode(),
+        getIkeepayKeys(),
+        isIkeepayConfigured(),
+        getPublicPaymentSettings(),
+        getWebhookSecret(),
+      ]);
+    const base =
+      process.env.PUBLIC_URL ||
+      process.env.SITE_URL ||
+      "https://mboppi-mboppi.vercel.app";
     res.json({
       mode,
       currency: publicSettings.currency,
@@ -861,6 +867,8 @@ router.get(
         public_key: keys.publicKey,
         secret_key_set: Boolean(keys.secretKey),
       },
+      // URL de webhook à renseigner chez iKeePay (token secret inclus).
+      webhook_url: `${base}/api/ikeepay/webhook?k=${webhookSecret}`,
     });
   })
 );

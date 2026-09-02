@@ -108,6 +108,19 @@ export async function isIkeepayConfigured() {
   return Boolean(publicKey && secretKey);
 }
 
+// Secret du webhook : empêche quiconque de forger un webhook pour activer une
+// adhésion sans payer (le webhook est monté avant originCheck, il est donc
+// joignable publiquement). Le secret est généré une seule fois et transmis à
+// iKeePay via l'URL de webhook (?k=...). Vérifié par le routeur webhook.
+export async function getWebhookSecret() {
+  let secret = await getSetting("ikeepay_webhook_secret");
+  if (!secret) {
+    secret = randomBytes(16).toString("hex");
+    await setSetting("ikeepay_webhook_secret", secret);
+  }
+  return secret;
+}
+
 // Retourne les infos publiques exposées au client (jamais la clé secrète).
 export async function getPublicPaymentSettings() {
   const [mode, { publicKey }] = await Promise.all([

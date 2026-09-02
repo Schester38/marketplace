@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { timingSafeEqual } from "node:crypto";
 import { q } from "../db.js";
 import { authRequired, authOptional, MEMBERSHIP_FEES } from "../auth.js";
 import {
@@ -7,6 +8,7 @@ import {
   getIkeepayKeys,
   getPublicPaymentSettings,
   isIkeepayConfigured,
+  getWebhookSecret,
   buildInlineCheckoutUrl,
   addPublicKey,
   genExternalRef,
@@ -248,6 +250,22 @@ router.post(
 webhookRouter.post(
   "/webhook",
   ah(async (req, res) => {
+    // Authentification du webhook : seul iKeePay (qui connaît l'URL secrète
+    // configurée dans son dashboard) peut poster ici. Sans ce token, toute
+    // requête est rejetée — sinon n'importe qui pourrait activer une adhésion
+    // en forgant un « payment.success » (le endpoint est public).
+    const expected = await getWebhookSecret();
+    const given = String(req.query.k || req.get("x-ikeepay-token") || "");
+    const a = Buffer.from(String(given));
+    const b = Buffer.from(String(expected));
+    if (
+      a.length !== b.length ||
+      !timingSafeEqual(a, b)
+    ) {
+      return res
+        .status(403)
+        .json({ received: false, error: "invalid_webhook_token" });
+    }
     // Tolérance : certains clients envoient le JSON avec un content-type
     // différent → express.json ne l'a pas parsé (req.body = {}). On tente un
     // reparsing depuis le corps brut si disponible.
