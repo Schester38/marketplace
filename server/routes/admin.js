@@ -13,6 +13,7 @@ import {
   getIkeepayKeys,
   isIkeepayConfigured,
   getPublicPaymentSettings,
+  purgePendingPayments,
 } from "../services/ikeepay.js";
 
 const router = Router();
@@ -909,6 +910,8 @@ router.get(
     const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 200);
     // La colonne donor_email peut ne pas exister si initDb n'a pas abouti.
     await ensureColumn("donations", "donor_email", "TEXT");
+    // Supprime automatiquement les paiements « en attente » depuis plus de 30 min.
+    await purgePendingPayments().catch(() => {});
     const [memberships, donations] = await Promise.all([
       q(
         `SELECT mp.id, mp.amount, mp.currency, mp.status, mp.external_reference,
@@ -991,6 +994,40 @@ router.post(
       `donation=${id} marquée complétée manuellement`,
       req.ip
     );
+    res.json({ ok: true });
+  })
+);
+
+// Supprimer une ligne de paiement (don) sur demande de l'admin.
+router.delete(
+  "/payments/donations/:id",
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Identifiant invalide" });
+    }
+    const donation = (await q("SELECT id FROM donations WHERE id = $1", [id]))[0];
+    if (!donation) return res.status(404).json({ error: "Don introuvable" });
+    await q("DELETE FROM donations WHERE id = $1", [id]);
+    await logAudit(req.user.id, "admin.payment_donation_delete", `donation=${id}`, req.ip);
+    res.json({ ok: true });
+  })
+);
+
+// Supprimer une ligne de paiement (adhésion) sur demande de l'admin.
+router.delete(
+  "/payments/memberships/:id",
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Identifiant invalide" });
+    }
+    const mp = (
+      await q("SELECT id FROM membership_payments WHERE id = $1", [id])
+    )[0];
+    if (!mp) return res.status(404).json({ error: "Paiement d'adhésion introuvable" });
+    await q("DELETE FROM membership_payments WHERE id = $1", [id]);
+    await logAudit(req.user.id, "admin.payment_membership_delete", `membership=${id}`, req.ip);
     res.json({ ok: true });
   })
 );

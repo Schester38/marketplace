@@ -342,6 +342,55 @@ export default function Admin() {
     }
   };
 
+  // Supprimer une ligne de paiement (don ou adhésion) — action admin.
+  const deleteDonation = async (d) => {
+    if (
+      !window.confirm(
+        t("Supprimer le don de {amount} F ({ref}) ?", {
+          amount: formatMoney(d.amount),
+          ref: d.external_reference,
+        })
+      )
+    )
+      return;
+    setPayError("");
+    setPayOk("");
+    try {
+      await api.adminDeleteDonation(d.id);
+      setPayments((p) => ({
+        ...p,
+        donations: (p?.donations || []).filter((x) => x.id !== d.id),
+      }));
+      setPayOk(t("Don supprimé."));
+    } catch (err) {
+      setPayError(err.message);
+    }
+  };
+
+  const deleteMembership = async (m) => {
+    if (
+      !window.confirm(
+        t("Supprimer le paiement d'adhésion de {name} ({ref}) ?", {
+          name: m.user_name,
+          ref: m.external_reference,
+        })
+      )
+    )
+      return;
+    setPayError("");
+    setPayOk("");
+    try {
+      await api.adminDeleteMembership(m.id);
+      setPayments((p) => ({
+        ...p,
+        memberships: (p?.memberships || []).filter((x) => x.id !== m.id),
+      }));
+      setPayOk(t("Paiement d'adhésion supprimé."));
+    } catch (err) {
+      setPayError(err.message);
+    }
+  };
+
   const toggleAdminApproved = async (u) => {
     try {
       await api.adminSetAdminApproved(u.id, !u.admin_approved);
@@ -944,6 +993,7 @@ export default function Admin() {
                         <th>{t("Référence")}</th>
                         <th>{t("Statut")}</th>
                         <th>{t("Date")}</th>
+                        <th>{t("Action")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -973,6 +1023,15 @@ export default function Admin() {
                             {m.completed_at
                               ? new Date(m.completed_at).toLocaleString()
                               : new Date(m.created_at).toLocaleString()}
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-small"
+                              onClick={() => deleteMembership(m)}
+                            >
+                              🗑 {t("Supprimer")}
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -1029,7 +1088,14 @@ export default function Admin() {
                               >
                                 ✅ {t("Marquer complété")}
                               </button>
-                            )}
+                            )}{" "}
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-small"
+                              onClick={() => deleteDonation(d)}
+                            >
+                              🗑 {t("Supprimer")}
+                            </button>
                           </td>
                         </tr>
                       ))}

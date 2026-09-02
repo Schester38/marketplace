@@ -231,6 +231,10 @@ export const api = {
   adminWebhooks: () => adminRequest("/admin/payments/webhooks"),
   adminCompleteDonation: (id) =>
     adminRequest(`/admin/payments/donations/${id}/complete`, { method: "POST" }),
+  adminDeleteDonation: (id) =>
+    adminRequest(`/admin/payments/donations/${id}`, { method: "DELETE" }),
+  adminDeleteMembership: (id) =>
+    adminRequest(`/admin/payments/memberships/${id}`, { method: "DELETE" }),
   adminReferrals: (search) =>
     adminRequest(`/admin/referrals${search ? `?search=${encodeURIComponent(search)}` : ""}`),
   adminMarkReferralPaid: (id) =>

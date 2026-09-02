@@ -358,5 +358,25 @@ export async function processWebhook(body) {
   return result;
 }
 
+// Purge les paiements (dons / adhésions) restés « en attente » depuis plus de
+// 30 minutes : ils ne seront jamais confirmés (transaction abandonnée ou
+// webhook perdu). Exécutée au chargement de la liste admin des paiements.
+const PENDING_MAX_AGE_MS = 30 * 60 * 1000;
+
+export async function purgePendingPayments() {
+  const cutoff = new Date(Date.now() - PENDING_MAX_AGE_MS).toISOString();
+  const [donations, memberships] = await Promise.all([
+    q(
+      `DELETE FROM donations WHERE status = 'pending' AND created_at < $1 RETURNING id`,
+      [cutoff]
+    ),
+    q(
+      `DELETE FROM membership_payments WHERE status = 'pending' AND created_at < $1 RETURNING id`,
+      [cutoff]
+    ),
+  ]);
+  return { donations: donations.length, memberships: memberships.length };
+}
+
 export { MEMBERSHIP_FEES };
 
