@@ -5,6 +5,9 @@ const ALLOWED_ORIGINS = [
   "http://localhost:4173",
   process.env.ALLOWED_ORIGIN,
   "https://mboppi-mboppi.vercel.app",
+  // iKeePay (webhook de confirmation de paiement, origine du tunnel en iframe)
+  "https://ikeepay.com",
+  "https://www.ikeepay.com",
 ].filter(Boolean);
 
 const CSP =
@@ -14,10 +17,10 @@ const CSP =
   "img-src 'self' data: blob: https:; " +
   "font-src 'self' data: https://cdn.trustpilot.net; " +
   "connect-src 'self' https://www.google.com https://www.gstatic.com https://widget.trustpilot.com https://cdn.trustpilot.net; " +
-  "frame-src 'self' https://www.google.com https://widget.trustpilot.com; " +
+  "frame-src 'self' https://www.google.com https://widget.trustpilot.com https://ikeepay.com https://www.ikeepay.com; " +
   "object-src 'none'; " +
   "base-uri 'self'; " +
-  "form-action 'self' https://www.google.com";
+  "form-action 'self' https://www.google.com https://ikeepay.com https://www.ikeepay.com";
 
 export function securityHeaders(req, res, next) {
   res.setHeader("X-Content-Type-Options", "nosniff");

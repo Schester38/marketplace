@@ -448,6 +448,16 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_provider ON payment_webhook_logs(provider, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_order ON payment_webhook_logs(provider_order_id);
 
+    -- Configuration plateforme (paiement) : mode manuel/automatique + clés iKeePay.
+    -- En mode automatique, seuls les PAYIN (adhésion, don) passent par iKeePay ;
+    -- les versements vers vendeurs/parrains restent manuels.
+    CREATE TABLE IF NOT EXISTS platform_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    ALTER TABLE donations ADD COLUMN IF NOT EXISTS donor_email TEXT;
+
     ALTER TABLE wallet_transactions DROP CONSTRAINT IF EXISTS wallet_transactions_transaction_type_check;
     ALTER TABLE wallet_transactions ADD CONSTRAINT wallet_transactions_transaction_type_check CHECK (transaction_type IN ('commission_credit','referral_credit','payout_debit','adjustment','online_collect','online_payout'));
   `);

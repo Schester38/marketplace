@@ -1,5 +1,8 @@
 import jwt from "jsonwebtoken";
 import { q } from "./db.js";
+import { MEMBERSHIP_FEES, MEMBERSHIP_DAYS } from "./fees.js";
+
+export { MEMBERSHIP_FEES, MEMBERSHIP_DAYS };
 
 const SECRET = process.env.JWT_SECRET;
 if (!SECRET || SECRET.length < 32) {
@@ -74,8 +77,8 @@ export function roleRequired(...roles) {
   };
 }
 
-export const MEMBERSHIP_FEES = { shop: 2500, seller: 1500, creator: 2500 };
-export const MEMBERSHIP_DAYS = 30;
+// MEMBERSHIP_FEES / MEMBERSHIP_DAYS sont définis dans server/fees.js et
+// re-exportés ici pour la rétrocompatibilité des imports existants.
 
 export function membershipRequired(user) {
   return Boolean(user && MEMBERSHIP_FEES[user.role]);

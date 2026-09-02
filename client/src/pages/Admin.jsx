@@ -73,6 +73,17 @@ export default function Admin() {
   const [refError, setRefError] = useState("");
   const [withdrawals, setWithdrawals] = useState(null);
   const [wdError, setWdError] = useState("");
+  // Système de paiement (manuel ↔ automatique)
+  const [paySettings, setPaySettings] = useState(null);
+  const [payPublicKey, setPayPublicKey] = useState("");
+  const [paySecretKey, setPaySecretKey] = useState("");
+  const [payments, setPayments] = useState(null);
+  const [payBusy, setPayBusy] = useState(false);
+  const [payError, setPayError] = useState("");
+  const [payOk, setPayOk] = useState("");
+
+  const payMode = paySettings?.mode === "auto" ? "auto" : "manual";
+  const isManual = payMode === "manual";
 
   const load = useCallback(
     (silent) => {
@@ -119,6 +130,18 @@ export default function Admin() {
       api
         .adminWithdrawals()
         .then((d) => setWithdrawals(d.withdrawals))
+        .catch(() => {});
+      api
+        .adminPaymentSettings()
+        .then((d) => {
+          setPaySettings(d);
+          setPayPublicKey(d?.ikeepay?.public_key || "");
+          setPaySecretKey("");
+        })
+        .catch(() => {});
+      api
+        .adminPayments()
+        .then((d) => setPayments(d))
         .catch(() => {});
     },
     [t]
@@ -245,6 +268,47 @@ export default function Admin() {
       );
     } catch (err) {
       setWdError(err.message);
+    }
+  };
+
+  const togglePaymentMode = async () => {
+    setPayError("");
+    setPayOk("");
+    setPayBusy(true);
+    try {
+      const next = payMode === "auto" ? "manual" : "auto";
+      await api.adminUpdatePaymentSettings({ mode: next });
+      setPaySettings((s) => ({ ...s, mode: next }));
+      setPayOk(
+        next === "auto"
+          ? t("Mode automatique activé : les adhésions et dons se paient en ligne (iKeePay).")
+          : t("Mode manuel activé : les paiements se font sous contrôle de l'administrateur.")
+      );
+      load(true);
+    } catch (err) {
+      setPayError(err.message);
+    } finally {
+      setPayBusy(false);
+    }
+  };
+
+  const savePaymentKeys = async (e) => {
+    e.preventDefault();
+    setPayError("");
+    setPayOk("");
+    setPayBusy(true);
+    try {
+      await api.adminUpdatePaymentSettings({
+        ikeepay_public_key: payPublicKey.trim(),
+        ikeepay_secret_key: paySecretKey.trim(),
+      });
+      setPaySecretKey("");
+      setPayOk(t("Clés iKeePay enregistrées."));
+      load(true);
+    } catch (err) {
+      setPayError(err.message);
+    } finally {
+      setPayBusy(false);
     }
   };
 
@@ -745,8 +809,202 @@ export default function Admin() {
         </button>
       </form>
 
-      <h2 className="section-title">👥 {t("Utilisateurs")}</h2>
-      <form onSubmit={searchUsers} className="hero-search" role="search">
+      {/* ===== Système de paiement : bascule manuel ↔ automatique (toujours visible) ===== */}
+      <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+        <h2 className="section-title" style={{ marginTop: 0 }}>
+          ⚙️ {t("Système de paiement")}
+        </h2>
+        <div className="payment-mode-toggle">
+          <span className={`payment-mode-badge ${payMode}`}>
+            {payMode === "auto" ? "🟢 " + t("Automatique (iKeePay)") : "🔵 " + t("Manuel")}
+          </span>
+          <button
+            type="button"
+            className="btn btn-outline btn-small"
+            disabled={payBusy}
+            onClick={togglePaymentMode}
+          >
+            {payBusy
+              ? "…"
+              : payMode === "auto"
+                ? "🔁 " + t("Basculer vers le manuel")
+                : "🔁 " + t("Basculer vers l'automatique")}
+          </button>
+        </div>
+        <p className="hint" style={{ marginBottom: 14 }}>
+          {payMode === "auto"
+            ? t(
+                "Mode automatique : les adhésions et les dons se paient en ligne via iKeePay. Les retraits des commissions d'activation restent manuels (validés ici)."
+              )
+            : t(
+                "Mode manuel : l'administration valide chaque adhésion et chaque paiement (adhésions, dons, parrainages)."
+              )}
+        </p>
+        {payError && <p className="error">{payError}</p>}
+        {payOk && <p className="success">{payOk}</p>}
+        <form
+          onSubmit={savePaymentKeys}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr auto",
+            gap: 10,
+            alignItems: "end",
+          }}
+        >
+          <div>
+            <label className="label" style={{ display: "block", marginBottom: 4 }}>
+              {t("Clé publique iKeePay")}
+            </label>
+            <input
+              className="input"
+              value={payPublicKey}
+              onChange={(e) => setPayPublicKey(e.target.value)}
+              placeholder="pk_..."
+            />
+          </div>
+          <div>
+            <label className="label" style={{ display: "block", marginBottom: 4 }}>
+              {t("Clé secrète iKeePay")}
+            </label>
+            <input
+              type="password"
+              className="input"
+              value={paySecretKey}
+              onChange={(e) => setPaySecretKey(e.target.value)}
+              placeholder={paySettings?.ikeepay?.secret_key_set ? "••••••••" : "sk_..."}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary btn-small" disabled={payBusy}>
+            {payBusy ? "…" : t("Enregistrer")}
+          </button>
+        </form>
+        {paySettings?.ikeepay_configured ? (
+          <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
+            ✅ {t("iKeePay configuré.")} {t("Webhook à enregistrer côté iKeePay :")}{" "}
+            <code>https://mboppi-mboppi.vercel.app/api/ikeepay/webhook</code>
+          </p>
+        ) : (
+          <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
+            ⚠️ {t("iKeePay non configuré : le mode automatique restera indisponible.")}
+          </p>
+        )}
+      </div>
+
+      {/* Mode automatique : suivi des paiements en ligne (sections manuelles masquées) */}
+      {!isManual && (
+        <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+          <h2 className="section-title" style={{ marginTop: 0 }}>
+            📊 {t("Paiements en ligne (iKeePay)")}
+          </h2>
+          {payments === null ? (
+            <div className="skeleton-block" style={{ height: 40 }}></div>
+          ) : (
+            <>
+              <h3>{t("Adhésions")}</h3>
+              {!(payments.memberships && payments.memberships.length) ? (
+                <p className="hint">{t("Aucune adhésion payée en ligne pour le moment.")}</p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>{t("Utilisateur")}</th>
+                        <th>{t("Rôle")}</th>
+                        <th>{t("Montant")}</th>
+                        <th>{t("Référence")}</th>
+                        <th>{t("Statut")}</th>
+                        <th>{t("Date")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.memberships.map((m) => (
+                        <tr key={m.id}>
+                          <td>
+                            {m.user_name}
+                            <div className="hint">{m.user_email}</div>
+                          </td>
+                          <td>{t(m.user_role || "")}</td>
+                          <td>
+                            <strong>{formatMoney(m.amount)} F</strong>
+                          </td>
+                          <td>
+                            <code>{m.external_reference}</code>
+                          </td>
+                          <td>
+                            {m.status === "completed" ? (
+                              <span className="badge badge-paid">{t("Complété")}</span>
+                            ) : m.status === "failed" ? (
+                              <span className="badge badge-pending">{t("Échoué")}</span>
+                            ) : (
+                              <span className="badge badge-warn">{t("En attente")}</span>
+                            )}
+                          </td>
+                          <td className="hint">
+                            {m.completed_at
+                              ? new Date(m.completed_at).toLocaleString()
+                              : new Date(m.created_at).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <h3 style={{ marginTop: 18 }}>{t("Dons")}</h3>
+              {!(payments.donations && payments.donations.length) ? (
+                <p className="hint">{t("Aucun don reçu en ligne pour le moment.")}</p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>{t("Montant")}</th>
+                        <th>{t("Opérateur")}</th>
+                        <th>{t("Référence")}</th>
+                        <th>{t("Statut")}</th>
+                        <th>{t("Date")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.donations.map((d) => (
+                        <tr key={d.id}>
+                          <td>
+                            <strong>{formatMoney(d.amount)} F</strong>
+                          </td>
+                          <td>{d.operator || "—"}</td>
+                          <td>
+                            <code>{d.external_reference}</code>
+                          </td>
+                          <td>
+                            {d.status === "completed" ? (
+                              <span className="badge badge-paid">{t("Complété")}</span>
+                            ) : d.status === "failed" ? (
+                              <span className="badge badge-pending">{t("Échoué")}</span>
+                            ) : (
+                              <span className="badge badge-warn">{t("En attente")}</span>
+                            )}
+                          </td>
+                          <td className="hint">
+                            {d.completed_at
+                              ? new Date(d.completed_at).toLocaleString()
+                              : new Date(d.created_at).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Mode manuel : sections d'administration manuelles (adhésions, parrainages, retraits) */}
+      {isManual && (
+        <>
+          <h2 className="section-title">👥 {t("Utilisateurs")}</h2>
+          <form onSubmit={searchUsers} className="hero-search" role="search">
         <span className="emoji" aria-hidden="true">
           🔍
         </span>
@@ -1050,6 +1308,10 @@ export default function Admin() {
           </table>
         </div>
         </>
+      )}
+
+      {/* Fin des sections manuelles (masquées en mode automatique) */}
+      </>
       )}
 
       <h2 className="section-title">

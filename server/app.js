@@ -29,6 +29,7 @@ import donationsRoutes from "./routes/donations.js";
 import activationWithdrawalRoutes from "./routes/activationWithdrawals.js";
 import logRoutes from "./routes/logs.js";
 import seoRoutes from "./routes/seo.js";
+import paymentsRouter, { webhookRouter } from "./routes/payments.js";
 import presentationRoutes, { pageRouter, imageRouter } from "./routes/presentation.js";
 import { authRequired } from "./auth.js";
 import { securityHeaders, originCheck } from "./security.js";
@@ -59,6 +60,8 @@ const ALLOWED_ORIGINS = [
   "http://localhost:4173",
   process.env.ALLOWED_ORIGIN,
   "https://mboppi-mboppi.vercel.app",
+  "https://ikeepay.com",
+  "https://www.ikeepay.com",
 ].filter(Boolean);
 
 app.use(cors({ origin: ALLOWED_ORIGINS }));
@@ -136,6 +139,9 @@ app.use("/api/flash-promotions", flashPromoRoutes);
 app.use("/api/metrics", metricsRoutes);
 app.use("/api/donations", donationsRoutes);
 app.use("/api/activation-withdrawals", activationWithdrawalRoutes);
+app.use("/api/payments", paymentsRouter);
+// Webhook iKeePay : monté sous /api/ikeepay/webhook (JSON POST).
+app.use("/api/ikeepay", webhookRouter);
 app.use("/api/logs", limiter(60 * 1000, 8));
 app.use("/api/logs", logRoutes);
 app.use("/api/admin", adminRoutes);

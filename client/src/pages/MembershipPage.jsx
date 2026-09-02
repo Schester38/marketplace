@@ -1,13 +1,55 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
+import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { countrySymbol, getCountry } from "../config.js";
+import { api } from "../api.js";
 
 export default function MembershipPage() {
   const { user } = useAuth();
   const { t } = useLang();
+  const [settings, setSettings] = useState({ mode: "manual", ikeepay_configured: false });
+  const [checkout, setCheckout] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api
+      .paymentSettings()
+      .then((d) => setSettings(d || { mode: "manual", ikeepay_configured: false }))
+      .catch(() => {});
+  }, []);
+
+  const isManual = settings.mode !== "auto";
+  const isAutoReady = settings.mode === "auto" && settings.ikeepay_configured;
+
+  const payOnline = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      const d = await api.membershipPayin();
+      setCheckout(d.checkout_url);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSuccess = async () => {
+    // Adhésion payée → session à jour puis retour automatique vers l'espace.
+    try {
+      const d = await api.me();
+      if (d?.user) {
+        localStorage.setItem("user", JSON.stringify(d.user));
+      }
+    } catch {
+      /* la session se synchronisera au prochain cycle */
+    }
+    window.location.reload();
+  };
 
   const isCameroon = user?.country === "Cameroun";
   const country = getCountry(user?.country || "Cameroun");
@@ -74,6 +116,49 @@ export default function MembershipPage() {
           </p>
         </div>
 
+        {/* Paiement en ligne — mode automatique iKeePay */}
+        {!isManual && (
+          <div
+            className="card"
+            style={{
+              borderColor: "var(--primary)",
+              backgroundColor: "rgba(var(--primary-rgb), 0.05)",
+              padding: 20,
+              marginBottom: 24,
+              textAlign: "center",
+            }}
+          >
+            {isAutoReady ? (
+              <>
+                <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 12 }}>
+                  💳 {t("Paiement en ligne sécurisé")}
+                </div>
+                <p className="hint" style={{ textAlign: "center", marginBottom: 16 }}>
+                  {t(
+                    "Cliquez sur le bouton ci-dessous pour payer votre adhésion en ligne. Votre espace sera activé immédiatement après confirmation du paiement."
+                  )}
+                </p>
+                {error && <p className="error">{error}</p>}
+                <button
+                  type="button"
+                  className="btn btn-primary btn-block"
+                  disabled={busy}
+                  onClick={payOnline}
+                >
+                  {busy ? "…" : "💳 " + t("Payer avec iKeePay")}
+                </button>
+              </>
+            ) : (
+              <p className="hint" style={{ textAlign: "center", marginBottom: 0 }}>
+                {t("Le paiement en ligne sera bientôt disponible. Veuillez réessayer plus tard.")}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Mode manuel : instructions de paiement direct */}
+        {isManual && (
+          <>
         {/* Instructions Cameroun */}
         <h3 style={{ marginTop: 24, marginBottom: 12 }}>🇨🇲 {t("CAMEROUN")}</h3>
         <p className="hint">
@@ -229,6 +314,9 @@ export default function MembershipPage() {
           </div>
         )}
 
+          </>
+        )}
+
         {/* Liens d'action */}
         <div className="row2" style={{ gap: 12 }}>
           <Link to="/compte" className="btn btn-outline btn-block">
@@ -244,6 +332,13 @@ export default function MembershipPage() {
           </a>
         </div>
       </div>
+      {checkout && (
+        <IkeepayCheckout
+          checkoutUrl={checkout}
+          onSuccess={handleSuccess}
+          onClose={() => setCheckout(null)}
+        />
+      )}
     </main>
   );
 }

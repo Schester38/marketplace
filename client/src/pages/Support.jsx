@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Seo from "../components/Seo.jsx";
+import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 import { useLang } from "../i18n.jsx";
+import { api } from "../api.js";
 
 function OrangeLogo() {
   return (
@@ -114,6 +116,39 @@ function InfoRow({ label, value, copyable }) {
 
 export default function Support() {
   const { t } = useLang();
+  const [settings, setSettings] = useState({ mode: "manual", ikeepay_configured: false });
+  const [donAmount, setDonAmount] = useState("");
+  const [donEmail, setDonEmail] = useState("");
+  const [checkout, setCheckout] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api
+      .paymentSettings()
+      .then((d) => setSettings(d || { mode: "manual", ikeepay_configured: false }))
+      .catch(() => {});
+  }, []);
+
+  const isManual = settings.mode !== "auto";
+  const isAutoReady = settings.mode === "auto" && settings.ikeepay_configured;
+
+  const payDonation = async (e) => {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const d = await api.donationPayin({
+        amount: Number(donAmount),
+        email: donEmail.trim(),
+      });
+      setCheckout(d.checkout_url);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const methods = [
     {
@@ -227,8 +262,56 @@ export default function Support() {
           >
             {t("Choisissez le moyen de paiement ci-dessous et envoyez la contribution qui vous convient.")}
           </p>
+
+          {/* Don en ligne — mode automatique iKeePay */}
+          {!isManual && (
+            <div style={{ marginTop: 16, textAlign: "left" }}>
+              {isAutoReady ? (
+                <form onSubmit={payDonation}>
+                  {error && <p className="error">{error}</p>}
+                  <label className="label" style={{ display: "block", marginBottom: 6 }}>
+                    {t("Montant du don")} ({settings.currency || "XAF"}) *
+                  </label>
+                  <input
+                    type="number"
+                    min="100"
+                    step="100"
+                    className="input"
+                    placeholder="1000"
+                    required
+                    value={donAmount}
+                    onChange={(e) => setDonAmount(e.target.value)}
+                  />
+                  <label className="label" style={{ display: "block", margin: "10px 0 6px" }}>
+                    {t("Email (optionnel)")}
+                  </label>
+                  <input
+                    type="email"
+                    className="input"
+                    value={donEmail}
+                    onChange={(e) => setDonEmail(e.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    className="btn btn-primary btn-block"
+                    style={{ marginTop: 14 }}
+                    disabled={busy}
+                  >
+                    {busy ? "…" : "💛 " + t("Faire un don avec iKeePay")}
+                  </button>
+                </form>
+              ) : (
+                <p className="hint" style={{ textAlign: "center", marginBottom: 0 }}>
+                  {t("Le don en ligne sera bientôt disponible. Veuillez réessayer plus tard.")}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
+        {/* Moyens de soutien manuels */}
+        {isManual && (
+          <>
         <div className="section-head">
           <h2>{t("Comment pouvez-vous soutenir le projet ?")}</h2>
           <p>{t("Choisissez le moyen qui vous convient.")}</p>
@@ -260,6 +343,8 @@ export default function Support() {
             </div>
           ))}
         </div>
+          </>
+        )}
       </section>
 
       <section className="section cta-section">
@@ -270,6 +355,13 @@ export default function Support() {
           )}
         </p>
       </section>
+      {checkout && (
+        <IkeepayCheckout
+          checkoutUrl={checkout}
+          onSuccess={() => setCheckout(null)}
+          onClose={() => setCheckout(null)}
+        />
+      )}
     </main>
   );
 }

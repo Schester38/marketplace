@@ -216,6 +216,18 @@ export const api = {
   activationWithdrawalMe: () => request("/activation-withdrawals/me"),
   createActivationWithdrawal: (payload) =>
     request("/activation-withdrawals", { method: "POST", body: JSON.stringify(payload) }),
+  // Paiements en ligne (iKeePay — PAYIN uniquement : adhésion + don)
+  paymentSettings: () => request("/payments/settings"),
+  membershipPayin: () => request("/payments/membership-payin", { method: "POST" }),
+  donationPayin: (payload) =>
+    request("/payments/donation-payin", { method: "POST", body: JSON.stringify(payload) }),
+  adminPaymentSettings: () => adminRequest("/admin/settings/payments"),
+  adminUpdatePaymentSettings: (payload) =>
+    adminRequest("/admin/settings/payments", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  adminPayments: () => adminRequest("/admin/payments"),
   adminReferrals: (search) =>
     adminRequest(`/admin/referrals${search ? `?search=${encodeURIComponent(search)}` : ""}`),
   adminMarkReferralPaid: (id) =>

@@ -5,6 +5,14 @@ import { logAudit } from "../security.js";
 import { migrateImages } from "../migrate-images.js";
 import { cleanupOutOfStock, cleanupOldStats, dbUsageReport } from "../cleanup.js";
 import { storageUsage } from "../storage.js";
+import { notifyActivationReferralPaid } from "../services/activationReferral.js";
+import {
+  getPaymentMode,
+  setPaymentMode,
+  getIkeepayKeys,
+  isIkeepayConfigured,
+  getPublicPaymentSettings,
+} from "../services/ikeepay.js";
 
 const router = Router();
 
@@ -555,32 +563,9 @@ router.get(
 // Commission d'activation (1 000 F) : prévient le parrain (notification +
 // push) quand l'adhésion d'un parrainé vient d'être marquée payée, c'est-à-dire
 // exactement au moment où sa balance d'activation augmente de 1 000 F.
-// Est concerné : un parrainé `seller` (le rôle est forcé à `seller` à
-// l'inscription via `ref_seller`) rattaché à un parrain vendeur.
-async function notifyActivationReferralPaid(parraine) {
-  if (!parraine || !parraine.referred_by || Number(parraine.referred_by) === Number(parraine.id)) {
-    return;
-  }
-  if (!["seller", "creator"].includes(parraine.role)) return;
-  const parrain = (
-    await q("SELECT id, role FROM users WHERE id = $1", [parraine.referred_by])
-  )[0];
-  if (!parrain || parrain.role !== "seller") return;
-  await q(
-    `INSERT INTO notifications (user_id, type, amount) VALUES ($1, 'activation_referral_paid', $2)`,
-    [parrain.id, 1000]
-  );
-  try {
-    const { sendPush } = await import("../push.js");
-    await sendPush(parrain.id, {
-      title: "Adhésion payée ✅",
-      body: `${parraine.name} a payé son adhésion — votre commission de 1 000 F est en attente.`,
-      url: "/seller",
-    });
-  } catch (err) {
-    console.error("[admin] push activation_referral_paid impossible :", err.message);
-  }
-}
+// Implémentation partagée avec le webhook iKeePay (voir
+// services/activationReferral.js) — la fonction notifyActivationReferralPaid
+// est importée en tête de fichier.
 
 // Parrainages d'activation : vendeurs inscrits via le code d'un vendeur
 // (`ref_seller` → `referred_by`, rôle forcé à `seller`). L'admin voit chaque
@@ -852,6 +837,107 @@ router.post(
   })
 );
 
+
+// Basculer entre les deux systèmes de paiement (manuel ↔ automatique) et
+// configurer les clés iKeePay. En automatique, seuls les PAYIN (adhésion, don)
+// passent par iKeePay ; les versements (retraits d'activation, commissions)
+// restent manuels, quel que soit le mode.
+router.get(
+  "/settings/payments",
+  ah(async (req, res) => {
+    const [mode, keys, configured, publicSettings] = await Promise.all([
+      getPaymentMode(),
+      getIkeepayKeys(),
+      isIkeepayConfigured(),
+      getPublicPaymentSettings(),
+    ]);
+    res.json({
+      mode,
+      currency: publicSettings.currency,
+      ikeepay_configured: configured,
+      ikeepay: {
+        public_key: keys.publicKey,
+        secret_key_set: Boolean(keys.secretKey),
+      },
+    });
+  })
+);
+
+router.post(
+  "/settings/payments",
+  ah(async (req, res) => {
+    const body = req.body || {};
+    let mode;
+    if (body.mode) {
+      mode = await setPaymentMode(body.mode);
+    } else {
+      mode = await getPaymentMode();
+    }
+    if (
+      body.ikeepay_public_key !== undefined ||
+      body.ikeepay_secret_key !== undefined
+    ) {
+      const current = await getIkeepayKeys();
+      const publicKey =
+        body.ikeepay_public_key !== undefined
+          ? String(body.ikeepay_public_key).trim()
+          : current.publicKey;
+      const secretKey =
+        body.ikeepay_secret_key !== undefined
+          ? String(body.ikeepay_secret_key).trim()
+          : current.secretKey;
+      await q(
+        `INSERT INTO platform_settings (key, value, updated_at) VALUES
+           ('ikeepay_public_key', $1, now()),
+           ('ikeepay_secret_key', $2, now())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+        [publicKey, secretKey]
+      );
+    }
+    await logAudit(
+      req.user.id,
+      "admin.payment_settings",
+      `mode=${mode} ikeepay_configured=${await isIkeepayConfigured()}`,
+      req.ip
+    );
+    res.json({ ok: true, mode });
+  })
+);
+
+// Liste des paiements en ligne (adhésions + dons) pour le suivi admin.
+router.get(
+  "/payments",
+  ah(async (req, res) => {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 200);
+    const [memberships, donations] = await Promise.all([
+      q(
+        `SELECT mp.id, mp.amount, mp.currency, mp.status, mp.external_reference,
+                mp.provider_reference, mp.created_at, mp.completed_at,
+                u.name AS user_name, u.email AS user_email, u.role AS user_role
+           FROM membership_payments mp
+           JOIN users u ON u.id = mp.user_id
+           ORDER BY mp.created_at DESC LIMIT $1`,
+        [limit]
+      ),
+      q(
+        `SELECT id, amount, currency, status, external_reference, provider_reference,
+                donor_email, donor_phone, operator, created_at, completed_at
+           FROM donations ORDER BY created_at DESC LIMIT $1`,
+        [limit]
+      ),
+    ]);
+    res.json({
+      memberships: memberships.map((m) => ({
+        ...m,
+        amount: Number(m.amount),
+      })),
+      donations: donations.map((d) => ({
+        ...d,
+        amount: Number(d.amount),
+      })),
+    });
+  })
+);
 
 // NOTE : les endpoints de réconciliation des reversements iKeePay
 // (GET /payouts, POST /payouts/:ref/resolve, POST /payouts/:ref/retry) ont été
