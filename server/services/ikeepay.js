@@ -276,16 +276,18 @@ async function completeMembershipPayment(payment, providerRef) {
     activated = user;
   });
   if (activated && activated.referred_by) {
-    try {
-      await notifyActivationReferralPaid({
-        id: activated.id,
-        name: activated.name,
-        role: activated.role,
-        referred_by: activated.referred_by,
-      });
-    } catch (err) {
+    // La notification ne doit JAMAIS bloquer la rÃ©ponse du webhook au-delÃ  de
+    // la limite serverless (10 s sur Vercel) : le push webpush peut rester
+    // suspendu indÃ©finiment (pas de timeout natif). On borne l'attente Ã  2,5 s.
+    const p = notifyActivationReferralPaid({
+      id: activated.id,
+      name: activated.name,
+      role: activated.role,
+      referred_by: activated.referred_by,
+    }).catch((err) => {
       console.error("[ikeepay] notification parrain impossible :", err.message);
-    }
+    });
+    await Promise.race([p, new Promise((resolve) => setTimeout(resolve, 2500))]);
   }
 }
 
@@ -490,13 +492,25 @@ export async function purgePendingPayments() {
 // polling client (GET /api/payments/membership-status) : mÃªme si la
 // rÃ©fÃ©rence renvoyÃ©e par iKeePay diffÃ¨re de la nÃ´tre, l'adhÃ©sion est
 // confirmÃ©e et le compte activÃ© automatiquement.
+const reconcileState = { lastRun: 0 };
 export async function reconcileMembershipFromWebhookLog({ userId, email, amount }) {
+  // Cooldown global : les sondes client arrivent toutes les 4 s ; sans garde,
+  // les invocations se chevauchent, saturent le pool de connexions et font
+  // exploser la durÃ©e (504 serverless). Un seul balayage toutes les 5 s.
+  const now = Date.now();
+  if (now - reconcileState.lastRun < 5000) {
+    return { ok: false, reason: "cooldown" };
+  }
+  reconcileState.lastRun = now;
+  const startedAt = Date.now();
   const logs = await q(
     `SELECT id, payload, provider_order_id, created_at FROM payment_webhook_logs
      WHERE handled = FALSE AND created_at >= now() - interval '24 hours'
-     ORDER BY created_at DESC LIMIT 50`
+     ORDER BY created_at DESC LIMIT 10`
   );
   for (const log of logs) {
+    // Budget temps : ne jamais dÃ©passer ~4 s de balayage (limite serverless).
+    if (Date.now() - startedAt > 4000) break;
     let body = log.payload;
     if (typeof body === "string") {
       try {
