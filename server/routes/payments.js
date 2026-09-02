@@ -55,12 +55,38 @@ router.get(
         new Date(user.membership_expires_at) > new Date()
     );
     if (active) return res.json({ active: true, reconciled: false });
-    const r = await reconcileMembershipFromWebhookLog({
-      userId: user.id,
-      email: user.email,
-      amount: fee,
-    }).catch(() => null);
-    res.json({ active: Boolean(r && r.ok), reconciled: Boolean(r && r.ok) });
+    // Diagnostic : l'adhÃ©sion en attente existe-t-elle ? Des webhooks sont-ils
+    // arrivÃ©s ? Le client affiche ces informations dans sa console â€” cela
+    // permet de savoir prÃ©cisÃ©ment pourquoi l'activation n'a pas eu lieu.
+    const pending = await q(
+      `SELECT id FROM membership_payments
+       WHERE user_id = $1 AND status IN ('pending','expired') AND amount = $2
+       ORDER BY created_at DESC LIMIT 1`,
+      [user.id, fee]
+    );
+    const [r, whCount] = await Promise.all([
+      pending.length
+        ? reconcileMembershipFromWebhookLog({
+            userId: user.id,
+            email: user.email,
+            amount: fee,
+          }).catch((e) => ({ ok: false, reason: "reconcile_error:" + e.message }))
+        : Promise.resolve({ ok: false, reason: "no_pending_membership" }),
+      q(
+        `SELECT COUNT(*)::int AS n FROM payment_webhook_logs
+         WHERE created_at >= now() - interval '24 hours'`
+      ),
+    ]);
+    const reason = r && r.ok ? "completed" : (r && r.reason) || "error";
+    res.json({
+      active: Boolean(r && r.ok),
+      reconciled: Boolean(r && r.ok),
+      debug: {
+        reason,
+        pending_membership: pending.length > 0,
+        webhooks_24h: (whCount[0] && whCount[0].n) || 0,
+      },
+    });
   })
 );
 

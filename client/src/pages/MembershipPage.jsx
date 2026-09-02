@@ -39,6 +39,17 @@ export default function MembershipPage() {
       if (stopped) return;
       try {
         const d = await api.membershipStatus();
+        if (d && d.debug) {
+          // Diagnostic visible dans la console navigateur (F12).
+          console.log(
+            "[adhésion] statut :",
+            d.debug.reason,
+            "| adhésion en attente :",
+            d.debug.pending_membership,
+            "| webhooks reçus (24 h) :",
+            d.debug.webhooks_24h
+          );
+        }
         if (d && d.active) {
           stopped = true;
           clearInterval(id);

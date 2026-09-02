@@ -542,6 +542,11 @@ export async function reconcileMembershipFromWebhookLog({ userId, email, amount 
     )[0];
     if (!payment) return { ok: false, reason: "no_pending_membership" };
     await completeMembershipPayment(payment, n.providerRef || log.provider_order_id || null);
+    // Marque le log comme traitÃ© pour ne pas le re-balayer inutilement.
+    await q(
+      `UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1`,
+      [log.id]
+    ).catch(() => {});
     return { ok: true, id: payment.id, reconciled: true };
   }
   return { ok: false, reason: "no_unmatched_webhook" };
