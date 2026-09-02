@@ -1072,7 +1072,28 @@ export default function Admin() {
                             )}
                           </td>
                           <td className="hint" style={{ maxWidth: 260, wordBreak: "break-word" }}>
-                            {w.error || (w.payload ? JSON.stringify(w.payload).slice(0, 160) : "—")}
+                            {w.error ? w.error : w.handled ? "OK" : "reçu"}
+                            {w.payload ? (
+                              <details style={{ marginTop: 6 }}>
+                                <summary style={{ fontSize: 11, color: "var(--primary)", cursor: "pointer" }}>
+                                  {t("Voir le payload")}
+                                </summary>
+                                <pre
+                                  style={{
+                                    fontSize: 10,
+                                    whiteSpace: "pre-wrap",
+                                    wordBreak: "break-word",
+                                    maxHeight: 120,
+                                    overflow: "auto",
+                                    background: "var(--soft)",
+                                    padding: 6,
+                                    borderRadius: 6,
+                                  }}
+                                >
+                                  {JSON.stringify(w.payload, null, 2)}
+                                </pre>
+                              </details>
+                            ) : null}
                           </td>
                         </tr>
                       ))}

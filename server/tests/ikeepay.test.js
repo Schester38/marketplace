@@ -46,6 +46,26 @@ suite("normalizeWebhook iKeePay", () => {
     assertEqual(w.providerRef, "IKP-H2H-B5C9EC0E", "providerRef");
   });
 
+  // Cas réel constaté : iKeePay envoie « payment.success » SANS order_id racine,
+  // la référence étant imbriquée dans data.external_reference.
+  test("accepte payment.success avec référence dans data", () => {
+    const w = normalizeWebhook({
+      event: "payment.success",
+      data: {
+        ikeepay_ref: "IKP-H2H-DON-B343",
+        external_reference: "MBP-DON-B343D73050CA",
+        amount: 100,
+        currency: "XAF",
+        status: "completed",
+      },
+    });
+    assertTrue(!!w, "should parse");
+    assertEqual(w.orderId, "MBP-DON-B343D73050CA", "orderId (depuis data)");
+    assertEqual(w.amount, 100, "amount");
+    assertEqual(w.currency, "XAF", "currency");
+    assertEqual(w.providerRef, "IKP-H2H-DON-B343", "providerRef (depuis data)");
+  });
+
   test("accepte le format transaction.updated (data.type=payin)", () => {
     const w = normalizeWebhook({
       event: "transaction.updated",

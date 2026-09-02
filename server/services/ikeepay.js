@@ -142,37 +142,65 @@ export function genExternalRef(prefix) {
   const rand = randomBytes(6).toString("hex").toUpperCase();
   return `${prefix}-${rand}`;
 }
+// Premier champ non vide parmi la liste (tolère les différentes signatures
+// utilisées par iKeePay : order_id, external_reference, reference, ikeepay_ref…).
+function firstString(...values) {
+  for (const v of values) {
+    if (v != null && String(v).trim() !== "") return String(v).trim();
+  }
+  return "";
+}
+
 // Normalise les deux formats de webhook documentés vers un objet unique.
-// Retourne null si le payload n'est pas un événement exploitable.
+// Le champ de référence, le montant et la devise peuvent être au niveau racine
+// OU imbriqués dans `data` — on cherche dans les deux pour être robuste aux
+// variations réelles d'iKeePay (ex. payment.success sans order_id racine).
 export function normalizeWebhook(body) {
   if (!body || typeof body !== "object") return null;
   const event = String(body.event || "");
+  const d = body && typeof body.data === "object" ? body.data : {};
+
   if (event === "payment.success") {
-    const status = String(body.status || "completed").toLowerCase();
+    const status = String(body.status || d.status || "completed").toLowerCase();
     if (status !== "completed" && status !== "success") return null;
     return {
-      orderId: String(body.order_id || ""),
-      amount: Number(body.amount),
-      currency: String(body.currency || ""),
-      providerRef: String(body.ikeepay_ref || ""),
+      orderId: firstString(
+        body.order_id,
+        body.external_reference,
+        body.reference,
+        d.order_id,
+        d.external_reference,
+        d.reference
+      ),
+      amount: Number(body.amount != null ? body.amount : d.amount),
+      currency: String(body.currency || d.currency || ""),
+      providerRef: firstString(
+        body.ikeepay_ref,
+        body.provider_reference,
+        d.ikeepay_ref,
+        d.provider_reference,
+        d.reference
+      ),
     };
   }
   if (event === "transaction.updated" || event === "transaction.created") {
-    const d = body.data || {};
     if (String(d.type || "") !== "payin") return null;
     const status = String(d.status || "").toLowerCase();
     if (status !== "completed") return null;
     return {
-      orderId: String(d.external_reference || ""),
+      orderId: firstString(d.external_reference, d.order_id, d.reference),
       amount: Number(d.amount),
       currency: String(d.currency || ""),
-      providerRef: String(d.provider_reference || ""),
+      providerRef: firstString(d.provider_reference, d.ikeepay_ref, d.reference),
     };
   }
   return null;
 }
 
 function currencyMatches(actual, expected) {
+  // Si le webhook n'envoie pas de devise (champ absent), on ne bloque pas :
+  // la confirmation reste protégée par la référence + le montant.
+  if (!actual) return true;
   const a = String(actual || "").toUpperCase();
   const e = String(expected || "").toUpperCase();
   return a === e || (FCFA_CURRENCIES.has(a) && FCFA_CURRENCIES.has(e));
