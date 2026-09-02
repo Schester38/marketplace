@@ -916,9 +916,14 @@ router.get(
       q(
         `SELECT mp.id, mp.amount, mp.currency, mp.status, mp.external_reference,
                 mp.provider_reference, mp.created_at, mp.completed_at,
-                u.name AS user_name, u.email AS user_email, u.role AS user_role
+                u.name AS user_name, u.email AS user_email, u.role AS user_role,
+                u.reference_number AS user_reference,
+                u.referred_by,
+                par.name AS parrain_name,
+                par.reference_number AS parrain_reference
            FROM membership_payments mp
            JOIN users u ON u.id = mp.user_id
+           LEFT JOIN users par ON par.id = u.referred_by
            ORDER BY mp.created_at DESC LIMIT $1`,
         [limit]
       ),
@@ -933,6 +938,7 @@ router.get(
       memberships: memberships.map((m) => ({
         ...m,
         amount: Number(m.amount),
+        is_referred: Boolean(m.referred_by && Number(m.referred_by) !== Number(m.id)),
       })),
       donations: donations.map((d) => ({
         ...d,

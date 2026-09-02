@@ -78,7 +78,6 @@ export default function Admin() {
   const [payPublicKey, setPayPublicKey] = useState("");
   const [paySecretKey, setPaySecretKey] = useState("");
   const [payments, setPayments] = useState(null);
-  const [webhooks, setWebhooks] = useState(null);
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState("");
   const [payOk, setPayOk] = useState("");
@@ -143,10 +142,6 @@ export default function Admin() {
       api
         .adminPayments()
         .then((d) => setPayments(d))
-        .catch(() => {});
-      api
-        .adminWebhooks()
-        .then((d) => setWebhooks(d.webhooks || []))
         .catch(() => {});
     },
     [t]
@@ -989,6 +984,7 @@ export default function Admin() {
                       <tr>
                         <th>{t("Utilisateur")}</th>
                         <th>{t("Rôle")}</th>
+                        <th>{t("Parrain")}</th>
                         <th>{t("Montant")}</th>
                         <th>{t("Référence")}</th>
                         <th>{t("Statut")}</th>
@@ -1003,7 +999,26 @@ export default function Admin() {
                             {m.user_name}
                             <div className="hint">{m.user_email}</div>
                           </td>
-                          <td>{t(m.user_role || "")}</td>
+                          <td>
+                            <span className="badge">{t(m.user_role || "")}</span>
+                            {m.is_referred && (
+                              <span className="badge badge-paid" style={{ marginLeft: 6 }}>
+                                {t("Vendeur parrainé")}
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            {m.parrain_name ? (
+                              <>
+                                {m.parrain_name}
+                                <div className="hint" style={{ fontSize: 12 }}>
+                                  <code>{m.parrain_reference || "—"}</code>
+                                </div>
+                              </>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
                           <td>
                             <strong>{formatMoney(m.amount)} F</strong>
                           </td>
@@ -1096,70 +1111,6 @@ export default function Admin() {
                             >
                               🗑 {t("Supprimer")}
                             </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* Journal des webhooks iKeePay reçus (diagnostic) */}
-              <h3 style={{ marginTop: 18 }}>{t("Journal des webhooks iKeePay")}</h3>
-              {!(webhooks && webhooks.length) ? (
-                <p className="hint">{t("Aucun webhook reçu pour le moment.")}</p>
-              ) : (
-                <div className="table-wrap">
-                  <table className="table">
-                    <thead>
-                      <tr>
-                        <th>{t("Date")}</th>
-                        <th>{t("Référence")}</th>
-                        <th>{t("Événement")}</th>
-                        <th>{t("Statut")}</th>
-                        <th>{t("Détail")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {webhooks.map((w) => (
-                        <tr key={w.id}>
-                          <td className="hint">
-                            {w.created_at ? new Date(w.created_at).toLocaleString() : "—"}
-                          </td>
-                          <td>
-                            <code>{w.provider_order_id || "—"}</code>
-                          </td>
-                          <td className="hint">{w.event || "—"}</td>
-                          <td>
-                            {w.handled ? (
-                              <span className="badge badge-paid">{t("Traité")}</span>
-                            ) : (
-                              <span className="badge badge-warn">{w.status || t("Non traité")}</span>
-                            )}
-                          </td>
-                          <td className="hint" style={{ maxWidth: 260, wordBreak: "break-word" }}>
-                            {w.error ? w.error : w.handled ? "OK" : "reçu"}
-                            {w.payload ? (
-                              <details style={{ marginTop: 6 }}>
-                                <summary style={{ fontSize: 11, color: "var(--primary)", cursor: "pointer" }}>
-                                  {t("Voir le payload")}
-                                </summary>
-                                <pre
-                                  style={{
-                                    fontSize: 10,
-                                    whiteSpace: "pre-wrap",
-                                    wordBreak: "break-word",
-                                    maxHeight: 120,
-                                    overflow: "auto",
-                                    background: "var(--soft)",
-                                    padding: 6,
-                                    borderRadius: 6,
-                                  }}
-                                >
-                                  {JSON.stringify(w.payload, null, 2)}
-                                </pre>
-                              </details>
-                            ) : null}
                           </td>
                         </tr>
                       ))}
