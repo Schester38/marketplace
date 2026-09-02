@@ -36,17 +36,49 @@ async function getSetting(key, fallback = "") {
     )[0];
     return row && row.value != null ? String(row.value) : fallback;
   } catch (err) {
+    // Table absente (initDb pas encore abouti) → on la crée puis on relit.
+    if (isMissingRelation(err)) {
+      try {
+        await ensurePlatformSettingsTable();
+        const row = (
+          await q("SELECT value FROM platform_settings WHERE key = $1", [key])
+        )[0];
+        return row && row.value != null ? String(row.value) : fallback;
+      } catch (err2) {
+        console.error("[ikeepay] lecture setting impossible (après création) :", err2.message);
+        return fallback;
+      }
+    }
     console.error("[ikeepay] lecture setting impossible :", err.message);
     return fallback;
   }
 }
 
-async function setSetting(key, value) {
+export async function setSetting(key, value) {
+  // Auto-réparation : garantit que la table existe avant l'écriture, même si
+  // initDb() n'a pas (encore) créé la table en production.
+  await ensurePlatformSettingsTable();
   await q(
     `INSERT INTO platform_settings (key, value, updated_at)
      VALUES ($1, $2, now())
      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
     [key, String(value == null ? "" : value)]
+  );
+}
+
+const SETTINGS_TABLE_SQL = `CREATE TABLE IF NOT EXISTS platform_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT '',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+)`;
+
+async function ensurePlatformSettingsTable() {
+  await q(SETTINGS_TABLE_SQL);
+}
+
+function isMissingRelation(err) {
+  return Boolean(
+    err && (err.code === "42P01" || /relation .* does not exist/i.test(err.message || ""))
   );
 }
 

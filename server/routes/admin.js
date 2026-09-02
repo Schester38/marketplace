@@ -9,6 +9,7 @@ import { notifyActivationReferralPaid } from "../services/activationReferral.js"
 import {
   getPaymentMode,
   setPaymentMode,
+  setSetting,
   getIkeepayKeys,
   isIkeepayConfigured,
   getPublicPaymentSettings,
@@ -886,13 +887,10 @@ router.post(
         body.ikeepay_secret_key !== undefined
           ? String(body.ikeepay_secret_key).trim()
           : current.secretKey;
-      await q(
-        `INSERT INTO platform_settings (key, value, updated_at) VALUES
-           ('ikeepay_public_key', $1, now()),
-           ('ikeepay_secret_key', $2, now())
-         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
-        [publicKey, secretKey]
-      );
+      // setSetting est auto-réparant : il crée la table platform_settings si
+      // elle n'existe pas encore en base (initDb pas forcément abouti en prod).
+      await setSetting("ikeepay_public_key", publicKey);
+      await setSetting("ikeepay_secret_key", secretKey);
     }
     await logAudit(
       req.user.id,
@@ -909,6 +907,8 @@ router.get(
   "/payments",
   ah(async (req, res) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 200);
+    // La colonne donor_email peut ne pas exister si initDb n'a pas abouti.
+    await ensureColumn("donations", "donor_email", "TEXT");
     const [memberships, donations] = await Promise.all([
       q(
         `SELECT mp.id, mp.amount, mp.currency, mp.status, mp.external_reference,
