@@ -64,7 +64,7 @@ router.get(
        ORDER BY created_at DESC LIMIT 1`,
       [user.id, fee]
     );
-    const [r, whCount] = await Promise.all([
+    const [r, whCount, whRows] = await Promise.all([
       pending.length
         ? reconcileMembershipFromWebhookLog({
             userId: user.id,
@@ -76,6 +76,11 @@ router.get(
         `SELECT COUNT(*)::int AS n FROM payment_webhook_logs
          WHERE created_at >= now() - interval '24 hours'`
       ),
+      q(
+        `SELECT event, status, error, created_at FROM payment_webhook_logs
+         WHERE created_at >= now() - interval '24 hours'
+         ORDER BY created_at DESC LIMIT 5`
+      ),
     ]);
     const reason = r && r.ok ? "completed" : (r && r.reason) || "error";
     res.json({
@@ -85,6 +90,12 @@ router.get(
         reason,
         pending_membership: pending.length > 0,
         webhooks_24h: (whCount[0] && whCount[0].n) || 0,
+        recent_webhooks: (whRows.rows || []).map((w) => ({
+          event: w.event,
+          status: w.status,
+          error: w.error,
+          at: w.created_at,
+        })),
       },
     });
   })

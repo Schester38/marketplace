@@ -304,24 +304,47 @@ async function completeDonation(donation, providerRef) {
 
 // Journalise chaque webhook reçu (table payment_webhook_logs, déjà créée par
 // initDb) pour permettre le diagnostic (le don resté « en attente » sans trace).
-async function logWebhook({ body, normalized, result }) {
+// InsÃ¨re d'abord la trace du webhook AVANT tout traitement : mÃªme si le
+// traitement Ã©choue ou dÃ©passe le timeout serverless, on garde ce qu'iKeePay
+// a envoyÃ© (c'Ã©tait l'angle mort : un webhook non journalisÃ© = invisible).
+async function logWebhookStart({ body, normalized }) {
   try {
-    await q(
+    const rows = await q(
       `INSERT INTO payment_webhook_logs
          (provider, provider_transaction_id, provider_order_id, event, payload, status, handled, error)
-       VALUES ('ikeepay', $1, $2, $3, $4, $5, $6, $7)`,
+       VALUES ('ikeepay', $1, $2, $3, $4, 'received', FALSE, NULL)
+       RETURNING id`,
       [
         normalized && normalized.providerRef ? normalized.providerRef : null,
         normalized && normalized.orderId ? normalized.orderId : null,
         body && body.event ? String(body.event) : null,
         JSON.stringify(body || {}),
+      ]
+    );
+    return rows[0] ? rows[0].id : null;
+  } catch (err) {
+    console.error("[ikeepay] logWebhookStart impossible :", err.message);
+    return null;
+  }
+}
+
+// Met Ã  jour la trace avec le rÃ©sultat du traitement.
+async function logWebhookFinish(logId, result) {
+  if (!logId) return;
+  try {
+    await q(
+      `UPDATE payment_webhook_logs
+       SET status = $2, handled = $3, error = $4
+       WHERE id = $1`,
+      [
+        logId,
         result && result.ok ? "handled" : result && result.reason ? `rejected:${result.reason}` : "received",
         Boolean(result && result.ok),
         result && result.reason ? String(result.reason) : null,
       ]
     );
   } catch (err) {
-    console.error("[ikeepay] logWebhook impossible :", err.message);
+    console.error("[ikeepay] logWebhookFinish impossible :", err.message);
   }
 }
 
@@ -329,16 +352,31 @@ async function logWebhook({ body, normalized, result }) {
 // reconnu, même si la référence est inconnue (éviter les retries inutiles).
 export async function processWebhook(body) {
   const normalized = normalizeWebhook(body);
+  // Trace Ã©crite AVANT le traitement : si le traitement plante ou expire
+  // (timeout serverless), le payload reste consultable et la rÃ©conciliation
+  // par sondage peut rattraper le paiement (angle mort corrigÃ©).
+  const logId = await logWebhookStart({ body, normalized });
+  try {
+    const result = await handleWebhook(body, normalized);
+    await logWebhookFinish(logId, result);
+    return result;
+  } catch (err) {
+    console.error("[ikeepay] traitement webhook impossible :", err.message);
+    await logWebhookFinish(logId, { ok: false, reason: "processing_error:" + err.message });
+    // 500 â†’ iKeePay retentera ; la trace conserve le payload pour le rattrapage.
+    throw err;
+  }
+}
+
+async function handleWebhook(body, normalized) {
   let result;
   if (!normalized) {
     result = { ok: false, reason: "unsupported" };
-    await logWebhook({ body, normalized: null, result });
     return result;
   }
   const { orderId, amount, currency, providerRef, email } = normalized;
   if (!orderId) {
     result = { ok: false, reason: "missing_reference" };
-    await logWebhook({ body, normalized, result });
     return result;
   }
 
@@ -353,14 +391,12 @@ export async function processWebhook(body) {
   if (membership) {
     if (!amountMatches(amount, membership.amount) || !currencyMatches(currency, membership.currency)) {
       result = { ok: false, reason: "mismatch" };
-      await logWebhook({ body, normalized, result });
       return result;
     }
     if (membership.status === "pending" || membership.status === "expired") {
       await completeMembershipPayment(membership, providerRef);
     }
     result = { ok: true, kind: "membership", id: membership.id };
-    await logWebhook({ body, normalized, result });
     return result;
   }
 
@@ -374,14 +410,12 @@ export async function processWebhook(body) {
   if (donation) {
     if (!amountMatches(amount, donation.amount) || !currencyMatches(currency, donation.currency)) {
       result = { ok: false, reason: "mismatch" };
-      await logWebhook({ body, normalized, result });
       return result;
     }
     if (donation.status === "pending" || donation.status === "expired") {
       await completeDonation(donation, providerRef);
     }
     result = { ok: true, kind: "donation", id: donation.id };
-    await logWebhook({ body, normalized, result });
     return result;
   }
 
@@ -415,12 +449,10 @@ export async function processWebhook(body) {
     if (recentMembership) {
       if (!currencyMatches(currency, recentMembership.currency)) {
         result = { ok: false, reason: "mismatch" };
-        await logWebhook({ body, normalized, result });
         return result;
       }
       await completeMembershipPayment(recentMembership, providerRef);
       result = { ok: true, kind: "membership", id: recentMembership.id, reconciled: true };
-      await logWebhook({ body, normalized, result });
       return result;
     }
     const recentDonation = (
@@ -446,19 +478,16 @@ export async function processWebhook(body) {
     if (recentDonation) {
       if (!currencyMatches(currency, recentDonation.currency)) {
         result = { ok: false, reason: "mismatch" };
-        await logWebhook({ body, normalized, result });
         return result;
       }
       await completeDonation(recentDonation, providerRef);
       result = { ok: true, kind: "donation", id: recentDonation.id, reconciled: true };
-      await logWebhook({ body, normalized, result });
       return result;
     }
   }
 
   // Référence inconnue : on ignore proprement.
   result = { ok: false, reason: "unknown_reference" };
-  await logWebhook({ body, normalized, result });
   return result;
 }
 
@@ -526,11 +555,32 @@ export async function reconcileMembershipFromWebhookLog({ userId, email, amount 
     // Si le webhook porte un email, il doit correspondre Ã  celui du compte.
     if (n.email && email && n.email !== String(email).toLowerCase()) continue;
     // La rÃ©fÃ©rence ne doit appartenir Ã  aucun paiement dÃ©jÃ  connu.
-    const [m, d] = await Promise.all([
-      q(`SELECT id FROM membership_payments WHERE external_reference = $1`, [n.orderId]),
-      q(`SELECT id FROM donations WHERE external_reference = $1`, [n.orderId]),
-    ]);
-    if (m.length || d.length) continue;
+    const m = (
+      await q(
+        `SELECT id, user_id, amount, currency, status FROM membership_payments
+         WHERE external_reference = $1`,
+        [n.orderId]
+      )
+    )[0];
+    const d = (
+      await q(`SELECT id FROM donations WHERE external_reference = $1`, [n.orderId])
+    )[0];
+    if (d) continue; // don deja connu : rien a faire ici
+    if (m) {
+      // Adhesion connue : si c'est celle de cet utilisateur et qu'elle est
+      // toujours en attente (traitement webhook anterieur echoue), on la
+      // complete maintenant au lieu de l'ignorer.
+      if (
+        Number(m.user_id) === Number(userId) &&
+        amountMatches(m.amount, amount) &&
+        (m.status === "pending" || m.status === "expired")
+      ) {
+        await completeMembershipPayment(m, n.providerRef || log.provider_order_id || null);
+        await q(`UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1`, [log.id]).catch(() => {});
+        return { ok: true, id: m.id, reconciled: true, via: "known_reference" };
+      }
+      continue;
+    }
     // ComplÃ¨te l'adhÃ©sion pending/expired la plus rÃ©cente de cet utilisateur.
     const payment = (
       await q(
