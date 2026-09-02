@@ -137,12 +137,36 @@ router.post(
 
 // Webhook iKeePay : iKeePay POST un JSON dès qu'une transaction est confirmée.
 // Répond 200 dès que le payload est reconnu pour stopper les retries.
+// (même si la référence est inconnue → on journalise et on répond quand même).
 webhookRouter.post(
   "/webhook",
   ah(async (req, res) => {
-    const result = await processWebhook(req.body);
-    // Un payload non reconnu (ni membership ni don) reste ignoré en 200.
+    // Tolérance : certains clients envoient le JSON avec un content-type
+    // différent → express.json ne l'a pas parsé (req.body = {}). On tente un
+    // reparsing depuis le corps brut si disponible.
+    let body = req.body;
+    if (!body || typeof body !== "object" || Object.keys(body).length === 0) {
+      const raw = req.rawBody || (req.body && req.body.raw);
+      if (raw) {
+        try {
+          body = JSON.parse(String(raw));
+        } catch {
+          /* garder {} */
+        }
+      }
+    }
+    const result = await processWebhook(body || {});
     res.json({ received: true, ...result });
+  })
+);
+
+// Diagnostic : permet de voir rapidement si le webhook a bien été reçu (garde
+// le même corps que POST mais ne fait aucun traitement). Protégé par le fait
+// qu'il ne renvoie que les dernières entrées de logs via l'API admin.
+webhookRouter.get(
+  "/webhook",
+  ah(async (req, res) => {
+    res.json({ ok: true, note: "iKeePay webhook endpoint (POST JSON)" });
   })
 );
 

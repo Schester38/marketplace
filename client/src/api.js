@@ -228,6 +228,9 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   adminPayments: () => adminRequest("/admin/payments"),
+  adminWebhooks: () => adminRequest("/admin/payments/webhooks"),
+  adminCompleteDonation: (id) =>
+    adminRequest(`/admin/payments/donations/${id}/complete`, { method: "POST" }),
   adminReferrals: (search) =>
     adminRequest(`/admin/referrals${search ? `?search=${encodeURIComponent(search)}` : ""}`),
   adminMarkReferralPaid: (id) =>

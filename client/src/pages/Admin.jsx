@@ -78,6 +78,7 @@ export default function Admin() {
   const [payPublicKey, setPayPublicKey] = useState("");
   const [paySecretKey, setPaySecretKey] = useState("");
   const [payments, setPayments] = useState(null);
+  const [webhooks, setWebhooks] = useState(null);
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState("");
   const [payOk, setPayOk] = useState("");
@@ -142,6 +143,10 @@ export default function Admin() {
       api
         .adminPayments()
         .then((d) => setPayments(d))
+        .catch(() => {});
+      api
+        .adminWebhooks()
+        .then((d) => setWebhooks(d.webhooks || []))
         .catch(() => {});
     },
     [t]
@@ -309,6 +314,31 @@ export default function Admin() {
       setPayError(err.message);
     } finally {
       setPayBusy(false);
+    }
+  };
+
+  // Secours : marquer un don « en attente » comme complété (si le webhook n'est
+  // jamais arrivé). Réservé à l'admin, à n'utiliser qu'après vérification.
+  const completeDonation = async (d) => {
+    if (
+      !window.confirm(
+        t("Marquer le don de {amount} F comme complété ?", { amount: formatMoney(d.amount) })
+      )
+    )
+      return;
+    setPayError("");
+    setPayOk("");
+    try {
+      await api.adminCompleteDonation(d.id);
+      setPayments((p) => ({
+        ...p,
+        donations: (p?.donations || []).map((x) =>
+          x.id === d.id ? { ...x, status: "completed", completed_at: new Date().toISOString() } : x
+        ),
+      }));
+      setPayOk(t("Don marqué comme complété."));
+    } catch (err) {
+      setPayError(err.message);
     }
   };
 
@@ -963,6 +993,7 @@ export default function Admin() {
                         <th>{t("Référence")}</th>
                         <th>{t("Statut")}</th>
                         <th>{t("Date")}</th>
+                        <th>{t("Action")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -988,6 +1019,60 @@ export default function Admin() {
                             {d.completed_at
                               ? new Date(d.completed_at).toLocaleString()
                               : new Date(d.created_at).toLocaleString()}
+                          </td>
+                          <td>
+                            {d.status !== "completed" && (
+                              <button
+                                type="button"
+                                className="btn btn-small btn-outline"
+                                onClick={() => completeDonation(d)}
+                              >
+                                ✅ {t("Marquer complété")}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Journal des webhooks iKeePay reçus (diagnostic) */}
+              <h3 style={{ marginTop: 18 }}>{t("Journal des webhooks iKeePay")}</h3>
+              {!(webhooks && webhooks.length) ? (
+                <p className="hint">{t("Aucun webhook reçu pour le moment.")}</p>
+              ) : (
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>{t("Date")}</th>
+                        <th>{t("Référence")}</th>
+                        <th>{t("Événement")}</th>
+                        <th>{t("Statut")}</th>
+                        <th>{t("Détail")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {webhooks.map((w) => (
+                        <tr key={w.id}>
+                          <td className="hint">
+                            {w.created_at ? new Date(w.created_at).toLocaleString() : "—"}
+                          </td>
+                          <td>
+                            <code>{w.provider_order_id || "—"}</code>
+                          </td>
+                          <td className="hint">{w.event || "—"}</td>
+                          <td>
+                            {w.handled ? (
+                              <span className="badge badge-paid">{t("Traité")}</span>
+                            ) : (
+                              <span className="badge badge-warn">{w.status || t("Non traité")}</span>
+                            )}
+                          </td>
+                          <td className="hint" style={{ maxWidth: 260, wordBreak: "break-word" }}>
+                            {w.error || (w.payload ? JSON.stringify(w.payload).slice(0, 160) : "—")}
                           </td>
                         </tr>
                       ))}

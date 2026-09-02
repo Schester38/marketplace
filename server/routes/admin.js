@@ -939,6 +939,62 @@ router.get(
   })
 );
 
+// Journal des webhooks iKeePay reçus (diagnostic d'un paiement resté en attente).
+router.get(
+  "/payments/webhooks",
+  ah(async (req, res) => {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 30, 1), 200);
+    const rows = await q(
+      `SELECT id, provider, provider_transaction_id, provider_order_id, event,
+              payload, status, handled, error, created_at
+         FROM payment_webhook_logs ORDER BY created_at DESC LIMIT $1`,
+      [limit]
+    );
+    res.json({
+      webhooks: rows.map((r) => ({
+        id: Number(r.id),
+        provider: r.provider,
+        provider_transaction_id: r.provider_transaction_id,
+        provider_order_id: r.provider_order_id,
+        event: r.event,
+        payload: r.payload,
+        status: r.status,
+        handled: Boolean(r.handled),
+        error: r.error,
+        created_at: r.created_at,
+      })),
+    });
+  })
+);
+
+// Secours manuel : marquer un don complété (webhook perdu / non arrivé). Réservé
+// à l'admin. Ne crée PAS d'adhésion (uniquement les dons restés en attente).
+router.post(
+  "/payments/donations/:id/complete",
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Identifiant invalide" });
+    }
+    const donation = (
+      await q("SELECT id FROM donations WHERE id = $1", [id])
+    )[0];
+    if (!donation) return res.status(404).json({ error: "Don introuvable" });
+    await q(
+      `UPDATE donations SET status = 'completed', completed_at = now()
+       WHERE id = $1 AND status = 'pending'`,
+      [id]
+    );
+    await logAudit(
+      req.user.id,
+      "admin.donation_complete_manual",
+      `donation=${id} marquée complétée manuellement`,
+      req.ip
+    );
+    res.json({ ok: true });
+  })
+);
+
 // NOTE : les endpoints de réconciliation des reversements iKeePay
 // (GET /payouts, POST /payouts/:ref/resolve, POST /payouts/:ref/retry) ont été
 // supprimés avec le système iKeePay. La table `automatic_payouts` est conservée

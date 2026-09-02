@@ -69,8 +69,19 @@ app.use(securityHeaders);
 app.use(
   express.json({
     limit: "12mb",
+    // Conserve le corps brut (Buffer) pour le webhook iKeePay : certains
+    // clients l'envoient avec un content-type non reconnu par express.json.
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
   })
 );
+
+// Webhook iKeePay : monté AVANT originCheck car iKeePay (serveur) peut envoyer
+// un header Origin non navigateur. La vérification se fait par correspondance
+// de référence + montant (processWebhook), pas par l'origine.
+app.use("/api/ikeepay", webhookRouter);
+
 app.use(originCheck);
 
 const limiter = (windowMs, max) =>
@@ -140,8 +151,6 @@ app.use("/api/metrics", metricsRoutes);
 app.use("/api/donations", donationsRoutes);
 app.use("/api/activation-withdrawals", activationWithdrawalRoutes);
 app.use("/api/payments", paymentsRouter);
-// Webhook iKeePay : monté sous /api/ikeepay/webhook (JSON POST).
-app.use("/api/ikeepay", webhookRouter);
 app.use("/api/logs", limiter(60 * 1000, 8));
 app.use("/api/logs", logRoutes);
 app.use("/api/admin", adminRoutes);

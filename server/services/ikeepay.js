@@ -240,13 +240,46 @@ async function completeDonation(donation, providerRef) {
     [donation.id, providerRef]
   );
 }
+
+// Journalise chaque webhook reçu (table payment_webhook_logs, déjà créée par
+// initDb) pour permettre le diagnostic (le don resté « en attente » sans trace).
+async function logWebhook({ body, normalized, result }) {
+  try {
+    await q(
+      `INSERT INTO payment_webhook_logs
+         (provider, provider_transaction_id, provider_order_id, event, payload, status, handled, error)
+       VALUES ('ikeepay', $1, $2, $3, $4, $5, $6, $7)`,
+      [
+        normalized && normalized.providerRef ? normalized.providerRef : null,
+        normalized && normalized.orderId ? normalized.orderId : null,
+        body && body.event ? String(body.event) : null,
+        JSON.stringify(body || {}),
+        result && result.ok ? "handled" : result && result.reason ? `rejected:${result.reason}` : "received",
+        Boolean(result && result.ok),
+        result && result.reason ? String(result.reason) : null,
+      ]
+    );
+  } catch (err) {
+    console.error("[ikeepay] logWebhook impossible :", err.message);
+  }
+}
+
 // Point d'entrée du webhook iKeePay. Toujours répondre 200 une fois le payload
 // reconnu, même si la référence est inconnue (éviter les retries inutiles).
 export async function processWebhook(body) {
   const normalized = normalizeWebhook(body);
-  if (!normalized) return { ok: false, reason: "unsupported" };
+  let result;
+  if (!normalized) {
+    result = { ok: false, reason: "unsupported" };
+    await logWebhook({ body, normalized: null, result });
+    return result;
+  }
   const { orderId, amount, currency, providerRef } = normalized;
-  if (!orderId) return { ok: false, reason: "missing_reference" };
+  if (!orderId) {
+    result = { ok: false, reason: "missing_reference" };
+    await logWebhook({ body, normalized, result });
+    return result;
+  }
 
   // Adhésion ?
   const membership = (
@@ -258,12 +291,16 @@ export async function processWebhook(body) {
   )[0];
   if (membership) {
     if (!amountMatches(amount, membership.amount) || !currencyMatches(currency, membership.currency)) {
-      return { ok: false, reason: "mismatch" };
+      result = { ok: false, reason: "mismatch" };
+      await logWebhook({ body, normalized, result });
+      return result;
     }
     if (membership.status === "pending") {
       await completeMembershipPayment(membership, providerRef);
     }
-    return { ok: true, kind: "membership", id: membership.id };
+    result = { ok: true, kind: "membership", id: membership.id };
+    await logWebhook({ body, normalized, result });
+    return result;
   }
 
   // Don ?
@@ -275,16 +312,22 @@ export async function processWebhook(body) {
   )[0];
   if (donation) {
     if (!amountMatches(amount, donation.amount) || !currencyMatches(currency, donation.currency)) {
-      return { ok: false, reason: "mismatch" };
+      result = { ok: false, reason: "mismatch" };
+      await logWebhook({ body, normalized, result });
+      return result;
     }
     if (donation.status === "pending") {
       await completeDonation(donation, providerRef);
     }
-    return { ok: true, kind: "donation", id: donation.id };
+    result = { ok: true, kind: "donation", id: donation.id };
+    await logWebhook({ body, normalized, result });
+    return result;
   }
 
   // Référence inconnue : on ignore proprement.
-  return { ok: false, reason: "unknown_reference" };
+  result = { ok: false, reason: "unknown_reference" };
+  await logWebhook({ body, normalized, result });
+  return result;
 }
 
 export { MEMBERSHIP_FEES };
