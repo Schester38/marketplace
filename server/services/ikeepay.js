@@ -16,7 +16,7 @@
 // La confirmation est validée côté serveur (référence inconnue + montant + devise)
 // puis applique les effets de bord (activation d'adhésion, notification du parrain,
 // complétion du don) de manière idempotente.
-import { q, withTransaction } from "../db.js";
+import { q } from "../db.js";
 import { randomBytes } from "node:crypto";
 import { MEMBERSHIP_FEES } from "../fees.js";
 import { notifyActivationReferralPaid } from "./activationReferral.js";
@@ -242,53 +242,65 @@ function amountMatches(received, expected) {
   return Math.abs(Number(received) - Number(expected)) < 0.01;
 }
 
-// Marque une adhésion payée et active l'utilisateur. La notification au parrain
-// est envoyée APRÈS le commit (une erreur de notif ne doit pas annuler
-// l'activation de l'adhésion).
+// Marque une adhésion payée (chemin rapide, identique au don : un seul UPDATE)
+// puis délègue l'activation en tâche de fond. C'est ce qui rend le webhook
+// d'adhésion aussi fiable que celui des dons : la réponse part immédiatement,
+// sans transaction ni push dans le chemin critique.
 async function completeMembershipPayment(payment, providerRef) {
-  let activated = null;
-  await withTransaction(async (tx) => {
-    const changed = await tx.query(
-      `UPDATE membership_payments
-       SET status = 'completed', completed_at = now(),
-           provider_reference = COALESCE(provider_reference, $2)
-       WHERE id = $1 AND status IN ('pending','expired')
-       RETURNING user_id, amount, currency`,
-      [payment.id, providerRef]
+  const changed = await q(
+    `UPDATE membership_payments
+     SET status = 'completed', completed_at = now(),
+         provider_reference = COALESCE(provider_reference, $2)
+     WHERE id = $1 AND status IN ('pending','expired')
+     RETURNING user_id`,
+    [payment.id, providerRef]
+  );
+  if (!changed.length) return false; // déjà traité (idempotent)
+  const activatedId = changed[0].user_id;
+  // Activation déportée hors du webhook : si le serverless meurt avant la fin
+  // de la tâche, le polling client (membership-status) rattrape l'activation
+  // via ensureMembershipActivated / activateMembershipUser.
+  setImmediate(() => {
+    activateMembershipUser(activatedId).catch((err) =>
+      console.error("[ikeepay] activation asynchrone impossible :", err.message)
     );
-    if (!changed.rows.length) return; // déjà traité (idempotent)
-    const user = (
-      await tx.query(
-        `SELECT id, name, role, referred_by FROM users WHERE id = $1`,
-        [changed.rows[0].user_id]
-      )
-    )[0];
-    if (!user) return;
-    // Activation immédiate : adhésion payée → accès sans intervention admin.
-    await tx.query(
-      `UPDATE users
-       SET membership_paid_at = COALESCE(membership_paid_at, now()),
-           admin_approved = TRUE,
-           membership_expires_at = now() + interval '30 days'
-       WHERE id = $1`,
-      [user.id]
-    );
-    activated = user;
   });
-  if (activated && activated.referred_by) {
-    // La notification ne doit JAMAIS bloquer la rÃ©ponse du webhook au-delÃ  de
-    // la limite serverless (10 s sur Vercel) : le push webpush peut rester
-    // suspendu indÃ©finiment (pas de timeout natif). On borne l'attente Ã  2,5 s.
-    const p = notifyActivationReferralPaid({
-      id: activated.id,
-      name: activated.name,
-      role: activated.role,
-      referred_by: activated.referred_by,
-    }).catch((err) => {
+  return true;
+}
+
+// Active le compte après paiement d'adhésion + notifie le parrain.
+// Garde atomique : seul l'appel dont l'UPDATE retourne une ligne fait la
+// notification — aucun doublon même si la tâche de fond et le polling
+// s'exécutent en même temps.
+export async function activateMembershipUser(userId) {
+  const user = (
+    await q(`SELECT id, name, role, referred_by FROM users WHERE id = $1`, [userId])
+  )[0];
+  if (!user) return false;
+  const changed = await q(
+    `UPDATE users
+     SET membership_paid_at = COALESCE(membership_paid_at, now()),
+         admin_approved = TRUE,
+         membership_expires_at = now() + interval '30 days'
+     WHERE id = $1
+       AND NOT (admin_approved = TRUE AND membership_expires_at > now())
+     RETURNING id`,
+    [userId]
+  );
+  if (!changed.length) return false; // déjà actif (idempotent)
+  if (user.referred_by) {
+    try {
+      await notifyActivationReferralPaid({
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        referred_by: user.referred_by,
+      });
+    } catch (err) {
       console.error("[ikeepay] notification parrain impossible :", err.message);
-    });
-    await Promise.race([p, new Promise((resolve) => setTimeout(resolve, 2500))]);
+    }
   }
+  return true;
 }
 
 // Marque un don comme complété.

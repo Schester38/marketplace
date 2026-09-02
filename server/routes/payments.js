@@ -12,6 +12,7 @@ import {
   genExternalRef,
   processWebhook,
   reconcileMembershipFromWebhookLog,
+  activateMembershipUser,
 } from "../services/ikeepay.js";
 
 const router = Router();
@@ -55,6 +56,32 @@ router.get(
         new Date(user.membership_expires_at) > new Date()
     );
     if (active) return res.json({ active: true, reconciled: false });
+    // Filet 1 : le webhook a déjà confirmé le paiement (status='completed')
+    // mais la tâche d'activation asynchrone a été interrompue (serverless
+    // arrêté après la réponse) → on active maintenant. Idempotent.
+    const completed = (
+      await q(
+        `SELECT id FROM membership_payments
+         WHERE user_id = $1 AND status = 'completed' AND amount = $2
+           AND created_at >= now() - interval '24 hours'
+         ORDER BY created_at DESC LIMIT 1`,
+        [user.id, fee]
+      )
+    )[0];
+    if (completed) {
+      const ok = await activateMembershipUser(user.id).catch(() => false);
+      if (ok) {
+        return res.json({
+          active: true,
+          reconciled: true,
+          debug: {
+            reason: "activated_after_completed_webhook",
+            pending_membership: false,
+            webhooks_24h: null,
+          },
+        });
+      }
+    }
     // Diagnostic : l'adhÃ©sion en attente existe-t-elle ? Des webhooks sont-ils
     // arrivÃ©s ? Le client affiche ces informations dans sa console â€” cela
     // permet de savoir prÃ©cisÃ©ment pourquoi l'activation n'a pas eu lieu.
@@ -82,10 +109,17 @@ router.get(
          ORDER BY created_at DESC LIMIT 5`
       ),
     ]);
-    const reason = r && r.ok ? "completed" : (r && r.reason) || "error";
+    let activeNow = Boolean(r && r.ok);
+    if (activeNow) {
+      // La réconciliation a marqué le paiement 'completed' : on active le
+      // compte immédiatement pour que CETTE réponse annonce déjà l'accès
+      // (et déclenche la redirection côté client sans attendre le cycle suivant).
+      await activateMembershipUser(user.id).catch(() => {});
+    }
+    const reason = activeNow ? "completed" : (r && r.reason) || "error";
     res.json({
-      active: Boolean(r && r.ok),
-      reconciled: Boolean(r && r.ok),
+      active: activeNow,
+      reconciled: activeNow,
       debug: {
         reason,
         pending_membership: pending.length > 0,
