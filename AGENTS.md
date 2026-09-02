@@ -6,7 +6,7 @@ Contexte de travail pour toute session IA sur ce dépôt. Lire ce fichier avant 
 
 Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiques, vendeurs indépendants, créateurs, livreurs, commandes par téléphone/WhatsApp et paiement mobile.
 
-- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.47.81`.
+- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.49.1`.
 - **Serveur** : Express 4 (`server/`, port 4000), PostgreSQL via Supabase (`server/db.js` : `DATABASE_URL_POOLED`, fallback `DATABASE_URL`, `ssl rejectUnauthorized: false` ; exports `q()`, `withTransaction()`, `initDb()`).
 - **Finance** : `server/services/payouts.js` — `computeRedistribution`, `normalizeWalletPrimary`, seuils de commission. Il n'existe **pas** de `server/finance.js`.
 - **Déploiement** : Vercel, entrée serverless `api/index.js` → `server/app.js` + `initDb()`. `vercel.json` route `/api/*`, `/produit/:id`, `/boutique/:id`, `/createur/:id`, `/ville/:x`, `/offre/:id`, `/sitemap.xml`, `/` vers l'API, le reste vers le SPA.
@@ -58,7 +58,11 @@ Le paiement des gains est **manuel** et comptabilisé dans `wallet_transactions`
 
 ### Parrainage d'activation vendeur (distinct)
 
-Un nouveau vendeur/créateur s'inscrit avec le code d'un autre vendeur (`ref_seller`) → `referred_by`. Quand l'admin marque l'adhésion payée (`POST /api/admin/referrals/:id/pay` → `membership_paid_at`), le parrain gagne **1 000 XAF par parrainé**. Il retire le cumul via `activation-withdrawals` (montant **multiple de 1 000**, **minimum 5 000 XAF**) ; l'admin paie la demande (`POST /api/admin/activation-withdrawals/:id/pay`). Aucun reversement automatique.
+Un nouveau **vendeur** s'inscrit avec le code d'un autre vendeur (`ref_seller`) → `referred_by`. Le rôle du parrainé est **forcé à `seller`** à l'inscription (email ou Google), même si le lien comportait un rôle `creator` — la doc « vendeur/créateur » est obsolète. Quand l'admin marque l'adhésion payée (`POST /api/admin/referrals/:id/pay` → `membership_paid_at`), le parrainé est simultanément **activé** (`admin_approved = TRUE`, `membership_expires_at = now() + 30 jours`) et le parrain gagne **1 000 XAF par parrainé**. 
+
+La notification push au parrain (type `activation_referral_paid`) est déclenchée **à chaque nouvelle adhésion payée** (balance en hausse), que l'admin passe par l'onglet **Parrainages** (`POST /api/admin/referrals/:id/pay`) ou par l'approbation dans l'onglet **Utilisateurs** (`PATCH /api/admin/users/:id/admin-approved`, qui pose aussi `membership_paid_at`). `membership_paid_at` n'est posé **que lors d'une approbation** (`admin_approved = TRUE`) : désapprouver ne marque jamais l'adhésion payée. Un re-clic sur un parrainé déjà payé n'envoie pas de doublon de notification.
+
+Il retire le cumul via `activation-withdrawals` (montant **multiple de 1 000**, **minimum 5 000 XAF**) ; l'admin paie la demande (`POST /api/admin/activation-withdrawals/:id/pay`). Aucun reversement automatique.
 **Comptabilité** : une demande payée insère un **débit** `payout_debit` dans `wallet_transactions` sans crédit d'activation préalable — le solde du wallet (`GET /api/wallet/me`) peut donc être **négatif**. La balance vit dans `activation_withdrawals`, séparée du wallet.
 
 ### Commission de vente d'un produit
@@ -116,7 +120,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 - **Verone / Vitrine** (`server/routes/offers.js`, `server/routes/presentation.js`) : `GET /api/offers` public ; `POST /api/offers` et `DELETE /api/offers/:id` **non authentifiés** (état actuel — la protection documentée en V2 n'existe plus) ; `GET /api/offers/mine` renvoie toutes les offres. `pageRouter` → `/p`, `imageRouter` → `/api/img`. Pages Verone.jsx, VitrineOffre.jsx, OfferDetail.jsx.
 - **Métriques** : `POST /api/metrics/views`, `POST /api/metrics/visit` (X-Visitor-Id), `GET /api/metrics/trending` (exclut les promos, cache s-maxage 120).
 - **i18n** : toutes les traductions (fr/en/es/ar) dans `client/src/i18n.jsx` (`I18N = { fr: {}, en: {...EN, ...RICH_EN}, ar: {...AR, ...RICH_AR}, es: {...ES, ...RICH_ES} }`), clés françaises. `client/src/i18n/{en,es,ar}.js` supprimés (jamais importés). RTL pour ar.
-- **PWA** : `client/public/sw.js`, cache `mboppi-v191`, app shell + API_SWR + push + 4 manifests.
+- **PWA** : `client/public/sw.js`, cache `mboppi-v194`, app shell + API_SWR + push + 4 manifests.
 - **Audit/sécurité** : `server/security.js`, rate limits, originCheck, CSP.
 - **Photos** : `server/storage.js` — buckets publics `photos` et `payment-proofs` ; clé `sb_secret_...` signée HS256 (`SUPABASE_JWT_SECRET`) ; fallback base64. `server/photo.js` : `{thumb, medium, large}`.
 - **Menu** (Navbar.jsx) : Produits, Créateurs, Je soutiens, Formations et Digital (chariow.pics), Formation Mboppi (YouTube), espaces par rôle, Administration 🛡️.
@@ -126,7 +130,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 ## Conventions de dev (IMPORTANT)
 
 1. **Ne jamais committer sans demande explicite.** Quand le user demande « deployer » / « mettre en ligne » : bump + commit + push.
-2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.47.81 / mboppi-v191**.
+2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.49.1 / mboppi-v194**.
 3. **Build** : `npm run build` dans `client/` (le hash du JS local diffère de celui de Vercel pour des raisons d'environnement ; vérifier le déploiement via le CSS hash ou en cherchant une chaîne caractéristique du nouveau code dans le JS servi).
 4. **Vérifier le déploiement** : attendre ~75–90 s après push, puis `curl` sur `https://mboppi-mboppi.vercel.app/` (header `Accept: text/html` pour le HTML SEO) et chercher le hash CSS/JS du build local ; tester les API concernées.
 5. Commandes utiles : `node --check server/routes/*.js` pour la syntaxe serveur.
@@ -135,7 +139,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 
 ## Historique récent des modifications
 
-(Changelog partiel — version courante **1.47.81** / cache PWA **v191**.)
+(Changelog partiel — version courante **1.49.1** / cache PWA **v194**.)
 
 - **1.10.0 / v51** : refonte promotion éclair (masquage catalogue, règles serveur, UI shop).
 - **1.11.0 / v52** : masquage SEO complet, commission promo 0, partage promo, offres Verone dans l'accueil (rail), suppression commission duo.

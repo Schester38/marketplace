@@ -93,7 +93,7 @@ Le frontend est disponible sur http://localhost:5173 et l'API sur http://localho
 
 ## Build et déploiement
 
-Le build frontend est lancé depuis la racine (version courante : **1.47.81** ; cache PWA `mboppi-v191`) :
+Le build frontend est lancé depuis la racine (version courante : **1.49.1** ; cache PWA `mboppi-v194`) :
 
 ```powershell
 npm run build

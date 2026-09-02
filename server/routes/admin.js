@@ -251,10 +251,20 @@ router.patch(
     const id = Number(req.params.id);
     if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
     const admin_approved = Boolean(req.body && req.body.admin_approved);
+    const before = (
+      await q(
+        "SELECT id, name, role, referred_by, membership_paid_at FROM users WHERE id = $1",
+        [id]
+      )
+    )[0];
+    if (!before) return res.status(404).json({ error: "Utilisateur introuvable" });
     const updated = await q(
       `UPDATE users
        SET admin_approved = $1,
-           membership_paid_at = COALESCE(membership_paid_at, now()),
+           membership_paid_at = CASE
+             WHEN $1 THEN COALESCE(membership_paid_at, now())
+             ELSE membership_paid_at
+           END,
            membership_expires_at = CASE
              WHEN $1 THEN now() + interval '30 days'
              ELSE membership_expires_at
@@ -263,7 +273,15 @@ router.patch(
        RETURNING id, membership_expires_at`,
       [admin_approved, id]
     );
-    if (!updated.length) return res.status(404).json({ error: "Utilisateur introuvable" });
+    // Approbation d'un parrainé dont l'adhésion n'était pas encore payée →
+    // la balance d'activation du parrain augmente de 1 000 F → le prévenir.
+    if (admin_approved && !before.membership_paid_at && before.referred_by) {
+      try {
+        await notifyActivationReferralPaid(before);
+      } catch (err) {
+        console.error("[admin] notification commission d'activation impossible :", err.message);
+      }
+    }
     await logAudit(
       req.user.id,
       "admin.set_admin_approved",
@@ -534,11 +552,41 @@ router.get(
   })
 );
 
-// Parrainages d'activation : vendeurs/créateurs inscrits via le code d'un
-// vendeur (`ref_seller` → `referred_by`). L'admin voit chaque parrainé, son
-// parrain, les numéros des deux, et si le parrainé a payé son adhésion
-// (payé / non payé). Recherche par numéro de référence (du parrainé OU du
-// parrain).
+// Commission d'activation (1 000 F) : prévient le parrain (notification +
+// push) quand l'adhésion d'un parrainé vient d'être marquée payée, c'est-à-dire
+// exactement au moment où sa balance d'activation augmente de 1 000 F.
+// Est concerné : un parrainé `seller` (le rôle est forcé à `seller` à
+// l'inscription via `ref_seller`) rattaché à un parrain vendeur.
+async function notifyActivationReferralPaid(parraine) {
+  if (!parraine || !parraine.referred_by || Number(parraine.referred_by) === Number(parraine.id)) {
+    return;
+  }
+  if (!["seller", "creator"].includes(parraine.role)) return;
+  const parrain = (
+    await q("SELECT id, role FROM users WHERE id = $1", [parraine.referred_by])
+  )[0];
+  if (!parrain || parrain.role !== "seller") return;
+  await q(
+    `INSERT INTO notifications (user_id, type, amount) VALUES ($1, 'activation_referral_paid', $2)`,
+    [parrain.id, 1000]
+  );
+  try {
+    const { sendPush } = await import("../push.js");
+    await sendPush(parrain.id, {
+      title: "Adhésion payée ✅",
+      body: `${parraine.name} a payé son adhésion — votre commission de 1 000 F est en attente.`,
+      url: "/seller",
+    });
+  } catch (err) {
+    console.error("[admin] push activation_referral_paid impossible :", err.message);
+  }
+}
+
+// Parrainages d'activation : vendeurs inscrits via le code d'un vendeur
+// (`ref_seller` → `referred_by`, rôle forcé à `seller`). L'admin voit chaque
+// parrainé, son parrain, les numéros des deux, et si le parrainé a payé son
+// adhésion (payé / non payé). Recherche par numéro de référence (du parrainé
+// OU du parrain).
 router.get(
   "/referrals",
   ah(async (req, res) => {
@@ -601,16 +649,19 @@ router.get(
   })
 );
 
-// Marque l'adhésion d'un parrainé comme payée et en informe son parrain.
-// La commission d'activation (1 000 F) reste versée manuellement par
-// l'administration à son initiative.
+// Marque l'adhésion d'un parrainé comme payée, active son compte et informe
+// son parrain. La commission d'activation (1 000 F) reste versée manuellement
+// par l'administration à son initiative.
 router.post(
   "/referrals/:id/pay",
   ah(async (req, res) => {
     const id = Number(req.params.id);
     if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
     const user = (
-      await q("SELECT id, name, referred_by FROM users WHERE id = $1", [id])
+      await q(
+        "SELECT id, name, role, referred_by, membership_paid_at FROM users WHERE id = $1",
+        [id]
+      )
     )[0];
     if (!user) return res.status(404).json({ error: "Utilisateur introuvable" });
     if (!user.referred_by) {
@@ -621,32 +672,37 @@ router.post(
     if (user.referred_by === user.id) {
       return res.status(400).json({ error: "Parrain invalide" });
     }
+    // Adhésion payée → le parrainé est également activé (accès accordé) :
+    // admin_approved + 30 jours d'adhésion.
     const updated = await q(
-      `UPDATE users SET membership_paid_at = COALESCE(membership_paid_at, now())
-       WHERE id = $1 RETURNING membership_paid_at`,
+      `UPDATE users
+       SET membership_paid_at = COALESCE(membership_paid_at, now()),
+           admin_approved = TRUE,
+           membership_expires_at = now() + interval '30 days'
+       WHERE id = $1
+       RETURNING membership_paid_at, membership_expires_at`,
       [id]
     );
-    await q(
-      `INSERT INTO notifications (user_id, type, amount) VALUES ($1, 'activation_referral_paid', $2)`,
-      [user.referred_by, 1000]
-    );
-    try {
-      const { sendPush } = await import("../push.js");
-      await sendPush(user.referred_by, {
-        title: "Adhésion payée ✅",
-        body: `${user.name} a payé son adhésion — votre commission de 1 000 F est en attente.`,
-        url: "/seller",
-      });
-    } catch (err) {
-      console.error("[admin] push activation_referral_paid impossible :", err.message);
+    // Notification au parrain uniquement si la balance augmente (adhésion pas
+    // encore marquée payée) — pas de doublon en cas de re-clic.
+    if (!user.membership_paid_at) {
+      try {
+        await notifyActivationReferralPaid(user);
+      } catch (err) {
+        console.error("[admin] notification commission d'activation impossible :", err.message);
+      }
     }
     await logAudit(
       req.user.id,
       "admin.referral_paid",
-      `parrainé=${id} (${user.name}) parrain=${user.referred_by} adhésion marquée payée`,
+      `parrainé=${id} (${user.name}) parrain=${user.referred_by} adhésion marquée payée, compte activé`,
       req.ip
     );
-    res.json({ ok: true, membership_paid_at: updated[0].membership_paid_at });
+    res.json({
+      ok: true,
+      membership_paid_at: updated[0].membership_paid_at,
+      membership_expires_at: updated[0].membership_expires_at,
+    });
   })
 );
 
