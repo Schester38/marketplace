@@ -386,6 +386,36 @@ export default function Admin() {
     }
   };
 
+  // Secours : compléter manuellement une adhésion « en attente » et activer le
+  // compte (le webhook n'a pas rattaché la référence).
+  const completeMembership = async (m) => {
+    if (
+      !window.confirm(
+        t("Compléter l'adhésion de {name} ({amount} F) et activer son compte ?", {
+          name: m.user_name,
+          amount: formatMoney(m.amount),
+        })
+      )
+    )
+      return;
+    setPayError("");
+    setPayOk("");
+    try {
+      await api.adminCompleteMembership(m.id);
+      setPayments((p) => ({
+        ...p,
+        memberships: (p?.memberships || []).map((x) =>
+          x.id === m.id
+            ? { ...x, status: "completed", completed_at: new Date().toISOString() }
+            : x
+        ),
+      }));
+      setPayOk(t("Adhésion complétée et compte activé."));
+    } catch (err) {
+      setPayError(err.message);
+    }
+  };
+
   const toggleAdminApproved = async (u) => {
     try {
       await api.adminSetAdminApproved(u.id, !u.admin_approved);

@@ -235,6 +235,8 @@ export const api = {
     adminRequest(`/admin/payments/donations/${id}`, { method: "DELETE" }),
   adminDeleteMembership: (id) =>
     adminRequest(`/admin/payments/memberships/${id}`, { method: "DELETE" }),
+  adminCompleteMembership: (id) =>
+    adminRequest(`/admin/payments/memberships/${id}/complete`, { method: "POST" }),
   adminReferrals: (search) =>
     adminRequest(`/admin/referrals${search ? `?search=${encodeURIComponent(search)}` : ""}`),
   adminMarkReferralPaid: (id) =>

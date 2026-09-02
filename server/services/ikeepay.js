@@ -151,47 +151,69 @@ function firstString(...values) {
   return "";
 }
 
+// Cherche une référence dans plusieurs objets (racine, data, data.data…) et
+// une liste large de noms de champs — iKeePay n'utilise pas toujours order_id.
+function pickReference(...objects) {
+  const KEYS = [
+    "order_id", "orderId", "external_reference", "reference", "reference_number",
+    "transaction_id", "payment_reference", "merchant_reference", "callback_ref", "ref",
+  ];
+  for (const obj of objects) {
+    if (!obj || typeof obj !== "object") continue;
+    for (const k of KEYS) {
+      const v = obj[k];
+      if (v != null && String(v).trim() !== "") return String(v).trim();
+    }
+  }
+  return "";
+}
+
 // Normalise les deux formats de webhook documentés vers un objet unique.
-// Le champ de référence, le montant et la devise peuvent être au niveau racine
-// OU imbriqués dans `data` — on cherche dans les deux pour être robuste aux
+// Le champ de référence, le montant et la devise peuvent être au niveau racine,
+// dans `data`, ou dans `data.data` — on cherche partout pour être robuste aux
 // variations réelles d'iKeePay (ex. payment.success sans order_id racine).
 export function normalizeWebhook(body) {
   if (!body || typeof body !== "object") return null;
-  const event = String(body.event || "");
+  const event = String(body.event || "").toLowerCase();
   const d = body && typeof body.data === "object" ? body.data : {};
+  const dd = d && typeof d.data === "object" ? d.data : {};
 
   if (event === "payment.success") {
-    const status = String(body.status || d.status || "completed").toLowerCase();
+    const status = String(body.status || d.status || dd.status || "completed").toLowerCase();
     if (status !== "completed" && status !== "success") return null;
     return {
-      orderId: firstString(
-        body.order_id,
-        body.external_reference,
-        body.reference,
-        d.order_id,
-        d.external_reference,
-        d.reference
+      orderId: pickReference(body, d, dd),
+      amount: Number(
+        body.amount != null ? body.amount : d.amount != null ? d.amount : dd.amount
       ),
-      amount: Number(body.amount != null ? body.amount : d.amount),
-      currency: String(body.currency || d.currency || ""),
+      currency: String(body.currency || d.currency || dd.currency || ""),
       providerRef: firstString(
         body.ikeepay_ref,
         body.provider_reference,
         d.ikeepay_ref,
         d.provider_reference,
-        d.reference
+        dd.ikeepay_ref,
+        dd.provider_reference,
+        pickReference(d, dd)
       ),
     };
   }
   if (event === "transaction.updated" || event === "transaction.created") {
-    if (String(d.type || "") !== "payin") return null;
-    const status = String(d.status || "").toLowerCase();
-    if (status !== "completed") return null;
+    // Le type peut être « payin » en minuscules ou majuscules, voire « PAYIN ».
+    const type = String(d.type || dd.type || "").toLowerCase().trim();
+    if (!type || type !== "payin") return null;
+    const status = String(d.status || dd.status || "").toLowerCase();
+    if (status !== "completed" && status !== "success") return null;
     return {
-      orderId: firstString(d.external_reference, d.order_id, d.reference),
-      amount: Number(d.amount),
-      currency: String(d.currency || ""),
-      providerRef: firstString(d.provider_reference, d.ikeepay_ref, d.reference),
+      orderId: pickReference(d, dd),
+      amount: Number(d.amount != null ? d.amount : dd.amount),
+      currency: String(d.currency || dd.currency || ""),
+      providerRef: firstString(
+        d.provider_reference,
+        d.ikeepay_ref,
+        dd.provider_reference,
+        dd.ikeepay_ref
+      ),
     };
   }
   return null;
@@ -350,6 +372,51 @@ export async function processWebhook(body) {
     result = { ok: true, kind: "donation", id: donation.id };
     await logWebhook({ body, normalized, result });
     return result;
+  }
+
+  // Réconciliation par montant : iKeePay peut envoyer une référence que nous ne
+  // reconnaissons pas. On tente alors de retrouver une adhésion/don « pending »
+  // récent (dernières 30 min) du même montant — couvre les légères variations
+  // de format de référence.
+  if (amount > 0) {
+    const recentMembership = (
+      await q(
+        `SELECT id, user_id, amount, currency, status FROM membership_payments
+         WHERE status = 'pending' AND amount = $1 AND created_at >= now() - interval '30 minutes'
+         ORDER BY created_at DESC LIMIT 1`,
+        [amount]
+      )
+    )[0];
+    if (recentMembership) {
+      if (!currencyMatches(currency, recentMembership.currency)) {
+        result = { ok: false, reason: "mismatch" };
+        await logWebhook({ body, normalized, result });
+        return result;
+      }
+      await completeMembershipPayment(recentMembership, providerRef);
+      result = { ok: true, kind: "membership", id: recentMembership.id, reconciled: true };
+      await logWebhook({ body, normalized, result });
+      return result;
+    }
+    const recentDonation = (
+      await q(
+        `SELECT id, amount, currency, status FROM donations
+         WHERE status = 'pending' AND amount = $1 AND created_at >= now() - interval '30 minutes'
+         ORDER BY created_at DESC LIMIT 1`,
+        [amount]
+      )
+    )[0];
+    if (recentDonation) {
+      if (!currencyMatches(currency, recentDonation.currency)) {
+        result = { ok: false, reason: "mismatch" };
+        await logWebhook({ body, normalized, result });
+        return result;
+      }
+      await completeDonation(recentDonation, providerRef);
+      result = { ok: true, kind: "donation", id: recentDonation.id, reconciled: true };
+      await logWebhook({ body, normalized, result });
+      return result;
+    }
   }
 
   // Référence inconnue : on ignore proprement.

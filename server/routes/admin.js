@@ -1038,6 +1038,54 @@ router.delete(
   })
 );
 
+// Secours manuel : compléter une adhésion restée « en attente » (webhook perdu /
+// référence non rattachée). Active réellement le compte de l'utilisateur.
+// Réservé à l'admin, à n'utiliser qu'après vérification que le paiement a bien eu lieu.
+router.post(
+  "/payments/memberships/:id/complete",
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Identifiant invalide" });
+    }
+    const mp = (
+      await q(
+        `SELECT id, user_id, amount, currency, status FROM membership_payments WHERE id = $1`,
+        [id]
+      )
+    )[0];
+    if (!mp) return res.status(404).json({ error: "Paiement d'adhésion introuvable" });
+    if (mp.status !== "pending") {
+      return res.status(409).json({ error: "Cette adhésion n'est pas en attente" });
+    }
+    // Active le compte (mêmes effets que le webhook : 30 jours + admin_approved).
+    const user = (
+      await q("SELECT id, name, role, referred_by FROM users WHERE id = $1", [mp.user_id])
+    )[0];
+    if (!user) return res.status(404).json({ error: "Utilisateur introuvable" });
+    await q(
+      `UPDATE membership_payments SET status = 'completed', completed_at = now()
+       WHERE id = $1`,
+      [id]
+    );
+    await q(
+      `UPDATE users
+       SET membership_paid_at = COALESCE(membership_paid_at, now()),
+           admin_approved = TRUE,
+           membership_expires_at = now() + interval '30 days'
+       WHERE id = $1`,
+      [user.id]
+    );
+    await logAudit(
+      req.user.id,
+      "admin.membership_complete_manual",
+      `membership=${id} user=${user.id} (${user.name}) marquée complétée manuellement`,
+      req.ip
+    );
+    res.json({ ok: true });
+  })
+);
+
 // NOTE : les endpoints de réconciliation des reversements iKeePay
 // (GET /payouts, POST /payouts/:ref/resolve, POST /payouts/:ref/retry) ont été
 // supprimés avec le système iKeePay. La table `automatic_payouts` est conservée
