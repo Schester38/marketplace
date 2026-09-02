@@ -15,11 +15,15 @@ Mboppi est une marketplace pour le Cameroun et l'Afrique. Elle met en relation d
 
 ## Paiements et commissions
 
-Les paiements sont **manuels et directs** : espèces à la livraison, virement Mobile Money direct ou virement bancaire (UBA). Mboppi **ne collecte aucun paiement et ne prélève aucun frais de plateforme**. Le moyen choisi est enregistré sur la vente. Après livraison, la boutique règle **manuellement** le vendeur et le parrain (avec une preuve de paiement enregistrée), et les montants sont suivis dans les wallets internes.
+Les ventes sont payées **manuellement et directement** : espèces à la livraison, Mobile Money ou virement bancaire (UBA). Le moyen choisi est enregistré sur la vente. Après livraison, la boutique règle **manuellement** le vendeur et le parrain (avec une preuve de paiement enregistrée), et les montants sont suivis dans les wallets internes.
 
-Les boutiques, vendeurs et créateurs doivent régler une adhésion valable 30 jours : **2 500 XAF** pour une boutique et un créateur, **1 500 XAF** pour un vendeur. Un compte validé par l'administrateur accède à son espace sans paiement. Un vendeur parrain reçoit **1 000 XAF** lorsqu'un vendeur inscrit avec son code paie son adhésion ; le cumul se retire à partir de **5 000 XAF** (par multiples de 1 000).
+**Adhésions et dons : deux systèmes au choix de l'admin** (bascule dans le panneau Administration → Système de paiement) :
+- **Manuel** : paiement hors plateforme (Mobile Money, virement UBA, MoneyFusion) ; l'admin valide chaque compte.
+- **Automatique (iKeePay, PAYIN uniquement)** : adhésion et don payés en ligne via le checkout iKeePay ; un **webhook sécurisé par token** confirme le paiement → **activation immédiate** du compte et redirection automatique vers son espace, sans intervention admin. Les paiements en ligne restent visibles dans le panneau Admin (avec secours « Marquer complété »). **Aucun reversement automatique** : les versements vers vendeurs et parrains restent manuels dans les deux modes.
 
-La commission du vendeur est définie par la boutique sur chaque produit (0 à 100 %). Le parrainage client rapporte **2 %** au vendeur référent lorsque le client est inscrit avec son code et authentifié lors de son achat ; le cumul est réclamé par le vendeur et versé manuellement par la boutique à partir de **5 000 XAF**. Il n'y a plus de paiement en ligne ni de reversement automatique.
+**Seul le vendeur paie une adhésion** (1 500 XAF / 30 jours). Les boutiques, créateurs, clients et livreurs accèdent **directement** à leur espace, quel que soit le mode. Un vendeur parrain reçoit **1 000 XAF** lorsqu'un vendeur inscrit avec son code paie son adhésion ; le cumul se retire à partir de **5 000 XAF** (par multiples de 1 000), sur validation manuelle de l'admin.
+
+La commission du vendeur est définie par la boutique sur chaque produit (0 à 100 %). Le parrainage client rapporte **2 %** au vendeur référent lorsque le client est inscrit avec son code et authentifié lors de son achat ; le cumul est réclamé par le vendeur et versé manuellement par la boutique à partir de **5 000 XAF**.
 
 ## Architecture
 
@@ -39,6 +43,7 @@ api/index.js  Entrée Vercel serverless
 - [server/routes/purchases.js](server/routes/purchases.js) crée les achats directs.
 - [server/routes/sales.js](server/routes/sales.js) gère statuts, livraison, commissions et preuves de paiement.
 - [server/services/payouts.js](server/services/payouts.js) calcule la répartition des montants et les seuils de commission.
+- [server/services/ikeepay.js](server/services/ikeepay.js) gère les paiements en ligne iKeePay (checkout inline, webhook tokenisé, réconciliation, activation d'adhésion).
 
 ## Démarrage local
 
@@ -89,6 +94,10 @@ Le frontend est disponible sur http://localhost:5173 et l'API sur http://localho
 | GET | `/api/wallet/me` | seller, creator, livreur | Consulter le wallet |
 | GET/POST | `/api/flash-promotions` | public / shop | Consulter ou créer une promotion |
 | GET/POST | `/api/activation-withdrawals` | seller | Retraits des commissions d'adhésion parrainée |
+| POST | `/api/payments/membership-payin` | seller | Ouvrir le checkout iKeePay pour l'adhésion (mode auto) |
+| POST | `/api/payments/donation-payin` | public | Ouvrir le checkout iKeePay pour un don (mode auto) |
+| GET | `/api/payments/membership-status` | connecté | Statut d'adhésion + auto-réparation (sondage client) |
+| POST | `/api/ikeepay/webhook?k=SECRET` | iKeePay (token) | Confirmation de paiement (activation/complétion) |
 | POST | `/api/admin/pass` | public | Ouvrir la session admin |
 
 ## Build et déploiement

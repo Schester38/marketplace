@@ -102,6 +102,66 @@ function contentHash(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex").slice(0, 12);
 }
 
+// --- Conversion automatique WebP -------------------------------------------------
+// Les photos (produits, offres, preuves de paiement) arrivent generalement en
+// JPEG ou PNG, souvent tres lourdes depuis un telephone. On les convertit en
+// WebP avant l'upload : meme rendu visuel, poids tres nettement reduit.
+// sharp est importe dynamiquement : s'il est absent ou incompatible sur
+// l'environnement, on garde le fichier original (aucune rupture d'upload).
+let sharpMod = null;
+let sharpTried = false;
+async function getSharp() {
+  if (!sharpTried) {
+    sharpTried = true;
+    try {
+      sharpMod = (await import("sharp")).default;
+    } catch (err) {
+      console.warn("[storage] sharp indisponible, conversion WebP desactivee :", err.message);
+    }
+  }
+  return sharpMod;
+}
+
+// Pas de conversion pour les micro-images (icones, logos minuscules) : gain
+// negligeable, et la conversion peut meme les alourdir.
+const WEBP_MIN_BYTES = 8 * 1024;
+const WEBP_QUALITY = 80;
+// Garde-fou pour les originaux tres larges (photos d'appareils recents).
+const WEBP_MAX_WIDTH = 2000;
+// Formats sources convertis. Le GIF (animation) et l'AVIF (deja plus compact)
+// sont conserves tels quels ; le WebP recu ne doit pas etre re-encode.
+const WEBP_SOURCE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/heic",
+  "image/heif",
+]);
+
+/**
+ * Convertit un buffer image en WebP. Retourne `null` si la conversion n'est
+ * pas applicable (format non eligible, image trop petite, sharp absent,
+ * erreur de decodage, ou resultat plus lourd que l'original) : l'appelant
+ * conserve alors le buffer d'origine.
+ */
+export async function toWebp(buffer, type) {
+  if (!Buffer.isBuffer(buffer) || !WEBP_SOURCE_TYPES.has(type)) return null;
+  if (buffer.length < WEBP_MIN_BYTES) return null;
+  const sharp = await getSharp();
+  if (!sharp) return null;
+  try {
+    const out = await sharp(buffer, { failOn: "none" })
+      .rotate() // applique l'orientation EXIF (photos de telephone)
+      .resize({ width: WEBP_MAX_WIDTH, withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+    // Securite : si le WebP est plus lourd que l'original, on garde l'original.
+    return out && out.length > 0 && out.length < buffer.length ? out : null;
+  } catch (err) {
+    console.warn("[storage] conversion WebP echouee, image originale conservee :", err.message);
+    return null;
+  }
+}
+
 /**
  * Upload un buffer vers Storage, sous `{folder}/{hash}/{variant}.{ext}`.
  * - Le dossier par hash permet de DÉDUPLIQUER : un contenu identique importé
@@ -111,6 +171,15 @@ function contentHash(buffer) {
  * - Cache-Control immutable : les URLs sont versionnées par contenu/uuids.
  */
 export async function uploadBuffer(buffer, type, folder = "products", variant = "auto", bucketName = BUCKET) {
+  // Conversion automatique en WebP (produits, offres, preuves de paiement) :
+  // meme rendu visuel, poids tres nettement reduit. Si la conversion n'est pas
+  // applicable (format non eligible, sharp absent, resultat plus lourd), le
+  // buffer d'origine est conserve — aucune rupture d'upload.
+  const converted = await toWebp(buffer, type);
+  if (converted) {
+    buffer = converted;
+    type = "image/webp";
+  }
   const ext = EXT_BY_TYPE[type] || "bin";
   const path = `${folder}/${contentHash(buffer)}/${variant}.${ext}`;
   const fullPath = `object/${bucketName}/${path}`;
