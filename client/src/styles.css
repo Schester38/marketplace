@@ -5655,6 +5655,52 @@ a.step {
   min-width: 220px;
 }
 
+/* Bannière d'activation des notifications (ouverture du site/PWA) */
+.notif-prompt {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 86px;
+  z-index: 1100;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 720px;
+  margin: 0 auto;
+  font-size: 0.85rem;
+}
+.notif-prompt .bell-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.notif-prompt-text {
+  margin: 0;
+  flex: 1;
+  min-width: 220px;
+  line-height: 1.5;
+}
+.notif-prompt-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.notif-prompt-actions .btn {
+  padding: 7px 14px;
+  font-size: 0.85rem;
+}
+@media (min-width: 600px) {
+  .notif-prompt {
+    bottom: 24px;
+  }
+}
+
 /* Admin */
 .stats-grid {
   display: grid;

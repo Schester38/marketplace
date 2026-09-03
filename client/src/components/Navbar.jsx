@@ -7,7 +7,7 @@ import { useCart, useFavs } from "../store.jsx";
 import { api } from "../api.js";
 import { setAppBadge, playNotificationSound } from "../app-badge.js";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
-import { urlBase64ToUint8Array } from "../utils.js";
+import { requestPushPermission } from "../push.js";
 import { formatMoney } from "./ProductCard.jsx";
 import { countrySymbol, PRODUCT_CATEGORIES } from "../config.js";
 import { MegaMenu } from "./MegaMenu.jsx";
@@ -289,33 +289,8 @@ function NotifBell() {
   };
 
   const ensurePermission = () => {
-    if (typeof Notification !== "undefined" && Notification.permission === "default") {
-      Notification.requestPermission()
-        .then(() => setupPush())
-        .catch(() => {});
-    } else if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      setupPush();
-    }
-  };
-
-  const setupPush = async () => {
-    if (!user || typeof Notification === "undefined" || Notification.permission !== "granted")
-      return;
-    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) return;
-    try {
-      const { public_key } = await api.pushKey();
-      const reg = await navigator.serviceWorker.ready;
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(public_key),
-        });
-      }
-      await api.pushSubscribe(sub.toJSON());
-    } catch {
-      /* silencieux */
-    }
+    if (!user || typeof Notification === "undefined") return;
+    requestPushPermission();
   };
 
   useEffect(() => {
