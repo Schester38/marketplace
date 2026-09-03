@@ -26,11 +26,11 @@ export default function MembershipPage() {
   const isManual = settings.mode !== "auto";
   const isAutoReady = settings.mode === "auto" && settings.ikeepay_configured;
 
-  // Confirmation automatique : tant que l'adhÃ©sion n'est pas active, la page
-  // sonde le serveur toutes les 4 s (max 6 min). Le serveur y vÃ©rifie l'Ã©tat
-  // ET rÃ©pare au besoin (webhook restÃ© non rattachÃ©) â†’ dÃ¨s que `active`
-  // repasse Ã  true, la session est rechargÃ©e et l'utilisateur est redirigÃ©
-  // vers son espace par App.jsx. Aucune intervention admin nÃ©cessaire.
+  // Confirmation automatique : tant que l'adhésion n'est pas active, la page
+  // sonde le serveur toutes les 4 s (max 6 min). Le serveur y vérifie l'état
+  // ET répare au besoin (webhook resté non rattaché) → dès que `active`
+  // repasse à true, la session est rechargée et l'utilisateur est redirigé
+  // vers son espace par App.jsx. Aucune intervention admin nécessaire.
   useEffect(() => {
     if (!isAutoReady) return undefined;
     let stopped = false;
@@ -63,7 +63,7 @@ export default function MembershipPage() {
           return;
         }
       } catch {
-        /* rÃ©seau indisponible : on retentera */
+        /* réseau indisponible : on retentera */
       }
       if (Date.now() - startedAt > 6 * 60 * 1000) {
         stopped = true;
@@ -198,7 +198,7 @@ export default function MembershipPage() {
                     className="hint"
                     style={{ textAlign: "center", marginBottom: 10, fontWeight: 600 }}
                   >
-                    âŒ› {t("Confirmation du paiement en coursâ€¦ Votre espace sera activÃ© automatiquement.")}
+                    ⌛ {t("Confirmation du paiement en cours… Votre espace sera activé automatiquement.")}
                   </p>
                 )}
                 <button

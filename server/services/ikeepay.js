@@ -329,9 +329,9 @@ async function completeDonation(donation, providerRef) {
 
 // Journalise chaque webhook reçu (table payment_webhook_logs, déjà créée par
 // initDb) pour permettre le diagnostic (le don resté « en attente » sans trace).
-// InsÃ¨re d'abord la trace du webhook AVANT tout traitement : mÃªme si le
-// traitement Ã©choue ou dÃ©passe le timeout serverless, on garde ce qu'iKeePay
-// a envoyÃ© (c'Ã©tait l'angle mort : un webhook non journalisÃ© = invisible).
+// Insère d'abord la trace du webhook AVANT tout traitement : même si le
+// traitement échoue ou dépasse le timeout serverless, on garde ce qu'iKeePay
+// a envoyé (c'était l'angle mort : un webhook non journalisé = invisible).
 async function logWebhookStart({ body, normalized }) {
   try {
     const rows = await q(
@@ -353,7 +353,7 @@ async function logWebhookStart({ body, normalized }) {
   }
 }
 
-// Met Ã  jour la trace avec le rÃ©sultat du traitement.
+// Met à jour la trace avec le résultat du traitement.
 async function logWebhookFinish(logId, result) {
   if (!logId) return;
   try {
@@ -377,9 +377,9 @@ async function logWebhookFinish(logId, result) {
 // reconnu, même si la référence est inconnue (éviter les retries inutiles).
 export async function processWebhook(body) {
   const normalized = normalizeWebhook(body);
-  // Trace Ã©crite AVANT le traitement : si le traitement plante ou expire
-  // (timeout serverless), le payload reste consultable et la rÃ©conciliation
-  // par sondage peut rattraper le paiement (angle mort corrigÃ©).
+  // Trace écrite AVANT le traitement : si le traitement plante ou expire
+  // (timeout serverless), le payload reste consultable et la réconciliation
+  // par sondage peut rattraper le paiement (angle mort corrigé).
   const logId = await logWebhookStart({ body, normalized });
   try {
     const result = await handleWebhook(body, normalized);
@@ -388,7 +388,7 @@ export async function processWebhook(body) {
   } catch (err) {
     console.error("[ikeepay] traitement webhook impossible :", err.message);
     await logWebhookFinish(logId, { ok: false, reason: "processing_error:" + err.message });
-    // 500 â†’ iKeePay retentera ; la trace conserve le payload pour le rattrapage.
+    // 500 → iKeePay retentera ; la trace conserve le payload pour le rattrapage.
     throw err;
   }
 }
@@ -464,7 +464,7 @@ async function handleWebhook(body, normalized) {
     )[0] ||
     (
       await q(
-        // 2) Secours : mÃªme montant sur 24 h (comme avant, fenÃªtre Ã©largie).
+        // 2) Secours : même montant sur 24 h (comme avant, fenêtre élargie).
         `SELECT id, user_id, amount, currency, status FROM membership_payments
          WHERE status IN ('pending','expired') AND amount = $1 AND created_at >= now() - interval '24 hours'
          ORDER BY created_at DESC LIMIT 1`,
@@ -493,7 +493,7 @@ async function handleWebhook(body, normalized) {
     )[0] ||
     (
       await q(
-        // 2) Secours : mÃªme montant sur 24 h (fenÃªtre Ã©largie).
+        // 2) Secours : même montant sur 24 h (fenêtre élargie).
         `SELECT id, amount, currency, status FROM donations
          WHERE status IN ('pending','expired') AND amount = $1 AND created_at >= now() - interval '24 hours'
          ORDER BY created_at DESC LIMIT 1`,
@@ -540,17 +540,17 @@ export async function purgePendingPayments() {
   return { donations: donations.length, memberships: memberships.length };
 }
 
-// Auto-rÃ©paration : retrouve dans le journal des webhooks un
-// Â« payment.success Â» non rattachÃ© (rÃ©fÃ©rence que nous ne connaissons pas) du
-// mÃªme montant, et complete l'adhÃ©sion de l'utilisateur. AppelÃ© par le
-// polling client (GET /api/payments/membership-status) : mÃªme si la
-// rÃ©fÃ©rence renvoyÃ©e par iKeePay diffÃ¨re de la nÃ´tre, l'adhÃ©sion est
-// confirmÃ©e et le compte activÃ© automatiquement.
+// Auto-réparation : retrouve dans le journal des webhooks un
+// « payment.success » non rattaché (référence que nous ne connaissons pas) du
+// même montant, et complete l'adhésion de l'utilisateur. Appelé par le
+// polling client (GET /api/payments/membership-status) : même si la
+// référence renvoyée par iKeePay diffère de la nôtre, l'adhésion est
+// confirmée et le compte activé automatiquement.
 const reconcileState = { lastRun: 0 };
 export async function reconcileMembershipFromWebhookLog({ userId, email, amount }) {
   // Cooldown global : les sondes client arrivent toutes les 4 s ; sans garde,
   // les invocations se chevauchent, saturent le pool de connexions et font
-  // exploser la durÃ©e (504 serverless). Un seul balayage toutes les 5 s.
+  // exploser la durée (504 serverless). Un seul balayage toutes les 5 s.
   const now = Date.now();
   if (now - reconcileState.lastRun < 5000) {
     return { ok: false, reason: "cooldown" };
@@ -563,7 +563,7 @@ export async function reconcileMembershipFromWebhookLog({ userId, email, amount 
      ORDER BY created_at DESC LIMIT 10`
   );
   for (const log of logs) {
-    // Budget temps : ne jamais dÃ©passer ~4 s de balayage (limite serverless).
+    // Budget temps : ne jamais dépasser ~4 s de balayage (limite serverless).
     if (Date.now() - startedAt > 4000) break;
     let body = log.payload;
     if (typeof body === "string") {
@@ -577,9 +577,9 @@ export async function reconcileMembershipFromWebhookLog({ userId, email, amount 
     if (!n || !n.orderId) continue;
     if (!amountMatches(n.amount, amount)) continue;
     if (!currencyMatches(n.currency, "XAF")) continue;
-    // Si le webhook porte un email, il doit correspondre Ã  celui du compte.
+    // Si le webhook porte un email, il doit correspondre à celui du compte.
     if (n.email && email && n.email !== String(email).toLowerCase()) continue;
-    // La rÃ©fÃ©rence ne doit appartenir Ã  aucun paiement dÃ©jÃ  connu.
+    // La référence ne doit appartenir à aucun paiement déjà connu.
     const m = (
       await q(
         `SELECT id, user_id, amount, currency, status FROM membership_payments
@@ -606,7 +606,7 @@ export async function reconcileMembershipFromWebhookLog({ userId, email, amount 
       }
       continue;
     }
-    // ComplÃ¨te l'adhÃ©sion pending/expired la plus rÃ©cente de cet utilisateur.
+    // Complète l'adhésion pending/expired la plus récente de cet utilisateur.
     const payment = (
       await q(
         `SELECT id, user_id, amount, currency, status FROM membership_payments
@@ -617,7 +617,7 @@ export async function reconcileMembershipFromWebhookLog({ userId, email, amount 
     )[0];
     if (!payment) return { ok: false, reason: "no_pending_membership" };
     await completeMembershipPayment(payment, n.providerRef || log.provider_order_id || null);
-    // Marque le log comme traitÃ© pour ne pas le re-balayer inutilement.
+    // Marque le log comme traité pour ne pas le re-balayer inutilement.
     await q(
       `UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1`,
       [log.id]

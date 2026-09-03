@@ -32,11 +32,11 @@ router.get(
   })
 );
 
-// Statut de l'adhÃ©sion de l'utilisateur courant + auto-rÃ©paration. S'il
-// existe un webhook Â« payment.success Â» non rattachÃ© (rÃ©fÃ©rence non
-// reconnue) du mÃªme montant, on complete l'adhÃ©sion Ã  la volÃ©e : le client
-// qui sonde ce endpoint aprÃ¨s le checkout obtient l'activation mÃªme si la
-// rÃ©fÃ©rence renvoyÃ©e par iKeePay diffÃ¨re. C'est ce qui rend la redirection
+// Statut de l'adhésion de l'utilisateur courant + auto-réparation. S'il
+// existe un webhook « payment.success » non rattaché (référence non
+// reconnue) du même montant, on complete l'adhésion à la volée : le client
+// qui sonde ce endpoint après le checkout obtient l'activation même si la
+// référence renvoyée par iKeePay diffère. C'est ce qui rend la redirection
 // vers l'espace de travail 100 % automatique, sans intervention admin.
 router.get(
   "/membership-status",
@@ -84,9 +84,9 @@ router.get(
         });
       }
     }
-    // Diagnostic : l'adhÃ©sion en attente existe-t-elle ? Des webhooks sont-ils
-    // arrivÃ©s ? Le client affiche ces informations dans sa console â€” cela
-    // permet de savoir prÃ©cisÃ©ment pourquoi l'activation n'a pas eu lieu.
+    // Diagnostic : l'adhésion en attente existe-t-elle ? Des webhooks sont-ils
+    // arrivés ? Le client affiche ces informations dans sa console — cela
+    // permet de savoir précisément pourquoi l'activation n'a pas eu lieu.
     const pending = await q(
       `SELECT id FROM membership_payments
        WHERE user_id = $1 AND status IN ('pending','expired') AND amount = $2
