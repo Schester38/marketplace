@@ -55,6 +55,7 @@ export default function SellerDashboard() {
   const [withdrawDone, setWithdrawDone] = useState(null);
   const [pmMissing, setPmMissing] = useState(false);
   const [pmChecking, setPmChecking] = useState(false);
+  const [withdrawSending, setWithdrawSending] = useState(false);
   const [sellerCode, setSellerCode] = useState(null);
   const [codeLoading, setCodeLoading] = useState(false);
   const [error, setError] = useState("");
@@ -256,6 +257,8 @@ export default function SellerDashboard() {
 
   const submitWithdraw = async (e) => {
     e.preventDefault();
+    if (withdrawSending) return; // anti double-clic : un seul envoi à la fois
+    setWithdrawSending(true);
     setError("");
     setSuccess("");
     try {
@@ -275,6 +278,8 @@ export default function SellerDashboard() {
       } else {
         setError(err.message);
       }
+    } finally {
+      setWithdrawSending(false);
     }
   };
 
@@ -1071,6 +1076,7 @@ export default function SellerDashboard() {
                   type="submit"
                   className="btn btn-primary"
                   disabled={
+                    withdrawSending ||
                     !withdrawForm.amount ||
                     Number(withdrawForm.amount) <= 0 ||
                     Number(withdrawForm.amount) > actWithdrawal.available ||
@@ -1079,7 +1085,7 @@ export default function SellerDashboard() {
                     !withdrawForm.email
                   }
                 >
-                  {t("Confirmer le retrait")}
+                  {withdrawSending ? "⏳ …" : t("Confirmer le retrait")}
                 </button>
               </div>
             </form>

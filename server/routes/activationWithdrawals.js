@@ -164,21 +164,88 @@ router.post(
         .status(400)
         .json({ error: "Solde insuffisant pour ce montant." });
     }
+    // Index unique défensif : garantit qu'un parrainé ne peut figurer dans une
+// seule demande, même si deux requêtes arrivent en même temps (double-clic,
+// double POST) — la seconde transaction échoue et est annulée.
+async function ensureUniqueMemberIndex() {
+  try {
+    await q(
+      `CREATE UNIQUE INDEX IF NOT EXISTS uniq_activation_withdrawal_member
+       ON activation_withdrawal_items (member_id)`
+    );
+  } catch (err) {
+    // Dédoublonnage défensif si d'anciennes données violent l'unicité, puis
+    // nouvelle tentative (l'index est la garantie de sécurité durable).
+    if (err && err.code === "23505") {
+      await q(
+        `DELETE FROM activation_withdrawal_items a
+         USING activation_withdrawal_items b
+         WHERE a.member_id = b.member_id AND a.id > b.id`
+      ).catch(() => {});
+      await q(
+        `CREATE UNIQUE INDEX IF NOT EXISTS uniq_activation_withdrawal_member
+         ON activation_withdrawal_items (member_id)`
+      ).catch(() => {});
+      return;
+    }
+    // Table absente (initDb ne la crée pas) : les migrations externes la
+    // fournissent — on ne bloque pas la demande, les INSERT la révéleront.
+    if (!(err && err.code === "42P01")) {
+      console.error("[withdrawals] index unique impossible :", err.message);
+    }
+  }
+}
+
     const cleanComment = comment ? String(comment).trim().slice(0, 500) : null;
-    const created = await withTransaction(async (tx) => {
+    await ensureUniqueMemberIndex();
+    let created;
+    try {
+      created = await withTransaction(async (tx) => {
       const [w] = await tx.query(
         `INSERT INTO activation_withdrawals (seller_id, amount, comment, email)
          VALUES ($1, $2, $3, $4) RETURNING id`,
         [req.user.id, value, cleanComment, cleanEmail]
       );
+      let locked = 0;
       for (const m of toLock) {
-        await tx.query(
-          `INSERT INTO activation_withdrawal_items (withdrawal_id, member_id) VALUES ($1, $2)`,
+        const r = await tx.query(
+          `INSERT INTO activation_withdrawal_items (withdrawal_id, member_id)
+           VALUES ($1, $2)
+           ON CONFLICT (member_id) DO NOTHING
+           RETURNING member_id`,
           [w.id, m.id]
         );
+        if (tx.queryResults && tx.queryResults(r) === 0) {
+          // Le parrainé vient d'être verrouillé par une autre demande → on
+          // annule TOUTE la demande (pas de doublon possible).
+          throw new Error("MEMBER_ALREADY_LOCKED");
+        }
+        locked += 1;
+      }
+      if (locked !== count) {
+        throw new Error("LOCK_MISMATCH");
       }
       return w;
-    });
+      });
+    } catch (err) {
+      // Course critique : un autre double-clic a verrouillé un parrainé en
+      // premier (violation de l'index unique) → la demande est annulée, aucune
+      // duplication possible. On informe le vendeur clairement.
+      const msg = String(err && err.message || "");
+      if (
+        msg.includes("MEMBER_ALREADY_LOCKED") ||
+        msg.includes("LOCK_MISMATCH") ||
+        msg.includes("uniq_activation_withdrawal_member") ||
+        (err && err.code === "23505")
+      ) {
+        return res.status(409).json({
+          error:
+            "Une demande de retrait est déjà en cours avec ces parrainés. Attendez le traitement par l'administration.",
+          code: "WITHDRAWAL_ALREADY_REQUESTED",
+        });
+      }
+      throw err;
+    }
     await q(
       `INSERT INTO notifications (user_id, type, amount) VALUES ($1, 'activation_withdrawal_requested', $2)`,
       [req.user.id, value]

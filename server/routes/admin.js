@@ -787,12 +787,20 @@ router.post(
       return res.status(409).json({ error: "Cette demande a déjà été payée" });
     }
     const amount = Number(w.amount);
+    // Protection anti-double-paiement (course critique) : l'UPDATE est
+    // conditionnel (status <> 'paid'). Si deux requêtes arrivent en même temps,
+    // une seule réussit ; la seconde ne voit aucun UPDATE et renvoie 409 — aucune
+    // double insertion de débit ni double notification ne peut se produire.
+    let paid = false;
     await withTransaction(async (tx) => {
-      await tx.query(
+      const up = await tx.query(
         `UPDATE activation_withdrawals SET status = 'paid', paid_at = now(), paid_by = $2
-         WHERE id = $1`,
+         WHERE id = $1 AND status <> 'paid'
+         RETURNING id`,
         [id, req.user.id]
       );
+      if (!up.length) return; // déjà payée par une requête concurrente → rollback
+      paid = true;
       await tx.query(
         `INSERT INTO wallet_transactions
            (user_id, amount, transaction_type, reference_type, reference_id, description)
@@ -805,6 +813,9 @@ router.post(
         ]
       );
     });
+    if (!paid) {
+      return res.status(409).json({ error: "Cette demande a déjà été payée" });
+    }
     await q(
       `INSERT INTO notifications (user_id, type, amount) VALUES ($1, 'activation_withdrawal_paid', $2)`,
       [w.seller_id, amount]
