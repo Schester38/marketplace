@@ -18,13 +18,13 @@ const VISIT_RANGES = [
 
 function getMembershipCountdownState(expiresAt) {
   if (!expiresAt) {
-    return { label: "—", tone: "neutral", daysLeft: null, blinking: false };
+    return { label: "â€”", tone: "neutral", daysLeft: null, blinking: false };
   }
   const expires = new Date(expiresAt);
   const diffMs = expires.getTime() - Date.now();
   const daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   if (diffMs <= 0) {
-    return { label: "Expiré", tone: "danger", daysLeft: 0, blinking: false };
+    return { label: "ExpirÃ©", tone: "danger", daysLeft: 0, blinking: false };
   }
   if (daysLeft <= 1) {
     return { label: `${daysLeft} jour restant`, tone: "danger", daysLeft, blinking: true };
@@ -73,7 +73,7 @@ export default function Admin() {
   const [refError, setRefError] = useState("");
   const [withdrawals, setWithdrawals] = useState(null);
   const [wdError, setWdError] = useState("");
-  // Système de paiement (manuel ↔ automatique)
+  // SystÃ¨me de paiement (manuel â†” automatique)
   const [paySettings, setPaySettings] = useState(null);
   const [waSettings, setWaSettings] = useState(null);
   const [waForm, setWaForm] = useState({
@@ -82,6 +82,7 @@ export default function Admin() {
     callmebot_key: "",
     cloud_token: "",
     cloud_phone_id: "",
+    notify_email: "",
   });
   const [waBusy, setWaBusy] = useState(false);
   const [waMsg, setWaMsg] = useState("");
@@ -103,7 +104,7 @@ export default function Admin() {
           localStorage.removeItem("admin_token");
           setGate(true);
           setGateError(
-            t("Session expirée ou invalide. Entrez à nouveau le mot de passe administrateur.")
+            t("Session expirÃ©e ou invalide. Entrez Ã  nouveau le mot de passe administrateur.")
           );
         } else if (e && e.message) {
           setError(e.message);
@@ -157,6 +158,7 @@ export default function Admin() {
             ...f,
             provider: d?.provider || "",
             admin_phone: d?.admin_phone_masked || "",
+            notify_email: d?.notify_email || "",
           }));
         })
         .catch(() => {});
@@ -181,7 +183,7 @@ export default function Admin() {
   }, [gate, load]);
   useRefreshOnFocus(load);
 
-  // Temps réel : actualisation silencieuse des statistiques, transactions et
+  // Temps rÃ©el : actualisation silencieuse des statistiques, transactions et
   // visites toutes les 30 s, quel que soit le mode de paiement.
   useEffect(() => {
     if (gate) return undefined;
@@ -248,7 +250,7 @@ export default function Admin() {
   const markReferralPaid = async (r) => {
     if (
       !window.confirm(
-        t("Marquer l'adhésion de {name} comme payée et avertir son parrain ?", {
+        t("Marquer l'adhÃ©sion de {name} comme payÃ©e et avertir son parrain ?", {
           name: r.parraine.name,
         })
       )
@@ -302,8 +304,8 @@ export default function Admin() {
       setPaySettings((s) => ({ ...s, mode: next }));
       setPayOk(
         next === "auto"
-          ? t("Mode automatique activé : les adhésions et dons se paient en ligne (iKeePay).")
-          : t("Mode manuel activé : les paiements se font sous contrôle de l'administrateur.")
+          ? t("Mode automatique activÃ© : les adhÃ©sions et dons se paient en ligne (iKeePay).")
+          : t("Mode manuel activÃ© : les paiements se font sous contrÃ´le de l'administrateur.")
       );
       load(true);
     } catch (err) {
@@ -324,7 +326,7 @@ export default function Admin() {
         ikeepay_secret_key: paySecretKey.trim(),
       });
       setPaySecretKey("");
-      setPayOk(t("Clés iKeePay enregistrées."));
+      setPayOk(t("ClÃ©s iKeePay enregistrÃ©es."));
       load(true);
     } catch (err) {
       setPayError(err.message);
@@ -333,16 +335,17 @@ export default function Admin() {
     }
   };
 
-  // ─── WhatsApp : sauvegarde des réglages + test d'envoi ────────────────────
-  // Le numéro masqué renvoyé par le serveur (••••) n'est jamais renvoyé tel
-  // quel : on ne modifie le numéro que si l'admin en saisit un nouveau.
+  // â”€â”€â”€ WhatsApp : sauvegarde des rÃ©glages + test d'envoi â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Le numÃ©ro masquÃ© renvoyÃ© par le serveur (â€¢â€¢â€¢â€¢) n'est jamais renvoyÃ© tel
+  // quel : on ne modifie le numÃ©ro que si l'admin en saisit un nouveau.
   const buildWhatsAppPayload = () => {
     const p = { provider: waForm.provider };
     const phone = waForm.admin_phone.trim();
-    if (phone && !phone.includes("••••")) p.admin_phone = phone;
+    if (phone && !phone.includes("â€¢â€¢â€¢â€¢")) p.admin_phone = phone;
     if (waForm.callmebot_key.trim()) p.callmebot_key = waForm.callmebot_key.trim();
     if (waForm.cloud_token.trim()) p.cloud_token = waForm.cloud_token.trim();
     if (waForm.cloud_phone_id.trim()) p.cloud_phone_id = waForm.cloud_phone_id.trim();
+    if (waForm.notify_email.trim()) p.notify_email = waForm.notify_email.trim();
     return p;
   };
 
@@ -356,11 +359,11 @@ export default function Admin() {
       setWaForm((f) => ({ ...f, callmebot_key: "", cloud_token: "", cloud_phone_id: "" }));
       setWaMsg(
         d?.configured
-          ? t("Notifications WhatsApp configurées ✅")
-          : t("Réglages enregistrés — WhatsApp inactif tant que le fournisseur est incomplet.")
+          ? t("Notifications WhatsApp configurÃ©es âœ…")
+          : t("RÃ©glages enregistrÃ©s â€” WhatsApp inactif tant que le fournisseur est incomplet.")
       );
     } catch (err) {
-      setWaMsg("❌ " + err.message);
+      setWaMsg("âŒ " + err.message);
     } finally {
       setWaBusy(false);
     }
@@ -372,21 +375,23 @@ export default function Admin() {
     try {
       const d = await api.adminTestWhatsApp();
       setWaMsg(
-        d?.ok ? t("Message de test envoyé sur votre WhatsApp ✅") : t("Test échoué.")
+        d?.ok
+          ? t("Test envoyÃ© â€” vÃ©rifiez votre WhatsApp et/ou votre boÃ®te email âœ…")
+          : t("Test Ã©chouÃ©.")
       );
     } catch (err) {
-      setWaMsg("❌ " + err.message);
+      setWaMsg("âŒ " + err.message);
     } finally {
       setWaBusy(false);
     }
   };
 
-  // Secours : marquer un don « en attente » comme complété (si le webhook n'est
-  // jamais arrivé). Réservé à l'admin, à n'utiliser qu'après vérification.
+  // Secours : marquer un don Â« en attente Â» comme complÃ©tÃ© (si le webhook n'est
+  // jamais arrivÃ©). RÃ©servÃ© Ã  l'admin, Ã  n'utiliser qu'aprÃ¨s vÃ©rification.
   const completeDonation = async (d) => {
     if (
       !window.confirm(
-        t("Marquer le don de {amount} F comme complété ?", { amount: formatMoney(d.amount) })
+        t("Marquer le don de {amount} F comme complÃ©tÃ© ?", { amount: formatMoney(d.amount) })
       )
     )
       return;
@@ -400,13 +405,13 @@ export default function Admin() {
           x.id === d.id ? { ...x, status: "completed", completed_at: new Date().toISOString() } : x
         ),
       }));
-      setPayOk(t("Don marqué comme complété."));
+      setPayOk(t("Don marquÃ© comme complÃ©tÃ©."));
     } catch (err) {
       setPayError(err.message);
     }
   };
 
-  // Supprimer une ligne de paiement (don ou adhésion) — action admin.
+  // Supprimer une ligne de paiement (don ou adhÃ©sion) â€” action admin.
   const deleteDonation = async (d) => {
     if (
       !window.confirm(
@@ -425,7 +430,7 @@ export default function Admin() {
         ...p,
         donations: (p?.donations || []).filter((x) => x.id !== d.id),
       }));
-      setPayOk(t("Don supprimé."));
+      setPayOk(t("Don supprimÃ©."));
     } catch (err) {
       setPayError(err.message);
     }
@@ -434,7 +439,7 @@ export default function Admin() {
   const deleteMembership = async (m) => {
     if (
       !window.confirm(
-        t("Supprimer le paiement d'adhésion de {name} ({ref}) ?", {
+        t("Supprimer le paiement d'adhÃ©sion de {name} ({ref}) ?", {
           name: m.user_name,
           ref: m.external_reference,
         })
@@ -449,18 +454,18 @@ export default function Admin() {
         ...p,
         memberships: (p?.memberships || []).filter((x) => x.id !== m.id),
       }));
-      setPayOk(t("Paiement d'adhésion supprimé."));
+      setPayOk(t("Paiement d'adhÃ©sion supprimÃ©."));
     } catch (err) {
       setPayError(err.message);
     }
   };
 
-  // Secours : compléter manuellement une adhésion « en attente » et activer le
-  // compte (le webhook n'a pas rattaché la référence).
+  // Secours : complÃ©ter manuellement une adhÃ©sion Â« en attente Â» et activer le
+  // compte (le webhook n'a pas rattachÃ© la rÃ©fÃ©rence).
   const completeMembership = async (m) => {
     if (
       !window.confirm(
-        t("Compléter l'adhésion de {name} ({amount} F) et activer son compte ?", {
+        t("ComplÃ©ter l'adhÃ©sion de {name} ({amount} F) et activer son compte ?", {
           name: m.user_name,
           amount: formatMoney(m.amount),
         })
@@ -479,7 +484,7 @@ export default function Admin() {
             : x
         ),
       }));
-      setPayOk(t("Adhésion complétée et compte activé."));
+      setPayOk(t("AdhÃ©sion complÃ©tÃ©e et compte activÃ©."));
     } catch (err) {
       setPayError(err.message);
     }
@@ -508,7 +513,7 @@ export default function Admin() {
   };
 
   const removeProduct = async (p) => {
-    if (!window.confirm(t("Supprimer « {name} » ?", { name: p.name }))) return;
+    if (!window.confirm(t("Supprimer Â« {name} Â» ?", { name: p.name }))) return;
     try {
       await api.adminDeleteProduct(p.id);
       setProducts((ps) => ps.filter((x) => x.id !== p.id));
@@ -532,7 +537,7 @@ export default function Admin() {
       });
       setMsgText("");
       setMsgUserId("");
-      setMsgOk(t("Message envoyé avec succès."));
+      setMsgOk(t("Message envoyÃ© avec succÃ¨s."));
       api
         .adminMessages()
         .then((d) => setMessages(d.messages))
@@ -549,13 +554,13 @@ export default function Admin() {
     if (m.target === "shop") return t("Boutiques");
     if (m.target === "seller") return t("Vendeurs");
     if (m.target === "client") return t("Clients");
-    if (m.target === "creator") return t("Créateurs");
-    if (m.target === "user") return `${t("Utilisateur")} : ${m.user_name || "—"}`;
+    if (m.target === "creator") return t("CrÃ©ateurs");
+    if (m.target === "user") return `${t("Utilisateur")} : ${m.user_name || "â€”"}`;
     return m.target;
   };
 
   const resetVisits = async () => {
-    if (!window.confirm(t("Réinitialiser tous les compteurs de visites ?"))) return;
+    if (!window.confirm(t("RÃ©initialiser tous les compteurs de visites ?"))) return;
     try {
       await api.adminVisitsReset();
       api
@@ -606,11 +611,11 @@ export default function Admin() {
       setNlBody("");
       setNlOk(
         d.failed > 0
-          ? t("Newsletter envoyée à {sent} abonnés ({failed} échecs).", {
+          ? t("Newsletter envoyÃ©e Ã  {sent} abonnÃ©s ({failed} Ã©checs).", {
               sent: d.sent,
               failed: d.failed,
             })
-          : t("Newsletter envoyée à {sent} abonnés.", { sent: d.sent })
+          : t("Newsletter envoyÃ©e Ã  {sent} abonnÃ©s.", { sent: d.sent })
       );
       api
         .adminNewsletter()
@@ -625,10 +630,10 @@ export default function Admin() {
 
   const statusInfo = {
     pending: { label: "En attente", cls: "badge-pending" },
-    bought: { label: "Acheté", cls: "badge-bought" },
-    confirmed: { label: "Confirmée", cls: "badge-confirmed" },
-    delivered: { label: "Livré", cls: "badge-bought" },
-    cancelled: { label: "Annulée", cls: "badge-cancelled" },
+    bought: { label: "AchetÃ©", cls: "badge-bought" },
+    confirmed: { label: "ConfirmÃ©e", cls: "badge-confirmed" },
+    delivered: { label: "LivrÃ©", cls: "badge-bought" },
+    cancelled: { label: "AnnulÃ©e", cls: "badge-cancelled" },
   };
   const statusBadge = (s) => {
     const st = statusInfo[s] || { label: s, cls: "badge" };
@@ -638,11 +643,11 @@ export default function Admin() {
   if (gate) {
     return (
       <main className="container narrow">
-        <Seo title={t("Administration") + " — Mboppi"} description={t("Administration")} noindex />
+        <Seo title={t("Administration") + " â€” Mboppi"} description={t("Administration")} noindex />
         <section className="dash-header">
           <div>
-            <h1>🛡️ {t("Administration")}</h1>
-            <p>{t("Espace réservé. Entrez le mot de passe administrateur.")}</p>
+            <h1>ðŸ›¡ï¸ {t("Administration")}</h1>
+            <p>{t("Espace rÃ©servÃ©. Entrez le mot de passe administrateur.")}</p>
           </div>
           <PwaInstallButton />
         </section>
@@ -660,7 +665,7 @@ export default function Admin() {
             </p>
           )}
           <button type="submit" className="btn btn-primary btn-block" disabled={busy || !password}>
-            {busy ? t("Vérification…") : t("Entrer")}
+            {busy ? t("VÃ©rificationâ€¦") : t("Entrer")}
           </button>
         </form>
       </main>
@@ -669,16 +674,16 @@ export default function Admin() {
 
   return (
     <main className="container">
-      <Seo title={t("Administration") + " — Mboppi"} description={t("Administration")} noindex />
+      <Seo title={t("Administration") + " â€” Mboppi"} description={t("Administration")} noindex />
       <section className="dash-header">
         <div>
-          <h1>🛡️ {t("Administration")}</h1>
+          <h1>ðŸ›¡ï¸ {t("Administration")}</h1>
           <p>{t("Vue globale de la plateforme.")}</p>
         </div>
         <div className="dash-actions">
           <PwaInstallButton />
           <button type="button" className="btn btn-outline btn-small" onClick={logout}>
-            {t("Se déconnecter")}
+            {t("Se dÃ©connecter")}
           </button>
         </div>
       </section>
@@ -689,38 +694,38 @@ export default function Admin() {
         </p>
       )}
       {!error && !loading && stats === null && users === null && (
-        <p className="hint">{t("Chargement des données…")}</p>
+        <p className="hint">{t("Chargement des donnÃ©esâ€¦")}</p>
       )}
 
       <section className="stats-grid">
-        {card(t("Utilisateurs"), stats ? stats.users : "…")}
-        {card(t("Boutiques"), stats ? stats.shops : "…")}
-        {card(t("Créateurs"), stats ? stats.creators : "…")}
-        {card(t("Vendeurs"), stats ? stats.sellers : "…")}
-        {card(t("Clients"), stats ? stats.clients : "…")}
-        {card(t("Livreurs"), stats ? stats.livreurs : "…")}
-        {card(t("Produits"), stats ? stats.products : "…")}
-        {card(t("Ventes"), stats ? stats.sales : "…")}
-        {card(t("En attente"), stats ? stats.pending_sales : "…")}
-        {card(t("Livrées"), stats ? stats.delivered_sales : "…")}
-        {card(t("Chiffre d'affaires"), stats ? `${formatMoney(stats.revenue)}` : "…")}
-        {card(t("Avis"), stats ? `${stats.reviews} (${stats.rating_avg}/5)` : "…")}
-        {card(t("Inscrits aujourd'hui"), stats ? stats.users_today : "…")}
-        {card(t("Abonnés newsletter"), stats ? stats.newsletter_subscribers : "…")}
+        {card(t("Utilisateurs"), stats ? stats.users : "â€¦")}
+        {card(t("Boutiques"), stats ? stats.shops : "â€¦")}
+        {card(t("CrÃ©ateurs"), stats ? stats.creators : "â€¦")}
+        {card(t("Vendeurs"), stats ? stats.sellers : "â€¦")}
+        {card(t("Clients"), stats ? stats.clients : "â€¦")}
+        {card(t("Livreurs"), stats ? stats.livreurs : "â€¦")}
+        {card(t("Produits"), stats ? stats.products : "â€¦")}
+        {card(t("Ventes"), stats ? stats.sales : "â€¦")}
+        {card(t("En attente"), stats ? stats.pending_sales : "â€¦")}
+        {card(t("LivrÃ©es"), stats ? stats.delivered_sales : "â€¦")}
+        {card(t("Chiffre d'affaires"), stats ? `${formatMoney(stats.revenue)}` : "â€¦")}
+        {card(t("Avis"), stats ? `${stats.reviews} (${stats.rating_avg}/5)` : "â€¦")}
+        {card(t("Inscrits aujourd'hui"), stats ? stats.users_today : "â€¦")}
+        {card(t("AbonnÃ©s newsletter"), stats ? stats.newsletter_subscribers : "â€¦")}
       </section>
 
       {stats && (
         <section className="card section" style={{ marginBottom: 18 }}>
           <h3 className="section-title" style={{ marginTop: 0 }}>
-            👥 {t("Répartition des utilisateurs")}
+            ðŸ‘¥ {t("RÃ©partition des utilisateurs")}
           </h3>
           <div className="role-bars">
             {[
-              { k: "shops", label: t("Boutiques"), icon: "🏬", color: "#ee7d00" },
-              { k: "sellers", label: t("Vendeurs"), icon: "🧑‍💼", color: "#2563eb" },
-              { k: "clients", label: t("Clients"), icon: "👥", color: "#16a34a" },
-              { k: "creators", label: t("Créateurs"), icon: "🎨", color: "#7c3aed" },
-              { k: "livreurs", label: t("Livreurs"), icon: "🛵", color: "#0891b2" },
+              { k: "shops", label: t("Boutiques"), icon: "ðŸ¬", color: "#ee7d00" },
+              { k: "sellers", label: t("Vendeurs"), icon: "ðŸ§‘â€ðŸ’¼", color: "#2563eb" },
+              { k: "clients", label: t("Clients"), icon: "ðŸ‘¥", color: "#16a34a" },
+              { k: "creators", label: t("CrÃ©ateurs"), icon: "ðŸŽ¨", color: "#7c3aed" },
+              { k: "livreurs", label: t("Livreurs"), icon: "ðŸ›µ", color: "#0891b2" },
             ].map((r) => {
               const total = Number(stats.users) || 0;
               const v = Number(stats[r.k]) || 0;
@@ -734,7 +739,7 @@ export default function Admin() {
                     <div className="role-bar-fill" style={{ width: `${pct}%`, background: r.color }} />
                   </div>
                   <span className="role-bar-value">
-                    {v} · {pct}%
+                    {v} Â· {pct}%
                   </span>
                 </div>
               );
@@ -746,8 +751,8 @@ export default function Admin() {
       {visits && (
         <section aria-label={t("Analyse des visites")} className="visits-panel">
           <div className="visits-head">
-            <h2 className="section-title">📈 {t("Analyse des visites")}</h2>
-            <div className="visits-range" role="group" aria-label={t("Période")}>
+            <h2 className="section-title">ðŸ“ˆ {t("Analyse des visites")}</h2>
+            <div className="visits-range" role="group" aria-label={t("PÃ©riode")}>
               {VISIT_RANGES.map((r) => (
                 <button
                   key={r.days}
@@ -768,13 +773,13 @@ export default function Admin() {
               <option value="">{t("Tous les pays")}</option>
               {(visits.countries || []).map((c) => (
                 <option key={c.country} value={c.country}>
-                  {c.country === "CM" ? "🇨🇲 Cameroun" : c.country} — {c.visitor_count} visiteur(s),{" "}
+                  {c.country === "CM" ? "ðŸ‡¨ðŸ‡² Cameroun" : c.country} â€” {c.visitor_count} visiteur(s),{" "}
                   {c.views} vues
                 </option>
               ))}
             </select>
             <button type="button" className="btn btn-danger btn-small" onClick={resetVisits}>
-              {t("Réinitialiser")}
+              {t("RÃ©initialiser")}
             </button>
           </div>
           <div className="stats-grid">
@@ -786,18 +791,18 @@ export default function Admin() {
         </section>
       )}
 
-      <h2 className="section-title">✉️ {t("Messages aux utilisateurs")}</h2>
+      <h2 className="section-title">âœ‰ï¸ {t("Messages aux utilisateurs")}</h2>
       <form onSubmit={sendMessage} className="card msg-form">
         <p className="hint">
           {t(
-            "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois)."
+            "Envoyez un message qui s'affichera en popup Ã  la prochaine connexion des utilisateurs (une seule fois)."
           )}
         </p>
         <textarea
           className="msg-textarea"
           rows="4"
           maxLength="2000"
-          placeholder={t("Votre message…")}
+          placeholder={t("Votre messageâ€¦")}
           value={msgText}
           onChange={(e) => setMsgText(e.target.value)}
         />
@@ -809,7 +814,7 @@ export default function Admin() {
               checked={msgTarget === "all"}
               onChange={() => setMsgTarget("all")}
             />
-            <span>{t("À tous les utilisateurs")}</span>
+            <span>{t("Ã€ tous les utilisateurs")}</span>
           </label>
           <label className="msg-radio">
             <input
@@ -818,7 +823,7 @@ export default function Admin() {
               checked={msgTarget === "user"}
               onChange={() => setMsgTarget("user")}
             />
-            <span>{t("À un utilisateur")}</span>
+            <span>{t("Ã€ un utilisateur")}</span>
           </label>
           <label className="msg-radio">
             <input
@@ -854,7 +859,7 @@ export default function Admin() {
               checked={msgTarget === "creator"}
               onChange={() => setMsgTarget("creator")}
             />
-            <span>{t("Aux créateurs")}</span>
+            <span>{t("Aux crÃ©ateurs")}</span>
           </label>
         </div>
         {msgTarget === "user" && (
@@ -864,10 +869,10 @@ export default function Admin() {
             onChange={(e) => setMsgUserId(e.target.value)}
             required
           >
-            <option value="">{t("Choisir un utilisateur…")}</option>
+            <option value="">{t("Choisir un utilisateurâ€¦")}</option>
             {(users || []).map((u) => (
               <option key={u.id} value={u.id}>
-                {u.name} — {u.email} ({u.role})
+                {u.name} â€” {u.email} ({u.role})
               </option>
             ))}
           </select>
@@ -882,11 +887,11 @@ export default function Admin() {
           className="btn btn-primary btn-block"
           disabled={msgBusy || !msgText.trim() || (msgTarget === "user" && !msgUserId)}
         >
-          {msgBusy ? t("Envoi…") : t("Envoyer")}
+          {msgBusy ? t("Envoiâ€¦") : t("Envoyer")}
         </button>
       </form>
 
-      <h3>{t("Messages envoyés")}</h3>
+      <h3>{t("Messages envoyÃ©s")}</h3>
       <div className="table-wrap">
         <table className="table">
           <thead>
@@ -907,7 +912,7 @@ export default function Admin() {
             ) : messages.length === 0 ? (
               <tr>
                 <td colSpan="4" className="empty">
-                  {t("Aucun message envoyé")}
+                  {t("Aucun message envoyÃ©")}
                 </td>
               </tr>
             ) : (
@@ -939,11 +944,11 @@ export default function Admin() {
         </table>
       </div>
 
-      <h2 className="section-title">✉️ {t("Newsletter")}</h2>
+      <h2 className="section-title">âœ‰ï¸ {t("Newsletter")}</h2>
       <form onSubmit={sendNewsletter} className="card msg-form">
         <p className="hint">
           {t(
-            "Envoyez une newsletter par email à tous les abonnés. Chaque abonné reçoit le lien de désabonnement automatiquement."
+            "Envoyez une newsletter par email Ã  tous les abonnÃ©s. Chaque abonnÃ© reÃ§oit le lien de dÃ©sabonnement automatiquement."
           )}
         </p>
         <input
@@ -957,7 +962,7 @@ export default function Admin() {
           className="msg-textarea"
           rows="6"
           maxLength="5000"
-          placeholder={t("Contenu de la newsletter…")}
+          placeholder={t("Contenu de la newsletterâ€¦")}
           value={nlBody}
           onChange={(e) => setNlBody(e.target.value)}
         />
@@ -969,27 +974,27 @@ export default function Admin() {
         <p className="hint">
           {newsletter
             ? newsletter.count === 0
-              ? t("Aucun abonné pour le moment.")
-              : t("Envoyer à {count} abonnés", { count: newsletter.count })
-            : t("Chargement…")}
+              ? t("Aucun abonnÃ© pour le moment.")
+              : t("Envoyer Ã  {count} abonnÃ©s", { count: newsletter.count })
+            : t("Chargementâ€¦")}
         </p>
         <button
           type="submit"
           className="btn btn-primary btn-block"
           disabled={nlBusy || !nlSubject.trim() || !nlBody.trim()}
         >
-          {nlBusy ? t("Envoi…") : t("Envoyer la newsletter")}
+          {nlBusy ? t("Envoiâ€¦") : t("Envoyer la newsletter")}
         </button>
       </form>
 
-      {/* ===== Système de paiement : bascule manuel ↔ automatique (toujours visible) ===== */}
+      {/* ===== SystÃ¨me de paiement : bascule manuel â†” automatique (toujours visible) ===== */}
       <div className="card" style={{ marginBottom: 20, padding: 18 }}>
         <h2 className="section-title" style={{ marginTop: 0 }}>
-          ⚙️ {t("Système de paiement")}
+          âš™ï¸ {t("SystÃ¨me de paiement")}
         </h2>
         <div className="payment-mode-toggle">
           <span className={`payment-mode-badge ${payMode}`}>
-            {payMode === "auto" ? "🟢 " + t("Automatique (iKeePay)") : "🔵 " + t("Manuel")}
+            {payMode === "auto" ? "ðŸŸ¢ " + t("Automatique (iKeePay)") : "ðŸ”µ " + t("Manuel")}
           </span>
           <button
             type="button"
@@ -998,19 +1003,19 @@ export default function Admin() {
             onClick={togglePaymentMode}
           >
             {payBusy
-              ? "…"
+              ? "â€¦"
               : payMode === "auto"
-                ? "🔁 " + t("Basculer vers le manuel")
-                : "🔁 " + t("Basculer vers l'automatique")}
+                ? "ðŸ” " + t("Basculer vers le manuel")
+                : "ðŸ” " + t("Basculer vers l'automatique")}
           </button>
         </div>
         <p className="hint" style={{ marginBottom: 14 }}>
           {payMode === "auto"
             ? t(
-                "Mode automatique : les adhésions et les dons se paient en ligne via iKeePay. Les retraits des commissions d'activation restent manuels (validés ici)."
+                "Mode automatique : les adhÃ©sions et les dons se paient en ligne via iKeePay. Les retraits des commissions d'activation restent manuels (validÃ©s ici)."
               )
             : t(
-                "Mode manuel : l'administration valide chaque adhésion et chaque paiement (adhésions, dons, parrainages)."
+                "Mode manuel : l'administration valide chaque adhÃ©sion et chaque paiement (adhÃ©sions, dons, parrainages)."
               )}
         </p>
         {payError && <p className="error">{payError}</p>}
@@ -1026,7 +1031,7 @@ export default function Admin() {
         >
           <div>
             <label className="label" style={{ display: "block", marginBottom: 4 }}>
-              {t("Clé publique iKeePay")}
+              {t("ClÃ© publique iKeePay")}
             </label>
             <input
               className="input"
@@ -1037,33 +1042,33 @@ export default function Admin() {
           </div>
           <div>
             <label className="label" style={{ display: "block", marginBottom: 4 }}>
-              {t("Clé secrète iKeePay")}
+              {t("ClÃ© secrÃ¨te iKeePay")}
             </label>
             <input
               type="password"
               className="input"
               value={paySecretKey}
               onChange={(e) => setPaySecretKey(e.target.value)}
-              placeholder={paySettings?.ikeepay?.secret_key_set ? "••••••••" : "sk_..."}
+              placeholder={paySettings?.ikeepay?.secret_key_set ? "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" : "sk_..."}
             />
           </div>
           <button type="submit" className="btn btn-primary btn-small" disabled={payBusy}>
-            {payBusy ? "…" : t("Enregistrer")}
+            {payBusy ? "â€¦" : t("Enregistrer")}
           </button>
         </form>
         {paySettings?.ikeepay_configured ? (
           <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
-            ✅ {t("iKeePay configuré.")}
+            âœ… {t("iKeePay configurÃ©.")}
           </p>
         ) : (
           <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
-            ⚠️ {t("iKeePay non configuré : le mode automatique restera indisponible.")}
+            âš ï¸ {t("iKeePay non configurÃ© : le mode automatique restera indisponible.")}
           </p>
         )}
         {paySettings?.webhook_url ? (
           <div style={{ marginTop: 10 }}>
             <p className="hint" style={{ marginBottom: 6 }}>
-              🔐 {t("Webhook à enregistrer chez iKeePay (URL protégée par un token secret) :")}
+              ðŸ” {t("Webhook Ã  enregistrer chez iKeePay (URL protÃ©gÃ©e par un token secret) :")}
             </p>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <code
@@ -1083,27 +1088,27 @@ export default function Admin() {
                 onClick={() => {
                   try {
                     navigator.clipboard.writeText(paySettings.webhook_url);
-                    setPayOk(t("URL du webhook copiée."));
+                    setPayOk(t("URL du webhook copiÃ©e."));
                   } catch {
                     /* clipboard indisponible */
                   }
                 }}
               >
-                📋 {t("Copier")}
+                ðŸ“‹ {t("Copier")}
               </button>
             </div>
             <p className="hint" style={{ marginTop: 6, marginBottom: 0 }}>
-              ⚠️ {t("Sans ce token dans l'URL, iKeePay ne peut plus confirmer les paiements.")}
+              âš ï¸ {t("Sans ce token dans l'URL, iKeePay ne peut plus confirmer les paiements.")}
             </p>
           </div>
         ) : null}
 
         {/* Notifications WhatsApp automatiques (demandes de retrait d'activation) */}
         <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid #eee" }}>
-          <h3 style={{ marginTop: 0 }}>📱 {t("Notifications WhatsApp (retraits d'activation)")}</h3>
+          <h3 style={{ marginTop: 0 }}>ðŸ“± {t("Notifications WhatsApp (retraits d'activation)")}</h3>
           <p className="hint" style={{ marginTop: 0 }}>
             {t(
-              "Recevez automatiquement sur WhatsApp chaque demande de retrait envoyée par un vendeur parrain."
+              "Recevez automatiquement (WhatsApp et/ou email) chaque demande de retrait envoyÃ©e par un vendeur parrain."
             )}
           </p>
           <form onSubmit={saveWhatsAppSettings} className="ikeepay-keys-form">
@@ -1114,13 +1119,13 @@ export default function Admin() {
                   value={waForm.provider}
                   onChange={(e) => setWaForm((f) => ({ ...f, provider: e.target.value }))}
                 >
-                  <option value="">{t("— Désactivé —")}</option>
+                  <option value="">{t("â€” DÃ©sactivÃ© â€”")}</option>
                   <option value="callmebot">CallMeBot (gratuit, simple)</option>
                   <option value="cloud">WhatsApp Cloud API (Meta)</option>
                 </select>
               </label>
               <label>
-                {t("Votre numéro WhatsApp (format international)")}
+                {t("Votre numÃ©ro WhatsApp (format international)")}
                 <input
                   type="tel"
                   placeholder="237699486146"
@@ -1129,13 +1134,24 @@ export default function Admin() {
                 />
               </label>
             </div>
+            <div className="form-row">
+              <label>
+                {t("Email de notification (retraits d'activation)")}
+                <input
+                  type="email"
+                  placeholder="vous@exemple.com"
+                  value={waForm.notify_email}
+                  onChange={(e) => setWaForm((f) => ({ ...f, notify_email: e.target.value }))}
+                />
+              </label>
+            </div>
             {waForm.provider === "callmebot" && (
               <div className="form-row">
                 <label>
-                  {t("Clé API CallMeBot")}
+                  {t("ClÃ© API CallMeBot")}
                   <input
                     type="text"
-                    placeholder={waSettings?.provider === "callmebot" ? "••••••••" : "clé reçue par WhatsApp"}
+                    placeholder={waSettings?.provider === "callmebot" ? "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" : "clÃ© reÃ§ue par WhatsApp"}
                     value={waForm.callmebot_key}
                     onChange={(e) => setWaForm((f) => ({ ...f, callmebot_key: e.target.value }))}
                   />
@@ -1146,10 +1162,10 @@ export default function Admin() {
               <>
                 <div className="form-row">
                   <label>
-                    {t("Token d'accès permanent (Meta)")}
+                    {t("Token d'accÃ¨s permanent (Meta)")}
                     <input
                       type="password"
-                      placeholder={waSettings?.provider === "cloud" ? "••••••••" : "EAAG..."}
+                      placeholder={waSettings?.provider === "cloud" ? "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" : "EAAG..."}
                       value={waForm.cloud_token}
                       onChange={(e) => setWaForm((f) => ({ ...f, cloud_token: e.target.value }))}
                     />
@@ -1169,27 +1185,27 @@ export default function Admin() {
               </>
             )}
             {waMsg && (
-              <p className="hint" style={{ color: waMsg.startsWith("❌") ? "#c0392b" : "#1e7d32" }}>
+              <p className="hint" style={{ color: waMsg.startsWith("âŒ") ? "#c0392b" : "#1e7d32" }}>
                 {waMsg}
               </p>
             )}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button type="submit" className="btn btn-primary btn-small" disabled={waBusy}>
-                {waBusy ? "…" : "💾 " + t("Enregistrer")}
+                {waBusy ? "â€¦" : "ðŸ’¾ " + t("Enregistrer")}
               </button>
               <button
                 type="button"
                 className="btn btn-secondary btn-small"
-                disabled={waBusy || !waForm.provider}
+                disabled={waBusy || (!waForm.provider && !waForm.notify_email.trim())}
                 onClick={testWhatsApp}
               >
-                {waBusy ? "…" : "📨 " + t("Envoyer un test")}
+                {waBusy ? "â€¦" : "ðŸ“¨ " + t("Envoyer un test")}
               </button>
             </div>
             {waForm.provider === "callmebot" && (
               <p className="hint" style={{ marginBottom: 0 }}>
                 {t(
-                  "CallMeBot : envoyez « I allow callmebot to send me messages » au +34 644 51 95 23 depuis votre WhatsApp pour recevoir votre clé, puis collez-la ici."
+                  "CallMeBot : envoyez Â« I allow callmebot to send me messages Â» au +34 644 51 95 23 depuis votre WhatsApp pour recevoir votre clÃ©, puis collez-la ici."
                 )}
               </p>
             )}
@@ -1197,29 +1213,29 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Mode automatique : suivi des paiements en ligne (sections manuelles masquées) */}
+      {/* Mode automatique : suivi des paiements en ligne (sections manuelles masquÃ©es) */}
       {!isManual && (
         <div className="card" style={{ marginBottom: 20, padding: 18 }}>
           <h2 className="section-title" style={{ marginTop: 0 }}>
-            📊 {t("Paiements en ligne (iKeePay)")}
+            ðŸ“Š {t("Paiements en ligne (iKeePay)")}
           </h2>
           {payments === null ? (
             <div className="skeleton-block" style={{ height: 40 }}></div>
           ) : (
             <>
-              <h3>{t("Adhésions")}</h3>
+              <h3>{t("AdhÃ©sions")}</h3>
               {!(payments.memberships && payments.memberships.length) ? (
-                <p className="hint">{t("Aucune adhésion payée en ligne pour le moment.")}</p>
+                <p className="hint">{t("Aucune adhÃ©sion payÃ©e en ligne pour le moment.")}</p>
               ) : (
                 <div className="table-wrap">
                   <table className="table">
                     <thead>
                       <tr>
                         <th>{t("Utilisateur")}</th>
-                        <th>{t("Rôle")}</th>
+                        <th>{t("RÃ´le")}</th>
                         <th>{t("Parrain")}</th>
                         <th>{t("Montant")}</th>
-                        <th>{t("Référence")}</th>
+                        <th>{t("RÃ©fÃ©rence")}</th>
                         <th>{t("Statut")}</th>
                         <th>{t("Date")}</th>
                         <th>{t("Action")}</th>
@@ -1236,7 +1252,7 @@ export default function Admin() {
                             <span className="badge">{t(m.user_role || "")}</span>
                             {m.is_referred && (
                               <span className="badge badge-paid" style={{ marginLeft: 6 }}>
-                                {t("Vendeur parrainé")}
+                                {t("Vendeur parrainÃ©")}
                               </span>
                             )}
                           </td>
@@ -1245,11 +1261,11 @@ export default function Admin() {
                               <>
                                 {m.parrain_name}
                                 <div className="hint" style={{ fontSize: 12 }}>
-                                  <code>{m.parrain_reference || "—"}</code>
+                                  <code>{m.parrain_reference || "â€”"}</code>
                                 </div>
                               </>
                             ) : (
-                              "—"
+                              "â€”"
                             )}
                           </td>
                           <td>
@@ -1260,9 +1276,9 @@ export default function Admin() {
                           </td>
                           <td>
                             {m.status === "completed" ? (
-                              <span className="badge badge-paid">{t("Complété")}</span>
+                              <span className="badge badge-paid">{t("ComplÃ©tÃ©")}</span>
                             ) : m.status === "failed" ? (
-                              <span className="badge badge-pending">{t("Échoué")}</span>
+                              <span className="badge badge-pending">{t("Ã‰chouÃ©")}</span>
                             ) : (
                               <span className="badge badge-warn">{t("En attente")}</span>
                             )}
@@ -1278,7 +1294,7 @@ export default function Admin() {
                               className="btn btn-danger btn-small"
                               onClick={() => deleteMembership(m)}
                             >
-                              🗑 {t("Supprimer")}
+                              ðŸ—‘ {t("Supprimer")}
                             </button>
                           </td>
                         </tr>
@@ -1289,15 +1305,15 @@ export default function Admin() {
               )}
               <h3 style={{ marginTop: 18 }}>{t("Dons")}</h3>
               {!(payments.donations && payments.donations.length) ? (
-                <p className="hint">{t("Aucun don reçu en ligne pour le moment.")}</p>
+                <p className="hint">{t("Aucun don reÃ§u en ligne pour le moment.")}</p>
               ) : (
                 <div className="table-wrap">
                   <table className="table">
                     <thead>
                       <tr>
                         <th>{t("Montant")}</th>
-                        <th>{t("Opérateur")}</th>
-                        <th>{t("Référence")}</th>
+                        <th>{t("OpÃ©rateur")}</th>
+                        <th>{t("RÃ©fÃ©rence")}</th>
                         <th>{t("Statut")}</th>
                         <th>{t("Date")}</th>
                         <th>{t("Action")}</th>
@@ -1309,15 +1325,15 @@ export default function Admin() {
                           <td>
                             <strong>{formatMoney(d.amount)} F</strong>
                           </td>
-                          <td>{d.operator || "—"}</td>
+                          <td>{d.operator || "â€”"}</td>
                           <td>
                             <code>{d.external_reference}</code>
                           </td>
                           <td>
                             {d.status === "completed" ? (
-                              <span className="badge badge-paid">{t("Complété")}</span>
+                              <span className="badge badge-paid">{t("ComplÃ©tÃ©")}</span>
                             ) : d.status === "failed" ? (
-                              <span className="badge badge-pending">{t("Échoué")}</span>
+                              <span className="badge badge-pending">{t("Ã‰chouÃ©")}</span>
                             ) : (
                               <span className="badge badge-warn">{t("En attente")}</span>
                             )}
@@ -1334,7 +1350,7 @@ export default function Admin() {
                                 className="btn btn-small btn-outline"
                                 onClick={() => completeDonation(d)}
                               >
-                                ✅ {t("Marquer complété")}
+                                âœ… {t("Marquer complÃ©tÃ©")}
                               </button>
                             )}{" "}
                             <button
@@ -1342,7 +1358,7 @@ export default function Admin() {
                               className="btn btn-danger btn-small"
                               onClick={() => deleteDonation(d)}
                             >
-                              🗑 {t("Supprimer")}
+                              ðŸ—‘ {t("Supprimer")}
                             </button>
                           </td>
                         </tr>
@@ -1357,15 +1373,15 @@ export default function Admin() {
       )}
 
       {/* Utilisateurs : toujours visibles, quel que soit le mode (l'admin doit
-          vérifier les comptes : ouvrir/fermer, vérifier, adhésion). */}
-      <h2 className="section-title">👥 {t("Utilisateurs")}</h2>
+          vÃ©rifier les comptes : ouvrir/fermer, vÃ©rifier, adhÃ©sion). */}
+      <h2 className="section-title">ðŸ‘¥ {t("Utilisateurs")}</h2>
           <form onSubmit={searchUsers} className="hero-search" role="search">
         <span className="emoji" aria-hidden="true">
-          🔍
+          ðŸ”
         </span>
         <input
           type="search"
-          placeholder={t("Rechercher un utilisateur (nom, email ou référence)…")}
+          placeholder={t("Rechercher un utilisateur (nom, email ou rÃ©fÃ©rence)â€¦")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -1379,16 +1395,16 @@ export default function Admin() {
             <tr>
               <th>{t("Nom")}</th>
               <th>{t("Email")}</th>
-              <th>{t("Téléphone")}</th>
-              <th>{t("Rôle")}</th>
+              <th>{t("TÃ©lÃ©phone")}</th>
+              <th>{t("RÃ´le")}</th>
               <th>{t("Pays")}</th>
-              <th>{t("Référence")}</th>
+              <th>{t("RÃ©fÃ©rence")}</th>
               <th>{t("Code vendeur")}</th>
               <th>{t("Code boutique")}</th>
               <th>{t("Inscription")}</th>
-              <th>{t("Adhésion")}</th>
-              <th>{t("Vérifié")}</th>
-              <th>{t("Accès")}</th>
+              <th>{t("AdhÃ©sion")}</th>
+              <th>{t("VÃ©rifiÃ©")}</th>
+              <th>{t("AccÃ¨s")}</th>
             </tr>
           </thead>
           <tbody>
@@ -1409,19 +1425,19 @@ export default function Admin() {
                 <tr key={u.id}>
                   <td>{u.name}</td>
                   <td className="hint">{u.email}</td>
-                  <td>{u.phone || "—"}</td>
+                  <td>{u.phone || "â€”"}</td>
                   <td>
                     <span className="badge">{t(u.role)}</span>
                   </td>
-                  <td>{u.country || "—"}</td>
+                  <td>{u.country || "â€”"}</td>
                   <td>
-                    <code>{u.reference_number || "—"}</code>
+                    <code>{u.reference_number || "â€”"}</code>
                   </td>
                   <td>
-                    <code>{u.seller_code || "—"}</code>
+                    <code>{u.seller_code || "â€”"}</code>
                   </td>
                   <td>
-                    <code>{u.shop_code || "—"}</code>
+                    <code>{u.shop_code || "â€”"}</code>
                   </td>
                   <td className="hint">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="hint">
@@ -1445,7 +1461,7 @@ export default function Admin() {
                       className={`btn btn-small ${u.verified ? "btn-primary" : "btn-outline"}`}
                       onClick={() => toggleVerified(u)}
                     >
-                      {u.verified ? `✓ ${t("Vérifié")}` : t("Vérifier")}
+                      {u.verified ? `âœ“ ${t("VÃ©rifiÃ©")}` : t("VÃ©rifier")}
                     </button>
                   </td>
                   <td>
@@ -1458,7 +1474,7 @@ export default function Admin() {
                         {u.admin_approved ? t("Fermer") : t("Ouvrir")}
                       </button>
                     ) : (
-                      <span className="hint">—</span>
+                      <span className="hint">â€”</span>
                     )}
                   </td>
                 </tr>
@@ -1469,17 +1485,17 @@ export default function Admin() {
       </div>
 
       {/* Parrainages : actions manuelles de l'admin (mode manuel). En automatique,
-          les adhésions parrainées se confirment via le webhook iKeePay. */}
+          les adhÃ©sions parrainÃ©es se confirment via le webhook iKeePay. */}
       {isManual && (
         <>
-      <h2 className="section-title">🤝 {t("Parrainages (vendeurs / créateurs)")}</h2>
+      <h2 className="section-title">ðŸ¤ {t("Parrainages (vendeurs / crÃ©ateurs)")}</h2>
       <form onSubmit={searchReferrals} className="hero-search" role="search">
         <span className="emoji" aria-hidden="true">
-          🔍
+          ðŸ”
         </span>
         <input
           type="search"
-          placeholder={t("Rechercher par numéro de référence (parrainé ou parrain)…")}
+          placeholder={t("Rechercher par numÃ©ro de rÃ©fÃ©rence (parrainÃ© ou parrain)â€¦")}
           value={refSearch}
           onChange={(e) => setRefSearch(e.target.value)}
         />
@@ -1492,14 +1508,14 @@ export default function Admin() {
         <table className="table">
           <thead>
             <tr>
-              <th>{t("Parrainé")}</th>
-              <th>{t("Rôle")}</th>
-              <th>{t("Référence parrainé")}</th>
-              <th>{t("Téléphone parrainé")}</th>
-              <th>{t("Adhésion")}</th>
+              <th>{t("ParrainÃ©")}</th>
+              <th>{t("RÃ´le")}</th>
+              <th>{t("RÃ©fÃ©rence parrainÃ©")}</th>
+              <th>{t("TÃ©lÃ©phone parrainÃ©")}</th>
+              <th>{t("AdhÃ©sion")}</th>
               <th>{t("Son parrain")}</th>
-              <th>{t("Référence parrain")}</th>
-              <th>{t("Téléphone parrain")}</th>
+              <th>{t("RÃ©fÃ©rence parrain")}</th>
+              <th>{t("TÃ©lÃ©phone parrain")}</th>
             </tr>
           </thead>
           <tbody>
@@ -1523,26 +1539,26 @@ export default function Admin() {
                     <span className="badge">{t(r.parraine.role)}</span>
                   </td>
                   <td>
-                    <code>{r.parraine.reference_number || "—"}</code>
+                    <code>{r.parraine.reference_number || "â€”"}</code>
                   </td>
-                  <td>{r.parraine.phone || "—"}</td>
+                  <td>{r.parraine.phone || "â€”"}</td>
                   <td>
                     {r.parraine.membership_paid ? (
-                      <span className="badge badge-paid">{t("Adhésion payée")}</span>
+                      <span className="badge badge-paid">{t("AdhÃ©sion payÃ©e")}</span>
                     ) : (
                       <button
                         className="btn btn-small btn-primary"
                         onClick={() => markReferralPaid(r)}
                       >
-                        ✓ {t("Payé")}
+                        âœ“ {t("PayÃ©")}
                       </button>
                     )}
                   </td>
                   <td>{r.parrain.name}</td>
                   <td>
-                    <code>{r.parrain.reference_number || "—"}</code>
+                    <code>{r.parrain.reference_number || "â€”"}</code>
                   </td>
-                  <td>{r.parrain.phone || "—"}</td>
+                  <td>{r.parrain.phone || "â€”"}</td>
                 </tr>
               ))
             )}
@@ -1552,18 +1568,18 @@ export default function Admin() {
         </>
       )}
 
-      {/* Retraits d'activation : payés manuellement par l'admin dans les deux modes */}
+      {/* Retraits d'activation : payÃ©s manuellement par l'admin dans les deux modes */}
       {withdrawals && withdrawals.length > 0 && (
         <>
-          <h2 className="section-title">💸 {t("Demandes de retrait (commissions d'activation)")}</h2>
+          <h2 className="section-title">ðŸ’¸ {t("Demandes de retrait (commissions d'activation)")}</h2>
           {wdError && <p className="error">{wdError}</p>}
           <div className="table-wrap">
             <table className="table">
           <thead>
             <tr>
               <th>{t("Parrain")}</th>
-              <th>{t("Référence parrain")}</th>
-              <th>{t("Parrainés (adhésion confirmée)")}</th>
+              <th>{t("RÃ©fÃ©rence parrain")}</th>
+              <th>{t("ParrainÃ©s (adhÃ©sion confirmÃ©e)")}</th>
               <th>{t("Montant")}</th>
               <th>{t("Moyen de paiement parrain")}</th>
               <th>{t("Email")}</th>
@@ -1591,17 +1607,17 @@ export default function Admin() {
                 <tr key={w.id}>
                   <td>{w.seller.name}</td>
                   <td>
-                    <code>{w.seller.reference_number || "—"}</code>
+                    <code>{w.seller.reference_number || "â€”"}</code>
                   </td>
                   <td>
                     <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
                       {w.items.map((it) => (
                         <li key={it.member_id}>
-                          {it.name} — <code>{it.reference_number || "—"}</code>{" "}
+                          {it.name} â€” <code>{it.reference_number || "â€”"}</code>{" "}
                           {it.membership_paid ? (
-                            <span className="badge badge-paid">{t("Payée")}</span>
+                            <span className="badge badge-paid">{t("PayÃ©e")}</span>
                           ) : (
-                            <span className="badge badge-pending">{t("Non payée")}</span>
+                            <span className="badge badge-pending">{t("Non payÃ©e")}</span>
                           )}
                         </li>
                       ))}
@@ -1623,31 +1639,31 @@ export default function Admin() {
                             {(w.seller.paymentMethods.wallets || []).map((wlt, i) => (
                               <li key={i}>
                                 <div>
-                                  <strong>{wlt.name || t("Opérateur")}</strong>
-                                  {wlt.primary ? " ⭐" : ""}
+                                  <strong>{wlt.name || t("OpÃ©rateur")}</strong>
+                                  {wlt.primary ? " â­" : ""}
                                 </div>
-                                <code>{wlt.value || "—"}</code>
+                                <code>{wlt.value || "â€”"}</code>
                               </li>
                             ))}
                           </ul>
                         ) : (
-                          <span className="hint">{t("Aucun moyen de paiement configuré")}</span>
+                          <span className="hint">{t("Aucun moyen de paiement configurÃ©")}</span>
                         )}
                       </>
                     ) : (
-                      <span className="hint">{t("Aucun moyen de paiement configuré")}</span>
+                      <span className="hint">{t("Aucun moyen de paiement configurÃ©")}</span>
                     )}
                   </td>
-                  <td className="hint">{w.email || "—"}</td>
+                  <td className="hint">{w.email || "â€”"}</td>
                   <td className="hint" style={{ maxWidth: 200 }}>
-                    {w.comment || "—"}
+                    {w.comment || "â€”"}
                   </td>
                   <td className="hint">
-                    {w.created_at ? new Date(w.created_at).toLocaleDateString() : "—"}
+                    {w.created_at ? new Date(w.created_at).toLocaleDateString() : "â€”"}
                   </td>
                   <td>
                     {w.status === "paid" ? (
-                      <span className="badge badge-paid">{t("Payé")}</span>
+                      <span className="badge badge-paid">{t("PayÃ©")}</span>
                     ) : (
                       <span className="badge badge-warn">{t("En attente")}</span>
                     )}
@@ -1659,7 +1675,7 @@ export default function Admin() {
                         className="btn btn-small btn-primary"
                         onClick={() => payWithdrawal(w)}
                       >
-                        💰 {t("Payer")}
+                        ðŸ’° {t("Payer")}
                       </button>
                     )}
                   </td>
@@ -1705,7 +1721,7 @@ export default function Admin() {
                   <td>{p.name}</td>
                   <td>
                     {p.shop_name}
-                    {p.shop_verified && <span className="badge badge-verified">✓</span>}
+                    {p.shop_verified && <span className="badge badge-verified">âœ“</span>}
                   </td>
                   <td>
                     {formatMoney(p.price)} {countrySymbol("")}
