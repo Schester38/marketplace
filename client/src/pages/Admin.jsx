@@ -75,6 +75,16 @@ export default function Admin() {
   const [wdError, setWdError] = useState("");
   // Système de paiement (manuel ↔ automatique)
   const [paySettings, setPaySettings] = useState(null);
+  const [waSettings, setWaSettings] = useState(null);
+  const [waForm, setWaForm] = useState({
+    provider: "",
+    admin_phone: "",
+    callmebot_key: "",
+    cloud_token: "",
+    cloud_phone_id: "",
+  });
+  const [waBusy, setWaBusy] = useState(false);
+  const [waMsg, setWaMsg] = useState("");
   const [payPublicKey, setPayPublicKey] = useState("");
   const [paySecretKey, setPaySecretKey] = useState("");
   const [payments, setPayments] = useState(null);
@@ -137,6 +147,17 @@ export default function Admin() {
           setPaySettings(d);
           setPayPublicKey(d?.ikeepay?.public_key || "");
           setPaySecretKey("");
+        })
+        .catch(() => {});
+      api
+        .adminWhatsAppSettings()
+        .then((d) => {
+          setWaSettings(d || {});
+          setWaForm((f) => ({
+            ...f,
+            provider: d?.provider || "",
+            admin_phone: d?.admin_phone_masked || "",
+          }));
         })
         .catch(() => {});
       api
@@ -309,6 +330,54 @@ export default function Admin() {
       setPayError(err.message);
     } finally {
       setPayBusy(false);
+    }
+  };
+
+  // ─── WhatsApp : sauvegarde des réglages + test d'envoi ────────────────────
+  // Le numéro masqué renvoyé par le serveur (••••) n'est jamais renvoyé tel
+  // quel : on ne modifie le numéro que si l'admin en saisit un nouveau.
+  const buildWhatsAppPayload = () => {
+    const p = { provider: waForm.provider };
+    const phone = waForm.admin_phone.trim();
+    if (phone && !phone.includes("••••")) p.admin_phone = phone;
+    if (waForm.callmebot_key.trim()) p.callmebot_key = waForm.callmebot_key.trim();
+    if (waForm.cloud_token.trim()) p.cloud_token = waForm.cloud_token.trim();
+    if (waForm.cloud_phone_id.trim()) p.cloud_phone_id = waForm.cloud_phone_id.trim();
+    return p;
+  };
+
+  const saveWhatsAppSettings = async (e) => {
+    e.preventDefault();
+    setWaMsg("");
+    setWaBusy(true);
+    try {
+      const d = await api.adminUpdateWhatsAppSettings(buildWhatsAppPayload());
+      setWaSettings(d);
+      setWaForm((f) => ({ ...f, callmebot_key: "", cloud_token: "", cloud_phone_id: "" }));
+      setWaMsg(
+        d?.configured
+          ? t("Notifications WhatsApp configurées ✅")
+          : t("Réglages enregistrés — WhatsApp inactif tant que le fournisseur est incomplet.")
+      );
+    } catch (err) {
+      setWaMsg("❌ " + err.message);
+    } finally {
+      setWaBusy(false);
+    }
+  };
+
+  const testWhatsApp = async () => {
+    setWaMsg("");
+    setWaBusy(true);
+    try {
+      const d = await api.adminTestWhatsApp();
+      setWaMsg(
+        d?.ok ? t("Message de test envoyé sur votre WhatsApp ✅") : t("Test échoué.")
+      );
+    } catch (err) {
+      setWaMsg("❌ " + err.message);
+    } finally {
+      setWaBusy(false);
     }
   };
 
@@ -1028,6 +1097,104 @@ export default function Admin() {
             </p>
           </div>
         ) : null}
+
+        {/* Notifications WhatsApp automatiques (demandes de retrait d'activation) */}
+        <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid #eee" }}>
+          <h3 style={{ marginTop: 0 }}>📱 {t("Notifications WhatsApp (retraits d'activation)")}</h3>
+          <p className="hint" style={{ marginTop: 0 }}>
+            {t(
+              "Recevez automatiquement sur WhatsApp chaque demande de retrait envoyée par un vendeur parrain."
+            )}
+          </p>
+          <form onSubmit={saveWhatsAppSettings} className="ikeepay-keys-form">
+            <div className="form-row">
+              <label>
+                {t("Fournisseur")}
+                <select
+                  value={waForm.provider}
+                  onChange={(e) => setWaForm((f) => ({ ...f, provider: e.target.value }))}
+                >
+                  <option value="">{t("— Désactivé —")}</option>
+                  <option value="callmebot">CallMeBot (gratuit, simple)</option>
+                  <option value="cloud">WhatsApp Cloud API (Meta)</option>
+                </select>
+              </label>
+              <label>
+                {t("Votre numéro WhatsApp (format international)")}
+                <input
+                  type="tel"
+                  placeholder="237699486146"
+                  value={waForm.admin_phone}
+                  onChange={(e) => setWaForm((f) => ({ ...f, admin_phone: e.target.value }))}
+                />
+              </label>
+            </div>
+            {waForm.provider === "callmebot" && (
+              <div className="form-row">
+                <label>
+                  {t("Clé API CallMeBot")}
+                  <input
+                    type="text"
+                    placeholder={waSettings?.provider === "callmebot" ? "••••••••" : "clé reçue par WhatsApp"}
+                    value={waForm.callmebot_key}
+                    onChange={(e) => setWaForm((f) => ({ ...f, callmebot_key: e.target.value }))}
+                  />
+                </label>
+              </div>
+            )}
+            {waForm.provider === "cloud" && (
+              <>
+                <div className="form-row">
+                  <label>
+                    {t("Token d'accès permanent (Meta)")}
+                    <input
+                      type="password"
+                      placeholder={waSettings?.provider === "cloud" ? "••••••••" : "EAAG..."}
+                      value={waForm.cloud_token}
+                      onChange={(e) => setWaForm((f) => ({ ...f, cloud_token: e.target.value }))}
+                    />
+                  </label>
+                </div>
+                <div className="form-row">
+                  <label>
+                    {t("Phone Number ID (Meta)")}
+                    <input
+                      type="text"
+                      placeholder="1234567890"
+                      value={waForm.cloud_phone_id}
+                      onChange={(e) => setWaForm((f) => ({ ...f, cloud_phone_id: e.target.value }))}
+                    />
+                  </label>
+                </div>
+              </>
+            )}
+            {waMsg && (
+              <p className="hint" style={{ color: waMsg.startsWith("❌") ? "#c0392b" : "#1e7d32" }}>
+                {waMsg}
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button type="submit" className="btn btn-primary btn-small" disabled={waBusy}>
+                {waBusy ? "…" : "💾 " + t("Enregistrer")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                disabled={waBusy || !waForm.provider}
+                onClick={testWhatsApp}
+              >
+                {waBusy ? "…" : "📨 " + t("Envoyer un test")}
+              </button>
+            </div>
+            {waForm.provider === "callmebot" && (
+              <p className="hint" style={{ marginBottom: 0 }}>
+                {t(
+                  "CallMeBot : envoyez « I allow callmebot to send me messages » au +34 644 51 95 23 depuis votre WhatsApp pour recevoir votre clé, puis collez-la ici."
+                )}
+              </p>
+            )}
+          </form>
+        </div>
       </div>
 
       {/* Mode automatique : suivi des paiements en ligne (sections manuelles masquées) */}

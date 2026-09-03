@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { q, withTransaction } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
+import { sendWhatsAppSafe } from "../services/whatsapp.js";
 
 const router = Router();
 
@@ -163,6 +164,19 @@ router.post(
     await q(
       `INSERT INTO notifications (user_id, type, amount) VALUES ($1, 'activation_withdrawal_requested', $2)`,
       [req.user.id, value]
+    );
+    // Notification WhatsApp de l'admin (non bloquante : ne peut jamais faire
+    // échouer la demande, et répond avant l'envoi réel).
+    const parrainName = req.user.name || "Vendeur";
+    const parrainRef = req.user.reference_number || "—";
+    sendWhatsAppSafe(
+      `🔔 Mboppi — Nouvelle demande de retrait d'activation\n` +
+        `👤 Parrain : ${parrainName} (${parrainRef})\n` +
+        `💰 Montant : ${value.toLocaleString("fr-FR")} F\n` +
+        `👥 Parrainés : ${count}\n` +
+        `📧 Email : ${cleanEmail}\n` +
+        (cleanComment ? `💬 Commentaire : ${cleanComment}\n` : "") +
+        `➡️ Panneau Admin → Retraits d'activation`
     );
     res.json({ ok: true, id: created.id, amount: value });
   })

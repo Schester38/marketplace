@@ -16,6 +16,11 @@ import {
   getWebhookSecret,
   purgePendingPayments,
 } from "../services/ikeepay.js";
+import {
+  getPublicWhatsAppSettings,
+  setWhatsAppSettings,
+  sendWhatsApp,
+} from "../services/whatsapp.js";
 
 const router = Router();
 
@@ -913,6 +918,48 @@ router.post(
 );
 
 // Liste des paiements en ligne (adhésions + dons) pour le suivi admin.
+// ─── Notifications WhatsApp de l'admin ───────────────────────────────────────
+// Reglages de l'envoi WhatsApp automatique (demandes de retrait d'activation).
+router.get(
+  "/settings/whatsapp",
+  ah(async (req, res) => {
+    res.json(await getPublicWhatsAppSettings());
+  })
+);
+
+router.post(
+  "/settings/whatsapp",
+  ah(async (req, res) => {
+    const b = req.body || {};
+    const provider = ["", "callmebot", "cloud"].includes(b.provider) ? b.provider : "";
+    await setWhatsAppSettings({
+      provider,
+      adminPhone: b.admin_phone !== undefined ? String(b.admin_phone).trim() : undefined,
+      callmebotKey: b.callmebot_key !== undefined ? String(b.callmebot_key).trim() : undefined,
+      cloudToken: b.cloud_token !== undefined ? String(b.cloud_token).trim() : undefined,
+      cloudPhoneId:
+        b.cloud_phone_id !== undefined ? String(b.cloud_phone_id).trim() : undefined,
+    });
+    await logAudit(req.user.id, "admin.whatsapp_settings", `provider=${provider}`, req.ip);
+    res.json({ ok: true, ...(await getPublicWhatsAppSettings()) });
+  })
+);
+
+// Test d'envoi : verifie la configuration sans attendre une vraie demande.
+router.post(
+  "/settings/whatsapp/test",
+  ah(async (req, res) => {
+    try {
+      const provider = await sendWhatsApp(
+        "Test de notification WhatsApp Mboppi : si vous lisez ce message, les demandes de retrait d'activation vous arriveront ici."
+      );
+      res.json({ ok: true, provider });
+    } catch (err) {
+      res.status(400).json({ ok: false, error: err.message });
+    }
+  })
+);
+
 router.get(
   "/payments",
   ah(async (req, res) => {
