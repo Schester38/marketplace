@@ -20,6 +20,7 @@ import {
   getPublicWhatsAppSettings,
   setWhatsAppSettings,
   sendWhatsApp,
+  getAdminNotifyEmail,
 } from "../services/whatsapp.js";
 
 const router = Router();
@@ -939,6 +940,7 @@ router.post(
       cloudToken: b.cloud_token !== undefined ? String(b.cloud_token).trim() : undefined,
       cloudPhoneId:
         b.cloud_phone_id !== undefined ? String(b.cloud_phone_id).trim() : undefined,
+      notifyEmail: b.notify_email !== undefined ? String(b.notify_email).trim() : undefined,
     });
     await logAudit(req.user.id, "admin.whatsapp_settings", `provider=${provider}`, req.ip);
     res.json({ ok: true, ...(await getPublicWhatsAppSettings()) });
@@ -946,17 +948,38 @@ router.post(
 );
 
 // Test d'envoi : verifie la configuration sans attendre une vraie demande.
+// Teste WhatsApp (si configuré) ET l'email de notification (si renseigné).
 router.post(
   "/settings/whatsapp/test",
   ah(async (req, res) => {
+    const out = { ok: false, whatsapp: null, email: null };
     try {
-      const provider = await sendWhatsApp(
-        "Test de notification WhatsApp Mboppi : si vous lisez ce message, les demandes de retrait d'activation vous arriveront ici."
-      );
-      res.json({ ok: true, provider });
+      out.whatsapp = { ok: true, provider: await sendWhatsApp(
+        "Test de notification Mboppi : si vous lisez ce message, les demandes de retrait d'activation vous arriveront ici."
+      ) };
+      out.ok = true;
     } catch (err) {
-      res.status(400).json({ ok: false, error: err.message });
+      out.whatsapp = { ok: false, error: err.message };
     }
+    // Email : uniquement si une adresse de notification est renseignée.
+    const notifyEmail = await getAdminNotifyEmail();
+    if (notifyEmail) {
+      try {
+        const { sendMail } = await import("../mailer.js");
+        await sendMail({
+          to: notifyEmail,
+          subject: "Mboppi — Test de notification (retraits d'activation)",
+          text:
+            "Test de notification Mboppi : si vous lisez cet email, les demandes de retrait d'activation vous arriveront ici.",
+        });
+        out.email = { ok: true, to: notifyEmail };
+        out.ok = true;
+      } catch (err) {
+        out.email = { ok: false, error: err.message };
+      }
+    }
+    if (!out.ok) return res.status(400).json({ ok: false, ...out });
+    res.json(out);
   })
 );
 

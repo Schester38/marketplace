@@ -178,6 +178,27 @@ router.post(
         (cleanComment ? `💬 Commentaire : ${cleanComment}\n` : "") +
         `➡️ Panneau Admin → Retraits d'activation`
     );
+    // Notification email de l'admin (non bloquante, parallèle à WhatsApp).
+    import("../services/whatsapp.js")
+      .then((m) => m.getAdminNotifyEmail())
+      .then((notifyEmail) => {
+        if (!notifyEmail) return;
+        return import("../mailer.js").then(({ sendMail }) =>
+          sendMail({
+            to: notifyEmail,
+            subject: `Mboppi — Demande de retrait d'activation : ${value.toLocaleString("fr-FR")} F`,
+            text:
+              `Nouvelle demande de retrait d'activation\n\n` +
+              `Parrain : ${parrainName} (${parrainRef})\n` +
+              `Montant : ${value.toLocaleString("fr-FR")} F\n` +
+              `Parrainés payés : ${count}\n` +
+              `Email du parrain : ${cleanEmail}\n` +
+              (cleanComment ? `Commentaire : ${cleanComment}\n` : "") +
+              `\nPanneau Admin → Retraits d'activation pour marquer la demande « payée ».`,
+          })
+        );
+      })
+      .catch((err) => console.error("[withdrawal] notification email impossible :", err.message));
     res.json({ ok: true, id: created.id, amount: value });
   })
 );

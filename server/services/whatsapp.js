@@ -21,14 +21,21 @@ async function getSetting(key, fallback = "") {
 
 // Configuration complète (usage serveur uniquement — contient les secrets).
 export async function getWhatsAppConfig() {
-  const [provider, adminPhone, callmebotKey, cloudToken, cloudPhoneId] = await Promise.all([
-    getSetting("whatsapp_provider"),
-    getSetting("whatsapp_admin_phone"),
-    getSetting("whatsapp_callmebot_key"),
-    getSetting("whatsapp_cloud_token"),
-    getSetting("whatsapp_cloud_phone_id"),
-  ]);
-  return { provider, adminPhone, callmebotKey, cloudToken, cloudPhoneId };
+  const [provider, adminPhone, callmebotKey, cloudToken, cloudPhoneId, notifyEmail] =
+    await Promise.all([
+      getSetting("whatsapp_provider"),
+      getSetting("whatsapp_admin_phone"),
+      getSetting("whatsapp_callmebot_key"),
+      getSetting("whatsapp_cloud_token"),
+      getSetting("whatsapp_cloud_phone_id"),
+      getSetting("notify_email"),
+    ]);
+  return { provider, adminPhone, callmebotKey, cloudToken, cloudPhoneId, notifyEmail };
+}
+
+// Email admin de notification (utilisé par le branchement « retraits »).
+export async function getAdminNotifyEmail() {
+  return (await getWhatsAppConfig()).notifyEmail;
 }
 
 // Config « publique » pour le panneau admin : booléens de configuration +
@@ -43,16 +50,25 @@ export async function getPublicWhatsAppSettings() {
       (c.provider === "callmebot" && Boolean(c.adminPhone && c.callmebotKey)) ||
       (c.provider === "cloud" && Boolean(c.cloudToken && c.cloudPhoneId)),
     admin_phone_masked: mask(c.adminPhone),
+    notify_email: c.notifyEmail || "",
   };
 }
 
-export async function setWhatsAppSettings({ provider, adminPhone, callmebotKey, cloudToken, cloudPhoneId }) {
+export async function setWhatsAppSettings({
+  provider,
+  adminPhone,
+  callmebotKey,
+  cloudToken,
+  cloudPhoneId,
+  notifyEmail,
+}) {
   const map = {
     whatsapp_provider: provider || "",
     whatsapp_admin_phone: adminPhone || "",
     whatsapp_callmebot_key: callmebotKey || "",
     whatsapp_cloud_token: cloudToken || "",
     whatsapp_cloud_phone_id: cloudPhoneId || "",
+    notify_email: notifyEmail || "",
   };
   for (const [key, value] of Object.entries(map)) {
     await q(
