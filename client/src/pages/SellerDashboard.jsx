@@ -53,6 +53,8 @@ export default function SellerDashboard() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawForm, setWithdrawForm] = useState({ amount: "", comment: "", email: "" });
   const [withdrawDone, setWithdrawDone] = useState(null);
+  const [pmMissing, setPmMissing] = useState(false);
+  const [pmChecking, setPmChecking] = useState(false);
   const [sellerCode, setSellerCode] = useState(null);
   const [codeLoading, setCodeLoading] = useState(false);
   const [error, setError] = useState("");
@@ -224,8 +226,26 @@ export default function SellerDashboard() {
     }
   };
 
-  const openWithdraw = () => {
+  const openWithdraw = async () => {
     setError("");
+    // Le parrain doit avoir configuré ses moyens de paiement : l'admin en a
+    // besoin pour lui transférer ses fonds. On vérifie AVANT d'ouvrir le
+    // formulaire — sinon on affiche un message avec un lien de configuration.
+    setPmChecking(true);
+    let configured = true;
+    try {
+      const d = await api.getPaymentMethods();
+      const wallets = d && d.methods && Array.isArray(d.methods.wallets) ? d.methods.wallets : [];
+      configured = wallets.length > 0;
+    } catch {
+      /* en cas d'erreur de chargement, on laisse le serveur arbitrer à l'envoi */
+      configured = true;
+    }
+    setPmChecking(false);
+    if (!configured) {
+      setPmMissing(true);
+      return;
+    }
     setWithdrawForm({
       amount: String(actWithdrawal.available || ""),
       comment: "",
@@ -248,7 +268,13 @@ export default function SellerDashboard() {
       setWithdrawDone({ amount: d.amount || Number(withdrawForm.amount) });
       load();
     } catch (err) {
-      setError(err.message);
+      // Le serveur refuse aussi si les moyens de paiement manquent (double garde).
+      if (err && err.code === "PAYMENT_METHODS_REQUIRED") {
+        setWithdrawOpen(false);
+        setPmMissing(true);
+      } else {
+        setError(err.message);
+      }
     }
   };
 
@@ -870,10 +896,13 @@ export default function SellerDashboard() {
               </div>
               <button
                 className="btn btn-primary"
-                disabled={actWithdrawal.available < (actWithdrawal.min_amount || 5000)}
+                disabled={
+                  pmChecking ||
+                  actWithdrawal.available < (actWithdrawal.min_amount || 5000)
+                }
                 onClick={openWithdraw}
               >
-                💰 {t("Retirer")}
+                {pmChecking ? "⏳ …" : "💰 " + t("Retirer")}
               </button>
             </div>
           </div>
@@ -927,6 +956,36 @@ export default function SellerDashboard() {
           </div>
         </section>
       ) : null}
+
+      {pmMissing && (
+        <div className="modal-overlay" onClick={() => setPmMissing(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>💳 {t("Moyens de paiement requis")}</h3>
+              <button className="drawer-close" onClick={() => setPmMissing(false)}>
+                ✕
+              </button>
+            </div>
+            <p style={{ lineHeight: 1.6 }}>
+              {t(
+                "Avant de retirer vos commissions d'activation, vous devez configurer vos moyens de paiement : l'administration en a besoin pour vous transférer vos fonds."
+              )}
+            </p>
+            <div className="row2" style={{ justifyContent: "space-between", marginTop: 16 }}>
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setPmMissing(false)}
+              >
+                {t("Plus tard")}
+              </button>
+              <Link to="/seller/paiements" className="btn btn-primary">
+                💳 {t("Configurer mes moyens de paiement")}
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {withdrawOpen && (
         <div className="modal-overlay" onClick={() => setWithdrawOpen(false)}>

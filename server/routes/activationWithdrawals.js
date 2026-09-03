@@ -120,6 +120,24 @@ router.post(
     if (!Number.isFinite(value) || value <= 0) {
       return res.status(400).json({ error: "Montant invalide." });
     }
+    // Le parrain doit avoir configuré ses moyens de paiement : l'admin en a
+    // besoin pour lui transférer les fonds (l'email de notification les inclut).
+    const pm = (
+      await q(
+        `SELECT wallets FROM seller_payment_methods WHERE seller_id = $1`,
+        [req.user.id]
+      )
+    )[0];
+    const hasWallets = Boolean(
+      pm && Array.isArray(pm.wallets) && pm.wallets.length > 0
+    );
+    if (!hasWallets) {
+      return res.status(400).json({
+        error:
+          "Configurez d'abord vos moyens de paiement (💳 Mes moyens de paiement) : l'administration en a besoin pour vous transférer vos fonds.",
+        code: "PAYMENT_METHODS_REQUIRED",
+      });
+    }
     const members = await lockableMembers(req.user.id);
     const maxAvailable = members.length * UNIT_COMMISSION;
     if (maxAvailable < 5000) {
@@ -169,6 +187,28 @@ router.post(
     // échouer la demande, et répond avant l'envoi réel).
     const parrainName = req.user.name || "Vendeur";
     const parrainRef = req.user.reference_number || "—";
+    // Moyens de paiement enregistrés par le parrain (transfert direct pour
+    // payer le retrait) — mêmes données que la liste admin.
+    const pmRow = (
+      await q(
+        `SELECT full_name, wallets FROM seller_payment_methods WHERE seller_id = $1`,
+        [req.user.id]
+      )
+    )[0];
+    const wallets = pmRow && Array.isArray(pmRow.wallets) ? pmRow.wallets : [];
+    const pmLines = wallets.length
+      ? `\nMoyens de paiement du parrain :\n` +
+        `Titulaire : ${pmRow.full_name || "—"}\n` +
+        wallets
+          .map(
+            (w, i) =>
+              `${i + 1}. ${w && w.name ? w.name : "Wallet"} : ${
+                w && w.value ? w.value : "—"
+              }${w && w.primary ? " (principal)" : ""}`
+          )
+          .join("\n") +
+        `\n`
+      : `\nMoyens de paiement du parrain : aucun enregistré\n`;
     sendWhatsAppSafe(
       `🔔 Mboppi — Nouvelle demande de retrait d'activation\n` +
         `👤 Parrain : ${parrainName} (${parrainRef})\n` +
@@ -176,6 +216,7 @@ router.post(
         `👥 Parrainés : ${count}\n` +
         `📧 Email : ${cleanEmail}\n` +
         (cleanComment ? `💬 Commentaire : ${cleanComment}\n` : "") +
+        pmLines +
         `➡️ Panneau Admin → Retraits d'activation`
     );
     // Notification email de l'admin (non bloquante, parallèle à WhatsApp).
@@ -194,6 +235,7 @@ router.post(
               `Parrainés payés : ${count}\n` +
               `Email du parrain : ${cleanEmail}\n` +
               (cleanComment ? `Commentaire : ${cleanComment}\n` : "") +
+              pmLines +
               `\nPanneau Admin → Retraits d'activation pour marquer la demande « payée ».`,
           })
         );
