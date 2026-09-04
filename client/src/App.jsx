@@ -20,7 +20,7 @@ import Home from "./pages/Home.jsx";
 import CityPage from "./pages/CityPage.jsx";
 import { LangProvider, useLang } from "./i18n.jsx";
 import { StoreProvider } from "./store.jsx";
-import { membershipActive, setMembershipGate } from "./auth-access.js";
+import { membershipActive, setMembershipGate, getMembershipGate } from "./auth-access.js";
 
 const lazyRetry = (importer) =>
   React.lazy(async () => {
@@ -186,16 +186,42 @@ export function AuthProvider({ children }) {
 
   const userIdRef = useRef(user?.id);
 
-  // Chargement de la bascule « adhésion obligatoire » (membership_gate) :
+  // Synchronisation de la bascule « adhésion obligatoire » (membership_gate) :
   // "seller" (défaut) = boutiques et créateurs gratuits ; "all" = les trois
-  // rôles sont soumis à l'adhésion. Le serveur reste l'autorité (402).
+  // rôles sont soumis à l'adhésion. Polling 30 s + retour sur l'onglet :
+  // quand l'admin bascule le blocage, l'app des utilisateurs ouverts est
+  // re-rendue immédiatement (state local) → RoleOnly ré-évalue
+  // membershipActive et redirige vers /adhesion SANS recharger la page.
+  // Le serveur reste l'autorité (402 MEMBERSHIP_REQUIRED).
+  const [membershipGateState, setMembershipGateState] = useState("seller");
   useEffect(() => {
-    api
-      .paymentSettings()
-      .then((d) => {
-        if (d && d.membership_gate) setMembershipGate(d.membership_gate);
-      })
-      .catch(() => {});
+    let cancelled = false;
+    const sync = async () => {
+      try {
+        const d = await api.paymentSettings();
+        if (cancelled || !d) return;
+        const next = d.membership_gate === "all" ? "all" : "seller";
+        if (getMembershipGate() !== next) {
+          setMembershipGate(next);
+          // Le state force le re-render de tout l'arbre → les routes
+          // protégées ré-évaluent l'accès au cycle suivant.
+          setMembershipGateState(next);
+        }
+      } catch {
+        /* réseau indisponible : nouvelle tentative au prochain cycle */
+      }
+    };
+    sync();
+    const id = setInterval(sync, 30000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") sync();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   // Accès fermé par l'admin (bouton « Fermer ») ou adhésion expirée : une API
@@ -267,7 +293,9 @@ export function AuthProvider({ children }) {
   }, [user?.id]);
 
   // Si l'accès vient d'être ouvert pendant que l'utilisateur est sur la page
-  // d'adhésion, le renvoyer automatiquement vers son espace.
+  // d'adhésion, le renvoyer automatiquement vers son espace. Dépend aussi de
+  // la bascule membership_gate : si l'admin libère boutique/créateur pendant
+  // que l'utilisateur attend ici, la redirection part au cycle de polling.
   useEffect(() => {
     if (!user || window.location.pathname !== "/adhesion") return;
     if (!membershipActive(user)) return;
@@ -280,7 +308,7 @@ export function AuthProvider({ children }) {
             ? "/creator"
             : "/";
     navigate(home, { replace: true });
-  }, [user, navigate]);
+  }, [user, navigate, membershipGateState]);
 
   useEffect(() => {
     if (!user) return;
