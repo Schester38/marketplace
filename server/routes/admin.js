@@ -952,6 +952,8 @@ router.post(
       cloudPhoneId:
         b.cloud_phone_id !== undefined ? String(b.cloud_phone_id).trim() : undefined,
       notifyEmail: b.notify_email !== undefined ? String(b.notify_email).trim() : undefined,
+      cloudTemplate:
+        b.cloud_template !== undefined ? String(b.cloud_template).trim() : undefined,
     });
     await logAudit(req.user.id, "admin.whatsapp_settings", `provider=${provider}`, req.ip);
     res.json({ ok: true, ...(await getPublicWhatsAppSettings()) });
@@ -966,7 +968,19 @@ router.post(
     const out = { ok: false, whatsapp: null, email: null };
     try {
       out.whatsapp = { ok: true, provider: await sendWhatsApp(
-        "Test de notification Mboppi : si vous lisez ce message, les demandes de retrait d'activation vous arriveront ici."
+        "Test de notification Mboppi : si vous lisez ce message, les demandes de retrait d'activation vous arriveront ici.",
+        // Si un template Cloud est configuré, le test utilise ses 9 variables.
+        [
+          "Test (MBP-000000)",
+          "1 500 F",
+          "1",
+          "admin@mboppi.com",
+          "—",
+          "Mboppi",
+          "Orange Money : 690000000 (principal)",
+          "—",
+          "—",
+        ]
       ) };
       out.ok = true;
     } catch (err) {

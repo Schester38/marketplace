@@ -276,6 +276,28 @@ async function ensureUniqueMemberIndex() {
           .join("\n") +
         `\n`
       : `\nMoyens de paiement du parrain : aucun enregistré\n`;
+    // Paramètres du template Cloud API : mêmes informations que l'email, portées
+    // par des variables courtes pour respecter les limites Meta (< 128 car.) :
+    //   {{1}} parrain · {{2}} montant · {{3}} parrainés · {{4}} email ·
+    //   {{5}} commentaire · {{6}} titulaire · {{7}} wallet 1 · {{8}} wallet 2 ·
+    //   {{9}} wallet 3
+    const walletLines = wallets.map(
+      (w, i) =>
+        `${w && w.name ? w.name : "Wallet"} : ${w && w.value ? w.value : "—"}${
+          w && w.primary ? " (principal)" : ""
+        }`
+    );
+    const tmplParams = [
+      `${parrainName} (${parrainRef})`,
+      `${value.toLocaleString("fr-FR")} F`,
+      `${count}`,
+      cleanEmail,
+      cleanComment || "—",
+      (pmRow && pmRow.full_name) || "—",
+      walletLines[0] || "—",
+      walletLines[1] || "—",
+      walletLines[2] || "—",
+    ];
     sendWhatsAppSafe(
       `🔔 Mboppi — Nouvelle demande de retrait d'activation\n` +
         `👤 Parrain : ${parrainName} (${parrainRef})\n` +
@@ -284,7 +306,8 @@ async function ensureUniqueMemberIndex() {
         `📧 Email : ${cleanEmail}\n` +
         (cleanComment ? `💬 Commentaire : ${cleanComment}\n` : "") +
         pmLines +
-        `➡️ Panneau Admin → Retraits d'activation`
+        `➡️ Panneau Admin → Retraits d'activation`,
+      tmplParams
     );
     // Notification email de l'admin (non bloquante, parallèle à WhatsApp).
     import("../services/whatsapp.js")

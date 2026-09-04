@@ -82,6 +82,7 @@ export default function Admin() {
     callmebot_key: "",
     cloud_token: "",
     cloud_phone_id: "",
+    cloud_template: "",
     notify_email: "",
   });
   const [waBusy, setWaBusy] = useState(false);
@@ -159,6 +160,7 @@ export default function Admin() {
             provider: d?.provider || "",
             admin_phone: d?.admin_phone_masked || "",
             notify_email: d?.notify_email || "",
+            cloud_template: d?.cloud_template || "",
           }));
         })
         .catch(() => {});
@@ -345,6 +347,7 @@ export default function Admin() {
     if (waForm.callmebot_key.trim()) p.callmebot_key = waForm.callmebot_key.trim();
     if (waForm.cloud_token.trim()) p.cloud_token = waForm.cloud_token.trim();
     if (waForm.cloud_phone_id.trim()) p.cloud_phone_id = waForm.cloud_phone_id.trim();
+    if (waForm.cloud_template.trim()) p.cloud_template = waForm.cloud_template.trim();
     if (waForm.notify_email.trim()) p.notify_email = waForm.notify_email.trim();
     return p;
   };
@@ -1182,6 +1185,24 @@ export default function Admin() {
                     />
                   </label>
                 </div>
+                <div className="form-row">
+                  <label>
+                    {t("Nom du template Meta (optionnel)")}
+                    <input
+                      type="text"
+                      placeholder="mboppi_alerte_retrait"
+                      value={waForm.cloud_template}
+                      onChange={(e) =>
+                        setWaForm((f) => ({ ...f, cloud_template: e.target.value }))
+                      }
+                    />
+                  </label>
+                </div>
+                <p className="hint" style={{ marginTop: 0, marginBottom: 4 }}>
+                  {t(
+                    "Template conseillé : catégorie « Utilitaire », langue fr, avec 9 variables (type « Nom »/texte) : {{1}} parrain (nom + réf), {{2}} montant, {{3}} nb parrainés, {{4}} email, {{5}} commentaire, {{6}} titulaire, {{7}} wallet 1, {{8}} wallet 2, {{9}} wallet 3. Ex. de corps : « 🔔 Mboppi — Demande de retrait / 👤 Parrain : {{1}} / 💰 Montant : {{2}} / 👥 Parrainés payés : {{3}} / 📧 Email : {{4}} / 💬 Commentaire : {{5}} / Moyens de paiement : Titulaire {{6}} / 1. {{7}} / 2. {{8}} / 3. {{9}} »."
+                  )}
+                </p>
               </>
             )}
             {waMsg && (
