@@ -248,6 +248,30 @@ export default function CreatorDashboard() {
       {showForm && (
         <div className="card form-card">
           <h2>{editingId ? t("Modifier la création") : t("Nouvelle création")}</h2>
+          <div className="photo-tip">
+            <strong>{t("📸 Astuce : des photos de qualité pour vos produits")}</strong>
+            <p>
+              {t(
+                "Pour donner une forte impression et un visuel professionnel à vos produits, suivez ces étapes :"
+              )}
+            </p>
+            <ol>
+              <li>{t("Téléchargez l'application ChatGPT si vous ne l'avez pas encore.")}</li>
+              <li>
+                {t("Dans ChatGPT, téléversez votre image puis copiez-collez ce prompt :")}
+              </li>
+            </ol>
+            <div className="photo-tip-prompt">
+              {t(
+                "Améliore cette image pour la présentation dans une marketplace et donne-moi de la télécharger au format WebP."
+              )}
+            </div>
+            <ol start={3}>
+              <li>
+                {t("Téléchargez l'image améliorée puis ajoutez-la à votre produit.")}
+              </li>
+            </ol>
+          </div>
           <form onSubmit={submitProduct}>
             <label>{t("Photos (maximum {n})", { n: MAX_PHOTOS })}</label>
             <div className="photo-input">

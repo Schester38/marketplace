@@ -495,6 +495,17 @@ const EN = {
   "Compression…": "Compressing…",
   "Photos complètes": "Photos complete",
   "📷 Ajouter des photos": "📷 Add photos",
+  "📸 Astuce : des photos de qualité pour vos produits": "📸 Tip: quality photos for your products",
+  "Pour donner une forte impression et un visuel professionnel à vos produits, suivez ces étapes :":
+    "To make a strong impression and give your products a professional look, follow these steps:",
+  "Téléchargez l'application ChatGPT si vous ne l'avez pas encore.":
+    "Download the ChatGPT app if you don't have it yet.",
+  "Dans ChatGPT, téléversez votre image puis copiez-collez ce prompt :":
+    "In ChatGPT, upload your image, then copy and paste this prompt:",
+  "Améliore cette image pour la présentation dans une marketplace et donne-moi de la télécharger au format WebP.":
+    "Improve this image for presentation in a marketplace and let me download it in WebP format.",
+  "Téléchargez l'image améliorée puis ajoutez-la à votre produit.":
+    "Download the improved image and add it to your product.",
   "Quantité en stock *": "Stock quantity *",
   "Garantie (en mois)": "Warranty (months)",
   "Publier le produit": "Publish product",
@@ -1905,6 +1916,17 @@ const AR = {
   "Compression…": "جارٍ الضغط…",
   "Photos complètes": "اكتملت الصور",
   "📷 Ajouter des photos": "📷 إضافة صور",
+  "📸 Astuce : des photos de qualité pour vos produits": "📸 نصيحة: صور عالية الجودة لمنتجاتك",
+  "Pour donner une forte impression et un visuel professionnel à vos produits, suivez ces étapes :":
+    "لإعطاء انطباع قوي ومظهر احترافي لمنتجاتك، اتبع هذه الخطوات:",
+  "Téléchargez l'application ChatGPT si vous ne l'avez pas encore.":
+    "حمّل تطبيق ChatGPT إذا لم تكن قد فعلت ذلك بعد.",
+  "Dans ChatGPT, téléversez votre image puis copiez-collez ce prompt :":
+    "في ChatGPT، ارفع صورتك ثم انسخ والصق هذا النص:",
+  "Améliore cette image pour la présentation dans une marketplace et donne-moi de la télécharger au format WebP.":
+    "حسّن هذه الصورة للعرض في سوق إلكتروني واسمح لي بتحميلها بصيغة WebP.",
+  "Téléchargez l'image améliorée puis ajoutez-la à votre produit.":
+    "حمّل الصورة المحسّنة ثم أضفها إلى منتجك.",
   "Quantité en stock *": "الكمية في المخزون *",
   "Garantie (en mois)": "الضمان (بالأشهر)",
   "Publier le produit": "نشر المنتج",
@@ -3225,6 +3247,17 @@ const ES = {
   "Compression…": "Comprimiendo…",
   "Photos complètes": "Fotos completas",
   "📷 Ajouter des photos": "📷 Agregar fotos",
+  "📸 Astuce : des photos de qualité pour vos produits": "📸 Consejo: fotos de calidad para tus productos",
+  "Pour donner une forte impression et un visuel professionnel à vos produits, suivez ces étapes :":
+    "Para causar una fuerte impresión y dar un aspecto profesional a tus productos, sigue estos pasos:",
+  "Téléchargez l'application ChatGPT si vous ne l'avez pas encore.":
+    "Descarga la aplicación ChatGPT si aún no la tienes.",
+  "Dans ChatGPT, téléversez votre image puis copiez-collez ce prompt :":
+    "En ChatGPT, sube tu imagen y luego copia y pega este prompt:",
+  "Améliore cette image pour la présentation dans une marketplace et donne-moi de la télécharger au format WebP.":
+    "Mejora esta imagen para presentarla en un marketplace y dame la opción de descargarla en formato WebP.",
+  "Téléchargez l'image améliorée puis ajoutez-la à votre produit.":
+    "Descarga la imagen mejorada y añádela a tu producto.",
   "Quantité en stock *": "Cantidad en stock *",
   "Garantie (en mois)": "Garantía (en meses)",
   "Publier le produit": "Publicar el producto",

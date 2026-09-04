@@ -995,6 +995,40 @@ main {
   font-size: 1.3rem;
 }
 
+/* Encadré d'aide « photos de qualité » (formulaires produit boutique / créateur) */
+.photo-tip {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--primary);
+  background: var(--soft);
+  border-radius: 0 12px 12px 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.photo-tip strong {
+  display: block;
+  margin-bottom: 6px;
+}
+.photo-tip p {
+  margin: 0 0 6px;
+}
+.photo-tip ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+.photo-tip li {
+  margin-bottom: 4px;
+}
+.photo-tip .photo-tip-prompt {
+  background: var(--input-bg);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
 .terms-check {
   display: flex;
   align-items: flex-start;
