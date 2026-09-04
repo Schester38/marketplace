@@ -333,6 +333,7 @@ const EN = {
     "Welcome {name}! Showcase your creations on the Mboppi marketplace.",
   "Bientôt disponible : une vitrine dédiée à vos créations.":
     "Coming soon: a dedicated showcase for your creations.",
+  "Bientôt disponible": "Coming soon",
 
   // ProductDetail
   "Retour aux produits": "Back to products",
@@ -1760,6 +1761,7 @@ const AR = {
   "Bienvenue {name} ! Faites rayonner vos créations sur le marché Mboppi.":
     "مرحباً {name}! أبرز إبداعاتك في سوق مبوبي.",
   "Bientôt disponible : une vitrine dédiée à vos créations.": "قريباً: واجهة مخصصة لإبداعاتك.",
+  "Bientôt disponible": "قريباً",
 
   // ProductDetail
   "Retour aux produits": "العودة إلى المنتجات",
@@ -3099,6 +3101,7 @@ const ES = {
     "¡Bienvenido {name}! Haz brillar tus creaciones en el mercado Mboppi.",
   "Bientôt disponible : une vitrine dédiée à vos créations.":
     "Próximamente: un escaparate dedicado a tus creaciones.",
+  "Bientôt disponible": "Próximamente",
   "Retour aux produits": "Volver a los productos",
   Boutique: "Tienda",
   "Quantité disponible : {n}": "Cantidad disponible: {n}",

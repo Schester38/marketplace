@@ -1927,6 +1927,20 @@ textarea {
 .role-option.role-disabled input {
   cursor: not-allowed;
 }
+.role-option .role-soon {
+  font-style: normal;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--primary);
+  background: var(--select-active-bg);
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  padding: 1px 8px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
 
 .info-banner {
   display: flex;
