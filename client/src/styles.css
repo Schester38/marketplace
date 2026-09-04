@@ -1027,6 +1027,18 @@ main {
   margin-bottom: 8px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+.photo-tip .photo-tip-prompt > span {
+  flex: 1;
+  min-width: 0;
+}
+.photo-tip .photo-tip-prompt .copy-code-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .terms-check {

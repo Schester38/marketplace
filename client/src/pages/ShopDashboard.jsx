@@ -14,6 +14,7 @@ import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
+import CopyCode from "../components/CopyCode.jsx";
 import {
   IconCart,
   IconChartBar,
@@ -39,6 +40,11 @@ const EMPTY_FORM = {
   photos: [],
 };
 const MAX_PHOTOS = 3;
+
+// Prompt ChatGPT conseillé pour améliorer les photos produits. La clé française
+// est aussi la valeur exacte copiée dans le presse-papiers (toutes langues).
+const PHOTO_PROMPT =
+  "/branding Améliore cette image pour la présentation dans une marketplace et donne-moi de la télécharger au format WebP.";
 
 const SALE_STATUS = {
   pending: { key: "En attente de vente", cls: "badge-pending" },
@@ -982,9 +988,8 @@ export default function ShopDashboard() {
                   </li>
                 </ol>
                 <div className="photo-tip-prompt">
-                  {t(
-                    "Améliore cette image pour la présentation dans une marketplace et donne-moi de la télécharger au format WebP."
-                  )}
+                  <span>{t(PHOTO_PROMPT)}</span>
+                  <CopyCode code={PHOTO_PROMPT} label={t("Copier")} />
                 </div>
                 <ol start={3}>
                   <li>
