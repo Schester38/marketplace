@@ -2,6 +2,7 @@ import { Router } from "express";
 import { timingSafeEqual } from "node:crypto";
 import { q } from "../db.js";
 import { authRequired, authOptional, MEMBERSHIP_FEES } from "../auth.js";
+import { membershipRoles } from "../services/membershipGate.js";
 import {
   PAYMENT_MODE_AUTO,
   getPaymentMode,
@@ -42,8 +43,13 @@ router.get(
   "/membership-status",
   authRequired,
   ah(async (req, res) => {
+    // Bascule admin : boutiques et créateurs ne sont pas soumis à l'adhésion
+    // tant que le blocage global n'est pas activé → accès libre.
+    const gatedRoles = await membershipRoles();
     const fee = MEMBERSHIP_FEES[req.user.role];
-    if (!fee) return res.json({ active: true, reconciled: false });
+    if (!fee || !gatedRoles.includes(req.user.role)) {
+      return res.json({ active: true, reconciled: false });
+    }
     const user = (
       await q(
         `SELECT id, email, admin_approved, membership_expires_at
@@ -52,11 +58,11 @@ router.get(
       )
     )[0];
     if (!user) return res.status(401).json({ error: "Session invalide" });
-    const active = Boolean(
-      user.admin_approved &&
-        user.membership_expires_at &&
-        new Date(user.membership_expires_at) > new Date()
-    );
+    // Adhésion active = date d'expiration dans le futur (posée à now() + 30 j
+    // à chaque paiement webhoooké ou approbation admin). Compte approuvé sans
+    // date (régime antérieur) : accès maintenu.
+    const expires = user.membership_expires_at ? new Date(user.membership_expires_at) : null;
+    const active = expires ? expires.getTime() > Date.now() : Boolean(user.admin_approved);
     if (active) return res.json({ active: true, reconciled: false });
     // Filet 1 : le webhook a déjà confirmé le paiement (status='completed')
     // mais la tâche d'activation asynchrone a été interrompue (serverless
@@ -158,6 +164,15 @@ router.post(
     const fee = MEMBERSHIP_FEES[req.user.role];
     if (!fee) {
       return res.status(400).json({ error: "Aucune adhésion requise pour ce rôle." });
+    }
+    // Bascule admin : si le blocage global n'est pas activé, boutiques et
+    // créateurs accèdent gratuitement — aucun paiement à encaisser.
+    const gatedRoles = await membershipRoles();
+    if (!gatedRoles.includes(req.user.role)) {
+      return res.status(400).json({
+        error: "Adhésion non requise actuellement pour votre rôle : accès gratuit.",
+        code: "MEMBERSHIP_NOT_REQUIRED",
+      });
     }
     const { publicKey } = await getIkeepayKeys();
     if (!publicKey) {

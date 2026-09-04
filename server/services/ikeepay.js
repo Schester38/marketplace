@@ -19,6 +19,7 @@
 import { q } from "../db.js";
 import { randomBytes } from "node:crypto";
 import { MEMBERSHIP_FEES } from "../fees.js";
+import { getMembershipGate } from "./membershipGate.js";
 import { notifyActivationReferralPaid } from "./activationReferral.js";
 
 const IKEEPAY_CHECKOUT_URL = "https://ikeepay.com/checkout/v1/inline";
@@ -123,14 +124,18 @@ export async function getWebhookSecret() {
 
 // Retourne les infos publiques exposées au client (jamais la clé secrète).
 export async function getPublicPaymentSettings() {
-  const [mode, { publicKey }] = await Promise.all([
+  const [mode, { publicKey }, membershipGate] = await Promise.all([
     getPaymentMode(),
     getIkeepayKeys(),
+    getMembershipGate(),
   ]);
   return {
     mode,
     currency: "XAF",
     ikeepay_configured: Boolean(publicKey),
+    // "seller" = seuls les vendeurs paient (boutiques/créateurs gratuits) ;
+    // "all" = boutiques, vendeurs et créateurs soumis à l'adhésion.
+    membership_gate: membershipGate,
   };
 }
 

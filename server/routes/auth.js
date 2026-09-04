@@ -8,6 +8,7 @@ import { logAudit } from "../security.js";
 import { sendMail, verificationEmailHtml } from "../mailer.js";
 import { registerSchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
+import { membershipRoles } from "../services/membershipGate.js";
 
 const router = Router();
 
@@ -46,7 +47,11 @@ function validEmail(v) {
   return typeof v === "string" && v.length <= 120 && EMAIL_RE.test(v.trim());
 }
 
-function publicUser(u) {
+async function publicUser(u) {
+  // Bascule admin : boutiques et créateurs ne sont soumis à l'adhésion que
+  // lorsque le blocage global est activé (membership_gate = "all").
+  const gatedRoles = await membershipRoles();
+  const required = Boolean(MEMBERSHIP_FEES[u.role]) && gatedRoles.includes(u.role);
   return {
     id: u.id,
     name: u.name,
@@ -64,12 +69,13 @@ function publicUser(u) {
     email_verified: !!u.email_verified,
     verified: !!u.verified,
     admin_approved: !!u.admin_approved,
-    membership_required: Boolean(MEMBERSHIP_FEES[u.role]),
-    membership_fee: MEMBERSHIP_FEES[u.role] || null,
+    membership_required: required,
+    membership_fee: required ? MEMBERSHIP_FEES[u.role] || null : null,
     membership_expires_at: u.membership_expires_at || null,
-    membership_active: !!(
-      u.admin_approved ||
-      (u.membership_expires_at && new Date(u.membership_expires_at) > new Date())
+    membership_active: !required || !!(
+      (u.membership_expires_at && new Date(u.membership_expires_at) > new Date()) ||
+      // Compte approuvé sans date (régime antérieur au compte à rebours).
+      (u.admin_approved && !u.membership_expires_at)
     ),
   };
 }
@@ -216,7 +222,9 @@ router.post(
       needs_confirmation: true,
       email: emailNorm,
       reference_number: referenceNumber,
-      membership_required: Boolean(MEMBERSHIP_FEES[finalRole]),
+      membership_required:
+        Boolean(MEMBERSHIP_FEES[finalRole]) &&
+        (await membershipRoles()).includes(finalRole),
       membership_fee: MEMBERSHIP_FEES[finalRole] || null,
     });
   })
@@ -266,7 +274,7 @@ router.post(
     if (user.role === "admin") {
       await logAudit(user.id, "admin.login", req.ip, null);
     }
-    res.json({ token: signToken(user), user: publicUser(user) });
+    res.json({ token: signToken(user), user: await publicUser(user) });
   })
 );
 
@@ -286,7 +294,7 @@ router.post(
         "UPDATE users SET email_verify_token = NULL, email_verify_expires = NULL WHERE id = $1",
         [user.id]
       );
-      return res.json({ ok: true, verified: true, user: publicUser(user), token: signToken(user) });
+      return res.json({ ok: true, verified: true, user: await publicUser(user), token: signToken(user) });
     }
     if (user.email_verify_expires && new Date(user.email_verify_expires) < new Date()) {
       return res.status(410).json({
@@ -300,7 +308,7 @@ router.post(
       [user.id]
     );
     const updated = (await q("SELECT * FROM users WHERE id = $1", [user.id]))[0];
-    res.json({ ok: true, verified: true, user: publicUser(updated), token: signToken(updated) });
+    res.json({ ok: true, verified: true, user: await publicUser(updated), token: signToken(updated) });
   })
 );
 
@@ -425,7 +433,7 @@ router.get(
   ah(async (req, res) => {
     const user = (await q("SELECT * FROM users WHERE id = $1", [req.user.id]))[0];
     if (!user) return res.status(404).json({ error: "Compte introuvable" });
-    res.json({ user: publicUser(user) });
+    res.json({ user: await publicUser(user) });
   })
 );
 
@@ -491,7 +499,7 @@ router.put(
         console.error("Confirmation de nouvel email échouée:", err.message);
       }
     }
-    res.json({ user: publicUser(updated[0]), email_changed: emailChanged });
+    res.json({ user: await publicUser(updated[0]), email_changed: emailChanged });
   })
 );
 

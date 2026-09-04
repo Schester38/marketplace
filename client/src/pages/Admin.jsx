@@ -317,6 +317,27 @@ export default function Admin() {
     }
   };
 
+  const toggleMembershipGate = async () => {
+    setPayError("");
+    setPayOk("");
+    setPayBusy(true);
+    try {
+      const next = (paySettings?.membership_gate === "all") ? "seller" : "all";
+      await api.adminUpdatePaymentSettings({ membership_gate: next });
+      setPaySettings((s) => ({ ...s, membership_gate: next }));
+      setPayOk(
+        next === "all"
+          ? t("Blocage global activé : boutiques, vendeurs et créateurs doivent payer l'adhésion (30 jours).")
+          : t("Boutiques et créateurs libérés : seul le vendeur paie l'adhésion.")
+      );
+      load(true);
+    } catch (err) {
+      setPayError(err.message);
+    } finally {
+      setPayBusy(false);
+    }
+  };
+
   const savePaymentKeys = async (e) => {
     e.preventDefault();
     setPayError("");
@@ -1021,6 +1042,45 @@ export default function Admin() {
                 "Mode manuel : l'administration valide chaque adhésion et chaque paiement (adhésions, dons, parrainages)."
               )}
         </p>
+
+        {/* ─── Bascule « adhésion obligatoire » (vendeurs seuls ↔ tout le monde) ─── */}
+        <div
+          style={{
+            borderTop: "1px solid var(--border, rgba(128,128,128,0.25))",
+            paddingTop: 14,
+            marginBottom: 14,
+          }}
+        >
+          <div className="payment-mode-toggle">
+            <span className={`payment-mode-badge ${paySettings?.membership_gate === "all" ? "auto" : "manual"}`}>
+              {paySettings?.membership_gate === "all"
+                ? "🔒 " + t("Tous (boutique, vendeur, créateur)")
+                : "🟢 " + t("Vendeurs seulement")}
+            </span>
+            <button
+              type="button"
+              className="btn btn-outline btn-small"
+              disabled={payBusy}
+              onClick={toggleMembershipGate}
+            >
+              {payBusy
+                ? "…"
+                : paySettings?.membership_gate === "all"
+                  ? "🔓 " + t("Libérer boutiques et créateurs")
+                  : "🔒 " + t("Bloquer aussi les boutiques et créateurs")}
+            </button>
+          </div>
+          <p className="hint" style={{ marginBottom: 0 }}>
+            {paySettings?.membership_gate === "all"
+              ? t(
+                  "Blocage global : boutiques, vendeurs et créateurs doivent payer l'adhésion (30 jours) pour accéder à leur espace. Les clients et livreurs ne sont pas concernés."
+                )
+              : t(
+                  "Seuls les vendeurs paient l'adhésion. Les boutiques et créateurs accèdent gratuitement à leur espace — activez le blocage global le moment venu."
+                )}
+          </p>
+        </div>
+
         {payError && <p className="error">{payError}</p>}
         {payOk && <p className="success">{payOk}</p>}
         <form

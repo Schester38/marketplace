@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { q } from "./db.js";
 import { MEMBERSHIP_FEES, MEMBERSHIP_DAYS } from "./fees.js";
+import { membershipRoles } from "./services/membershipGate.js";
 
 export { MEMBERSHIP_FEES, MEMBERSHIP_DAYS };
 
@@ -56,19 +57,28 @@ export function roleRequired(...roles) {
     if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({ error: "Accès réservé aux " + roles.join(" / ") });
     }
-    // Seul le vendeur est soumis à l'adhésion. Boutiques et créateurs ont un
-    // accès direct (l'admin vérifie les comptes via le panneau, pas de 402).
-    if (["seller"].includes(req.user.role)) {
+    // Adhésion : le vendeur y est toujours soumis ; boutiques et créateurs
+    // seulement quand l'admin a activé le blocage global (bascule
+    // « membership_gate » dans le panneau — défaut : accès gratuit). Le
+    // contrôle est basé sur la DATE D'EXPIRATION (posée à now() + 30 jours à
+    // chaque paiement en ligne ou approbation admin). Expirée ou absente
+    // → 402, le client redirige vers la page d'adhésion (/adhesion).
+    const gatedRoles = await membershipRoles();
+    if (gatedRoles.includes(req.user.role)) {
       const current = (
         await q("SELECT admin_approved, membership_expires_at FROM users WHERE id = $1", [
           req.user.id,
         ])
       )[0];
-      if (
-        current &&
-        !current.admin_approved &&
-        (!current.membership_expires_at || new Date(current.membership_expires_at) <= new Date())
-      ) {
+      const expires = current?.membership_expires_at
+        ? new Date(current.membership_expires_at)
+        : null;
+      // Compte approuvé sans date (régime antérieur au compte à rebours) :
+      // accès maintenu jusqu'à la prochaine approbation/paiement.
+      const active = expires
+        ? expires.getTime() > Date.now()
+        : Boolean(current && current.admin_approved);
+      if (!active) {
         return res.status(402).json({
           error: "Adhésion requise pour accéder à cet espace",
           code: "MEMBERSHIP_REQUIRED",
@@ -87,6 +97,10 @@ export function membershipRequired(user) {
 }
 
 export function membershipActive(user) {
-  if (!membershipRequired(user) || user.admin_approved) return true;
+  if (!membershipRequired(user)) return true;
+  // Compte approuvé sans date (régime antérieur au compte à rebours) :
+  // accès maintenu jusqu'à la prochaine approbation/paiement.
+  if (user.admin_approved && !user.membership_expires_at) return true;
+  // Sinon : actif uniquement si l'adhésion (30 jours) est dans le futur.
   return Boolean(user.membership_expires_at && new Date(user.membership_expires_at) > new Date());
 }

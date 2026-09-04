@@ -2,8 +2,8 @@
 //   — server/auth.js (rôles, roleRequired, inscription) ;
 //   — server/services/ikeepay.js (payin d'adhésion en ligne).
 //
-// Seul le rôle `seller` est soumis à l'adhésion (1 500 F / 30 jours). Les
-// boutiques et créateurs accèdent directement à leur espace (aucun frais, quel
-// que soit le mode de paiement) ; l'admin vérifie les comptes via le panneau.
-export const MEMBERSHIP_FEES = { seller: 1500 };
+// Vendeur, boutique et créateur sont soumis à l'adhésion (renouvelable tous
+// les 30 jours : paiement en ligne ou approbation admin → expiry = now + 30 j).
+// Les clients et livreurs accèdent directement à leur espace (aucun frais).
+export const MEMBERSHIP_FEES = { seller: 1500, shop: 2500, creator: 2500 };
 export const MEMBERSHIP_DAYS = 30;

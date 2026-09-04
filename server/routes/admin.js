@@ -16,6 +16,7 @@ import {
   getWebhookSecret,
   purgePendingPayments,
 } from "../services/ikeepay.js";
+import { getMembershipGate, setMembershipGate } from "../services/membershipGate.js";
 import {
   getPublicWhatsAppSettings,
   setWhatsAppSettings,
@@ -881,6 +882,7 @@ router.get(
       mode,
       currency: publicSettings.currency,
       ikeepay_configured: configured,
+      membership_gate: publicSettings.membership_gate,
       ikeepay: {
         public_key: keys.publicKey,
         secret_key_set: Boolean(keys.secretKey),
@@ -900,6 +902,14 @@ router.post(
       mode = await setPaymentMode(body.mode);
     } else {
       mode = await getPaymentMode();
+    }
+    // Bascule « adhésion obligatoire » : "seller" (défaut — boutiques et
+    // créateurs gratuits) | "all" (boutique, vendeur et créateur bloqués).
+    let membershipGate;
+    if (body.membership_gate !== undefined) {
+      membershipGate = await setMembershipGate(body.membership_gate);
+    } else {
+      membershipGate = await getMembershipGate();
     }
     if (
       body.ikeepay_public_key !== undefined ||
@@ -922,10 +932,10 @@ router.post(
     await logAudit(
       req.user.id,
       "admin.payment_settings",
-      `mode=${mode} ikeepay_configured=${await isIkeepayConfigured()}`,
+      `mode=${mode} membership_gate=${membershipGate} ikeepay_configured=${await isIkeepayConfigured()}`,
       req.ip
     );
-    res.json({ ok: true, mode });
+    res.json({ ok: true, mode, membership_gate: membershipGate });
   })
 );
 

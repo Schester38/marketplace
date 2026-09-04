@@ -26,6 +26,13 @@ export default function MembershipPage() {
   const isManual = settings.mode !== "auto";
   const isAutoReady = settings.mode === "auto" && settings.ikeepay_configured;
 
+  // Bascule admin : tant que le blocage global n'est pas activé
+  // (membership_gate = "seller"), boutiques et créateurs accèdent
+  // gratuitement à leur espace — aucun paiement à effectuer ici.
+  const gateFree =
+    (user?.role === "shop" || user?.role === "creator") &&
+    settings.membership_gate !== "all";
+
   // Confirmation automatique : tant que l'adhésion n'est pas active, la page
   // sonde le serveur toutes les 4 s (max 6 min). Le serveur y vérifie l'état
   // ET répare au besoin (webhook resté non rattaché) → dès que `active`
@@ -116,6 +123,34 @@ export default function MembershipPage() {
   };
 
   const userPrice = prices[user?.role] || 2500;
+
+  // Accès gratuit actif pour ce rôle → pas de paywall : simple information.
+  if (gateFree) {
+    return (
+      <main className="container narrow">
+        <Seo
+          title={t("Adhésion Mboppi") + " — Mboppi"}
+          description={t("Payez votre adhésion Mboppi et accédez à votre espace professionnel.")}
+          noindex
+        />
+        <div className="card form-card">
+          <div className="auth-brand">✅</div>
+          <h1>{t("Aucune adhésion requise")}</h1>
+          <p className="hint">
+            {t(
+              "L'accès à votre espace est actuellement gratuit. Vous pouvez y accéder directement."
+            )}
+          </p>
+          <Link
+            className="btn btn-primary"
+            to={user?.role === "shop" ? "/shop" : "/creator"}
+          >
+            {t("Aller à mon espace")}
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="container narrow">

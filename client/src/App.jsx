@@ -20,7 +20,7 @@ import Home from "./pages/Home.jsx";
 import CityPage from "./pages/CityPage.jsx";
 import { LangProvider, useLang } from "./i18n.jsx";
 import { StoreProvider } from "./store.jsx";
-import { membershipActive } from "./auth-access.js";
+import { membershipActive, setMembershipGate } from "./auth-access.js";
 
 const lazyRetry = (importer) =>
   React.lazy(async () => {
@@ -185,6 +185,18 @@ export function AuthProvider({ children }) {
   }, [user, navigate]);
 
   const userIdRef = useRef(user?.id);
+
+  // Chargement de la bascule « adhésion obligatoire » (membership_gate) :
+  // "seller" (défaut) = boutiques et créateurs gratuits ; "all" = les trois
+  // rôles sont soumis à l'adhésion. Le serveur reste l'autorité (402).
+  useEffect(() => {
+    api
+      .paymentSettings()
+      .then((d) => {
+        if (d && d.membership_gate) setMembershipGate(d.membership_gate);
+      })
+      .catch(() => {});
+  }, []);
 
   // Accès fermé par l'admin (bouton « Fermer ») ou adhésion expirée : une API
   // a répondu 402 MEMBERSHIP_REQUIRED → rafraîchir la session puis rediriger
