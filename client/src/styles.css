@@ -1896,12 +1896,16 @@ textarea {
 .role-option {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   border: 2px solid var(--border);
   border-radius: 10px;
   padding: 14px;
   cursor: pointer;
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .role-option.selected {
   border-color: var(--primary);
@@ -1912,12 +1916,18 @@ textarea {
 }
 .role-option span {
   font-weight: 700;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 .role-option small {
   display: block;
   color: var(--muted);
   font-weight: 400;
   width: 100%;
+  flex-basis: 100%;
 }
 .role-option.role-disabled {
   opacity: 0.55;
