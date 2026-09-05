@@ -138,7 +138,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 - **PWA** : `client/public/sw.js`, cache `mboppi-v202`, app shell + API_SWR + push + 4 manifests.
 - **Audit/sécurité** : `server/security.js`, rate limits, originCheck, CSP.
  - **Photos** : `server/storage.js` — buckets publics `photos` et `payment-proofs` ; clé `sb_secret_...` signée HS256 (`SUPABASE_JWT_SECRET`) ; fallback base64. `server/photo.js` : `{thumb, medium, large}`. **Conversion WebP automatique** : tout upload (produits, offres, preuves de paiement) passe par `toWebp()` (sharp, qualité 80, max 2000px, EXIF/rotate) — JPEG/PNG/HEIC convertis, GIF/AVIF/WebP conservés tels quels, micro-images < 8 ko et conversions « plus lourdes » ignorées ; en cas d'échec, l'image originale est conservée (aucune rupture d'upload).
-- **Menu** (Navbar.jsx) : Produits, Créateurs, Je soutiens, Formations et Digital (chariow.pics), Formation Mboppi (YouTube), espaces par rôle, Administration 🛡️.
+- **Menu** (Navbar.jsx) : Produits, Créateurs, Je soutiens, Formations et Digital (chariow.pics), Tutoriel Mboppi (TikTok @mboppishop), espaces par rôle, Administration 🛡️.
 - **Livreurs** : `server/routes/livreurs.js` (`GET /api/livreurs`, `/options`) **non monté dans app.js** et `api.listLivreurs` absent côté client → page `/shop/livreurs` non fonctionnelle (état actuel).
 - **Donations** : en mode **manuel**, `POST /api/donations` enregistre un don déclaratif (virement direct hors plateforme, validation par l'équipe). En mode **automatique**, `POST /api/payments/donation-payin` ouvre le checkout iKeePay et le webhook marque le don `completed`. Le suivi admin des paiements en ligne est sur `GET /api/admin/payments`.
 

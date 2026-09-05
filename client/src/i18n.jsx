@@ -70,7 +70,7 @@ const EN = {
   // Support / menu
   "Je soutiens": "Support us",
   "Formations et Digital": "Training & Digital",
-  "Formation Mboppi": "Mboppi Training",
+  "Tutoriel Mboppi": "Mboppi Tutorial",
   "Je soutiens Mboppi": "Support Mboppi",
   "Chaque geste compte pour faire grandir Mboppi": "Every gesture counts to grow Mboppi",
   "Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.":
@@ -1530,7 +1530,7 @@ const AR = {
   // Support / menu
   "Je soutiens": "أدعم",
   "Formations et Digital": "تدريب ورقمنة",
-  "Formation Mboppi": "تدريب Mboppi",
+  "Tutoriel Mboppi": "درس Mboppi",
   "Je soutiens Mboppi": "أدعم مبوّي",
   "Chaque geste compte pour faire grandir Mboppi": "كل مساهمة تصنع الفرق لتنمية مبوّي",
   "Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.":
@@ -2888,7 +2888,7 @@ const ES = {
     "Puedes darte de baja en cualquier momento mediante el enlace de cada correo.",
   "Je soutiens": "Apoyo",
   "Formations et Digital": "Formación y Digital",
-  "Formation Mboppi": "Formación Mboppi",
+  "Tutoriel Mboppi": "Tutorial de Mboppi",
   "Je soutiens Mboppi": "Apoyo a Mboppi",
   "Chaque geste compte pour faire grandir Mboppi": "Cada gesto cuenta para hacer crecer a Mboppi",
   "Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.":

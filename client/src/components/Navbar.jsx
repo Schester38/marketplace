@@ -182,7 +182,7 @@ function FollowUs() {
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.454.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.194 1.871.18.297-.008 1.757-.868 2.006-1.973.248-1.104.174-2.275-.372-3.26-.173-.32-.32-.615-.42-.814-.099-.198-.148-.372-.198-.545-.049-.174-.198-.52-.198-1.043z" />
         </svg>
       ),
-      url: "https://whatsapp.com/channel/0029VbDs0PKKmCPInjtQZi0u",
+      url: "https://whatsapp.com/channel/0029VbDWGBG0wajmKA8by41y",
     },
     {
       label: "TikTok",
@@ -1018,12 +1018,12 @@ export default function Navbar({ onLogout }) {
         {t("Formations et Digital")}
       </a>
       <a
-        href="https://www.youtube.com/channel/UC0afKxIhEIsvYxbvDiz74Ow"
+        href="https://www.tiktok.com/@mboppishop?_r=1&_t=ZS-99TrzaxlgCD"
         target="_blank"
         rel="noopener noreferrer"
         onClick={close}
       >
-        {t("Formation Mboppi")}
+        {t("Tutoriel Mboppi")}
       </a>
       {user && user.role === "shop" && (
         <Link to="/shop" onClick={close}>
