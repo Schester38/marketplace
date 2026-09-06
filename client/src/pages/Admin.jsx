@@ -1547,7 +1547,7 @@ export default function Admin() {
                     </button>
                   </td>
                   <td>
-                    {"shop" === u.role || "seller" === u.role || "creator" === u.role ? (
+                    {"seller" === u.role || (("shop" === u.role || "creator" === u.role) && paySettings?.membership_gate === "all") ? (
                       <span className="access-cell">
                         <span
                           className={`access-state ${u.admin_approved ? "access-state--open" : "access-state--closed"}`}
@@ -1562,10 +1562,12 @@ export default function Admin() {
                           {u.admin_approved ? t("Fermer") : t("Ouvrir")}
                         </button>
                       </span>
-                    ) : (
-                      <span className="hint">—</span>
-                    )}
-                  </td>
+                    ) : (("shop" === u.role || "creator" === u.role ? (
+            <span className="access-state access-state--open">{t("Accès gratuit")}</span>
+          ) : (
+            <span className="hint">—</span>
+          )))}
+          </td>
                 </tr>
               ))
             )}
