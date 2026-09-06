@@ -30,6 +30,7 @@ async function request(path, options = {}, retries = 1) {
 }
 
 async function adminRequest(path, options = {}) {
+  options.cache = "no-store";
   const token = storage.getItem("admin_token");
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;

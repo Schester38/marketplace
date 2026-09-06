@@ -517,9 +517,9 @@ export default function Admin() {
 
   const toggleAdminApproved = async (u) => {
     try {
-      await api.adminSetAdminApproved(u.id, !u.admin_approved);
+      const d = await api.adminSetAdminApproved(u.id, !u.admin_approved);
       setUsers((us) =>
-        us.map((x) => (x.id === u.id ? { ...x, admin_approved: !x.admin_approved } : x))
+        us.map((x) => (x.id === u.id ? { ...x, admin_approved: Boolean(d.admin_approved) } : x))
       );
     } catch (err) {
       setError(err.message);
@@ -1548,13 +1548,20 @@ export default function Admin() {
                   </td>
                   <td>
                     {"shop" === u.role || "seller" === u.role || "creator" === u.role ? (
-                      <button
-                        type="button"
-                        className={`btn btn-small ${u.admin_approved ? "btn-primary" : "btn-outline"}`}
-                        onClick={() => toggleAdminApproved(u)}
-                      >
-                        {u.admin_approved ? t("Fermer") : t("Ouvrir")}
-                      </button>
+                      <span className="access-cell">
+                        <span
+                          className={`access-state ${u.admin_approved ? "access-state--open" : "access-state--closed"}`}
+                        >
+                          {u.admin_approved ? t("Ouvert") : t("Ferm\u00e9")}
+                        </span>
+                        <button
+                          type="button"
+                          className={`btn btn-small ${u.admin_approved ? "btn-outline" : "btn-primary"}`}
+                          onClick={() => toggleAdminApproved(u)}
+                        >
+                          {u.admin_approved ? t("Fermer") : t("Ouvrir")}
+                        </button>
+                      </span>
                     ) : (
                       <span className="hint">—</span>
                     )}

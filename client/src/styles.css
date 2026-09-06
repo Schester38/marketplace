@@ -5256,6 +5256,37 @@ a.step {
 .membership-badge--blink {
   animation: membership-blink 0.8s step-end infinite;
 }
+
+/* Admin — colonne « Accès » : état explicite + action conditionnelle */
+.access-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.access-state {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.access-state--open {
+  color: #15803d;
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.35);
+}
+.access-state--closed {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+[data-theme="dark"] .access-state--open {
+  color: #4ade80;
+}
+[data-theme="dark"] .access-state--closed {
+  color: #f87171;
+}
 @keyframes membership-blink {
   0%,
   100% {

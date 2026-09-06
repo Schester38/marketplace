@@ -26,6 +26,13 @@ import {
 
 const router = Router();
 
+// Les données du panneau admin doivent toujours être fraîches : interdiction
+// explicite de cache navigateur / CDN sur toutes les réponses /api/admin/*.
+router.use((req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
+
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 const isId = (v) => Number.isInteger(v) && v > 0;
