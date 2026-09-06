@@ -9,7 +9,7 @@ import { countrySymbol, getCountry } from "../config.js";
 import { api } from "../api.js";
 
 export default function MembershipPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { t } = useLang();
   const [settings, setSettings] = useState({ mode: "manual", ikeepay_configured: false });
   const [checkout, setCheckout] = useState(null);
@@ -61,13 +61,9 @@ export default function MembershipPage() {
         if (d && d.active) {
           stopped = true;
           clearInterval(id);
-          try {
-            const me = await api.me();
-            if (me?.user) storage.setItem("user", JSON.stringify(me.user));
-          } catch {
-            /* la session se synchronisera au rechargement */
-          }
-          window.location.reload();
+          // Session a jour en arriere-plan : App.jsx redirige vers l'espace
+          // en SPA (aucun rechargement visible de la page).
+          await refreshUser();
           return;
         }
       } catch {
@@ -102,15 +98,8 @@ export default function MembershipPage() {
 
   const handleSuccess = async () => {
     // Adhésion payée → session à jour puis retour automatique vers l'espace.
-    try {
-      const d = await api.me();
-      if (d?.user) {
-        storage.setItem("user", JSON.stringify(d.user));
-      }
-    } catch {
-      /* la session se synchronisera au prochain cycle */
-    }
-    window.location.reload();
+    // Session a jour en arriere-plan, sans rechargement visible.
+    await refreshUser();
   };
 
   const isCameroon = user?.country === "Cameroun";

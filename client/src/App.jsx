@@ -148,6 +148,23 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  // Rafraichit la session depuis le serveur SANS recharger la page : les
+  // changements d'acces (ouverture/fermeture par l'admin, adhesion confirmee)
+  // sont appliques en arriere-plan et l'UI suit via le state (redirection SPA).
+  const refreshUser = useCallback(async () => {
+    try {
+      const d = await api.me();
+      const u = d?.user;
+      if (u?.id) {
+        setUser(u);
+        storage.setItem("user", JSON.stringify(u));
+      }
+      return u || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const logoutRef = useRef(logout);
   useEffect(() => {
     logoutRef.current = logout;
@@ -362,7 +379,7 @@ export function AuthProvider({ children }) {
     };
   }, [user]);
 
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, login, logout, refreshUser }}>{children}</AuthContext.Provider>;
 }
 
 function Protected({ children }) {
