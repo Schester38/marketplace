@@ -99,6 +99,7 @@ export default function MembershipPage() {
   const handleSuccess = async () => {
     // Adhésion payée → session à jour puis retour automatique vers l'espace.
     // Session a jour en arriere-plan, sans rechargement visible.
+    setCheckout(null);
     await refreshUser();
   };
 
