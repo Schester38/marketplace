@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
@@ -30,8 +31,8 @@ export default function OfferDetail() {
         setOffer(d.offer);
         const key = "mboppi_view_offer_" + id;
         try {
-          if (sessionStorage.getItem(key)) return;
-          sessionStorage.setItem(key, "1");
+          if (sessionStore.getItem(key)) return;
+          sessionStore.setItem(key, "1");
         } catch {}
         api.trackViews([{ type: "offer", id: Number(id) }]).catch(() => {});
       })

@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "./storage";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export const LANGS = [
@@ -4346,13 +4347,13 @@ export function LangProvider({ children }) {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("lang");
+      const saved = storage.getItem("lang");
       if (saved) setLang(saved);
     } catch {}
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("lang", lang);
+    storage.setItem("lang", lang);
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
   }, [lang]);

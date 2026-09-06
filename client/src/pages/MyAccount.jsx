@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
@@ -299,7 +300,7 @@ export default function MyAccount() {
         city,
         country,
       });
-      login(updated, localStorage.getItem("token"));
+      login(updated, storage.getItem("token"));
       setProfileMsg(t("Profil mis à jour avec succès."));
     } catch (err) {
       setProfileError(err.message);

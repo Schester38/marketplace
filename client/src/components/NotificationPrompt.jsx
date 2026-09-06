@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useEffect, useState } from "react";
 import { useLang } from "../i18n.jsx";
 import { requestPushPermission } from "../push.js";
@@ -26,7 +27,7 @@ export default function NotificationPrompt({ user }) {
     // permission === "default" → proposer, mais pas plus d'une fois / 7 jours.
     try {
       const id = NOTIF_PROMPT_KEY(user && user.id);
-      const last = Number(localStorage.getItem(id) || 0);
+      const last = Number(storage.getItem(id) || 0);
       const WEEK = 7 * 24 * 60 * 60 * 1000;
       if (Date.now() - last < WEEK) return;
     } catch {
@@ -44,7 +45,7 @@ export default function NotificationPrompt({ user }) {
       /* silencieux */
     }
     try {
-      localStorage.setItem(NOTIF_PROMPT_KEY(user && user.id), String(Date.now()));
+      storage.setItem(NOTIF_PROMPT_KEY(user && user.id), String(Date.now()));
     } catch {
       /* silencieux */
     }
@@ -54,7 +55,7 @@ export default function NotificationPrompt({ user }) {
 
   const dismiss = () => {
     try {
-      localStorage.setItem(NOTIF_PROMPT_KEY(user && user.id), String(Date.now()));
+      storage.setItem(NOTIF_PROMPT_KEY(user && user.id), String(Date.now()));
     } catch {
       /* silencieux */
     }

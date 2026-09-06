@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useCallback, useEffect, useState } from "react";
 import Seo from "../components/Seo.jsx";
 import Logo from "../components/Logo.jsx";
@@ -43,7 +44,7 @@ export default function Admin() {
   const [gate, setGate] = useState(true);
 
   useEffect(() => {
-    setGate(!localStorage.getItem("admin_token"));
+    setGate(!storage.getItem("admin_token"));
   }, []);
   const [password, setPassword] = useState("");
   const [gateError, setGateError] = useState("");
@@ -102,7 +103,7 @@ export default function Admin() {
       if (!silent) setLoading(true);
       const onErr = (e) => {
         if (e && (e.status === 401 || e.status === 403)) {
-          localStorage.removeItem("admin_token");
+          storage.removeItem("admin_token");
           setGate(true);
           setGateError(
             t("Session expirée ou invalide. Entrez à nouveau le mot de passe administrateur.")
@@ -205,7 +206,7 @@ export default function Admin() {
     setGateError("");
     try {
       const d = await api.adminPass(password);
-      localStorage.setItem("admin_token", d.token);
+      storage.setItem("admin_token", d.token);
       setGate(false);
       setPassword("");
     } catch (err) {
@@ -216,7 +217,7 @@ export default function Admin() {
   };
 
   const logout = () => {
-    localStorage.removeItem("admin_token");
+    storage.removeItem("admin_token");
     setGate(true);
     setLoading(false);
     setStats(null);

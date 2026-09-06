@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "./storage";
 import React, {
   Suspense,
   createContext,
@@ -38,8 +39,8 @@ const lazyRetry = (importer) =>
         // On force un rechargement complet (une fois par session) pour que le
         // SW ravive "/" et récupère le nouveau bundle. Guard anti-boucle.
         try {
-          if (!sessionStorage.getItem("reload_chunk")) {
-            sessionStorage.setItem("reload_chunk", "1");
+          if (!sessionStore.getItem("reload_chunk")) {
+            sessionStore.setItem("reload_chunk", "1");
             window.location.reload();
             return new Promise(() => {});
           }
@@ -120,12 +121,12 @@ export function useAuth() {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
-      let u = JSON.parse(localStorage.getItem("user"));
+      let u = JSON.parse(storage.getItem("user"));
       // Auto-réparation : répare les sessions corrompues par l'ancien bug
       // (objet { user: {...} } stocké tel quel, sans role/id au premier niveau)
       if (u && typeof u === "object" && !u.role && u.user && typeof u.user === "object") {
         u = u.user;
-        localStorage.setItem("user", JSON.stringify(u));
+        storage.setItem("user", JSON.stringify(u));
       }
       if (u?.role) console.log("[auth] init user role=", u.role, "email=", u.email);
       return u;
@@ -135,15 +136,15 @@ export function AuthProvider({ children }) {
   });
 
   const login = (userData, token) => {
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(userData));
+    storage.setItem("token", token);
+    storage.setItem("user", JSON.stringify(userData));
     setUser(userData);
     if (userData?.role) console.log("[auth] login role=", userData.role, "email=", userData.email);
   };
 
   const logout = useCallback(() => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    storage.removeItem("token");
+    storage.removeItem("user");
     setUser(null);
   }, []);
 
@@ -236,7 +237,7 @@ export function AuthProvider({ children }) {
         const u = d?.user;
         if (!cancelled && u?.id) {
           setUser(u);
-          localStorage.setItem("user", JSON.stringify(u));
+          storage.setItem("user", JSON.stringify(u));
         }
       } catch {
         /* session peut-être expirée : on redirige quand même */
@@ -274,7 +275,7 @@ export function AuthProvider({ children }) {
         if (sig === lastSig) return;
         lastSig = sig;
         setUser(u);
-        localStorage.setItem("user", JSON.stringify(u));
+        storage.setItem("user", JSON.stringify(u));
       } catch {
         /* réseau indisponible : nouvelle tentative au prochain cycle */
       }
@@ -323,7 +324,7 @@ export function AuthProvider({ children }) {
         // L'API renvoie { user }, ne jamais écraser la session si la réponse est invalide
         if (cancelled || !u?.id) return;
         setUser(u);
-        localStorage.setItem("user", JSON.stringify(u));
+        storage.setItem("user", JSON.stringify(u));
       })
       .catch((e) => console.log("[auth] /me refresh failed", e.message));
     return () => {
@@ -370,7 +371,7 @@ class ErrorBoundary extends React.Component {
         url: window.location.href,
         username: (() => {
           try {
-            return JSON.parse(localStorage.getItem("user") || "null")?.name || "";
+            return JSON.parse(storage.getItem("user") || "null")?.name || "";
           } catch {
             return "";
           }
@@ -441,13 +442,13 @@ function WelcomeBanner() {
 
   useEffect(() => {
     try {
-      setKind(localStorage.getItem("mboppi_welcome"));
+      setKind(storage.getItem("mboppi_welcome"));
     } catch {
       setKind(null);
     }
   }, []);
   const dismiss = useCallback(() => {
-    localStorage.removeItem("mboppi_welcome");
+    storage.removeItem("mboppi_welcome");
     setKind(null);
   }, []);
   useEffect(() => {
@@ -504,18 +505,18 @@ export default function App() {
   const pathKey = location.pathname + location.search;
   useEffect(() => {
     if (!online || !pathKey) return;
-    let visitorId = localStorage.getItem("mboppi_visitor_id");
+    let visitorId = storage.getItem("mboppi_visitor_id");
     if (!visitorId) {
       const id =
         (typeof crypto !== "undefined" && crypto.randomUUID && crypto.randomUUID()) ||
         "v-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 12);
-      localStorage.setItem("mboppi_visitor_id", id);
+      storage.setItem("mboppi_visitor_id", id);
       visitorId = id;
     }
     try {
       const key = "mboppi_visited_" + pathKey;
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, "1");
+      if (sessionStore.getItem(key)) return;
+      sessionStore.setItem(key, "1");
       fetch("/api/metrics/visit", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Visitor-Id": visitorId },

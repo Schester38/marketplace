@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
@@ -62,7 +63,7 @@ export default function MembershipPage() {
           clearInterval(id);
           try {
             const me = await api.me();
-            if (me?.user) localStorage.setItem("user", JSON.stringify(me.user));
+            if (me?.user) storage.setItem("user", JSON.stringify(me.user));
           } catch {
             /* la session se synchronisera au rechargement */
           }
@@ -104,7 +105,7 @@ export default function MembershipPage() {
     try {
       const d = await api.me();
       if (d?.user) {
-        localStorage.setItem("user", JSON.stringify(d.user));
+        storage.setItem("user", JSON.stringify(d.user));
       }
     } catch {
       /* la session se synchronisera au prochain cycle */

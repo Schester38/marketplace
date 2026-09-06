@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useCallback, useEffect, useState } from "react";
 import { api } from "../api.js";
 import Seo from "../components/Seo.jsx";
@@ -20,7 +21,7 @@ export default function LivreurDashboard() {
   const [code, setCode] = useState("");
 
   useEffect(() => {
-    setCode(localStorage.getItem(CODE_KEY) || "");
+    setCode(storage.getItem(CODE_KEY) || "");
   }, []);
   const [shopName, setShopName] = useState(null);
   // Stats des frais de livraison (comme boutique/vendeur) : calculées côté
@@ -64,7 +65,7 @@ export default function LivreurDashboard() {
         setCodeError("");
       } catch (e) {
         if (e.message && /code boutique invalide/i.test(e.message)) {
-          localStorage.removeItem(CODE_KEY);
+          storage.removeItem(CODE_KEY);
           setCode("");
           setCodeInput("");
           setCodeError(t("Code boutique invalide. Vérifiez le code auprès de la boutique."));
@@ -120,12 +121,12 @@ export default function LivreurDashboard() {
       setCodeError(t("Entrez le code de la boutique."));
       return;
     }
-    localStorage.setItem(CODE_KEY, clean);
+    storage.setItem(CODE_KEY, clean);
     setCode(clean);
   };
 
   const changeCode = () => {
-    localStorage.removeItem(CODE_KEY);
+    storage.removeItem(CODE_KEY);
     setCode("");
     setCodeInput("");
     setPending([]);

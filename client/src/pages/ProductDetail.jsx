@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
@@ -59,7 +60,7 @@ export default function ProductDetail() {
         setQty(1);
         try {
           const p = d.product;
-          const prev = JSON.parse(localStorage.getItem("mboppi_recent") || "[]");
+          const prev = JSON.parse(storage.getItem("mboppi_recent") || "[]");
           const entry = {
             id: p.id,
             name: p.name,
@@ -82,12 +83,12 @@ export default function ProductDetail() {
             entry,
             ...(Array.isArray(prev) ? prev : []).filter((x) => Number(x.id) !== Number(p.id)),
           ].slice(0, 12);
-          localStorage.setItem("mboppi_recent", JSON.stringify(updated));
+          storage.setItem("mboppi_recent", JSON.stringify(updated));
         } catch {}
         const key = "mboppi_view_product_" + id;
         try {
-          if (sessionStorage.getItem(key)) return;
-          sessionStorage.setItem(key, "1");
+          if (sessionStore.getItem(key)) return;
+          sessionStore.setItem(key, "1");
         } catch {}
         api.trackViews([{ type: "product", id: Number(id) }]).catch(() => {});
       })

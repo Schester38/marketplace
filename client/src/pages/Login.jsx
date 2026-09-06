@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
@@ -26,7 +27,7 @@ export default function Login() {
       const data = await api.login(form);
       console.log("[login] api.login role=", data.user?.role, "email=", data.user?.email);
       login(data.user, data.token);
-      localStorage.setItem("mboppi_welcome", "login");
+      storage.setItem("mboppi_welcome", "login");
       const from = location.state?.from;
       navigate(typeof from === "string" && from ? from : postLoginPath(data.user));
     } catch (err) {

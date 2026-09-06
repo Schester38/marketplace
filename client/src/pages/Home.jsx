@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
@@ -69,7 +70,7 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      const cached = sessionStorage.getItem("mboppi_products");
+      const cached = sessionStore.getItem("mboppi_products");
       const arr = cached ? JSON.parse(cached) : null;
       if (Array.isArray(arr) && arr.length) {
         hasLoaded.current = true;
@@ -83,7 +84,7 @@ export default function Home() {
 
   useEffect(() => {
     try {
-      const list = JSON.parse(localStorage.getItem("mboppi_recent") || "[]");
+      const list = JSON.parse(storage.getItem("mboppi_recent") || "[]");
       const filtered = Array.isArray(list) ? list.filter((p) => Number(p.quantity || 0) > 0) : [];
       setRecent(filtered);
     } catch {
@@ -249,7 +250,7 @@ export default function Home() {
             }
             if (unfiltered && sort === "recent" && !append) {
               try {
-                sessionStorage.setItem("mboppi_products", JSON.stringify(next));
+                sessionStore.setItem("mboppi_products", JSON.stringify(next));
               } catch {
                 /* stockage indisponible : on ignore */
               }

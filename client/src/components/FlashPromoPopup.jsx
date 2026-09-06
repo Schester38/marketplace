@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { api } from "../api.js";
@@ -13,7 +14,7 @@ const REFRESH_MS = 30000;
 
 function isDismissed(id) {
   try {
-    const map = JSON.parse(localStorage.getItem("mboppi_flash_dismissed") || "{}");
+    const map = JSON.parse(storage.getItem("mboppi_flash_dismissed") || "{}");
     return map[id] === new Date().toDateString();
   } catch {
     return false;
@@ -22,9 +23,9 @@ function isDismissed(id) {
 
 function markDismissed(id) {
   try {
-    const map = JSON.parse(localStorage.getItem("mboppi_flash_dismissed") || "{}");
+    const map = JSON.parse(storage.getItem("mboppi_flash_dismissed") || "{}");
     map[id] = new Date().toDateString();
-    localStorage.setItem("mboppi_flash_dismissed", JSON.stringify(map));
+    storage.setItem("mboppi_flash_dismissed", JSON.stringify(map));
   } catch {
     /* stockage indisponible : on ignore */
   }

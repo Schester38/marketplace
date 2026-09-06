@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
@@ -27,7 +28,7 @@ export default function AuthGoogle() {
       return;
     }
     done.current = true;
-    localStorage.setItem("token", token);
+    storage.setItem("token", token);
     const timeout = new Promise((_, reject) =>
       setTimeout(
         () => reject(new Error("Le serveur met trop de temps à répondre. Réessayez.")),
@@ -38,11 +39,11 @@ export default function AuthGoogle() {
       .then((data) => {
         console.log("[AuthGoogle] me response", data.user?.id, data.user?.email, data.user?.role);
         login(data.user, token);
-        localStorage.setItem("mboppi_welcome", "login");
+        storage.setItem("mboppi_welcome", "login");
         navigate(postLoginPath(data.user), { replace: true });
       })
       .catch((e) => {
-        localStorage.removeItem("token");
+        storage.removeItem("token");
         setError(e.message);
       });
   }, [params, login, navigate]);

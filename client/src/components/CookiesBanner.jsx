@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "../storage";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLang } from "../i18n.jsx";
@@ -7,11 +8,11 @@ export default function CookiesBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem("mboppi_cookies")) setVisible(true);
+    if (!storage.getItem("mboppi_cookies")) setVisible(true);
   }, []);
 
   const accept = () => {
-    localStorage.setItem("mboppi_cookies", "ok");
+    storage.setItem("mboppi_cookies", "ok");
     setVisible(false);
   };
 

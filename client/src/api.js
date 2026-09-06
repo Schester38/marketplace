@@ -1,7 +1,8 @@
+import { storage, sessionStore } from "./storage";
 const API = "/api";
 
 async function request(path, options = {}, retries = 1) {
-  const token = localStorage.getItem("token");
+  const token = storage.getItem("token");
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
   const method = (options.method || "GET").toUpperCase();
@@ -29,7 +30,7 @@ async function request(path, options = {}, retries = 1) {
 }
 
 async function adminRequest(path, options = {}) {
-  const token = localStorage.getItem("admin_token");
+  const token = storage.getItem("admin_token");
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(API + path, { ...options, headers });

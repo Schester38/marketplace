@@ -1,3 +1,4 @@
+import { storage, sessionStore } from "./storage";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
@@ -32,7 +33,7 @@ if (!pathname.startsWith("/admin")) {
       url: window.location.href,
       username: (() => {
         try {
-          return JSON.parse(localStorage.getItem("user") || "null")?.name || "";
+          return JSON.parse(storage.getItem("user") || "null")?.name || "";
         } catch {
           return "";
         }
@@ -60,7 +61,7 @@ if (!pathname.startsWith("/admin")) {
 }
 
 try {
-  let t = localStorage.getItem("theme");
+  let t = storage.getItem("theme");
   if (!t) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   document.documentElement.setAttribute("data-theme", t);
 } catch {
