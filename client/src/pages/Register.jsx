@@ -29,7 +29,6 @@ export default function Register() {
   const [accepted, setAccepted] = useState(false);
   const [sent, setSent] = useState(false);
   const [resending, setResending] = useState(false);
-  const [countryAuto, setCountryAuto] = useState(false);
   const userPickedCountry = useRef(false);
 
   // Géolocalisation automatique : le pays est pré-rempli (modifiable) dès que
@@ -39,7 +38,6 @@ export default function Register() {
     detectCountry().then((g) => {
       if (cancelled || !g?.country || userPickedCountry.current) return;
       setForm((f) => (f.country ? f : { ...f, country: g.country, operator: "" }));
-      setCountryAuto(true);
     });
     return () => {
       cancelled = true;
@@ -149,16 +147,10 @@ export default function Register() {
             onChange={(v) => {
               setForm({ ...form, country: v, operator: "" });
               userPickedCountry.current = true;
-              if (countryAuto) setCountryAuto(false);
             }}
             placeholder={t("Choisir votre pays…")}
             emptyLabel={t("Aucun résultat")}
           />
-          {countryAuto && form.country && (
-            <p className="hint">
-              📍 {t("Pays détecté automatiquement — modifiable")}
-            </p>
-          )}
 
           {!refCode && !refSeller && (
             <>
