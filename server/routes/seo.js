@@ -9,6 +9,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const INDEX_PATH = path.join(__dirname, "..", "..", "client", "dist", "index.html");
 const BASE_URL = process.env.PUBLIC_URL || "https://mboppi-mboppi.vercel.app";
 
+// Cache CDN (edge Vercel) : le HTML SEO est public et identique pour tous les
+// visiteurs. s-maxage=60 -> la plupart des ouvertures sont servies par l'edge
+// sans réveiller la fonction serverless (démarrage à froid) ; les URLs produits
+// ne changent pas (id série), un délai de 60 s est donc sans risque.
+const HTML_CACHE = "public, s-maxage=60, stale-while-revalidate=300";
+
+function sendHtml(res, html) {
+  if (html) {
+    res.set("Cache-Control", HTML_CACHE);
+    res.vary("Accept");
+    return res.type("html").send(html);
+  }
+  res.status(500).send("Erreur serveur");
+}
+
 let htmlCache = null;
 let htmlCacheAt = 0;
 const TTL = 30 * 1000;
@@ -198,10 +213,10 @@ router.get("/", async (req, res) => {
 </body></html>`
         );
     }
-    res.type("html").send(html);
+    sendHtml(res, html);
   } catch {
     const html = await loadIndexHtml();
-    if (html) return res.type("html").send(html);
+    if (html) return sendHtml(res, html);
     res.status(500).send("Erreur serveur");
   }
 });
@@ -288,10 +303,10 @@ router.get("/produit/:id", async (req, res) => {
             )}<script type="application/ld+json">${JSON.stringify(jsonLd)}</script></head><body><h1>${title.replace(/</g, "")}</h1><p>${descText.replace(/</g, "")}</p><p><a href="${canonical}">Voir le produit</a></p></body></html>`
         );
     }
-    res.type("html").send(html);
+    sendHtml(res, html);
   } catch (err) {
     const html = await loadIndexHtml();
-    if (html) return res.type("html").send(html);
+    if (html) return sendHtml(res, html);
     res.status(500).send("Erreur serveur");
   }
 });
@@ -356,10 +371,10 @@ router.get("/boutique/:id", async (req, res) => {
         .send(
           `<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title><meta name="description" content="${descText}"/></head><body><h1>${title}</h1></body></html>`
         );
-    res.type("html").send(html);
+    sendHtml(res, html);
   } catch {
     const html = await loadIndexHtml();
-    if (html) return res.type("html").send(html);
+    if (html) return sendHtml(res, html);
     res.status(500).send("Erreur serveur");
   }
 });
@@ -424,10 +439,10 @@ router.get("/createur/:id", async (req, res) => {
         .send(
           `<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title><meta name="description" content="${descText}"/></head><body><h1>${title}</h1></body></html>`
         );
-    res.type("html").send(html);
+    sendHtml(res, html);
   } catch {
     const html = await loadIndexHtml();
-    if (html) return res.type("html").send(html);
+    if (html) return sendHtml(res, html);
     res.status(500).send("Erreur serveur");
   }
 });
@@ -481,6 +496,8 @@ router.get("/sitemap.xml", async (req, res) => {
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${entries.map((e) => `  <url><loc>${e.loc}</loc><changefreq>${e.freq}</changefreq><priority>${e.prio}</priority>${e.lastmod ? `<lastmod>${String(e.lastmod).slice(0, 10)}</lastmod>` : ""}</url>`).join("\n")}
 </urlset>`;
+    res.set("Cache-Control", HTML_CACHE);
+    res.vary("Accept");
     res.type("application/xml").send(xml);
   } catch {
     res.status(500).send("Erreur serveur");
@@ -557,10 +574,10 @@ router.get("/ville/:slug", async (req, res) => {
         .send(
           `<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title><meta name="description" content="${descText}"/></head><body><h1>${title}</h1></body></html>`
         );
-    res.type("html").send(html);
+    sendHtml(res, html);
   } catch {
     const html = await loadIndexHtml();
-    if (html) return res.type("html").send(html);
+    if (html) return sendHtml(res, html);
     res.status(500).send("Erreur serveur");
   }
 });
@@ -620,10 +637,10 @@ router.get("/offre/:id", async (req, res) => {
         .send(
           `<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${title}</title><meta name="description" content="${descText}"/></head><body><h1>${title}</h1></body></html>`
         );
-    res.type("html").send(html);
+    sendHtml(res, html);
   } catch {
     const html = await loadIndexHtml();
-    if (html) return res.type("html").send(html);
+    if (html) return sendHtml(res, html);
     res.status(500).send("Erreur serveur");
   }
 });
@@ -708,10 +725,10 @@ router.get(Object.keys(STATIC_PAGES), async (req, res) => {
           `<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${page.title}</title><meta name="description" content="${page.description}"/><link rel="canonical" href="${canonical}"/></head><body><h1>${page.title}</h1><p><a href="${BASE_URL}/">Retour à Mboppi</a></p></body></html>`
         );
     }
-    res.type("html").send(html);
+    sendHtml(res, html);
   } catch {
     const html = await loadIndexHtml();
-    if (html) return res.type("html").send(html);
+    if (html) return sendHtml(res, html);
     res.status(500).send("Erreur serveur");
   }
 });
