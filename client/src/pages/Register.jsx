@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { GoogleIcon } from "../components/icons.jsx";
@@ -7,6 +7,7 @@ import SearchSelect from "../components/SearchSelect.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
 import Logo from "../components/Logo.jsx";
 import { COUNTRIES, OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../config.js";
+import { detectCountry } from "../geo.js";
 import { useLang } from "../i18n.jsx";
 
 export default function Register() {
@@ -28,6 +29,22 @@ export default function Register() {
   const [accepted, setAccepted] = useState(false);
   const [sent, setSent] = useState(false);
   const [resending, setResending] = useState(false);
+  const [countryAuto, setCountryAuto] = useState(false);
+  const userPickedCountry = useRef(false);
+
+  // Géolocalisation automatique : le pays est pré-rempli (modifiable) dès que
+  // la détection aboutit — jamais au détriment d'un choix manuel de l'utilisateur.
+  useEffect(() => {
+    let cancelled = false;
+    detectCountry().then((g) => {
+      if (cancelled || !g?.country || userPickedCountry.current) return;
+      setForm((f) => (f.country ? f : { ...f, country: g.country, operator: "" }));
+      setCountryAuto(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const countryOptions = COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }));
   const operators = OPERATORS_BY_COUNTRY[form.country] || [];
@@ -129,10 +146,19 @@ export default function Register() {
           <SearchSelect
             options={COUNTRIES.map((c) => ({ value: c.name, label: c.name, flag: c.flag }))}
             value={form.country}
-            onChange={(v) => setForm({ ...form, country: v, operator: "" })}
+            onChange={(v) => {
+              setForm({ ...form, country: v, operator: "" });
+              userPickedCountry.current = true;
+              if (countryAuto) setCountryAuto(false);
+            }}
             placeholder={t("Choisir votre pays…")}
             emptyLabel={t("Aucun résultat")}
           />
+          {countryAuto && form.country && (
+            <p className="hint">
+              📍 {t("Pays détecté automatiquement — modifiable")}
+            </p>
+          )}
 
           {!refCode && !refSeller && (
             <>

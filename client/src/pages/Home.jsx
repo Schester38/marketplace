@@ -16,6 +16,7 @@ import { useLang } from "../i18n.jsx";
 import { PRODUCT_CATEGORIES, currencySymbol } from "../config.js";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { useAuth } from "../App.jsx";
+import { useGeo } from "../geo.js";
 
 function mergeUnique(prev, next) {
   if (!prev.length) return next;
@@ -60,6 +61,9 @@ export default function Home() {
   const [popular, setPopular] = useState([]);
   const [flashPromos, setFlashPromos] = useState([]);
   const [activeRail, setActiveRail] = useState(() => params.get("rail") || "");
+  // Géolocalisation : pays détecté + préférence « produits de mon pays d'abord ».
+  const { country: geoCountry, city: geoCity, loading: geoLoading } = useGeo();
+  const [localOnly, setLocalOnly] = useState(true);
 
   // Lien « Promotions » du header : /?rail=promos ouvre directement le rail.
   useEffect(() => {
@@ -230,6 +234,7 @@ export default function Home() {
           ...(scope && scope !== "product" ? { scope } : {}),
           ...(minPrice ? { min_price: Number(minPrice) } : {}),
           ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
+          ...(localOnly && geoCountry ? { country: geoCountry } : {}),
           limit: PER_PAGE,
           offset,
         })
@@ -277,7 +282,7 @@ export default function Home() {
           }
         });
     },
-    [debouncedSearch, category, sort, scope, minPrice, maxPrice, offset]
+    [debouncedSearch, category, sort, scope, minPrice, maxPrice, offset, localOnly, geoCountry]
   );
 
   useEffect(() => {
@@ -782,6 +787,20 @@ export default function Home() {
             <option value="creation">{t("Rechercher une création")}</option>
           </select>
         </div>
+        {geoCountry && mode === "products" && !debouncedSearch && !category && (
+          <div className="geo-banner" role="region" aria-label={t("Produits locaux")}>
+            <span>
+              📍 {localOnly ? t("Produits de") + " " + geoCountry + " " + t("en premier") : t("Tous les produits, partout")}
+            </span>
+            <button
+              type="button"
+              className="btn btn-small btn-outline"
+              onClick={() => setLocalOnly((v) => !v)}
+            >
+              {localOnly ? t("Tout voir") : `🌍 ${t("Voir d'abord")} ${geoCountry}`}
+            </button>
+          </div>
+        )}
         {error && mode === "products" && (
           <p className="error" role="alert">
             {error}

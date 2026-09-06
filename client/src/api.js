@@ -66,6 +66,7 @@ export const api = {
     ).toString();
     return request("/products" + (qs ? `?${qs}` : ""));
   },
+  geo: () => request("/geo"),
   listCities: (search = "") =>
     request("/products/cities" + (search ? `?q=${encodeURIComponent(search)}` : "")),
   listShops: (params = {}) => {

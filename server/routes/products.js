@@ -123,7 +123,7 @@ const SORTS = {
 
 router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
   cachePublic(res);
-  const { search, shop, category, sort, scope, min_price, max_price, city, limit, offset } =
+  const { search, shop, category, sort, scope, min_price, max_price, city, country, limit, offset } =
     req.query;
   let sql = SELECT_PRODUCT;
   const params = [];
@@ -197,7 +197,20 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
     "NOT EXISTS (SELECT 1 FROM flash_promotions fp2 WHERE fp2.product_id = p.id AND fp2.ends_at > now())"
   );
   if (where.length) sql += " WHERE " + where.join(" AND ");
-  sql += " ORDER BY " + (SORTS[sort] || SORTS.recent);
+  // Boost géographique : si un pays est fourni (détection automatique), les
+  // produits des boutiques de ce pays remontent en premier, sans exclure les
+  // autres — on peut toujours tout faire défiler.
+  let countryNorm = null;
+  if (country) {
+    countryNorm = String(country).slice(0, 60);
+    const countryParam = params.length + 1;
+    sql +=
+      " ORDER BY " +
+      `CASE WHEN ${FOLD_TEXT(`u.country`)} = ${FOLD_TEXT(`$${countryParam}`)} THEN 0 ELSE 1 END, ` +
+      (SORTS[sort] || SORTS.recent);
+  } else {
+    sql += " ORDER BY " + (SORTS[sort] || SORTS.recent);
+  }
   const rawLimit = Number(limit);
   const rawOffset = Number(offset);
   const paging =
@@ -211,6 +224,7 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
       params
     );
     sql += ` LIMIT ${pageSize} OFFSET ${skip}`;
+    if (countryNorm) params.push(countryNorm);
     const products = (await q(sql, params)).map(productRow);
     const total = Number(countRow.n);
     res.json({
@@ -222,6 +236,7 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
     });
     return;
   }
+  if (countryNorm) params.push(countryNorm);
   const products = (await q(sql, params)).map(productRow);
   res.json({ products });
 });

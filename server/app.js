@@ -31,6 +31,7 @@ import logRoutes from "./routes/logs.js";
 import seoRoutes from "./routes/seo.js";
 import paymentsRouter, { webhookRouter } from "./routes/payments.js";
 import presentationRoutes, { pageRouter, imageRouter } from "./routes/presentation.js";
+import geoRoutes from "./routes/geo.js";
 import { authRequired } from "./auth.js";
 import { securityHeaders, originCheck } from "./security.js";
 
@@ -151,6 +152,7 @@ app.use("/api/metrics", metricsRoutes);
 app.use("/api/donations", donationsRoutes);
 app.use("/api/activation-withdrawals", activationWithdrawalRoutes);
 app.use("/api/payments", paymentsRouter);
+app.use("/api/geo", limiter(60 * 1000, 30), geoRoutes);
 app.use("/api/logs", limiter(60 * 1000, 8));
 app.use("/api/logs", logRoutes);
 app.use("/api/admin", adminRoutes);
