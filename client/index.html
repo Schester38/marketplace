@@ -32,6 +32,9 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Préconnexion au tunnel de paiement iKeePay : DNS + TLS lancés tôt,
+         l'overlay s'ouvre plus vite quand l'utilisateur clique sur payer. -->
+    <link rel="preconnect" href="https://ikeepay.com" crossorigin />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Mboppi" />

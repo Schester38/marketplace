@@ -1156,6 +1156,9 @@ const EN = {
   Ouvert: "Open",
   Fermé: "Closed",
   "Accès gratuit": "Free access",
+  "Ouverture du tunnel de paiement…": "Opening the payment tunnel…",
+  "Le tunnel de paiement met trop de temps à répondre.":
+    "The payment tunnel is taking too long to respond.",
   "Boutique vérifiée": "Verified shop",
   "Contacter sur WhatsApp": "Contact on WhatsApp",
   "Produits de la boutique": "Shop products",
@@ -2562,6 +2565,9 @@ const AR = {
   Ouvert: "مفتوح",
   Fermé: "مغلق",
   "Accès gratuit": "وصول مجاني",
+  "Ouverture du tunnel de paiement…": "جارٍ فتح نافذة الدفع…",
+  "Le tunnel de paiement met trop de temps à répondre.":
+    "نافذة الدفع تستغرق وقتاً طويلاً للاستجابة.",
   "Boutique vérifiée": "متجر موثّق",
   "Contacter sur WhatsApp": "تواصل عبر واتساب",
   "Produits de la boutique": "منتجات المتجر",
@@ -3915,6 +3921,9 @@ const ES = {
   Ouvert: "Abierto",
   Fermé: "Cerrado",
   "Accès gratuit": "Acceso gratuito",
+  "Ouverture du tunnel de paiement…": "Abriendo el túnel de pago…",
+  "Le tunnel de paiement met trop de temps à répondre.":
+    "El túnel de pago tarda demasiado en responder.",
   "Boutique vérifiée": "Tienda verificada",
   "Contacter sur WhatsApp": "Contactar por WhatsApp",
   "Produits de la boutique": "Productos de la tienda",
