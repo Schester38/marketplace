@@ -251,7 +251,7 @@ export function AuthProvider({ children }) {
     };
   }, [navigate]);
 
-  // Synchronisation automatique de la session (60 s + retour sur l'onglet) :
+  // Synchronisation automatique de la session (15 s + retour sur l'onglet) :
   // applique immédiatement « Ouvrir »/« Fermer » décidés par l'admin ou une
   // adhésion confirmée, sans déconnexion/reconnexion.
   useEffect(() => {
@@ -281,7 +281,7 @@ export function AuthProvider({ children }) {
       }
     };
     sync();
-    const id = setInterval(sync, 60000);
+    const id = setInterval(sync, 15000);
     const onVisible = () => {
       if (document.visibilityState === "visible") sync();
     };
@@ -309,6 +309,36 @@ export function AuthProvider({ children }) {
             ? "/creator"
             : "/";
     navigate(home, { replace: true });
+  }, [user, navigate, membershipGateState]);
+
+  // Attente active sur /adhesion : sonde la session toutes les 4 s (10 min max)
+  // pour detecter immediatement une ouverture decidee par l'admin —
+  // redirection automatique vers l'espace, sans rafraichir la page.
+  useEffect(() => {
+    if (!user || window.location.pathname !== "/adhesion") return undefined;
+    if (membershipActive(user)) return undefined;
+    let cancelled = false;
+    const started = Date.now();
+    const id = setInterval(async () => {
+      if (cancelled || Date.now() - started > 10 * 60 * 1000) {
+        clearInterval(id);
+        return;
+      }
+      try {
+        const d = await api.me();
+        const u = d?.user;
+        if (!cancelled && u?.id) {
+          setUser(u);
+          storage.setItem("user", JSON.stringify(u));
+        }
+      } catch {
+        /* reseau indisponible : nouvelle tentative au prochain cycle */
+      }
+    }, 4000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [user, navigate, membershipGateState]);
 
   useEffect(() => {
