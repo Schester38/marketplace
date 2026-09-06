@@ -88,10 +88,12 @@ export default function IkeepayCheckout({ checkoutUrl, onSuccess, onClose }) {
         {status !== "ready" && (
           <div className="ikeepay-loading">
             {status === "loading" ? (
-              <>
-                <span className="ikeepay-spinner" aria-hidden="true" />
-                <p>{t("Ouverture du tunnel de paiement…")}</p>
-              </>
+              <span
+                className="ikeepay-spinner"
+                role="status"
+                aria-label={t("Chargement…")}
+                aria-live="polite"
+              />
             ) : (
               <>
                 <p className="error">{t("Le tunnel de paiement met trop de temps à répondre.")}</p>

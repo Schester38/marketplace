@@ -1156,7 +1156,6 @@ const EN = {
   Ouvert: "Open",
   Fermé: "Closed",
   "Accès gratuit": "Free access",
-  "Ouverture du tunnel de paiement…": "Opening the payment tunnel…",
   "Le tunnel de paiement met trop de temps à répondre.":
     "The payment tunnel is taking too long to respond.",
   "Boutique vérifiée": "Verified shop",
@@ -2565,7 +2564,6 @@ const AR = {
   Ouvert: "مفتوح",
   Fermé: "مغلق",
   "Accès gratuit": "وصول مجاني",
-  "Ouverture du tunnel de paiement…": "جارٍ فتح نافذة الدفع…",
   "Le tunnel de paiement met trop de temps à répondre.":
     "نافذة الدفع تستغرق وقتاً طويلاً للاستجابة.",
   "Boutique vérifiée": "متجر موثّق",
@@ -3921,7 +3919,6 @@ const ES = {
   Ouvert: "Abierto",
   Fermé: "Cerrado",
   "Accès gratuit": "Acceso gratuito",
-  "Ouverture du tunnel de paiement…": "Abriendo el túnel de pago…",
   "Le tunnel de paiement met trop de temps à répondre.":
     "El túnel de pago tarda demasiado en responder.",
   "Boutique vérifiée": "Tienda verificada",
