@@ -72,11 +72,16 @@ async function publicUser(u) {
     membership_required: required,
     membership_fee: required ? MEMBERSHIP_FEES[u.role] || null : null,
     membership_expires_at: u.membership_expires_at || null,
-    membership_active: !required || !!(
-      (u.membership_expires_at && new Date(u.membership_expires_at) > new Date()) ||
-      // Compte approuvé sans date (régime antérieur au compte à rebours).
-      (u.admin_approved && !u.membership_expires_at)
-    ),
+    membership_active:
+      !required ||
+      !!(
+        // Fermé par l'admin (admin_approved = false) → inactif, même si la
+        // date d'adhésion est encore dans le futur.
+        u.admin_approved &&
+        // Compte approuvé sans date (régime antérieur au compte à rebours) :
+        // accès maintenu jusqu'à la prochaine approbation/paiement.
+        (!u.membership_expires_at || new Date(u.membership_expires_at) > new Date())
+      ),
   };
 }
 

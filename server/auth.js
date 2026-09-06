@@ -75,9 +75,10 @@ export function roleRequired(...roles) {
         : null;
       // Compte approuvé sans date (régime antérieur au compte à rebours) :
       // accès maintenu jusqu'à la prochaine approbation/paiement.
-      const active = expires
-        ? expires.getTime() > Date.now()
-        : Boolean(current && current.admin_approved);
+      // La fermeture par l'admin (admin_approved = false) bloque IMMÉDIATEMENT,
+      // même si la date d'adhésion est encore dans le futur.
+      const approved = Boolean(current && current.admin_approved);
+      const active = approved && (!expires || expires.getTime() > Date.now());
       if (!active) {
         return res.status(402).json({
           error: "Adhésion requise pour accéder à cet espace",

@@ -20,10 +20,13 @@ export function membershipActive(user) {
   // seulement quand l'admin a activé le blocage global.
   const gatedRoles = GATE === "all" ? ["seller", "shop", "creator"] : ["seller"];
   if (!gatedRoles.includes(user.role)) return true;
+  // Fermé par l'admin (admin_approved = false) → inactif, même si la date
+  // d'adhésion est encore dans le futur.
+  if (!user.admin_approved) return false;
   // Compte approuvé sans date (régime antérieur au compte à rebours) :
   // accès maintenu jusqu'à la prochaine approbation/paiement.
-  if (user.admin_approved && !user.membership_expires_at) return true;
+  if (!user.membership_expires_at) return true;
   // Sinon : actif uniquement si l'adhésion est dans le futur → sinon
   // redirection vers /adhesion (Protected + événement membership-required).
-  return Boolean(user.membership_expires_at && new Date(user.membership_expires_at) > new Date());
+  return new Date(user.membership_expires_at) > new Date();
 }
