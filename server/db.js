@@ -158,8 +158,24 @@ export async function initDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS seller_code TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS shop_code TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE;
-    ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_approved BOOLEAN NOT NULL DEFAULT FALSE;
-    UPDATE users SET admin_approved = COALESCE(verified, FALSE) WHERE admin_approved IS DISTINCT FROM verified;
+  `);
+
+  // admin_approved : backfill UNIQUEMENT à la création de la colonne.
+  // ⚠️ Ne JAMAIS resynchroniser admin_approved sur verified à chaque boot :
+  // l'admin ouvre les comptes (admin_approved = TRUE alors que verified reste
+  // FALSE) — une resynchronisation les refermerait à chaque cold start.
+  {
+    const { rows: pre } = await pool.query(
+      `SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'users' AND column_name = 'admin_approved') AS existed`
+    );
+    const existed = pre?.[0]?.existed === true;
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_approved BOOLEAN NOT NULL DEFAULT FALSE;`);
+    if (!existed) {
+      await pool.query(`UPDATE users SET admin_approved = COALESCE(verified, FALSE) WHERE admin_approved IS DISTINCT FROM verified;`);
+    }
+  }
+
+  await pool.query(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_attempts INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT TRUE;
