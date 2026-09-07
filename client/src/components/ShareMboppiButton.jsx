@@ -3,7 +3,7 @@ import { useLang } from "../i18n.jsx";
 import { BASE_URL } from "../config.js";
 import { IconShare } from "./icons.jsx";
 
-const LOGO_URL = "/navbar-logo.png";
+const LOGO_URL = "/share-logo.png";
 
 function shareMessage(t) {
   return t(
