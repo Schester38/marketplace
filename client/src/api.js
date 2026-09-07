@@ -1,14 +1,47 @@
 import { storage, sessionStore } from "./storage";
 const API = "/api";
 
-async function request(path, options = {}, retries = 1) {
+// --- Journalisation silencieuse des erreurs serveur (visible dans Admin → Journal) ---
+const recentLogKeys = new Map(); // clé -> timestamp du dernier log
+function reportServerError(path, status, detail) {
+  try {
+    const key = `${path}|${status}`;
+    const now = Date.now();
+    const last = recentLogKeys.get(key) || 0;
+    if (now - last < 30_000) return; // max 1 log / 30 s par route+statut
+    recentLogKeys.set(key, now);
+    if (recentLogKeys.size > 50) {
+      const oldest = [...recentLogKeys.entries()].sort((a, b) => a[1] - b[1])[0];
+      if (oldest) recentLogKeys.delete(oldest[0]);
+    }
+    // fetch brut (pas request()) pour éviter toute récursion
+    fetch(`${API}/logs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: `[API] ${path} -> ${status}${detail ? ` (${detail})` : ""}`,
+        stack: null,
+        url: typeof window !== "undefined" ? window.location.pathname : "",
+        username: storage.getItem("user_name") || "",
+      }),
+    }).catch(() => {});
+  } catch {
+    /* jamais bloquant */
+  }
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const RETRYABLE_STATUS = new Set([500, 502, 503, 504]);
+
+async function request(path, options = {}, retries = 2) {
   const token = storage.getItem("token");
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
   const method = (options.method || "GET").toUpperCase();
+  let data = {};
   try {
     const res = await fetch(API + path, { ...options, headers });
-    const data = await res.json().catch(() => ({}));
+    data = await res.json().catch(() => ({}));
     if (!res.ok) {
       const err = new Error(data.error || `Erreur ${res.status}`);
       err.status = res.status;
@@ -18,13 +51,17 @@ async function request(path, options = {}, retries = 1) {
     return data;
   } catch (err) {
     const network = err instanceof TypeError;
+    const serverError = RETRYABLE_STATUS.has(err.status);
     if (network && typeof navigator !== "undefined" && !navigator.onLine) {
       window.dispatchEvent(new Event("app-offline"));
     }
-    if (network && method === "GET" && retries > 0) {
-      await new Promise((r) => setTimeout(r, 1200));
+    // Retry automatique UNIQUEMENT sur les GET (idempotents) : erreur réseau
+    // ou 5xx transitoire (cold start, déploiement) -> invisible pour l'utilisateur.
+    if ((network || serverError) && method === "GET" && retries > 0) {
+      await sleep(network ? 1200 : retries === 2 ? 800 : 2000);
       return request(path, options, retries - 1);
     }
+    if (serverError) reportServerError(path, err.status, data?.error || "");
     throw err;
   }
 }
@@ -34,14 +71,32 @@ async function adminRequest(path, options = {}) {
   const token = storage.getItem("admin_token");
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(API + path, { ...options, headers });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(data.error || `Erreur ${res.status}`);
-    err.status = res.status;
-    throw err;
+  const method = (options.method || "GET").toUpperCase();
+  for (let attempt = 2; attempt >= 0; attempt--) {
+    let res;
+    try {
+      res = await fetch(API + path, { ...options, headers });
+    } catch (err) {
+      if (method === "GET" && attempt > 0) {
+        await sleep(1200);
+        continue;
+      }
+      throw err;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(data.error || `Erreur ${res.status}`);
+      err.status = res.status;
+      if (RETRYABLE_STATUS.has(res.status) && method === "GET" && attempt > 0) {
+        await sleep(attempt === 2 ? 800 : 2000);
+        continue;
+      }
+      if (RETRYABLE_STATUS.has(res.status)) reportServerError(path, res.status, data.error || "");
+      throw err;
+    }
+    return data;
   }
-  return data;
+  throw new Error("Erreur réseau");
 }
 
 export const api = {
