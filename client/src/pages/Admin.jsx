@@ -249,6 +249,7 @@ export default function Admin() {
       [
         m.user_name,
         m.user_email,
+        m.user_reference,
         m.user_role,
         m.external_reference,
         m.parrain_name,
@@ -1367,6 +1368,11 @@ export default function Admin() {
                           <td>
                             {m.user_name}
                             <div className="hint">{m.user_email}</div>
+                            {m.user_reference && (
+                              <div className="hint">
+                                <code>{m.user_reference}</code>
+                              </div>
+                            )}
                           </td>
                           <td>
                             <span className="badge">{t(m.user_role || "")}</span>
