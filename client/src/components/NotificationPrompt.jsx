@@ -1,4 +1,3 @@
-import { storage, sessionStore } from "../storage";
 import React, { useEffect, useState } from "react";
 import { useLang } from "../i18n.jsx";
 import { requestPushPermission } from "../push.js";
@@ -6,11 +5,9 @@ import { requestPushPermission } from "../push.js";
 // Bannière d'activation des notifications, affichée à l'ouverture du site.
 // Un clic sur « Activer » est nécessaire : tous les navigateurs exigent un
 // geste utilisateur pour Notification.requestPermission() (le déclenchement
-// automatique est ignoré). On ne harcèle pas : la bannière n'apparaît que si
-// la permission est encore « default » et pas déjà refusée / proposée au
-// cours des 7 derniers jours.
-const NOTIF_PROMPT_KEY = (uid) => `mboppi_notif_prompt_${uid || "guest"}`;
-
+// automatique est ignoré). La bannière réapparaît à chaque connexion tant que
+// la permission n'est pas accordée ; « Plus tard » ne la cache que pour la
+// session en cours.
 export default function NotificationPrompt({ user }) {
   const { t } = useLang();
   const [visible, setVisible] = useState(false);
@@ -24,15 +21,7 @@ export default function NotificationPrompt({ user }) {
       requestPushPermission();
       return;
     }
-    // permission === "default" → proposer, mais pas plus d'une fois / 7 jours.
-    try {
-      const id = NOTIF_PROMPT_KEY(user && user.id);
-      const last = Number(storage.getItem(id) || 0);
-      const WEEK = 7 * 24 * 60 * 60 * 1000;
-      if (Date.now() - last < WEEK) return;
-    } catch {
-      /* stockage indisponible : on affiche quand même */
-    }
+    // permission === "default" → proposer à chaque connexion.
     const timer = setTimeout(() => setVisible(true), 1200);
     return () => clearTimeout(timer);
   }, [user]);
@@ -44,21 +33,11 @@ export default function NotificationPrompt({ user }) {
     } catch {
       /* silencieux */
     }
-    try {
-      storage.setItem(NOTIF_PROMPT_KEY(user && user.id), String(Date.now()));
-    } catch {
-      /* silencieux */
-    }
     setBusy(false);
     setVisible(false);
   };
 
   const dismiss = () => {
-    try {
-      storage.setItem(NOTIF_PROMPT_KEY(user && user.id), String(Date.now()));
-    } catch {
-      /* silencieux */
-    }
     setVisible(false);
   };
 
