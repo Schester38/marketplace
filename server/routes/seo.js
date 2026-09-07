@@ -159,8 +159,6 @@ router.get("/", async (req, res) => {
     const canonical = `${originOf(req)}/`;
     const descText =
       "Mboppi, le marché de votre quartier en ligne : produits des boutiques, créations des créateurs, vente avec commissions, commande avec livraison et paiement mobile.";
-    const image = products[0]?.image || "";
-    const absImage = absImageOf(image, originOf(req));
 
     const jsonLd = {
       "@context": "https://schema.org",
@@ -198,7 +196,8 @@ router.get("/", async (req, res) => {
     }
 
     let html = await loadIndexHtml();
-    html = injectHead(html, { title, description: descText, canonical, ogImage: absImage });
+    // Aperçu Open Graph : le logo Mboppi (et non la photo d'un produit)
+    html = injectHead(html, { title, description: descText, canonical, ogImage: OG_DEFAULT });
     html = injectJsonLd(html, jsonLd);
     if (!html) {
       return res
