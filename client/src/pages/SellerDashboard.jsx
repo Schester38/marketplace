@@ -124,15 +124,16 @@ export default function SellerDashboard() {
   };
 
   const shareOrCopy = async (kind, url, text, imageUrl) => {
-    const shared = await nativeShareWithImage({
+    // Le lien est toujours copié dans le presse-papiers en premier : même si
+    // la boîte de partage native échoue ou est annulée, le lien est généré.
+    await copy(kind, url);
+    await nativeShareWithImage({
       title: "Mboppi",
       text,
       url,
       imageUrl,
       useLogo: true, // liens affiliation / parrainage / vente -> logo Mboppi
     });
-    if (shared) return;
-    copy(kind, url);
   };
 
   const shareProduct = (p) =>

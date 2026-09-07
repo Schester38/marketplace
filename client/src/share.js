@@ -65,8 +65,20 @@ export async function nativeShareWithImage({ title, text, url, imageUrl, useLogo
   }
   try {
     await navigator.share(shareData);
-  } catch {
-    /* annulé par l'utilisateur */
+  } catch (err) {
+    // Annulé par l'utilisateur -> on s'arrête. En cas d'échec réel (ex. pièce
+    // jointe refusée par la plateforme), on retombe sur la copie du lien.
+    if (err && err.name === "AbortError") return true;
+    if (shareData.files) {
+      try {
+        delete shareData.files;
+        await navigator.share(shareData);
+        return true;
+      } catch (err2) {
+        if (err2 && err2.name === "AbortError") return true;
+      }
+    }
+    return false;
   }
   return true;
 }
