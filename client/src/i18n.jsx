@@ -1233,6 +1233,10 @@ const EN = {
     "Help us improve Mboppi: your message will open in WhatsApp.",
   "Votre suggestion…": "Your suggestion…",
   "Envoyer sur WhatsApp": "Send on WhatsApp",
+  "Partager Mboppi": "Share Mboppi",
+  "Découvre Mboppi": "Discover Mboppi",
+  "🛍️ Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs et créateurs — commandez facilement ! 👉 {url}":
+    "🛍️ Discover Mboppi: the online marketplace of Cameroon and Africa. Shops, sellers and creators — order easily! 👉 {url}",
   "Messages aux utilisateurs": "Messages to users",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "Send a message that will show as a popup on the users' next log-in (once only).",
@@ -2645,6 +2649,10 @@ const AR = {
     "ساعدنا في تحسين Mboppi: ستُفتح رسالتك في WhatsApp.",
   "Votre suggestion…": "اقتراحك…",
   "Envoyer sur WhatsApp": "إرسال عبر WhatsApp",
+  "Partager Mboppi": "مشاركة Mboppi",
+  "Découvre Mboppi": "اكتشف Mboppi",
+  "🛍️ Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs et créateurs — commandez facilement ! 👉 {url}":
+    "🛍️ اكتشف Mboppi: السوق الإلكتروني للكاميرون وأفريقيا. متاجر وبائعون ومبدعون — اطلب بسهولة! 👉 {url}",
   "Messages aux utilisateurs": "رسائل إلى المستخدمين",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "أرسل رسالة ستظهر كنافذة منبثقة عند تسجيل المستخدمين دخولهم التالي (مرة واحدة فقط).",
@@ -4007,6 +4015,10 @@ const ES = {
     "Ayúdanos a mejorar Mboppi: tu mensaje se abrirá en WhatsApp.",
   "Votre suggestion…": "Tu sugerencia…",
   "Envoyer sur WhatsApp": "Enviar por WhatsApp",
+  "Partager Mboppi": "Compartir Mboppi",
+  "Découvre Mboppi": "Descubre Mboppi",
+  "🛍️ Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs et créateurs — commandez facilement ! 👉 {url}":
+    "🛍️ Descubre Mboppi: el mercado en línea de Camerún y África. Tiendas, vendedores y creadores— ¡pide fácilmente! 👉 {url}",
   "Messages aux utilisateurs": "Mensajes a los usuarios",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "Envía un mensaje que se mostrará en una ventana emergente en el próximo inicio de sesión de los usuarios (una sola vez).",

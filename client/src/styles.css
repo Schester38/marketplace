@@ -4229,6 +4229,12 @@ a.step {
 .suggest-toggle:hover {
   background: var(--soft);
 }
+.share-mboppi-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--primary);
+}
 .suggest-overlay {
   z-index: 1001;
 }

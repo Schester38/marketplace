@@ -14,6 +14,7 @@ import { countrySymbol, PRODUCT_CATEGORIES } from "../config.js";
 import { MegaMenu } from "./MegaMenu.jsx";
 import { useLite } from "../liteMode.js";
 import SuggestionButton from "./SuggestionButton.jsx";
+import ShareMboppiButton from "./ShareMboppiButton.jsx";
 import {
   IconGrid,
   IconStore,
@@ -950,6 +951,7 @@ export default function Navbar({ onLogout }) {
       </div>
       <FollowUs />
       <SuggestionButton onOpened={close} />
+      <ShareMboppiButton onOpened={close} />
     </div>
   );
 
