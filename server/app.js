@@ -112,7 +112,12 @@ app.use("/api", limiter(60 * 1000, 300));
 
 app.get("/", (req, res, next) => {
   const wantsHtml = /text\/html|application\/xhtml\+xml/i.test(req.headers.accept || "");
-  if (wantsHtml) return next();
+  // Les crawlers de réseaux sociaux (WhatsApp, Facebook, X, Telegram…)
+  // n'envoient pas "Accept: text/html" : ils doivent recevoir le HTML SEO
+  // (balises og:image) pour que l'aperçu du lien affiche le logo.
+  const ua = req.headers["user-agent"] || "";
+  const isCrawler = /WhatsApp|facebookexternalhit|FacebookBot|Twitterbot|TelegramBot|Slackbot|Discordbot|LinkedInBot|Googlebot|bingbot|embedly|quora link preview/i.test(ua);
+  if (wantsHtml || isCrawler) return next();
   res.json({ name: "Mboppi API", version: "1.0.0" });
 });
 
