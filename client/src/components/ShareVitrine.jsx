@@ -21,10 +21,11 @@ export default function ShareVitrine({ onClose }) {
   const msg = shareMessage(t);
 
   const shareNative = async () => {
+    // L'URL est déjà dans le texte du message -> pas de champ `url` séparé,
+    // sinon l'URL apparaîtrait en double dans la boîte de partage.
     const shared = await nativeShareWithImage({
       title: t("Ma vitrine Mboppi"),
       text: msg,
-      url: VITRINE_URL,
       useLogo: true, // vitrine -> logo Mboppi
     });
     if (shared) onClose();

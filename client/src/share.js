@@ -50,7 +50,8 @@ export function firstProductImage(product) {
  */
 export async function nativeShareWithImage({ title, text, url, imageUrl, useLogo = false }) {
   if (!navigator.share) return false;
-  const shareData = { title, text, url };
+  const shareData = { title, text };
+  if (url) shareData.url = url;
   let file = null;
   if (imageUrl) file = await getFileFromImageUrl(imageUrl);
   if (!file && useLogo) file = await getLogoFile();

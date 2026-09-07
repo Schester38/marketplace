@@ -46,7 +46,11 @@ export default function ShareMboppiButton({ onOpened }) {
 
     // Navigateur sans Web Share : WhatsApp + presse-papiers
     copyFallback();
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(`${msg} 👉 ${BASE_URL}`)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   return (

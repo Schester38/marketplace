@@ -1,4 +1,4 @@
-import { storage, sessionStore } from "./storage";
+﻿import { storage, sessionStore } from "./storage";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export const LANGS = [
@@ -1237,8 +1237,8 @@ const EN = {
   "Envoyer sur WhatsApp": "Send on WhatsApp",
   "Partager Mboppi": "Share Mboppi",
   "Découvre Mboppi": "Discover Mboppi",
-  "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez ! 👉 {url}":
-    "Discover Mboppi: the online marketplace of Cameroon and Africa. Shops, sellers, creators and riders — order easily, sell more and earn! 👉 {url}",
+  "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
+    "Discover Mboppi: the online marketplace of Cameroon and Africa. Shops, sellers, creators and riders — order easily, sell more and earn!",
   "Messages aux utilisateurs": "Messages to users",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "Send a message that will show as a popup on the users' next log-in (once only).",
@@ -2655,8 +2655,8 @@ const AR = {
   "Envoyer sur WhatsApp": "إرسال عبر WhatsApp",
   "Partager Mboppi": "مشاركة Mboppi",
   "Découvre Mboppi": "اكتشف Mboppi",
-  "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez ! 👉 {url}":
-    "اكتشف Mboppi: السوق الإلكتروني للكاميرون وأفريقيا. متاجر وبائعون ومبدعون وموصّلون — اطلب بسهولة، بيع أكثر واربح! 👉 {url}",
+  "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
+    "اكتشف Mboppi: السوق الإلكتروني للكاميرون وأفريقيا. متاجر وبائعون ومبدعون وموصّلون — اطلب بسهولة، بيع أكثر واربح!",
   "Messages aux utilisateurs": "رسائل إلى المستخدمين",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "أرسل رسالة ستظهر كنافذة منبثقة عند تسجيل المستخدمين دخولهم التالي (مرة واحدة فقط).",
@@ -4023,8 +4023,8 @@ const ES = {
   "Envoyer sur WhatsApp": "Enviar por WhatsApp",
   "Partager Mboppi": "Compartir Mboppi",
   "Découvre Mboppi": "Descubre Mboppi",
-  "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez ! 👉 {url}":
-    "Descubre Mboppi: el mercado en línea de Camerún y África. Tiendas, vendedores, creadores y repartidores — pide fácilmente, vende más y gana! 👉 {url}",
+  "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
+    "Descubre Mboppi: el mercado en línea de Camerún y África. Tiendas, vendedores, creadores y repartidores — pide fácilmente, vende más y gana!",
   "Messages aux utilisateurs": "Mensajes a los usuarios",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "Envía un mensaje que se mostrará en una ventana emergente en el próximo inicio de sesión de los usuarios (una sola vez).",
