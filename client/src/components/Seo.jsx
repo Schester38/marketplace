@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-const OG_DEFAULT = `${window.location.origin}/share-logo.png`;
+const OG_DEFAULT = `${window.location.origin}/share-logo.jpg`;
 
 const ensureMeta = (selector, create) => {
   let el = document.head.querySelector(selector);
