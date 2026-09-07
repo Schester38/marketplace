@@ -8,7 +8,7 @@ import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
-import { nativeShareWithImage, firstProductImage } from "../share.js";
+import { nativeShareWithImage } from "../share.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 
 const SALE_STATUS = {
@@ -123,16 +123,15 @@ export default function SellerDashboard() {
     }
   };
 
-  const shareOrCopy = async (kind, url, text, imageUrl) => {
-    // Le lien est toujours copié dans le presse-papiers en premier : même si
-    // la boîte de partage native échoue ou est annulée, le lien est généré.
+  const shareOrCopy = async (kind, url, text) => {
+    // Le lien est TOUJOURS copié dans le presse-papiers, puis la boîte de
+    // partage native s'ouvre avec le logo Mboppi joint.
     await copy(kind, url);
     await nativeShareWithImage({
       title: "Mboppi",
       text,
       url,
-      imageUrl,
-      useLogo: true, // liens affiliation / parrainage / vente -> logo Mboppi
+      useLogo: true,
     });
   };
 
@@ -140,8 +139,7 @@ export default function SellerDashboard() {
     shareOrCopy(
       "product-" + p.id,
       productLink(p),
-      t("Découvrez cet article sur Mboppi : {name}", { name: p.name }),
-      firstProductImage(p)
+      t("Découvrez cet article sur Mboppi : {name}", { name: p.name })
     );
 
   const shareSale = (p) => {
@@ -299,7 +297,8 @@ export default function SellerDashboard() {
       "Rejoins Mboppi et parraine tes amis ! Gagne 2% de leurs achats. Inscris-toi avec mon lien : {link}",
       { link: referralLink }
     );
-    window.open(whatsappLink(msg), "_blank", "noopener,noreferrer");
+    // Sans numéro : l'utilisateur choisit lui-même le destinataire du partage.
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
   };
 
   const shareSellerReferralWhatsApp = () => {
@@ -308,7 +307,8 @@ export default function SellerDashboard() {
       "Deviens vendeur sur Mboppi avec mon lien et gagne le 1000 F offerts à chaque vendeur qui s'inscrit et active son compte via mon lien. Inscris-toi : {link}",
       { link: sellerReferralLink }
     );
-    window.open(whatsappLink(msg), "_blank", "noopener,noreferrer");
+    // Sans numéro : l'utilisateur choisit lui-même le destinataire du partage.
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
   };
 
   const openProof = async (s, kind = "commission") => {

@@ -30,6 +30,9 @@ export default function ShareMboppiButton({ onOpened }) {
     const msg = shareMessage(t);
 
     if (navigator.share) {
+      // Le lien est TOUJOURS copié, puis la boîte de partage native s'ouvre
+      // avec le logo Mboppi joint.
+      await copyFallback();
       await nativeShareWithImage({ title: t("Partager Mboppi"), text: msg, url: BASE_URL, useLogo: true });
       return;
     }
