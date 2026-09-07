@@ -8,7 +8,7 @@ import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
-import { nativeShareWithImage, firstProductImage } from "../share.js";
+import { nativeShareWithImage, firstProductImage, isTouchDevice } from "../share.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 
 const SALE_STATUS = {
@@ -124,8 +124,14 @@ export default function SellerDashboard() {
   };
 
   const shareOrCopy = async (kind, url, text, imageUrl) => {
-    // Partage d'abord (activation utilisateur fraîche -> image acceptée),
-    // copie du lien juste après — garantie dans tous les cas.
+    if (!isTouchDevice()) {
+      // Ordinateur : copie du lien D'ABORD (activation utilisateur fraîche),
+      // puis partage sans pièce jointe (la feuille Windows ne copierait que la photo).
+      await copy(kind, url);
+      await nativeShareWithImage({ title: "Mboppi", text, url });
+      return;
+    }
+    // Mobile : partage d'abord (image acceptée), copie du lien juste après.
     await nativeShareWithImage({
       title: "Mboppi",
       text,

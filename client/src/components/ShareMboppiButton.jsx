@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useLang } from "../i18n.jsx";
 import { BASE_URL } from "../config.js";
 import { IconShare } from "./icons.jsx";
+import { isTouchDevice } from "../share.js";
 
 function shareMessage(t) {
   return t(
@@ -28,6 +29,7 @@ export default function ShareMboppiButton({ onOpened }) {
     const msg = shareMessage(t);
 
     if (navigator.share) {
+      if (!isTouchDevice()) await copyFallback(); // ordinateur : copie garantie avant la feuille de partage
       // Présentation native d'origine : texte + lien, SANS pièce jointe.
       // (Un fichier joint fait apparaître un second « Copier » sur Android.)
       try {

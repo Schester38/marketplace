@@ -41,11 +41,22 @@ export function firstProductImage(product) {
   return product.image || null;
 }
 
+/** Vrai sur appareil à écran tactile (téléphone/tablette), false sur ordinateur. */
+export function isTouchDevice() {
+  try {
+    return typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Partage natif avec pièce jointe image :
  *  - imageUrl fourni (produit) -> attache la photo du produit ;
  *  - sinon useLogo -> attache le logo Mboppi ;
  *  - si la plateforme refuse les fichiers, partage texte sans image.
+ * Sur ordinateur, AUCUNE pièce jointe : la feuille de partage Windows
+ * ne propose alors que de copier la photo, jamais le lien.
  * Retourne true si navigator.share a été utilisé (false sinon, ex. desktop).
  */
 export async function nativeShareWithImage({ title, text, url, imageUrl, useLogo = false }) {
@@ -53,15 +64,17 @@ export async function nativeShareWithImage({ title, text, url, imageUrl, useLogo
   const shareData = { title, text };
   if (url) shareData.url = url;
   let file = null;
-  if (imageUrl) file = await getFileFromImageUrl(imageUrl);
-  if (!file && useLogo) file = await getLogoFile();
-  if (file) {
-    try {
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        shareData.files = [file];
+  if (isTouchDevice()) {
+    if (imageUrl) file = await getFileFromImageUrl(imageUrl);
+    if (!file && useLogo) file = await getLogoFile();
+    if (file) {
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          shareData.files = [file];
+        }
+      } catch {
+        /* canShare indisponible : partage sans image */
       }
-    } catch {
-      /* canShare indisponible : partage sans image */
     }
   }
   try {
