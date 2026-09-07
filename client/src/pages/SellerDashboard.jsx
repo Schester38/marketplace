@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import ProductCard, { formatMoney } from "../components/ProductCard.jsx";
 import { downloadInvoice } from "../components/Invoice.jsx";
-import { BASE_URL, countrySymbol, whatsappLink } from "../config.js";
+import { BASE_URL, countrySymbol, waLink, whatsappLink } from "../config.js";
 import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
@@ -228,11 +228,52 @@ export default function SellerDashboard() {
     if (!window.confirm(msg)) return;
     setError("");
     setSuccess("");
+    // Réservation de l'ouverture pendant l'activation utilisateur (anti pop-up
+    // blocker) ; l'URL WhatsApp de la boutique y est placée une fois la
+    // réclamation enregistrée.
+    const popup = window.open("", "_blank");
+    const waMessage = [
+      t("💰 Réclamation — {shop}", { shop: group.shop_name }),
+      "",
+      isSale
+        ? t(
+            "Bonjour {shop}, le vendeur {name} (code vendeur : {code}) réclame {amount} de commissions de vente (livraisons validées).",
+            {
+              shop: group.shop_name,
+              name: user?.name || "—",
+              code: user?.seller_code || "—",
+              amount: `${formatMoney(group.pending)} ${countrySymbol(group.shop_country)}`,
+            }
+          )
+        : t(
+            "Bonjour {shop}, le vendeur {name} (code vendeur : {code}) réclame {amount} de commissions de parrainage client (2%).",
+            {
+              shop: group.shop_name,
+              name: user?.name || "—",
+              code: user?.seller_code || "—",
+              amount: `${formatMoney(group.pending)} ${countrySymbol(group.shop_country)}`,
+            }
+          ),
+      "",
+      t("Merci de régler ce montant via le moyen de paiement enregistré du vendeur."),
+      t("👉 Votre espace boutique : {url}", { url: `${BASE_URL}/shop` }),
+    ].join("\n");
     try {
       await api.groupedClaim(kind, group.shop_id);
       setSuccess(t("Paiement réclamé ! La boutique a été notifiée."));
       load();
+      // WhatsApp de la boutique avec le message prérempli ; sans numéro, la
+      // fenêtre se referme (la notification site reste le canal principal).
+      if (popup && !popup.closed) {
+        const phone = group.shop_phone || group.shop_contact || "";
+        if (phone) {
+          popup.location.href = waLink(phone, waMessage);
+        } else {
+          popup.close();
+        }
+      }
     } catch (err) {
+      if (popup && !popup.closed) popup.close();
       setError(err.message);
     }
   };
@@ -542,6 +583,9 @@ export default function SellerDashboard() {
               groups.set(key, {
                 shop_id: s.shop_id,
                 shop_name: s.shop_name,
+                shop_phone: s.shop_phone,
+                shop_contact: s.shop_contact,
+                shop_country: s.shop_country,
                 items: [],
                 pending: 0,
                 anyClaimed: false,
@@ -760,6 +804,9 @@ export default function SellerDashboard() {
                   groups.set(shopId, {
                     shop_id: s.shop_id,
                     shop_name: s.shop_name,
+                    shop_phone: s.shop_phone,
+                    shop_contact: s.shop_contact,
+                    shop_country: s.shop_country,
                     items: [],
                     pending: 0,
                     anyClaimed: false,
