@@ -221,7 +221,9 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/produit/:id", async (req, res) => {
+// /produit/:id (partage) et /acheter/:id (lien vendeur) partagent le même
+// aperçu Open Graph : la photo du produit.
+router.get(["/produit/:id", "/acheter/:id"], async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id) || id <= 0) return res.status(404).type("html").send(notFoundHtml);

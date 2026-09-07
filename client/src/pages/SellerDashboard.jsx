@@ -8,7 +8,7 @@ import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
-import { nativeShareWithImage } from "../share.js";
+import { nativeShareWithImage, firstProductImage } from "../share.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 
 const SALE_STATUS = {
@@ -123,15 +123,16 @@ export default function SellerDashboard() {
     }
   };
 
-  const shareOrCopy = async (kind, url, text) => {
+  const shareOrCopy = async (kind, url, text, imageUrl) => {
     // Le lien est TOUJOURS copié dans le presse-papiers, puis la boîte de
-    // partage native s'ouvre avec le logo Mboppi joint.
+    // partage native s'ouvre avec la PHOTO DU PRODUIT jointe (repli logo).
     await copy(kind, url);
     await nativeShareWithImage({
       title: "Mboppi",
       text,
       url,
-      useLogo: true,
+      imageUrl,
+      useLogo: !imageUrl,
     });
   };
 
@@ -139,7 +140,8 @@ export default function SellerDashboard() {
     shareOrCopy(
       "product-" + p.id,
       productLink(p),
-      t("Découvrez cet article sur Mboppi : {name}", { name: p.name })
+      t("Découvrez cet article sur Mboppi : {name}", { name: p.name }),
+      firstProductImage(p)
     );
 
   const shareSale = (p) => {
@@ -153,7 +155,8 @@ export default function SellerDashboard() {
       t("Commandez « {name} » sur Mboppi avec le code vendeur {code}", {
         name: p.name,
         code: sellerCode,
-      })
+      }),
+      firstProductImage(p)
     );
   };
 
