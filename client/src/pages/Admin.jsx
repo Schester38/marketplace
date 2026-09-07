@@ -91,6 +91,7 @@ export default function Admin() {
   const [payPublicKey, setPayPublicKey] = useState("");
   const [paySecretKey, setPaySecretKey] = useState("");
   const [payments, setPayments] = useState(null);
+  const [paySearch, setPaySearch] = useState("");
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState("");
   const [payOk, setPayOk] = useState("");
@@ -238,6 +239,24 @@ export default function Admin() {
       setError(err.message);
     }
   };
+
+  // Filtre local des paiements en ligne (nom, email, référence, parrain…).
+  const filterPayments = (list) => {
+    if (!Array.isArray(list)) return [];
+    const q = paySearch.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((m) =>
+      [
+        m.user_name,
+        m.user_email,
+        m.user_role,
+        m.external_reference,
+        m.parrain_name,
+        m.parrain_reference,
+      ].some((v) => String(v || "").toLowerCase().includes(q))
+    );
+  };
+
 
   const searchReferrals = async (e) => {
     e.preventDefault();
@@ -1301,13 +1320,32 @@ export default function Admin() {
           <h2 className="section-title" style={{ marginTop: 0 }}>
             📊 {t("Paiements en ligne (iKeePay)")}
           </h2>
+          <form onSubmit={(e) => e.preventDefault()} className="hero-search" role="search">
+            <span className="emoji" aria-hidden="true">
+              🔍
+            </span>
+            <input
+              type="search"
+              placeholder={t("Rechercher un paiement (nom, email ou référence)…")}
+              value={paySearch}
+              onChange={(e) => setPaySearch(e.target.value)}
+            />
+            <button type="submit" className="btn btn-primary">
+              🔍
+            </button>
+          </form>
+
           {payments === null ? (
             <div className="skeleton-block" style={{ height: 40 }}></div>
           ) : (
             <>
               <h3>{t("Adhésions")}</h3>
-              {!(payments.memberships && payments.memberships.length) ? (
-                <p className="hint">{t("Aucune adhésion payée en ligne pour le moment.")}</p>
+              {!(filterPayments(payments.memberships).length) ? (
+                <p className="hint">
+                  {payments.memberships && payments.memberships.length
+                    ? t("Aucun paiement ne correspond à cette recherche.")
+                    : t("Aucune adhésion payée en ligne pour le moment.")}
+                </p>
               ) : (
                 <div className="table-wrap">
                   <table className="table">
@@ -1324,7 +1362,7 @@ export default function Admin() {
                       </tr>
                     </thead>
                     <tbody>
-                      {payments.memberships.map((m) => (
+                      {filterPayments(payments.memberships).map((m) => (
                         <tr key={m.id}>
                           <td>
                             {m.user_name}
