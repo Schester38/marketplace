@@ -1218,6 +1218,29 @@ textarea.input {
 .wallet-value {
   max-width: 260px;
 }
+/* Mobile : le label et le bouton sur la première ligne, le champ numéro
+   passe sur sa propre ligne pleine largeur (il était écrasé). */
+@media (max-width: 600px) {
+  .wallet-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .wallet-check {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .wallet-row .btn-small {
+    order: 2;
+    flex-shrink: 0;
+  }
+  .wallet-value {
+    order: 3;
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
 
 .livreur-list {
   display: flex;
