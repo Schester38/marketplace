@@ -23,6 +23,7 @@ const EMPTY_FORM = {
   price: "",
   old_price: "",
   commission_percent: "0",
+  commission_amount: "",
   photos: [],
 };
 const MAX_PHOTOS = 3;
@@ -129,7 +130,14 @@ export default function CreatorDashboard() {
       ...form,
       price: priceNum !== null ? priceNum : oldNum,
       old_price: priceNum !== null ? oldNum : null,
-      commission_percent: Number(form.commission_percent || 0),
+      // Le créateur saisit la commission en MONTANT (par article) : conversion
+      // en pourcentage précis (6 décimales) pour la base.
+      commission_percent: (() => {
+        const base = priceNum !== null ? priceNum : oldNum;
+        const amt = Number(form.commission_amount || 0);
+        if (!base || base <= 0 || !amt) return 0;
+        return Math.min(100, Math.round((amt / base) * 1e8) / 1e6);
+      })(),
       delivery_fee: Number(form.delivery_fee || 0),
       quantity: Number(form.quantity || 1),
       warranty: form.warranty.trim() || null,
@@ -190,6 +198,10 @@ export default function CreatorDashboard() {
       price: p.price != null ? String(p.price) : "",
       old_price: p.old_price != null ? String(p.old_price) : "",
       commission_percent: p.commission_percent != null ? String(p.commission_percent) : "0",
+      commission_amount:
+        p.price != null && p.commission_percent != null
+          ? String(Math.round(Number(p.price) * Number(p.commission_percent)) / 100)
+          : "",
       photos,
     });
     setEditingId(p.id);
@@ -390,15 +402,15 @@ export default function CreatorDashboard() {
 
             <div className="row2">
               <div>
-                <label>{t("Commission pour les vendeurs (%) *")}</label>
+                <label>{t("Commission pour les vendeurs ({symbol}) par article *", { symbol })}</label>
                 <input
                   className="input"
                   type="number"
                   min="0"
-                  max="100"
                   step="any"
-                  value={form.commission_percent}
-                  onChange={(e) => setForm({ ...form, commission_percent: e.target.value })}
+                  placeholder={t("ex : 1000")}
+                  value={form.commission_amount}
+                  onChange={(e) => setForm({ ...form, commission_amount: e.target.value })}
                 />
               </div>
               <div>

@@ -194,7 +194,7 @@ export async function initDb() {
     UPDATE products SET reserved_quantity = 0 WHERE reserved_quantity IS NULL;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS old_price REAL;
     ALTER TABLE products ALTER COLUMN price TYPE NUMERIC(14,2) USING round(price::numeric, 2);
-    ALTER TABLE products ALTER COLUMN commission_percent TYPE NUMERIC(6,2) USING round(commission_percent::numeric, 2);
+    ALTER TABLE products ALTER COLUMN commission_percent TYPE NUMERIC(9,6) USING round(commission_percent::numeric, 6);
     ALTER TABLE products ALTER COLUMN delivery_fee TYPE NUMERIC(14,2) USING round(delivery_fee::numeric, 2);
     ALTER TABLE products ALTER COLUMN old_price TYPE NUMERIC(14,2) USING CASE WHEN old_price IS NULL THEN NULL ELSE round(old_price::numeric, 2) END;
     ALTER TABLE products ALTER COLUMN warranty TYPE TEXT USING warranty::text;

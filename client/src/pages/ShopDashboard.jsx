@@ -38,6 +38,7 @@ const EMPTY_FORM = {
   price: "",
   old_price: "",
   commission_percent: "",
+  commission_amount: "",
   photos: [],
 };
 const MAX_PHOTOS = 3;
@@ -191,7 +192,14 @@ export default function ShopDashboard() {
       ...form,
       price: priceNum !== null ? priceNum : oldNum,
       old_price: priceNum !== null ? oldNum : null,
-      commission_percent: Number(form.commission_percent || 0),
+      // La boutique saisit la commission en MONTANT (par article) : on la
+      // convertit en pourcentage précis (6 décimales) pour la base.
+      commission_percent: (() => {
+        const base = priceNum !== null ? priceNum : oldNum;
+        const amt = Number(form.commission_amount || 0);
+        if (!base || base <= 0 || !amt) return 0;
+        return Math.min(100, Math.round((amt / base) * 1e8) / 1e6);
+      })(),
       delivery_fee: Number(form.delivery_fee || 0),
       quantity: Number(form.quantity || 1),
       warranty: form.warranty.trim() || null,
@@ -253,6 +261,10 @@ export default function ShopDashboard() {
       price: p.price != null ? String(p.price) : "",
       old_price: p.old_price != null ? String(p.old_price) : "",
       commission_percent: p.commission_percent != null ? String(p.commission_percent) : "",
+      commission_amount:
+        p.price != null && p.commission_percent != null
+          ? String(Math.round(Number(p.price) * Number(p.commission_percent)) / 100)
+          : "",
       photos,
     });
     setEditingId(p.id);
@@ -1161,31 +1173,31 @@ export default function ShopDashboard() {
                 </div>
                 <div className="row2">
                   <div>
-                    <label>{t("Commission vendeur (%) *")}</label>
+                    <label>{t("Commission vendeur ({symbol}) par article *", { symbol })}</label>
                     <input
                       className="input"
                       type="number"
                       min="0"
-                      max="100"
-                      step="0.1"
+                      step="any"
                       required
-                      value={form.commission_percent}
-                      onChange={(e) => setForm({ ...form, commission_percent: e.target.value })}
+                      placeholder={t("ex : 1000")}
+                      value={form.commission_amount}
+                      onChange={(e) => setForm({ ...form, commission_amount: e.target.value })}
                     />
                   </div>
                 </div>
-                {form.price && form.commission_percent ? (
+                {form.price && form.commission_amount ? (
                   <p className="hint">
-                    {t(
-                      "Le vendeur affichera : {price} {symbol} et gagnera {commission} {symbol} de commission.",
-                      {
-                        price: formatMoney(form.price),
-                        symbol,
-                        commission: formatMoney(
-                          form.price * (Number(form.commission_percent) / 100)
-                        ),
-                      }
-                    )}
+                    {Number(form.commission_amount) > Number(form.price)
+                      ? t("⚠️ La commission ne peut pas dépasser le prix de vente.")
+                      : t(
+                          "Le vendeur affichera : {price} {symbol} et gagnera {commission} {symbol} de commission par article vendu.",
+                          {
+                            price: formatMoney(form.price),
+                            symbol,
+                            commission: formatMoney(Number(form.commission_amount)),
+                          }
+                        )}
                   </p>
                 ) : null}
                 {error && <p className="error">{error}</p>}
