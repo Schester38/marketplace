@@ -4,6 +4,8 @@ import { api } from "../api.js";
 import {
   countrySymbol,
   categoryEmoji,
+  countryPhone,
+  BASE_URL,
   OPERATORS_BY_COUNTRY,
   DEFAULT_OPERATORS,
 } from "../config.js";
@@ -39,6 +41,7 @@ export default function PurchasePage() {
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [purchase, setPurchase] = useState(null);
+  const [waUrl, setWaUrl] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -64,10 +67,47 @@ export default function PurchasePage() {
     } catch {}
   };
 
+  /** URL WhatsApp de la boutique avec le récapitulatif de la commande prérempli. */
+  const buildShopWaUrl = (sale) => {
+    let digits = String(product.shop_phone || "").replace(/[^0-9]/g, "");
+    if (!digits) return null;
+    if (digits.startsWith("00")) digits = digits.slice(2);
+    const dial = countryPhone(product.shop_country).replace("+", "");
+    if (!digits.startsWith(dial)) digits = dial + digits.replace(/^0+/, "");
+    const qty = Number(form.quantity) || 1;
+    const code = sale && (sale.confirm_code || sale.buyer_code);
+    const pay =
+      paymentMethod === "espece"
+        ? "En espèces (à la livraison)"
+        : "Mobile Money direct";
+    const dashboard = product.shop_role === "seller" ? "/seller" : "/shop";
+    const lines = [
+      "🛒 *Nouvelle commande Mboppi*",
+      "",
+      `📦 Produit : ${product.name}`,
+      `🔢 Quantité : ${qty}`,
+      `💰 Prix : ${formatMoney(displayPrice)} ${symbol}${flash ? " (prix promo)" : ""}`,
+      `💳 Paiement : ${pay}`,
+      "",
+      "— Coordonnées du client —",
+      `👤 Nom : ${form.buyer_name}`,
+      `📞 Téléphone : ${form.buyer_phone}`,
+      `🏙️ Ville : ${form.buyer_city}`,
+      `📍 Adresse : ${form.buyer_address}`,
+      code ? `🔑 Code de confirmation : ${code}` : null,
+      "",
+      `👉 Gérez cette commande dans votre espace Mboppi : ${BASE_URL}${dashboard}`,
+    ].filter(Boolean);
+    return `https://wa.me/${digits}?text=${encodeURIComponent(lines.join("\n"))}`;
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
+    // Réservation de l'ouverture pendant l'activation utilisateur (anti pop-up blocker) ;
+    // la vraie URL WhatsApp y est placée une fois la commande confirmée.
+    const popup = window.open("", "_blank");
     try {
       const qty = Number(form.quantity) || 1;
       const d = await api.purchaseCreate({
@@ -81,8 +121,16 @@ export default function PurchasePage() {
         payment_method: paymentMethod,
       });
       setPurchase(d.sale || null);
+      const url = buildShopWaUrl(d.sale);
+      setWaUrl(url);
       setDone(true);
+      if (url && popup && !popup.closed) {
+        popup.location.href = url;
+      } else if (popup && !popup.closed) {
+        popup.close();
+      }
     } catch (err) {
+      if (popup && !popup.closed) popup.close();
       setError(err.message);
     } finally {
       setSubmitting(false);
@@ -178,6 +226,23 @@ export default function PurchasePage() {
               "Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison."
             )}
           </p>
+          {waUrl && (
+            <>
+              <p className="hint" style={{ marginTop: 8 }}>
+                {t(
+                  "La commande n'a pas été transmise sur WhatsApp ? Envoyez-la en un clic :"
+                )}
+              </p>
+              <a
+                className="btn btn-primary"
+                href={waUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                📲 {t("Envoyer ma commande sur WhatsApp")}
+              </a>
+            </>
+          )}
           {purchase && (purchase.confirm_code || purchase.buyer_code) && (
             <div className="buyer-code-box">
               <span className="buyer-code-label">{t("Votre code de confirmation")} :</span>
