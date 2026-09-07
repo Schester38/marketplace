@@ -216,6 +216,7 @@ export const api = {
     request("/donations", { method: "POST", body: JSON.stringify(payload) }),
   trackViews: (items) => request("/views", { method: "POST", body: JSON.stringify({ items }) }),
   myFlashPromotions: () => request("/flash-promotions/mine"),
+  deleteFlashPromotion: (id) => request(`/flash-promotions/${id}`, { method: "DELETE" }),
   activationWithdrawalMe: () => request("/activation-withdrawals/me"),
   createActivationWithdrawal: (payload) =>
     request("/activation-withdrawals", { method: "POST", body: JSON.stringify(payload) }),
