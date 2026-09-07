@@ -137,7 +137,7 @@ router.get(
     const sales = (
       await q(
         `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
-              u.name AS shop_name, u.country AS shop_country,
+              u.name AS shop_name, u.country AS shop_country, u.phone AS shop_phone,
               u2.seller_code AS seller_code, u2.phone AS seller_phone
 FROM sales s
        JOIN products p ON p.id = s.product_id
@@ -172,7 +172,7 @@ FROM sales s
       await q(
         `SELECT s.id, s.status, s.buyer_name, s.created_at, s.delivered_at, s.referral_commission,
               s.referral_paid, s.referral_claimed_at, p.shop_id, p.name AS product_name, p.contact AS shop_contact,
-              shop.name AS shop_name, shop.country AS shop_country
+              shop.name AS shop_name, shop.country AS shop_country, shop.phone AS shop_phone
        FROM sales s
        JOIN products p ON p.id = s.product_id
        JOIN users shop ON shop.id = p.shop_id
