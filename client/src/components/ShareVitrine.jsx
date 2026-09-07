@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useLang } from "../i18n.jsx";
+import { nativeShareWithImage } from "../share.js";
 
 const VITRINE_URL = "https://mboppi-mboppi.vercel.app/vitrine-offre";
 
@@ -20,12 +21,13 @@ export default function ShareVitrine({ onClose }) {
   const msg = shareMessage(t);
 
   const shareNative = async () => {
-    try {
-      await navigator.share({ title: t("Ma vitrine Mboppi"), text: msg, url: VITRINE_URL });
-      onClose();
-    } catch {
-      /* annulé par l'utilisateur */
-    }
+    const shared = await nativeShareWithImage({
+      title: t("Ma vitrine Mboppi"),
+      text: msg,
+      url: VITRINE_URL,
+      useLogo: true, // vitrine -> logo Mboppi
+    });
+    if (shared) onClose();
   };
 
   const copyLink = async () => {

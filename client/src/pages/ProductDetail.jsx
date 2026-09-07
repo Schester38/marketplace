@@ -10,6 +10,7 @@ import { useAuth } from "../App.jsx";
 import { useCart, useFavs } from "../store.jsx";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
+import { nativeShareWithImage, firstProductImage } from "../share.js";
 import Reviews from "../components/Reviews.jsx";
 import Logo from "../components/Logo.jsx";
 import ReviewQuote from "../components/ReviewQuote.jsx";
@@ -533,7 +534,7 @@ export default function ProductDetail() {
                   });
                   try {
                     if (navigator.share) {
-                      await navigator.share({ title: product.name, text, url });
+                      await nativeShareWithImage({ title: product.name, text, url, imageUrl: firstProductImage(product) });
                     } else {
                       await navigator.clipboard.writeText(url);
                       setShared(true);

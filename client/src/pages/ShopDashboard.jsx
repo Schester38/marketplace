@@ -10,6 +10,7 @@ import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { compressImage } from "../utils.js";
 import { smartProcessImageFile, formatBytes, optimizePaymentProof } from "../imageKit.js";
+import { nativeShareWithImage, firstProductImage } from "../share.js";
 import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
@@ -341,10 +342,13 @@ export default function ShopDashboard() {
       }
     );
     try {
-      if (navigator.share) {
-        await navigator.share({ title: pr.product_name, text, url });
-        return;
-      }
+      const sharedNative = await nativeShareWithImage({
+        title: pr.product_name,
+        text,
+        url,
+        imageUrl: firstProductImage(pr), // photo du produit si disponible
+      });
+      if (sharedNative) return;
       await navigator.clipboard.writeText(url);
       setSuccess(t("Lien de la promotion copié !"));
     } catch {}

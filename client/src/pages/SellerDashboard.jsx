@@ -8,6 +8,7 @@ import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
+import { nativeShareWithImage, firstProductImage } from "../share.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 
 const SALE_STATUS = {
@@ -122,15 +123,15 @@ export default function SellerDashboard() {
     }
   };
 
-  const shareOrCopy = async (kind, url, text) => {
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Mboppi", text, url });
-        return;
-      } catch (err) {
-        if (err.name === "AbortError") return;
-      }
-    }
+  const shareOrCopy = async (kind, url, text, imageUrl) => {
+    const shared = await nativeShareWithImage({
+      title: "Mboppi",
+      text,
+      url,
+      imageUrl,
+      useLogo: true, // liens affiliation / parrainage / vente -> logo Mboppi
+    });
+    if (shared) return;
     copy(kind, url);
   };
 
@@ -138,7 +139,8 @@ export default function SellerDashboard() {
     shareOrCopy(
       "product-" + p.id,
       productLink(p),
-      t("Découvrez cet article sur Mboppi : {name}", { name: p.name })
+      t("Découvrez cet article sur Mboppi : {name}", { name: p.name }),
+      firstProductImage(p)
     );
 
   const shareSale = (p) => {

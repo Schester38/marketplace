@@ -125,7 +125,7 @@ function parsePhotos(raw, fallback) {
   return fallback ? [fallback] : [];
 }
 
-const OG_DEFAULT = `${BASE_URL}/og-image.png`;
+const OG_DEFAULT = `${BASE_URL}/share-logo.png`;
 
 function originOf(req) {
   const proto = req.get("x-forwarded-proto");

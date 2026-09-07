@@ -2,25 +2,13 @@ import React, { useState } from "react";
 import { useLang } from "../i18n.jsx";
 import { BASE_URL } from "../config.js";
 import { IconShare } from "./icons.jsx";
-
-const LOGO_URL = "/share-logo.png";
+import { nativeShareWithImage } from "../share.js";
 
 function shareMessage(t) {
   return t(
     "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez ! 👉 {url}",
     { url: BASE_URL }
   );
-}
-
-async function logoFile() {
-  try {
-    const res = await fetch(LOGO_URL);
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return new File([blob], "mboppi-logo.png", { type: blob.type || "image/png" });
-  } catch {
-    return null;
-  }
 }
 
 export default function ShareMboppiButton({ onOpened }) {
@@ -42,22 +30,7 @@ export default function ShareMboppiButton({ onOpened }) {
     const msg = shareMessage(t);
 
     if (navigator.share) {
-      const shareData = { title: t("Partager Mboppi"), text: msg, url: BASE_URL };
-      const file = await logoFile();
-      if (file) {
-        try {
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            shareData.files = [file];
-          }
-        } catch {
-          /* canShare indisponible : partage sans image */
-        }
-      }
-      try {
-        await navigator.share(shareData);
-      } catch {
-        /* partage annulé ou indisponible */
-      }
+      await nativeShareWithImage({ title: t("Partager Mboppi"), text: msg, url: BASE_URL, useLogo: true });
       return;
     }
 

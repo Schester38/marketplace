@@ -5,6 +5,7 @@ import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { waLink, BASE_URL, countrySymbol } from "../config.js";
+import { nativeShareWithImage } from "../share.js";
 import { formatMoney } from "../components/ProductCard.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 
@@ -231,14 +232,18 @@ export default function Suivi() {
                     product: sale.product_name,
                     url,
                   });
+                  const sharedNative = await nativeShareWithImage({
+                    title: t("Suivi de commande"),
+                    text,
+                    url,
+                    useLogo: true, // lien de suivi -> logo Mboppi
+                  });
                   try {
-                    if (navigator.share) {
-                      await navigator.share({ title: t("Suivi de commande"), text, url });
-                    } else {
+                    if (!sharedNative) {
                       await navigator.clipboard.writeText(url);
                     }
                   } catch {
-                    /* annulé */
+                    /* presse-papiers indisponible */
                   }
                 }}
               >
