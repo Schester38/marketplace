@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLang } from "../i18n.jsx";
 import { BASE_URL } from "../config.js";
 import { IconShare } from "./icons.jsx";
-import { nativeShareWithImage } from "../share.js";
+import { nativeShareWithImage, getLogoFile } from "../share.js";
 
 function shareMessage(t) {
   return t(
@@ -14,6 +14,12 @@ function shareMessage(t) {
 export default function ShareMboppiButton({ onOpened }) {
   const { t } = useLang();
   const [copied, setCopied] = useState(false);
+
+  // Précharge le logo pour que le partage avec image s'ouvre instantanément
+  // (sans attendre un téléchargement qui ferait expirer l'activation utilisateur).
+  useEffect(() => {
+    getLogoFile();
+  }, []);
 
   const copyFallback = async () => {
     try {
@@ -30,10 +36,11 @@ export default function ShareMboppiButton({ onOpened }) {
     const msg = shareMessage(t);
 
     if (navigator.share) {
-      // Le lien est TOUJOURS copié, puis la boîte de partage native s'ouvre
-      // avec le logo Mboppi joint.
-      await copyFallback();
+      // Le partage DOIT être appelé immédiatement au clic (fenêtre d'activation
+      // utilisateur) pour que l'image soit acceptée ; la copie vient ensuite —
+      // le lien est copié dans tous les cas, même si la boîte est annulée.
       await nativeShareWithImage({ title: t("Partager Mboppi"), text: msg, url: BASE_URL, useLogo: true });
+      await copyFallback();
       return;
     }
 

@@ -124,9 +124,8 @@ export default function SellerDashboard() {
   };
 
   const shareOrCopy = async (kind, url, text, imageUrl) => {
-    // Le lien est TOUJOURS copié dans le presse-papiers, puis la boîte de
-    // partage native s'ouvre avec la PHOTO DU PRODUIT jointe (repli logo).
-    await copy(kind, url);
+    // Partage d'abord (activation utilisateur fraîche -> image acceptée),
+    // copie du lien juste après — garantie dans tous les cas.
     await nativeShareWithImage({
       title: "Mboppi",
       text,
@@ -134,6 +133,7 @@ export default function SellerDashboard() {
       imageUrl,
       useLogo: !imageUrl,
     });
+    await copy(kind, url);
   };
 
   const shareProduct = (p) =>
