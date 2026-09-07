@@ -297,7 +297,7 @@ export default function SellerDashboard() {
   const shareReferralWhatsApp = () => {
     if (!referralLink) return;
     const msg = t(
-      "Rejoins Mboppi et parraine tes amis ! Gagne 2% de leurs achats. Inscris-toi avec mon lien : {link}",
+      "Rejoins Mboppi et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}",
       { link: referralLink }
     );
     // Sans numéro : l'utilisateur choisit lui-même le destinataire du partage.
@@ -307,7 +307,7 @@ export default function SellerDashboard() {
   const shareSellerReferralWhatsApp = () => {
     if (!sellerReferralLink) return;
     const msg = t(
-      "Deviens vendeur sur Mboppi avec mon lien et gagne le 1000 F offerts à chaque vendeur qui s'inscrit et active son compte via mon lien. Inscris-toi : {link}",
+      "Deviens vendeur sur Mboppi et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}",
       { link: sellerReferralLink }
     );
     // Sans numéro : l'utilisateur choisit lui-même le destinataire du partage.

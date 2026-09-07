@@ -1239,6 +1239,10 @@ const EN = {
   "Découvre Mboppi": "Discover Mboppi",
   "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
     "Discover Mboppi: the online marketplace of Cameroon and Africa. Shops, sellers, creators and riders — order easily, sell more and earn!",
+  "Rejoins Mboppi et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}":
+    "Join Mboppi and find all the best deals — cash on delivery. Click here to sign up: {link}",
+  "Deviens vendeur sur Mboppi et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}":
+    "Become a seller on Mboppi and earn commissions on every sale and 1000 F for every seller you refer. Sign up here: {link}",
   "Messages aux utilisateurs": "Messages to users",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "Send a message that will show as a popup on the users' next log-in (once only).",
@@ -2657,6 +2661,10 @@ const AR = {
   "Découvre Mboppi": "اكتشف Mboppi",
   "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
     "اكتشف Mboppi: السوق الإلكتروني للكاميرون وأفريقيا. متاجر وبائعون ومبدعون وموصّلون — اطلب بسهولة، بيع أكثر واربح!",
+  "Rejoins Mboppi et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}":
+    "انضم إلى Mboppi واكتشف كل العروض بأفضل سعر — الدفع عند التسليم. اضغط هنا للتسجيل: {link}",
+  "Deviens vendeur sur Mboppi et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}":
+    "كن بائعًا على Mboppi واكسب عمولات على كل عملية بيع و1000 فرنك على كل بائع تحيله. سجّل هنا: {link}",
   "Messages aux utilisateurs": "رسائل إلى المستخدمين",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "أرسل رسالة ستظهر كنافذة منبثقة عند تسجيل المستخدمين دخولهم التالي (مرة واحدة فقط).",
@@ -4025,6 +4033,10 @@ const ES = {
   "Découvre Mboppi": "Descubre Mboppi",
   "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
     "Descubre Mboppi: el mercado en línea de Camerún y África. Tiendas, vendedores, creadores y repartidores — pide fácilmente, vende más y gana!",
+  "Rejoins Mboppi et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}":
+    "Únete a Mboppi y encuentra todas las ofertas al mejor precio — pago contra entrega. Haz clic aquí para registrarte: {link}",
+  "Deviens vendeur sur Mboppi et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}":
+    "Conviértete en vendedor en Mboppi y gana comisiones en cada venta y 1000 F por cada vendedor que refieras. Regístrate aquí: {link}",
   "Messages aux utilisateurs": "Mensajes a los usuarios",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "Envía un mensaje que se mostrará en una ventana emergente en el próximo inicio de sesión de los usuarios (una sola vez).",
