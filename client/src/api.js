@@ -218,6 +218,9 @@ export const api = {
   notificationsRead: () => request("/notifications/read", { method: "POST" }),
   deleteNotification: (id) => request(`/notifications/${id}`, { method: "DELETE" }),
   pushKey: () => request("/push/key"),
+  pushPrefs: () => request("/push/prefs"),
+  updatePushPrefs: (payload) =>
+    request("/push/prefs", { method: "PUT", body: JSON.stringify(payload) }),
   pushSubscribe: (payload) =>
     request("/push/subscribe", { method: "POST", body: JSON.stringify(payload) }),
   pushUnsubscribe: (payload) =>

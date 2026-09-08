@@ -23,6 +23,42 @@ async function preparePhotos(photos, folder) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Digest quotidien des nouveaux produits (canal push "digest", désactivable
+// par l'utilisateur via Mon compte). Déclenché en fire-and-forget par la
+// route GET /products — au plus une fois par jour, mémorisé dans
+// platform_settings ("products_digest_last").
+// ---------------------------------------------------------------------------
+let digestCheckedAt = 0;
+const DIGEST_CHECK_INTERVAL_MS = 10 * 60 * 1000; // vérif au plus toutes les 10 min/instance
+async function maybeSendProductsDigest() {
+  if (Date.now() - digestCheckedAt < DIGEST_CHECK_INTERVAL_MS) return;
+  digestCheckedAt = Date.now();
+  const today = new Date().toISOString().slice(0, 10);
+  const last = (await getSetting("products_digest_last")) || "";
+  if (last === today) return;
+  const [cnt] = await q(
+    "SELECT COUNT(*)::int AS n FROM products WHERE created_at >= CURRENT_DATE AND quantity > 0"
+  );
+  const n = Number(cnt?.n || 0);
+  if (n <= 0) {
+    await setSetting("products_digest_last", today);
+    return;
+  }
+  const sent = await sendPushToAll(
+    {
+      title: "🛍️ Nouveautés du jour",
+      body: `${n} nouveau${n > 1 ? "x" : ""} produit${n > 1 ? "s" : ""} publié${n > 1 ? "s" : ""} aujourd'hui sur Mboppi — viens découvrir !`,
+      url: "/",
+      tag: `digest-${today}`,
+    },
+    { channel: "digest" }
+  );
+  await setSetting("products_digest_last", today);
+  if (sent > 0)
+    console.warn(`[products] digest quotidien envoyé à ${sent} abonné(s) (${n} produits)`);
+}
+
 function cachePublic(res, sMaxAge = 60) {
   res.set(
     "Cache-Control",
@@ -146,6 +182,11 @@ const CAP_SORTS = {
 
 router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
   cachePublic(res);
+  // Digest quotidien (non bloquant, fire-and-forget) : au premier appel de la
+  // journée, informe tous les abonnés push du nombre de nouveaux produits.
+  // Cache mémoire 10 min pour n'exécuter la vérification qu'au plus toutes les
+  // 10 minutes par instance serverless.
+  maybeSendProductsDigest().catch(() => {});
   const { search, shop, category, sort, scope, min_price, max_price, city, country, limit, offset } =
     req.query;
   let sql = SELECT_PRODUCT;

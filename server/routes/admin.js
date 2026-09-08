@@ -499,8 +499,8 @@ router.post(
         kind === "user"
           ? sendPush(uid, payload)
           : kind === "all"
-            ? sendPushToAll(payload)
-            : sendPushToAll(payload, { roles: [kind] });
+            ? sendPushToAll(payload, { channel: "messages" })
+            : sendPushToAll(payload, { roles: [kind], channel: "messages" });
       push.catch((err) => console.error("[admin] push message impossible :", err.message));
     });
     await logAudit(req.user.id, "admin.send_message", `target=${kind} user=${uid}`, req.ip);

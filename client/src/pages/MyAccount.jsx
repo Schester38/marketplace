@@ -1,5 +1,5 @@
 import { storage, sessionStore } from "../storage";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
@@ -262,6 +262,36 @@ export default function MyAccount() {
   const [delError, setDelError] = useState("");
   const [busy, setBusy] = useState(false);
   const [refCopied, setRefCopied] = useState(false);
+
+  // Préférences de notifications push (absence de préférence = tout activé).
+  const [pushPrefs, setPushPrefs] = useState({ flash: true, digest: true, messages: true });
+  const [pushSaving, setPushSaving] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .pushPrefs()
+      .then((d) => {
+        if (!cancelled && d?.prefs) setPushPrefs(d.prefs);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const togglePushPref = async (key) => {
+    if (pushSaving) return;
+    setPushSaving(true);
+    const next = { ...pushPrefs, [key]: !pushPrefs[key] };
+    setPushPrefs(next); // optimiste
+    try {
+      await api.updatePushPrefs(next);
+    } catch {
+      setPushPrefs(pushPrefs); // rollback si échec
+    } finally {
+      setPushSaving(false);
+    }
+  };
+
 
   const copyReference = async () => {
     try {
@@ -580,6 +610,49 @@ export default function MyAccount() {
             </button>
           </form>
         </div>
+
+        <div className="card">
+          <h2>🔔 {t("Notifications")}</h2>
+          <p className="contact-hint">
+            {t(
+              "Choisissez les notifications push que vous souhaitez recevoir sur votre appareil."
+            )}
+          </p>
+          <div className="info-row">
+            <span>⚡ {t("Promotions éclair")}</span>
+            <button
+              type="button"
+              className={`btn btn-small ${pushPrefs.flash ? "btn-primary" : "btn-outline"}`}
+              disabled={pushSaving}
+              onClick={() => togglePushPref("flash")}
+            >
+              {pushPrefs.flash ? t("Activées") : t("Désactivées")}
+            </button>
+          </div>
+          <div className="info-row">
+            <span>🛍️ {t("Nouveautés du jour")}</span>
+            <button
+              type="button"
+              className={`btn btn-small ${pushPrefs.digest ? "btn-primary" : "btn-outline"}`}
+              disabled={pushSaving}
+              onClick={() => togglePushPref("digest")}
+            >
+              {pushPrefs.digest ? t("Activées") : t("Désactivées")}
+            </button>
+          </div>
+          <div className="info-row">
+            <span>📢 {t("Messages de Mboppi")}</span>
+            <button
+              type="button"
+              className={`btn btn-small ${pushPrefs.messages ? "btn-primary" : "btn-outline"}`}
+              disabled={pushSaving}
+              onClick={() => togglePushPref("messages")}
+            >
+              {pushPrefs.messages ? t("Activées") : t("Désactivées")}
+            </button>
+          </div>
+        </div>
+
 
         <div className="card danger-card">
           <h2>{t("Zone dangereuse")}</h2>

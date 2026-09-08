@@ -75,7 +75,7 @@ export async function sendPush(userId, payload) {
  */
 export async function sendPushToAll(
   payload,
-  { country, roles, excludeUserId, budgetMs = 4000, batch = 50 } = {}
+  { country, roles, excludeUserId, channel, budgetMs = 4000, batch = 50 } = {}
 ) {
   if (!PUBLIC_KEY || !PRIVATE_KEY) return 0;
   const filters = [];
@@ -92,11 +92,19 @@ export async function sendPushToAll(
     params.push(Number(excludeUserId));
     filters.push(`u.id <> $${params.length}`);
   }
+  // Préférences par canal : absence de ligne push_prefs = canal activé.
+  const CHANNEL_COLUMNS = { flash: "flash_ok", digest: "digest_ok", messages: "messages_ok" };
+  let joinPrefs = "";
+  if (channel && CHANNEL_COLUMNS[channel]) {
+    joinPrefs = "LEFT JOIN push_prefs pp ON pp.user_id = u.id";
+    filters.push(`COALESCE(pp.${CHANNEL_COLUMNS[channel]}, TRUE) = TRUE`);
+  }
   const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
   const subs = await q(
     `SELECT ps.id, ps.endpoint, ps.keys
        FROM push_subscriptions ps
        JOIN users u ON u.id = ps.user_id
+       ${joinPrefs}
        ${where}
       ORDER BY ps.id`,
     params

@@ -79,6 +79,18 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data && event.notification.data.url ? event.notification.data.url : '/';
+  // Mesure d'ouverture : ping best-effort (keepalive survit à la fermeture).
+  try {
+    const tag = event.notification.tag || '';
+    event.waitUntil(
+      fetch('/api/metrics/push-open', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tag }),
+        keepalive: true,
+      }).catch(() => {})
+    );
+  } catch (e) {}
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
       for (const client of windowClients) {

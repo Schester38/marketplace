@@ -46,6 +46,18 @@ router.post("/visit", async (req, res) => {
   res.json({ ok: true });
 });
 
+// Mesure d'ouverture des notifications push (envoyé par le service worker au
+// clic sur une notification) : journalisé dans client_logs pour mesurer
+// l'efficacité des campagnes (flash, digest, messages).
+router.post("/push-open", async (req, res) => {
+  const tag = String((req.body && req.body.tag) || "").slice(0, 120);
+  await q(`INSERT INTO client_logs (message, url) VALUES ($1, $2)`, [
+    `push_open${tag ? `: ${tag}` : ""}`,
+    "/",
+  ]);
+  res.json({ ok: true });
+});
+
 router.get("/trending", async (req, res) => {
   res.set("Cache-Control", "public, s-maxage=120, max-age=60, stale-while-revalidate=30");
   const rows = await q(

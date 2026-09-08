@@ -350,6 +350,16 @@ export async function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_client_logs_created ON client_logs(created_at);
 
+    -- Préférences de notifications push par utilisateur (absence de ligne =
+    -- tout activé par défaut). L'utilisateur opt-out via Mon compte.
+    CREATE TABLE IF NOT EXISTS push_prefs (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      flash_ok BOOLEAN NOT NULL DEFAULT TRUE,
+      digest_ok BOOLEAN NOT NULL DEFAULT TRUE,
+      messages_ok BOOLEAN NOT NULL DEFAULT TRUE,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
     CREATE TABLE IF NOT EXISTS admin_messages (
       id SERIAL PRIMARY KEY,
       message TEXT NOT NULL,

@@ -151,7 +151,7 @@ router.post(
           url: `/produit/${promo.product_id}`,
           tag: `flash-${promo.id}`,
         },
-        { country: raw.shop_country, excludeUserId: req.user.id }
+        { country: raw.shop_country, excludeUserId: req.user.id, channel: "flash" }
       ).catch((err) => console.error("[flash] push impossible :", err.message));
     });
     res.status(201).json({ promotion: promo, ok: true });
