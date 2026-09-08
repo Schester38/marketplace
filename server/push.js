@@ -30,12 +30,18 @@ function buildPayload(payload) {
 }
 
 // Envoi à un abonnement : 1 si livré, 0 sinon. Les abonnements morts (404/410)
-// sont purgés automatiquement.
+// sont purgés automatiquement. IMPORTANT : web-push exige l'OBJET subscription
+// { endpoint, keys } — le passage de l'endpoint seul chiffre avec des clés
+// vides et échoue/est rejeté par le push service.
 async function sendToSub(sub, raw) {
   try {
+    const subscription = {
+      endpoint: sub.endpoint,
+      keys: typeof sub.keys === "object" ? sub.keys : {},
+    };
     // TTL 24 h : un appareil éteint reçoit quand même la notification au
     // redémarrage (au lieu d'une expiration après 1 h).
-    await webpush.sendNotification(sub.endpoint, JSON.stringify(raw), {
+    await webpush.sendNotification(subscription, JSON.stringify(raw), {
       headers: { TTL: 86400 },
     });
     return 1;
