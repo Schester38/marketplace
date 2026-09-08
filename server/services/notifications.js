@@ -1,5 +1,5 @@
 import { q } from "../db.js";
-import { sendPushToAll } from "../push.js";
+import { sendPushToUsers } from "../push.js";
 
 // ---------------------------------------------------------------------------
 // Notifications « cloche » (in-app) couplées au push.
@@ -62,12 +62,14 @@ export async function insertNotificationsForUsers(
 /**
  * Diffusion « cloche + push » à (quasi) tous les utilisateurs, avec les mêmes
  * filtres que sendPushToAll : country, roles, excludeUserId, channel.
- * - La cloche est insérée pour TOUTES les cibles (l'in-app ne dépend pas de
- *   l'abonnement push).
- * - Le push n'atteint que les appareils abonnés (sendPushToAll s'en charge).
- * Anti-timeout : l'envoi push est borné par budgetMs, et chaque étape est
- * isolée dans un try/catch — jamais bloquant pour l'appelant (la route répond
- * toujours, même si la base du push traîne).
+ * - Le push est envoyé en DIRECT à tous les abonnements des utilisateurs
+ *   ciblés (comme le bouton « Tester ») : TOUS les abonnés sont traités, sans
+ *   coupure budget-temps qui sauterait les abonnés en fin de liste.
+ * - La cloche est ensuite insérée pour TOUTES les cibles (l'in-app ne dépend
+ *   pas de l'abonnement push).
+ * Le canal (flash / digest / messages) respecte les préférences push de chaque
+ * utilisateur (Mon compte). Chaque étape est isolée dans un try/catch — jamais
+ * bloquant pour l'appelant (la route répond toujours).
  * @returns {Promise<{users: number, inserted: number, sent: number}>}
  */
 export async function broadcastNotification({
@@ -77,7 +79,6 @@ export async function broadcastNotification({
   roles,
   excludeUserId,
   channel,
-  budgetMs = 4000,
 } = {}) {
   // 1. Sélection des utilisateurs cibles (mêmes filtres que sendPushToAll).
   const filters = [];
@@ -103,7 +104,18 @@ export async function broadcastNotification({
     console.error("[notifications] sélection des utilisateurs impossible :", err.message);
   }
 
-  // 2. Cloche (in-app) : une ligne par utilisateur (champ type obligatoire).
+  // 2. Push (AVANT la cloche, comme le bouton « Tester ») : envoi DIRECT aux
+  //    abonnements des cibles, tous traités (pas de coupure budget-temps).
+  let sent = 0;
+  if (payload && payload.title) {
+    try {
+      sent = await sendPushToUsers(ids, payload, { channel, timeoutMs: 2000, batch: 50 });
+    } catch (err) {
+      console.error("[notifications] push impossible :", err.message);
+    }
+  }
+
+  // 3. Cloche (in-app) : une ligne par utilisateur (champ type obligatoire).
   let inserted = 0;
   if (ids.length && type && type.type) {
     try {
@@ -113,14 +125,5 @@ export async function broadcastNotification({
     }
   }
 
-  // 3. Push : uniquement aux appareils abonnés + préférences de canal.
-  let sent = 0;
-  if (payload && payload.title) {
-    try {
-      sent = await sendPushToAll(payload, { country, roles, excludeUserId, channel, budgetMs });
-    } catch (err) {
-      console.error("[notifications] push impossible :", err.message);
-    }
-  }
   return { users: ids.length, inserted, sent };
 }
