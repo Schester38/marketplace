@@ -145,12 +145,9 @@ const CAP_SORTS = {
 };
 
 router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
-  const { search, shop, category, sort, scope, min_price, max_price, city, country, limit, offset, seed } =
+  cachePublic(res);
+  const { search, shop, category, sort, scope, min_price, max_price, city, country, limit, offset } =
     req.query;
-  // Rotation aléatoire : une requête avec `seed` doit pouvoir renvoyer un ordre
-  // différent à chaque chargement — on interdit toute mise en cache CDN/navigateur.
-  if (seed) res.set("Cache-Control", "private, no-store");
-  else cachePublic(res);
   let sql = SELECT_PRODUCT;
   const params = [];
   const where = [];
@@ -237,18 +234,6 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
   if (paging) {
     const pageSize = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 24;
     const skip = Number.isInteger(rawOffset) && rawOffset > 0 ? rawOffset : 0;
-    // Rotation aléatoire seedée : avec `seed`, l'ordre est un mélange déterministe
-    // de la graine (md5(id + seed)) — différent à chaque chargement de page côté
-    // client, mais stable entre les pages d'une même visite (pas de doublon via
-    // « Voir plus de produits »).
-    let seedParam = null;
-    if (seed) {
-      seedParam = params.length + 1;
-      params.push(String(seed).slice(0, 64));
-    }
-    const simpleSort = seed
-      ? `md5(p.id::text || $${seedParam})`
-      : SORTS[sort] || SORTS.recent;
     // Total RÉEL (non plafonné) : aucun produit ne doit rester caché.
     const [totalRow] = await q(`SELECT COUNT(*) AS n FROM (${sql}) t`, params);
     const total = Number(totalRow.n);
@@ -261,15 +246,13 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
         orderSql +=
           `CASE WHEN ${FOLD_TEXT("u.country")} = ${FOLD_TEXT(`$${countryParam}`)} THEN 0 ELSE 1 END, `;
       }
-      orderSql += simpleSort;
+      orderSql += SORTS[sort] || SORTS.recent;
       pagedSql = sql + orderSql + ` LIMIT ${pageSize} OFFSET ${skip}`;
     } else {
       // Diversité : entrelacement par boutique — le 1ᵉʳ produit de chaque
       // boutique d'abord (par score), puis les 2ᵉ, etc. Chaque page mélange
       // les boutiques et TOUS les produits restent accessibles via la pagination.
-      const innerRank = seed
-        ? `md5(base_row.id::text || $${seedParam})`
-        : CAP_SORTS[sort] || CAP_SORTS.recent;
+      const innerRank = CAP_SORTS[sort] || CAP_SORTS.recent;
       const rankedSql =
         `SELECT base_row.*, ROW_NUMBER() OVER (PARTITION BY base_row.shop_id ORDER BY ${innerRank}) AS shop_rn` +
         ` FROM (${sql}) base_row`;

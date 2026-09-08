@@ -125,7 +125,7 @@ self.addEventListener('fetch', (event) => {
   // Donnees API : JSON publics servis depuis le cache (stale-while-revalidate avec timeout)
   // pour que la page s'ouvre meme en reseau tres lent ; le reste est en reseau pur.
   if (url.pathname.startsWith('/api/')) {
-    if (isApiSwr(url.pathname) && !url.search.includes('seed=')) {
+    if (isApiSwr(url.pathname)) {
       event.respondWith(apiSwr(event.request));
     } else {
       event.respondWith(

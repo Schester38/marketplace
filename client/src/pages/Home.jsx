@@ -63,9 +63,6 @@ export default function Home() {
   const [bestSellers, setBestSellers] = useState([]);
   const [popular, setPopular] = useState([]);
   const [newArrivals, setNewArrivals] = useState([]);
-  // Rotation aléatoire : nouvelle graine à chaque montage de la page (visite ou
-  // rafraîchissement) — l'ordre de la grille change, la pagination reste cohérente.
-  const [browseSeed] = useState(() => Math.random().toString(36).slice(2, 10));
   const [flashPromos, setFlashPromos] = useState([]);
   const [activeRail, setActiveRail] = useState(() => params.get("rail") || "");
   // Géolocalisation : pays détecté + préférence « produits de mon pays d'abord ».
@@ -253,7 +250,6 @@ export default function Home() {
           ...(minPrice ? { min_price: Number(minPrice) } : {}),
           ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
           ...(localOnly && geoCountry ? { country: geoCountry } : {}),
-          ...(isBrowse ? { seed: browseSeed } : {}),
           limit: isBrowse ? BROWSE_PAGE_SIZE : PER_PAGE,
           offset: isBrowse ? page * BROWSE_PAGE_SIZE : offset,
         })
@@ -301,7 +297,7 @@ export default function Home() {
           }
         });
     },
-    [debouncedSearch, category, sort, scope, minPrice, maxPrice, offset, page, localOnly, geoCountry, browseSeed]
+    [debouncedSearch, category, sort, scope, minPrice, maxPrice, offset, page, localOnly, geoCountry]
   );
 
   useEffect(() => {
