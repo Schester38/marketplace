@@ -10,6 +10,7 @@ import { CITIES } from "../cities.js";
 import { useLang } from "../i18n.jsx";
 import { formatMoney } from "../components/ProductCard.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
+import { requestPushPermission } from "../push.js";
 
 function todayStr() {
   const d = new Date();
@@ -266,6 +267,9 @@ export default function MyAccount() {
   // Préférences de notifications push (absence de préférence = tout activé).
   const [pushPrefs, setPushPrefs] = useState({ flash: true, digest: true, messages: true });
   const [pushSaving, setPushSaving] = useState(false);
+  // Statut réel d'abonnement (abonné ou non côté serveur).
+  const [pushSubscribed, setPushSubscribed] = useState(null);
+  const [pushBusy, setPushBusy] = useState(false);
   useEffect(() => {
     let cancelled = false;
     api
@@ -274,6 +278,12 @@ export default function MyAccount() {
         if (!cancelled && d?.prefs) setPushPrefs(d.prefs);
       })
       .catch(() => {});
+    api
+      .pushStatus()
+      .then((d) => {
+        if (!cancelled && d) setPushSubscribed(!!d.subscribed);
+      })
+      .catch(() => setPushSubscribed(false));
     return () => {
       cancelled = true;
     };
@@ -289,6 +299,27 @@ export default function MyAccount() {
       setPushPrefs(pushPrefs); // rollback si échec
     } finally {
       setPushSaving(false);
+    }
+  };
+  // Active/abonne le push depuis un clic (les navigateurs exigent un geste).
+  const activatePush = async () => {
+    if (pushBusy) return;
+    setPushBusy(true);
+    try {
+      const ok = await requestPushPermission();
+      if (ok) {
+        setPushSubscribed(true);
+        try {
+          const d = await api.pushStatus();
+          if (d) setPushSubscribed(!!d.subscribed);
+        } catch {
+          /* erreur de relecture : on garde le statut optimiste */
+        }
+      }
+    } catch {
+      /* silencieux */
+    } finally {
+      setPushBusy(false);
     }
   };
 
@@ -618,6 +649,34 @@ export default function MyAccount() {
               "Choisissez les notifications push que vous souhaitez recevoir sur votre appareil."
             )}
           </p>
+          {/* Statut d'abonnement navigateur (nécessaire pour recevoir). */}
+          {pushSubscribed !== null && (
+            <div
+              className={`info-row ${pushSubscribed ? "" : ""}`}
+              style={{ background: "var(--card)" }}
+            >
+              <span>{t("Notifications sur cet appareil")}</span>
+              {pushSubscribed ? (
+                <strong className="badge badge-paid">{t("Activées")}</strong>
+              ) : (
+                <button
+                  type="button"
+                  className="btn btn-small btn-primary"
+                  disabled={pushBusy}
+                  onClick={activatePush}
+                >
+                  {pushBusy ? "⏳ …" : t("Activer les notifications")}
+                </button>
+              )}
+            </div>
+          )}
+          {pushSubscribed === false && (
+            <p className="hint" style={{ marginTop: 6 }}>
+              {t(
+                "Cliquez sur « Activer les notifications » pour autoriser et abonner cet appareil : vous recevrez alors une alerte à chaque événement ci-dessous."
+              )}
+            </p>
+          )}
           <div className="info-row">
             <span>⚡ {t("Promotions éclair")}</span>
             <button

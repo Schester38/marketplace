@@ -44,6 +44,22 @@ router.post(
   })
 );
 
+// État réel d'abonnement push de l'utilisateur (bannière + Mon compte).
+router.get(
+  "/status",
+  authRequired,
+  ah(async (req, res) => {
+    const [sub] = await q(
+      "SELECT COUNT(*)::int AS n FROM push_subscriptions WHERE user_id = $1",
+      [req.user.id]
+    );
+    res.json({
+      subscribed: Number(sub?.n || 0) > 0,
+      configured: Boolean(vapidPublicKey), // VAPID présent côté serveur
+    });
+  })
+);
+
 // Préférences de notifications push (flash / digest / messages). Absence de
 // ligne = tout activé par défaut.
 router.get(

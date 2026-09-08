@@ -604,6 +604,10 @@ const EN = {
   "Désactivées": "Disabled",
   "Choisissez les notifications push que vous souhaitez recevoir sur votre appareil.":
     "Choose the push notifications you want to receive on your device.",
+  "Notifications sur cet appareil": "Notifications on this device",
+  "Activer les notifications": "Enable notifications",
+  "Cliquez sur « Activer les notifications » pour autoriser et abonner cet appareil : vous recevrez alors une alerte à chaque événement ci-dessous.":
+    "Click \"Enable notifications\" to authorize and subscribe this device: you will then receive an alert for each event below.",
   "Tout marquer comme lu": "Mark all as read",
   "Aucune notification": "No notifications",
   "Supprimer la notification": "Delete notification",
@@ -2060,6 +2064,10 @@ const AR = {
   "Désactivées": "معطّلة",
   "Choisissez les notifications push que vous souhaitez recevoir sur votre appareil.":
     "اختر إشعارات الدفع التي تريد استلامها على جهازك.",
+  "Notifications sur cet appareil": "الإشعارات على هذا الجهاز",
+  "Activer les notifications": "تفعيل الإشعارات",
+  "Cliquez sur « Activer les notifications » pour autoriser et abonner cet appareil : vous recevrez alors une alerte à chaque événement ci-dessous.":
+    "انقر على «تفعيل الإشعارات» للسماح وتفعيل هذا الجهاز: ستصلك تنبيهات لكل حدث أدناه.",
   "Tout marquer comme lu": "تحديد الكل كمقروء",
   "Aucune notification": "لا توجد إشعارات",
   "Supprimer la notification": "حذف الإشعار",
@@ -3433,6 +3441,10 @@ const ES = {
   "Désactivées": "Desactivadas",
   "Choisissez les notifications push que vous souhaitez recevoir sur votre appareil.":
     "Elige las notificaciones push que quieres recibir en tu dispositivo.",
+  "Notifications sur cet appareil": "Notificaciones en este dispositivo",
+  "Activer les notifications": "Activar notificaciones",
+  "Cliquez sur « Activer les notifications » pour autoriser et abonner cet appareil : vous recevrez alors une alerte à chaque événement ci-dessous.":
+    "Haz clic en \"Activar notificaciones\" para autorizar y suscribir este dispositivo: recibirás una alerta en cada evento a continuación.",
   "Tout marquer comme lu": "Marcar todo como leído",
   "Aucune notification": "Sin notificaciones",
   "Supprimer la notification": "Eliminar la notificación",
