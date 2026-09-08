@@ -4950,6 +4950,27 @@ a.step {
     grid-template-columns: 1fr;
     gap: 12px;
   }
+  /* Accueil uniquement : étapes & valeurs en une seule ligne glissable sur
+     téléphone (snap + momentum) au lieu de cartes empilées. */
+  .home-page .steps {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    padding: 4px 2px 14px;
+    margin: 0 0 6px;
+  }
+  .home-page .steps::-webkit-scrollbar {
+    display: none;
+  }
+  .home-page .steps > .step {
+    flex: 0 0 72%;
+    min-width: 230px;
+    scroll-snap-align: start;
+  }
   .section-title {
     font-size: 1.2rem;
   }
