@@ -513,7 +513,7 @@ router.post(
     //    court pour ne pas bloquer la route, et le canal « messages » respecte
     //    les préférences push de chaque utilisateur (Mon compte → Messages).
     const payload = {
-      title: "📢 Message de Mboppi",
+      title: "📢 Administration-Mboppi",
       body: text.slice(0, 140),
       url: "/",
       tag: `admin-msg-${created[0].id}`,

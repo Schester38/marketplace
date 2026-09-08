@@ -221,8 +221,8 @@ FROM sales s
       await q(
         `SELECT
          COUNT(*) AS total_sales,
-         COALESCE(SUM(s.total_price), 0) AS revenue,
-         COALESCE(SUM(s.delivery_fee), 0) AS delivery_revenue,
+         COALESCE(SUM(s.total_price) FILTER (WHERE s.status = 'delivered'), 0) AS revenue,
+         COALESCE(SUM(s.delivery_fee) FILTER (WHERE s.status = 'delivered'), 0) AS delivery_revenue,
          COALESCE(SUM(CASE WHEN s.seller_id IS NOT NULL THEN s.commission ELSE 0 END) + SUM(CASE WHEN s.referred_by IS NOT NULL THEN s.referral_commission ELSE 0 END), 0) AS total_commission,
          COALESCE(SUM(CASE WHEN s.paid AND s.seller_id IS NOT NULL THEN s.commission ELSE 0 END) + SUM(CASE WHEN s.referral_paid AND s.referred_by IS NOT NULL THEN s.referral_commission ELSE 0 END), 0) AS paid_commission,
          COALESCE(SUM(CASE WHEN s.status = 'delivered' AND NOT s.paid AND s.seller_id IS NOT NULL THEN s.commission ELSE 0 END) + SUM(CASE WHEN s.status = 'delivered' AND NOT s.referral_paid AND s.referred_by IS NOT NULL THEN s.referral_commission ELSE 0 END), 0) AS owed_commission
@@ -235,7 +235,7 @@ FROM sales s
     const series = (
       await q(
         `SELECT to_char(date_trunc('day', s.created_at), 'YYYY-MM-DD') AS day,
-              COUNT(*) AS cnt, COALESCE(SUM(s.total_price), 0) AS rev
+              COUNT(*) AS cnt, COALESCE(SUM(s.total_price) FILTER (WHERE s.status = 'delivered'), 0) AS rev
        FROM sales s
        JOIN products p ON p.id = s.product_id
        WHERE p.shop_id = $1 AND s.created_at >= now() - interval '13 days' AND NOT ($1 = ANY(s.hidden_for))
@@ -245,7 +245,7 @@ FROM sales s
     ).map((r) => ({ day: r.day, cnt: Number(r.cnt), rev: Number(r.rev) }));
     const topProducts = (
       await q(
-        `SELECT p.name, COUNT(*) AS cnt, COALESCE(SUM(s.total_price), 0) AS rev
+        `SELECT p.name, COUNT(*) AS cnt, COALESCE(SUM(s.total_price) FILTER (WHERE s.status = 'delivered'), 0) AS rev
        FROM sales s
        JOIN products p ON p.id = s.product_id
        WHERE p.shop_id = $1 AND NOT ($1 = ANY(s.hidden_for))

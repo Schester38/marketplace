@@ -2,22 +2,23 @@ import pg from "pg";
 
 const { Pool } = pg;
 
-const connectionString =
-  process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/marketplace";
+const dbUrl =
+  process.env.DATABASE_URL_POOLED || // PgBouncer Supabase (multiplexé, recommandé serverless)
+  process.env.DATABASE_URL || // connexion directe (plafonné à ~200 → EMAXCONN en rafale)
+  "postgres://postgres:postgres@localhost:5432/marketplace";
 
 const pool = new Pool({
-  connectionString,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+  connectionString: dbUrl,
+  ssl: dbUrl !== "postgres://postgres:postgres@localhost:5432/marketplace" ? { rejectUnauthorized: false } : undefined,
   // Robustesse serverless (Vercel) :
-  //  - max borné (6 au lieu du défaut 10) : chaque instance Vercel ouvre jusqu'à
-  //    `max` connexions PostgreSQL. Avec plusieurs instances + push en
-  //    parallèle, le défaut saturait la limite Supabase (EMAXCONN, 200
-  //    connexions) → 503/500 sur toutes les routes.
+  //  - max bas (2) : avec DATABASE_URL_POOLED (PgBouncer) les requêtes logiques
+  //    sont multiplexées sur un petit pool physique — pas besoin de beaucoup de
+  //    connexions par instance. Évite aussi de saturer PgBouncer lui-même.
   //  - connectionTimeoutMillis : si le pool de l'instance est plein (rafale de
   //    requêtes, ex. panneau admin qui poll en parallèle), les requêtes
-  //    attendent AVANT d'échouer (8 s au lieu de 3 s) — évite des 500 en épingle.
+  //    attendent AVANT d'échouer (8 s) — évite des 500 en épingle.
   //  - idleTimeoutMillis : libère les connexions inactives, réduit la pression.
-  max: 6,
+  max: 2,
   connectionTimeoutMillis: 8000,
   idleTimeoutMillis: 10000,
 });
