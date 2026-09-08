@@ -279,7 +279,7 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
         orderSql +=
           `CASE WHEN ${FOLD_TEXT("ranked.shop_country")} = ${FOLD_TEXT(`$${countryParam}`)} THEN 0 ELSE 1 END, `;
       }
-      orderSql += `ranked.shop_rn ASC, ${rankedSort.replace(/base_row\./g, "ranked.")}`;
+      orderSql += `ranked.shop_rn ASC, ${innerRank.replace(/base_row\./g, "ranked.")}`;
       pagedSql = `SELECT * FROM (${rankedSql}) ranked` + orderSql + ` LIMIT ${pageSize} OFFSET ${skip}`;
     }
     if (countryNorm) params.push(countryNorm);
