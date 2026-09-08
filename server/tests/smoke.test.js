@@ -501,8 +501,8 @@ suite("validators: productListQuerySchema", () => {
     assertInvalid(productListQuerySchema, { sort: "invalid_sort" }, "invalid sort");
   });
 
-  test("rejette un limit > 60", () => {
-    assertInvalid(productListQuerySchema, { limit: 100 }, "limit too high");
+  test("rejette un limit > 100", () => {
+    assertInvalid(productListQuerySchema, { limit: 101 }, "limit too high");
   });
 
   test("rejette un min_price négatif", () => {

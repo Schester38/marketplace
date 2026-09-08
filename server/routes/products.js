@@ -132,12 +132,8 @@ const SORTS = {
   rating: "COALESCE(r.rating_avg, 0) DESC, p.created_at DESC",
 };
 
-// Diversité boutiques : sur une page paginée du catalogue, une boutique ne peut
-// pas occuper plus de N emplacements. Les autres produits de la boutique
-// restent accessibles via les pages suivantes, la fiche boutique et la recherche.
-const MAX_PRODUCTS_PER_SHOP_PER_PAGE = 3;
-
-// Mêmes tris que SORTS, exprimés sur la sous-requête paginée (alias base_row).
+// Classement des tris exprimés sur la sous-requête paginée (alias base_row),
+// utilisée pour l'entrelacement par boutique (ROW_NUMBER par shop_id).
 const CAP_SORTS = {
   recent: "base_row.created_at DESC",
   popular:
@@ -239,41 +235,55 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
   const paging =
     (Number.isInteger(rawLimit) && rawLimit > 0) || (Number.isInteger(rawOffset) && rawOffset > 0);
   if (paging) {
-    const pageSize = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 60) : 24;
+    const pageSize = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 100) : 24;
     const skip = Number.isInteger(rawOffset) && rawOffset > 0 ? rawOffset : 0;
     // Rotation aléatoire seedée : avec `seed`, l'ordre est un mélange déterministe
     // de la graine (md5(id + seed)) — différent à chaque chargement de page côté
     // client, mais stable entre les pages d'une même visite (pas de doublon via
-    // « Voir plus de produits »). Le plafond par boutique continue de s'appliquer.
+    // « Voir plus de produits »).
     let seedParam = null;
     if (seed) {
       seedParam = params.length + 1;
       params.push(String(seed).slice(0, 64));
     }
-    const innerSort = seed
-      ? `md5(base_row.id::text || $${seedParam})`
-      : CAP_SORTS[sort] || CAP_SORTS.recent;
-    const outerSort = innerSort.replace(/base_row\./g, "ranked.");
-    const cappedSql =
-      `SELECT * FROM (
-         SELECT base_row.*, ROW_NUMBER() OVER (PARTITION BY base_row.shop_id ORDER BY ${innerSort}) AS shop_rn
-         FROM (${sql}) base_row
-       ) ranked
-       WHERE ranked.shop_rn <= ${MAX_PRODUCTS_PER_SHOP_PER_PAGE}`;
-    // Le total porte sur l'ensemble plafonné pour que hasMore reste fiable.
-    const [countRow] = await q(`SELECT COUNT(*) AS n FROM (${cappedSql}) c`, params);
-    let orderSql = " ORDER BY " + outerSort;
-    if (countryNorm) {
-      const countryParam = params.length + 1;
-      orderSql =
-        " ORDER BY " +
-        `CASE WHEN ${FOLD_TEXT("ranked.shop_country")} = ${FOLD_TEXT(`$${countryParam}`)} THEN 0 ELSE 1 END, ` +
-        outerSort;
+    const simpleSort = seed
+      ? `md5(p.id::text || $${seedParam})`
+      : SORTS[sort] || SORTS.recent;
+    // Total RÉEL (non plafonné) : aucun produit ne doit rester caché.
+    const [totalRow] = await q(`SELECT COUNT(*) AS n FROM (${sql}) t`, params);
+    const total = Number(totalRow.n);
+    let pagedSql;
+    if (total <= pageSize) {
+      // Tout tient sur une page : liste directe, aucun produit masqué.
+      let orderSql = " ORDER BY ";
+      if (countryNorm) {
+        const countryParam = params.length + 1;
+        orderSql +=
+          `CASE WHEN ${FOLD_TEXT("u.country")} = ${FOLD_TEXT(`$${countryParam}`)} THEN 0 ELSE 1 END, `;
+      }
+      orderSql += simpleSort;
+      pagedSql = sql + orderSql + ` LIMIT ${pageSize} OFFSET ${skip}`;
+    } else {
+      // Diversité : entrelacement par boutique — le 1ᵉʳ produit de chaque
+      // boutique d'abord (par score), puis les 2ᵉ, etc. Chaque page mélange
+      // les boutiques et TOUS les produits restent accessibles via la pagination.
+      const innerRank = seed
+        ? `md5(base_row.id::text || $${seedParam})`
+        : CAP_SORTS[sort] || CAP_SORTS.recent;
+      const rankedSql =
+        `SELECT base_row.*, ROW_NUMBER() OVER (PARTITION BY base_row.shop_id ORDER BY ${innerRank}) AS shop_rn` +
+        ` FROM (${sql}) base_row`;
+      let orderSql = " ORDER BY ";
+      if (countryNorm) {
+        const countryParam = params.length + 1;
+        orderSql +=
+          `CASE WHEN ${FOLD_TEXT("ranked.shop_country")} = ${FOLD_TEXT(`$${countryParam}`)} THEN 0 ELSE 1 END, `;
+      }
+      orderSql += `ranked.shop_rn ASC, ${rankedSort.replace(/base_row\./g, "ranked.")}`;
+      pagedSql = `SELECT * FROM (${rankedSql}) ranked` + orderSql + ` LIMIT ${pageSize} OFFSET ${skip}`;
     }
-    const pagedSql = cappedSql + orderSql + ` LIMIT ${pageSize} OFFSET ${skip}`;
     if (countryNorm) params.push(countryNorm);
     const products = (await q(pagedSql, params)).map(productRow);
-    const total = Number(countRow.n);
     res.json({
       products,
       total,

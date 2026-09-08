@@ -53,13 +53,15 @@ export function RailShell({ title, hint, emoji, children, ariaLabel }) {
       aria-label={ariaLabel || title}
       className="product-rail rail-shell reveal"
     >
-      <div className="section-head">
-        <h2 className="section-title">
-          {emoji ? `${emoji} ` : ""}
-          {title}
-        </h2>
-        {hint && <p className="hint">{hint}</p>}
-      </div>
+      {(title || hint) && (
+        <div className="section-head">
+          <h2 className="section-title">
+            {emoji ? `${emoji} ` : ""}
+            {title}
+          </h2>
+          {hint && <p className="hint">{hint}</p>}
+        </div>
+      )}
       <div className="rail-frame">
         <button
           type="button"

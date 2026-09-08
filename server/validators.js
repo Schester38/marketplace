@@ -197,7 +197,7 @@ export const productListQuerySchema = z.object({
     .max(64)
     .regex(/^[A-Za-z0-9_-]*$/, "Graine invalide")
     .optional(),
-  limit: z.coerce.number().int().min(1).max(60, "Maximum 60 résultats par page").optional(),
+  limit: z.coerce.number().int().min(1).max(100, "Maximum 100 résultats par page").optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
 

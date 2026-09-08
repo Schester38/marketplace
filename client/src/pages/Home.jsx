@@ -50,7 +50,10 @@ export default function Home() {
   const [shopsLoading, setShopsLoading] = useState(false);
   const [shopsError, setShopsError] = useState("");
   const PER_PAGE = 24;
+  // Navigation libre : pages de 100 produits = 10 lignes glissables de 10.
+  const BROWSE_PAGE_SIZE = 100;
   const [offset, setOffset] = useState(0);
+  const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const appendRef = useRef(false);
@@ -106,12 +109,14 @@ export default function Home() {
     setSearch(params.get("q") || "");
     setDebouncedSearch(params.get("q") || "");
     setOffset(0);
+    setPage(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.get("q")]);
 
   useEffect(() => {
     setCategory(params.get("cat") || "");
     setOffset(0);
+    setPage(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.get("cat")]);
 
@@ -249,8 +254,8 @@ export default function Home() {
           ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
           ...(localOnly && geoCountry ? { country: geoCountry } : {}),
           ...(isBrowse ? { seed: browseSeed } : {}),
-          limit: isBrowse ? 10 : PER_PAGE,
-          offset,
+          limit: isBrowse ? BROWSE_PAGE_SIZE : PER_PAGE,
+          offset: isBrowse ? page * BROWSE_PAGE_SIZE : offset,
         })
         .then((d) => {
           if (mounted.current) {
@@ -261,7 +266,7 @@ export default function Home() {
             if (next.length === 0 && hasData.current && unfiltered) {
               setError("");
             } else {
-              setHasMore(Boolean(d.hasMore) && !isBrowse);
+              setHasMore(Boolean(d.hasMore));
               setProducts((prev) => (append ? mergeUnique(prev, next) : next));
               hasData.current = d.total != null ? d.total > 0 : next.length > 0;
               if (next.length > 0) retryRef.current = 0;
@@ -296,7 +301,7 @@ export default function Home() {
           }
         });
     },
-    [debouncedSearch, category, sort, scope, minPrice, maxPrice, offset, localOnly, geoCountry, browseSeed]
+    [debouncedSearch, category, sort, scope, minPrice, maxPrice, offset, page, localOnly, geoCountry, browseSeed]
   );
 
   useEffect(() => {
@@ -386,6 +391,7 @@ export default function Home() {
   const changeFilter = (setter) => (e) => {
     setter(e.target.value);
     setOffset(0);
+    setPage(0);
   };
 
   // Navigation libre (sans recherche ni filtre) : la sélection s'affiche en
@@ -397,6 +403,15 @@ export default function Home() {
     !maxPrice &&
     !debouncedSearch.trim() &&
     scope === "product";
+
+  // Découpage en lignes de 10 produits glissables (10 lignes par page).
+  const productRows = [];
+  for (let i = 0; i < products.length; i += 10) productRows.push(products.slice(i, i + 10));
+
+  const goToPage = (p) => {
+    setPage(p);
+    produitsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   return (
     <main className="container home-page">
@@ -523,26 +538,24 @@ export default function Home() {
       )}
 
       <section ref={produitsRef} aria-label={t("Produits")} style={{ scrollMarginTop: 80 }}>
-        {!browseMode && (
-          <div className="section-head">
-            <h2 className="section-title">
-              <Logo className="logo-inline" /> {t("Produits et créations")}
-            </h2>
-            {category || minPrice || maxPrice ? (
-              <button
-                type="button"
-                className="section-link"
-                onClick={() => {
-                  setCategory("");
-                  setMinPrice("");
-                  setMaxPrice("");
-                }}
-              >
-                ✕ {t("Réinitialiser les filtres")}
-              </button>
-            ) : null}
-          </div>
-        )}
+        <div className="section-head">
+          <h2 className="section-title">
+            <Logo className="logo-inline" /> {t("Produits et créations")}
+          </h2>
+          {category || minPrice || maxPrice ? (
+            <button
+              type="button"
+              className="section-link"
+              onClick={() => {
+                setCategory("");
+                setMinPrice("");
+                setMaxPrice("");
+              }}
+            >
+              ✕ {t("Réinitialiser les filtres")}
+            </button>
+          ) : null}
+        </div>
         {browseMode && (
             <>
               <div className="home-tabs-wrap">
@@ -952,16 +965,35 @@ export default function Home() {
             </p>
           </div>
         ) : browseMode ? (
-          <RailShell
-            title={t("Produits et créations")}
-            hint={t("Glissez pour découvrir la sélection du moment.")}
-            emoji="🛍️"
-            ariaLabel={t("Produits")}
-          >
-            {products.slice(0, 10).map((p) => (
-              <ProductCard key={p.id} product={p} />
+          <>
+            {productRows.map((row, ri) => (
+              <RailShell key={ri} ariaLabel={`${t("Produits et créations")} — ${ri + 1}`}>
+                {row.map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </RailShell>
             ))}
-          </RailShell>
+            <div className="load-more-wrap">
+              {page > 0 && (
+                <button
+                  className="btn btn-outline"
+                  disabled={loadingMore}
+                  onClick={() => goToPage(page - 1)}
+                >
+                  ← {t("Page précédente")}
+                </button>
+              )}
+              {hasMore && (
+                <button
+                  className="btn btn-primary"
+                  disabled={loadingMore}
+                  onClick={() => goToPage(page + 1)}
+                >
+                  {loadingMore ? "…" : `${t("Page suivante")} →`}
+                </button>
+              )}
+            </div>
+          </>
         ) : (
           <>
             <div className="grid">

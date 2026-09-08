@@ -544,6 +544,8 @@ const EN = {
   "Commission de parrainage": "Referral commission",
   Activité: "Activity",
   "Voir plus de produits": "Show more products",
+  "Page suivante": "Next page",
+  "Page précédente": "Previous page",
   "Télécharger le tableau (Excel)": "Download the table (Excel)",
   "Le fichier téléchargé liste chaque activité du compte : publications de produits, ventes, commissions payées, achats et commandes.":
     "The downloaded file lists every account activity: product publications, sales, paid commissions, purchases and orders.",
@@ -1994,6 +1996,8 @@ const AR = {
   "Commission de parrainage": "عمولة الإحالة",
   Activité: "النشاط",
   "Voir plus de produits": "عرض المزيد من المنتجات",
+  "Page suivante": "الصفحة التالية",
+  "Page précédente": "الصفحة السابقة",
   "Télécharger le tableau (Excel)": "تنزيل الجدول (Excel)",
   "Le fichier téléchargé liste chaque activité du compte : publications de produits, ventes, commissions payées, achats et commandes.":
     "يسرد الملف الذي تم تنزيله كل نشاط في الحساب: نشر المنتجات والمبيعات والعمولات المدفوعة والمشتريات والطلبات.",
@@ -3355,6 +3359,8 @@ const ES = {
   "Commission de parrainage": "Comisión de referidos",
   Activité: "Actividad",
   "Voir plus de produits": "Ver más productos",
+  "Page suivante": "Página siguiente",
+  "Page précédente": "Página anterior",
   "Télécharger le tableau (Excel)": "Descargar la tabla (Excel)",
   "Le fichier téléchargé liste chaque activité du compte : publications de produits, ventes, commissions payées, achats et commandes.":
     "El archivo descargado enumera cada actividad de la cuenta: publicaciones de productos, ventas, comisiones pagadas, compras y pedidos.",
