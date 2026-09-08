@@ -71,7 +71,18 @@ export default function Verone() {
     e.preventDefault();
     setDeleting(true);
     try {
-      await api.deleteOffer(deleteTarget.id);
+      let token = null;
+      try {
+        const map = JSON.parse(localStorage.getItem("mboppi_offer_tokens") || "{}");
+        token = map[deleteTarget.id] || null;
+        if (token) {
+          delete map[deleteTarget.id];
+          localStorage.setItem("mboppi_offer_tokens", JSON.stringify(map));
+        }
+      } catch {
+        /* stockage indisponible : on tente sans token */
+      }
+      await api.deleteOffer(deleteTarget.id, token);
       setMyOffers(myOffers.filter((o) => o.id !== deleteTarget.id));
       setDeleteTarget(null);
       setSuccess(t("Offre retirée de la vitrine."));
@@ -115,12 +126,22 @@ export default function Verone() {
     }
     setSubmitting(true);
     try {
-      await api.createOffer({
+      const d = await api.createOffer({
         ...form,
         original_price: Number(form.original_price),
         promo_price: Number(form.promo_price),
         quantity: Number(form.quantity || 0),
       });
+      // Token de suppression : requis pour retirer l'offre plus tard.
+      if (d?.offer?.id && d?.delete_token) {
+        try {
+          const map = JSON.parse(localStorage.getItem("mboppi_offer_tokens") || "{}");
+          map[d.offer.id] = d.delete_token;
+          localStorage.setItem("mboppi_offer_tokens", JSON.stringify(map));
+        } catch {
+          /* stockage indisponible : la suppression restera possible si connecté */
+        }
+      }
       setForm(EMPTY_FORM);
       setShowForm(false);
       setSuccess(

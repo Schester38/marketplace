@@ -226,7 +226,11 @@ export const api = {
   myOffers: () => request("/offers/mine"),
   getOffer: (id) => request(`/offers/${id}`),
   createOffer: (payload) => request("/offers", { method: "POST", body: JSON.stringify(payload) }),
-  deleteOffer: (id) => request(`/offers/${id}`, { method: "DELETE" }),
+  deleteOffer: (id, token) =>
+    request(
+      `/offers/${id}${token ? `?token=${encodeURIComponent(token)}` : ""}`,
+      { method: "DELETE" }
+    ),
   createOrder: (payload) => request("/orders", { method: "POST", body: JSON.stringify(payload) }),
   myOrders: () => request("/orders/me"),
   productReviews: (id) => request(`/reviews/product/${id}`),

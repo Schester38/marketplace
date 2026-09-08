@@ -2,7 +2,7 @@ import { Router } from "express";
 import { q, withTransaction } from "../db.js";
 import { authRequired, roleRequired, authOptional } from "../auth.js";
 import { sendPush } from "../push.js";
-import { uploadPaymentProof } from "../storage.js";
+import { uploadPaymentProof, signedProofUrl } from "../storage.js";
 import {
   paySaleAutomatically,
   referralThresholdReached,
@@ -667,14 +667,19 @@ router.get(
         .status(409)
         .json({ error: "Le produit doit être livré avant de consulter une preuve" });
     }
+    // Preuves stockées dans le bucket PRIVÉ payment-proofs : on génère des URLs
+    // signées à durée limitée (1 h) à la lecture — jamais d'URL publique.
+    const [proof, referralProof] = await Promise.all([
+      isShop || isSeller ? (sale.paid ? signedProofUrl(sale.payment_proof, 3600) : null) : null,
+      isShop || isReferrer
+        ? sale.referral_paid
+          ? signedProofUrl(sale.referral_payment_proof, 3600)
+          : null
+        : null,
+    ]);
     res.json({
-      proof: isShop || isSeller ? (sale.paid ? sale.payment_proof || null : null) : null,
-      referral_proof:
-        isShop || isReferrer
-          ? sale.referral_paid
-            ? sale.referral_payment_proof || null
-            : null
-          : null,
+      proof: proof || null,
+      referral_proof: referralProof || null,
     });
   })
 );

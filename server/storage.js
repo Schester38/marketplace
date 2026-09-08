@@ -75,16 +75,52 @@ async function request(path, options = {}, bucketName = BUCKET) {
   return res;
 }
 
-export async function ensureBucket(bucketName = BUCKET) {
+export async function ensureBucket(bucketName = BUCKET, { public: isPublic = true } = {}) {
   const res = await request("bucket", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id: bucketName, name: bucketName, public: true }),
+    body: JSON.stringify({ id: bucketName, name: bucketName, public: isPublic }),
   }, bucketName);
   if (res.ok || res.status === 409) return;
   const text = await res.text().catch(() => "");
   if (/BucketAlreadyExists/i.test(text)) return;
   throw new Error(`Création du bucket ${bucketName} échouée (${res.status}) : ${text.slice(0, 160)}`);
+}
+
+// Génère une URL signée (durée limitée) pour une preuve de paiement stockée
+// dans le bucket PRIVÉ PAYMENT_PROOF_BUCKET. Retourne l'URL d'origine si elle
+// ne pointe pas vers ce bucket (data: URI) ou en cas d'erreur (fallback
+// silencieux : jamais de rupture d'affichage).
+export async function signedProofUrl(url, expiresSec = 3600) {
+  try {
+    if (!url || !SUPABASE_URL || !SERVICE_KEY) return url || null;
+    const prefix = `${SUPABASE_URL}/storage/v1/object/${PAYMENT_PROOF_BUCKET}/`;
+    if (!String(url).startsWith(prefix)) return url;
+    const objectPath = String(url).slice(prefix.length);
+    const token = apiToken();
+    const res = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/sign/${PAYMENT_PROOF_BUCKET}/${objectPath
+        .split("/")
+        .map(encodeURIComponent)
+        .join("/")}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ expiresIn: expiresSec }),
+      }
+    );
+    if (!res.ok) throw new Error(`sign HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data?.signedURL) return url;
+    return `${SUPABASE_URL}/storage/v1${data.signedURL}`;
+  } catch (err) {
+    console.warn("[storage] URL signée preuve impossible, URL d'origine conservée :", err.message);
+    return url;
+  }
 }
 
 const EXT_BY_TYPE = {
@@ -211,7 +247,7 @@ export async function uploadPaymentProof(dataUri, folder = "payments") {
   if (!parts) return null;
   if (!SUPABASE_URL || !SERVICE_KEY) return dataUri;
   try {
-    await ensureBucket(PAYMENT_PROOF_BUCKET);
+    await ensureBucket(PAYMENT_PROOF_BUCKET, { public: false });
     return await uploadBuffer(parts.buffer, parts.type, folder, "proof", PAYMENT_PROOF_BUCKET);
   } catch (err) {
     console.warn("[storage] upload preuve paiement fallback base64 :", err.message);
