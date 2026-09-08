@@ -287,6 +287,19 @@ async function ensureUniqueMemberIndex() {
           w && w.primary ? " (principal)" : ""
         }`
     );
+    // Liste des parrainés verrouillés dans cette demande (nom + référence) pour
+    // que l'admin puisse vérifier sans ouvrir le panneau. Tronquée à 10 pour ne
+    // pas exploser la taille des messages WhatsApp/Meta.
+    const memberLines = toLock
+      .map((m, i) => `${i + 1}. ${m.name || "—"} (${m.reference_number || "—"})`)
+      .join("\n");
+    const MEMBER_LIST_MAX = 10;
+    const memberListText =
+      memberLines.length > 0
+        ? `\nParrainés :\n${memberLines}${
+            count > MEMBER_LIST_MAX ? `\n… et ${count - MEMBER_LIST_MAX} autre(s)` : ""
+          }\n`
+        : "";
     const tmplParams = [
       `${parrainName} (${parrainRef})`,
       `${value.toLocaleString("fr-FR")} F`,
@@ -305,6 +318,7 @@ async function ensureUniqueMemberIndex() {
         `👥 Parrainés : ${count}\n` +
         `📧 Email : ${cleanEmail}\n` +
         (cleanComment ? `💬 Commentaire : ${cleanComment}\n` : "") +
+        memberListText +
         pmLines +
         `➡️ Panneau Admin → Retraits d'activation`,
       tmplParams
@@ -325,6 +339,7 @@ async function ensureUniqueMemberIndex() {
               `Parrainés payés : ${count}\n` +
               `Email du parrain : ${cleanEmail}\n` +
               (cleanComment ? `Commentaire : ${cleanComment}\n` : "") +
+              memberListText +
               pmLines +
               `\nPanneau Admin → Retraits d'activation pour marquer la demande « payée ».`,
           })

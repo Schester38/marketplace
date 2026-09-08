@@ -321,6 +321,58 @@ export default function SellerDashboard() {
       setWithdrawOpen(false);
       setWithdrawDone({ amount: d.amount || Number(withdrawForm.amount) });
       load();
+      // Ouvre WhatsApp vers la plateforme avec un message pré-rempli contenant
+      // les mêmes informations que l'email reçu par l'admin (parrain, montant,
+      // nombre de parrainés, liste des parrainés, email, commentaire).
+      try {
+        const amount = Number(withdrawForm.amount) || 0;
+        const paid = (activationReferrals || []).filter((r) => !!r.membership_paid_at);
+        const memberLines = paid
+          .slice(0, 10)
+          .map((r, i) => `${i + 1}. ${r.name || "—"} (${r.reference_number || "—"})`)
+          .join("\n");
+        const memberListText =
+          memberLines.length > 0
+            ? `\nParrainés :\n${memberLines}${
+                paid.length > 10 ? `\n… et ${paid.length - 10} autre(s)` : ""
+              }\n`
+            : "";
+        // Moyens de paiement du parrain (mêmes infos que l'email à l'admin).
+        let pmText = "";
+        try {
+          const pm = await api.getPaymentMethods();
+          const wallets = pm?.methods?.wallets || [];
+          if (pm?.methods?.full_name || wallets.length > 0) {
+            pmText =
+              `\nMoyens de paiement :\n` +
+              (pm.methods.full_name ? `Titulaire : ${pm.methods.full_name}\n` : "") +
+              wallets
+                .map(
+                  (w, i) =>
+                    `${i + 1}. ${w?.name || "Wallet"} : ${w?.value || "—"}${
+                      w?.primary ? " (principal)" : ""
+                    }`
+                )
+                .join("\n") +
+              `\n`;
+          }
+        } catch {
+          /* moyens de paiement indisponibles : on les omet, sans bloquer l'ouverture */
+        }
+        const msg =
+          `🔔 Mboppi — Demande de retrait d'activation\n` +
+          `👤 Parrain : ${user?.name || "—"} (${user?.reference_number || "—"})\n` +
+          `💰 Montant : ${formatMoney(amount)} F\n` +
+          `👥 Parrainés : ${paid.length}\n` +
+          `📧 Email : ${withdrawForm.email || user?.email || ""}\n` +
+          (withdrawForm.comment ? `💬 Commentaire : ${withdrawForm.comment}\n` : "") +
+          memberListText +
+          pmText +
+          `➡️ Merci de traiter ma demande.`;
+        window.open(whatsappLink(msg), "_blank", "noopener,noreferrer");
+      } catch {
+        /* ouverture WhatsApp non bloquante : ne fait jamais échouer la demande */
+      }
     } catch (err) {
       // Le serveur refuse aussi si les moyens de paiement manquent (double garde).
       if (err && err.code === "PAYMENT_METHODS_REQUIRED") {
