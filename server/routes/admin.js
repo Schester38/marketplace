@@ -487,22 +487,25 @@ router.post(
      VALUES ($1, $2, $3) RETURNING id`,
       [text, kind, uid]
     );
-    // Push notification (non bloquant) : cible selon le destinataire choisi.
-    setImmediate(() => {
+    // Push notification : envoi AVANT la réponse (en serverless, le code après
+    // res.json n'est pas garanti d'exécuter). Budget interne max 4 s.
+    try {
       const payload = {
         title: "📢 Message de Mboppi",
         body: text.slice(0, 140),
         url: "/",
         tag: `admin-msg-${created[0].id}`,
       };
-      const push =
-        kind === "user"
-          ? sendPush(uid, payload)
-          : kind === "all"
-            ? sendPushToAll(payload, { channel: "messages" })
-            : sendPushToAll(payload, { roles: [kind], channel: "messages" });
-      push.catch((err) => console.error("[admin] push message impossible :", err.message));
-    });
+      if (kind === "user") {
+        await sendPush(uid, payload);
+      } else if (kind === "all") {
+        await sendPushToAll(payload, { channel: "messages" });
+      } else {
+        await sendPushToAll(payload, { roles: [kind], channel: "messages" });
+      }
+    } catch (err) {
+      console.error("[admin] push message impossible :", err.message);
+    }
     await logAudit(req.user.id, "admin.send_message", `target=${kind} user=${uid}`, req.ip);
     res.json({ ok: true, id: created[0].id });
   })

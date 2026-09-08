@@ -263,6 +263,7 @@ export const api = {
   adminProducts: () => adminRequest("/admin/products"),
   adminDeleteProduct: (id) => adminRequest(`/admin/products/${id}`, { method: "DELETE" }),
   adminMessages: () => adminRequest("/admin/messages"),
+  adminDeleteMessage: (id) => adminRequest(`/admin/messages/${id}`, { method: "DELETE" }),
   adminSendMessage: (payload) =>
     adminRequest("/admin/messages", { method: "POST", body: JSON.stringify(payload) }),
   adminLogs: (limit = 100) => adminRequest(`/logs/list?limit=${limit}`),

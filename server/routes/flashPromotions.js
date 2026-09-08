@@ -140,9 +140,10 @@ router.post(
     )[0];
     const promo = promoRow(raw);
     // Push temps réel aux abonnés du pays de la boutique (hors la boutique
-    // elle-même) — non bloquant : la réponse part avant l'envoi.
-    setImmediate(() => {
-      sendPushToAll(
+    // elle-même) — envoi AVANT la réponse : en serverless, le code après
+    // res.json n'est pas garanti d'exécuter. Budget interne max 4 s.
+    try {
+      await sendPushToAll(
         {
           title: "⚡ Promotion éclair !",
           body: `${promo.shop_name} : ${promo.product_name} à ${Number(
@@ -152,8 +153,10 @@ router.post(
           tag: `flash-${promo.id}`,
         },
         { country: raw.shop_country, excludeUserId: req.user.id, channel: "flash" }
-      ).catch((err) => console.error("[flash] push impossible :", err.message));
-    });
+      );
+    } catch (err) {
+      console.error("[flash] push impossible :", err.message);
+    }
     res.status(201).json({ promotion: promo, ok: true });
   })
 );

@@ -93,22 +93,40 @@ export async function sendPushToAll(
     filters.push(`u.id <> $${params.length}`);
   }
   // Préférences par canal : absence de ligne push_prefs = canal activé.
+  // Si la table push_prefs n'existe pas encore (migration pas encore passée),
+  // on diffuse sans filtre de préférences plutôt que d'échouer.
   const CHANNEL_COLUMNS = { flash: "flash_ok", digest: "digest_ok", messages: "messages_ok" };
-  let joinPrefs = "";
-  if (channel && CHANNEL_COLUMNS[channel]) {
-    joinPrefs = "LEFT JOIN push_prefs pp ON pp.user_id = u.id";
-    filters.push(`COALESCE(pp.${CHANNEL_COLUMNS[channel]}, TRUE) = TRUE`);
-  }
-  const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
-  const subs = await q(
-    `SELECT ps.id, ps.endpoint, ps.keys
+  const usePrefs = channel && CHANNEL_COLUMNS[channel];
+  const baseFilters = [...filters];
+  const buildSql = (withPrefs) => {
+    const all = [...baseFilters];
+    if (withPrefs) all.push(`COALESCE(pp.${CHANNEL_COLUMNS[channel]}, TRUE) = TRUE`);
+    const where = all.length ? `WHERE ${all.join(" AND ")}` : "";
+    return (
+      `SELECT ps.id, ps.endpoint, ps.keys
        FROM push_subscriptions ps
        JOIN users u ON u.id = ps.user_id
-       ${joinPrefs}
+       ${withPrefs ? "LEFT JOIN push_prefs pp ON pp.user_id = u.id" : ""}
        ${where}
-      ORDER BY ps.id`,
-    params
-  );
+      ORDER BY ps.id`
+    );
+  };
+  let subs = null;
+  try {
+    subs = await q(buildSql(usePrefs), params);
+  } catch (err) {
+    if (!usePrefs) {
+      console.error("[push] requête abonnés impossible :", err.message);
+      return 0;
+    }
+    console.warn("[push] push_prefs indisponible, diffusion sans préférences :", err.message);
+    try {
+      subs = await q(buildSql(false), params);
+    } catch (err2) {
+      console.error("[push] requête abonnés impossible (fallback) :", err2.message);
+      return 0;
+    }
+  }
   if (!subs.length) return 0;
   const raw = buildPayload(payload);
   const started = Date.now();
