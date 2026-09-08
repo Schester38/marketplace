@@ -342,6 +342,21 @@ function NotifBell() {
 
   const message = (n) => {
     const buyer = n.buyer_name || t("le client");
+    if (n.type === "new_product") {
+      return t("Nouveau produit « {name} » publié{from} — venez le découvrir !", {
+        name: n.product_name,
+        from: n.body ? ` par ${n.body}` : "",
+      });
+    }
+    if (n.type === "flash_promo") {
+      return t("⚡ Promotion éclair : « {name} » {promo} — durée limitée !", {
+        name: n.product_name,
+        promo: n.body || "",
+      });
+    }
+    if (n.type === "admin_message") {
+      return n.body || t("Message de l'équipe Mboppi.");
+    }
     if (n.type === "sale_order") {
       if (user.id === n.seller_id) {
         return t("Nouvelle commande pour « {product} » — {buyer}.", {
@@ -568,6 +583,10 @@ function NotifBell() {
   };
 
   const linkFor = (n) => {
+    if (n.type === "new_product" || n.type === "flash_promo") {
+      return n.product_id ? `/produit/${n.product_id}` : "/";
+    }
+    if (n.type === "admin_message") return "/";
     if (n.type === "product_deleted") {
       if (user.role === "shop") return "/shop";
       return "/seller";

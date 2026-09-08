@@ -4,6 +4,9 @@ import { authRequired, roleRequired } from "../auth.js";
 import { listPhotos, mediumPhotos, fullPhotos, normalizeUploadPhotos } from "../photo.js";
 import { defaultCurrencyFor, validCurrency } from "../currency.js";
 import { storePhotos, collectStorageKeys, deleteStorageKeys } from "../storage.js";
+import { broadcastNotification } from "../services/notifications.js";
+import { getSetting, setSetting } from "../services/ikeepay.js";
+import { sendPushToAll } from "../push.js";
 import { createProductSchema, productListQuerySchema, citiesQuerySchema } from "../validators.js";
 import { validate, validateQuery } from "../middlewares/validate.js";
 
@@ -443,6 +446,38 @@ router.post(
       ]
     );
     const product = productRow((await q(SELECT_PRODUCT + " WHERE p.id = $1", [created[0].id]))[0]);
+    // Notification + push temps réel « Nouveau produit » à tous les
+    // utilisateurs (hors boutique émettrice, qui vient de le publier).
+    // Envoi AVANT la réponse : en serverless, le code après res.json n'est pas
+    // garanti d'exécuter. Jamais bloquant (try/catch + budget interne).
+    // Réconciliation avec l'existant : le digest quotidien « Nouveautés du
+    // jour » (getSetting/setSetting products_digest_last) sert d'anti-spam —
+    // si la notification immédiate a réussi (au moins une ligne cloche écrite),
+    // on marque aujourd'hui comme « déjà digesté » pour ne pas doublonner.
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const r = await broadcastNotification({
+        type: {
+          type: "new_product",
+          product_id: product.id,
+          product_name: product.name,
+          body: String(req.user.name || "").slice(0, 120) || null,
+        },
+        payload: {
+          title: "🆕 Nouveau produit sur Mboppi",
+          body: `« ${product.name} » vient d'être publié${req.user.name ? ` par ${req.user.name}` : ""} — venez le découvrir !`,
+          url: `/produit/${product.id}`,
+          tag: `product-${product.id}`,
+        },
+        channel: "digest",
+        excludeUserId: req.user.id,
+      });
+      if (r && r.inserted > 0) {
+        await setSetting("products_digest_last", today);
+      }
+    } catch (err) {
+      console.error("[products] notification nouveau produit impossible :", err.message);
+    }
     res.status(201).json({ product });
   }
 );

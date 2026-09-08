@@ -313,6 +313,8 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
     ALTER TABLE notifications ADD COLUMN IF NOT EXISTS amount REAL;
     ALTER TABLE notifications ALTER COLUMN amount TYPE NUMERIC(14,2) USING CASE WHEN amount IS NULL THEN NULL ELSE round(amount::numeric, 2) END;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS product_id INTEGER REFERENCES products(id) ON DELETE SET NULL;
+    ALTER TABLE notifications ADD COLUMN IF NOT EXISTS body TEXT;
 
     CREATE TABLE IF NOT EXISTS reviews (
       id SERIAL PRIMARY KEY,

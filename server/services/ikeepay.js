@@ -30,7 +30,7 @@ export const PAYMENT_MODE_AUTO = "auto";
 // on accepte donc indifféremment les deux au webhook.
 const FCFA_CURRENCIES = new Set(["XAF", "XOF"]);
 
-async function getSetting(key, fallback = "") {
+export async function getSetting(key, fallback = "") {
   try {
     const row = (
       await q("SELECT value FROM platform_settings WHERE key = $1", [key])

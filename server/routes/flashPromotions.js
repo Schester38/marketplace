@@ -4,7 +4,7 @@ import { authRequired, roleRequired } from "../auth.js";
 import { listPhotos } from "../photo.js";
 import { createFlashPromoSchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
-import { sendPushToAll } from "../push.js";
+import { broadcastNotification } from "../services/notifications.js";
 
 const router = Router();
 
@@ -139,12 +139,20 @@ router.post(
       )
     )[0];
     const promo = promoRow(raw);
-    // Push temps réel aux abonnés du pays de la boutique (hors la boutique
-    // elle-même) — envoi AVANT la réponse : en serverless, le code après
-    // res.json n'est pas garanti d'exécuter. Budget interne max 4 s.
+    // Notification cloche + push temps réel aux abonnés du pays de la boutique
+    // (hors la boutique elle-même) — envoi AVANT la réponse : en serverless, le
+    // code après res.json n'est pas garanti d'exécuter. Budget interne max 4 s.
     try {
-      await sendPushToAll(
-        {
+      await broadcastNotification({
+        type: {
+          type: "flash_promo",
+          product_id: promo.product_id,
+          product_name: promo.product_name,
+          body: `-${promo.discount_percent}% · ${Number(promo.promo_price).toLocaleString(
+            "fr-FR"
+          )} ${promo.currency} · par ${promo.shop_name}`,
+        },
+        payload: {
           title: "⚡ Promotion éclair !",
           body: `${promo.shop_name} : ${promo.product_name} à ${Number(
             promo.promo_price
@@ -152,10 +160,12 @@ router.post(
           url: `/produit/${promo.product_id}`,
           tag: `flash-${promo.id}`,
         },
-        { country: raw.shop_country, excludeUserId: req.user.id, channel: "flash" }
-      );
+        country: raw.shop_country,
+        excludeUserId: req.user.id,
+        channel: "flash",
+      });
     } catch (err) {
-      console.error("[flash] push impossible :", err.message);
+      console.error("[flash] notification impossible :", err.message);
     }
     res.status(201).json({ promotion: promo, ok: true });
   })

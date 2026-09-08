@@ -334,9 +334,13 @@ export default function MyAccount() {
     setPushTestMsg("");
     try {
       const d = await api.pushTest();
+      const n = Number((d && d.subscribers) || 0);
+      const plural = n > 1 ? "s" : "";
       setPushTestMsg(
         d && d.sent > 0
-          ? t("Notification de test envoyée ✅ Vérifiez votre téléphone (baissez l'écran pour tester).")
+          ? t(
+              `Notification de test envoyée sur ${n} appareil${plural} ✅ Vérifiez chacun de vos appareils abonnés (sur téléphone, baissez l'écran pour tester).`
+            )
           : t("La notification de test n'a pas pu être envoyée.")
       );
     } catch (err) {

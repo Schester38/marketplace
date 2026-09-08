@@ -18,6 +18,7 @@ import {
 } from "../services/ikeepay.js";
 import { getMembershipGate, setMembershipGate } from "../services/membershipGate.js";
 import { sendPush, sendPushToAll } from "../push.js";
+import { insertNotificationsForUsers } from "../services/notifications.js";
 import {
   getPublicWhatsAppSettings,
   setWhatsAppSettings,
@@ -487,9 +488,26 @@ router.post(
      VALUES ($1, $2, $3) RETURNING id`,
       [text, kind, uid]
     );
-    // Push notification : envoi AVANT la réponse (en serverless, le code après
-    // res.json n'est pas garanti d'exécuter). Budget interne max 4 s.
+    // Ligne « cloche » (in-app) pour chaque utilisateur cible, puis push.
+    // Envoi AVANT la réponse : en serverless, le code après res.json n'est pas
+    // garanti d'exécuter. Budget interne max 4 s.
     try {
+      let targetIds = [];
+      if (kind === "user") {
+        targetIds = [uid];
+      } else if (kind === "all") {
+        targetIds = (await q("SELECT id FROM users")).map((r) => Number(r.id));
+      } else {
+        targetIds = (await q("SELECT id FROM users WHERE role = $1", [kind])).map((r) =>
+          Number(r.id)
+        );
+      }
+      if (targetIds.length) {
+        await insertNotificationsForUsers(targetIds, {
+          type: "admin_message",
+          body: text.slice(0, 200),
+        });
+      }
       const payload = {
         title: "📢 Message de Mboppi",
         body: text.slice(0, 140),
@@ -504,7 +522,7 @@ router.post(
         await sendPushToAll(payload, { roles: [kind], channel: "messages" });
       }
     } catch (err) {
-      console.error("[admin] push message impossible :", err.message);
+      console.error("[admin] notification message impossible :", err.message);
     }
     await logAudit(req.user.id, "admin.send_message", `target=${kind} user=${uid}`, req.ip);
     res.json({ ok: true, id: created[0].id });
