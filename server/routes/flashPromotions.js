@@ -4,6 +4,7 @@ import { authRequired, roleRequired } from "../auth.js";
 import { listPhotos } from "../photo.js";
 import { createFlashPromoSchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
+import { sendPushToAll } from "../push.js";
 
 const router = Router();
 
@@ -126,16 +127,34 @@ router.post(
         [req.user.id, product.id, price, minutes]
       )
     )[0];
-    const row = await q(
-      `SELECT fp.*, p.name, p.price, p.category, p.image, p.photos, p.currency,
-            u.name AS shop_name, u.verified AS shop_verified, u.country AS shop_country
-     FROM flash_promotions fp
-     JOIN products p ON p.id = fp.product_id
-     JOIN users u ON u.id = fp.shop_id
-     WHERE fp.id = $1`,
-      [created.id]
-    );
-    res.status(201).json({ promotion: promoRow(row[0]), ok: true });
+    const raw = (
+      await q(
+        `SELECT fp.*, p.name, p.price, p.category, p.image, p.photos, p.currency,
+              u.name AS shop_name, u.verified AS shop_verified, u.country AS shop_country
+       FROM flash_promotions fp
+       JOIN products p ON p.id = fp.product_id
+       JOIN users u ON u.id = fp.shop_id
+       WHERE fp.id = $1`,
+        [created.id]
+      )
+    )[0];
+    const promo = promoRow(raw);
+    // Push temps réel aux abonnés du pays de la boutique (hors la boutique
+    // elle-même) — non bloquant : la réponse part avant l'envoi.
+    setImmediate(() => {
+      sendPushToAll(
+        {
+          title: "⚡ Promotion éclair !",
+          body: `${promo.shop_name} : ${promo.product_name} à ${Number(
+            promo.promo_price
+          ).toLocaleString("fr-FR")} ${promo.currency} (-${promo.discount_percent}%) — ${minutes} min seulement`,
+          url: `/produit/${promo.product_id}`,
+          tag: `flash-${promo.id}`,
+        },
+        { country: raw.shop_country, excludeUserId: req.user.id }
+      ).catch((err) => console.error("[flash] push impossible :", err.message));
+    });
+    res.status(201).json({ promotion: promo, ok: true });
   })
 );
 

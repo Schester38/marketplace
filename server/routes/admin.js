@@ -17,6 +17,7 @@ import {
   purgePendingPayments,
 } from "../services/ikeepay.js";
 import { getMembershipGate, setMembershipGate } from "../services/membershipGate.js";
+import { sendPush, sendPushToAll } from "../push.js";
 import {
   getPublicWhatsAppSettings,
   setWhatsAppSettings,
@@ -486,6 +487,22 @@ router.post(
      VALUES ($1, $2, $3) RETURNING id`,
       [text, kind, uid]
     );
+    // Push notification (non bloquant) : cible selon le destinataire choisi.
+    setImmediate(() => {
+      const payload = {
+        title: "📢 Message de Mboppi",
+        body: text.slice(0, 140),
+        url: "/",
+        tag: `admin-msg-${created[0].id}`,
+      };
+      const push =
+        kind === "user"
+          ? sendPush(uid, payload)
+          : kind === "all"
+            ? sendPushToAll(payload)
+            : sendPushToAll(payload, { roles: [kind] });
+      push.catch((err) => console.error("[admin] push message impossible :", err.message));
+    });
     await logAudit(req.user.id, "admin.send_message", `target=${kind} user=${uid}`, req.ip);
     res.json({ ok: true, id: created[0].id });
   })

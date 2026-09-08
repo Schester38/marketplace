@@ -14,12 +14,8 @@ if (!PUBLIC_KEY || !PRIVATE_KEY) {
 
 export const vapidPublicKey = PUBLIC_KEY || "";
 
-export async function sendPush(userId, payload) {
-  const subs = await q("SELECT id, endpoint, keys FROM push_subscriptions WHERE user_id = $1", [
-    userId,
-  ]);
-  if (!subs.length) return;
-  const raw = {
+function buildPayload(payload) {
+  return {
     title: payload.title,
     body: payload.body,
     icon: payload.icon || "/icon-192.png",
@@ -31,15 +27,91 @@ export async function sendPush(userId, payload) {
     vibrate: [200, 100, 200],
     data: { url: payload.url || "/" },
   };
+}
+
+// Envoi à un abonnement : 1 si livré, 0 sinon. Les abonnements morts (404/410)
+// sont purgés automatiquement.
+async function sendToSub(sub, raw) {
+  try {
+    // TTL 24 h : un appareil éteint reçoit quand même la notification au
+    // redémarrage (au lieu d'une expiration après 1 h).
+    await webpush.sendNotification(sub.endpoint, JSON.stringify(raw), {
+      headers: { TTL: 86400 },
+    });
+    return 1;
+  } catch (err) {
+    if (err.statusCode === 404 || err.statusCode === 410) {
+      await q("DELETE FROM push_subscriptions WHERE id = $1", [sub.id]).catch(() => {});
+    }
+    return 0;
+  }
+}
+
+export async function sendPush(userId, payload) {
+  const subs = await q("SELECT id, endpoint, keys FROM push_subscriptions WHERE user_id = $1", [
+    userId,
+  ]);
+  if (!subs.length) return 0;
+  const raw = buildPayload(payload);
+  let sent = 0;
   await Promise.allSettled(
     subs.map(async (s) => {
-      try {
-        await webpush.sendNotification(s.endpoint, JSON.stringify(raw), { headers: { TTL: 3600 } });
-      } catch (err) {
-        if (err.statusCode === 404 || err.statusCode === 410) {
-          await q("DELETE FROM push_subscriptions WHERE id = $1", [s.id]);
-        }
-      }
+      sent += await sendToSub(s, raw);
     })
   );
+  return sent;
+}
+
+/**
+ * Diffusion à tous les abonnés (broadcast), avec filtres optionnels :
+ *   - country : pays de l'utilisateur (ex. pays de la boutique émettrice)
+ *   - roles   : liste de rôles cibles (ex. ["seller", "client"])
+ *   - excludeUserId : exclut un utilisateur (ex. la boutique qui crée la promo)
+ * Anti-timeout serverless : envoi par lots de `batch` avec un budget temps
+ * global (`budgetMs`) — au-delà, l'envoi s'arrête proprement (les lots suivants
+ * sont abandonnés plutôt que de faire mourir la fonction Vercel).
+ * Non bloquant par conception : l'appelant n'attend pas le résultat.
+ * @returns {Promise<number>} nombre de notifications réellement envoyées.
+ */
+export async function sendPushToAll(
+  payload,
+  { country, roles, excludeUserId, budgetMs = 4000, batch = 50 } = {}
+) {
+  if (!PUBLIC_KEY || !PRIVATE_KEY) return 0;
+  const filters = [];
+  const params = [];
+  if (country) {
+    params.push(String(country).trim());
+    filters.push(`u.country = $${params.length}`);
+  }
+  if (roles && roles.length) {
+    params.push(roles);
+    filters.push(`u.role = ANY($${params.length})`);
+  }
+  if (excludeUserId) {
+    params.push(Number(excludeUserId));
+    filters.push(`u.id <> $${params.length}`);
+  }
+  const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+  const subs = await q(
+    `SELECT ps.id, ps.endpoint, ps.keys
+       FROM push_subscriptions ps
+       JOIN users u ON u.id = ps.user_id
+       ${where}
+      ORDER BY ps.id`,
+    params
+  );
+  if (!subs.length) return 0;
+  const raw = buildPayload(payload);
+  const started = Date.now();
+  let sent = 0;
+  for (let i = 0; i < subs.length; i += batch) {
+    if (Date.now() - started > budgetMs) break;
+    await Promise.allSettled(
+      subs.slice(i, i + batch).map(async (s) => {
+        sent += await sendToSub(s, raw);
+      })
+    );
+  }
+  return sent;
 }
