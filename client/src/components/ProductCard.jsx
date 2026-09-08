@@ -71,10 +71,6 @@ export default function ProductCard({
   const displayPrice = flash ? Number(flash.price) : Number(product.price);
   const hasPromo = oldPrice > 0 && oldPrice > displayPrice;
   const promoPct = hasPromo ? Math.round((1 - displayPrice / oldPrice) * 100) : 0;
-  // Badge « Nouveau » : produit publié depuis moins de 7 jours.
-  const isNew =
-    product.created_at &&
-    Date.now() - new Date(product.created_at).getTime() < 7 * 24 * 60 * 60 * 1000;
 
   const add = (e) => {
     e.preventDefault();
@@ -138,7 +134,6 @@ export default function ProductCard({
           <IconFire size={12} /> {sold} {t("vendus")}
         </span>
       )}
-      {isNew && !flash && <span className="badge badge-new">✨ {t("Nouveau")}</span>}
       {badge && <span className={`badge ${badge.cls}`}>{badge.text}</span>}
       <Link to={`/produit/${product.id}`} className="product-body">
         <h3>{product.name}</h3>

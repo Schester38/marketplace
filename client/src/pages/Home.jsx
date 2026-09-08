@@ -249,7 +249,7 @@ export default function Home() {
           ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
           ...(localOnly && geoCountry ? { country: geoCountry } : {}),
           ...(isBrowse ? { seed: browseSeed } : {}),
-          limit: PER_PAGE,
+          limit: isBrowse ? 10 : PER_PAGE,
           offset,
         })
         .then((d) => {
@@ -261,7 +261,7 @@ export default function Home() {
             if (next.length === 0 && hasData.current && unfiltered) {
               setError("");
             } else {
-              setHasMore(Boolean(d.hasMore));
+              setHasMore(Boolean(d.hasMore) && !isBrowse);
               setProducts((prev) => (append ? mergeUnique(prev, next) : next));
               hasData.current = d.total != null ? d.total > 0 : next.length > 0;
               if (next.length > 0) retryRef.current = 0;
@@ -388,6 +388,16 @@ export default function Home() {
     setOffset(0);
   };
 
+  // Navigation libre (sans recherche ni filtre) : la sélection s'affiche en
+  // ligne horizontale glissable (max 10) au lieu de la grille paginée.
+  const browseMode =
+    mode === "products" &&
+    !category &&
+    !minPrice &&
+    !maxPrice &&
+    !debouncedSearch.trim() &&
+    scope === "product";
+
   return (
     <main className="container home-page">
       <Seo
@@ -513,30 +523,27 @@ export default function Home() {
       )}
 
       <section ref={produitsRef} aria-label={t("Produits")} style={{ scrollMarginTop: 80 }}>
-        <div className="section-head">
-          <h2 className="section-title">
-            <Logo className="logo-inline" /> {t("Produits et créations")}
-          </h2>
-          {category || minPrice || maxPrice ? (
-            <button
-              type="button"
-              className="section-link"
-              onClick={() => {
-                setCategory("");
-                setMinPrice("");
-                setMaxPrice("");
-              }}
-            >
-              ✕ {t("Réinitialiser les filtres")}
-            </button>
-          ) : null}
-        </div>
-        {mode === "products" &&
-          !category &&
-          !minPrice &&
-          !maxPrice &&
-          !search.trim() &&
-          scope === "product" && (
+        {!browseMode && (
+          <div className="section-head">
+            <h2 className="section-title">
+              <Logo className="logo-inline" /> {t("Produits et créations")}
+            </h2>
+            {category || minPrice || maxPrice ? (
+              <button
+                type="button"
+                className="section-link"
+                onClick={() => {
+                  setCategory("");
+                  setMinPrice("");
+                  setMaxPrice("");
+                }}
+              >
+                ✕ {t("Réinitialiser les filtres")}
+              </button>
+            ) : null}
+          </div>
+        )}
+        {browseMode && (
             <>
               <div className="home-tabs-wrap">
                 <button
@@ -581,15 +588,6 @@ export default function Home() {
                       onClick={() => setActiveRail(activeRail === "popular" ? "" : "popular")}
                     >
                       <span className="tab-emoji">🔥</span> <span>{t("Plus populaires")}</span>
-                    </button>
-                  )}
-                  {newArrivals.length > 0 && (
-                    <button
-                      type="button"
-                      className={`home-tab t-new ${activeRail === "new" ? "active" : ""}`}
-                      onClick={() => setActiveRail(activeRail === "new" ? "" : "new")}
-                    >
-                      <span className="tab-emoji">✨</span> <span>{t("Nouveautés")}</span>
                     </button>
                   )}
                   {flashPromos.length >= 0 && (
@@ -641,7 +639,8 @@ export default function Home() {
                   products={bestSellers}
                 />
               )}
-              {activeRail === "new" && newArrivals.length > 0 && (
+              {/* Rail « Nouveautés » toujours visible (max 10, glissable). */}
+              {newArrivals.length > 0 && (
                 <ProductRail
                   title={t("Nouveautés")}
                   hint={t("Les derniers produits publiés sur Mboppi.")}
@@ -952,6 +951,17 @@ export default function Home() {
                   : t("Aucun produit disponible.")}
             </p>
           </div>
+        ) : browseMode ? (
+          <RailShell
+            title={t("Produits et créations")}
+            hint={t("Glissez pour découvrir la sélection du moment.")}
+            emoji="🛍️"
+            ariaLabel={t("Produits")}
+          >
+            {products.slice(0, 10).map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </RailShell>
         ) : (
           <>
             <div className="grid">
