@@ -51,7 +51,7 @@ function buildPayload(payload) {
 // sont purgés automatiquement. IMPORTANT : web-push exige l'OBJET subscription
 // { endpoint, keys } — le passage de l'endpoint seul chiffre avec des clés
 // vides et échoue/est rejeté par le push service.
-async function sendToSub(sub, raw) {
+async function sendToSub(sub, raw, timeoutMs = 4000) {
   try {
     const subscription = {
       endpoint: sub.endpoint,
@@ -67,7 +67,7 @@ async function sendToSub(sub, raw) {
     await webpush.sendNotification(subscription, JSON.stringify(raw), {
       headers: { TTL: 86400 },
       urgency: "high",
-      timeout: 4000,
+      timeout: timeoutMs,
     });
     return 1;
   } catch (err) {
@@ -105,6 +105,59 @@ export async function sendPush(userId, payload) {
       sent += await sendToSub(s, raw);
     })
   );
+  return sent;
+}
+
+/**
+ * Envoi direct à un ensemble d'utilisateurs (mêmes cibles que « Tester » : on
+ * vise les abonnements des userIds passés, SANS boucle anti-timeout qui saute
+ * des abonnés). Utilisé pour les messages admin, qui doivent arriver comme un
+ * test. Filtre optionnel par canal push_prefs (flash / digest / messages).
+ * Chaque abonnement a un timeout court (défaut 2000 ms) pour ne pas bloquer la
+ * route ; tous les abonnés de la liste sont traités.
+ * @returns {Promise<number>} nombre de notifications réellement envoyées.
+ */
+export async function sendPushToUsers(userIds, payload, { channel, timeoutMs = 2000, batch = 20 } = {}) {
+  if (!PUBLIC_KEY || !PRIVATE_KEY) return 0;
+  const ids = [
+    ...new Set((userIds || []).map(Number).filter((v) => Number.isInteger(v) && v > 0)),
+  ];
+  if (!ids.length) return 0;
+  const CHANNEL_COLUMNS = { flash: "flash_ok", digest: "digest_ok", messages: "messages_ok" };
+  const col = channel ? CHANNEL_COLUMNS[channel] : null;
+  const buildSql = (withPrefs) =>
+    `SELECT ps.id, ps.endpoint, ps.keys
+     FROM push_subscriptions ps
+     ${withPrefs ? "LEFT JOIN push_prefs pp ON pp.user_id = ps.user_id" : ""}
+     WHERE ps.user_id = ANY($1::int[])
+       ${withPrefs ? `AND COALESCE(pp.${col}, TRUE) = TRUE` : ""}
+     ORDER BY ps.id`;
+  let subs = null;
+  try {
+    subs = await q(buildSql(Boolean(col)), [ids]);
+  } catch (err) {
+    if (!col) {
+      console.error("[push] requête abonnés impossible :", err.message);
+      return 0;
+    }
+    console.warn("[push] push_prefs indisponible, envoi sans préférences :", err.message);
+    try {
+      subs = await q(buildSql(false), [ids]);
+    } catch (err2) {
+      console.error("[push] requête abonnés impossible (fallback) :", err2.message);
+      return 0;
+    }
+  }
+  if (!subs.length) return 0;
+  const raw = buildPayload(payload);
+  let sent = 0;
+  for (let i = 0; i < subs.length; i += batch) {
+    await Promise.allSettled(
+      subs.slice(i, i + batch).map(async (s) => {
+        sent += await sendToSub(s, raw, timeoutMs);
+      })
+    );
+  }
   return sent;
 }
 
@@ -177,12 +230,20 @@ export async function sendPushToAll(
   const raw = buildPayload(payload);
   const started = Date.now();
   let sent = 0;
+  let lastProcessed = 0;
   for (let i = 0; i < subs.length; i += batch) {
     if (Date.now() - started > budgetMs) break;
+    const chunk = subs.slice(i, i + batch);
     await Promise.allSettled(
-      subs.slice(i, i + batch).map(async (s) => {
-        sent += await sendToSub(s, raw);
+      chunk.map(async (s) => {
+        sent += await sendToSub(s, raw, 2000);
       })
+    );
+    lastProcessed = i + chunk.length;
+  }
+  if (lastProcessed < subs.length) {
+    console.warn(
+      `[push] broadcast partiel : ${lastProcessed}/${subs.length} abonné(s) atteint(s) (budget ${budgetMs}ms épuisé)`
     );
   }
   return sent;

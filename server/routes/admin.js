@@ -17,7 +17,7 @@ import {
   purgePendingPayments,
 } from "../services/ikeepay.js";
 import { getMembershipGate, setMembershipGate } from "../services/membershipGate.js";
-import { sendPush, sendPushToAll } from "../push.js";
+import { sendPush, sendPushToUsers } from "../push.js";
 import { insertNotificationsForUsers } from "../services/notifications.js";
 import {
   getPublicWhatsAppSettings,
@@ -488,11 +488,9 @@ router.post(
      VALUES ($1, $2, $3) RETURNING id`,
       [text, kind, uid]
     );
-    // Ligne « cloche » (in-app) pour chaque utilisateur cible, puis push.
-    // Envoi AVANT la réponse : en serverless, le code après res.json n'est pas
-    // garanti d'exécuter. Budget interne max 4 s.
+    // Cibles visées : tous / un rôle / un utilisateur précis.
+    let targetIds = [];
     try {
-      let targetIds = [];
       if (kind === "user") {
         targetIds = [uid];
       } else if (kind === "all") {
@@ -502,30 +500,48 @@ router.post(
           Number(r.id)
         );
       }
+    } catch (err) {
+      console.error("[admin] sélection des cibles impossible :", err.message);
+    }
+
+    // 1) Envoi du push AVANT l'insertion cloche (qui peut être lourde sur une
+    //    grosse base) : en serverless, le code après res.json n'est pas garanti
+    //    d'exécuter, et un timeout en plein milieu couperait l'envoi.
+    //    Pour les messages admin on utilise un envoi DIRECT aux abonnements des
+    //    cibles (comme le bouton « Tester ») et non la diffusion budget-temps qui
+    //    peut sauter des abonnés en fin de liste. Chaque abonnement a un timeout
+    //    court pour ne pas bloquer la route, et le canal « messages » respecte
+    //    les préférences push de chaque utilisateur (Mon compte → Messages).
+    const payload = {
+      title: "📢 Message de Mboppi",
+      body: text.slice(0, 140),
+      url: "/",
+      tag: `admin-msg-${created[0].id}`,
+    };
+    let pushSent = 0;
+    try {
+      pushSent =
+        kind === "user"
+          ? await sendPush(uid, payload)
+          : await sendPushToUsers(targetIds, payload, { channel: "messages" });
+    } catch (err) {
+      console.error("[admin] push message impossible :", err.message);
+    }
+
+    // 2) Ligne « cloche » (in-app) pour chaque utilisateur cible.
+    try {
       if (targetIds.length) {
         await insertNotificationsForUsers(targetIds, {
           type: "admin_message",
           body: text.slice(0, 200),
         });
       }
-      const payload = {
-        title: "📢 Message de Mboppi",
-        body: text.slice(0, 140),
-        url: "/",
-        tag: `admin-msg-${created[0].id}`,
-      };
-      if (kind === "user") {
-        await sendPush(uid, payload);
-      } else if (kind === "all") {
-        await sendPushToAll(payload, { channel: "messages" });
-      } else {
-        await sendPushToAll(payload, { roles: [kind], channel: "messages" });
-      }
     } catch (err) {
-      console.error("[admin] notification message impossible :", err.message);
+      console.error("[admin] cloche message impossible :", err.message);
     }
+
     await logAudit(req.user.id, "admin.send_message", `target=${kind} user=${uid}`, req.ip);
-    res.json({ ok: true, id: created[0].id });
+    res.json({ ok: true, id: created[0].id, push_sent: pushSent });
   })
 );
 
