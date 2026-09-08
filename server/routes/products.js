@@ -112,19 +112,49 @@ const NORMALIZE_TEXT = (col) =>
 const FOLD_TEXT = (col) =>
   `translate(lower(${col}), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn')`;
 
+// Boost de fraîcheur : un produit publié il y a moins de 14 jours reçoit un
+// bonus qui décroît linéairement (max +28, soit ≈ 9 ventes × 3) — garantie
+// d'une fenêtre de visibilité de lancement, sans pénaliser les best-sellers.
+const FRESHNESS_WINDOW_DAYS = 14;
+// EXTRACT(EPOCH)/86400 plutôt que EXTRACT(DAY) : ce dernier découpe les
+// intervalles en mois + jours (« 1 mon 15 days ») et fausserait l'âge au-delà
+// de 30 jours.
+const freshBoost = (col) =>
+  `GREATEST(0, ${FRESHNESS_WINDOW_DAYS} - EXTRACT(EPOCH FROM now() - ${col}) / 86400) * 2`;
+
 const SORTS = {
   recent: "p.created_at DESC",
-  popular: "(COALESCE(s.n, 0) * 3 + COALESCE(v.w1_views, 0)) DESC, p.created_at DESC",
+  popular:
+    `(COALESCE(s.n, 0) * 3 + COALESCE(v.w1_views, 0) + ${freshBoost("p.created_at")}) DESC, p.created_at DESC`,
   sales: "COALESCE(s.n, 0) DESC, p.created_at DESC",
   price_asc: "p.price ASC, p.created_at DESC",
   price_desc: "p.price DESC, p.created_at DESC",
   rating: "COALESCE(r.rating_avg, 0) DESC, p.created_at DESC",
 };
 
+// Diversité boutiques : sur une page paginée du catalogue, une boutique ne peut
+// pas occuper plus de N emplacements. Les autres produits de la boutique
+// restent accessibles via les pages suivantes, la fiche boutique et la recherche.
+const MAX_PRODUCTS_PER_SHOP_PER_PAGE = 3;
+
+// Mêmes tris que SORTS, exprimés sur la sous-requête paginée (alias base_row).
+const CAP_SORTS = {
+  recent: "base_row.created_at DESC",
+  popular:
+    `(COALESCE(base_row.n, 0) * 3 + COALESCE(base_row.w1_views, 0) + ${freshBoost("base_row.created_at")}) DESC, base_row.created_at DESC`,
+  sales: "COALESCE(base_row.n, 0) DESC, base_row.created_at DESC",
+  price_asc: "base_row.price ASC, base_row.created_at DESC",
+  price_desc: "base_row.price DESC, base_row.created_at DESC",
+  rating: "COALESCE(base_row.rating_avg, 0) DESC, base_row.created_at DESC",
+};
+
 router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
-  cachePublic(res);
-  const { search, shop, category, sort, scope, min_price, max_price, city, country, limit, offset } =
+  const { search, shop, category, sort, scope, min_price, max_price, city, country, limit, offset, seed } =
     req.query;
+  // Rotation aléatoire : une requête avec `seed` doit pouvoir renvoyer un ordre
+  // différent à chaque chargement — on interdit toute mise en cache CDN/navigateur.
+  if (seed) res.set("Cache-Control", "private, no-store");
+  else cachePublic(res);
   let sql = SELECT_PRODUCT;
   const params = [];
   const where = [];
@@ -203,13 +233,6 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
   let countryNorm = null;
   if (country) {
     countryNorm = String(country).slice(0, 60);
-    const countryParam = params.length + 1;
-    sql +=
-      " ORDER BY " +
-      `CASE WHEN ${FOLD_TEXT(`u.country`)} = ${FOLD_TEXT(`$${countryParam}`)} THEN 0 ELSE 1 END, ` +
-      (SORTS[sort] || SORTS.recent);
-  } else {
-    sql += " ORDER BY " + (SORTS[sort] || SORTS.recent);
   }
   const rawLimit = Number(limit);
   const rawOffset = Number(offset);
@@ -218,14 +241,38 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
   if (paging) {
     const pageSize = Number.isInteger(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 60) : 24;
     const skip = Number.isInteger(rawOffset) && rawOffset > 0 ? rawOffset : 0;
-    const [countRow] = await q(
-      `SELECT COUNT(*) AS n FROM products p JOIN users u ON u.id = p.shop_id` +
-        (where.length ? " WHERE " + where.join(" AND ") : ""),
-      params
-    );
-    sql += ` LIMIT ${pageSize} OFFSET ${skip}`;
+    // Rotation aléatoire seedée : avec `seed`, l'ordre est un mélange déterministe
+    // de la graine (md5(id + seed)) — différent à chaque chargement de page côté
+    // client, mais stable entre les pages d'une même visite (pas de doublon via
+    // « Voir plus de produits »). Le plafond par boutique continue de s'appliquer.
+    let seedParam = null;
+    if (seed) {
+      seedParam = params.length + 1;
+      params.push(String(seed).slice(0, 64));
+    }
+    const innerSort = seed
+      ? `md5(base_row.id::text || $${seedParam})`
+      : CAP_SORTS[sort] || CAP_SORTS.recent;
+    const outerSort = innerSort.replace(/base_row\./g, "ranked.");
+    const cappedSql =
+      `SELECT * FROM (
+         SELECT base_row.*, ROW_NUMBER() OVER (PARTITION BY base_row.shop_id ORDER BY ${innerSort}) AS shop_rn
+         FROM (${sql}) base_row
+       ) ranked
+       WHERE ranked.shop_rn <= ${MAX_PRODUCTS_PER_SHOP_PER_PAGE}`;
+    // Le total porte sur l'ensemble plafonné pour que hasMore reste fiable.
+    const [countRow] = await q(`SELECT COUNT(*) AS n FROM (${cappedSql}) c`, params);
+    let orderSql = " ORDER BY " + outerSort;
+    if (countryNorm) {
+      const countryParam = params.length + 1;
+      orderSql =
+        " ORDER BY " +
+        `CASE WHEN ${FOLD_TEXT("ranked.shop_country")} = ${FOLD_TEXT(`$${countryParam}`)} THEN 0 ELSE 1 END, ` +
+        outerSort;
+    }
+    const pagedSql = cappedSql + orderSql + ` LIMIT ${pageSize} OFFSET ${skip}`;
     if (countryNorm) params.push(countryNorm);
-    const products = (await q(sql, params)).map(productRow);
+    const products = (await q(pagedSql, params)).map(productRow);
     const total = Number(countRow.n);
     res.json({
       products,
@@ -236,8 +283,18 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
     });
     return;
   }
+  // Liste complète (favoris, rails, fiches similaires) : pas de plafond par
+  // boutique — le tri normal s'applique.
+  let orderSql = " ORDER BY ";
+  if (countryNorm) {
+    const countryParam = params.length + 1;
+    orderSql +=
+      `CASE WHEN ${FOLD_TEXT(`u.country`)} = ${FOLD_TEXT(`$${countryParam}`)} THEN 0 ELSE 1 END, `;
+  }
+  orderSql += SORTS[sort] || SORTS.recent;
+  const fullSql = sql + orderSql;
   if (countryNorm) params.push(countryNorm);
-  const products = (await q(sql, params)).map(productRow);
+  const products = (await q(fullSql, params)).map(productRow);
   res.json({ products });
 });
 

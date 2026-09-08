@@ -4599,6 +4599,16 @@ a.step {
   color: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
+/* Badge « Nouveau » : côté droit, sous les boutons favori/partage (pas de
+   collision avec la pile de badges gauche promo/attente/vendus). */
+.badge-new {
+  position: absolute;
+  top: 54px;
+  right: 10px;
+  z-index: 2;
+  background: #dcfce7;
+  color: #166534;
+}
 .product-card:has(.badge-promo) .badge-sold {
   top: 38px;
 }
@@ -5013,6 +5023,10 @@ a.step {
   .badge-promo {
     top: 6px;
     left: 6px;
+  }
+  .badge-new {
+    top: 46px;
+    right: 5px;
   }
   .product-card:has(.badge-promo) .badge-sold {
     top: 34px;

@@ -59,6 +59,10 @@ export default function Home() {
   const [trending, setTrending] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
   const [popular, setPopular] = useState([]);
+  const [newArrivals, setNewArrivals] = useState([]);
+  // Rotation aléatoire : nouvelle graine à chaque montage de la page (visite ou
+  // rafraîchissement) — l'ordre de la grille change, la pagination reste cohérente.
+  const [browseSeed] = useState(() => Math.random().toString(36).slice(2, 10));
   const [flashPromos, setFlashPromos] = useState([]);
   const [activeRail, setActiveRail] = useState(() => params.get("rail") || "");
   // Géolocalisation : pays détecté + préférence « produits de mon pays d'abord ».
@@ -147,6 +151,11 @@ export default function Home() {
       .then((d) => ok && setPopular(d.products || []))
       .catch(() => {});
     api
+      .listProducts({ sort: "recent", limit: 10 })
+      .then((d) => ok && setNewArrivals(d.products || []))
+      .catch(() => {});
+
+    api
       .flashPromotions()
       .then((d) => ok && setFlashPromos(d.promotions || []))
       .catch(() => {});
@@ -226,6 +235,10 @@ export default function Home() {
   const loadProducts = useCallback(
     (silent, append) => {
       if (!silent && !hasLoaded.current) setLoading(true);
+      // Navigation libre (sans recherche ni filtre) : les produits tournent à
+      // chaque visite via la graine. Recherche/filtres : ordre pertinent conservé.
+      const isBrowse =
+        !debouncedSearch && !category && !minPrice && !maxPrice && scope === "product";
       api
         .listProducts({
           search: debouncedSearch || undefined,
@@ -235,6 +248,7 @@ export default function Home() {
           ...(minPrice ? { min_price: Number(minPrice) } : {}),
           ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
           ...(localOnly && geoCountry ? { country: geoCountry } : {}),
+          ...(isBrowse ? { seed: browseSeed } : {}),
           limit: PER_PAGE,
           offset,
         })
@@ -282,7 +296,7 @@ export default function Home() {
           }
         });
     },
-    [debouncedSearch, category, sort, scope, minPrice, maxPrice, offset, localOnly, geoCountry]
+    [debouncedSearch, category, sort, scope, minPrice, maxPrice, offset, localOnly, geoCountry, browseSeed]
   );
 
   useEffect(() => {
@@ -569,6 +583,15 @@ export default function Home() {
                       <span className="tab-emoji">🔥</span> <span>{t("Plus populaires")}</span>
                     </button>
                   )}
+                  {newArrivals.length > 0 && (
+                    <button
+                      type="button"
+                      className={`home-tab t-new ${activeRail === "new" ? "active" : ""}`}
+                      onClick={() => setActiveRail(activeRail === "new" ? "" : "new")}
+                    >
+                      <span className="tab-emoji">✨</span> <span>{t("Nouveautés")}</span>
+                    </button>
+                  )}
                   {flashPromos.length >= 0 && (
                     <button
                       type="button"
@@ -616,6 +639,14 @@ export default function Home() {
                   hint={t("Les produits les plus commandés.")}
                   emoji="🔥"
                   products={bestSellers}
+                />
+              )}
+              {activeRail === "new" && newArrivals.length > 0 && (
+                <ProductRail
+                  title={t("Nouveautés")}
+                  hint={t("Les derniers produits publiés sur Mboppi.")}
+                  emoji="✨"
+                  products={newArrivals}
                 />
               )}
               {activeRail === "popular" && popular.length > 0 && (

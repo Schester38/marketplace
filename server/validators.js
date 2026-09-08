@@ -191,6 +191,12 @@ export const productListQuerySchema = z.object({
   max_price: z.coerce.number().min(0, "Prix maximum invalide").optional(),
   city: z.string().max(60).optional(),
   country: z.string().max(60).optional(),
+  // Graine de rotation aléatoire (voir products.js) : alphanumérique/-/_ seulement.
+  seed: z
+    .string()
+    .max(64)
+    .regex(/^[A-Za-z0-9_-]*$/, "Graine invalide")
+    .optional(),
   limit: z.coerce.number().int().min(1).max(60, "Maximum 60 résultats par page").optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });
