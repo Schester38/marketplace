@@ -9,15 +9,16 @@ const pool = new Pool({
   connectionString,
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
   // Robustesse serverless (Vercel) :
-  //  - max bas (4 au lieu du défaut 10) : chaque instance Vercel ouvre jusqu'à
+  //  - max borné (6 au lieu du défaut 10) : chaque instance Vercel ouvre jusqu'à
   //    `max` connexions PostgreSQL. Avec plusieurs instances + push en
   //    parallèle, le défaut saturait la limite Supabase (EMAXCONN, 200
   //    connexions) → 503/500 sur toutes les routes.
-  //  - connectionTimeoutMillis : échoue vite au lieu de bloquer en attendant
-  //    une connexion si le pool de l'instance est plein.
+  //  - connectionTimeoutMillis : si le pool de l'instance est plein (rafale de
+  //    requêtes, ex. panneau admin qui poll en parallèle), les requêtes
+  //    attendent AVANT d'échouer (8 s au lieu de 3 s) — évite des 500 en épingle.
   //  - idleTimeoutMillis : libère les connexions inactives, réduit la pression.
-  max: 4,
-  connectionTimeoutMillis: 3000,
+  max: 6,
+  connectionTimeoutMillis: 8000,
   idleTimeoutMillis: 10000,
 });
 
