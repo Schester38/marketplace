@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { q } from "../db.js";
+import { q, withTransaction } from "../db.js";
 import { authRequired } from "../auth.js";
-import { vapidPublicKey } from "../push.js";
+import { vapidPublicKey, sendPush } from "../push.js";
 
 const router = Router();
 
@@ -39,6 +39,80 @@ router.post(
         req.user.id,
         String(endpoint),
       ]);
+    }
+    res.json({ ok: true });
+  })
+);
+
+// Envoi d'une notification de test sur TOUS les appareils abonnés de l'utilisateur
+// connecté. Sert à vérifier immédiatement la livraison (écran verrouillé inclus).
+router.post(
+  "/test",
+  authRequired,
+  ah(async (req, res) => {
+    const [row] = await q(
+      "SELECT COUNT(*)::int AS n FROM push_subscriptions WHERE user_id = $1",
+      [req.user.id]
+    );
+    const count = Number(row?.n || 0);
+    if (!count) {
+      return res
+        .status(400)
+        .json({ error: "Aucun appareil abonné sur ce compte.", code: "NO_SUB" });
+    }
+    const sent = await sendPush(req.user.id, {
+      title: "🔔 Test de notification Mboppi",
+      body: "Si vous la voyez, les notifications push fonctionnent sur cet appareil, même écran fermé.",
+      url: "/compte",
+      tag: `push-test-${Date.now()}`,
+    });
+    res.json({ sent, configured: Boolean(vapidPublicKey), subscribers: count });
+  })
+);
+
+// Mise à jour d'un abonnement expiré (déclenché côté navigateur par l'événement
+// `pushsubscriptionchange` du service worker : rotation FCM, réinstallation…).
+// L'ancien endpoint est un "capability URL" secret : le posséder suffit à prouver
+// qu'on est bien l'auteur de l'abonnement — aucun JWT requis ici (le service
+// worker ne peut pas lire le token de session).
+router.post(
+  "/refresh",
+  ah(async (req, res) => {
+    const { old_endpoint, subscription } = req.body || {};
+    const newEndpoint = subscription?.endpoint;
+    const keys = subscription?.keys;
+    if (!old_endpoint || !newEndpoint || !keys?.p256dh || !keys?.auth) {
+      return res.status(400).json({ error: "Abonnement invalide" });
+    }
+    let replaced = 0;
+    try {
+      replaced = await withTransaction(async (tx) => {
+        const found = await tx.query(
+          "SELECT user_id FROM push_subscriptions WHERE endpoint = $1",
+          [String(old_endpoint)]
+        );
+        if (!found.length) return 0;
+        await tx.query("DELETE FROM push_subscriptions WHERE endpoint = $1", [
+          String(old_endpoint),
+        ]);
+        await tx.query(
+          `INSERT INTO push_subscriptions (user_id, endpoint, keys)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (endpoint) DO UPDATE SET keys = EXCLUDED.keys, created_at = now()`,
+          [
+            found[0].user_id,
+            String(newEndpoint),
+            { p256dh: String(keys.p256dh), auth: String(keys.auth) },
+          ]
+        );
+        return 1;
+      });
+    } catch (err) {
+      console.error("[push] refresh échoué :", err.message);
+      return res.status(500).json({ error: "Mise à jour impossible" });
+    }
+    if (!replaced) {
+      return res.status(404).json({ error: "Ancien abonnement introuvable" });
     }
     res.json({ ok: true });
   })

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v207';
+const CACHE_NAME = 'mboppi-v208';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/assistant-avatar.webp', '/og-image.svg', '/og-image.png', '/robots.txt', '/splash.js', '/diapo/MboppiShop_Developpez_votre_boutique.webp', '/diapo/MboppiShop_Gagner_telephone_connexion.webp', '/diapo/MboppiShop_Paiement_a_la_livraison_1x1.webp', '/diapo/MboppiShop_Shopify_optimise.webp'];
 
 // Endpoints GET publics : servis depuis le cache quand le reseau est lent ou coupe,
@@ -61,20 +61,101 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch (e) {}
+  const title = data.title || 'Mboppi';
+  // CRITIQUE : `renotify: true` exige un tag NON vide, sinon showNotification()
+  // jette une TypeError et la notification n'est jamais affichée. Le serveur
+  // envoie toujours un tag, mais on se protège si jamais il manque.
+  const tag =
+    data.tag ||
+    'mboppi-' +
+      String(title + '|' + (data.body || ''))
+        .replace(/[^\w-]+/g, '')
+        .slice(0, 48) ||
+    'mboppi';
   const options = {
     body: data.body || '',
     icon: data.icon || '/icon-192.png',
     badge: data.badge || '/favicon-32x32.png',
-    tag: data.tag,
+    tag,
     renotify: true,
     // Son de notification (supporté surtout sur Android/Chrome ; Chrome
-    // desktop ignore le champ "sound" comme documenté).
+    // desktop ignore le champ "sound" comme documenté). NB : quand l'app est
+    // FERMÉE, le son vient du canal système de la PWA (Réglages → Applications
+    // → [nom] → Notifications → activer le son) ; la vibration fonctionne, elle.
     sound: data.sound || '/notification.wav',
     vibrate: data.vibrate || [200, 100, 200],
+    // La notification reste affichée tant que l'utilisateur n'a pas réagi.
+    requireInteraction: data.requireInteraction !== false,
     data: { url: data.data && data.data.url ? data.data.url : '/' },
   };
-  event.waitUntil(self.registration.showNotification(data.title || 'Mboppi', options));
+  event.waitUntil(self.registration.showNotification(title, options));
 });
+
+// Rotation de l'abonnement push par le push service (FCM renouvelle les tokens,
+// désinstallation temporaire/réinstallation du navigateur…) : on se ré-abonne
+// aussitôt et on met à jour le serveur. Sans ça, l'appareil perd le push pour
+// toujours jusqu'à la prochaine ouverture de l'app.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(handlePushSubscriptionChange(event.oldSubscription));
+});
+
+async function getVapidPublicKey() {
+  const keyUrl = '/api/push/key';
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    const cached = await cache.match(keyUrl);
+    if (cached) {
+      try {
+        const d = await cached.json();
+        if (d.public_key) return d.public_key;
+      } catch (e) {}
+    }
+    const resp = await fetch(keyUrl);
+    if (resp.ok) {
+      const d = await resp.json();
+      const clone = new Response(JSON.stringify(d), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      cache.put(keyUrl, clone).catch(() => {});
+      if (d.public_key) return d.public_key;
+    }
+  } catch (e) {}
+  return null;
+}
+
+async function handlePushSubscriptionChange(oldSub) {
+  try {
+    const publicKey = await getVapidPublicKey();
+    if (!publicKey) return;
+    const sub = await self.registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+    const oldEndpoint = oldSub && oldSub.endpoint ? oldSub.endpoint : null;
+    // L'ancien endpoint est un "capability URL" secret : le fournir suffit au
+    // serveur pour transférer l'abonnement sans JWT (le SW ne lit pas le token).
+    if (oldEndpoint) {
+      await fetch('/api/push/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ old_endpoint: oldEndpoint, subscription: sub.toJSON() }),
+      }).catch(() => {});
+    }
+  } catch (err) {
+    console.error('[sw] pushsubscriptionchange erreur :', err && err.message);
+  }
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();

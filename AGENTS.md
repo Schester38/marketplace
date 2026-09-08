@@ -135,7 +135,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 - **Verone / Vitrine** (`server/routes/offers.js`, `server/routes/presentation.js`) : `GET /api/offers` public ; `POST /api/offers` et `DELETE /api/offers/:id` **non authentifiés** (état actuel — la protection documentée en V2 n'existe plus) ; `GET /api/offers/mine` renvoie toutes les offres. `pageRouter` → `/p`, `imageRouter` → `/api/img`. Pages Verone.jsx, VitrineOffre.jsx, OfferDetail.jsx.
 - **Métriques** : `POST /api/metrics/views`, `POST /api/metrics/visit` (X-Visitor-Id), `GET /api/metrics/trending` (exclut les promos, cache s-maxage 120).
 - **i18n** : toutes les traductions (fr/en/es/ar) dans `client/src/i18n.jsx` (`I18N = { fr: {}, en: {...EN, ...RICH_EN}, ar: {...AR, ...RICH_AR}, es: {...ES, ...RICH_ES} }`), clés françaises. `client/src/i18n/{en,es,ar}.js` supprimés (jamais importés). RTL pour ar.
-- **PWA** : `client/public/sw.js`, cache `mboppi-v202`, app shell + API_SWR + push + 4 manifests.
+- **PWA** : `client/public/sw.js`, cache `mboppi-v208`, app shell + API_SWR + push + 4 manifests.
 - **Audit/sécurité** : `server/security.js`, rate limits, originCheck, CSP.
  - **Photos** : `server/storage.js` — buckets publics `photos` et `payment-proofs` ; clé `sb_secret_...` signée HS256 (`SUPABASE_JWT_SECRET`) ; fallback base64. `server/photo.js` : `{thumb, medium, large}`. **Conversion WebP automatique** : tout upload (produits, offres, preuves de paiement) passe par `toWebp()` (sharp, qualité 80, max 2000px, EXIF/rotate) — JPEG/PNG/HEIC convertis, GIF/AVIF/WebP conservés tels quels, micro-images < 8 ko et conversions « plus lourdes » ignorées ; en cas d'échec, l'image originale est conservée (aucune rupture d'upload).
 - **Menu** (Navbar.jsx) : Produits, Créateurs, Je soutiens, Formations et Digital (chariow.pics), Tutoriel Mboppi (TikTok @mboppishop), espaces par rôle, Administration 🛡️.
@@ -145,7 +145,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 ## Conventions de dev (IMPORTANT)
 
 1. **Ne jamais committer sans demande explicite.** Quand le user demande « deployer » / « mettre en ligne » : bump + commit + push.
-2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.52.2 / mboppi-v202**.
+2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.52.2 / mboppi-v208**.
 3. **Build** : `npm run build` dans `client/` (le hash du JS local diffère de celui de Vercel pour des raisons d'environnement ; vérifier le déploiement via le CSS hash ou en cherchant une chaîne caractéristique du nouveau code dans le JS servi).
 4. **Vérifier le déploiement** : attendre ~75–90 s après push, puis `curl` sur `https://mboppi-mboppi.vercel.app/` (header `Accept: text/html` pour le HTML SEO) et chercher le hash CSS/JS du build local ; tester les API concernées.
 5. Commandes utiles : `node --check server/routes/*.js` pour la syntaxe serveur.

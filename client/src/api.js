@@ -226,6 +226,9 @@ export const api = {
     request("/push/subscribe", { method: "POST", body: JSON.stringify(payload) }),
   pushUnsubscribe: (payload) =>
     request("/push/unsubscribe", { method: "POST", body: JSON.stringify(payload) }),
+  pushTest: () => request("/push/test", { method: "POST" }),
+  pushRefresh: (payload) =>
+    request("/push/refresh", { method: "POST", body: JSON.stringify(payload) }),
   listOffers: () => request("/offers"),
   myOffers: () => request("/offers/mine"),
   getOffer: (id) => request(`/offers/${id}`),

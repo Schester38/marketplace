@@ -14,17 +14,35 @@ if (!PUBLIC_KEY || !PRIVATE_KEY) {
 
 export const vapidPublicKey = PUBLIC_KEY || "";
 
+// Tag stable dérivé du contenu. Critique : `renotify: true` exige un tag NON
+// VIDE — sinon showNotification() jette une TypeError dans le service worker et
+// la notification n'est JAMAIS affichée. Un tag dérivé du titre+corps remplace
+// en plus une notification identique au lieu d'en empiler des copies.
+function stableTag(source) {
+  const s = String(source || "mboppi");
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0;
+  }
+  return "mboppi-" + (h >>> 0).toString(36);
+}
+
 function buildPayload(payload) {
   return {
     title: payload.title,
     body: payload.body,
     icon: payload.icon || "/icon-192.png",
     badge: "/favicon-32x32.png",
-    tag: payload.tag,
+    tag: payload.tag || stableTag(`${payload.title}|${payload.body}`),
     renotify: true,
     // Son de notification (le service worker s'en sert dans sw.js).
+    // NB : Chrome Android ignore `sound` — c'est le canal système de la PWA qui
+    // décide du son quand l'app est fermée. La vibration, elle, fonctionne.
     sound: "/notification.wav",
-    vibrate: [200, 100, 200],
+    vibrate: payload.vibrate || [200, 100, 200],
+    // La notification reste affichée tant que l'utilisateur n'a pas réagi
+    // (utile pour commandes/paiements), sauf demande contraire du payload.
+    requireInteraction: payload.requireInteraction !== false,
     data: { url: payload.url || "/" },
   };
 }
@@ -41,19 +59,41 @@ async function sendToSub(sub, raw) {
     };
     // TTL 24 h : un appareil éteint reçoit quand même la notification au
     // redémarrage (au lieu d'une expiration après 1 h).
+    // urgency "high" : livraison immédiate même en veille. Sans ça, FCM qualifie
+    // le message de priorité « normale » et le RETARDE en mode Doze / économiseur
+    // de batterie Android → les notifications n'arrivent qu'à la prochaine
+    // ouverture de l'app (symptôme typique constaté en production).
+    // timeout : évite qu'un push service lent fasse mourir la route serveur.
     await webpush.sendNotification(subscription, JSON.stringify(raw), {
       headers: { TTL: 86400 },
+      urgency: "high",
+      timeout: 4000,
     });
     return 1;
   } catch (err) {
     if (err.statusCode === 404 || err.statusCode === 410) {
       await q("DELETE FROM push_subscriptions WHERE id = $1", [sub.id]).catch(() => {});
+    } else {
+      // Diagnostic : un refus FCM (400/403/413…) est visible dans les logs.
+      console.warn(
+        "[push] envoi refusé par le push service",
+        err.statusCode || "",
+        err.message || err
+      );
     }
     return 0;
   }
 }
 
+let warnedNoVapid = false;
 export async function sendPush(userId, payload) {
+  if (!PUBLIC_KEY || !PRIVATE_KEY) {
+    if (!warnedNoVapid) {
+      warnedNoVapid = true;
+      console.warn("⚠️  VAPID non configuré : envoi push ignoré (export sendPush).");
+    }
+    return 0;
+  }
   const subs = await q("SELECT id, endpoint, keys FROM push_subscriptions WHERE user_id = $1", [
     userId,
   ]);

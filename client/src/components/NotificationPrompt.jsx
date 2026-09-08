@@ -50,7 +50,7 @@ export default function NotificationPrompt({ user }) {
       </span>
       <p className="notif-prompt-text">
         {t(
-          "Activez les notifications pour être prévenu immédiatement des commandes, paiements et messages, même lorsque l'application est fermée."
+          "Activez les notifications pour être prévenu immédiatement des commandes, paiements et messages, même lorsque l'application est fermée. Sur Android, vérifiez aussi le son et l'économiseur de batterie (Réglages → Applications)."
         )}
       </p>
       <div className="notif-prompt-actions">

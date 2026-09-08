@@ -270,6 +270,8 @@ export default function MyAccount() {
   // Statut réel d'abonnement (abonné ou non côté serveur).
   const [pushSubscribed, setPushSubscribed] = useState(null);
   const [pushBusy, setPushBusy] = useState(false);
+  const [pushTesting, setPushTesting] = useState(false);
+  const [pushTestMsg, setPushTestMsg] = useState("");
   useEffect(() => {
     let cancelled = false;
     api
@@ -323,6 +325,37 @@ export default function MyAccount() {
     }
   };
 
+
+  // Envoie une notification de test sur cet appareil pour vérifier la
+  // livraison (utile notamment pour tester avec l'écran verrouillé).
+  const sendTestPush = async () => {
+    if (pushTesting) return;
+    setPushTesting(true);
+    setPushTestMsg("");
+    try {
+      const d = await api.pushTest();
+      setPushTestMsg(
+        d && d.sent > 0
+          ? t("Notification de test envoyée ✅ Vérifiez votre téléphone (baissez l'écran pour tester).")
+          : t("La notification de test n'a pas pu être envoyée.")
+      );
+    } catch (err) {
+      setPushTestMsg(
+        (err && err.message) || t("La notification de test a échoué : mieux vaut réessayer.")
+      );
+      // NO_SUB : l'appareil n'est pas abonné côté serveur → on relance l'abonnement.
+      if (err && err.code === "NO_SUB") {
+        try {
+          const ok = await requestPushPermission();
+          if (ok) setPushSubscribed(true);
+        } catch {
+          /* silencieux */
+        }
+      }
+    } finally {
+      setPushTesting(false);
+    }
+  };
 
   const copyReference = async () => {
     try {
@@ -676,6 +709,31 @@ export default function MyAccount() {
                 "Cliquez sur « Activer les notifications » pour autoriser et abonner cet appareil : vous recevrez alors une alerte à chaque événement ci-dessous."
               )}
             </p>
+          )}
+          {pushSubscribed === true && (
+            <>
+              <div className="info-row" style={{ background: "var(--card)", marginTop: 6 }}>
+                <span>📨 {t("Tester la notification sur cet appareil")}</span>
+                <button
+                  type="button"
+                  className="btn btn-small btn-outline"
+                  disabled={pushTesting}
+                  onClick={sendTestPush}
+                >
+                  {pushTesting ? "⏳ …" : t("Tester")}
+                </button>
+              </div>
+              {pushTestMsg && (
+                <p className="hint" style={{ marginTop: 6 }}>
+                  {pushTestMsg}
+                </p>
+              )}
+              <p className="hint" style={{ marginTop: 6 }}>
+                {t(
+                  "Astuce : sur Android le son, lorsque l'écran est verrouillé, vient du canal système de l'application (Paramètres → Applications → Chrome ou Mboppi → Notifications → activer le son). Évitez aussi de restreindre l'application dans l'économiseur de batterie, sinon les notifications peuvent être retardées."
+                )}
+              </p>
+            </>
           )}
           <div className="info-row">
             <span>⚡ {t("Promotions éclair")}</span>
