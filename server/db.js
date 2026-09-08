@@ -8,6 +8,25 @@ const connectionString =
 const pool = new Pool({
   connectionString,
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+  // Robustesse serverless (Vercel) :
+  //  - max bas (4 au lieu du défaut 10) : chaque instance Vercel ouvre jusqu'à
+  //    `max` connexions PostgreSQL. Avec plusieurs instances + push en
+  //    parallèle, le défaut saturait la limite Supabase (EMAXCONN, 200
+  //    connexions) → 503/500 sur toutes les routes.
+  //  - connectionTimeoutMillis : échoue vite au lieu de bloquer en attendant
+  //    une connexion si le pool de l'instance est plein.
+  //  - idleTimeoutMillis : libère les connexions inactives, réduit la pression.
+  max: 4,
+  connectionTimeoutMillis: 3000,
+  idleTimeoutMillis: 10000,
+});
+
+// CRITIQUE : sans ce handler, quand Supabase ferme une connexion idle (timeout,
+// redémarrage, coupure réseau), pg émet un événement 'error' NON géré sur le
+// pool → crash de l'instance Node → « erreur interne de serveur » sur toutes
+// les requêtes en vol. On capture et on loggie à la place.
+pool.on("error", (err) => {
+  console.error("[db] erreur de connexion PostgreSQL (pool) :", err.message);
 });
 
 pool.on("connect", (client) => {
