@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { q, withTransaction } from "../db.js";
 import { authRequired } from "../auth.js";
 import { sendPush } from "../push.js";
+import { notifyAdmins } from "../services/adminNotify.js";
 import { listPhotos } from "../photo.js";
 
 const router = Router();
@@ -211,6 +212,14 @@ router.post(
       title: "Nouvelle commande 🛒",
       body: `${productName} — vendeur : ${seller.name} (${code}), client : ${name}${result.confirmCode ? `, code : ${result.confirmCode}` : ""}${referredBy ? `, client parrainé (2% pour le parrain : ${referralCommission} F)` : ""}.`,
       url: "/shop",
+    });
+    notifyAdmins({
+      title: "Nouvelle vente 🛍️",
+      body: `${productName} ×${qty} — ${total} F — client : ${name} — vendeur : ${seller.name} (${code}).`,
+      sale_id: result.id,
+      product_id: product.id,
+      product_name: productName,
+      amount: total,
     });
     if (referredBy) {
       const referrer = (await q("SELECT name FROM users WHERE id = $1", [referredBy]))[0];

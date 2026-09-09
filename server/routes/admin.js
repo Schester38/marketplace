@@ -8,6 +8,7 @@ import { migrateImages } from "../migrate-images.js";
 import { cleanupOutOfStock, cleanupOldStats, dbUsageReport } from "../cleanup.js";
 import { storageUsage } from "../storage.js";
 import { notifyActivationReferralPaid } from "../services/activationReferral.js";
+import { notifyAdmins } from "../services/adminNotify.js";
 import {
   getPaymentMode,
   setPaymentMode,
@@ -368,6 +369,12 @@ router.patch(
       } catch (err) {
         console.error("[admin] notification commission d'activation impossible :", err.message);
       }
+    }
+    if (admin_approved) {
+      notifyAdmins({
+        title: "Compte activé ✅",
+        body: `${before.name} (${before.role}) a été approuvé — adhésion active 30 jours.`,
+      });
     }
     await logAudit(
       req.user.id,
@@ -808,6 +815,10 @@ router.post(
         console.error("[admin] notification commission d'activation impossible :", err.message);
       }
     }
+    notifyAdmins({
+      title: "Adhésion payée 💰",
+      body: `${user.name} (${user.role}) — adhésion marquée payée, compte activé 30 jours.`,
+    });
     await logAudit(
       req.user.id,
       "admin.referral_paid",

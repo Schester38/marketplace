@@ -2,6 +2,7 @@ import { Router } from "express";
 import { q, withTransaction } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { sendWhatsAppSafe } from "../services/whatsapp.js";
+import { notifyAdmins } from "../services/adminNotify.js";
 
 const router = Router();
 
@@ -323,6 +324,11 @@ async function ensureUniqueMemberIndex() {
         `➡️ Panneau Admin → Retraits d'activation`,
       tmplParams
     );
+    notifyAdmins({
+      title: "Demande de retrait 💸",
+      body: `${parrainName} (${parrainRef}) demande ${value.toLocaleString("fr-FR")} F — ${count} parrainé(s). Panneau Admin → Retraits d'activation.`,
+      amount: value,
+    });
     // Notification email de l'admin (non bloquante, parallèle à WhatsApp).
     import("../services/whatsapp.js")
       .then((m) => m.getAdminNotifyEmail())

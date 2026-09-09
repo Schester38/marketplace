@@ -21,6 +21,7 @@ import { randomBytes } from "node:crypto";
 import { MEMBERSHIP_FEES } from "../fees.js";
 import { getMembershipGate } from "./membershipGate.js";
 import { notifyActivationReferralPaid } from "./activationReferral.js";
+import { notifyAdmins } from "./adminNotify.js";
 
 const IKEEPAY_CHECKOUT_URL = "https://ikeepay.com/checkout/v1/inline";
 export const PAYMENT_MODE_MANUAL = "manual";
@@ -306,6 +307,10 @@ export async function activateMembershipUser(userId) {
     [userId]
   );
   if (!changed.length) return false; // déjà actif (idempotent)
+  notifyAdmins({
+    title: "Adhésion payée en ligne 💰",
+    body: `${user.name} (${user.role}) — paiement iKeePay confirmé, compte activé 30 jours.`,
+  });
   if (user.referred_by) {
     try {
       await notifyActivationReferralPaid({
@@ -323,13 +328,21 @@ export async function activateMembershipUser(userId) {
 
 // Marque un don comme complété.
 async function completeDonation(donation, providerRef) {
-  await q(
+  const updated = await q(
     `UPDATE donations
      SET status = 'completed', completed_at = now(),
          provider_reference = COALESCE(provider_reference, $2)
-     WHERE id = $1 AND status = 'pending'`,
+     WHERE id = $1 AND status = 'pending'
+     RETURNING id`,
     [donation.id, providerRef]
   );
+  if (updated.length) {
+    notifyAdmins({
+      title: "Don payé en ligne 💝",
+      body: `${Number(donation.amount)} XAF (iKeePay) — référence : ${providerRef || "—"}.`,
+      amount: Number(donation.amount),
+    });
+  }
 }
 
 // Journalise chaque webhook reçu (table payment_webhook_logs, déjà créée par

@@ -9,6 +9,7 @@ import { sendMail, verificationEmailHtml } from "../mailer.js";
 import { registerSchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
 import { membershipRoles } from "../services/membershipGate.js";
+import { notifyAdmins } from "../services/adminNotify.js";
 
 const router = Router();
 
@@ -223,6 +224,17 @@ router.post(
     } catch (err) {
       console.error("Envoi de confirmation échoué:", err.message);
     }
+    const ROLE_LABELS = {
+      shop: "boutique",
+      seller: "vendeur",
+      client: "client",
+      creator: "créateur",
+      livreur: "livreur",
+    };
+    notifyAdmins({
+      title: "Nouveau compte à valider 🆕",
+      body: `${String(name).trim()} (${ROLE_LABELS[finalRole] || finalRole}) — ${emailNorm} — ${country || "pays non renseigné"}.`,
+    });
     res.status(201).json({
       needs_confirmation: true,
       email: emailNorm,
@@ -423,6 +435,10 @@ router.get(
           ]
         );
         user = (await q("SELECT * FROM users WHERE id = $1", [created[0].id]))[0];
+        notifyAdmins({
+          title: "Nouveau compte à valider 🆕",
+          body: `${user.name} (${user.role}, Google) — ${user.email}${user.country ? ` — ${user.country}` : ""}.`,
+        });
       }
       res.redirect(`/auth-google?token=${signToken(user)}`);
       await logAudit(null, "google.register", `user=${user.id} email=${user.email} role=${user.role}`, req.ip);

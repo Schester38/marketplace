@@ -2,6 +2,7 @@ import { Router } from "express";
 import { q } from "../db.js";
 import { donationSchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
+import { notifyAdmins } from "../services/adminNotify.js";
 
 const router = Router();
 
@@ -35,7 +36,13 @@ router.post(
       )
     )[0];
 
-        res.json({
+    notifyAdmins({
+      title: "Nouveau don déclaré 💝",
+      body: `${amt} XAF via ${operatorCode} — donateur : +${normalized}. À valider par l'équipe (Panneau Admin → Dons).`,
+      amount: amt,
+    });
+
+    res.json({
       ok: true,
       donation_id: created.id,
       reference: `DON:${created.id}`,

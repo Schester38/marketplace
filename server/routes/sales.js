@@ -2,6 +2,7 @@ import { Router } from "express";
 import { q, withTransaction } from "../db.js";
 import { authRequired, roleRequired, authOptional } from "../auth.js";
 import { sendPush } from "../push.js";
+import { notifyAdmins } from "../services/adminNotify.js";
 import { uploadPaymentProof, signedProofUrl } from "../storage.js";
 import {
   paySaleAutomatically,
@@ -102,6 +103,14 @@ router.post(
         )
       )[0]
     );
+    notifyAdmins({
+      title: "Nouvelle vente 🛍️",
+      body: `${sale.product_name} ×${qty} — ${Number(sale.total_price)} F — vendeur : ${sale.seller_name}.`,
+      sale_id: sale.id,
+      product_id: sale.product_id,
+      product_name: sale.product_name,
+      amount: Number(sale.total_price),
+    });
     res.status(201).json({ sale });
   })
 );
@@ -827,6 +836,14 @@ router.post(
         url: `/suivi/${sale.id}?code=${encodeURIComponent(sale.confirm_code || sale.buyer_code || "")}`,
       });
     }
+    notifyAdmins({
+      title: "Livraison confirmée 🛵",
+      body: `${deliveredName} livré à ${buyerName} — frais : ${Number(fee)} F (${cleanMethod}).`,
+      sale_id: sale.id,
+      product_id: sale.product_id,
+      product_name: deliveredName,
+      amount: Number(fee),
+    });
 
     const full = (
       await q(

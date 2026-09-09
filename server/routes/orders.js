@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { q, withTransaction } from "../db.js";
 import { authRequired } from "../auth.js";
 import { sendPush } from "../push.js";
+import { notifyAdmins } from "../services/adminNotify.js";
 import { listPhotos } from "../photo.js";
 
 const router = Router();
@@ -215,6 +216,17 @@ router.post("/", optionalAuth, async (req, res, next) => {
           url: "/seller",
         });
     }
+    const orderTotalAll =
+      Math.round(result.createdSales.reduce((a, s) => a + Number(s.total || 0), 0) * 100) / 100;
+    notifyAdmins({
+      title: "Nouvelle commande 🛍️",
+      body: `${result.createdSales.length} article(s) — ${orderTotalAll} F — client : ${String(buyer_name).trim()}.`,
+      product_name: result.createdSales
+        .map((s) => `${s.name} ×${s.quantity}`)
+        .slice(0, 3)
+        .join(", "),
+      amount: orderTotalAll,
+    });
     const sales = await q(
       `SELECT s.*, p.name AS product_name, p.price, p.contact AS shop_contact, shop.name AS shop_name, shop.country AS shop_country, shop.location AS shop_location
        FROM sales s JOIN products p ON p.id = s.product_id JOIN users shop ON shop.id = p.shop_id WHERE s.id = ANY($1::int[]) ORDER BY s.id`,
