@@ -1,3 +1,5 @@
+import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { Router } from "express";
 import { q, ensureColumn, withTransaction } from "../db.js";
 import { authRequired, roleRequired, signToken } from "../auth.js";
@@ -66,6 +68,64 @@ router.post(
 );
 
 router.use(authRequired, roleRequired("admin"));
+
+// ─── Compte administrateur personnel ────────────────────────────────────────
+// L'admin « virtuel » (id 0, mot de passe ADMIN_PASSWORD) ne peut ni s'abonner
+// au push ni recevoir la cloche 🔔 : push_subscriptions et notifications
+// référencent users.id. Ce endpoint, protégé par le token admin (visible
+// uniquement après le mot de passe admin), crée le VRAI compte personnel de
+// l'administrateur (rôle 'admin', email déjà vérifié, adhésion active) pour
+// qu'il puisse se connecter comme n'importe quel utilisateur et recevoir les
+// notifications push + cloche.
+router.post(
+  "/account/register",
+  ah(async (req, res) => {
+    const { name, email, password, country } = req.body || {};
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    const cleanName = String(name || "").trim();
+    if (cleanName.length < 2 || cleanName.length > 100) {
+      return res.status(400).json({ error: "Nom invalide (2 à 100 caractères)" });
+    }
+    const emailNorm = String(email || "").trim().toLowerCase();
+    if (!emailNorm || emailNorm.length > 120 || !EMAIL_RE.test(emailNorm)) {
+      return res.status(400).json({ error: "Adresse email invalide" });
+    }
+    if (!password || String(password).length < 8) {
+      return res
+        .status(400)
+        .json({ error: "Le mot de passe doit contenir au moins 8 caractères" });
+    }
+    const exists = (await q("SELECT id FROM users WHERE email = $1", [emailNorm]))[0];
+    if (exists) {
+      return res.status(409).json({
+        error: "Un compte existe déjà avec cet email — utilisez l'onglet « Connexion »",
+      });
+    }
+    let referenceNumber = `MBP-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const collision = await q("SELECT id FROM users WHERE reference_number = $1", [
+        referenceNumber,
+      ]);
+      if (!collision.length) break;
+      referenceNumber = `MBP-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
+    }
+    const hash = bcrypt.hashSync(String(password), 12);
+    const created = await q(
+      `INSERT INTO users (name, email, password, role, country, accepted_terms_at, email_verified, email_verified_at, admin_approved, membership_expires_at, reference_number)
+       VALUES ($1, $2, $3, 'admin', $4, now(), TRUE, now(), TRUE, now() + interval '30 days', $5)
+       RETURNING id, name, email, role`,
+      [cleanName, emailNorm, hash, country ? String(country).trim() : null, referenceNumber]
+    );
+    const user = created[0];
+    await logAudit(
+      req.user.id,
+      "admin.account_created",
+      `user=${user.id} email=${user.email} role=${user.role}`,
+      req.ip
+    );
+    res.status(201).json({ user, token: signToken(user) });
+  })
+);
 
 router.get(
   "/stats",

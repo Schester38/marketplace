@@ -1,13 +1,15 @@
 import { storage, sessionStore } from "../storage";
 import React, { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import Logo from "../components/Logo.jsx";
 import PwaInstallButton from "../components/PwaInstallButton.jsx";
 import { api } from "../api.js";
+import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { formatMoney } from "../components/ProductCard.jsx";
-import { countrySymbol } from "../config.js";
+import { countrySymbol, COUNTRIES } from "../config.js";
 import MiniChart from "../components/MiniChart.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
 
@@ -95,6 +97,25 @@ export default function Admin() {
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState("");
   const [payOk, setPayOk] = useState("");
+
+  // ─── Compte administrateur personnel (notifications push + cloche) ────────
+  // L'admin « virtuel » (mot de passe ADMIN_PASSWORD, id 0) ne peut pas
+  // s'abonner au push : il lui faut un VRAI compte utilisateur. Ces formulaires
+  // ne sont visibles qu'après le mot de passe admin (gate).
+  const { user, login: loginUser } = useAuth();
+  const [acctTab, setAcctTab] = useState("login");
+  const [acctLogin, setAcctLogin] = useState({ email: "", password: "" });
+  const [acctLoginErr, setAcctLoginErr] = useState("");
+  const [acctLoginBusy, setAcctLoginBusy] = useState(false);
+  const [acctReg, setAcctReg] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirm: "",
+    country: "",
+  });
+  const [acctRegErr, setAcctRegErr] = useState("");
+  const [acctRegBusy, setAcctRegBusy] = useState(false);
 
   const payMode = paySettings?.mode === "auto" ? "auto" : "manual";
   const isManual = payMode === "manual";
@@ -214,6 +235,58 @@ export default function Admin() {
       setGateError(err.message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  // ─── Compte administrateur : connexion / création ─────────────────────────
+  const submitAcctLogin = async (e) => {
+    e.preventDefault();
+    setAcctLoginErr("");
+    setAcctLoginBusy(true);
+    try {
+      const d = await api.login(acctLogin);
+      loginUser(d.user, d.token);
+      setAcctLogin({ email: "", password: "" });
+    } catch (err) {
+      setAcctLoginErr(err.message);
+    } finally {
+      setAcctLoginBusy(false);
+    }
+  };
+
+  const submitAcctRegister = async (e) => {
+    e.preventDefault();
+    setAcctRegErr("");
+    if (
+      !acctReg.name.trim() ||
+      !acctReg.email ||
+      !acctReg.password ||
+      !acctReg.confirm ||
+      !acctReg.country
+    ) {
+      setAcctRegErr(t("Veuillez remplir tous les champs."));
+      return;
+    }
+    if (acctReg.password !== acctReg.confirm) {
+      setAcctRegErr(t("Les mots de passe ne correspondent pas."));
+      return;
+    }
+    setAcctRegBusy(true);
+    try {
+      // Le compte créé est déjà vérifié (email_verified = TRUE) → connexion
+      // immédiate avec le token renvoyé, sans email de confirmation.
+      const d = await api.adminCreateAccount({
+        name: acctReg.name,
+        email: acctReg.email,
+        password: acctReg.password,
+        country: acctReg.country,
+      });
+      loginUser(d.user, d.token);
+      setAcctReg({ name: "", email: "", password: "", confirm: "", country: "" });
+    } catch (err) {
+      setAcctRegErr(err.message);
+    } finally {
+      setAcctRegBusy(false);
     }
   };
 
@@ -731,6 +804,156 @@ export default function Admin() {
             {t("Se déconnecter")}
           </button>
         </div>
+      </section>
+
+      {/* Compte administrateur : visible uniquement après le mot de passe admin */}
+      <section className="card section" style={{ marginBottom: 18 }}>
+        <h3 className="section-title" style={{ marginTop: 0 }}>
+          👤 {t("Compte administrateur")}
+        </h3>
+        {user ? (
+          <>
+            <p className="hint" style={{ marginTop: 0 }}>
+              {t("Connecté en tant que")} <strong>{user.name}</strong> — {user.email} (
+              {user.role})
+            </p>
+            <p className="hint" style={{ marginTop: 6 }}>
+              {t(
+                "Pour recevoir les notifications (push + cloche 🔔) comme n'importe quel utilisateur, activez-les depuis « Mon compte »."
+              )}
+            </p>
+            <div className="dash-actions">
+              <Link to="/compte" className="btn btn-outline btn-small">
+                {t("Ouvrir Mon compte")}
+              </Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="hint" style={{ marginTop: 0 }}>
+              {t(
+                "Le portail admin n'est pas un compte utilisateur : pour recevoir les notifications, connectez ou créez votre compte personnel ci-dessous. Ces formulaires ne sont visibles qu'après le mot de passe administrateur."
+              )}
+            </p>
+            <div className="dash-actions" style={{ marginBottom: 12 }}>
+              <button
+                type="button"
+                className={`btn btn-small ${acctTab === "login" ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setAcctTab("login")}
+              >
+                {t("Connexion")}
+              </button>
+              <button
+                type="button"
+                className={`btn btn-small ${acctTab === "register" ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setAcctTab("register")}
+              >
+                {t("Créer mon compte")}
+              </button>
+            </div>
+            {acctTab === "login" ? (
+              <form onSubmit={submitAcctLogin} style={{ maxWidth: 420 }}>
+                <label>{t("Email")}</label>
+                <input
+                  className="input"
+                  type="email"
+                  required
+                  value={acctLogin.email}
+                  onChange={(e) => setAcctLogin({ ...acctLogin, email: e.target.value })}
+                />
+                <label>{t("Mot de passe")}</label>
+                <PasswordInput
+                  className="input"
+                  required
+                  value={acctLogin.password}
+                  onChange={(e) => setAcctLogin({ ...acctLogin, password: e.target.value })}
+                  autoComplete="current-password"
+                />
+                {acctLoginErr && (
+                  <p className="error" role="alert">
+                    {acctLoginErr}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-block"
+                  disabled={acctLoginBusy}
+                >
+                  {acctLoginBusy ? "⏳ …" : t("Se connecter")}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={submitAcctRegister} style={{ maxWidth: 420 }}>
+                <label>{t("Nom")}</label>
+                <input
+                  className="input"
+                  required
+                  minLength={2}
+                  maxLength={100}
+                  value={acctReg.name}
+                  onChange={(e) => setAcctReg({ ...acctReg, name: e.target.value })}
+                />
+                <label>{t("Email")}</label>
+                <input
+                  className="input"
+                  type="email"
+                  required
+                  value={acctReg.email}
+                  onChange={(e) => setAcctReg({ ...acctReg, email: e.target.value })}
+                />
+                <label>{t("Mot de passe (8 caractères minimum)")}</label>
+                <PasswordInput
+                  className="input"
+                  required
+                  minLength={8}
+                  value={acctReg.password}
+                  onChange={(e) => setAcctReg({ ...acctReg, password: e.target.value })}
+                  autoComplete="new-password"
+                />
+                <label>{t("Confirmer le mot de passe")}</label>
+                <PasswordInput
+                  className="input"
+                  required
+                  minLength={8}
+                  value={acctReg.confirm}
+                  onChange={(e) => setAcctReg({ ...acctReg, confirm: e.target.value })}
+                  autoComplete="new-password"
+                />
+                <label>{t("Pays")}</label>
+                <select
+                  className="input"
+                  required
+                  value={acctReg.country}
+                  onChange={(e) => setAcctReg({ ...acctReg, country: e.target.value })}
+                >
+                  <option value="">{t("Choisir un pays…")}</option>
+                  {COUNTRIES.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      {c.flag} {c.name}
+                    </option>
+                  ))}
+                </select>
+                {acctRegErr && (
+                  <p className="error" role="alert">
+                    {acctRegErr}
+                  </p>
+                )}
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-block"
+                  disabled={acctRegBusy}
+                >
+                  {acctRegBusy ? "⏳ …" : t("Créer mon compte")}
+                </button>
+                <p className="hint" style={{ marginTop: 8 }}>
+                  {t(
+                    "Le compte est créé avec le rôle « admin », email déjà vérifié : connexion immédiate, aucune confirmation par email."
+                  )}
+                </p>
+              </form>
+            )}
+          </>
+        )}
       </section>
 
       {error && (

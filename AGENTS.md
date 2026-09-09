@@ -16,6 +16,8 @@ Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiqu
 
 `users.role` accepte `('shop','seller','client','creator','livreur')` ; la contrainte est étendue à `'admin'` par une migration (`db.js`). L'admin est un utilisateur virtuel (id 0), authentifié par `ADMIN_PASSWORD` → `POST /api/admin/pass`.
 
+> **Compte administrateur personnel** : l'admin virtuel ne peut pas recevoir les notifications (push/cloche) car `push_subscriptions` et `notifications` référencent `users.id`. `POST /api/admin/account/register` (token admin requis) crée le vrai compte de l'admin (rôle `admin`, email déjà vérifié, adhésion active) et renvoie le JWT → connexion immédiate. Les formulaires connexion/inscription correspondants sont dans le panneau Admin (`Admin.jsx`, carte « 👤 Compte administrateur »), visibles uniquement après le mot de passe admin.
+
 - **shop** : boutique (max **5 produits**, `MAX_PRODUCTS_PER_SHOP` = 5), promos éclair, partage, paiement des commissions.
 - **seller** : vendeur indépendant, code vendeur 6 caractères, commissions de vente et de parrainage.
 - **creator** : crée des créations/offres et publie des produits (catégorie forcée « Arts & Artisanat »). Moyens de paiement partagés avec les boutiques (`shop_payment_methods`).

@@ -249,6 +249,8 @@ export const api = {
   exportSales: () => request("/sales/export"),
   adminPass: (password) =>
     adminRequest("/admin/pass", { method: "POST", body: JSON.stringify({ password }) }),
+  adminCreateAccount: (payload) =>
+    adminRequest("/admin/account/register", { method: "POST", body: JSON.stringify(payload) }),
   adminStats: () => adminRequest("/admin/stats"),
   adminTransactions: () => adminRequest("/admin/transactions"),
   adminUsers: (search = "") =>
