@@ -2,38 +2,92 @@ import pg from "pg";
 
 const { Pool } = pg;
 
-const dbUrl =
-  process.env.DATABASE_URL_POOLED || // PgBouncer Supabase (multiplexé, recommandé serverless)
-  process.env.DATABASE_URL || // connexion directe (plafonné à ~200 → EMAXCONN en rafale)
-  "postgres://postgres:postgres@localhost:5432/marketplace";
+const LOCAL_DEFAULT = "postgres://postgres:postgres@localhost:5432/marketplace";
 
-const pool = new Pool({
-  connectionString: dbUrl,
-  ssl: dbUrl !== "postgres://postgres:postgres@localhost:5432/marketplace" ? { rejectUnauthorized: false } : undefined,
-  // Robustesse serverless (Vercel) :
-  //  - max bas (2) : avec DATABASE_URL_POOLED (PgBouncer) les requêtes logiques
-  //    sont multiplexées sur un petit pool physique — pas besoin de beaucoup de
-  //    connexions par instance. Évite aussi de saturer PgBouncer lui-même.
-  //  - connectionTimeoutMillis : si le pool de l'instance est plein (rafale de
-  //    requêtes, ex. panneau admin qui poll en parallèle), les requêtes
-  //    attendent AVANT d'échouer (8 s) — évite des 500 en épingle.
-  //  - idleTimeoutMillis : libère les connexions inactives, réduit la pression.
-  max: 2,
-  connectionTimeoutMillis: 8000,
-  idleTimeoutMillis: 10000,
-});
+// PRIORITÉ : DATABASE_URL (l'URL qui a toujours fonctionné en production).
+// DATABASE_URL_POOLED (PgBouncer) est gardé en secours uniquement : sa valeur
+// sur Vercel contient un mot de passe invalide (« password authentication
+// failed for user "postgres" ») — elle ne doit redevenir prioritaire qu'après
+// correction du mot de passe dans les réglages Vercel.
+const dbCandidates = [process.env.DATABASE_URL, process.env.DATABASE_URL_POOLED].filter(Boolean);
+if (!dbCandidates.length) dbCandidates.push(LOCAL_DEFAULT);
 
-// CRITIQUE : sans ce handler, quand Supabase ferme une connexion idle (timeout,
-// redémarrage, coupure réseau), pg émet un événement 'error' NON géré sur le
-// pool → crash de l'instance Node → « erreur interne de serveur » sur toutes
-// les requêtes en vol. On capture et on loggie à la place.
-pool.on("error", (err) => {
-  console.error("[db] erreur de connexion PostgreSQL (pool) :", err.message);
-});
+function maskUrl(url) {
+  return url.includes("@") ? url.replace(/:[^:@]+@/, ":***@") : url;
+}
 
-pool.on("connect", (client) => {
-  client.query("SET search_path TO public").catch(() => {});
-});
+function createPool(url) {
+  const p = new Pool({
+    connectionString: url,
+    ssl: url !== LOCAL_DEFAULT ? { rejectUnauthorized: false } : undefined,
+    // Robustesse serverless (Vercel) :
+    //  - max bas (2) : avec DATABASE_URL_POOLED (PgBouncer) les requêtes logiques
+    //    sont multiplexées sur un petit pool physique — pas besoin de beaucoup de
+    //    connexions par instance. Évite aussi de saturer PgBouncer lui-même.
+    //  - connectionTimeoutMillis : si le pool de l'instance est plein (rafale de
+    //    requêtes, ex. panneau admin qui poll en parallèle), les requêtes
+    //    attendent AVANT d'échouer (8 s) — évite des 500 en épingle.
+    //  - idleTimeoutMillis : libère les connexions inactives, réduit la pression.
+    max: 2,
+    connectionTimeoutMillis: 8000,
+    idleTimeoutMillis: 10000,
+  });
+  // CRITIQUE : sans ce handler, quand Supabase ferme une connexion idle (timeout,
+  // redémarrage, coupure réseau), pg émet un événement 'error' NON géré sur le
+  // pool → crash de l'instance Node → « erreur interne de serveur » sur toutes
+  // les requêtes en vol. On capture et on loggie à la place.
+  p.on("error", (err) => {
+    console.error("[db] erreur de connexion PostgreSQL (pool) :", err.message);
+  });
+  p.on("connect", (client) => {
+    client.query("SET search_path TO public").catch(() => {});
+  });
+  return p;
+}
+
+// Pool initial : premier candidat (DATABASE_URL). La sélection définitive se
+// fait ci-dessous EN ARRIÈRE-PLAN (sans bloquer le chargement du module — des
+// tests importent db.js en cascade) : on sonde chaque URL avec une vraie
+// connexion et le pool est remplacé à chaud si une URL fonctionnelle est
+// trouvée (ex. mot de passe invalide sur la prioritaire).
+let currentUrl = dbCandidates[0];
+let pool = createPool(currentUrl);
+
+async function probeDbUrl(url) {
+  const client = new pg.Client({
+    connectionString: url,
+    ssl: url !== LOCAL_DEFAULT ? { rejectUnauthorized: false } : undefined,
+    connectionTimeoutMillis: 4000,
+  });
+  try {
+    await client.query("SELECT 1");
+  } finally {
+    client.end().catch(() => {});
+  }
+}
+
+(async () => {
+  let chosen = dbCandidates[dbCandidates.length - 1];
+  let ok = false;
+  for (const candidate of dbCandidates) {
+    try {
+      await probeDbUrl(candidate);
+      chosen = candidate;
+      ok = true;
+      break;
+    } catch (err) {
+      console.error(`[db] URL de base de données rejetée (${err.message}) : ${maskUrl(candidate)}`);
+    }
+  }
+  if (!ok) return; // aucune URL fonctionnelle : on garde le pool initial (erreurs explicites côté requêtes)
+  if (chosen !== currentUrl) {
+    const old = pool;
+    currentUrl = chosen;
+    pool = createPool(chosen);
+    console.error(`[db] bascule vers l'URL de secours : ${maskUrl(chosen)}`);
+    old.end().catch(() => {});
+  }
+})();
 
 export function getPool() {
   return pool;
