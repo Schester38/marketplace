@@ -115,10 +115,38 @@ export async function isIkeepayConfigured() {
 // joignable publiquement). Le secret est généré une seule fois et transmis à
 // iKeePay via l'URL de webhook (?k=...). Vérifié par le routeur webhook.
 export async function getWebhookSecret() {
-  let secret = await getSetting("ikeepay_webhook_secret");
-  if (!secret) {
-    secret = randomBytes(16).toString("hex");
+  // Lecture STRICTE : une erreur de base de données (bascule direct ↔ pooler
+  // Supabase, mot de passe pooler invalide, saturation EMAXCONN…) ne doit
+  // JAMAIS régénérer le secret. Sinon l'URL enregistrée chez iKeePay devient
+  // invalide → tous les webhooks reçus rejetés (403) → les paiements restent
+  // « en attente » sans redirection et sans trace exploitable.
+  let secret = "";
+  try {
+    const row = (
+      await q("SELECT value FROM platform_settings WHERE key = $1", [
+        "ikeepay_webhook_secret",
+      ])
+    )[0];
+    secret = row && row.value != null ? String(row.value) : "";
+  } catch (err) {
+    console.error(
+      "[ikeepay] lecture du secret webhook impossible (aucune régénération) :",
+      err.message
+    );
+    // Secret indisponible : le routeur répondra 503 webhook_secret_unavailable
+    // (iKeePay réessaiera) — jamais 403 avec un secret frais.
+    return "";
+  }
+  if (secret) return secret;
+  // Table lisible mais clé absente (première installation) → génération
+  // unique + persistance. Si la persistance échoue, on renvoie "" : jamais un
+  // secret volatil qui changerait à chaque redémarrage.
+  secret = randomBytes(16).toString("hex");
+  try {
     await setSetting("ikeepay_webhook_secret", secret);
+  } catch (err) {
+    console.error("[ikeepay] persistance du secret webhook impossible :", err.message);
+    return "";
   }
   return secret;
 }
@@ -578,7 +606,7 @@ export async function reconcileMembershipFromWebhookLog({ userId, email, amount 
   const logs = await q(
     `SELECT id, payload, provider_order_id, created_at FROM payment_webhook_logs
      WHERE handled = FALSE AND created_at >= now() - interval '24 hours'
-     ORDER BY created_at DESC LIMIT 10`
+     ORDER BY created_at DESC LIMIT 30`
   );
   for (const log of logs) {
     // Budget temps : ne jamais dépasser ~4 s de balayage (limite serverless).

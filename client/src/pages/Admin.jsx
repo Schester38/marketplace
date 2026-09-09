@@ -93,6 +93,7 @@ export default function Admin() {
   const [payPublicKey, setPayPublicKey] = useState("");
   const [paySecretKey, setPaySecretKey] = useState("");
   const [payments, setPayments] = useState(null);
+  const [webhookHealth, setWebhookHealth] = useState(null);
   const [paySearch, setPaySearch] = useState("");
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState("");
@@ -191,6 +192,27 @@ export default function Admin() {
         .adminPayments()
         .then((d) => setPayments(d))
         .catch(() => {});
+      // Santé du webhook : un paiement resté « en attente » sans trace est
+      // presque toujours un webhook rejeté (URL iKeePay obsolète, token
+      // invalide) ou jamais reçu. Ce résumé rend le cas visible en un coup
+      // d'œil dans la section « Paiements en ligne (iKeePay) ».
+      api
+        .adminWebhooks()
+        .then((d) => {
+          const rows = d?.webhooks || [];
+          const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+          const recent = rows.filter(
+            (w) => w && new Date(w.created_at).getTime() > dayAgo
+          );
+          const last = recent[0] || null;
+          setWebhookHealth({
+            total: recent.length,
+            rejected: recent.filter((w) => w.error === "invalid_webhook_token").length,
+            lastEvent: last ? last.event : null,
+            lastAt: last ? last.created_at : null,
+          });
+        })
+        .catch(() => setWebhookHealth(null));
     },
     [t]
   );
@@ -1558,6 +1580,51 @@ export default function Admin() {
               🔍
             </button>
           </form>
+
+          {/* Santé du webhook iKeePay : un paiement resté « en attente » sans
+              trace est presque toujours un webhook rejeté (URL obsolète,
+              token invalide) ou jamais reçu. Résumé mis à jour à chaque
+              chargement de la section. */}
+          {webhookHealth && (
+            webhookHealth.rejected > 0 ? (
+              <div
+                style={{
+                  backgroundColor: "rgba(220, 53, 69, 0.08)",
+                  border: "1px solid #dc3545",
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 14,
+                }}
+              >
+                <strong>
+                  ⚠️{" "}
+                  {t("Webhooks iKeePay rejetés (token invalide) : {n} sur 24 h", {
+                    n: webhookHealth.rejected,
+                  })}
+                </strong>
+                <p className="hint" style={{ marginBottom: 0 }}>
+                  {t(
+                    "iKeePay envoie bien les confirmations, mais l'URL enregistrée dans son dashboard est obsolète. Ouvrez la carte « Système de paiement » ci-dessus, recopiez l'URL de webhook (bouton Copier) et mettez-la à jour chez iKeePay : les paiements en attente seront alors confirmés automatiquement."
+                  )}
+                </p>
+              </div>
+            ) : (
+              <p className="hint" style={{ marginBottom: 10 }}>
+                ✅{" "}
+                {t("Webhooks iKeePay reçus (24 h) : {total} — aucun rejet de token.", {
+                  total: webhookHealth.total,
+                })}
+                {webhookHealth.lastEvent
+                  ? " " +
+                    t("Dernier : {event}", {
+                      event: `${webhookHealth.lastEvent} (${new Date(
+                        webhookHealth.lastAt
+                      ).toLocaleString()})`,
+                    })
+                  : ""}
+              </p>
+            )
+          )}
 
           {payments === null ? (
             <div className="skeleton-block" style={{ height: 40 }}></div>

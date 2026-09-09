@@ -271,12 +271,37 @@ webhookRouter.post(
     // en forgant un « payment.success » (le endpoint est public).
     const expected = await getWebhookSecret();
     const given = String(req.query.k || req.get("x-ikeepay-token") || "");
+    // Secret indisponible (lecture base momentanément impossible : bascule
+    // direct ↔ pooler, saturation du pool…) → 503 : iKeePay réessaiera. Sans
+    // ce garde, '' === '' accepterait un webhook NON authentifié pendant une
+    // panne de base.
+    if (!expected) {
+      return res
+        .status(503)
+        .json({ received: false, error: "webhook_secret_unavailable" });
+    }
     const a = Buffer.from(String(given));
     const b = Buffer.from(String(expected));
-    if (
-      a.length !== b.length ||
-      !timingSafeEqual(a, b)
-    ) {
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      // Journalise l'échec d'authentification AVANT le 403 : c'était l'angle
+      // mort qui laissait les paiements « en attente » sans trace quand l'URL
+      // enregistrée chez iKeePay devenait obsolète (token absent/modifié).
+      // handled=TRUE : un webhook NON authentifié ne peut jamais alimenter la
+      // réconciliation (sinon quiconque pourrait activer une adhésion en
+      // forgeant un payment.success) — on journalise uniquement un résumé,
+      // pas le payload.
+      const evt =
+        req.body && typeof req.body === "object" && req.body.event
+          ? String(req.body.event).slice(0, 60)
+          : null;
+      await q(
+        `INSERT INTO payment_webhook_logs
+           (provider, event, payload, status, handled, error)
+         VALUES ('ikeepay', 'auth_rejected', $1, 'rejected:invalid_webhook_token', TRUE, 'invalid_webhook_token')`,
+        [JSON.stringify({ event: evt, token_provided: given ? "yes" : "no" })]
+      ).catch((err) =>
+        console.error("[ikeepay] journalisation 403 impossible :", err.message)
+      );
       return res
         .status(403)
         .json({ received: false, error: "invalid_webhook_token" });
