@@ -49,9 +49,7 @@ export default function NotificationPrompt({ user }) {
         🔔
       </span>
       <p className="notif-prompt-text">
-        {t(
-          "Activez les notifications pour être prévenu immédiatement des commandes, paiements et messages, même lorsque l'application est fermée. Sur Android, vérifiez aussi le son et l'économiseur de batterie (Réglages → Applications)."
-        )}
+        {t("Veillez autoriser les notifications")}
       </p>
       <div className="notif-prompt-actions">
         <button type="button" className="btn btn-primary" onClick={activate} disabled={busy}>
