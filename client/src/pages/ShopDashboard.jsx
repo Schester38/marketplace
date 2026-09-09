@@ -512,12 +512,7 @@ export default function ShopDashboard() {
       <section className="dash-header">
         <div>
           <h1>{t("Ma boutique")}</h1>
-          <p>
-            {t("Produits publiés : {n} / 5", { n: products.length })}
-            {products.length >= 5 && (
-              <span className="badge badge-warn">{t("Limite atteinte")}</span>
-            )}
-          </p>
+          <p>{t("Produits publiés : {n}", { n: products.length })}</p>
         </div>
         <div className="row2 dash-actions">
           <Link className="btn btn-outline btn-sm" to="/shop/paiements" style={{ flexShrink: 0 }}>
@@ -614,12 +609,12 @@ export default function ShopDashboard() {
                   <span className="kpi-label">{t("Commissions versées")}</span>
                 </span>
               </div>
-              <div className={`kpi-card${products.length >= 5 ? " kpi-warn" : ""}`}>
+              <div className="kpi-card">
                 <span className="kpi-icon ki-blue" aria-hidden="true">
                   <IconStore size={20} />
                 </span>
                 <span className="kpi-body">
-                  <span className="kpi-value">{products.length} / 5</span>
+                  <span className="kpi-value">{products.length}</span>
                   <span className="kpi-label">{t("Produits en ligne")}</span>
                 </span>
               </div>

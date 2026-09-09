@@ -20,7 +20,7 @@ Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiqu
 >
 > **Notifications admin** : `server/services/adminNotify.js` (`notifyAdmins`) diffuse push + cloche 🔔 à tous les comptes de rôle `admin` (ids en cache 60 s, jamais bloquant, erreurs avalées). Événements couverts : nouvelle inscription (email + Google, `auth.js`), vente (`sales.js` POST `/`, `purchases.js`, `orders.js`), livraison confirmée (`sales.js` `/:id/deliver`), adhésion payée (manuelle `admin.js` `referrals/:id/pay` + `users/:id/admin-approved`, en ligne `ikeepay.js` `activateMembershipUser`), don déclaré (`donations.js`) ou payé en ligne (`ikeepay.js` `completeDonation`), demande de retrait d'activation (`activationWithdrawals.js`, en plus de WhatsApp + email).
 
-- **shop** : boutique (max **5 produits**, `MAX_PRODUCTS_PER_SHOP` = 5), promos éclair, partage, paiement des commissions.
+- **shop** : boutique (produits illimités), promos éclair, partage, paiement des commissions.
 - **seller** : vendeur indépendant, code vendeur 6 caractères, commissions de vente et de parrainage.
 - **creator** : crée des créations/offres et publie des produits (catégorie forcée « Arts & Artisanat »). Moyens de paiement partagés avec les boutiques (`shop_payment_methods`).
 - **client / livreur** : espaces distincts ; le livreur confirme les livraisons (`/:id/deliver`).

@@ -4,7 +4,7 @@ Mboppi est une marketplace pour le Cameroun et l'Afrique. Elle met en relation d
 
 ## Fonctionnalités
 
-- **Boutique** : publie jusqu'à 5 produits, définit les prix, le stock et la commission du vendeur, confirme les commandes et règle les commissions.
+- **Boutique** : publie ses produits sans limite, définit les prix, le stock et la commission du vendeur, confirme les commandes et règle les commissions.
 - **Vendeur** : s'inscrit, génère un code vendeur, partage les produits et reçoit la commission prévue pour chaque vente.
 - **Client** : commande avec ou sans compte, reçoit un code de confirmation et suit sa commande.
 - **Créateur** : publie des créations et gère son espace.

@@ -12,7 +12,6 @@ import { validate, validateQuery } from "../middlewares/validate.js";
 
 const router = Router();
 
-const MAX_PRODUCTS_PER_SHOP = 5;
 const OWNER_ROLES = ["shop", "creator"];
 
 async function preparePhotos(photos, folder) {
@@ -345,7 +344,7 @@ router.get("/mine", authRequired, roleRequired(...OWNER_ROLES), async (req, res)
       [req.user.id]
     )
   ).map(productRow);
-  res.json({ products, limit: MAX_PRODUCTS_PER_SHOP });
+  res.json({ products });
 });
 
 router.get("/cities", validateQuery(citiesQuerySchema), async (req, res) => {
@@ -412,14 +411,6 @@ router.post(
       currency,
     } = req.body;
     const photoList = await preparePhotos(photos, `products/${req.user.id}`);
-    const count = (
-      await q("SELECT COUNT(*) AS n FROM products WHERE shop_id = $1", [req.user.id])
-    )[0];
-    if (Number(count.n) >= MAX_PRODUCTS_PER_SHOP) {
-      return res.status(400).json({
-        error: `Limite atteinte : maximum ${MAX_PRODUCTS_PER_SHOP} produits publiés`,
-      });
-    }
     const cleanCategory =
       req.user.role === "creator" ? "Arts & Artisanat" : category ? String(category).trim() : null;
     const currencyCode = validCurrency(currency)
@@ -505,14 +496,6 @@ router.post("/:id/duplicate", authRequired, roleRequired(...OWNER_ROLES), async 
   if (!product) return res.status(404).json({ error: "Produit introuvable" });
   if (product.shop_id !== req.user.id) {
     return res.status(403).json({ error: "Ce produit ne vous appartient pas" });
-  }
-  const count = (
-    await q("SELECT COUNT(*) AS n FROM products WHERE shop_id = $1", [req.user.id])
-  )[0];
-  if (Number(count.n) >= MAX_PRODUCTS_PER_SHOP) {
-    return res.status(400).json({
-      error: `Limite atteinte : maximum ${MAX_PRODUCTS_PER_SHOP} produits publiés`,
-    });
   }
   const created = await q(
     `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency)
