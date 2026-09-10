@@ -5,6 +5,7 @@ import { authRequired } from "../auth.js";
 import { sendPush } from "../push.js";
 import { notifyAdmins } from "../services/adminNotify.js";
 import { listPhotos } from "../photo.js";
+import { SALES_LIST_COLUMNS } from "./sales.js";
 
 const router = Router();
 
@@ -256,7 +257,7 @@ router.get(
   ah(async (req, res) => {
     const purchases = (
       await q(
-        `SELECT s.*, p.name AS product_name, p.commission_percent, p.photos, p.contact AS shop_contact, COALESCE(u.name, '—') AS seller_name, u.phone AS seller_phone, shop.name AS shop_name, shop.country AS shop_country
+        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.photos, p.contact AS shop_contact, COALESCE(u.name, '—') AS seller_name, u.phone AS seller_phone, shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id

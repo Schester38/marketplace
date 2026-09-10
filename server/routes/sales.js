@@ -26,6 +26,24 @@ function saleRow(s) {
   };
 }
 
+// Colonnes de vente pour les LISTES (rafraîchies toutes les 30 s par les
+// tableaux de bord) : on exclut volontairement les colonnes lourdes —
+// signature (≤ 300 Ko), payment_proof / referral_payment_proof (preuves en
+// base64, jusqu'à ~1 Mo en fallback) et provider_payload (JSONB iKeePay).
+// Sans cela, chaque rafraîchissement re-téléchargeait TOUT l'historique des
+// preuves/signatures → saturation de l'egress Supabase. La signature est
+// récupérée à la demande via GET /api/sales/:id/signature (facture), les
+// preuves via GET /api/sales/:id/proof.
+export const SALES_LIST_COLUMNS = `s.id, s.product_id, s.seller_id, s.buyer_id, s.buyer_name, s.buyer_phone, s.buyer_code, s.buyer_city, s.buyer_address,
+      s.quantity, s.total_price, s.purchase_price, s.commission, s.referral_commission, s.referred_by,
+      s.status, s.currency, s.created_at, s.confirm_code, s.hidden_for, s.stock_reserved,
+      s.delivery_fee, s.payment_method, s.delivered_at, s.delivered_by, s.shop_confirmed_at,
+      s.paid, s.paid_at, s.payment_status, s.referral_paid, s.referral_paid_at,
+      s.commission_claimed_at, s.referral_claimed_at,
+      s.online_payment, s.payment_provider, s.payment_country, s.payment_operator,
+      s.payment_external_reference, s.payment_provider_reference, s.payment_link, s.payment_error,
+      s.payment_received_by, s.payout_initiated, s.payout_initiated_at`;
+
 router.post(
   "/",
   authRequired,
@@ -145,7 +163,7 @@ router.get(
   ah(async (req, res) => {
     const sales = (
       await q(
-        `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
+        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
               u.name AS shop_name, u.country AS shop_country, u.phone AS shop_phone,
               u2.seller_code AS seller_code, u2.phone AS seller_phone
 FROM sales s
@@ -215,7 +233,7 @@ router.get(
     }
     const sales = (
       await q(
-        `SELECT s.*, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone, u.seller_code, parrain.name AS parrain_name, shop.country AS shop_country
+        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.contact AS shop_contact, u.name AS seller_name, u.phone AS seller_phone, u.seller_code, parrain.name AS parrain_name, shop.country AS shop_country
 FROM sales s
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
@@ -447,7 +465,7 @@ router.get(
     if (!shop) return res.status(404).json({ error: "Code boutique invalide" });
     const pending = (
       await q(
-        `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
+        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
               u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
               shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
@@ -469,7 +487,7 @@ router.get(
     const deliveredParams = me ? [me, shop.id] : [shop.id];
     const delivered = (
       await q(
-        `SELECT s.*, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
+        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
               u.name AS seller_name, u.phone AS seller_phone, u.seller_code,
               shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
@@ -655,6 +673,37 @@ router.post(
       });
     }
     res.json({ ok: true });
+  })
+);
+
+// Signature du client d'une vente : récupérée À LA DEMANDE (facture PDF).
+// Les listes de ventes ne la transportent plus (blob ≤ 300 Ko/ligne — egress).
+router.get(
+  "/:id/signature",
+  authRequired,
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Identifiant invalide" });
+    }
+    const sale = (
+      await q(
+        `SELECT s.signature, s.seller_id, s.buyer_id, s.delivered_by, p.shop_id
+         FROM sales s
+         JOIN products p ON p.id = s.product_id
+         WHERE s.id = $1`,
+        [id]
+      )
+    )[0];
+    if (!sale) return res.status(404).json({ error: "Vente introuvable" });
+    const uid = Number(req.user.id);
+    const allowed =
+      (sale.delivered_by && Number(sale.delivered_by) === uid) ||
+      (sale.seller_id && Number(sale.seller_id) === uid) ||
+      (sale.buyer_id && Number(sale.buyer_id) === uid) ||
+      Number(sale.shop_id) === uid;
+    if (!allowed) return res.status(403).json({ error: "Accès refusé" });
+    res.json({ signature: sale.signature || null });
   })
 );
 

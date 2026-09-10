@@ -58,6 +58,20 @@ export async function downloadInvoice(sale, t, symbol = "XAF") {
     logo = null;
   }
 
+  // Signature du client : les listes de ventes ne la transportent plus
+  // (colonne lourde — egress). On la récupère à la demande pour les ventes
+  // livrées ; en cas d'échec, la facture s'imprime sans signature.
+  let signature = sale.signature || null;
+  if (!signature && sale.delivered_at && sale.id) {
+    try {
+      const { api } = await import("../api.js");
+      const d = await api.saleSignature(sale.id);
+      signature = d?.signature || null;
+    } catch {
+      signature = null;
+    }
+  }
+
   doc.setFillColor(...BLUE_DARK);
   doc.rect(0, 0, W, 34, "F");
   doc.setFillColor(...BLUE);
@@ -205,7 +219,7 @@ export async function downloadInvoice(sale, t, symbol = "XAF") {
   }
 
   // Signature du client (capturée par le livreur à la livraison).
-  if (sale.delivered_at && sale.signature) {
+  if (sale.delivered_at && signature) {
     try {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
@@ -214,7 +228,7 @@ export async function downloadInvoice(sale, t, symbol = "XAF") {
       doc.setDrawColor(190, 200, 220);
       doc.setLineWidth(0.3);
       doc.rect(W - 84, y + 8, 68, 26);
-      doc.addImage(sale.signature, "PNG", W - 83, y + 9, 66, 24);
+      doc.addImage(signature, "PNG", W - 83, y + 9, 66, 24);
       y += 40;
     } catch {
       // signature illisible : on l'ignore silencieusement sur le PDF
