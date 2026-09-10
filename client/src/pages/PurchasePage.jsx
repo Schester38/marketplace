@@ -280,22 +280,25 @@ export default function PurchasePage() {
           {/* Bandeau anti-fraude : rappel d'exiger le formulaire du livreur. */}
           <div
             style={{
-              background: "#fff3cd",
-              border: "2px solid #f0b429",
+              background: "#fff8e1",
+              border: "2px solid #d97706",
               borderRadius: 10,
               padding: "12px 14px",
               marginBottom: 14,
+              color: "#78350f",
             }}
           >
-            <strong style={{ display: "block", fontSize: 15 }}>
+            <strong style={{ display: "block", fontSize: 15, color: "#7c2d12" }}>
               🛡️ {t("CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.")}
             </strong>
-            <p style={{ margin: "6px 0 2px", fontSize: 13 }}>
+            <p style={{ margin: "6px 0 2px", fontSize: 13, lineHeight: 1.5, color: "#78350f" }}>
               {t(
                 "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat."
               )}
             </p>
-            <small style={{ display: "block", textAlign: "right", fontWeight: 600 }}>
+            <small
+              style={{ display: "block", textAlign: "right", fontWeight: 600, color: "#7c2d12" }}
+            >
               — {t("L'Administration Mboppi")}
             </small>
           </div>
