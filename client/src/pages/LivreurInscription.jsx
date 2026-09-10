@@ -95,6 +95,12 @@ export default function LivreurInscription() {
               </a>
               <Link
                 className="btn btn-outline"
+                to={`/login?force=livreur`}
+              >
+                🔐 {t("J'ai déjà un compte livreur — me connecter")}
+              </Link>
+              <Link
+                className="btn btn-outline"
                 to={`/register?role=livreur&email=${encodeURIComponent(user.email || "")}`}
               >
                 🔑 {t("Créer mon espace livreur (email + mot de passe)")}
