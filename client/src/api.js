@@ -109,6 +109,8 @@ export const api = {
   login: (payload) => request("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
   mySpaces: () => request("/auth/spaces"),
   switchAccount: () => request("/auth/switch", { method: "POST" }),
+  googleChoose: (ct, role) =>
+    request("/auth/google-choose", { method: "POST", body: JSON.stringify({ ct, role }) }),
   me: () => request("/auth/me"),
   updateProfile: (payload) => request("/auth/me", { method: "PUT", body: JSON.stringify(payload) }),
   changePassword: (payload) =>

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { q } from "../db.js";
 import { signToken, authRequired, roleRequired, MEMBERSHIP_FEES } from "../auth.js";
 import { googleConfigured, googleAuthUrl, getGoogleProfile } from "../google.js";
@@ -445,10 +446,18 @@ router.get(
         cleanRole = user.role;
       }
       if (!user && existing.length > 1 && !explicitRole) {
-        const msg = encodeURIComponent(
-          "Vous avez plusieurs espaces (boutique et livreur). Connectez-vous via le bouton du rôle souhaité (ex. « Devenir livreur » depuis votre boutique)."
+        // Plusieurs espaces (ex. boutique + livreur) sur le même email : on
+        // propose le choix sur la page de retour Google, sécurisé par un jeton
+        // éphémère (10 min) qui prouve que Google vient de valider l'identité.
+        const ct = jwt.sign(
+          { purpose: "choose_space", email: existing[0].email },
+          process.env.JWT_SECRET,
+          { expiresIn: "10m" }
         );
-        return res.redirect(`/auth-google?error=${msg}`);
+        const rolesParam = existing.map((u) => u.role).join(",");
+        return res.redirect(
+          `/auth-google?choose=${encodeURIComponent(rolesParam)}&ct=${encodeURIComponent(ct)}`
+        );
       }
       if (!user) {
         if (accepted !== "1") {
@@ -589,6 +598,44 @@ router.post(
       });
     }
     res.json({ token: signToken(other), user: await publicUser(other) });
+  })
+);
+
+// Choix de l'espace après connexion Google (email multi-espaces, ex.
+// boutique + livreur) : sécurisé par un jeton éphémère émis par le callback
+// Google — il prouve que l'identité Google vient d'être validée.
+router.post(
+  "/google-choose",
+  ah(async (req, res) => {
+    const { ct, role } = req.body || {};
+    if (!ct || !role) {
+      return res.status(400).json({ error: "Requête incomplète" });
+    }
+    let payload;
+    try {
+      payload = jwt.verify(String(ct), process.env.JWT_SECRET);
+    } catch {
+      return res.status(401).json({ error: "Sélection expirée. Reconnectez-vous avec Google." });
+    }
+    if (payload.purpose !== "choose_space" || !payload.email) {
+      return res.status(403).json({ error: "Jeton de sélection invalide" });
+    }
+    if (!["shop", "livreur"].includes(role)) {
+      return res
+        .status(403)
+        .json({ error: "Le choix est limité aux espaces boutique et livreur" });
+    }
+    const user = (
+      await q(
+        "SELECT * FROM users WHERE lower(email) = lower($1) AND role = $2 LIMIT 1",
+        [payload.email, role]
+      )
+    )[0];
+    if (!user) {
+      return res.status(404).json({ error: "Aucun espace de ce type sur cet email" });
+    }
+    await logAudit(user.id, "google.choose_space", `role=${role}`, req.ip);
+    res.json({ token: signToken(user), user: await publicUser(user) });
   })
 );
 
