@@ -94,6 +94,8 @@ export default function Admin() {
   const [paySecretKey, setPaySecretKey] = useState("");
   const [payments, setPayments] = useState(null);
   const [webhookHealth, setWebhookHealth] = useState(null);
+  const [migrateBusy, setMigrateBusy] = useState(false);
+  const [migrateReport, setMigrateReport] = useState(null);
   const [prodSearch, setProdSearch] = useState("");
   // Refs synchrones des recherches en cours : le rechargement silencieux
   // (30 s / retour sur l'onglet) lit ces refs pour ne PAS écraser les
@@ -346,6 +348,21 @@ export default function Admin() {
       setUsers(d.users);
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  // Migration email (boutique<->livreur) — outil de maintenance admin.
+  const runMigrateEmail = async () => {
+    if (!window.confirm("Appliquer la migration email boutique<->livreur (supprime la contrainte UNIQUE(email) globale) ?")) return;
+    setMigrateBusy(true);
+    setMigrateReport(null);
+    try {
+      const r = await api.adminMigrateEmailShare();
+      setMigrateReport(r);
+    } catch (err) {
+      setMigrateReport({ error: err.message });
+    } finally {
+      setMigrateBusy(false);
     }
   };
 

@@ -250,6 +250,8 @@ export const api = {
   exportSales: () => request("/sales/export"),
   adminPass: (password) =>
     adminRequest("/admin/pass", { method: "POST", body: JSON.stringify({ password }) }),
+  adminMigrateEmailShare: () =>
+    adminRequest("/admin/migrate/email-share", { method: "POST" }),
   adminCreateAccount: (payload) =>
     adminRequest("/admin/account/register", { method: "POST", body: JSON.stringify(payload) }),
   adminStats: () => adminRequest("/admin/stats"),

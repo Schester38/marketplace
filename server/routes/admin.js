@@ -128,6 +128,56 @@ router.post(
   })
 );
 
+
+// ─── Migration déclenchable : partage d'email boutique ↔ livreur ──────────
+// Vercel réutilise des instances chaudes où initDb (ancien flag dbInitStarted)
+// n'est plus relancé → la migration atomique peut ne jamais tourner. Ce
+// endpoint permet à l'admin de la forcer à la demande, avec diagnostic.
+router.post(
+  "/migrate/email-share",
+  ah(async (req, res) => {
+    const before = await q(
+      `SELECT conname FROM pg_constraint
+       WHERE conrelid = 'users'::regclass AND contype = 'u'
+         AND pg_get_constraintdef(oid) ILIKE '%email%'`
+    ).catch(() => []);
+    const report = { before: (before.rows || before).map((r) => r.conname) };
+    try {
+      const toDrop = before.rows || before;
+      for (const row of toDrop) {
+        await q(`ALTER TABLE users DROP CONSTRAINT IF EXISTS "${row.conname}"`);
+      }
+      await q(
+        `CREATE UNIQUE INDEX IF NOT EXISTS users_email_shop_key ON users(email) WHERE role = 'shop'`
+      );
+      await q(
+        `CREATE UNIQUE INDEX IF NOT EXISTS users_email_livreur_key ON users(email) WHERE role = 'livreur'`
+      );
+      await q(
+        `CREATE UNIQUE INDEX IF NOT EXISTS users_email_other_key ON users(email) WHERE role NOT IN ('shop', 'livreur')`
+      );
+      const after = await q(
+        `SELECT conname FROM pg_constraint
+         WHERE conrelid = 'users'::regclass AND contype = 'u'
+           AND pg_get_constraintdef(oid) ILIKE '%email%'`
+      ).catch(() => []);
+      const afterIdx = await q(
+        `SELECT indexname FROM pg_indexes
+         WHERE tablename = 'users' AND indexname IN
+           ('users_email_shop_key','users_email_livreur_key','users_email_other_key')`
+      ).catch(() => []);
+      report.after = (after.rows || after).map((r) => r.conname);
+      report.indexes = (afterIdx.rows || afterIdx).map((r) => r.indexname);
+      report.ok = report.after.length === 0;
+      await logAudit(req.user.id, "admin.migrate_email_share", JSON.stringify(report), req.ip);
+      res.json(report);
+    } catch (err) {
+      await logAudit(req.user.id, "admin.migrate_email_share_error", err.message, req.ip);
+      return res.status(500).json({ ok: false, error: err.message, report });
+    }
+  })
+);
+
 router.get(
   "/stats",
   ah(async (req, res) => {
