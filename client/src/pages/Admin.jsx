@@ -1,5 +1,5 @@
 import { storage, sessionStore } from "../storage";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import Logo from "../components/Logo.jsx";
@@ -94,6 +94,14 @@ export default function Admin() {
   const [paySecretKey, setPaySecretKey] = useState("");
   const [payments, setPayments] = useState(null);
   const [webhookHealth, setWebhookHealth] = useState(null);
+  const [prodSearch, setProdSearch] = useState("");
+  // Refs synchrones des recherches en cours : le rechargement silencieux
+  // (30 s / retour sur l'onglet) lit ces refs pour ne PAS écraser les
+  // résultats d'une recherche active.
+  const searchRef = useRef("");
+  const prodSearchRef = useRef("");
+  searchRef.current = search;
+  prodSearchRef.current = prodSearch;
   const [paySearch, setPaySearch] = useState("");
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState("");
@@ -143,14 +151,20 @@ export default function Admin() {
           setLoading(false);
         })
         .catch(onErr);
-      api
-        .adminUsers()
-        .then((d) => setUsers(d.users))
-        .catch(onErr);
-      api
-        .adminProducts()
-        .then((d) => setProducts(d.products))
-        .catch(onErr);
+      // Ne pas écraser les résultats d'une recherche en cours lors des
+      // rechargements silencieux (30 s / retour sur l'onglet).
+      if (!searchRef.current.trim()) {
+        api
+          .adminUsers()
+          .then((d) => setUsers(d.users))
+          .catch(onErr);
+      }
+      if (!prodSearchRef.current.trim()) {
+        api
+          .adminProducts()
+          .then((d) => setProducts(d.products))
+          .catch(onErr);
+      }
       api
         .adminMessages()
         .then((d) => setMessages(d.messages))
@@ -334,6 +348,20 @@ export default function Admin() {
       setError(err.message);
     }
   };
+
+  // Section Produits : 5 derniers par défaut, recherche instantanée sur
+  // toute la liste chargée (nom du produit ou boutique). Les résultats de
+  // recherche sont plafonnés (20) pour ne jamais saturer le rendu.
+  const prodQuery = prodSearch.trim().toLowerCase();
+  const prodMatches = Array.isArray(products)
+    ? prodQuery
+      ? products.filter(
+          (p) =>
+            String(p.name || "").toLowerCase().includes(prodQuery) ||
+            String(p.shop_name || "").toLowerCase().includes(prodQuery)
+        )
+      : products
+    : [];
 
   // Filtre local des paiements en ligne (nom, email, référence, parrain…).
   const filterPayments = (list) => {
@@ -1799,12 +1827,33 @@ export default function Admin() {
           type="search"
           placeholder={t("Rechercher un utilisateur (nom, email ou référence)…")}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setSearch(v);
+            // Champ vidé : on recharge la liste par défaut (5 derniers)
+            // sans attendre le prochain cycle de rafraîchissement.
+            if (!v.trim() && searchRef.current.trim()) {
+              api.adminUsers().then((d) => setUsers(d.users)).catch(() => {});
+            }
+          }}
         />
         <button type="submit" className="btn btn-primary">
           {t("Rechercher")}
         </button>
       </form>
+      <p className="hint" style={{ margin: "0 0 10px" }}>
+        {search.trim()
+          ? t("{n} utilisateur(s) trouvé(s)", {
+              n: Array.isArray(users) ? users.length : 0,
+            })
+          : t("{n} derniers utilisateurs affichés sur {total}", {
+              n: Array.isArray(users) ? Math.min(users.length, 5) : 0,
+              total: Array.isArray(users) ? users.length : 0,
+            })}
+        {search.trim() && Array.isArray(users) && users.length > 20
+          ? " — " + t("affinez la recherche")
+          : ""}
+      </p>
       <div className="table-wrap">
         <table className="table">
           <thead>
@@ -1833,11 +1882,13 @@ export default function Admin() {
             ) : users.length === 0 ? (
               <tr>
                 <td colSpan="12" className="empty">
-                  {t("Aucun utilisateur")}
+                  {search.trim()
+                    ? t("Aucun utilisateur ne correspond à cette recherche.")
+                    : t("Aucun utilisateur")}
                 </td>
               </tr>
             ) : (
-              users.map((u) => (
+              users.slice(0, search.trim() ? 20 : 5).map((u) => (
                 <tr key={u.id}>
                   <td>{u.name}</td>
                   <td className="hint">{u.email}</td>
@@ -2113,9 +2164,44 @@ export default function Admin() {
         </>
       )}
 
-      <h2 className="section-title">
-        <Logo className="logo-inline" /> {t("Produits")}
-      </h2>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          flexWrap: "wrap",
+          marginBottom: 10,
+        }}
+      >
+        <h2 className="section-title" style={{ margin: 0 }}>
+          <Logo className="logo-inline" /> {t("Produits")}
+        </h2>
+        <form
+          onSubmit={(e) => e.preventDefault()}
+          className="hero-search"
+          role="search"
+          style={{ flex: 1, minWidth: 240 }}
+        >
+          <span className="emoji" aria-hidden="true">
+            🔍
+          </span>
+          <input
+            type="search"
+            placeholder={t("Rechercher un produit (nom ou boutique)…")}
+            value={prodSearch}
+            onChange={(e) => setProdSearch(e.target.value)}
+          />
+        </form>
+      </div>
+      <p className="hint" style={{ margin: "0 0 10px" }}>
+        {prodQuery
+          ? t("{n} produit(s) trouvé(s)", { n: prodMatches.length })
+          : t("{n} derniers produits affichés sur {total}", {
+              n: Math.min(prodMatches.length, 5),
+              total: prodMatches.length,
+            })}
+        {prodQuery && prodMatches.length > 20 ? " — " + t("affinez la recherche") : ""}
+      </p>
       <div className="table-wrap">
         <table className="table">
           <thead>
@@ -2134,14 +2220,16 @@ export default function Admin() {
                   <div className="skeleton-block" style={{ height: 30 }}></div>
                 </td>
               </tr>
-            ) : products.length === 0 ? (
+            ) : prodMatches.length === 0 ? (
               <tr>
                 <td colSpan="5" className="empty">
-                  {t("Aucun produit")}
+                  {prodQuery
+                    ? t("Aucun produit ne correspond à cette recherche.")
+                    : t("Aucun produit")}
                 </td>
               </tr>
             ) : (
-              products.map((p) => (
+              prodMatches.slice(0, prodQuery ? 20 : 5).map((p) => (
                 <tr key={p.id}>
                   <td>{p.name}</td>
                   <td>
