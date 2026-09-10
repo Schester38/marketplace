@@ -537,6 +537,62 @@ router.get(
   })
 );
 
+// Espaces associés à cet email (uniquement la paire boutique ↔ livreur —
+// seul partage d'email autorisé). Sert à afficher le bouton de bascule
+// dans les tableaux de bord.
+router.get(
+  "/spaces",
+  authRequired,
+  ah(async (req, res) => {
+    const cur = (
+      await q("SELECT id, email, role FROM users WHERE id = $1", [req.user.id])
+    )[0];
+    if (!cur) return res.status(404).json({ error: "Compte introuvable" });
+    if (!["shop", "livreur"].includes(cur.role)) return res.json({ spaces: [] });
+    const otherRole = cur.role === "shop" ? "livreur" : "shop";
+    const other = (
+      await q(
+        "SELECT id, name FROM users WHERE lower(email) = lower($1) AND role = $2 LIMIT 1",
+        [cur.email, otherRole]
+      )
+    )[0];
+    res.json({ spaces: other ? [{ role: otherRole, name: other.name }] : [] });
+  })
+);
+
+// Bascule immédiate vers l'autre espace (boutique ↔ livreur, même email) :
+// renvoie un nouveau JWT pour le compte associé — sans déconnexion/reconnexion.
+router.post(
+  "/switch",
+  authRequired,
+  ah(async (req, res) => {
+    const cur = (await q("SELECT * FROM users WHERE id = $1", [req.user.id]))[0];
+    if (!cur) return res.status(404).json({ error: "Compte introuvable" });
+    if (!["shop", "livreur"].includes(cur.role)) {
+      return res
+        .status(403)
+        .json({ error: "La bascule est réservée aux espaces boutique et livreur" });
+    }
+    const otherRole = cur.role === "shop" ? "livreur" : "shop";
+    const other = (
+      await q(
+        "SELECT * FROM users WHERE lower(email) = lower($1) AND role = $2 LIMIT 1",
+        [cur.email, otherRole]
+      )
+    )[0];
+    if (!other) {
+      return res.status(404).json({
+        error:
+          otherRole === "shop"
+            ? "Aucun espace boutique n'est associé à cet email"
+            : "Aucun espace livreur n'est associé à cet email",
+      });
+    }
+    res.json({ token: signToken(other), user: await publicUser(other) });
+  })
+);
+
+
 router.put(
   "/me",
   authRequired,
@@ -562,12 +618,23 @@ router.put(
       return res.status(400).json({ error: "Des champs sont trop longs" });
     }
     const emailNorm = String(email).trim().toLowerCase();
-    const dup = await q("SELECT id FROM users WHERE email = $1 AND id <> $2", [
+    // Partage d'email : un compte boutique et un compte livreur peuvent
+    // légitimement partager la même adresse. Toute autre collision est refusée.
+    const dup = await q("SELECT id, role FROM users WHERE email = $1 AND id <> $2", [
       emailNorm,
       req.user.id,
     ]);
     if (dup.length) {
-      return res.status(409).json({ error: "Un compte existe déjà avec cet email" });
+      const roles = dup.map((r) => r.role);
+      const allowed =
+        dup.length === 1 &&
+        ((req.user.role === "shop" && roles[0] === "livreur") ||
+          (req.user.role === "livreur" && roles[0] === "shop"));
+      if (!allowed) {
+        return res
+          .status(409)
+          .json({ error: "Un compte existe déjà avec cet email" });
+      }
     }
     const phoneClean = String(phone || "")
       .trim()

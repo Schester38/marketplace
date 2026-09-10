@@ -107,6 +107,8 @@ export const api = {
   resendVerification: (email) =>
     request("/auth/resend", { method: "POST", body: JSON.stringify({ email }) }),
   login: (payload) => request("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
+  mySpaces: () => request("/auth/spaces"),
+  switchAccount: () => request("/auth/switch", { method: "POST" }),
   me: () => request("/auth/me"),
   updateProfile: (payload) => request("/auth/me", { method: "PUT", body: JSON.stringify(payload) }),
   changePassword: (payload) =>

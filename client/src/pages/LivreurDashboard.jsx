@@ -10,6 +10,7 @@ import { countrySymbol, OPERATORS_BY_COUNTRY, DEFAULT_OPERATORS } from "../confi
 import { Link } from "react-router-dom";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
+import SwitchSpaceButton from "../components/SwitchSpaceButton.jsx";
 import MiniChart from "../components/MiniChart.jsx";
 import { dailyBuckets } from "../utils.js";
 
@@ -214,7 +215,10 @@ export default function LivreurDashboard() {
             )}
           </p>
         </div>
-        <PwaInstallButton />
+        <span className="row2 dash-actions" style={{ alignItems: "center" }}>
+          <SwitchSpaceButton />
+          <PwaInstallButton />
+        </span>
       </section>
 
       {!code ? (

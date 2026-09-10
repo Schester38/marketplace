@@ -16,6 +16,7 @@ import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 import CopyCode from "../components/CopyCode.jsx";
+import SwitchSpaceButton from "../components/SwitchSpaceButton.jsx";
 import {
   IconCart,
   IconChartBar,
@@ -521,9 +522,13 @@ export default function ShopDashboard() {
           <Link className="btn btn-outline btn-sm" to="/shop/livreurs" style={{ flexShrink: 0 }}>
             🛵 {t("Contacter un livreur")}
           </Link>
-          <Link className="btn btn-outline btn-sm" to="/livreur-inscription" style={{ flexShrink: 0 }}>
-            🚚 {t("Devenir livreur")}
-          </Link>
+          <SwitchSpaceButton
+            noneSlot={
+              <Link className="btn btn-outline btn-sm" to="/livreur-inscription" style={{ flexShrink: 0 }}>
+                🚚 {t("Devenir livreur")}
+              </Link>
+            }
+          />
           <button
             className={`btn ${showDelivered ? "btn-primary" : "btn-outline"}`}
             onClick={() => setShowDelivered(!showDelivered)}

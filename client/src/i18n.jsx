@@ -986,6 +986,9 @@ const EN = {
   "Envoyez aussi la commande à la boutique sur WhatsApp :": "Also send the order to the shop on WhatsApp:",
   "WhatsApp : {shop}": "WhatsApp: {shop}",
 "Espace livreur": "Delivery driver space",
+  "Retour à la boutique": "Back to the shop",
+  "Ouvrir l'espace de": "Open the space of",
+  "Changement d'espace impossible. Réessayez.": "Could not switch spaces. Please try again.",
   "AFIN DE FINALISER VOTRE COMMANDE, VEILLEZ VOUS CONNECTER À VOTRE COMPTE LIVREUR.":
     "TO FINALIZE YOUR ORDER, PLEASE LOG IN TO YOUR DELIVERY DRIVER ACCOUNT.",
   "Les livraisons Mboppi passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
@@ -2476,6 +2479,9 @@ const AR = {
   "Envoyez aussi la commande à la boutique sur WhatsApp :": "أرسل الطلب أيضًا إلى المتجر عبر واتساب:",
   "WhatsApp : {shop}": "واتساب: {shop}",
   "Espace livreur": "مساحة الموزّع",
+  "Retour à la boutique": "العودة إلى المتجر",
+  "Ouvrir l'espace de": "فتح مساحة",
+  "Changement d'espace impossible. Réessayez.": "تعذّر تبديل المساحة. أعد المحاولة.",
   "AFIN DE FINALISER VOTRE COMMANDE, VEILLEZ VOUS CONNECTER À VOTRE COMPTE LIVREUR.":
     "لإتمام طلبك، يرجى تسجيل الدخول إلى حساب الموزّع الخاص بك.",
   "Les livraisons Mboppi passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
@@ -3899,6 +3905,9 @@ const ES = {
   "Envoyez aussi la commande à la boutique sur WhatsApp :": "Envía también el pedido a la tienda por WhatsApp:",
   "WhatsApp : {shop}": "WhatsApp: {shop}",
 "Espace livreur": "Espacio del repartidor",
+  "Retour à la boutique": "Volver a la tienda",
+  "Ouvrir l'espace de": "Abrir el espacio de",
+  "Changement d'espace impossible. Réessayez.": "No se pudo cambiar de espacio. Inténtalo de nuevo.",
   "AFIN DE FINALISER VOTRE COMMANDE, VEILLEZ VOUS CONNECTER À VOTRE COMPTE LIVREUR.":
     "PARA FINALIZAR SU PEDIDO, CONÉCTESE A SU CUENTA DE REPARTIDOR.",
   "Les livraisons Mboppi passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
