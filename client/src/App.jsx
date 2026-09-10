@@ -62,6 +62,7 @@ const SellerDashboard = lazyRetry(() => import("./pages/SellerDashboard.jsx"));
 const SellerPayments = lazyRetry(() => import("./pages/SellerPayments.jsx"));
 const ShopPayments = lazyRetry(() => import("./pages/ShopPayments.jsx"));
 const LivreurDashboard = lazyRetry(() => import("./pages/LivreurDashboard.jsx"));
+const LivreurInscription = lazyRetry(() => import("./pages/LivreurInscription.jsx"));
 const LivreurPayments = lazyRetry(() => import("./pages/LivreurPayments.jsx"));
 const CreatorPayments = lazyRetry(() => import("./pages/CreatorPayments.jsx"));
 const LivreursList = lazyRetry(() => import("./pages/LivreursList.jsx"));
@@ -396,6 +397,12 @@ function RoleOnly({ role, children }) {
   return children;
 }
 
+function LivreurOnly({ children }) {
+  const { user } = useAuth();
+  if (!user || user.role !== "livreur") return <Navigate to="/livreur-inscription" replace />;
+  return children;
+}
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -638,6 +645,7 @@ export default function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/verifier-email" element={<ConfirmEmail />} />
             <Route path="/auth-google" element={<AuthGoogle />} />
+            <Route path="/livreur-inscription" element={<LivreurInscription />} />
             <Route
               path="/shop"
               element={
@@ -697,17 +705,17 @@ export default function App() {
             <Route
               path="/livreur"
               element={
-                <RoleOnly role="livreur">
+                <LivreurOnly>
                   <LivreurDashboard />
-                </RoleOnly>
+                </LivreurOnly>
               }
             />
             <Route
               path="/livreur/paiements"
               element={
-                <RoleOnly role="livreur">
+                <LivreurOnly>
                   <LivreurPayments />
-                </RoleOnly>
+                </LivreurOnly>
               }
             />
             <Route

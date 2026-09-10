@@ -985,6 +985,32 @@ const EN = {
     "Fill in your details to confirm your order. No account required. The seller code is only useful if a seller offered you this product.",
   "Envoyez aussi la commande à la boutique sur WhatsApp :": "Also send the order to the shop on WhatsApp:",
   "WhatsApp : {shop}": "WhatsApp: {shop}",
+"Espace livreur": "Delivery driver space",
+  "AFIN DE FINALISER VOTRE COMMANDE, VEILLEZ VOUS CONNECTER À VOTRE COMPTE LIVREUR.":
+    "TO FINALIZE YOUR ORDER, PLEASE LOG IN TO YOUR DELIVERY DRIVER ACCOUNT.",
+  "Les livraisons Mboppi passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
+    "Mboppi deliveries must go through a delivery driver's space: the driver records your order, has you enter your confirmation code, sign, and validate the payment securely.",
+  "Votre compte boutique est connecté": "Your shop account is logged in",
+  "Créez votre espace livreur associé — même email, aucune information à ressaisir. Vous pourrez ainsi finaliser vous-même les livraisons de vos commandes.":
+    "Create your linked delivery driver space — same email, no information to re-enter. You will then be able to finalize your orders' deliveries yourself.",
+  "Créer mon espace livreur avec Google": "Create my delivery driver space with Google",
+  "Créer mon espace livreur (email + mot de passe)": "Create my delivery driver space (email + password)",
+  "Le partage d'email n'est autorisé qu'entre un compte boutique et un compte livreur. Vous pouvez créer un compte livreur avec une autre adresse email.":
+    "Email sharing is only allowed between a shop account and a delivery driver account. You can create a delivery driver account with another email address.",
+  "Créer un compte livreur": "Create a delivery driver account",
+  "Se connecter comme livreur": "Log in as a delivery driver",
+  "Se connecter / créer avec Google (livreur)": "Log in / create with Google (delivery driver)",
+  "Devenir livreur": "Become a delivery driver",
+  "Livreur": "Delivery driver",
+  "Je livre les articles et finalise les commandes (code client, signature, paiement)":
+    "I deliver items and finalize orders (customer code, signature, payment)",
+  "Plusieurs espaces détectés sur cet email. Quel espace voulez-vous ouvrir ?":
+    "Multiple spaces detected on this email. Which space do you want to open?",
+  "CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.":
+    "DEAR CUSTOMERS, THANK YOU FOR TRUSTING MBOPPI.",
+  "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat.":
+    "To avoid any fraud when your parcel is delivered, require the payment form from the delivery driver, where you will enter your confirmation code and sign, before validating your purchase.",
+  "L'Administration Mboppi": "The Mboppi Administration",
   "Signature du client": "Client's signature",
   "Rechercher un produit (nom ou boutique)…": "Search for a product (name or shop)…",
   "Aucun produit ne correspond à cette recherche.": "No product matches this search.",
@@ -2449,6 +2475,32 @@ const AR = {
     "أدخل معلوماتك لتأكيد طلبك. لا حاجة إلى حساب. رمز البائع مفيد فقط إذا عرض عليك بائع هذا المنتج.",
   "Envoyez aussi la commande à la boutique sur WhatsApp :": "أرسل الطلب أيضًا إلى المتجر عبر واتساب:",
   "WhatsApp : {shop}": "واتساب: {shop}",
+  "Espace livreur": "مساحة الموزّع",
+  "AFIN DE FINALISER VOTRE COMMANDE, VEILLEZ VOUS CONNECTER À VOTRE COMPTE LIVREUR.":
+    "لإتمام طلبك، يرجى تسجيل الدخول إلى حساب الموزّع الخاص بك.",
+  "Les livraisons Mboppi passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
+    "تمرّ توصيلات Mboppi إجبارياً عبر مساحة الموزّع: هو من يسجّل طلبك، ويطلب منك إدخال رمز التأكيد والتوقيع والتحقق من الدفع بأمان.",
+  "Votre compte boutique est connecté": "تم تسجيل الدخول إلى حساب المتجر الخاص بك",
+  "Créez votre espace livreur associé — même email, aucune information à ressaisir. Vous pourrez ainsi finaliser vous-même les livraisons de vos commandes.":
+    "أنشئ مساحة الموزّع المرتبطة — نفس البريد الإلكتروني، دون الحاجة لإعادة إدخال أي معلومة. وبهذا يمكنك إنهاء توصيلات طلباتك بنفسك.",
+  "Créer mon espace livreur avec Google": "إنشاء مساحة الموزّع عبر Google",
+  "Créer mon espace livreur (email + mot de passe)": "إنشاء مساحة الموزّع (بريد إلكتروني + كلمة مرور)",
+  "Le partage d'email n'est autorisé qu'entre un compte boutique et un compte livreur. Vous pouvez créer un compte livreur avec une autre adresse email.":
+    "لا يُسمح بمشاركة البريد الإلكتروني إلا بين حساب متجر وحساب موزّع. يمكنك إنشاء حساب موزّع بعنوان بريد آخر.",
+  "Créer un compte livreur": "إنشاء حساب موزّع",
+  "Se connecter comme livreur": "تسجيل الدخول كموزّع",
+  "Se connecter / créer avec Google (livreur)": "تسجيل الدخول / الإنشاء عبر Google (موزّع)",
+  "Devenir livreur": "أن أصبح موزّعاً",
+  "Livreur": "موزّع",
+  "Je livre les articles et finalise les commandes (code client, signature, paiement)":
+    "أُوصّل المقالات وأنهي الطلبات (رمز العميل، التوقيع، الدفع)",
+  "Plusieurs espaces détectés sur cet email. Quel espace voulez-vous ouvrir ?":
+    "تم رصد عدة مساحات على هذا البريد الإلكتروني. أي مساحة تريد فتحها؟",
+  "CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.":
+    "أيها العملاء الأعزاء، شكراً لثقتكم في Mboppi.",
+  "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat.":
+    "لتجنّب أي احتيال عند تسليم طردكم، اطلبوا من الموزّع نموذج الدفع حيث تدخلون رمز التأكيد وتوقّعون، قبل التحقق من صحة عملية الشراء.",
+  "L'Administration Mboppi": "إدارة Mboppi",
   "Signature du client": "توقيع العميل",
   "Rechercher un produit (nom ou boutique)…": "ابحث عن منتج (اسم أو متجر)…",
   "Aucun produit ne correspond à cette recherche.": "لا يوجد منتج مطابق لهذا البحث.",
@@ -3846,6 +3898,32 @@ const ES = {
     "Completa tus datos para confirmar tu pedido. No se requiere cuenta. El código del vendedor solo es útil si un vendedor te ofreció este producto.",
   "Envoyez aussi la commande à la boutique sur WhatsApp :": "Envía también el pedido a la tienda por WhatsApp:",
   "WhatsApp : {shop}": "WhatsApp: {shop}",
+"Espace livreur": "Espacio del repartidor",
+  "AFIN DE FINALISER VOTRE COMMANDE, VEILLEZ VOUS CONNECTER À VOTRE COMPTE LIVREUR.":
+    "PARA FINALIZAR SU PEDIDO, CONÉCTESE A SU CUENTA DE REPARTIDOR.",
+  "Les livraisons Mboppi passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
+    "Los envíos de Mboppi pasan obligatoriamente por el espacio de un repartidor: es él quien registra su pedido, le hace ingresar su código de confirmación, firmar y validar el pago con total seguridad.",
+  "Votre compte boutique est connecté": "Su cuenta de tienda está conectada",
+  "Créez votre espace livreur associé — même email, aucune information à ressaisir. Vous pourrez ainsi finaliser vous-même les livraisons de vos commandes.":
+    "Cree su espacio de repartidor asociado — mismo email, sin necesidad de volver a ingresar nada. Así podrá finalizar usted mismo los envíos de sus pedidos.",
+  "Créer mon espace livreur avec Google": "Crear mi espacio de repartidor con Google",
+  "Créer mon espace livreur (email + mot de passe)": "Crear mi espacio de repartidor (email + contraseña)",
+  "Le partage d'email n'est autorisé qu'entre un compte boutique et un compte livreur. Vous pouvez créer un compte livreur avec une autre adresse email.":
+    "El uso compartido de email solo está permitido entre una cuenta de tienda y una de repartidor. Puede crear una cuenta de repartidor con otra dirección de email.",
+  "Créer un compte livreur": "Crear una cuenta de repartidor",
+  "Se connecter comme livreur": "Conectarse como repartidor",
+  "Se connecter / créer avec Google (livreur)": "Conectarse / crear con Google (repartidor)",
+  "Devenir livreur": "Hacerse repartidor",
+  "Livreur": "Repartidor",
+  "Je livre les articles et finalise les commandes (code client, signature, paiement)":
+    "Reparto los artículos y finalizo los pedidos (código del cliente, firma, pago)",
+  "Plusieurs espaces détectés sur cet email. Quel espace voulez-vous ouvrir ?":
+    "Se detectaron varios espacios en este email. ¿Qué espacio desea abrir?",
+  "CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.":
+    "QUERIDOS CLIENTES, GRACIAS POR CONFIAR EN MBOPPI.",
+  "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat.":
+    "Para evitar cualquier fraude en la entrega de su paquete, exija al repartidor el formulario de pago donde ingresará su código de confirmación y firmará, antes de validar su compra.",
+  "L'Administration Mboppi": "La Administración Mboppi",
   "Signature du client": "Firma del cliente",
   "Rechercher un produit (nom ou boutique)…": "Buscar un producto (nombre o tienda)…",
   "Aucun produit ne correspond à cette recherche.": "Ningún producto coincide con esta búsqueda.",

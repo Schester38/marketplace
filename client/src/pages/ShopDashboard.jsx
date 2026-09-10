@@ -521,6 +521,9 @@ export default function ShopDashboard() {
           <Link className="btn btn-outline btn-sm" to="/shop/livreurs" style={{ flexShrink: 0 }}>
             🛵 {t("Contacter un livreur")}
           </Link>
+          <Link className="btn btn-outline btn-sm" to="/livreur-inscription" style={{ flexShrink: 0 }}>
+            🚚 {t("Devenir livreur")}
+          </Link>
           <button
             className={`btn ${showDelivered ? "btn-primary" : "btn-outline"}`}
             onClick={() => setShowDelivered(!showDelivered)}

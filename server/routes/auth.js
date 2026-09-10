@@ -165,9 +165,21 @@ router.post(
         .json({ error: "Un opérateur et un numéro de paiement sont requis pour ce rôle" });
     }
     const emailNorm = String(email).trim().toLowerCase();
-    const exists = await q("SELECT id FROM users WHERE email = $1", [emailNorm]);
-    if (exists.length) {
-      return res.status(409).json({ error: "Un compte existe déjà avec cet email" });
+    // Partage d'email : AUTORISÉ uniquement entre un compte boutique (shop)
+    // et un compte livreur. Toute autre combinaison avec le même email est
+    // refusée — c'est la règle métier pilier du modèle de livraison Mboppi.
+    const existing = await q("SELECT id, role FROM users WHERE email = $1", [emailNorm]);
+    if (existing.length) {
+      const roles = existing.map((r) => r.role);
+      const allowed =
+        (finalRole === "livreur" && roles.length === 1 && roles[0] === "shop") ||
+        (finalRole === "shop" && roles.length === 1 && roles[0] === "livreur");
+      if (!allowed) {
+        return res.status(409).json({
+          error:
+            "Cet email est déjà utilisé par un autre compte Mboppi. Le partage d'email n'est autorisé qu'entre un compte boutique (shop) et un compte livreur.",
+        });
+      }
     }
     const hash = bcrypt.hashSync(String(password), 12);
     let referenceNumber = `MBP-${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
@@ -251,32 +263,67 @@ router.post(
   "/login",
   ah(async (req, res) => {
     const { email, password } = req.body || {};
+    const pickRole = req.body && req.body.role ? String(req.body.role) : "";
     if (!email || !password) {
       return res.status(400).json({ error: "Email et mot de passe sont requis" });
     }
-    const user = (
-      await q("SELECT * FROM users WHERE email = $1", [String(email).trim().toLowerCase()])
-    )[0];
-    if (user && user.locked_until && new Date(user.locked_until) > new Date()) {
+    const rows = await q("SELECT * FROM users WHERE email = $1", [
+      String(email).trim().toLowerCase(),
+    ]);
+    if (!rows.length) {
+      return res.status(401).json({ error: "Email ou mot de passe incorrect" });
+    }
+    // Plusieurs comptes peuvent partager le même email (uniquement boutique +
+    // livreur — contrainte serveur). On ne garde que les comptes dont le mot
+    // de passe correspond ; s'il y en a plusieurs, l'utilisateur choisit son
+    // espace.
+    const lockedRow = rows.find((r) => r.password) || rows[0];
+    if (lockedRow && lockedRow.locked_until && new Date(lockedRow.locked_until) > new Date()) {
       return res
         .status(429)
         .json({ error: "Trop de tentatives, compte verrouillé. Réessayez dans 15 minutes" });
     }
-    const valid = user && user.password && bcrypt.compareSync(String(password), user.password);
-    if (!valid) {
-      if (user && user.password) {
-        const attempts = (user.failed_attempts || 0) + 1;
+    let user = null;
+    const matched = () =>
+      rows.filter((r) => r.password && bcrypt.compareSync(String(password), r.password));
+    if (pickRole) {
+      user = rows.find(
+        (r) =>
+          r.role === pickRole && r.password && bcrypt.compareSync(String(password), r.password)
+      ) || null;
+    } else {
+      const valid = matched();
+      if (valid.length > 1) {
+        return res.json({
+          needs_account_choice: true,
+          roles: valid.map((v) => v.role),
+        });
+      }
+      user = valid[0] || null;
+    }
+    if (!user) {
+      // Mot de passe incorrect (ou rôle demandé non trouvé) : comptage des
+      // tentatives sur le premier compte à mot de passe pour limiter le
+      // verrouillage à l'identité email.
+      const base = rows.find((r) => r.password) || null;
+      if (base && base.locked_until && new Date(base.locked_until) > new Date()) {
+        return res
+          .status(429)
+          .json({ error: "Trop de tentatives, compte verrouillé. Réessayez dans 15 minutes" });
+      }
+      if (base) {
+        const attempts = (base.failed_attempts || 0) + 1;
         if (attempts >= 5) {
           await q(
             "UPDATE users SET failed_attempts = 0, locked_until = now() + interval '15 minutes' WHERE id = $1",
-            [user.id]
+            [base.id]
           );
         } else {
-          await q("UPDATE users SET failed_attempts = $1 WHERE id = $2", [attempts, user.id]);
+          await q("UPDATE users SET failed_attempts = $1 WHERE id = $2", [attempts, base.id]);
         }
-      }
-      if (user && user.role === "admin") {
-        await logAudit(user.id, "admin.login_failed", String(email).trim().toLowerCase(), req.ip);
+        if (base.role === "admin") {
+          await logAudit(base.id, "admin.login_failed", String(email).trim().toLowerCase(), req.ip);
+        }
       }
       return res.status(401).json({ error: "Email ou mot de passe incorrect" });
     }
@@ -385,16 +432,45 @@ router.get(
     }
     try {
       const profile = await getGoogleProfile(code, req);
-      let user = (await q("SELECT * FROM users WHERE email = $1", [profile.email]))[0];
+      const existing = await q("SELECT * FROM users WHERE email = $1", [profile.email]);
+      const [stateRole, country, ref, accepted, refSeller] = String(state || "").split("|");
+      const explicitRole = VALID_ROLES.includes(stateRole) ? stateRole : "";
+      let cleanRole = explicitRole || "seller";
+      // Clic Google « générique » (aucun rôle dans le state) : on connecte le
+      // compte existant unique ; s'il y a plusieurs espaces (boutique +
+      // livreur), on oriente vers le bouton du rôle voulu.
+      let user = existing.find((u) => u.role === cleanRole) || null;
+      if (!user && !explicitRole && existing.length === 1) {
+        user = existing[0];
+        cleanRole = user.role;
+      }
+      if (!user && existing.length > 1 && !explicitRole) {
+        const msg = encodeURIComponent(
+          "Vous avez plusieurs espaces (boutique et livreur). Connectez-vous via le bouton du rôle souhaité (ex. « Devenir livreur » depuis votre boutique)."
+        );
+        return res.redirect(`/auth-google?error=${msg}`);
+      }
       if (!user) {
-        const [role, country, ref, accepted, refSeller] = String(state || "").split("|");
         if (accepted !== "1") {
           const msg = encodeURIComponent(
             "Vous devez accepter les Conditions Générales d'Utilisation pour vous inscrire"
           );
           return res.redirect(`/auth-google?error=${msg}`);
         }
-        let cleanRole = VALID_ROLES.includes(role) ? role : "seller";
+        // Partage d'email : autorisé uniquement pour compléter une paire
+        // boutique ↔ livreur (même email). Toute autre combinaison est refusée.
+        if (existing.length) {
+          const roles = existing.map((u) => u.role);
+          const allowed =
+            (cleanRole === "livreur" && roles.length === 1 && roles[0] === "shop") ||
+            (cleanRole === "shop" && roles.length === 1 && roles[0] === "livreur");
+          if (!allowed) {
+            const msg = encodeURIComponent(
+              "Cet email est déjà utilisé par un autre espace Mboppi. Le partage d'email n'est autorisé qu'entre boutique et livreur. Créez votre espace livreur depuis votre boutique (« Devenir livreur »)."
+            );
+            return res.redirect(`/auth-google?error=${msg}`);
+          }
+        }
         const cleanCountry = country && country.length <= 60 ? country : null;
         let referredBy = null;
         const cleanRef = ref ? String(ref).trim().toUpperCase() : "";

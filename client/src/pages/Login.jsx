@@ -1,6 +1,6 @@
 import { storage, sessionStore } from "../storage";
 import React, { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth, postLoginPath } from "../App.jsx";
 import { GoogleIcon } from "../components/icons.jsx";
@@ -19,16 +19,62 @@ export default function Login() {
   const [unverified, setUnverified] = useState("");
   const [resending, setResending] = useState(false);
 
+  // Plusieurs espaces (ex. boutique + livreur) sur le même email : attend le
+  // choix de l'espace à ouvrir.
+  const [accountChoice, setAccountChoice] = useState([]);
+
+  const ROLE_LABEL = (role) =>
+    role === "shop"
+      ? "🏪 Boutique"
+      : role === "livreur"
+        ? "🛵 Livreur"
+        : role === "seller"
+          ? "🛒 Vendeur"
+          : role === "creator"
+            ? "🎨 Créateur"
+            : "👤 Client";
+
+
+  const pickSpace = async (role) => {
+    setError("");
+    setUnverified("");
+    try {
+      const data = await api.login({ ...form, role });
+      setAccountChoice([]);
+      login(data.user, data.token);
+      storage.setItem("mboppi_welcome", "login");
+      navigate(postLoginPath(data.user));
+    } catch (err) {
+      if (err.code === "EMAIL_NOT_VERIFIED") {
+        setUnverified(err.email || form.email);
+        return;
+      }
+      setError(err.message);
+    }
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setError("");
     setUnverified("");
     try {
       const data = await api.login(form);
+      // Même email sur plusieurs rôles (boutique + livreur) : l'API demande
+      // de choisir l'espace à ouvrir avant de délivrer le jeton.
+      if (data && data.needs_account_choice) {
+        setAccountChoice(Array.isArray(data.roles) ? data.roles : []);
+        return;
+      }
+      setAccountChoice([]);
       console.log("[login] api.login role=", data.user?.role, "email=", data.user?.email);
       login(data.user, data.token);
       storage.setItem("mboppi_welcome", "login");
+      const force = new URLSearchParams(location.search).get("force");
       const from = location.state?.from;
+      if (force === "livreur" && data.user?.role !== "livreur") {
+        navigate("/livreur-inscription", { replace: true });
+        return;
+      }
       navigate(typeof from === "string" && from ? from : postLoginPath(data.user));
     } catch (err) {
       if (err.code === "EMAIL_NOT_VERIFIED") {
@@ -105,6 +151,35 @@ export default function Login() {
           {error && <p className="error">{error}</p>}
           <button className="btn btn-primary btn-block">{t("Se connecter")}</button>
         </form>
+
+        {accountChoice.length > 0 && (
+          <div
+            className="card"
+            style={{
+              background: "var(--soft)",
+              border: "1px solid #f0b429",
+              borderRadius: 10,
+              padding: "14px 16px",
+              marginTop: 14,
+            }}
+          >
+            <strong style={{ display: "block", marginBottom: 8 }}>
+              {t("Plusieurs espaces détectés sur cet email. Quel espace voulez-vous ouvrir ?")}
+            </strong>
+            <div className="row2" style={{ flexWrap: "wrap", gap: 8 }}>
+              {accountChoice.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => pickSpace(r)}
+                >
+                  {ROLE_LABEL(r)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="divider">
           <span>{t("ou")}</span>

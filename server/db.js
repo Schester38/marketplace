@@ -287,6 +287,10 @@ export async function initDb() {
     // Signature du client (PNG data URI) capturée par le livreur à la
     // livraison, réaffichée sur la facture PDF.
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS signature TEXT;
+    // Marquage « prise en charge par un livreur » — posé quand un livreur
+    // authentifié consulte l'espace de la boutique (serve de preuve et
+    // déclenche la confirmation automatique de la commande).
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_viewed_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_proof TEXT;
@@ -327,6 +331,17 @@ export async function initDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_received_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payout_initiated BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payout_initiated_at TIMESTAMPTZ;
+
+    -- Email partagé : AUTORISÉ UNIQUEMENT entre un compte boutique (shop) et
+    -- un compte livreur. On remplace la contrainte globale UNIQUE (email) par
+    -- des index partiels : au plus 1 « shop » par email, au plus 1 « livreur »
+    -- par email, et au plus 1 compte parmi les autres rôles (seller/client/
+    -- creator/admin). Toute autre combinaison (ex. shop+seller même email)
+    -- est refusée aussi bien par ces index que par la logique métier.
+    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key;
+    CREATE UNIQUE INDEX IF NOT EXISTS users_email_shop_key ON users(email) WHERE role = 'shop';
+    CREATE UNIQUE INDEX IF NOT EXISTS users_email_livreur_key ON users(email) WHERE role = 'livreur';
+    CREATE UNIQUE INDEX IF NOT EXISTS users_email_other_key ON users(email) WHERE role NOT IN ('shop', 'livreur');
 
     ALTER TABLE products ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';

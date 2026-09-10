@@ -15,12 +15,23 @@ export default function Register() {
   const [searchParams] = useSearchParams();
   const refCode = (searchParams.get("ref") || "").trim().toUpperCase();
   const refSeller = (searchParams.get("refs") || "").trim().toUpperCase();
+  // Prise en charge du portail « Espace livreur » : /register?role=livreur
+  // (+ email pré-rempli quand une boutique crée son espace associé).
+  const roleParam = (searchParams.get("role") || "").trim();
+  const emailParam = (searchParams.get("email") || "").trim();
   const [form, setForm] = useState({
     name: "",
-    email: "",
+    email: emailParam,
     password: "",
     confirmPassword: "",
-    role: refCode ? "client" : "seller",
+    role:
+      refCode
+        ? "client"
+        : refSeller
+          ? "seller"
+          : roleParam === "livreur"
+            ? "livreur"
+            : "seller",
     country: "",
     operator: "",
     phone: "",
@@ -193,6 +204,19 @@ export default function Register() {
                   </span>
                   <small>
                     {t("Je consulte les offres et les produits, je commande facilement")}
+                  </small>
+                </label>
+                <label className={`role-option ${form.role === "livreur" ? "selected" : ""}`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="livreur"
+                    checked={form.role === "livreur"}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  />
+                  <span>🛵 {t("Livreur")}</span>
+                  <small>
+                    {t("Je livre les articles et finalise les commandes (code client, signature, paiement)")}
                   </small>
                 </label>
                 <label

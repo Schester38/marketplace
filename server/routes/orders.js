@@ -100,6 +100,7 @@ router.post("/", optionalAuth, async (req, res, next) => {
           )
         )[0];
         const price = promo ? Number(promo.promo_price) : Number(p.price);
+        const isFlash = Boolean(promo);
         const commissionPercent = promo
           ? Number(promo.commission_percent)
           : Number(p.commission_percent);
@@ -162,6 +163,7 @@ router.post("/", optionalAuth, async (req, res, next) => {
           name: p.name,
           quantity: qty,
           total,
+          flash_promo: isFlash,
         });
       }
 
@@ -232,12 +234,16 @@ router.post("/", optionalAuth, async (req, res, next) => {
        FROM sales s JOIN products p ON p.id = s.product_id JOIN users shop ON shop.id = p.shop_id WHERE s.id = ANY($1::int[]) ORDER BY s.id`,
       [result.createdSales.map((s) => s.id)]
     );
+    const flashById = new Map(
+      result.createdSales.filter((s) => s.flash_promo).map((s) => [String(s.id), true])
+    );
     res.status(201).json({
       order_id: result.orderId,
       sales: sales.map((s) => ({
         ...s,
         total_price: Number(s.total_price),
         price: Number(s.price),
+        flash_promo: flashById.get(String(s.id)) || false,
       })),
     });
   } catch (err) {

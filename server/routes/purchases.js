@@ -107,6 +107,7 @@ router.post(
         [product.id]
       )
     )[0];
+    const isFlash = Boolean(promo);
     const price = promo ? Number(promo.promo_price) : Number(product.price);
     if (!Number.isFinite(price) || price < 0)
       return res.status(500).json({ error: "Prix produit invalide" });
@@ -210,7 +211,7 @@ router.post(
       await tx.query(
         `INSERT INTO notifications (user_id, type, sale_id) VALUES ${notifValues}`
       );
-      return { id: created[0].id, confirmCode };
+      return { id: created[0].id, confirmCode, flash_promo: isFlash };
     });
 
     const productName = String(product.name || "article");
@@ -259,7 +260,10 @@ router.post(
       )
     )[0];
 
-    res.status(201).json({ sale: saleRow(full), ok: true });
+    res.status(201).json({
+      sale: saleRow({ ...full, flash_promo: Boolean(result.flash_promo) }),
+      ok: true,
+    });
   })
 );
 

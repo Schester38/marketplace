@@ -463,6 +463,60 @@ router.get(
       await q("SELECT id, name, country FROM users WHERE shop_code = $1", [shopCode])
     )[0];
     if (!shop) return res.status(404).json({ error: "Code boutique invalide" });
+    // Confirmation automatique : quand un LIVREUR connecté charge l'espace de
+    // la boutique, les commandes en attente passent « confirmed ». C'est le
+    // refus de prise en charge : la boutique ET le client sont notifiés une
+    // seule fois (la transition 'pending' → 'confirmed' n'a lieu qu'une fois).
+    let autoConfirmed = 0;
+    if (req.user && req.user.role === "livreur") {
+      const confirmedRows = await q(
+        `UPDATE sales SET status = 'confirmed',
+              shop_confirmed_at = COALESCE(shop_confirmed_at, now()),
+              livreur_viewed_at = now(),
+              hidden_for = array_remove(hidden_for, $1)
+         WHERE status = 'pending' AND id IN (
+           SELECT s.id FROM sales s
+           JOIN products p2 ON p2.id = s.product_id
+           WHERE p2.shop_id = $2 AND NOT ($1 = ANY(s.hidden_for))
+         )
+         RETURNING id, buyer_id, product_id`,
+        [req.user.id, shop.id]
+      );
+      if (confirmedRows.length) {
+        autoConfirmed = confirmedRows.length;
+        // Cloche + push à la boutique (une notification globale pour le lot).
+        await q(
+          `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_confirmed_by_livreur', $2)`,
+          [shop.id, confirmedRows[0].id]
+        ).catch(() => {});
+        await sendPush(shop.id, {
+          title: "Commande confirmée 🛵",
+          body: `Le livreur a pris en charge ${autoConfirmed} commande${autoConfirmed > 1 ? "s" : ""}.`,
+          url: "/shop",
+        }).catch(() => {});
+        // Cloche + push à chaque client concerné (transition unique).
+        for (const row of confirmedRows) {
+          if (!row.buyer_id) continue;
+          const productName = (
+            await q("SELECT name FROM products WHERE id = $1", [row.product_id])
+          )[0]?.name || "votre commande";
+          await q(
+            `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_confirmed_by_livreur', $2)`,
+            [row.buyer_id, row.id]
+          ).catch(() => {});
+          await sendPush(row.buyer_id, {
+            title: "Commande confirmée ✅",
+            body: `${productName} est confirmée — le livreur s'en occupe. Gardez votre code de confirmation.`,
+            url: `/suivi/${row.id}`,
+          }).catch(() => {});
+        }
+        const shopName = String(shop.name || "boutique");
+        notifyAdmins({
+          title: "Livraison prise en charge 🛵",
+          body: `${autoConfirmed} commande${autoConfirmed > 1 ? "s" : ""} confirmée${autoConfirmed > 1 ? "s" : ""} chez ${shopName} par un livreur.`,
+        }).catch(() => {});
+      }
+    }
     const pending = (
       await q(
         `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.shop_id, p.contact AS shop_contact,
@@ -536,6 +590,7 @@ router.get(
       pending,
       delivered,
       shop_name: shop.name,
+      confirmed: autoConfirmed,
       shop_country: shop.country,
       authenticated: Boolean(me),
       stats,

@@ -94,10 +94,14 @@ export default function Cart() {
           "",
           "📦 Articles :",
           ...g.items.map(
-            (s) =>
+            (s) => [
               `• ${s.product_name} ×${Number(s.quantity)} — ${formatMoney(
                 s.total_price
-              )} F${s.confirm_code ? ` (code : ${s.confirm_code})` : ""}`
+              )} F${s.flash_promo ? " (prix promo)" : ""}${s.confirm_code ? ` (code : ${s.confirm_code})` : ""}`,
+              s.id && s.confirm_code
+                ? `📦 Suivi : ${BASE_URL}/suivi/${s.id}?code=${encodeURIComponent(s.confirm_code)}`
+                : null,
+            ].filter(Boolean).join("\n")
           ),
           "",
           "— Coordonnées du client —",
@@ -106,7 +110,7 @@ export default function Cart() {
           `🏙️ Ville : ${city.trim()}`,
           `📍 Adresse : ${address.trim()}`,
           "",
-          `👉 Gérez ces commandes dans votre espace Mboppi : ${BASE_URL}/shop`,
+          `👉 Gérez ces commandes dans votre espace livreur : ${BASE_URL}/livreur`,
         ];
         return {
           ...g,
@@ -321,6 +325,28 @@ export default function Cart() {
             </div>
 
             <form onSubmit={submit}>
+              {/* Bandeau anti-fraude : rappel d'exiger le formulaire du livreur. */}
+              <div
+                style={{
+                  background: "#fff3cd",
+                  border: "2px solid #f0b429",
+                  borderRadius: 10,
+                  padding: "12px 14px",
+                  marginBottom: 14,
+                }}
+              >
+                <strong style={{ display: "block", fontSize: 15 }}>
+                  🛡️ {t("CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.")}
+                </strong>
+                <p style={{ margin: "6px 0 2px", fontSize: 13 }}>
+                  {t(
+                    "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat."
+                  )}
+                </p>
+                <small style={{ display: "block", textAlign: "right", fontWeight: 600 }}>
+                  — {t("L'Administration Mboppi")}
+                </small>
+              </div>
               <label>{t("Votre nom *")}</label>
               <input
                 className="input"

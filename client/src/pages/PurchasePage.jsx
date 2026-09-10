@@ -80,13 +80,12 @@ export default function PurchasePage() {
       paymentMethod === "espece"
         ? "En espèces (à la livraison)"
         : "Mobile Money direct";
-    const dashboard = product.shop_role === "seller" ? "/seller" : "/shop";
     const lines = [
       "🛒 *Nouvelle commande Mboppi*",
       "",
       `📦 Produit : ${product.name}`,
       `🔢 Quantité : ${qty}`,
-      `💰 Prix : ${formatMoney(displayPrice)} ${symbol}${flash ? " (prix promo)" : ""}`,
+      `💰 Prix : ${formatMoney(displayPrice)} ${symbol}${sale && sale.flash_promo ? " (prix promo)" : ""}`,
       `💳 Paiement : ${pay}`,
       "",
       "— Coordonnées du client —",
@@ -95,8 +94,13 @@ export default function PurchasePage() {
       `🏙️ Ville : ${form.buyer_city}`,
       `📍 Adresse : ${form.buyer_address}`,
       code ? `🔑 Code de confirmation : ${code}` : null,
+      sale && sale.id
+        ? `📦 Suivi de votre commande : ${BASE_URL}/suivi/${sale.id}?code=${encodeURIComponent(
+            code || ""
+          )}`
+        : null,
       "",
-      `👉 Gérez cette commande dans votre espace Mboppi : ${BASE_URL}${dashboard}`,
+      `👉 Gérez cette commande dans votre espace livreur : ${BASE_URL}/livreur`,
     ].filter(Boolean);
     return `https://wa.me/${digits}?text=${encodeURIComponent(lines.join("\n"))}`;
   };
@@ -273,6 +277,29 @@ export default function PurchasePage() {
         </div>
       ) : (
         <div className="card form-card">
+          {/* Bandeau anti-fraude : rappel d'exiger le formulaire du livreur. */}
+          <div
+            style={{
+              background: "#fff3cd",
+              border: "2px solid #f0b429",
+              borderRadius: 10,
+              padding: "12px 14px",
+              marginBottom: 14,
+            }}
+          >
+            <strong style={{ display: "block", fontSize: 15 }}>
+              🛡️ {t("CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.")}
+            </strong>
+            <p style={{ margin: "6px 0 2px", fontSize: 13 }}>
+              {t(
+                "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat."
+              )}
+            </p>
+            <small style={{ display: "block", textAlign: "right", fontWeight: 600 }}>
+              — {t("L'Administration Mboppi")}
+            </small>
+          </div>
+
           <h2>{t("Commander")}</h2>
           <p className="hint">
             {t(
