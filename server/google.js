@@ -19,7 +19,7 @@ export function googleAuthUrl(role, country, ref, ref_seller, accepted, req) {
     response_type: "code",
     scope: "openid email profile",
     prompt: "select_account",
-    state: `${role || "seller"}|${country || ""}|${ref || ""}|${accepted === "1" ? "1" : ""}|${ref_seller || ""}`,
+    state: `${role || ""}|${country || ""}|${ref || ""}|${accepted === "1" ? "1" : ""}|${ref_seller || ""}`,
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }

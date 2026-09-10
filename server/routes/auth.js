@@ -418,7 +418,7 @@ router.get("/google", (req, res) => {
       ? "seller"
       : VALID_ROLES.includes(req.query.role)
         ? req.query.role
-        : "seller";
+        : "";
   const accepted = req.query.accepted === "1" ? "1" : "";
   res.redirect(googleAuthUrl(role, req.query.country, ref, refSeller, accepted, req));
 });
@@ -452,8 +452,11 @@ router.get(
       }
       if (!user) {
         if (accepted !== "1") {
+          // Aucun compte n'est associé à cette adresse Google : ce n'est pas
+          // une inscription (l'utilisateur a peut-être un compte créé avec un
+          // autre email/mot de passe). Message clair au lieu du verdict CGU.
           const msg = encodeURIComponent(
-            "Vous devez accepter les Conditions Générales d'Utilisation pour vous inscrire"
+            "Aucun compte Mboppi n'est associé à cette adresse Google. Si vous avez déjà un compte (email + mot de passe), connectez-vous avec vos identifiants. Sinon, créez votre compte en acceptant les conditions."
           );
           return res.redirect(`/auth-google?error=${msg}`);
         }
