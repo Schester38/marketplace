@@ -58,8 +58,8 @@ router.post(
       buyer_address,
       payment_method,
     } = req.body || {};
-    if (!product_id || !seller_code) {
-      return res.status(400).json({ error: "Produit et code vendeur sont requis" });
+    if (!product_id) {
+      return res.status(400).json({ error: "Produit requis" });
     }
 
     const rawMethod = String(payment_method || "")
@@ -72,12 +72,19 @@ router.post(
           ? "automatic"
           : "espece";
 
-    const code = String(seller_code).trim().toUpperCase();
-    const seller = (
-      await q("SELECT id, name, seller_code FROM users WHERE seller_code = $1", [code])
-    )[0];
-    if (!seller) {
-      return res.status(400).json({ error: "Code vendeur invalide" });
+    // Code vendeur FACULTATIF : fourni → la vente est rattachée au vendeur
+    // (suivi + notification) ; absent → vente directe (seller_id NULL).
+    const rawCode = seller_code ? String(seller_code).trim().toUpperCase() : "";
+    let seller = null;
+    let code = null;
+    if (rawCode) {
+      seller = (
+        await q("SELECT id, name, seller_code FROM users WHERE seller_code = $1", [rawCode])
+      )[0];
+      if (!seller) {
+        return res.status(400).json({ error: "Code vendeur invalide" });
+      }
+      code = seller.seller_code;
     }
 
     const productId = Number(product_id);
@@ -177,7 +184,7 @@ router.post(
        VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, TRUE) RETURNING id`,
         [
           product.id,
-          seller.id,
+          seller ? seller.id : null,
           qty,
           total,
           commission,
@@ -196,27 +203,32 @@ router.post(
         ]
       );
 
+      // Notification cloche : vendeur (si code fourni) + boutique concernée.
+      const notifValues = seller
+        ? `(${seller.id}, 'sale_order', ${created[0].id}), (${product.shop_id}, 'sale_order', ${created[0].id})`
+        : `(${product.shop_id}, 'sale_order', ${created[0].id})`;
       await tx.query(
-        `INSERT INTO notifications (user_id, type, sale_id) VALUES ($1, 'sale_order', $2), ($3, 'sale_order', $2)`,
-        [seller.id, created[0].id, product.shop_id]
+        `INSERT INTO notifications (user_id, type, sale_id) VALUES ${notifValues}`
       );
       return { id: created[0].id, confirmCode };
     });
 
     const productName = String(product.name || "article");
-    await sendPush(seller.id, {
-      title: "Nouvelle commande 🛒",
-      body: `${productName} — ${name} attend la livraison.`,
-      url: "/seller",
-    });
+    if (seller) {
+      await sendPush(seller.id, {
+        title: "Nouvelle commande 🛒",
+        body: `${productName} — ${name} attend la livraison.`,
+        url: "/seller",
+      });
+    }
     await sendPush(product.shop_id, {
       title: "Nouvelle commande 🛒",
-      body: `${productName} — vendeur : ${seller.name} (${code}), client : ${name}${result.confirmCode ? `, code : ${result.confirmCode}` : ""}${referredBy ? `, client parrainé (2% pour le parrain : ${referralCommission} F)` : ""}.`,
+      body: `${productName} — ${seller ? `vendeur : ${seller.name} (${code}), ` : "commande directe, "}${name}${result.confirmCode ? `, code : ${result.confirmCode}` : ""}${referredBy ? `, client parrainé (2% pour le parrain : ${referralCommission} F)` : ""}.`,
       url: "/shop",
     });
     notifyAdmins({
       title: "Nouvelle vente 🛍️",
-      body: `${productName} ×${qty} — ${total} F — client : ${name} — vendeur : ${seller.name} (${code}).`,
+      body: `${productName} ×${qty} — ${total} F — client : ${name}${seller ? ` — vendeur : ${seller.name} (${code})` : " — vente directe"}.`,
       sale_id: result.id,
       product_id: product.id,
       product_name: productName,
@@ -237,10 +249,10 @@ router.post(
 
     const full = (
       await q(
-        `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, shop.name AS shop_name, shop.country AS shop_country
+        `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, shop.name AS shop_name, shop.country AS shop_country, shop.phone AS shop_phone, p.contact AS shop_contact
        FROM sales s
        JOIN products p ON p.id = s.product_id
-       JOIN users u ON u.id = s.seller_id
+       LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
        WHERE s.id = $1`,
         [result.id]

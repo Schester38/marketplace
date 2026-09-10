@@ -112,7 +112,9 @@ export default function PurchasePage() {
       const qty = Number(form.quantity) || 1;
       const d = await api.purchaseCreate({
         product_id: id,
-        seller_code: form.seller_code,
+        // Code vendeur facultatif : présent si le client vient d'un lien de
+        // partage vendeur, absent pour un achat direct (vente sans vendeur).
+        seller_code: (form.seller_code || "").trim() || undefined,
         buyer_name: form.buyer_name,
         buyer_city: form.buyer_city,
         buyer_address: form.buyer_address,
@@ -274,7 +276,7 @@ export default function PurchasePage() {
           <h2>{t("Commander")}</h2>
           <p className="hint">
             {t(
-              "Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande. Aucun compte requis."
+              "Remplissez vos informations pour confirmer votre commande. Aucun compte requis. Le code du vendeur est utile seulement si un vendeur vous a proposé ce produit."
             )}
           </p>
           <form onSubmit={submit}>
@@ -321,10 +323,9 @@ export default function PurchasePage() {
                 })
               }
             />
-            <label>{t("Code du vendeur *")}</label>
+            <label>{t("Code du vendeur (facultatif)")}</label>
             <input
               className="input code-input"
-              required
               maxLength="6"
               readOnly={!!linkCode}
               value={form.seller_code}

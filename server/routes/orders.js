@@ -228,7 +228,7 @@ router.post("/", optionalAuth, async (req, res, next) => {
       amount: orderTotalAll,
     });
     const sales = await q(
-      `SELECT s.*, p.name AS product_name, p.price, p.contact AS shop_contact, shop.name AS shop_name, shop.country AS shop_country, shop.location AS shop_location
+      `SELECT s.*, p.name AS product_name, p.price, p.contact AS shop_contact, shop.name AS shop_name, shop.country AS shop_country, shop.location AS shop_location, shop.phone AS shop_phone
        FROM sales s JOIN products p ON p.id = s.product_id JOIN users shop ON shop.id = p.shop_id WHERE s.id = ANY($1::int[]) ORDER BY s.id`,
       [result.createdSales.map((s) => s.id)]
     );

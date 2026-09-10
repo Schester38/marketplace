@@ -3,11 +3,21 @@ import { Link, useNavigate } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
 import { formatMoney } from "../components/ProductCard.jsx";
-import { countrySymbol, BASE_URL } from "../config.js";
+import { countrySymbol, countryPhone, BASE_URL } from "../config.js";
 import { useAuth } from "../App.jsx";
 import { useCart } from "../store.jsx";
 import { useLang } from "../i18n.jsx";
 import CopyCode from "../components/CopyCode.jsx";
+
+/** Normalise un numéro de boutique au format international (wa.me). */
+function waDigits(raw, country) {
+  let digits = String(raw || "").replace(/[^0-9]/g, "");
+  if (!digits) return null;
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  const dial = countryPhone(country).replace("+", "");
+  if (!digits.startsWith(dial)) digits = dial + digits.replace(/^0+/, "");
+  return digits;
+}
 
 export default function Cart() {
   const { user } = useAuth();
@@ -26,6 +36,8 @@ export default function Cart() {
   const [error, setError] = useState("");
   const [placing, setPlacing] = useState(false);
   const [sales, setSales] = useState(null);
+  // Groupes WhatsApp (une entrée par boutique concernée par la commande).
+  const [waGroups, setWaGroups] = useState([]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -39,6 +51,10 @@ export default function Cart() {
       return;
     }
     setPlacing(true);
+    // Anti pop-up blocker : réservation de l'ouverture pendant le geste
+    // utilisateur ; l'URL WhatsApp de la boutique y est injectée une fois la
+    // commande confirmée (une seule boutique → ouverture automatique).
+    const popup = window.open("", "_blank");
     try {
       const data = await api.createOrder({
         items: cart.map((i) => ({ product_id: i.id, quantity: i.qty })),
@@ -55,8 +71,59 @@ export default function Cart() {
         throw new Error(t("Aucune commande n'a pu être enregistrée. Veuillez réessayer."));
       }
       setSales(created);
+      // Groupement des commandes par boutique (le panier peut toucher
+      // plusieurs boutiques) → un message WhatsApp prérempli par boutique.
+      const groups = new Map();
+      for (const s of created) {
+        const key = s.shop_phone || s.shop_contact || s.shop_name || "shop";
+        if (!groups.has(key)) {
+          groups.set(key, {
+            shop_name: s.shop_name || "Boutique",
+            phone: s.shop_phone || s.shop_contact || "",
+            country: s.shop_country,
+            items: [],
+          });
+        }
+        groups.get(key).items.push(s);
+      }
+      const list = [...groups.values()].map((g) => {
+        const digits = waDigits(g.phone, g.country);
+        if (!digits) return { ...g, waUrl: null };
+        const lines = [
+          "🛒 *Nouvelle commande Mboppi*",
+          "",
+          "📦 Articles :",
+          ...g.items.map(
+            (s) =>
+              `• ${s.product_name} ×${Number(s.quantity)} — ${formatMoney(
+                s.total_price
+              )} F${s.confirm_code ? ` (code : ${s.confirm_code})` : ""}`
+          ),
+          "",
+          "— Coordonnées du client —",
+          `👤 Nom : ${buyerName.trim()}`,
+          `📞 Téléphone : ${phone.trim()}`,
+          `🏙️ Ville : ${city.trim()}`,
+          `📍 Adresse : ${address.trim()}`,
+          "",
+          `👉 Gérez ces commandes dans votre espace Mboppi : ${BASE_URL}/shop`,
+        ];
+        return {
+          ...g,
+          waUrl: `https://wa.me/${digits}?text=${encodeURIComponent(lines.join("\n"))}`,
+        };
+      });
+      setWaGroups(list);
       clearCart();
+      // Une seule boutique concernée → ouverture automatique de son WhatsApp.
+      const first = list.find((g) => g.waUrl);
+      if (first && popup && !popup.closed) {
+        popup.location.href = first.waUrl;
+      } else if (popup && !popup.closed) {
+        popup.close();
+      }
     } catch (err) {
+      if (popup && !popup.closed) popup.close();
       setError(err.message);
     } finally {
       setPlacing(false);
@@ -81,6 +148,30 @@ export default function Cart() {
               "Chaque article a son code de confirmation : communiquez-le à la boutique ou au livreur, ou suivez votre commande avec celui-ci."
             )}
           </p>
+          {/* WhatsApp de la boutique : message prérempli par boutique concernée
+              (la première s'est déjà ouverte automatiquement si possible). */}
+          {waGroups.length > 0 && (
+            <div style={{ width: "100%", marginTop: 10 }}>
+              <p className="hint" style={{ marginBottom: 8 }}>
+                {t("Envoyez aussi la commande à la boutique sur WhatsApp :")}
+              </p>
+              {waGroups.map(
+                (g, i) =>
+                  g.waUrl && (
+                    <a
+                      key={i}
+                      className="btn btn-primary"
+                      style={{ marginBottom: 8, display: "inline-flex", marginRight: 8 }}
+                      href={g.waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      💬 {t("WhatsApp : {shop}", { shop: g.shop_name })}
+                    </a>
+                  )
+              )}
+            </div>
+          )}
           <div className="order-list" style={{ width: "100%" }}>
             {sales.map((s) => (
               <div className="card order-card" key={s.id}>

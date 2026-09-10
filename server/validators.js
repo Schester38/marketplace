@@ -109,7 +109,14 @@ export const purchaseItemSchema = z.object({
 
 export const createPurchaseSchema = z.object({
   product_id: z.coerce.number().int().positive("Produit requis"),
-  seller_code: z.string().min(1, "Code vendeur requis").max(20),
+  // Le code vendeur est FACULTATIF : sans code, la vente est directe
+  // (seller_id NULL, commission calculée mais non payable — même modèle que
+  // les articles du panier). Avec code, le vendeur suit la vente.
+  seller_code: z
+    .string()
+    .max(20, "Code vendeur trop long")
+    .transform((v) => String(v || "").trim().toUpperCase())
+    .optional(),
   purchase_price: z.coerce.number().min(0, "Prix invalide").optional(),
   quantity: z.coerce.number().int().min(1, "Quantité minimale 1").default(1),
   buyer_name: z.string().min(1, "Nom requis").max(100),
