@@ -204,6 +204,23 @@ export async function downloadInvoice(sale, t, symbol = "XAF") {
     y += 18;
   }
 
+  // Signature du client (capturée par le livreur à la livraison).
+  if (sale.delivered_at && sale.signature) {
+    try {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...GRAY);
+      doc.text(t("Signature du client"), W - 16, y + 5, { align: "right" });
+      doc.setDrawColor(190, 200, 220);
+      doc.setLineWidth(0.3);
+      doc.rect(W - 84, y + 8, 68, 26);
+      doc.addImage(sale.signature, "PNG", W - 83, y + 9, 66, 24);
+      y += 40;
+    } catch {
+      // signature illisible : on l'ignore silencieusement sur le PDF
+    }
+  }
+
   y += 6;
   doc.setDrawColor(190, 200, 220);
   doc.setLineWidth(0.3);

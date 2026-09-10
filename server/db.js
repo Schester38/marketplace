@@ -284,6 +284,9 @@ export async function initDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS confirm_code TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivered_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+    // Signature du client (PNG data URI) capturée par le livreur à la
+    // livraison, réaffichée sur la facture PDF.
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS signature TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_proof TEXT;

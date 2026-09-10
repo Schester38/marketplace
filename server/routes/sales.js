@@ -698,7 +698,7 @@ router.post(
   authRequired,
   roleRequired("livreur"),
   ah(async (req, res) => {
-    const { delivery_fee, payment_method, client_code, shop_code } = req.body || {};
+    const { delivery_fee, payment_method, client_code, shop_code, signature } = req.body || {};
     const shopCode = String(shop_code || "")
       .trim()
       .toUpperCase();
@@ -716,6 +716,22 @@ router.post(
     }
     const lowerMethod = String(payment_method).toLowerCase();
     const cleanMethod = lowerMethod.startsWith("m") ? "mobile" : "espèce";
+
+    // Signature du client (optionnelle) : PNG data URI capturé sur l'écran
+    // du livreur à la livraison, réaffiché sur la facture PDF.
+    let cleanSignature = null;
+    if (signature != null && signature !== "") {
+      if (
+        typeof signature !== "string" ||
+        !signature.startsWith("data:image/png;base64,")
+      ) {
+        return res.status(400).json({ error: "Signature invalide (image PNG attendue)" });
+      }
+      if (signature.length > 300000) {
+        return res.status(400).json({ error: "Signature trop volumineuse" });
+      }
+      cleanSignature = signature;
+    }
 
     const sale = (await q("SELECT * FROM sales WHERE id = $1", [Number(req.params.id)]))[0];
     if (!sale) return res.status(404).json({ error: "Vente introuvable" });
@@ -773,9 +789,10 @@ router.post(
       const updated = (
         await tx.query(
           `UPDATE sales SET status = 'delivered', delivery_fee = $1, payment_method = $2, delivered_at = now(), delivered_by = $3,
-        payment_status = CASE WHEN payment_status = 'paid' THEN payment_status ELSE 'pending' END
+        payment_status = CASE WHEN payment_status = 'paid' THEN payment_status ELSE 'pending' END,
+        signature = COALESCE($5, signature)
         WHERE id = $4 RETURNING id`,
-          [fee, cleanMethod, req.user ? req.user.id : null, lockedSale.id]
+          [fee, cleanMethod, req.user ? req.user.id : null, lockedSale.id, cleanSignature]
         )
       )[0];
       // Les nouvelles ventes ont déjà réservé leur stock. Pour les anciennes ventes,
