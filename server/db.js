@@ -334,15 +334,9 @@ export async function initDb() {
 
     -- Email partagé : AUTORISÉ UNIQUEMENT entre un compte boutique (shop) et
     -- un compte livreur. On remplace la contrainte globale UNIQUE (email) par
-    -- des index partiels : au plus 1 « shop » par email, au plus 1 « livreur »
-    -- par email, et au plus 1 compte parmi les autres rôles (seller/client/
-    -- creator/admin). Toute autre combinaison (ex. shop+seller même email)
-    -- est refusée aussi bien par ces index que par la logique métier.
-    ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key;
-    CREATE UNIQUE INDEX IF NOT EXISTS users_email_shop_key ON users(email) WHERE role = 'shop';
-    CREATE UNIQUE INDEX IF NOT EXISTS users_email_livreur_key ON users(email) WHERE role = 'livreur';
-    CREATE UNIQUE INDEX IF NOT EXISTS users_email_other_key ON users(email) WHERE role NOT IN ('shop', 'livreur');
-
+    -- des index partiels. Cette partie est exécutée SEPAREMENT (ligne ci-dessous
+    -- en JS) avec try/catch : si la migration partielle échoue (ex. doublons
+    -- historiques), elle ne fait PAS échouer tout initDb.
     ALTER TABLE products ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
@@ -374,6 +368,44 @@ export async function initDb() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
+
+  // ------------------------------------------------ MIGRATION EMAIL PARTAGÉ
+  // AUTORISÉ : boutique (shop) ↔ livreur uniquement. On remplace la
+  // contrainte globale UNIQUE(email) par des index partiels. EXÉCUTÉ
+  // SÉPARÉMENT avec try/catch : un échec ici ne doit PAS faire échouer le
+  // reste de initDb (Ex : doublons historiques).
+  try {
+    // 1) Retirer la contrainte globale UNIQUE(email) — quel que soit son nom réel.
+    const constraints = await pool.query(
+      `SELECT conname FROM pg_constraint
+       WHERE conrelid = 'users'::regclass AND contype = 'u'
+         AND conkey = (
+           SELECT ARRAY[attnum::int2] FROM pg_attribute
+           WHERE attrelid = 'users'::regclass AND attname = 'email'
+         )`
+    );
+    for (const row of constraints.rows) {
+      await pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS "${row.conname}"`).catch(() => {});
+    }
+    // 2) Index partiels (uniques) — le « one per email » se fait par rôle.
+    await pool
+      .query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS users_email_shop_key ON users(email) WHERE role = 'shop'`
+      )
+      .catch(() => {});
+    await pool
+      .query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS users_email_livreur_key ON users(email) WHERE role = 'livreur'`
+      )
+      .catch(() => {});
+    await pool
+      .query(
+        `CREATE UNIQUE INDEX IF NOT EXISTS users_email_other_key ON users(email) WHERE role NOT IN ('shop', 'livreur')`
+      )
+      .catch(() => {});
+  } catch (err) {
+    console.warn("[db] migration email partagé (boutique-livreur) ignorée :", err.message);
+  }
 
   await pool.query(`
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL;\n    ALTER TABLE offers ALTER COLUMN original_price TYPE NUMERIC(14,2) USING round(original_price::numeric, 2);
