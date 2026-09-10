@@ -250,7 +250,7 @@ router.post(
 
     const full = (
       await q(
-        `SELECT s.*, p.name AS product_name, p.commission_percent, u.name AS seller_name, shop.name AS shop_name, shop.country AS shop_country, shop.phone AS shop_phone, p.contact AS shop_contact
+        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, u.name AS seller_name, shop.name AS shop_name, shop.country AS shop_country, shop.phone AS shop_phone, p.contact AS shop_contact
        FROM sales s
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id

@@ -10,7 +10,7 @@ import { FlashCountdown, formatFlashTime } from "./FlashPromo.jsx";
 const ALLOWED_PATHS = ["/", "/shop", "/seller", "/client", "/creator", "/livreur"];
 const MAX_DISPLAY = 4;
 const ROTATE_MS = 5000;
-const REFRESH_MS = 30000;
+const REFRESH_MS = 60000;
 
 function isDismissed(id) {
   try {

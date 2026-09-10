@@ -231,7 +231,7 @@ export function AuthProvider({ children }) {
       }
     };
     sync();
-    const id = setInterval(sync, 30000);
+    const id = setInterval(sync, 60000);
     const onVisible = () => {
       if (document.visibilityState === "visible") sync();
     };
@@ -299,7 +299,7 @@ export function AuthProvider({ children }) {
       }
     };
     sync();
-    const id = setInterval(sync, 15000);
+    const id = setInterval(sync, 45000);
     const onVisible = () => {
       if (document.visibilityState === "visible") sync();
     };

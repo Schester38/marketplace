@@ -301,7 +301,7 @@ function NotifBell() {
     } else {
       setAppBadge(0);
     }
-    const iv = setInterval(loadNotifs, 30000);
+    const iv = setInterval(loadNotifs, 60000);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);

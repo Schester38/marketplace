@@ -166,7 +166,7 @@ export default function ShopDashboard() {
 
   // Temps réel : rafraîchit produits, ventes et statistiques toutes les 30 s
   useEffect(() => {
-    const id = setInterval(() => load(), 30000);
+    const id = setInterval(() => load(), 60000);
     return () => clearInterval(id);
   }, [load]);
 
