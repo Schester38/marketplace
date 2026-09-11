@@ -6,7 +6,58 @@ const router = Router();
 const MAX_BATCH = 50;
 const MAX_PATH = 200;
 
+// ---------------------------------------------------------------------------
+// Fiabilisation des métriques (sans rien casser : mêmes routes, mêmes
+// réponses, aucun changement de schéma de table).
+//
+// 1) Filtre anti-bot serveur : les crawlers (Googlebot, Bing, curl, scripts,
+//    frameworks, pré-rendering…) font gonfler les vues côté admin SANS être
+//    de vrais visiteurs. On les ignore silencieusement : réponses { ok:true }
+//    conservées → aucun client n'est cassé, ne cessent d'exister.
+// 2) Déduplication par vibration visiteur : évite qu'une même vue soit
+//    remontée 20× par un client qui boucle sur une page (cache mémoire court).
+// 3) Plafond de vues par jour et par article : un boucle de refresh ne peut
+//    plus faire croître indéfiniment item_views.count le même jour.
+// ---------------------------------------------------------------------------
+
+const BOT_UA =
+  /(bot|crawler|spider|slurp|bingpreview|facebookexternalhit|headless|go-http|okhttp|axios|python-urllib|python-requests|curl\/|wget|libwww|scrapy|nutch|java\/|node-fetch|postmanruntime|insomnia|guzzle|httpie|ruby|lighthouse|pingdom|uptimerobot|statuscake|monitor|vercel-cron|prerender|feedfetcher|wp-?robots|search\b|yandex|baiduspider|duckduckgo|mediapartners|adsbot)/i;
+
+const MAX_ITEM_VIEWS_PER_DAY = 200; // plafond anti-boucle par (type,id,jour)
+
+// Cache mémoire court (par instance Vercel) : clé `visitor|type|id` → minute.
+// Simple approche « au moins une fois par visiteur et par minute » : réduit le
+// double-comptage d'une même vue sans jamais bloquer un vrai utilisateur.
+const recentViews = new Map(); // clé -> timestamp (ms)
+const VIEW_WINDOW_MS = 60_000;
+const MAX_RECENT_KEYS = 2000;
+
+function viewKey(visitorId, type, id) {
+  return `${String(visitorId || "?")}|${type}|${id}`;
+}
+
+function isBotRequest(req) {
+  const ua = String(req.get("user-agent") || "");
+  return ua.length > 0 && BOT_UA.test(ua);
+}
+
+function throttleView(visitorId, type, id) {
+  const key = viewKey(visitorId, type, id);
+  const now = Date.now();
+  const last = recentViews.get(key) || 0;
+  if (now - last < VIEW_WINDOW_MS) return true; // déjà vue récemment → ignorer
+  recentViews.set(key, now);
+  if (recentViews.size > MAX_RECENT_KEYS) {
+    const oldestKey = [...recentViews.entries()].sort((a, b) => a[1] - b[1])[0][0];
+    if (oldestKey) recentViews.delete(oldestKey);
+  }
+  return false;
+}
+
 router.post("/views", async (req, res) => {
+  // Bots ignorés (réponses identiques).
+  if (isBotRequest(req)) return res.json({ ok: true, counted: 0, ignored: "bot" });
+  const visitorId = String(req.get("X-Visitor-Id") || "").slice(0, 100);
   const raw = Array.isArray(req.body?.views) ? req.body.views.slice(0, MAX_BATCH) : [];
   const views = [];
   for (const item of raw) {
@@ -17,19 +68,24 @@ router.post("/views", async (req, res) => {
     }
   }
   if (!views.length) return res.status(400).json({ error: "Requête invalide" });
+  let counted = 0;
   for (const [type, id] of views) {
+    if (throttleView(visitorId, type, id)) continue;
+    counted += 1;
     await q(
       `INSERT INTO item_views (item_type, item_id, count)
        VALUES ($1, $2, 1)
        ON CONFLICT (item_type, item_id, seen_on)
-       DO UPDATE SET count = item_views.count + 1`,
-      [type, id]
+       DO UPDATE SET count = LEAST(item_views.count + 1, $3)`,
+      [type, id, MAX_ITEM_VIEWS_PER_DAY]
     );
   }
-  res.json({ ok: true, counted: views.length });
+  res.json({ ok: true, counted });
 });
 
 router.post("/visit", async (req, res) => {
+  // Bots ignorés (réponses identiques).
+  if (isBotRequest(req)) return res.json({ ok: true, ignored: "bot" });
   const path = String((req.body && req.body.path) || req.path || "/").slice(0, MAX_PATH);
   const visitorId = String(req.get("X-Visitor-Id") || "").slice(0, 100);
   if (!visitorId) return res.status(400).json({ error: "Identifiant visiteur manquant" });
