@@ -1523,7 +1523,6 @@ export default function ShopDashboard() {
                       <input
                         type="file"
                         accept="image/*"
-                        capture="environment"
                         hidden
                         onChange={(e) => addProof(e.target.files[0])}
                       />
