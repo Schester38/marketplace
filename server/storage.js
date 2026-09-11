@@ -94,9 +94,24 @@ export async function ensureBucket(bucketName = BUCKET, { public: isPublic = tru
 export async function signedProofUrl(url, expiresSec = 3600) {
   try {
     if (!url || !SUPABASE_URL || !SERVICE_KEY) return url || null;
-    const prefix = `${SUPABASE_URL}/storage/v1/object/${PAYMENT_PROOF_BUCKET}/`;
-    if (!String(url).startsWith(prefix)) return url;
-    const objectPath = String(url).slice(prefix.length);
+    // Formes possibles :
+    //  - `${SUPABASE_URL}/storage/v1/object/payment-proofs/...`   (URL logique)
+    //  - `${SUPABASE_URL}/storage/v1/object/public/payment-proofs/...`
+    //    (URL publique générée par uploadBuffer — le bucket étant privé,
+    //    cette URL ne répond plus : il FAUT signer via object/sign).
+    const base = `${SUPABASE_URL}/storage/v1/object/`;
+    const logical = `${base}${PAYMENT_PROOF_BUCKET}/`;
+    const publicForm = `${base}public/${PAYMENT_PROOF_BUCKET}/`;
+    let objectPath = null;
+    if (String(url).startsWith(logical)) {
+      objectPath = String(url).slice(logical.length);
+    } else if (String(url).startsWith(publicForm)) {
+      objectPath = String(url).slice(publicForm.length);
+    } else {
+      // data: URI ou URL hors storage → conservée telle quelle (affiche en l'état).
+      return url;
+    }
+    if (!objectPath) return url;
     const token = apiToken();
     const res = await fetch(
       `${SUPABASE_URL}/storage/v1/object/sign/${PAYMENT_PROOF_BUCKET}/${objectPath
