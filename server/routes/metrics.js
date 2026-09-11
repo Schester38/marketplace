@@ -89,10 +89,13 @@ router.post("/visit", async (req, res) => {
   const path = String((req.body && req.body.path) || req.path || "/").slice(0, MAX_PATH);
   const visitorId = String(req.get("X-Visitor-Id") || "").slice(0, 100);
   if (!visitorId) return res.status(400).json({ error: "Identifiant visiteur manquant" });
-  const country =
-    String((req.body && req.body.country) || "CM")
-      .trim()
-      .slice(0, 40) || "CM";
+  // Pays du visiteur — priorité au compte connecté, sinon au pays IP fourni
+  // par Vercel (x-vercel-ip-country, code ISO 3166-1 alpha-2). Cela permet à
+  // l'admin de connaître le pays même pour les visiteurs NON connectés, sans
+  // se fier au « CM » par défaut envoyé par le client pour les anonymes.
+  const clientCountry = String((req.body && req.body.country) || "").trim().slice(0, 40);
+  const ipCountry = String(req.get("x-vercel-ip-country") || "").trim().toUpperCase().slice(0, 40);
+  const country = clientCountry || ipCountry || "CM";
   await q(
     `INSERT INTO daily_visits (visitor_id, path, country)
      VALUES ($1, $2, $3)

@@ -574,7 +574,7 @@ export default function App() {
       fetch("/api/metrics/visit", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Visitor-Id": visitorId },
-        body: JSON.stringify({ path: pathKey, country: (user && user.country) || "CM" }),
+        body: JSON.stringify({ path: pathKey, country: (user && user.country) || "" }),
         keepalive: true,
       }).catch(() => {});
     } catch {
