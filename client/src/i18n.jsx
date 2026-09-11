@@ -561,6 +561,14 @@ const EN = {
   échecs: "failures",
   "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":
     "Send \"{title}\" to {audience} via {channels}? This action is irreversible.",
+  "Supprimer tout": "Delete all",
+  "Supprimer définitivement cette commande": "Permanently delete this order",
+  "Supprimer définitivement la commande #{id} ({product}) ? Cette action est irréversible : positions GPS et historique financier de cette vente seront perdus.":
+    "Permanently delete order #{id} ({product})? This action is irreversible: GPS positions and the financial history of this sale will be lost.",
+  "Supprimer TOUTES les {n} commandes de cette liste ? Les positions GPS et l'historique financier de ces ventes seront définitivement perdus.":
+    "Delete ALL {n} orders in this list? GPS positions and the financial history of these sales will be permanently lost.",
+  "Confirmation finale : tout supprimer maintenant ?": "Final confirmation: delete everything now?",
+  "commande(s) dans le suivi": "order(s) in tracking",
   "Compression…": "Compressing…",
   "Photos complètes": "Photos complete",
   "📷 Ajouter des photos": "📷 Add photos",
@@ -2129,6 +2137,14 @@ const AR = {
   échecs: "إخفاقات",
   "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":
     "إرسال «{title}» إلى {audience} عبر {channels}؟ هذا الإجراء لا رجعة فيه.",
+  "Supprimer tout": "حذف الكل",
+  "Supprimer définitivement cette commande": "حذف هذا الطلب نهائياً",
+  "Supprimer définitivement la commande #{id} ({product}) ? Cette action est irréversible : positions GPS et historique financier de cette vente seront perdus.":
+    "حذف الطلب #{id} ({product}) نهائياً؟ هذا الإجراء لا رجعة فيه: ستُفقد مواقع GPS والسجل المالي لهذه العملية.",
+  "Supprimer TOUTES les {n} commandes de cette liste ? Les positions GPS et l'historique financier de ces ventes seront définitivement perdus.":
+    "حذف كل الـ{n} طلبات في هذه القائمة؟ ستُفقد مواقع GPS والسجل المالي لهذه العمليات نهائياً.",
+  "Confirmation finale : tout supprimer maintenant ?": "تأكيد نهائي: حذف الكل الآن؟",
+  "commande(s) dans le suivi": "طلب (طلبات) في التتبع",
   "Compression…": "جارٍ الضغط…",
   "Photos complètes": "اكتملت الصور",
   "📷 Ajouter des photos": "📷 إضافة صور",
@@ -3608,6 +3624,14 @@ const ES = {
   échecs: "fallos",
   "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":
     "¿Enviar \"{title}\" a {audience} vía {channels}? Esta acción es irreversible.",
+  "Supprimer tout": "Eliminar todo",
+  "Supprimer définitivement cette commande": "Eliminar definitivamente este pedido",
+  "Supprimer définitivement la commande #{id} ({product}) ? Cette action est irréversible : positions GPS et historique financier de cette vente seront perdus.":
+    "¿Eliminar definitivamente el pedido #{id} ({product})? Esta acción es irreversible: se perderán las posiciones GPS y el historial financiero de esta venta.",
+  "Supprimer TOUTES les {n} commandes de cette liste ? Les positions GPS et l'historique financier de ces ventes seront définitivement perdus.":
+    "¿Eliminar TODOS los {n} pedidos de esta lista? Las posiciones GPS y el historial financiero de estas ventas se perderán definitivamente.",
+  "Confirmation finale : tout supprimer maintenant ?": "Confirmación final: ¿eliminar todo ahora?",
+  "commande(s) dans le suivi": "pedido(s) en seguimiento",
   "Compression…": "Comprimiendo…",
   "Photos complètes": "Fotos completas",
   "📷 Ajouter des photos": "📷 Agregar fotos",

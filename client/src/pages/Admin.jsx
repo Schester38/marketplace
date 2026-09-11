@@ -82,6 +82,45 @@ export default function Admin() {
       .catch(() => {});
   }, []);
 
+  // Suppression d'une commande du suivi GPS (définitive).
+  const deleteTrackingSale = async (d) => {
+    if (
+      !window.confirm(
+        t(
+          "Supprimer définitivement la commande #{id} ({product}) ? Cette action est irréversible : positions GPS et historique financier de cette vente seront perdus."
+        )
+      )
+    )
+      return;
+    try {
+      await api.adminTrackingDelete(d.id);
+      setDeliveries((prev) => prev.filter((x) => x.id !== d.id));
+    } catch (err) {
+      // silencieux : la liste se rafraîchit au prochain cycle
+    }
+  };
+
+  // Suppression de TOUTES les commandes de la liste (définitive).
+  const deleteAllTracking = async () => {
+    if (!deliveries.length) return;
+    if (
+      !window.confirm(
+        t(
+          "Supprimer TOUTES les {n} commandes de cette liste ? Les positions GPS et l'historique financier de ces ventes seront définitivement perdus."
+        )
+      )
+    )
+      return;
+    if (!window.confirm(t("Confirmation finale : tout supprimer maintenant ?"))) return;
+    try {
+      await api.adminTrackingDeleteAll();
+      setDeliveries([]);
+    } catch (err) {
+      // silencieux
+    }
+  };
+  // --- fin suppression suivi GPS ---
+
   useEffect(() => {
     if (gate) return;
     loadTracking();
@@ -1222,6 +1261,18 @@ export default function Admin() {
 
       <h2 className="section-title">🛰️ {t("Suivi GPS des livraisons")}</h2>
       <section className="card">
+        <div className="row2" style={{ alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <span className="hint" style={{ margin: 0 }}>
+            {deliveries.length
+              ? `${deliveries.length} ${t("commande(s) dans le suivi")}`
+              : ""}
+          </span>
+          {deliveries.length > 0 && (
+            <button className="btn btn-small btn-danger" onClick={deleteAllTracking}>
+              🗑️ {t("Supprimer tout")}
+            </button>
+          )}
+        </div>
         {deliveries.length === 0 ? (
           <p className="empty">{t("Aucune livraison en cours pour le moment.")}</p>
         ) : (
@@ -1245,16 +1296,25 @@ export default function Admin() {
                       : `🛵 ${t("Position livreur non partagée")}`}
                   </p>
                 </div>
-                <button
-                  className="btn btn-small btn-outline"
-                  onClick={() => {
-                    setTrackSaleId(d.id);
-                    setTrackData(null);
-                    api.saleTrack(d.id, "").then(setTrackData).catch(() => {});
-                  }}
-                >
-                  🗺️ {t("Carte")}
-                </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <button
+                    className="btn btn-small btn-outline"
+                    onClick={() => {
+                      setTrackSaleId(d.id);
+                      setTrackData(null);
+                      api.saleTrack(d.id, "").then(setTrackData).catch(() => {});
+                    }}
+                  >
+                    🗺️ {t("Carte")}
+                  </button>
+                  <button
+                    className="btn btn-small btn-danger"
+                    onClick={() => deleteTrackingSale(d)}
+                    title={t("Supprimer définitivement cette commande")}
+                  >
+                    🗑️ {t("Supprimer")}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

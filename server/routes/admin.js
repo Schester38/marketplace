@@ -496,6 +496,84 @@ router.post(
   })
 );
 
+// Suppression DÉFINITIVE de commandes depuis la section Suivi GPS (à la
+// demande de l'admin) :
+//  - une commande à la fois (POST /tracking/delete { id }) ;
+//  - ou toute la liste (POST /tracking/delete-all) = commandes en cours +
+//    livrées depuis ≤ 7 jours.
+// Le stock réservé des commandes NON livrées est restauré (elles n'auront
+// jamais lieu) ; celui des commandes LIVRÉES n'est PAS restauré (les biens
+// sont physiquement partis). Les notifications liées sont nettoyées.
+// ⚠️ Irréversible : l'historique financier de ces ventes est perdu.
+
+router.post(
+  "/tracking/delete",
+  ah(async (req, res) => {
+    const id = Number(req.body?.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Identifiant invalide" });
+    }
+    const sale = (
+      await q(
+        "SELECT id, status, quantity, stock_reserved, product_id FROM sales WHERE id = $1",
+        [id]
+      )
+    )[0];
+    if (!sale) return res.status(404).json({ error: "Commande introuvable" });
+    if (sale.stock_reserved && ["pending", "confirmed"].includes(sale.status)) {
+      await q(
+        `UPDATE products
+            SET quantity = quantity + $2,
+                reserved_quantity = GREATEST(COALESCE(reserved_quantity, 0) - $2, 0)
+          WHERE id = $1`,
+        [sale.product_id, sale.quantity]
+      );
+    }
+    await q("DELETE FROM notifications WHERE sale_id = $1", [id]);
+    await q("DELETE FROM sales WHERE id = $1", [id]);
+    await logAudit(
+      req.user.id,
+      "admin.tracking_delete",
+      `Suppression définitive commande #${id} (section Suivi GPS)`,
+      req.ip
+    );
+    res.json({ ok: true });
+  })
+);
+
+router.post(
+  "/tracking/delete-all",
+  ah(async (req, res) => {
+    const sales = await q(
+      `SELECT id, status, quantity, stock_reserved, product_id
+       FROM sales
+      WHERE status IN ('pending', 'confirmed')
+         OR (status = 'delivered'
+             AND COALESCE(delivered_at, created_at) >= now() - INTERVAL '7 days')`
+    );
+    for (const s of sales) {
+      if (s.stock_reserved && ["pending", "confirmed"].includes(s.status)) {
+        await q(
+          `UPDATE products
+              SET quantity = quantity + $2,
+                  reserved_quantity = GREATEST(COALESCE(reserved_quantity, 0) - $2, 0)
+            WHERE id = $1`,
+          [s.product_id, s.quantity]
+        );
+      }
+      await q("DELETE FROM notifications WHERE sale_id = $1", [s.id]);
+      await q("DELETE FROM sales WHERE id = $1", [s.id]);
+    }
+    await logAudit(
+      req.user.id,
+      "admin.tracking_delete_all",
+      `Suppression définitive de ${sales.length} commande(s) (section Suivi GPS)`,
+      req.ip
+    );
+    res.json({ ok: true, deleted: sales.length });
+  })
+);
+
 router.get(
   "/backup",
   ah(async (req, res) => {

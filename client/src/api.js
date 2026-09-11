@@ -330,6 +330,9 @@ export const api = {
     return request(`/users/nearby?${qs.toString()}`);
   },
   adminTracking: () => adminRequest("/admin/tracking"),
+  adminTrackingDelete: (id) =>
+    adminRequest("/admin/tracking/delete", { method: "POST", body: JSON.stringify({ id }) }),
+  adminTrackingDeleteAll: () => adminRequest("/admin/tracking/delete-all", { method: "POST" }),
   myFlashPromotions: () => request("/flash-promotions/mine"),
   deleteFlashPromotion: (id) => request(`/flash-promotions/${id}`, { method: "DELETE" }),
   activationWithdrawalMe: () => request("/activation-withdrawals/me"),
