@@ -508,8 +508,8 @@ const EN = {
     "Download the ChatGPT app if you don't have it yet.",
   "Dans ChatGPT, téléversez votre image puis copiez-collez ce prompt :":
     "In ChatGPT, upload your image, then copy and paste this prompt:",
-  "Améliore cette image pour la présentation dans une marketplace et donne-moi de la télécharger au format WebP.":
-    "Improve this image for presentation in a marketplace and let me download it in WebP format.",
+  "Améliore cette image pour la présentation dans une marketplace.":
+    "Improve this image for presentation in a marketplace.",
   "Téléchargez l'image améliorée puis ajoutez-la à votre produit.":
     "Download the improved image and add it to your product.",
   "Quantité en stock *": "Stock quantity *",
@@ -2014,8 +2014,8 @@ const AR = {
     "حمّل تطبيق ChatGPT إذا لم تكن قد فعلت ذلك بعد.",
   "Dans ChatGPT, téléversez votre image puis copiez-collez ce prompt :":
     "في ChatGPT، ارفع صورتك ثم انسخ والصق هذا النص:",
-  "Améliore cette image pour la présentation dans une marketplace et donne-moi de la télécharger au format WebP.":
-    "حسّن هذه الصورة للعرض في سوق إلكتروني واسمح لي بتحميلها بصيغة WebP.",
+  "Améliore cette image pour la présentation dans une marketplace.":
+    "حسّن هذه الصورة للعرض في سوق إلكتروني.",
   "Téléchargez l'image améliorée puis ajoutez-la à votre produit.":
     "حمّل الصورة المحسّنة ثم أضفها إلى منتجك.",
   "Quantité en stock *": "الكمية في المخزون *",
@@ -3430,8 +3430,8 @@ const ES = {
     "Descarga la aplicación ChatGPT si aún no la tienes.",
   "Dans ChatGPT, téléversez votre image puis copiez-collez ce prompt :":
     "En ChatGPT, sube tu imagen y luego copia y pega este prompt:",
-  "Améliore cette image pour la présentation dans une marketplace et donne-moi de la télécharger au format WebP.":
-    "Mejora esta imagen para presentarla en un marketplace y dame la opción de descargarla en formato WebP.",
+  "Améliore cette image pour la présentation dans une marketplace.":
+    "Mejora esta imagen para presentarla en un marketplace.",
   "Téléchargez l'image améliorée puis ajoutez-la à votre produit.":
     "Descarga la imagen mejorada y añádela a tu producto.",
   "Quantité en stock *": "Cantidad en stock *",

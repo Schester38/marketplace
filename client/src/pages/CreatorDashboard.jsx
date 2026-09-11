@@ -31,7 +31,7 @@ const MAX_PHOTOS = 1;
 // Prompt ChatGPT conseillé pour améliorer les photos produits. La clé française
 // est aussi la valeur exacte copiée dans le presse-papiers (toutes langues).
 const PHOTO_PROMPT =
-  "/branding Améliore cette image pour la présentation dans une marketplace et donne-moi de la télécharger au format WebP.";
+  "/branding Améliore cette image pour la présentation dans une marketplace.";
 
 export default function CreatorDashboard() {
   const { user } = useAuth();
