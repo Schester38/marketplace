@@ -736,7 +736,11 @@ router.post(
     ) {
       return res.status(400).json({ error: "Coordonnées invalides" });
     }
-    await q("UPDATE users SET lat = $1, lng = $2 WHERE id = $3", [lat, lng, req.user.id]);
+    await q("UPDATE users SET lat = $1, lng = $2, position_updated_at = now() WHERE id = $3", [
+      lat,
+      lng,
+      req.user.id,
+    ]);
     res.json({ ok: true });
   })
 );

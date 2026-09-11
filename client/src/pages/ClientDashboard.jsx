@@ -9,6 +9,7 @@ import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import CopyCode from "../components/CopyCode.jsx";
+import NearbyMap from "../components/NearbyMap.jsx";
 
 const PURCHASE_STATUS = {
   pending: { key: "En attente", cls: "badge-pending" },
@@ -279,6 +280,14 @@ export default function ClientDashboard() {
           <strong>{new Date(user.created_at).toLocaleDateString(locale)}</strong>
         </div>
       </section>
+
+      {/* Carte « à proximité » : le client voit les boutiques autour de lui */}
+      <NearbyMap
+        role="shop"
+        title={`🏪 ${t("Boutiques à proximité")}`}
+        emoji="🏪"
+        label={t("boutiques")}
+      />
     </main>
   );
 }

@@ -33,6 +33,7 @@ import seoRoutes from "./routes/seo.js";
 import paymentsRouter, { webhookRouter } from "./routes/payments.js";
 import presentationRoutes, { pageRouter, imageRouter } from "./routes/presentation.js";
 import geoRoutes from "./routes/geo.js";
+import usersRoutes from "./routes/users.js";
 import { authRequired } from "./auth.js";
 import { securityHeaders, originCheck } from "./security.js";
 
@@ -156,6 +157,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/flash-promotions", flashPromoRoutes);
 app.use("/api/metrics", metricsRoutes);
+app.use("/api/users", usersRoutes);
 app.use("/api/donations", donationsRoutes);
 app.use("/api/activation-withdrawals", activationWithdrawalRoutes);
 app.use("/api/payments", paymentsRouter);

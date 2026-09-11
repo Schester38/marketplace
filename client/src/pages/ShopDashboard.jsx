@@ -18,6 +18,7 @@ import ExportSalesButton from "../components/ExportSalesButton.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 import SwitchSpaceButton from "../components/SwitchSpaceButton.jsx";
 import TrackMap from "../components/TrackMap.jsx";
+import NearbyMap from "../components/NearbyMap.jsx";
 import {
   IconCart,
   IconChartBar,
@@ -1452,6 +1453,14 @@ export default function ShopDashboard() {
               </div>
             )}
           </section>
+
+          {/* Carte « à proximité » : la boutique voit les livreurs autour d'elle */}
+          <NearbyMap
+            role="livreur"
+            title={`🛵 ${t("Livreurs à proximité")}`}
+            emoji="🛵"
+            label={t("livreurs")}
+          />
 
           {/* Modale carte de suivi GPS (livreur / client / boutique) */}
           {trackSaleId && (

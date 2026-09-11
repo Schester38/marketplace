@@ -11,6 +11,7 @@ import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { nativeShareWithImage, firstProductImage, isTouchDevice } from "../share.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 import TrackMap from "../components/TrackMap.jsx";
+import NearbyMap from "../components/NearbyMap.jsx";
 
 const SALE_STATUS = {
   pending: { key: "En attente de vente", cls: "badge-pending" },
@@ -1285,6 +1286,14 @@ export default function SellerDashboard() {
           </div>
         </div>
       )}
+
+      {/* Carte « à proximité » : le vendeur voit les boutiques autour de lui */}
+      <NearbyMap
+        role="shop"
+        title={`🏪 ${t("Boutiques à proximité")}`}
+        emoji="🏪"
+        label={t("boutiques")}
+      />
 
       {/* Modale carte de suivi GPS (livreur / client / boutique) */}
       {trackSaleId && (

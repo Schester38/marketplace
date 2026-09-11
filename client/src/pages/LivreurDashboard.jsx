@@ -13,6 +13,7 @@ import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import SwitchSpaceButton from "../components/SwitchSpaceButton.jsx";
 import MiniChart from "../components/MiniChart.jsx";
 import TrackMap from "../components/TrackMap.jsx";
+import NearbyMap from "../components/NearbyMap.jsx";
 import { dailyBuckets } from "../utils.js";
 
 const CODE_KEY = "livreur_shop_code";
@@ -451,6 +452,14 @@ export default function LivreurDashboard() {
               />
             </section>
           )}
+
+          {/* Carte « à proximité » : le livreur voit les boutiques autour de lui */}
+          <NearbyMap
+            role="shop"
+            title={`🏪 ${t("Boutiques à proximité")}`}
+            emoji="🏪"
+            label={t("boutiques")}
+          />
 
           <section className="card" style={{ marginBottom: 14 }}>
             <h2>📈 {t("Gains des 14 derniers jours")}</h2>

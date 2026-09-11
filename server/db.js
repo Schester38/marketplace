@@ -303,6 +303,10 @@ export async function initDb() {
     // Position GPS partagée volontairement par la boutique (carte de suivi).
     ALTER TABLE users ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;
+    // Fraîcheur de la position : un livreur « disponible » met à jour cette
+    // colonne à chaque ping → les cartes « à proximité » ne montrent que les
+    // acteurs réellement en ligne (position < 10 min), pas les anciennes.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS position_updated_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_proof TEXT;

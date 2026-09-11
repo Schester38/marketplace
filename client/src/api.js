@@ -316,6 +316,15 @@ export const api = {
     request(`/sales/${id}/track${code ? `?code=${encodeURIComponent(code)}` : ""}`),
   myPosition: (payload) =>
     request("/auth/position", { method: "POST", body: JSON.stringify(payload) }),
+  nearbyUsers: (opts = {}) => {
+    const qs = new URLSearchParams();
+    if (opts.role) qs.set("role", opts.role);
+    if (opts.lat != null) qs.set("lat", String(opts.lat));
+    if (opts.lng != null) qs.set("lng", String(opts.lng));
+    if (opts.radius_km) qs.set("radius_km", String(opts.radius_km));
+    if (opts.fresh != null) qs.set("fresh", opts.fresh ? "1" : "0");
+    return request(`/users/nearby?${qs.toString()}`);
+  },
   adminTracking: () => adminRequest("/admin/tracking"),
   myFlashPromotions: () => request("/flash-promotions/mine"),
   deleteFlashPromotion: (id) => request(`/flash-promotions/${id}`, { method: "DELETE" }),
