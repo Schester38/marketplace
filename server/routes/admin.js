@@ -354,6 +354,148 @@ router.get(
   })
 );
 
+// ==================== CAMPAGNES GRATUITES (PUSH + EMAIL) ====================
+// L'admin diffuse un message aux contacts du système via les deux canaux
+// DÉJÀ GRATUITS de la plateforme :
+//  - PUSH : notifications web (VAPID), filtrées par les préférences
+//    utilisateur (canal « messages ») ;
+//  - EMAIL : SMTP existant (mailer.js), uniquement les emails VÉRIFIÉS.
+// Aucun SMS : les passerelles SMS sont payantes à chaque message.
+const CAMPAIGN_AUDIENCES = {
+  all: null,
+  clients: ["client"],
+  sellers: ["seller", "creator"],
+  shops: ["shop"],
+  livreurs: ["livreur"],
+  newsletter: null,
+};
+const CAMPAIGN_EMAIL_CAP = 500;
+
+router.get(
+  "/campaign/recipients",
+  ah(async (req, res) => {
+    const audience = String(req.query.audience || "all");
+    if (!CAMPAIGN_AUDIENCES.hasOwnProperty(audience)) {
+      return res.status(400).json({ error: "Audience invalide" });
+    }
+    const roles = CAMPAIGN_AUDIENCES[audience];
+    const { mailConfigured } = await import("../mailer.js");
+    let email_count = 0;
+    let push_count = 0;
+    if (audience === "newsletter") {
+      email_count = (await q("SELECT COUNT(*)::int AS n FROM newsletter_subscribers"))[0].n;
+      push_count = (await q("SELECT COUNT(DISTINCT user_id)::int AS n FROM push_subscriptions"))[0].n;
+    } else {
+      const roleClause = roles ? "AND u.role = ANY($1::text[])" : "";
+      const params = roles ? [roles] : [];
+      email_count = (
+        await q(
+          `SELECT COUNT(*)::int AS n FROM users u WHERE u.email_verified = TRUE ${roleClause}`,
+          params
+        )
+      )[0].n;
+      push_count = (
+        await q(
+          `SELECT COUNT(DISTINCT ps.user_id)::int AS n
+           FROM push_subscriptions ps JOIN users u ON u.id = ps.user_id
+          WHERE TRUE ${roleClause}`,
+          params
+        )
+      )[0].n;
+    }
+    res.json({ email_count, push_count, mail_configured: mailConfigured() });
+  })
+);
+
+router.post(
+  "/campaign/send",
+  ah(async (req, res) => {
+    const title = String(req.body?.title || "").trim().slice(0, 120);
+    const message = String(req.body?.message || "").trim().slice(0, 2000);
+    const url = String(req.body?.url || "/").trim().slice(0, 200) || "/";
+    const audience = String(req.body?.audience || "all");
+    const channels = Array.isArray(req.body?.channels) ? req.body.channels : [];
+    if (!title || !message) {
+      return res.status(400).json({ error: "Titre et message requis" });
+    }
+    if (!CAMPAIGN_AUDIENCES.hasOwnProperty(audience)) {
+      return res.status(400).json({ error: "Audience invalide" });
+    }
+    const doPush = channels.includes("push");
+    const doEmail = channels.includes("email");
+    if (!doPush && !doEmail) {
+      return res.status(400).json({ error: "Choisissez au moins un canal (push ou email)" });
+    }
+    const roles = CAMPAIGN_AUDIENCES[audience];
+    const result = {
+      push_sent: 0,
+      email_sent: 0,
+      email_failed: 0,
+      email_simulated: false,
+      audience,
+    };
+
+    if (doPush) {
+      try {
+        const { sendPushToAll } = await import("../push.js");
+        result.push_sent = await sendPushToAll(
+          {
+            title: `📣 ${title}`,
+            body: message,
+            url,
+            tag: `campaign-${Date.now()}`,
+          },
+          { roles: roles || undefined, channel: "messages" }
+        );
+      } catch (err) {
+        console.error("[campaign] push échoué :", err.message);
+      }
+    }
+
+    if (doEmail) {
+      let recipients = [];
+      if (audience === "newsletter") {
+        recipients = (await q("SELECT email FROM newsletter_subscribers")).map((r) => ({
+          email: r.email,
+          name: "",
+        }));
+      } else {
+        const roleClause = roles ? "AND role = ANY($2::text[])" : "";
+        recipients = await q(
+          `SELECT email, name FROM users WHERE email_verified = TRUE ${roleClause} LIMIT ${CAMPAIGN_EMAIL_CAP}`,
+          roles ? [true, roles] : [true]
+        );
+      }
+      const { sendMail, mailConfigured, newsletterEmailHtml } = await import("../mailer.js");
+      result.email_simulated = !mailConfigured();
+      const unsubscribeUrl = `${process.env.SITE_URL || "https://mboppi-mboppi.vercel.app"}/`;
+      for (const r of recipients) {
+        try {
+          await sendMail({
+            to: r.email,
+            subject: `${title} — Mboppi`,
+            text: `${message}\n\n— Mboppi`,
+            html: newsletterEmailHtml({ title, body: message, unsubscribeUrl }),
+          });
+          result.email_sent += 1;
+        } catch (err) {
+          result.email_failed += 1;
+          console.warn(`[campaign] email échoué vers ${r.email} :`, err.message);
+        }
+      }
+      result.email_total = Math.min(recipients.length, CAMPAIGN_EMAIL_CAP);
+    }
+
+    await logAudit(
+      req.user.id,
+      "admin.campaign",
+      `Campagne « ${title} » → push ${result.push_sent}, email ${result.email_sent}${result.email_failed ? ` (${result.email_failed} échecs)` : ""}`,
+      req.ip
+    );
+    res.json(result);
+  })
+);
+
 router.get(
   "/backup",
   ah(async (req, res) => {

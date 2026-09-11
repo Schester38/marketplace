@@ -285,6 +285,10 @@ export const api = {
       `/admin/visits?days=${days}${country ? `&country=${encodeURIComponent(country)}` : ""}`
     ),
   adminVisitsReset: () => adminRequest("/admin/visits/reset", { method: "POST" }),
+  adminCampaignRecipients: (audience) =>
+    adminRequest(`/admin/campaign/recipients?audience=${encodeURIComponent(audience)}`),
+  adminCampaignSend: (payload) =>
+    adminRequest("/admin/campaign/send", { method: "POST", body: JSON.stringify(payload) }),
   popupMessage: () => request("/messages/popup"),
   ackMessage: (id) => request(`/messages/${id}/ack`, { method: "POST" }),
   chat: (payload) => request("/chat", { method: "POST", body: JSON.stringify(payload) }),

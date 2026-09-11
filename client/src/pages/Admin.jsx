@@ -104,6 +104,64 @@ export default function Admin() {
     return () => clearInterval(iv);
   }, [gate, trackSaleId, loadTracking]);
   // --- fin suivi GPS ---
+
+  // --- Campagne PUSH + EMAIL (gratuits) ---
+  const [campAudience, setCampAudience] = useState("all");
+  const [campTitle, setCampTitle] = useState("");
+  const [campMessage, setCampMessage] = useState("");
+  const [campUrl, setCampUrl] = useState("/");
+  const [campPush, setCampPush] = useState(true);
+  const [campEmail, setCampEmail] = useState(false);
+  const [campRecipients, setCampRecipients] = useState(null);
+  const [campSending, setCampSending] = useState(false);
+  const [campResult, setCampResult] = useState(null);
+
+  useEffect(() => {
+    if (gate) return;
+    setCampRecipients(null);
+    api
+      .adminCampaignRecipients(campAudience)
+      .then(setCampRecipients)
+      .catch(() => {});
+  }, [gate, campAudience]);
+
+  const sendCampaign = async () => {
+    if (!campTitle.trim() || !campMessage.trim()) return;
+    const channels = [campPush ? "push" : null, campEmail ? "email" : null].filter(Boolean);
+    if (!channels.length) return;
+    if (
+      !window.confirm(
+        t(
+          "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.",
+          {
+            title: campTitle.trim(),
+            audience: campAudience,
+            channels: channels.join(" + "),
+          }
+        )
+      )
+    )
+      return;
+    setCampSending(true);
+    setCampResult(null);
+    try {
+      const d = await api.adminCampaignSend({
+        title: campTitle.trim(),
+        message: campMessage.trim(),
+        audience: campAudience,
+        channels,
+        url: campUrl.trim() || "/",
+      });
+      setCampResult(d);
+      setCampTitle("");
+      setCampMessage("");
+    } catch (err) {
+      setCampResult({ error: err.message });
+    } finally {
+      setCampSending(false);
+    }
+  };
+  // --- fin campagne ---
   const [visitDays, setVisitDays] = useState(30);
   const [visitCountry, setVisitCountry] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1227,6 +1285,143 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      <h2 className="section-title">📣 {t("Campagne (Push + Email gratuits)")}</h2>
+      <section className="card msg-form">
+        <p className="hint">
+          {t(
+            "Diffusez un message à vos contacts via les deux canaux gratuits : notifications push (appareils abonnés) et email (adresses vérifiées). Aucun SMS payant."
+          )}
+        </p>
+        <div className="msg-target-row">
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="camp-audience"
+              checked={campAudience === "all"}
+              onChange={() => setCampAudience("all")}
+            />
+            {t("Tous")}
+          </label>
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="camp-audience"
+              checked={campAudience === "clients"}
+              onChange={() => setCampAudience("clients")}
+            />
+            {t("Clients")}
+          </label>
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="camp-audience"
+              checked={campAudience === "sellers"}
+              onChange={() => setCampAudience("sellers")}
+            />
+            {t("Vendeurs")}
+          </label>
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="camp-audience"
+              checked={campAudience === "shops"}
+              onChange={() => setCampAudience("shops")}
+            />
+            {t("Boutiques")}
+          </label>
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="camp-audience"
+              checked={campAudience === "livreurs"}
+              onChange={() => setCampAudience("livreurs")}
+            />
+            {t("Livreurs")}
+          </label>
+          <label className="msg-radio">
+            <input
+              type="radio"
+              name="camp-audience"
+              checked={campAudience === "newsletter"}
+              onChange={() => setCampAudience("newsletter")}
+            />
+            {t("Abonnés newsletter")}
+          </label>
+        </div>
+        <input
+          className="input"
+          placeholder={t("Titre de la campagne")}
+          value={campTitle}
+          maxLength={120}
+          onChange={(e) => setCampTitle(e.target.value)}
+          style={{ marginBottom: 8 }}
+        />
+        <textarea
+          className="msg-textarea"
+          rows="4"
+          maxLength={2000}
+          placeholder={t("Votre message…")}
+          value={campMessage}
+          onChange={(e) => setCampMessage(e.target.value)}
+        />
+        <input
+          className="input"
+          placeholder={t("Lien (optionnel, ex : /produit/12)")}
+          value={campUrl}
+          onChange={(e) => setCampUrl(e.target.value)}
+          style={{ margin: "8px 0" }}
+        />
+        <div className="msg-target-row">
+          <label className="msg-radio">
+            <input
+              type="checkbox"
+              checked={campPush}
+              onChange={(e) => setCampPush(e.target.checked)}
+            />
+            🔔 {t("Push")}
+            {campRecipients ? ` (${campRecipients.push_count})` : ""}
+          </label>
+          <label className="msg-radio">
+            <input
+              type="checkbox"
+              checked={campEmail}
+              onChange={(e) => setCampEmail(e.target.checked)}
+            />
+            📧 {t("Email")}
+            {campRecipients ? ` (${campRecipients.email_count})` : ""}
+          </label>
+        </div>
+        {campRecipients && !campRecipients.mail_configured && (
+          <p className="hint">
+            ⚠️ {t("SMTP non configuré : les emails seront simulés (non envoyés).")}
+          </p>
+        )}
+        <button
+          className="btn btn-primary btn-block"
+          disabled={campSending || !campTitle.trim() || !campMessage.trim() || (!campPush && !campEmail)}
+          onClick={sendCampaign}
+          style={{ marginTop: 10 }}
+        >
+          {campSending ? "…" : `📣 ${t("Envoyer la campagne")}`}
+        </button>
+        {campResult && (
+          <p className={campResult.error ? "error" : "success"} style={{ marginTop: 8 }}>
+            {campResult.error
+              ? campResult.error
+              : `✅ ${t(
+                  "Campagne envoyée : {push} push, {email}/{total} emails.",
+                  {
+                    push: campResult.push_sent,
+                    email: campResult.email_sent,
+                    total: campResult.email_total != null ? campResult.email_total : campResult.email_sent,
+                  }
+                )}${campResult.email_simulated ? ` (${t("SMTP simulé")})` : ""}${
+                  campResult.email_failed ? ` — ${campResult.email_failed} ${t("échecs")}` : ""
+                }`}
+          </p>
+        )}
+      </section>
 
       <h2 className="section-title">✉️ {t("Messages aux utilisateurs")}</h2>
       <form onSubmit={sendMessage} className="card msg-form">

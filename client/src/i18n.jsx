@@ -544,6 +544,23 @@ const EN = {
     "Your location is shared while this screen is open; nearby {role} are refreshed every 30 seconds.",
   "Rechercher un {role} par nom…": "Search a {role} by name…",
   "Aucun utilisateur trouvé pour « {q} ».": "No user found for \"{q}\".",
+  "Campagne (Push + Email gratuits)": "Campaign (free Push + Email)",
+  "Diffusez un message à vos contacts via les deux canaux gratuits : notifications push (appareils abonnés) et email (adresses vérifiées). Aucun SMS payant.":
+    "Send a message to your contacts via the two free channels: push notifications (subscribed devices) and email (verified addresses). No paid SMS.",
+  "Abonnés newsletter": "Newsletter subscribers",
+  "Titre de la campagne": "Campaign title",
+  "Lien (optionnel, ex : /produit/12)": "Link (optional, e.g. /product/12)",
+  Push: "Push",
+  Email: "Email",
+  "SMTP non configuré : les emails seront simulés (non envoyés).":
+    "SMTP not configured: emails will be simulated (not sent).",
+  "Envoyer la campagne": "Send campaign",
+  "Campagne envoyée : {push} push, {email}/{total} emails.":
+    "Campaign sent: {push} push, {email}/{total} emails.",
+  "SMTP simulé": "SMTP simulated",
+  échecs: "failures",
+  "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":
+    "Send \"{title}\" to {audience} via {channels}? This action is irreversible.",
   "Compression…": "Compressing…",
   "Photos complètes": "Photos complete",
   "📷 Ajouter des photos": "📷 Add photos",
@@ -2095,6 +2112,23 @@ const AR = {
     "يتم مشاركة موقعك أثناء فتح هذه الشاشة؛ يتم تحديث {role} القريبين كل 30 ثانية.",
   "Rechercher un {role} par nom…": "ابحث عن {role} بالاسم…",
   "Aucun utilisateur trouvé pour « {q} ».": "لم يتم العثور على مستخدم لـ «{q}».",
+  "Campagne (Push + Email gratuits)": "حملة (إشعارات وبريد مجانية)",
+  "Diffusez un message à vos contacts via les deux canaux gratuits : notifications push (appareils abonnés) et email (adresses vérifiées). Aucun SMS payant.":
+    "أرسل رسالة إلى جهات الاتصال عبر القناتين المجانيتين: إشعارات الدفع (الأجهزة المشتركة) والبريد الإلكتروني (العناوين المؤكدة). لا رسائل SMS مدفوعة.",
+  "Abonnés newsletter": "مشتركو النشرة البريدية",
+  "Titre de la campagne": "عنوان الحملة",
+  "Lien (optionnel, ex : /produit/12)": "رابط (اختياري، مثال: /produit/12)",
+  Push: "إشعارات",
+  Email: "بريد إلكتروني",
+  "SMTP non configuré : les emails seront simulés (non envoyés).":
+    "SMTP غير مهيأ: ستتم محاكاة الرسائل (لن تُرسل).",
+  "Envoyer la campagne": "إرسال الحملة",
+  "Campagne envoyée : {push} push, {email}/{total} emails.":
+    "تم إرسال الحملة: {push} إشعار، {email}/{total} بريد إلكتروني.",
+  "SMTP simulé": "SMTP محاكى",
+  échecs: "إخفاقات",
+  "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":
+    "إرسال «{title}» إلى {audience} عبر {channels}؟ هذا الإجراء لا رجعة فيه.",
   "Compression…": "جارٍ الضغط…",
   "Photos complètes": "اكتملت الصور",
   "📷 Ajouter des photos": "📷 إضافة صور",
@@ -3557,6 +3591,23 @@ const ES = {
     "Tu ubicación se comparte mientras esta pantalla esté abierta; los {role} cercanos se actualizan cada 30 segundos.",
   "Rechercher un {role} par nom…": "Buscar un {role} por nombre…",
   "Aucun utilisateur trouvé pour « {q} ».": "No se encontró ningún usuario para \"{q}\".",
+  "Campagne (Push + Email gratuits)": "Campaña (Push + Email gratis)",
+  "Diffusez un message à vos contacts via les deux canaux gratuits : notifications push (appareils abonnés) et email (adresses vérifiées). Aucun SMS payant.":
+    "Envía un mensaje a tus contactos por los dos canales gratuitos: notificaciones push (dispositivos suscritos) y email (direcciones verificadas). Sin SMS de pago.",
+  "Abonnés newsletter": "Suscriptores del boletín",
+  "Titre de la campagne": "Título de la campaña",
+  "Lien (optionnel, ex : /produit/12)": "Enlace (opcional, ej: /produit/12)",
+  Push: "Push",
+  Email: "Email",
+  "SMTP non configuré : les emails seront simulés (non envoyés).":
+    "SMTP no configurado: los emails se simularán (no se enviarán).",
+  "Envoyer la campagne": "Enviar la campaña",
+  "Campagne envoyée : {push} push, {email}/{total} emails.":
+    "Campaña enviada: {push} push, {email}/{total} emails.",
+  "SMTP simulé": "SMTP simulado",
+  échecs: "fallos",
+  "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":
+    "¿Enviar \"{title}\" a {audience} vía {channels}? Esta acción es irreversible.",
   "Compression…": "Comprimiendo…",
   "Photos complètes": "Fotos completas",
   "📷 Ajouter des photos": "📷 Agregar fotos",
