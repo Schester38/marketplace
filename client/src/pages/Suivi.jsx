@@ -97,8 +97,9 @@ export default function Suivi() {
       ]
     : [];
 
-  // --- Suivi GPS temps réel (pendant pending/confirmed uniquement) ---
-  const trackable = sale && (sale.status === "pending" || sale.status === "confirmed");
+  // --- Suivi GPS temps réel (pendant pending/confirmed, puis figé) ---
+  // La carte reste visible APRÈS la livraison : les positions sont figées
+  // (dernière position + trace) et servent de preuve du trajet.
   const trackCode = sale ? sale.confirm_code || sale.buyer_code || code.trim() : "";
   const [track, setTrack] = useState(null);
   const [gpsMsg, setGpsMsg] = useState("");
@@ -107,19 +108,39 @@ export default function Suivi() {
     if (!id || !trackCode) return;
     api
       .saleTrack(id, trackCode)
-      .then(setTrack)
+      .then((d) => {
+        setTrack(d);
+        return d;
+      })
       .catch(() => {});
   };
 
   useEffect(() => {
-    if (!trackable) {
+    if (!id || !trackCode) {
       setTrack(null);
       return undefined;
     }
-    loadTrack();
-    const iv = setInterval(loadTrack, 12000); // temps réel : 12 s
-    return () => clearInterval(iv);
-  }, [id, trackable, trackCode]);
+    let iv = null;
+    const tick = () => {
+      api
+        .saleTrack(id, trackCode)
+        .then((d) => {
+          setTrack(d);
+          // La livraison est terminée : un dernier rafraîchissement suffit,
+          // on arrête le polling (les positions restent figées sur la carte).
+          if (d && d.tracking_active === false && iv) {
+            clearInterval(iv);
+            iv = null;
+          }
+        })
+        .catch(() => {});
+    };
+    tick();
+    iv = setInterval(tick, 12000);
+    return () => {
+      if (iv) clearInterval(iv);
+    };
+  }, [id, trackCode, sale?.status]);
 
   const shareMyPosition = () => {
     if (!navigator.geolocation) {
@@ -250,30 +271,38 @@ export default function Suivi() {
               </ol>
             )}
 
-            {/* Suivi GPS temps réel : carte livreur/client/boutique */}
-            {trackable && (
+            {/* Suivi GPS : carte livreur/client/boutique (figée après livraison) */}
+            {track && (track.tracking_active || track.livreur || track.buyer || track.shop) && (
               <div style={{ marginTop: 14 }}>
                 <strong>🛰️ {t("Suivi en temps réel")}</strong>
-                <p className="hint" style={{ margin: "4px 0 8px" }}>
-                  {t("Position du livreur actualisée toutes les 12 secondes pendant la livraison.")}
-                </p>
+                {track.tracking_active ? (
+                  <p className="hint" style={{ margin: "4px 0 8px" }}>
+                    {t("Position du livreur actualisée toutes les 12 secondes pendant la livraison.")}
+                  </p>
+                ) : (
+                  <p className="hint" style={{ margin: "4px 0 8px" }}>
+                    {t("Livraison terminée — les positions restent visibles (figées).")}
+                  </p>
+                )}
                 <TrackMap
                   livreur={track?.livreur || null}
                   buyer={track?.buyer || null}
                   shop={track?.shop || null}
                   height={260}
                 />
-                <div style={{ marginTop: 8 }}>
-                  <button type="button" className="btn btn-outline btn-sm" onClick={shareMyPosition}>
-                    📍 {t("Partager ma position au livreur")}
-                  </button>
-                  {gpsMsg && <p className="hint" style={{ marginTop: 6 }}>{gpsMsg}</p>}
-                  {track && !track.livreur && (
-                    <p className="hint" style={{ marginTop: 6 }}>
-                      {t("Le livreur n'a pas encore activé le partage de sa position.")}
-                    </p>
-                  )}
-                </div>
+                {track.tracking_active && (
+                  <div style={{ marginTop: 8 }}>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={shareMyPosition}>
+                      📍 {t("Partager ma position au livreur")}
+                    </button>
+                    {gpsMsg && <p className="hint" style={{ marginTop: 6 }}>{gpsMsg}</p>}
+                    {!track.livreur && (
+                      <p className="hint" style={{ marginTop: 6 }}>
+                        {t("Le livreur n'a pas encore activé le partage de sa position.")}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 

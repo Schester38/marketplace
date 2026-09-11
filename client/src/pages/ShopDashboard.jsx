@@ -997,6 +997,17 @@ export default function ShopDashboard() {
                               <div className="row2" style={{ justifyContent: "flex-end", gap: 6 }}>
                                 <button
                                   className="btn btn-small"
+                                  title={t("Voir la carte de suivi GPS en temps réel")}
+                                  onClick={() => {
+                                    setTrackSaleId(s.id);
+                                    setTrackData(null);
+                                    loadTrackData(s.id);
+                                  }}
+                                >
+                                  📍 {t("Suivi")}
+                                </button>
+                                <button
+                                  className="btn btn-small"
                                   onClick={() =>
                                     downloadInvoice(s, t, countrySymbol(s.shop_country))
                                   }
@@ -1460,7 +1471,7 @@ export default function ShopDashboard() {
                 />
                 {trackData && !trackData.tracking_active && (
                   <p className="hint" style={{ marginTop: 8 }}>
-                    {t("La livraison est terminée : le suivi GPS est désactivé.")}
+                    {t("Livraison terminée — les positions restent visibles (figées).")}
                   </p>
                 )}
                 <div style={{ marginTop: 10 }}>

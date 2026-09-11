@@ -330,6 +330,8 @@ router.get(
        JOIN products p ON p.id = s.product_id
        JOIN users sh ON sh.id = p.shop_id
       WHERE s.status IN ('pending', 'confirmed')
+         OR (s.status = 'delivered'
+             AND COALESCE(s.delivered_at, s.created_at) >= now() - INTERVAL '7 days')
       ORDER BY s.created_at DESC
       LIMIT 20`
     );

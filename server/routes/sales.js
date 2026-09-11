@@ -1619,13 +1619,17 @@ router.get(
       return res.status(403).json({ error: "Accès refusé : code de suivi requis" });
     }
 
-    // Positions partagées UNIQUEMENT pendant la livraison.
+    // Positions VISIBLES EN PERMANENCE (demande produit) : après la livraison,
+    // elles sont FIGÉES (dernière position + trace) et servent de preuve du
+    // trajet. `tracking_active` indique si la livraison est toujours en cours
+    // (le partage temps réel du livreur s'arrête à la livraison, la lecture
+    // des positions enregistrées reste possible pour les parties prenantes).
     const active = sale.status === "pending" || sale.status === "confirmed";
     res.json({
       status: sale.status,
       tracking_active: active,
       livreur:
-        active && sale.livreur_lat != null
+        sale.livreur_lat != null
           ? {
               lat: Number(sale.livreur_lat),
               lng: Number(sale.livreur_lng),
@@ -1634,11 +1638,11 @@ router.get(
             }
           : null,
       buyer:
-        active && sale.buyer_lat != null
+        sale.buyer_lat != null
           ? { lat: Number(sale.buyer_lat), lng: Number(sale.buyer_lng) }
           : null,
       shop:
-        active && sale.shop_lat != null
+        sale.shop_lat != null
           ? {
               lat: Number(sale.shop_lat),
               lng: Number(sale.shop_lng),

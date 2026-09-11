@@ -787,19 +787,17 @@ export default function SellerDashboard() {
                         {s.status === "delivered" && isDirect && (
                           <span className="badge badge-pending">{t("Vente directe")}</span>
                         )}
-                        {s.status !== "delivered" && (
-                          <button
-                            className="btn btn-small btn-outline"
-                            title={t("Voir la carte de suivi GPS en temps réel")}
-                            onClick={() => {
-                              setTrackSaleId(s.id);
-                              setTrackData(null);
-                              loadTrackData(s.id);
-                            }}
-                          >
-                            📍 {t("Suivi")}
-                          </button>
-                        )}
+                        <button
+                          className="btn btn-small btn-outline"
+                          title={t("Voir la carte de suivi GPS en temps réel")}
+                          onClick={() => {
+                            setTrackSaleId(s.id);
+                            setTrackData(null);
+                            loadTrackData(s.id);
+                          }}
+                        >
+                          📍 {t("Suivi")}
+                        </button>
                         {s.status === "delivered" && !isDirect && !s.paid && (
                           <>
                             <span className="badge badge-warn">{t("Commission en attente")}</span>
@@ -1306,7 +1304,7 @@ export default function SellerDashboard() {
             />
             {trackData && !trackData.tracking_active && (
               <p className="hint" style={{ marginTop: 8 }}>
-                {t("La livraison est terminée : le suivi GPS est désactivé.")}
+                {t("Livraison terminée — les positions restent visibles (figées).")}
               </p>
             )}
             {trackData && !trackData.livreur && trackData.tracking_active && (

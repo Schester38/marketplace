@@ -512,6 +512,8 @@ const EN = {
     "The delivery driver hasn't enabled location sharing yet.",
   "La livraison est terminée : le suivi GPS est désactivé.":
     "Delivery completed: GPS tracking is disabled.",
+  "Livraison terminée — les positions restent visibles (figées).":
+    "Delivery completed — positions remain visible (frozen).",
   "Partager la position de la boutique": "Share the shop location",
   "Position de la boutique partagée ✓": "Shop location shared ✓",
   "Suivi GPS — commande #{id}": "GPS tracking — order #{id}",
@@ -2052,6 +2054,8 @@ const AR = {
     "لم يقم عامل التوصيل بتفعيل مشاركة موقعه بعد.",
   "La livraison est terminée : le suivi GPS est désactivé.":
     "اكتمل التوصيل: تم تعطيل تتبع GPS.",
+  "Livraison terminée — les positions restent visibles (figées).":
+    "اكتمل التوصيل — تبقى المواقع مرئية (مجمدّة).",
   "Partager la position de la boutique": "مشاركة موقع المتجر",
   "Position de la boutique partagée ✓": "تمت مشاركة موقع المتجر ✓",
   "Suivi GPS — commande #{id}": "تتبع GPS — الطلب #{id}",
@@ -3501,6 +3505,8 @@ const ES = {
     "El repartidor aún no ha activado el uso compartido de su ubicación.",
   "La livraison est terminée : le suivi GPS est désactivé.":
     "Entrega completada: el seguimiento GPS está desactivado.",
+  "Livraison terminée — les positions restent visibles (figées).":
+    "Entrega completada — las posiciones permanecen visibles (congeladas).",
   "Partager la position de la boutique": "Compartir la ubicación de la tienda",
   "Position de la boutique partagée ✓": "Ubicación de la tienda compartida ✓",
   "Suivi GPS — commande #{id}": "Seguimiento GPS — pedido #{id}",
