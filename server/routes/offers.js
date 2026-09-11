@@ -8,7 +8,7 @@ import { offerSchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
 
 const router = Router();
-const MAX_PHOTOS = 3;
+const MAX_PHOTOS = 1;
 const MAX_PHOTO_SIZE = 1500000;
 
 // Colonne delete_token créée à la demande (lazy, une seule fois par process).

@@ -11,11 +11,14 @@ const ok = (v) => typeof v === "string" && (v.startsWith("data:image/") || /^htt
 
 /**
  * Normalise une entrée photo en { thumb, medium, large }.
+ * Depuis la refonte « une seule photo » : le client envoie `{ thumb }` (une
+ * seule variante, max 1024px, WebP) — on propage la même URL sur medium/large
+ * pour la rétrocompat (les anciens produits ont des variants thumb/medium/large).
  * Formats acceptés (rétrocompatibles) :
  *  - "https://…"                        (string seule)
  *  - { thumb, full }                    (ancien format 2 variantes)
- *  - { thumb, medium, large }           (nouveau format 3 variantes)
- *  - { thumb, medium, large, meta }     (+ métadonnées d'optimisation)
+ *  - { thumb, medium, large }           (ancien format 3 variantes)
+ *  - { thumb, meta }                    (nouveau format : UNE seule variante)
  */
 export function entry(x) {
   if (typeof x === "string" && ok(x)) return { thumb: x, medium: x, large: x };
@@ -34,7 +37,7 @@ export function entry(x) {
 }
 
 export function photoEntries(raw) {
-  return parsePhotos(raw).map(entry).filter(Boolean).slice(0, 3);
+  return parsePhotos(raw).map(entry).filter(Boolean).slice(0, 1);
 }
 
 /** Thumbnails — listes, catalogues, vignettes. */
@@ -59,5 +62,5 @@ export function photoMetaList(raw) {
 
 export function normalizeUploadPhotos(photos) {
   if (!Array.isArray(photos)) return [];
-  return photos.map(entry).filter(Boolean).slice(0, 3);
+  return photos.map(entry).filter(Boolean).slice(0, 1);
 }

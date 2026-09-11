@@ -22,7 +22,7 @@ const EMPTY_FORM = {
   photos: [],
 };
 
-const MAX_PHOTOS = 3;
+const MAX_PHOTOS = 1;
 
 export default function Verone() {
   const { t } = useLang();
@@ -264,7 +264,7 @@ export default function Verone() {
         <div className="card form-card">
           <h2>{t("Nouvelle offre")}</h2>
           <form onSubmit={submit}>
-            <label>{t("Photos (maximum {n})", { n: MAX_PHOTOS })}</label>
+            <label>{t("Photo (1 max)")}</label>
             <div className="photo-input">
               <label className="photo-picker">
                 <input

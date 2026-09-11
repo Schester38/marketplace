@@ -26,7 +26,7 @@ const EMPTY_FORM = {
   commission_amount: "",
   photos: [],
 };
-const MAX_PHOTOS = 3;
+const MAX_PHOTOS = 1;
 
 // Prompt ChatGPT conseillé pour améliorer les photos produits. La clé française
 // est aussi la valeur exacte copiée dans le presse-papiers (toutes langues).
@@ -290,7 +290,7 @@ export default function CreatorDashboard() {
             </ol>
           </div>
           <form onSubmit={submitProduct}>
-            <label>{t("Photos (maximum {n})", { n: MAX_PHOTOS })}</label>
+            <label>{t("Photo (1 max)")}</label>
             <div className="photo-input">
               <label className="photo-picker">
                 <input

@@ -38,12 +38,8 @@ export const PAYMENT_PROOF_CONFIG = {
 };
 
 export const IMAGE_CONFIG = {
-  /** Variantes générées : dimensions max + qualité d'encodage WebP. */
-  variants: {
-    thumb: { max: 300, quality: 0.7, key: "Miniature" },
-    medium: { max: 800, quality: 0.78, key: "Fiche produit" },
-    large: { max: 1200, quality: 0.82, key: "Zoom" },
-  },
+  /** Une SEULE variante par photo (le système thumb/medium/large est abandonné). */
+  single: { max: 1024, quality: 0.8, key: "Photo" },
   /** Règle « déjà optimisée » : format moderne + poids faible + dimensions ok. */
   alreadyOptimized: {
     formats: ["image/webp", "image/avif"],
@@ -242,7 +238,9 @@ export function pickPaymentProofStrategy({ format, bytes, width, height }) {
 /**
  * Analyse + optimise un fichier image sélectionné.
  * Retourne :
- *  - entry : { thumb, medium, large, meta } (data-URIs à envoyer au serveur)
+ *  - entry : { thumb, meta } — UNE SEULE variante (le système thumb/medium/large
+ *    est abandonné : une photo = un fichier, compressé en WebP, affiché partout
+ *    par redimensionnement CSS + déduplication serveur).
  *  - info  : métriques de surveillance prêtes pour l'UI
  */
 export async function smartProcessImageFile(file) {
@@ -272,48 +270,26 @@ export async function smartProcessImageFile(file) {
     height,
   });
 
-  const V = IMAGE_CONFIG.variants;
-  const needThumb = true; // listes + vignettes
-  const needMedium = true; // affichage principal de la fiche
-  const needLarge = Math.max(width, height) > V.medium.max; // zoom seulement si utile
+  const V = IMAGE_CONFIG.single;
   const srcFits = (max) => Math.max(width, height) <= max;
 
-  let thumb = null;
-  let medium = null;
-  let large = null;
+  // Une seule version : ni thumb, ni medium, ni large.
+  // - si déjà optimisée et ≤ max → on garde l'originale (le serveur déduplique) ;
+  // - sinon → redimensionnement unique (max 1024 px, qualité 0.8 → WebP).
+  let single;
+  if (strategy.action === "keep" && srcFits(V.max)) {
+    single = sourceDataUrl;
+  } else {
+    single = renderVariant(img, V.max, V.quality).dataUrl;
+  }
 
-  if (needThumb) {
-    if (strategy.action === "keep" && srcFits(V.thumb.max)) {
-      thumb = sourceDataUrl; // identique → le serveur dédupliquera par hachage
-    } else {
-      thumb = renderVariant(img, V.thumb.max, V.thumb.quality).dataUrl;
-    }
-  }
-  if (needMedium) {
-    if (strategy.action === "keep" && srcFits(V.medium.max)) {
-      medium = sourceDataUrl;
-    } else {
-      medium = renderVariant(img, V.medium.max, V.medium.quality).dataUrl;
-    }
-  }
-  if (needLarge) {
-    if (strategy.action === "keep" && srcFits(V.large.max)) {
-      large = sourceDataUrl;
-    } else {
-      large = renderVariant(img, V.large.max, V.large.quality).dataUrl;
-    }
-  }
-  // Image trop petite pour un zoom dédié : le zoom utilisera le medium.
-  if (!needLarge) large = null;
-
-  const ref = medium || large || thumb;
-  const refFormat = (ref.match(/^data:(image\/[a-z+]+)/) || [])[1] || "image/webp";
-  const totalBytes = dataUrlBytes(thumb) + dataUrlBytes(medium) + dataUrlBytes(large);
+  const refFormat = (single.match(/^data:(image\/[a-z+]+)/) || [])[1] || "image/webp";
+  const totalBytes = dataUrlBytes(single);
 
   const meta = {
-    width: Math.min(width, V.medium.max),
-    height: Math.min(height, V.medium.max),
-    bytes: dataUrlBytes(ref),
+    width: Math.min(width, V.max),
+    height: Math.min(height, V.max),
+    bytes: totalBytes,
     format: refFormat,
     original_width: width,
     original_height: height,
@@ -322,9 +298,7 @@ export async function smartProcessImageFile(file) {
     strategy: strategy.action,
   };
 
-  const entry = { thumb, medium };
-  if (large) entry.large = large;
-  entry.meta = meta;
+  const entry = { thumb: single, meta };
 
   return {
     entry,

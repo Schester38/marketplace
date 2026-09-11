@@ -170,7 +170,7 @@ export const offerSchema = z
     quantity: z.coerce.number().int().min(0, "Quantité invalide").default(0),
     photos: z
       .array(z.union([photoDataUriSchema, photoUrlSchema]))
-      .max(3, "Maximum 3 photos")
+      .max(1, "Maximum 1 photo")
       .optional(),
     currency: z.string().max(10).optional(),
   })
