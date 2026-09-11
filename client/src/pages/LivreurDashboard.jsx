@@ -12,6 +12,7 @@ import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import SwitchSpaceButton from "../components/SwitchSpaceButton.jsx";
 import MiniChart from "../components/MiniChart.jsx";
+import TrackMap from "../components/TrackMap.jsx";
 import { dailyBuckets } from "../utils.js";
 
 const CODE_KEY = "livreur_shop_code";
@@ -153,6 +154,75 @@ export default function LivreurDashboard() {
     });
     if (initialMethod === "mobile") loadShopMethods(s.shop_id);
   };
+
+  // --- Suivi GPS : partage de position pendant la livraison en cours ---
+  const [sharingId, setSharingId] = useState(null); // vente partagée
+  const [trackData, setTrackData] = useState(null); // réponse /:id/track
+  const [gpsMsg, setGpsMsg] = useState("");
+  const shareTimerRef = useRef(null);
+  const watchIdRef = useRef(null);
+
+  const stopSharing = () => {
+    if (shareTimerRef.current) clearInterval(shareTimerRef.current);
+    if (watchIdRef.current != null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+    }
+    shareTimerRef.current = null;
+    watchIdRef.current = null;
+    setSharingId(null);
+    setTrackData(null);
+  };
+
+  // Stoppe le partage quand on quitte la page (l'app fermée = plus de ping).
+  useEffect(
+    () => () => {
+      if (shareTimerRef.current) clearInterval(shareTimerRef.current);
+      if (watchIdRef.current != null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    },
+    []
+  );
+
+  const loadTrack = (saleId) => {
+    api
+      .saleTrack(saleId, "")
+      .then(setTrackData)
+      .catch(() => {});
+  };
+
+  const postPosition = (saleId, pos) => {
+    api
+      .livreurPosition(saleId, { lat: pos.coords.latitude, lng: pos.coords.longitude })
+      .then(() => loadTrack(saleId))
+      .catch((e) => setGpsMsg(e.message));
+  };
+
+  const startSharing = (s) => {
+    if (!navigator.geolocation) {
+      setGpsMsg(t("La géolocalisation n'est pas disponible sur cet appareil."));
+      return;
+    }
+    setGpsMsg(t("Localisation en cours…"));
+    setSharingId(s.id);
+    setTrackData(null);
+    // watchPosition : position continue tant que la page est ouverte.
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => postPosition(s.id, pos),
+      () => setGpsMsg(t("Position refusée ou indisponible — activez la géolocalisation.")),
+      { enableHighAccuracy: true, maximumAge: 8000, timeout: 15000 }
+    );
+    // Filet : un ping forcé toutes les 30 s même si watchPosition se tait.
+    shareTimerRef.current = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => postPosition(s.id, pos),
+        () => {},
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
+    }, 30000);
+    loadTrack(s.id);
+  };
+  // --- fin suivi GPS ---
 
   const removeDelivered = async (s) => {
     if (!window.confirm(t("Supprimer cette livraison « {name} » ?", { name: s.product_name })))
@@ -330,14 +400,57 @@ export default function LivreurDashboard() {
                         </p>
                       ) : null}
                     </div>
-                    <button className="btn btn-primary" onClick={() => openDeliver(s)}>
-                      🛵 {t("Livrer")}
-                    </button>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      <button className="btn btn-primary" onClick={() => openDeliver(s)}>
+                        🛵 {t("Livrer")}
+                      </button>
+                      {sharingId === s.id ? (
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={stopSharing}
+                          title={t("Arrêter le partage de position")}
+                        >
+                          ⏹ {t("Arrêter le partage")}
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => startSharing(s)}
+                          title={t("Partager votre position GPS pendant la livraison")}
+                        >
+                          📍 {t("Partager ma position")}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </section>
+
+          {/* Panneau de suivi GPS : carte temps réel livreur/client/boutique */}
+          {sharingId && (
+            <section className="card" style={{ marginBottom: 14 }}>
+              <div className="row2" style={{ alignItems: "center", marginBottom: 8 }}>
+                <h2 style={{ margin: 0 }}>🛰️ {t("Partage de position en cours")}</h2>
+                <button className="btn btn-outline btn-sm" onClick={stopSharing}>
+                  ⏹ {t("Arrêter")}
+                </button>
+              </div>
+              <p className="hint">
+                {t(
+                  "Votre position est partagée tant que cet écran reste ouvert. Le client, la boutique et le vendeur vous voient en temps réel."
+                )}
+              </p>
+              {gpsMsg && <p className="hint">{gpsMsg}</p>}
+              <TrackMap
+                livreur={trackData?.livreur || null}
+                buyer={trackData?.buyer || null}
+                shop={trackData?.shop || null}
+                height={280}
+              />
+            </section>
+          )}
 
           <section className="card" style={{ marginBottom: 14 }}>
             <h2>📈 {t("Gains des 14 derniers jours")}</h2>

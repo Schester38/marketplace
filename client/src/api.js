@@ -307,6 +307,16 @@ export const api = {
       },
       body: JSON.stringify({ items }),
     }),
+  // Suivi GPS temps réel d'une livraison
+  livreurPosition: (id, payload) =>
+    request(`/sales/${id}/livreur-position`, { method: "POST", body: JSON.stringify(payload) }),
+  buyerPosition: (id, payload) =>
+    request(`/sales/${id}/buyer-position`, { method: "POST", body: JSON.stringify(payload) }),
+  saleTrack: (id, code = "") =>
+    request(`/sales/${id}/track${code ? `?code=${encodeURIComponent(code)}` : ""}`),
+  myPosition: (payload) =>
+    request("/auth/position", { method: "POST", body: JSON.stringify(payload) }),
+  adminTracking: () => adminRequest("/admin/tracking"),
   myFlashPromotions: () => request("/flash-promotions/mine"),
   deleteFlashPromotion: (id) => request(`/flash-promotions/${id}`, { method: "DELETE" }),
   activationWithdrawalMe: () => request("/activation-withdrawals/me"),

@@ -8,6 +8,7 @@ import { waLink, BASE_URL, countrySymbol } from "../config.js";
 import { nativeShareWithImage } from "../share.js";
 import { formatMoney } from "../components/ProductCard.jsx";
 import CopyCode from "../components/CopyCode.jsx";
+import TrackMap from "../components/TrackMap.jsx";
 
 export default function Suivi() {
   const { id } = useParams();
@@ -95,6 +96,53 @@ export default function Suivi() {
         { key: "Commande livrée", date: sale.delivered_at },
       ]
     : [];
+
+  // --- Suivi GPS temps réel (pendant pending/confirmed uniquement) ---
+  const trackable = sale && (sale.status === "pending" || sale.status === "confirmed");
+  const trackCode = sale ? sale.confirm_code || sale.buyer_code || code.trim() : "";
+  const [track, setTrack] = useState(null);
+  const [gpsMsg, setGpsMsg] = useState("");
+
+  const loadTrack = () => {
+    if (!id || !trackCode) return;
+    api
+      .saleTrack(id, trackCode)
+      .then(setTrack)
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    if (!trackable) {
+      setTrack(null);
+      return undefined;
+    }
+    loadTrack();
+    const iv = setInterval(loadTrack, 12000); // temps réel : 12 s
+    return () => clearInterval(iv);
+  }, [id, trackable, trackCode]);
+
+  const shareMyPosition = () => {
+    if (!navigator.geolocation) {
+      setGpsMsg(t("La géolocalisation n'est pas disponible sur cet appareil."));
+      return;
+    }
+    setGpsMsg(t("Localisation en cours…"));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        api
+          .buyerPosition(id, {
+            code: trackCode,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+          })
+          .then(() => setGpsMsg(t("Position partagée ✓ — le livreur peut vous localiser.")))
+          .catch((e) => setGpsMsg(e.message));
+      },
+      () => setGpsMsg(t("Position refusée ou indisponible.")),
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  };
+  // --- fin suivi GPS ---
 
   return (
     <main className="container narrow">
@@ -200,6 +248,33 @@ export default function Suivi() {
                   );
                 })}
               </ol>
+            )}
+
+            {/* Suivi GPS temps réel : carte livreur/client/boutique */}
+            {trackable && (
+              <div style={{ marginTop: 14 }}>
+                <strong>🛰️ {t("Suivi en temps réel")}</strong>
+                <p className="hint" style={{ margin: "4px 0 8px" }}>
+                  {t("Position du livreur actualisée toutes les 12 secondes pendant la livraison.")}
+                </p>
+                <TrackMap
+                  livreur={track?.livreur || null}
+                  buyer={track?.buyer || null}
+                  shop={track?.shop || null}
+                  height={260}
+                />
+                <div style={{ marginTop: 8 }}>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={shareMyPosition}>
+                    📍 {t("Partager ma position au livreur")}
+                  </button>
+                  {gpsMsg && <p className="hint" style={{ marginTop: 6 }}>{gpsMsg}</p>}
+                  {track && !track.livreur && (
+                    <p className="hint" style={{ marginTop: 6 }}>
+                      {t("Le livreur n'a pas encore activé le partage de sa position.")}
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
 
             <div className="suivi-actions">

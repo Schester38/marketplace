@@ -1503,4 +1503,152 @@ router.get(
   })
 );
 
+// ========================= SUIVI GPS TEMPS RÉEL =============================
+// Le livreur partage sa position pendant la prise en charge (pending /
+// confirmed) ; le client partage la sienne avec son code de confirmation.
+// Chaque partie concernée (client, boutique, vendeur, livreur, admin) lit
+// toutes les positions de la commande via GET /:id/track. Les positions sont
+// MASQUÉES dès que la vente n'est plus en cours (delivered / cancelled) :
+// fin de suivi, respect de la vie privée.
+
+const GPS_TRACK_CAP = 60; // points conservés dans livreur_track (~15 min)
+
+function isValidCoord(lat, lng) {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  );
+}
+
+// Partage de position par le LIVREUR (appelé toutes les ~15 s tant que la
+// livraison est en cours et l'app ouverte au premier plan).
+router.post(
+  "/:id/livreur-position",
+  authRequired,
+  roleRequired("livreur"),
+  ah(async (req, res) => {
+    const lat = Number(req.body?.lat);
+    const lng = Number(req.body?.lng);
+    if (!isValidCoord(lat, lng)) return res.status(400).json({ error: "Coordonnées invalides" });
+    const sale = (
+      await q("SELECT id, status, livreur_track FROM sales WHERE id = $1", [
+        Number(req.params.id),
+      ])
+    )[0];
+    if (!sale) return res.status(404).json({ error: "Vente introuvable" });
+    if (!["pending", "confirmed"].includes(sale.status)) {
+      return res.status(409).json({ error: "Le suivi GPS n'est actif que pendant la livraison" });
+    }
+    const track = Array.isArray(sale.livreur_track) ? sale.livreur_track : [];
+    track.push({ lat, lng, at: new Date().toISOString() });
+    await q(
+      `UPDATE sales
+          SET livreur_lat = $2, livreur_lng = $3, livreur_pos_at = now(), livreur_track = $4::jsonb
+        WHERE id = $1`,
+      [sale.id, lat, lng, JSON.stringify(track.slice(-GPS_TRACK_CAP))]
+    );
+    res.json({ ok: true });
+  })
+);
+
+// Partage de position par le CLIENT (avec son code de confirmation).
+router.post(
+  "/:id/buyer-position",
+  ah(async (req, res) => {
+    const lat = Number(req.body?.lat);
+    const lng = Number(req.body?.lng);
+    const typed = String(req.body?.code || "").trim().toUpperCase();
+    if (!isValidCoord(lat, lng)) return res.status(400).json({ error: "Coordonnées invalides" });
+    if (!typed) return res.status(400).json({ error: "Code requis" });
+    const sale = (
+      await q("SELECT id, status, confirm_code, buyer_code FROM sales WHERE id = $1", [
+        Number(req.params.id),
+      ])
+    )[0];
+    if (!sale) return res.status(404).json({ error: "Commande introuvable" });
+    if (typed !== String(sale.confirm_code || sale.buyer_code || "").trim().toUpperCase()) {
+      return res.status(403).json({ error: "Code incorrect" });
+    }
+    if (!["pending", "confirmed"].includes(sale.status)) {
+      return res.status(409).json({ error: "Le suivi GPS n'est actif que pendant la livraison" });
+    }
+    await q("UPDATE sales SET buyer_lat = $2, buyer_lng = $3 WHERE id = $1", [sale.id, lat, lng]);
+    res.json({ ok: true });
+  })
+);
+
+// Lecture de toutes les positions d'une commande. Accès : code de suivi
+// valide, OU partie prenante authentifiée (client, boutique, vendeur,
+// livreur, admin). Sinon 403 — les positions ne sont pas publiques.
+router.get(
+  "/:id/track",
+  authOptional,
+  ah(async (req, res) => {
+    const sale = (
+      await q(
+        `SELECT s.id, s.status, s.confirm_code, s.buyer_code, s.seller_id, s.buyer_id,
+                s.buyer_lat, s.buyer_lng,
+                s.livreur_lat, s.livreur_lng, s.livreur_pos_at, s.livreur_track,
+                p.shop_id, sh.lat AS shop_lat, sh.lng AS shop_lng,
+                sh.name AS shop_name, sh.city AS shop_city, sh.location AS shop_location
+         FROM sales s
+         JOIN products p ON p.id = s.product_id
+         JOIN users sh ON sh.id = p.shop_id
+        WHERE s.id = $1`,
+        [Number(req.params.id)]
+      )
+    )[0];
+    if (!sale) return res.status(404).json({ error: "Commande introuvable" });
+
+    const typed = String(req.query.code || "").trim().toUpperCase();
+    const codeOk =
+      typed && typed === String(sale.confirm_code || sale.buyer_code || "").trim().toUpperCase();
+    const u = req.user;
+    const involved =
+      u &&
+      (u.role === "admin" ||
+        u.role === "livreur" ||
+        Number(sale.seller_id) === Number(u.id) ||
+        Number(sale.buyer_id) === Number(u.id) ||
+        Number(sale.shop_id) === Number(u.id));
+    if (!codeOk && !involved) {
+      return res.status(403).json({ error: "Accès refusé : code de suivi requis" });
+    }
+
+    // Positions partagées UNIQUEMENT pendant la livraison.
+    const active = sale.status === "pending" || sale.status === "confirmed";
+    res.json({
+      status: sale.status,
+      tracking_active: active,
+      livreur:
+        active && sale.livreur_lat != null
+          ? {
+              lat: Number(sale.livreur_lat),
+              lng: Number(sale.livreur_lng),
+              at: sale.livreur_pos_at,
+              track: Array.isArray(sale.livreur_track) ? sale.livreur_track.slice(-30) : [],
+            }
+          : null,
+      buyer:
+        active && sale.buyer_lat != null
+          ? { lat: Number(sale.buyer_lat), lng: Number(sale.buyer_lng) }
+          : null,
+      shop:
+        active && sale.shop_lat != null
+          ? {
+              lat: Number(sale.shop_lat),
+              lng: Number(sale.shop_lng),
+              name: sale.shop_name,
+              city: sale.shop_city,
+              location: sale.shop_location,
+            }
+          : null,
+    });
+  })
+);
+
 export default router;

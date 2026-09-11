@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import MiniChart from "../components/MiniChart.jsx";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
@@ -17,6 +17,7 @@ import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 import SwitchSpaceButton from "../components/SwitchSpaceButton.jsx";
+import TrackMap from "../components/TrackMap.jsx";
 import {
   IconCart,
   IconChartBar,
@@ -306,6 +307,47 @@ export default function ShopDashboard() {
       setError(err.message);
     }
   };
+
+  // --- Suivi GPS temps réel (carte livreur/client/boutique) ---
+  const [trackSaleId, setTrackSaleId] = useState(null);
+  const [trackData, setTrackData] = useState(null);
+  const [gpsMsg, setGpsMsg] = useState("");
+
+  const loadTrackData = (saleId) => {
+    api
+      .saleTrack(saleId, "")
+      .then(setTrackData)
+      .catch((e) => setGpsMsg(e.message));
+  };
+
+  // Polling 12 s pendant que la modale carte est ouverte.
+  useEffect(() => {
+    if (!trackSaleId) return undefined;
+    const iv = setInterval(() => loadTrackData(trackSaleId), 12000);
+    return () => clearInterval(iv);
+  }, [trackSaleId]);
+
+  const shareShopPosition = () => {
+    if (!navigator.geolocation) {
+      setGpsMsg(t("La géolocalisation n'est pas disponible sur cet appareil."));
+      return;
+    }
+    setGpsMsg(t("Localisation en cours…"));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        api
+          .myPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+          .then(() => {
+            setGpsMsg(t("Position de la boutique partagée ✓"));
+            if (trackSaleId) loadTrackData(trackSaleId);
+          })
+          .catch((e) => setGpsMsg(e.message));
+      },
+      () => setGpsMsg(t("Position refusée ou indisponible.")),
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  };
+  // --- fin suivi GPS ---
 
   const submitFlash = async (e) => {
     e.preventDefault();
@@ -1357,26 +1399,39 @@ export default function ShopDashboard() {
                             <span className={`badge ${st.cls}`}>{t(st.key)}</span>
                           </td>
                           <td>
-                            {s.status === "pending" && (
-                              <div className="row2">
-                                {s.shop_confirmed_at ? (
-                                  <span className="badge badge-confirmed">✓ {t("Vue")}</span>
-                                ) : (
+                            <div className="row2" style={{ alignItems: "center" }}>
+                              {s.status === "pending" && (
+                                <>
+                                  {s.shop_confirmed_at ? (
+                                    <span className="badge badge-confirmed">✓ {t("Vue")}</span>
+                                  ) : (
+                                    <button
+                                      className="btn btn-small btn-primary"
+                                      onClick={() => changeStatus(s.id, "confirmed")}
+                                    >
+                                      {t("Confirmer")}
+                                    </button>
+                                  )}
                                   <button
-                                    className="btn btn-small btn-primary"
-                                    onClick={() => changeStatus(s.id, "confirmed")}
+                                    className="btn btn-small btn-danger"
+                                    onClick={() => changeStatus(s.id, "cancelled")}
                                   >
-                                    {t("Confirmer")}
+                                    {t("Annuler")}
                                   </button>
-                                )}
-                                <button
-                                  className="btn btn-small btn-danger"
-                                  onClick={() => changeStatus(s.id, "cancelled")}
-                                >
-                                  {t("Annuler")}
-                                </button>
-                              </div>
-                            )}
+                                </>
+                              )}
+                              <button
+                                className="btn btn-small btn-outline"
+                                title={t("Voir la carte de suivi GPS en temps réel")}
+                                onClick={() => {
+                                  setTrackSaleId(s.id);
+                                  setTrackData(null);
+                                  loadTrackData(s.id);
+                                }}
+                              >
+                                📍 {t("Suivi")}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1386,6 +1441,46 @@ export default function ShopDashboard() {
               </div>
             )}
           </section>
+
+          {/* Modale carte de suivi GPS (livreur / client / boutique) */}
+          {trackSaleId && (
+            <div className="modal-overlay" onClick={() => setTrackSaleId(null)}>
+              <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">
+                  <h3>🛰️ {t("Suivi GPS — commande #{id}", { id: trackSaleId })}</h3>
+                  <button className="drawer-close" onClick={() => setTrackSaleId(null)}>
+                    ✕
+                  </button>
+                </div>
+                <TrackMap
+                  livreur={trackData?.livreur || null}
+                  buyer={trackData?.buyer || null}
+                  shop={trackData?.shop || null}
+                  height={300}
+                />
+                {trackData && !trackData.tracking_active && (
+                  <p className="hint" style={{ marginTop: 8 }}>
+                    {t("La livraison est terminée : le suivi GPS est désactivé.")}
+                  </p>
+                )}
+                <div style={{ marginTop: 10 }}>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={shareShopPosition}
+                  >
+                    📍 {t("Partager la position de la boutique")}
+                  </button>
+                  {gpsMsg && <p className="hint" style={{ marginTop: 6 }}>{gpsMsg}</p>}
+                  {trackData && !trackData.livreur && trackData.tracking_active && (
+                    <p className="hint" style={{ marginTop: 6 }}>
+                      {t("Le livreur n'a pas encore activé le partage de sa position.")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {payForm && (
             <div className="modal-overlay" onClick={() => setPayForm(null)}>

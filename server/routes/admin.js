@@ -315,6 +315,43 @@ router.post(
   })
 );
 
+// Suivi GPS des livraisons en cours : liste compacte pour le panneau admin
+// (les positions détaillées/l'historique se lisent via GET /api/sales/:id/track,
+// accessible à l'admin authentifié).
+router.get(
+  "/tracking",
+  ah(async (req, res) => {
+    const rows = await q(
+      `SELECT s.id, s.status, s.created_at,
+              s.buyer_name, s.buyer_city, s.buyer_lat, s.buyer_lng,
+              s.livreur_lat, s.livreur_lng, s.livreur_pos_at,
+              p.name AS product_name, sh.name AS shop_name
+       FROM sales s
+       JOIN products p ON p.id = s.product_id
+       JOIN users sh ON sh.id = p.shop_id
+      WHERE s.status IN ('pending', 'confirmed')
+      ORDER BY s.created_at DESC
+      LIMIT 20`
+    );
+    res.json({
+      deliveries: rows.map((r) => ({
+        id: Number(r.id),
+        status: r.status,
+        created_at: r.created_at,
+        product_name: r.product_name,
+        shop_name: r.shop_name,
+        buyer_name: r.buyer_name,
+        buyer_city: r.buyer_city,
+        buyer: r.buyer_lat != null ? { lat: Number(r.buyer_lat), lng: Number(r.buyer_lng) } : null,
+        livreur:
+          r.livreur_lat != null
+            ? { lat: Number(r.livreur_lat), lng: Number(r.livreur_lng), at: r.livreur_pos_at }
+            : null,
+      })),
+    });
+  })
+);
+
 router.get(
   "/backup",
   ah(async (req, res) => {

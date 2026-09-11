@@ -12,6 +12,7 @@ import { formatMoney } from "../components/ProductCard.jsx";
 import { countrySymbol, COUNTRIES } from "../config.js";
 import MiniChart from "../components/MiniChart.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
+import TrackMap from "../components/TrackMap.jsx";
 
 const VISIT_RANGES = [
   { days: 1, label: "1 jour" },
@@ -68,6 +69,41 @@ export default function Admin() {
   const [nlBusy, setNlBusy] = useState(false);
   const [nlOk, setNlOk] = useState("");
   const [visits, setVisits] = useState(null);
+
+  // --- Suivi GPS des livraisons en cours (liste + carte) ---
+  const [deliveries, setDeliveries] = useState([]);
+  const [trackSaleId, setTrackSaleId] = useState(null);
+  const [trackData, setTrackData] = useState(null);
+
+  const loadTracking = useCallback(() => {
+    api
+      .adminTracking()
+      .then((d) => setDeliveries(d.deliveries || []))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (gate) return;
+    loadTracking();
+  }, [gate, loadTracking]);
+
+  // Polling 12 s pendant qu'une carte est ouverte ; 60 s sinon.
+  useEffect(() => {
+    if (gate) return undefined;
+    if (!trackSaleId) {
+      const slow = setInterval(loadTracking, 60000);
+      return () => clearInterval(slow);
+    }
+    const iv = setInterval(() => {
+      loadTracking();
+      api
+        .saleTrack(trackSaleId, "")
+        .then(setTrackData)
+        .catch(() => {});
+    }, 12000);
+    return () => clearInterval(iv);
+  }, [gate, trackSaleId, loadTracking]);
+  // --- fin suivi GPS ---
   const [visitDays, setVisitDays] = useState(30);
   const [visitCountry, setVisitCountry] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1124,6 +1160,72 @@ export default function Admin() {
           </div>
 
         </section>
+      )}
+
+      <h2 className="section-title">🛰️ {t("Suivi GPS des livraisons")}</h2>
+      <section className="card">
+        {deliveries.length === 0 ? (
+          <p className="empty">{t("Aucune livraison en cours pour le moment.")}</p>
+        ) : (
+          <div className="livreur-list">
+            {deliveries.map((d) => (
+              <div className="livreur-item" key={d.id}>
+                <div className="livreur-item-info">
+                  <div className="livreur-item-top">
+                    <strong>
+                      #{d.id} — {d.product_name}
+                    </strong>
+                    <span className={`badge badge-pending`}>{t("En cours")}</span>
+                  </div>
+                  <p className="hint">
+                    🏪 {d.shop_name} · 🧑 {d.buyer_name || "—"}
+                    {d.buyer_city ? ` · ${d.buyer_city}` : ""}
+                  </p>
+                  <p className="hint">
+                    {d.livreur
+                      ? `🛵 ${t("Position livreur :")} ${d.livreur.lat.toFixed(4)}, ${d.livreur.lng.toFixed(4)}`
+                      : `🛵 ${t("Position livreur non partagée")}`}
+                  </p>
+                </div>
+                <button
+                  className="btn btn-small btn-outline"
+                  onClick={() => {
+                    setTrackSaleId(d.id);
+                    setTrackData(null);
+                    api.saleTrack(d.id, "").then(setTrackData).catch(() => {});
+                  }}
+                >
+                  🗺️ {t("Carte")}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Modale carte de suivi GPS (toutes positions de la commande) */}
+      {trackSaleId && (
+        <div className="modal-overlay" onClick={() => setTrackSaleId(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🛰️ {t("Suivi GPS — commande #{id}", { id: trackSaleId })}</h3>
+              <button className="drawer-close" onClick={() => setTrackSaleId(null)}>
+                ✕
+              </button>
+            </div>
+            <TrackMap
+              livreur={trackData?.livreur || null}
+              buyer={trackData?.buyer || null}
+              shop={trackData?.shop || null}
+              height={320}
+            />
+            {trackData && !trackData.tracking_active && (
+              <p className="hint" style={{ marginTop: 8 }}>
+                {t("La livraison est terminée : le suivi GPS est désactivé.")}
+              </p>
+            )}
+          </div>
+        </div>
       )}
 
       <h2 className="section-title">✉️ {t("Messages aux utilisateurs")}</h2>

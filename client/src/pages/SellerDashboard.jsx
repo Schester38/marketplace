@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import ProductCard, { formatMoney } from "../components/ProductCard.jsx";
@@ -10,6 +10,7 @@ import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { nativeShareWithImage, firstProductImage, isTouchDevice } from "../share.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
+import TrackMap from "../components/TrackMap.jsx";
 
 const SALE_STATUS = {
   pending: { key: "En attente de vente", cls: "badge-pending" },
@@ -63,6 +64,25 @@ export default function SellerDashboard() {
   const [success, setSuccess] = useState("");
   const [copied, setCopied] = useState("");
   const [proofSale, setProofSale] = useState(null);
+
+  // --- Suivi GPS temps réel (carte livreur/client/boutique) ---
+  const [trackSaleId, setTrackSaleId] = useState(null);
+  const [trackData, setTrackData] = useState(null);
+
+  const loadTrackData = (saleId) => {
+    api
+      .saleTrack(saleId, "")
+      .then(setTrackData)
+      .catch(() => {});
+  };
+
+  // Polling 12 s pendant que la modale carte est ouverte.
+  useEffect(() => {
+    if (!trackSaleId) return undefined;
+    const iv = setInterval(() => loadTrackData(trackSaleId), 12000);
+    return () => clearInterval(iv);
+  }, [trackSaleId]);
+  // --- fin suivi GPS ---
   const [proofLoading, setProofLoading] = useState(false);
 
   const load = async () => {
@@ -767,6 +787,19 @@ export default function SellerDashboard() {
                         {s.status === "delivered" && isDirect && (
                           <span className="badge badge-pending">{t("Vente directe")}</span>
                         )}
+                        {s.status !== "delivered" && (
+                          <button
+                            className="btn btn-small btn-outline"
+                            title={t("Voir la carte de suivi GPS en temps réel")}
+                            onClick={() => {
+                              setTrackSaleId(s.id);
+                              setTrackData(null);
+                              loadTrackData(s.id);
+                            }}
+                          >
+                            📍 {t("Suivi")}
+                          </button>
+                        )}
                         {s.status === "delivered" && !isDirect && !s.paid && (
                           <>
                             <span className="badge badge-warn">{t("Commission en attente")}</span>
@@ -1251,6 +1284,36 @@ export default function SellerDashboard() {
             <p className="hint" style={{ marginBottom: 0 }}>
               {t("La boutique a confirmé le paiement de cette vente.")}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modale carte de suivi GPS (livreur / client / boutique) */}
+      {trackSaleId && (
+        <div className="modal-overlay" onClick={() => setTrackSaleId(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>🛰️ {t("Suivi GPS — commande #{id}", { id: trackSaleId })}</h3>
+              <button className="drawer-close" onClick={() => setTrackSaleId(null)}>
+                ✕
+              </button>
+            </div>
+            <TrackMap
+              livreur={trackData?.livreur || null}
+              buyer={trackData?.buyer || null}
+              shop={trackData?.shop || null}
+              height={300}
+            />
+            {trackData && !trackData.tracking_active && (
+              <p className="hint" style={{ marginTop: 8 }}>
+                {t("La livraison est terminée : le suivi GPS est désactivé.")}
+              </p>
+            )}
+            {trackData && !trackData.livreur && trackData.tracking_active && (
+              <p className="hint" style={{ marginTop: 6 }}>
+                {t("Le livreur n'a pas encore activé le partage de sa position.")}
+              </p>
+            )}
           </div>
         </div>
       )}

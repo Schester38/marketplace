@@ -291,6 +291,18 @@ export async function initDb() {
     // authentifié consulte l'espace de la boutique (serve de preuve et
     // déclenche la confirmation automatique de la commande).
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_viewed_at TIMESTAMPTZ;
+    // Suivi GPS temps réel d'une livraison : position actuelle du livreur +
+    // trace (dernier ~60 points) + position GPS du client (partagée à la
+    // commande). Masquées dès que la vente n'est plus pending/confirmed.
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_lat DOUBLE PRECISION;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_lng DOUBLE PRECISION;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_pos_at TIMESTAMPTZ;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_track JSONB NOT NULL DEFAULT '[]'::jsonb;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_lat DOUBLE PRECISION;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_lng DOUBLE PRECISION;
+    // Position GPS partagée volontairement par la boutique (carte de suivi).
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_proof TEXT;

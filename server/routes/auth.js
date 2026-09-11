@@ -717,6 +717,30 @@ router.put(
   })
 );
 
+// Position GPS partagée volontairement (boutique, vendeur, créateur, livreur)
+// pour la carte de suivi des livraisons. Légère : ne touche QUE lat/lng,
+// jamais le reste du profil.
+router.post(
+  "/position",
+  authRequired,
+  ah(async (req, res) => {
+    const lat = Number(req.body?.lat);
+    const lng = Number(req.body?.lng);
+    if (
+      !Number.isFinite(lat) ||
+      lat < -90 ||
+      lat > 90 ||
+      !Number.isFinite(lng) ||
+      lng < -180 ||
+      lng > 180
+    ) {
+      return res.status(400).json({ error: "Coordonnées invalides" });
+    }
+    await q("UPDATE users SET lat = $1, lng = $2 WHERE id = $3", [lat, lng, req.user.id]);
+    res.json({ ok: true });
+  })
+);
+
 router.put(
   "/password",
   authRequired,
