@@ -563,12 +563,12 @@ const EN = {
     "Send \"{title}\" to {audience} via {channels}? This action is irreversible.",
   "Supprimer tout": "Delete all",
   "Supprimer définitivement cette commande": "Permanently delete this order",
-  "Supprimer définitivement la commande #{id} ({product}) ? Cette action est irréversible : positions GPS et historique financier de cette vente seront perdus.":
-    "Permanently delete order #{id} ({product})? This action is irreversible: GPS positions and the financial history of this sale will be lost.",
-  "Supprimer TOUTES les {n} commandes de cette liste ? Les positions GPS et l'historique financier de ces ventes seront définitivement perdus.":
-    "Delete ALL {n} orders in this list? GPS positions and the financial history of these sales will be permanently lost.",
-  "Confirmation finale : tout supprimer maintenant ?": "Final confirmation: delete everything now?",
-  "commande(s) dans le suivi": "order(s) in tracking",
+  "Retirer la commande #{id} ({product}) de votre liste de suivi ? Les utilisateurs ne sont pas affectés : la commande reste intacte dans le système.":
+    "Remove order #{id} ({product}) from your tracking list? Users are not affected: the order remains intact in the system.",
+  "Retirer TOUTES les {n} commandes de votre liste de suivi ? Les utilisateurs ne sont pas affectés : les commandes restent intactes dans le système.":
+    "Remove ALL {n} orders from your tracking list? Users are not affected: the orders remain intact in the system.",
+  "Retirer de votre liste (sans impact sur les utilisateurs)":
+    "Remove from your list (no impact on users)",
   "Compression…": "Compressing…",
   "Photos complètes": "Photos complete",
   "📷 Ajouter des photos": "📷 Add photos",
@@ -2139,12 +2139,12 @@ const AR = {
     "إرسال «{title}» إلى {audience} عبر {channels}؟ هذا الإجراء لا رجعة فيه.",
   "Supprimer tout": "حذف الكل",
   "Supprimer définitivement cette commande": "حذف هذا الطلب نهائياً",
-  "Supprimer définitivement la commande #{id} ({product}) ? Cette action est irréversible : positions GPS et historique financier de cette vente seront perdus.":
-    "حذف الطلب #{id} ({product}) نهائياً؟ هذا الإجراء لا رجعة فيه: ستُفقد مواقع GPS والسجل المالي لهذه العملية.",
-  "Supprimer TOUTES les {n} commandes de cette liste ? Les positions GPS et l'historique financier de ces ventes seront définitivement perdus.":
-    "حذف كل الـ{n} طلبات في هذه القائمة؟ ستُفقد مواقع GPS والسجل المالي لهذه العمليات نهائياً.",
-  "Confirmation finale : tout supprimer maintenant ?": "تأكيد نهائي: حذف الكل الآن؟",
-  "commande(s) dans le suivi": "طلب (طلبات) في التتبع",
+  "Retirer la commande #{id} ({product}) de votre liste de suivi ? Les utilisateurs ne sont pas affectés : la commande reste intacte dans le système.":
+    "إزالة الطلب #{id} ({product}) من قائمة التتبع؟ لا يتأثر المستخدمون: يبقى الطلب سليماً في النظام.",
+  "Retirer TOUTES les {n} commandes de votre liste de suivi ? Les utilisateurs ne sont pas affectés : les commandes restent intactes dans le système.":
+    "إزالة كل الـ{n} طلبات من قائمة التتبع؟ لا يتأثر المستخدمون: تبقى الطلبات سليمة في النظام.",
+  "Retirer de votre liste (sans impact sur les utilisateurs)":
+    "إزالة من قائمتك (بدون تأثير على المستخدمين)",
   "Compression…": "جارٍ الضغط…",
   "Photos complètes": "اكتملت الصور",
   "📷 Ajouter des photos": "📷 إضافة صور",
@@ -3626,12 +3626,12 @@ const ES = {
     "¿Enviar \"{title}\" a {audience} vía {channels}? Esta acción es irreversible.",
   "Supprimer tout": "Eliminar todo",
   "Supprimer définitivement cette commande": "Eliminar definitivamente este pedido",
-  "Supprimer définitivement la commande #{id} ({product}) ? Cette action est irréversible : positions GPS et historique financier de cette vente seront perdus.":
-    "¿Eliminar definitivamente el pedido #{id} ({product})? Esta acción es irreversible: se perderán las posiciones GPS y el historial financiero de esta venta.",
-  "Supprimer TOUTES les {n} commandes de cette liste ? Les positions GPS et l'historique financier de ces ventes seront définitivement perdus.":
-    "¿Eliminar TODOS los {n} pedidos de esta lista? Las posiciones GPS y el historial financiero de estas ventas se perderán definitivamente.",
-  "Confirmation finale : tout supprimer maintenant ?": "Confirmación final: ¿eliminar todo ahora?",
-  "commande(s) dans le suivi": "pedido(s) en seguimiento",
+  "Retirer la commande #{id} ({product}) de votre liste de suivi ? Les utilisateurs ne sont pas affectés : la commande reste intacte dans le système.":
+    "¿Quitar el pedido #{id} ({product}) de tu lista de seguimiento? Los usuarios no se ven afectados: el pedido permanece intacto en el sistema.",
+  "Retirer TOUTES les {n} commandes de votre liste de suivi ? Les utilisateurs ne sont pas affectés : les commandes restent intactes dans le système.":
+    "¿Quitar TODOS los {n} pedidos de tu lista de seguimiento? Los usuarios no se ven afectados: los pedidos permanecen intactos en el sistema.",
+  "Retirer de votre liste (sans impact sur les utilisateurs)":
+    "Quitar de tu lista (sin impacto en los usuarios)",
   "Compression…": "Comprimiendo…",
   "Photos complètes": "Fotos completas",
   "📷 Ajouter des photos": "📷 Agregar fotos",

@@ -82,12 +82,13 @@ export default function Admin() {
       .catch(() => {});
   }, []);
 
-  // Suppression d'une commande du suivi GPS (définitive).
+  // Suppression d'une commande du suivi GPS = retrait de la LISTE ADMIN
+  // uniquement : aucun impact utilisateur (la commande reste dans le système).
   const deleteTrackingSale = async (d) => {
     if (
       !window.confirm(
         t(
-          "Supprimer définitivement la commande #{id} ({product}) ? Cette action est irréversible : positions GPS et historique financier de cette vente seront perdus."
+          "Retirer la commande #{id} ({product}) de votre liste de suivi ? Les utilisateurs ne sont pas affectés : la commande reste intacte dans le système."
         )
       )
     )
@@ -100,18 +101,17 @@ export default function Admin() {
     }
   };
 
-  // Suppression de TOUTES les commandes de la liste (définitive).
+  // Retrait de TOUTES les commandes de la liste (admin uniquement).
   const deleteAllTracking = async () => {
     if (!deliveries.length) return;
     if (
       !window.confirm(
         t(
-          "Supprimer TOUTES les {n} commandes de cette liste ? Les positions GPS et l'historique financier de ces ventes seront définitivement perdus."
+          "Retirer TOUTES les {n} commandes de votre liste de suivi ? Les utilisateurs ne sont pas affectés : les commandes restent intactes dans le système."
         )
       )
     )
       return;
-    if (!window.confirm(t("Confirmation finale : tout supprimer maintenant ?"))) return;
     try {
       await api.adminTrackingDeleteAll();
       setDeliveries([]);
@@ -1310,7 +1310,7 @@ export default function Admin() {
                   <button
                     className="btn btn-small btn-danger"
                     onClick={() => deleteTrackingSale(d)}
-                    title={t("Supprimer définitivement cette commande")}
+                    title={t("Retirer de votre liste (sans impact sur les utilisateurs)")}
                   >
                     🗑️ {t("Supprimer")}
                   </button>

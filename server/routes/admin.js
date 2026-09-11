@@ -321,6 +321,8 @@ router.post(
 router.get(
   "/tracking",
   ah(async (req, res) => {
+    // Les commandes retirées par l'admin (hidden_for contient son id) ne
+    // s'affichent plus dans SA liste — aucun impact pour les utilisateurs.
     const rows = await q(
       `SELECT s.id, s.status, s.created_at,
               s.buyer_name, s.buyer_city, s.buyer_lat, s.buyer_lng,
@@ -329,11 +331,13 @@ router.get(
        FROM sales s
        JOIN products p ON p.id = s.product_id
        JOIN users sh ON sh.id = p.shop_id
-      WHERE s.status IN ('pending', 'confirmed')
+      WHERE (s.status IN ('pending', 'confirmed')
          OR (s.status = 'delivered'
-             AND COALESCE(s.delivered_at, s.created_at) >= now() - INTERVAL '7 days')
+             AND COALESCE(s.delivered_at, s.created_at) >= now() - INTERVAL '7 days'))
+        AND NOT ($1 = ANY(COALESCE(s.hidden_for, '{}')))
       ORDER BY s.created_at DESC
-      LIMIT 20`
+      LIMIT 20`,
+      [req.user.id]
     );
     res.json({
       deliveries: rows.map((r) => ({
@@ -496,16 +500,11 @@ router.post(
   })
 );
 
-// Suppression DÉFINITIVE de commandes depuis la section Suivi GPS (à la
-// demande de l'admin) :
-//  - une commande à la fois (POST /tracking/delete { id }) ;
-//  - ou toute la liste (POST /tracking/delete-all) = commandes en cours +
-//    livrées depuis ≤ 7 jours.
-// Le stock réservé des commandes NON livrées est restauré (elles n'auront
-// jamais lieu) ; celui des commandes LIVRÉES n'est PAS restauré (les biens
-// sont physiquement partis). Les notifications liées sont nettoyées.
-// ⚠️ Irréversible : l'historique financier de ces ventes est perdu.
-
+// Retrait DÉFINITIF D'UNE COMMANDE DE LA LISTE ADMIN UNIQUEMENT (bouton
+// « Supprimer » de la section Suivi GPS). AUCUN impact utilisateur :
+// la commande reste dans le système (suivi client, stock, commissions,
+// notifications), seul l'admin ne la voit plus dans SA liste (via le
+// mécanisme hidden_for existant — on y ajoute l'id de l'admin).
 router.post(
   "/tracking/delete",
   ah(async (req, res) => {
@@ -513,64 +512,43 @@ router.post(
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ error: "Identifiant invalide" });
     }
-    const sale = (
-      await q(
-        "SELECT id, status, quantity, stock_reserved, product_id FROM sales WHERE id = $1",
-        [id]
-      )
-    )[0];
+    const sale = (await q("SELECT id FROM sales WHERE id = $1", [id]))[0];
     if (!sale) return res.status(404).json({ error: "Commande introuvable" });
-    if (sale.stock_reserved && ["pending", "confirmed"].includes(sale.status)) {
-      await q(
-        `UPDATE products
-            SET quantity = quantity + $2,
-                reserved_quantity = GREATEST(COALESCE(reserved_quantity, 0) - $2, 0)
-          WHERE id = $1`,
-        [sale.product_id, sale.quantity]
-      );
-    }
-    await q("DELETE FROM notifications WHERE sale_id = $1", [id]);
-    await q("DELETE FROM sales WHERE id = $1", [id]);
+    await q(
+      "UPDATE sales SET hidden_for = array_append(COALESCE(hidden_for, '{}'), $2) WHERE id = $1",
+      [id, req.user.id]
+    );
     await logAudit(
       req.user.id,
-      "admin.tracking_delete",
-      `Suppression définitive commande #${id} (section Suivi GPS)`,
+      "admin.tracking_hide",
+      `Retrait commande #${id} de la liste Suivi GPS (admin uniquement, utilisateurs non affectés)`,
       req.ip
     );
     res.json({ ok: true });
   })
 );
 
+// Retrait de TOUTES les commandes de la liste (même critère que l'affichage).
 router.post(
   "/tracking/delete-all",
   ah(async (req, res) => {
-    const sales = await q(
-      `SELECT id, status, quantity, stock_reserved, product_id
-       FROM sales
-      WHERE status IN ('pending', 'confirmed')
-         OR (status = 'delivered'
-             AND COALESCE(delivered_at, created_at) >= now() - INTERVAL '7 days')`
+    const rows = await q(
+      `UPDATE sales
+          SET hidden_for = array_append(COALESCE(hidden_for, '{}'), $1)
+        WHERE (status IN ('pending', 'confirmed')
+           OR (status = 'delivered'
+               AND COALESCE(delivered_at, created_at) >= now() - INTERVAL '7 days'))
+          AND NOT ($1 = ANY(COALESCE(hidden_for, '{}')))
+      RETURNING id`,
+      [req.user.id]
     );
-    for (const s of sales) {
-      if (s.stock_reserved && ["pending", "confirmed"].includes(s.status)) {
-        await q(
-          `UPDATE products
-              SET quantity = quantity + $2,
-                  reserved_quantity = GREATEST(COALESCE(reserved_quantity, 0) - $2, 0)
-            WHERE id = $1`,
-          [s.product_id, s.quantity]
-        );
-      }
-      await q("DELETE FROM notifications WHERE sale_id = $1", [s.id]);
-      await q("DELETE FROM sales WHERE id = $1", [s.id]);
-    }
     await logAudit(
       req.user.id,
-      "admin.tracking_delete_all",
-      `Suppression définitive de ${sales.length} commande(s) (section Suivi GPS)`,
+      "admin.tracking_hide_all",
+      `Retrait de ${rows.length} commande(s) de la liste Suivi GPS (admin uniquement)`,
       req.ip
     );
-    res.json({ ok: true, deleted: sales.length });
+    res.json({ ok: true, hidden: rows.length });
   })
 );
 
