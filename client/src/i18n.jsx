@@ -542,6 +542,8 @@ const EN = {
   "Aucun acteur à proximité pour le moment.": "No actor nearby right now.",
   "Votre position est partagée pendant que cet écran est ouvert ; les {role} à proximité sont mis à jour toutes les 30 s.":
     "Your location is shared while this screen is open; nearby {role} are refreshed every 30 seconds.",
+  "Rechercher un {role} par nom…": "Search a {role} by name…",
+  "Aucun utilisateur trouvé pour « {q} ».": "No user found for \"{q}\".",
   "Compression…": "Compressing…",
   "Photos complètes": "Photos complete",
   "📷 Ajouter des photos": "📷 Add photos",
@@ -2091,6 +2093,8 @@ const AR = {
   "Aucun acteur à proximité pour le moment.": "لا يوجد أي شخص قريب حالياً.",
   "Votre position est partagée pendant que cet écran est ouvert ; les {role} à proximité sont mis à jour toutes les 30 s.":
     "يتم مشاركة موقعك أثناء فتح هذه الشاشة؛ يتم تحديث {role} القريبين كل 30 ثانية.",
+  "Rechercher un {role} par nom…": "ابحث عن {role} بالاسم…",
+  "Aucun utilisateur trouvé pour « {q} ».": "لم يتم العثور على مستخدم لـ «{q}».",
   "Compression…": "جارٍ الضغط…",
   "Photos complètes": "اكتملت الصور",
   "📷 Ajouter des photos": "📷 إضافة صور",
@@ -3551,6 +3555,8 @@ const ES = {
   "Aucun acteur à proximité pour le moment.": "No hay nadie cerca por el momento.",
   "Votre position est partagée pendant que cet écran est ouvert ; les {role} à proximité sont mis à jour toutes les 30 s.":
     "Tu ubicación se comparte mientras esta pantalla esté abierta; los {role} cercanos se actualizan cada 30 segundos.",
+  "Rechercher un {role} par nom…": "Buscar un {role} por nombre…",
+  "Aucun utilisateur trouvé pour « {q} ».": "No se encontró ningún usuario para \"{q}\".",
   "Compression…": "Comprimiendo…",
   "Photos complètes": "Fotos completas",
   "📷 Ajouter des photos": "📷 Agregar fotos",

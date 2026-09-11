@@ -28,6 +28,8 @@ export default function NearbyMap({ role = "livreur", fresh = true, title, emoji
   const [me, setMe] = useState(null);
   const [msg, setMsg] = useState("");
   const [ready, setReady] = useState(false);
+  const [query, setQuery] = useState("");
+  const searching = query.trim().length > 0;
 
   // --- Init Leaflet (chunk dynamique, tuiles OSM gratuites) ---
   useEffect(() => {
@@ -88,7 +90,7 @@ export default function NearbyMap({ role = "livreur", fresh = true, title, emoji
 
   // --- Chargement des acteurs autour (distance côté serveur) ---
   useEffect(() => {
-    if (!me) {
+    if (!me || searching) {
       setUsers([]);
       return;
     }
@@ -101,7 +103,17 @@ export default function NearbyMap({ role = "livreur", fresh = true, title, emoji
     load();
     const iv = setInterval(load, 30000);
     return () => clearInterval(iv);
-  }, [me, role, fresh]);
+  }, [me, role, fresh, searching]);
+
+  // --- Recherche par nom dès la première lettre (ignore rayon/fraîcheur) ---
+  useEffect(() => {
+    if (!me || !searching) return;
+    const q = query.trim();
+    api
+      .nearbyUsers({ role, q })
+      .then((d) => setUsers(Array.isArray(d.users) ? d.users : []))
+      .catch(() => {});
+  }, [me, role, query, searching]);
 
   // --- Dessin : marqueurs acteurs + position courante + cadrage ---
   useEffect(() => {
@@ -148,6 +160,15 @@ export default function NearbyMap({ role = "livreur", fresh = true, title, emoji
           { role: label || role }
         )}
       </p>
+      <input
+        className="input"
+        placeholder={t("Rechercher un {role} par nom…", { role: label || role })}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        style={{ marginBottom: 8 }}
+        autoCapitalize="words"
+        autoComplete="off"
+      />
       {msg && <p className="hint">{msg}</p>}
       <div
         ref={boxRef}
@@ -161,7 +182,12 @@ export default function NearbyMap({ role = "livreur", fresh = true, title, emoji
       >
         {mapError && <div style={{ padding: 14, fontSize: 13 }}>{mapError}</div>}
       </div>
-      {me && users.length === 0 && (
+      {me && searching && users.length === 0 && (
+        <p className="hint" style={{ marginTop: 6 }}>
+          {t("Aucun utilisateur trouvé pour « {q} ».", { q: query.trim() })}
+        </p>
+      )}
+      {me && !searching && users.length === 0 && (
         <p className="hint" style={{ marginTop: 6 }}>
           {t("Aucun acteur à proximité pour le moment.")}
         </p>

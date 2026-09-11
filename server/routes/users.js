@@ -39,32 +39,46 @@ router.get(
     // boutiques on accepte les positions plus anciennes (position de référence).
     const onlyFresh = String(req.query.fresh || "1") !== "0";
     const freshClause = onlyFresh ? "AND u.position_updated_at >= now() - INTERVAL '" + FRESH_MINUTES + " minutes'" : "";
+    // Recherche par nom (dès la première lettre) : on ignore rayon + fraîcheur,
+    // on privilégie les préfixes (nom commence par la saisie) puis le début de
+    // nom partout, trié par pertinence puis distance.
+    const searchQ = String(req.query.q || "").trim();
+    const DIST =
+      "6371 * acos(LEAST(1, COS(RADIANS($1)) * COS(RADIANS(u.lat)) * COS(RADIANS(u.lng) - RADIANS($2)) + SIN(RADIANS($1)) * SIN(RADIANS(u.lat))))";
 
-    const rows = await q(
-      `SELECT u.id, u.name, u.lat, u.lng, u.position_updated_at, u.city, u.location,
-              (6371 * acos(
-                LEAST(1,
-                  COS(RADIANS($1)) * COS(RADIANS(u.lat))
-                  * COS(RADIANS(u.lng) - RADIANS($2))
-                  + SIN(RADIANS($1)) * SIN(RADIANS(u.lat))
-                )
-              )) AS distance_km
-       FROM users u
-      WHERE u.role = $3
-        AND u.id <> $4
-        AND u.lat IS NOT NULL AND u.lng IS NOT NULL
-        ${freshClause}
-        AND 6371 * acos(
-                LEAST(1,
-                  COS(RADIANS($1)) * COS(RADIANS(u.lat))
-                  * COS(RADIANS(u.lng) - RADIANS($2))
-                  + SIN(RADIANS($1)) * SIN(RADIANS(u.lat))
-                )
-              ) <= $5
-      ORDER BY distance_km
-      LIMIT 50`,
-      [lat, lng, role, req.user.id, radius]
-    );
+    let rows;
+    if (searchQ) {
+      if (searchQ.length > 80) return res.status(400).json({ error: "Recherche trop longue" });
+      const prefix = searchQ + "%";
+      const esc = searchQ.replace(/[\\%_]/g, "\\$&");
+      const any = "%" + esc + "%";
+      rows = await q(
+        `SELECT u.id, u.name, u.lat, u.lng, u.position_updated_at, u.city, u.location,
+                ${DIST} AS distance_km
+         FROM users u
+        WHERE u.role = $3
+          AND u.id <> $4
+          AND u.lat IS NOT NULL AND u.lng IS NOT NULL
+          AND (u.name ILIKE $5 OR u.name ILIKE $6)
+        ORDER BY (u.name ILIKE $5) DESC, distance_km
+        LIMIT 25`,
+        [lat, lng, role, req.user.id, prefix, any]
+      );
+    } else {
+      rows = await q(
+        `SELECT u.id, u.name, u.lat, u.lng, u.position_updated_at, u.city, u.location,
+                ${DIST} AS distance_km
+         FROM users u
+        WHERE u.role = $3
+          AND u.id <> $4
+          AND u.lat IS NOT NULL AND u.lng IS NOT NULL
+          ${freshClause}
+          AND ${DIST} <= $5
+        ORDER BY distance_km
+        LIMIT 50`,
+        [lat, lng, role, req.user.id, radius]
+      );
+    }
 
     res.json({
       users: rows.map((u) => ({
@@ -80,6 +94,7 @@ router.get(
       })),
       fresh_minutes: FRESH_MINUTES,
       radius_km: radius,
+      search: searchQ,
     });
   })
 );
