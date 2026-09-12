@@ -359,6 +359,10 @@ export const api = {
     }),
   adminPayments: () => adminRequest("/admin/payments"),
   adminWebhooks: () => adminRequest("/admin/payments/webhooks"),
+  adminFixImageCache: () =>
+    adminRequest("/admin/storage/fix-image-cache", { method: "POST" }),
+  adminMigrateInlinePhotos: () =>
+    adminRequest("/admin/storage/migrate-inline-photos", { method: "POST" }),
   adminCompleteDonation: (id) =>
     adminRequest(`/admin/payments/donations/${id}/complete`, { method: "POST" }),
   adminDeleteDonation: (id) =>

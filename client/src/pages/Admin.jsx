@@ -244,6 +244,10 @@ export default function Admin() {
   const [payBusy, setPayBusy] = useState(false);
   const [payError, setPayError] = useState("");
   const [payOk, setPayOk] = useState("");
+  // Maintenance Storage (egress images) : correction du cache + migration inline
+  const [storageBusy, setStorageBusy] = useState(false);
+  const [storageReport, setStorageReport] = useState(null);
+  const [storageMsg, setStorageMsg] = useState("");
 
   // ─── Compte administrateur personnel (notifications push + cloche) ────────
   // L'admin « virtuel » (mot de passe ADMIN_PASSWORD, id 0) ne peut pas
@@ -1965,6 +1969,74 @@ export default function Admin() {
             )}
           </form>
         </div>
+      </div>
+{/* ─── Maintenance Storage (egress images) ─────────────────────────────── */}
+      <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+        <h2 className="section-title" style={{ marginTop: 0 }}>
+          🖼️ {t("Maintenance des images (egress)")}
+        </h2>
+        <p className="hint" style={{ marginBottom: 12 }}>
+          {t(
+            "Les photos sont servies via le proxy /api/photo avec un cache « eternal » : Supabase n'est appelé qu'une fois par image. Ces boutons corrigent les objets existants et migrent les vieilles photos stockées en texte (0,4 Mo ajoutés à chaque appel du catalogue)."
+          )}
+        </p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={storageBusy}
+            onClick={async () => {
+              setStorageBusy(true);
+              setStorageMsg("");
+              setStorageReport(null);
+              try {
+                const r = await api.adminFixImageCache();
+                setStorageReport(r);
+              } catch (err) {
+                setStorageMsg(err.message);
+              } finally {
+                setStorageBusy(false);
+              }
+            }}
+          >
+            {storageBusy ? "…" : "⚡ " + t("Corriger le cache des images")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline"
+            disabled={storageBusy}
+            onClick={async () => {
+              setStorageBusy(true);
+              setStorageMsg("");
+              try {
+                const r = await api.adminMigrateInlinePhotos();
+                setStorageReport(r);
+              } catch (err) {
+                setStorageMsg(err.message);
+              } finally {
+                setStorageBusy(false);
+              }
+            }}
+          >
+            {storageBusy ? "…" : "♻️ " + t("Migrer les photos en texte")}
+          </button>
+        </div>
+        {storageMsg && <p className="error">{storageMsg}</p>}
+        {storageReport && (
+          <pre
+            className="hint"
+            style={{
+              marginTop: 8,
+              whiteSpace: "pre-wrap",
+              fontSize: 12,
+              background: "rgba(128,128,128,0.08)",
+              padding: 8,
+              borderRadius: 6,
+            }}
+          >
+            {JSON.stringify(storageReport, null, 2)}
+          </pre>
+        )}
       </div>
 
       {/* Mode automatique : suivi des paiements en ligne (sections manuelles masquées) */}
