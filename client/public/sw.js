@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v236';
+﻿const CACHE_NAME = 'mboppi-v237';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/assistant-avatar.webp', '/og-image.svg', '/og-image.png', '/robots.txt', '/splash.js', '/diapo/MboppiShop_Developpez_votre_boutique.webp', '/diapo/MboppiShop_Gagner_telephone_connexion.webp', '/diapo/MboppiShop_Paiement_a_la_livraison_1x1.webp', '/diapo/MboppiShop_Shopify_optimise.webp'];
 
 // Endpoints GET publics : servis depuis le cache quand le reseau est lent ou coupe,
@@ -63,8 +63,8 @@ self.addEventListener('push', (event) => {
   } catch (e) {}
   const title = data.title || 'Mboppi';
   // CRITIQUE : `renotify: true` exige un tag NON vide, sinon showNotification()
-  // jette une TypeError et la notification n'est jamais affichée. Le serveur
-  // envoie toujours un tag, mais on se protège si jamais il manque.
+  // jette une TypeError et la notification n'est jamais affichÃ©e. Le serveur
+  // envoie toujours un tag, mais on se protÃ¨ge si jamais il manque.
   const tag =
     data.tag ||
     'mboppi-' +
@@ -78,13 +78,13 @@ self.addEventListener('push', (event) => {
     badge: data.badge || '/favicon-32x32.png',
     tag,
     renotify: true,
-    // Son de notification (supporté surtout sur Android/Chrome ; Chrome
-    // desktop ignore le champ "sound" comme documenté). NB : quand l'app est
-    // FERMÉE, le son vient du canal système de la PWA (Réglages → Applications
-    // → [nom] → Notifications → activer le son) ; la vibration fonctionne, elle.
+    // Son de notification (supportÃ© surtout sur Android/Chrome ; Chrome
+    // desktop ignore le champ "sound" comme documentÃ©). NB : quand l'app est
+    // FERMÃ‰E, le son vient du canal systÃ¨me de la PWA (RÃ©glages â†’ Applications
+    // â†’ [nom] â†’ Notifications â†’ activer le son) ; la vibration fonctionne, elle.
     sound: data.sound || '/notification.wav',
     vibrate: data.vibrate || [200, 100, 200],
-    // La notification reste affichée tant que l'utilisateur n'a pas réagi.
+    // La notification reste affichÃ©e tant que l'utilisateur n'a pas rÃ©agi.
     requireInteraction: data.requireInteraction !== false,
     data: { url: data.data && data.data.url ? data.data.url : '/' },
   };
@@ -92,9 +92,9 @@ self.addEventListener('push', (event) => {
 });
 
 // Rotation de l'abonnement push par le push service (FCM renouvelle les tokens,
-// désinstallation temporaire/réinstallation du navigateur…) : on se ré-abonne
-// aussitôt et on met à jour le serveur. Sans ça, l'appareil perd le push pour
-// toujours jusqu'à la prochaine ouverture de l'app.
+// dÃ©sinstallation temporaire/rÃ©installation du navigateurâ€¦) : on se rÃ©-abonne
+// aussitÃ´t et on met Ã  jour le serveur. Sans Ã§a, l'appareil perd le push pour
+// toujours jusqu'Ã  la prochaine ouverture de l'app.
 self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(handlePushSubscriptionChange(event.oldSubscription));
 });
@@ -133,7 +133,7 @@ async function handlePushSubscriptionChange(oldSub) {
     });
     const oldEndpoint = oldSub && oldSub.endpoint ? oldSub.endpoint : null;
     // L'ancien endpoint est un "capability URL" secret : le fournir suffit au
-    // serveur pour transférer l'abonnement sans JWT (le SW ne lit pas le token).
+    // serveur pour transfÃ©rer l'abonnement sans JWT (le SW ne lit pas le token).
     if (oldEndpoint) {
       await fetch('/api/push/refresh', {
         method: 'POST',
@@ -160,7 +160,7 @@ function urlBase64ToUint8Array(base64String) {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data && event.notification.data.url ? event.notification.data.url : '/';
-  // Mesure d'ouverture : ping best-effort (keepalive survit à la fermeture).
+  // Mesure d'ouverture : ping best-effort (keepalive survit Ã  la fermeture).
   try {
     const tag = event.notification.tag || '';
     event.waitUntil(
@@ -191,8 +191,8 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   // Images produits (origin Supabase Storage) : cache-first pour que les photos
-  // déjà vues restent visibles hors connexion. Les URLs sont uniques par upload
-  // (timestamp + uuid), donc pas de risque de servir une version périmée.
+  // dÃ©jÃ  vues restent visibles hors connexion. Les URLs sont uniques par upload
+  // (timestamp + uuid), donc pas de risque de servir une version pÃ©rimÃ©e.
   if (/storage\.supabase\.co/.test(url.hostname)) {
     event.respondWith(
       (async () => {
@@ -231,7 +231,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Bundles JS/CSS (contenus avec hash) : stale-while-revalidate. Le cache sert
-  // immédiatement, le reseau rafraichit en arriere-plan. Les fichiers ont un hash,
+  // immÃ©diatement, le reseau rafraichit en arriere-plan. Les fichiers ont un hash,
   // donc deux versions ne se melangent jamais.
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(assetSwr(event.request));

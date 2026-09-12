@@ -111,7 +111,10 @@ export default function LivreurDashboard() {
 
   // Temps réel : rafraîchit livraisons et gains toutes les 30 s
   useEffect(() => {
-    const id = setInterval(() => load(true), 60000);
+    const id = setInterval(() => {
+      if (document.hidden) return;
+      load(true);
+    }, 60000);
     return () => clearInterval(id);
   }, [load]);
 

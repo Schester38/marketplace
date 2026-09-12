@@ -10,6 +10,10 @@ const PAYMENT_PROOF_BUCKET = process.env.SUPABASE_PAYMENT_PROOF_BUCKET || "payme
 // Les URLs produites sont immuables (hash du contenu + uuid) : elles peuvent
 // être servies par le CDN / cache navigateur « pour toujours ».
 const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
+// Format attendu par le Storage Supabase : secondes PURES (convention supabase-js).
+// Une chaîne complète ("public, max-age=…, immutable") est IGNORÉE par le Storage
+// (metadata cache-control stockée à no-cache → aucune mise en cache, egress × N).
+const IMMUTABLE_CACHE_SECONDS = "31536000";
 
 // Le Storage valide l'Authorization Bearer comme JWT.
 // - Clé legacy (eyJ...) : utilisée telle quelle.
@@ -242,7 +246,10 @@ export async function uploadBuffer(buffer, type, folder = "products", variant = 
     method: "POST",
     headers: {
       "Content-Type": type,
-      "Cache-Control": IMMUTABLE_CACHE_CONTROL,
+      // Secondes pures : le Storage accepte uniquement ce format (un header
+      // complet « public, max-age=…, immutable » est silencieusement ignoré
+      // et l'objet se retrouve en cache-control no-cache).
+      "Cache-Control": IMMUTABLE_CACHE_SECONDS,
     },
     body: buffer,
   }, bucketName);
@@ -441,4 +448,152 @@ export async function storageUsage() {
     if (items.length < 1000) break;
   }
   return { count, bytes };
+}
+
+// ─── Cache des images : correction des objets existants ─────────────────────
+// Les objets uploadés AVANT le correctif « Cache-Control en secondes pures »
+// sont stockés avec cache-control no-cache → chaque visiteur re-télécharge
+// chaque image à chaque vue (egress Storage × N). Cette routine :
+//  1. tente la mise à jour de metadata (POST JSON {cacheControl}),
+//  2. sinon ré-uploade le même contenu avec x-upsert + cache-control en
+//     secondes (URL inchangée : les références en base restent valides).
+export async function fixBucketCacheControl({ bucketName = BUCKET, seconds = IMMUTABLE_CACHE_SECONDS } = {}) {
+  if (!SUPABASE_URL || !SERVICE_KEY) return { error: "Storage non configuré" };
+  const token = apiToken();
+  const objets = [];
+  let offset = 0;
+  for (;;) {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${bucketName}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, apikey: token, "Content-Type": "application/json" },
+      body: JSON.stringify({ prefix: "", limit: 1000, offset }),
+    });
+    if (!res.ok) return { error: `Liste du bucket échouée (${res.status})` };
+    const items = await res.json();
+    if (!Array.isArray(items) || !items.length) break;
+    for (const it of items) if (it?.name) objets.push(it.name);
+    offset += items.length;
+    if (items.length < 1000) break;
+  }
+  let fixed = 0;
+  let skipped = 0;
+  let failed = 0;
+  const servedHeader = async (key) => {
+    try {
+      const h = await fetch(publicUrl(key, bucketName), { method: "HEAD" });
+      return (h.headers.get("cache-control") || "").toLowerCase();
+    } catch {
+      return "";
+    }
+  };
+  for (const key of objets) {
+    try {
+      const before = await servedHeader(key);
+      if (before.includes(`max-age=${seconds}`)) {
+        skipped += 1;
+        continue;
+      }
+      // 1) metadata update (léger)
+      await request(
+        `object/${bucketName}/${key.split("/").map(encodeURIComponent).join("/")}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cacheControl: seconds }) },
+        bucketName
+      ).catch(() => null);
+      let after = await servedHeader(key);
+      if (after.includes(`max-age=${seconds}`)) {
+        fixed += 1;
+        continue;
+      }
+      // 2) fallback : ré-upload du même contenu avec x-upsert (URL inchangée)
+      const bin = await fetch(publicUrl(key, bucketName));
+      if (bin.ok) {
+        const buf = Buffer.from(await bin.arrayBuffer());
+        const type = bin.headers.get("content-type") || "application/octet-stream";
+        const re = await request(
+          `object/${bucketName}/${key.split("/").map(encodeURIComponent).join("/")}`,
+          { method: "POST", headers: { "Content-Type": type, "Cache-Control": seconds, "x-upsert": "true" }, body: buf },
+          bucketName
+        );
+        after = re.ok || re.status === 409 ? await servedHeader(key) : "";
+      }
+      if (after.includes(`max-age=${seconds}`)) fixed += 1;
+      else failed += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+  return { bucket: bucketName, total: objets.length, fixed, skipped, failed };
+}
+
+// ─── Migration des photos inline (data: URIs) vers Storage ──────────────────
+// Un produit stocké en base64 inline est renvoyé ENTIÈREMENT dans chaque
+// réponse catalogue / liste (GET /api/products, dashboards…). Cette routine
+// convertit ces data: URIs en fichiers Storage (URLs) et met la base à jour.
+export async function migrateInlinePhotos() {
+  if (!SUPABASE_URL || !SERVICE_KEY) return { error: "Storage non configuré" };
+  const upload = (uri, variant) => uploadPhoto(uri, "products", variant);
+  const fixEntry = async (e) => {
+    if (typeof e === "string") return (await upload(e, "thumb")) || e;
+    if (!e || typeof e !== "object") return e;
+    const out = { ...e };
+    for (const f of ["thumb", "medium", "large", "full"]) {
+      if (isBase64Photo(out[f])) {
+        const url = await upload(out[f], f === "full" ? "full" : f);
+        if (url) out[f] = url;
+      }
+    }
+    return out;
+  };
+  let productsFixed = 0;
+  const prodRows = await q(
+    `SELECT id, photos, image FROM products
+      WHERE photos::text LIKE '%data:image/%' OR (image IS NOT NULL AND image LIKE '%data:image/%')`
+  );
+  for (const row of prodRows) {
+    try {
+      let photos;
+      try {
+        photos = JSON.parse(typeof row.photos === "string" ? row.photos : JSON.stringify(row.photos || []));
+      } catch {
+        photos = [];
+      }
+      const newPhotos = [];
+      for (const e of Array.isArray(photos) ? photos : []) newPhotos.push(await fixEntry(e));
+      let image = row.image;
+      if (isBase64Photo(image)) image = (await upload(image, "thumb")) || image;
+      await q(`UPDATE products SET photos = $2::jsonb, image = $3 WHERE id = $1`, [
+        row.id,
+        JSON.stringify(newPhotos),
+        image,
+      ]);
+      productsFixed += 1;
+    } catch (err) {
+      console.error("[storage] migration inline produit", row.id, "échouée :", err.message);
+    }
+  }
+  let offersFixed = 0;
+  try {
+    const offRows = await q(`SELECT id, photos FROM offers WHERE photos::text LIKE '%data:image/%'`);
+    for (const row of offRows) {
+      try {
+        let arr;
+        try {
+          arr = JSON.parse(row.photos || "[]");
+        } catch {
+          arr = [];
+        }
+        const out = [];
+        for (const s of Array.isArray(arr) ? arr : []) {
+          out.push(typeof s === "string" && isBase64Photo(s) ? (await uploadPhoto(s, "offers")) || s : s);
+        }
+        await q(`UPDATE offers SET photos = $2 WHERE id = $1`, [row.id, JSON.stringify(out)]);
+        offersFixed += 1;
+      } catch (err) {
+        console.error("[storage] migration inline offre", row.id, "échouée :", err.message);
+      }
+    }
+  } catch {
+    /* table offers absente : ignoré */
+  }
+  return { productsFixed, offersFixed };
 }

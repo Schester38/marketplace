@@ -112,7 +112,10 @@ export default function CreatorDashboard() {
 
   // Temps réel : rafraîchit créations et statistiques toutes les 30 s
   useEffect(() => {
-    const id = setInterval(() => load(), 60000);
+    const id = setInterval(() => {
+      if (document.hidden) return;
+      load();
+    }, 60000);
     return () => clearInterval(id);
   }, [load]);
 

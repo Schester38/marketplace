@@ -6,7 +6,7 @@ import { authRequired, roleRequired, signToken } from "../auth.js";
 import { logAudit } from "../security.js";
 import { migrateImages } from "../migrate-images.js";
 import { cleanupOutOfStock, cleanupOldStats, dbUsageReport } from "../cleanup.js";
-import { storageUsage } from "../storage.js";
+import { storageUsage, fixBucketCacheControl, migrateInlinePhotos } from "../storage.js";
 import { notifyActivationReferralPaid } from "../services/activationReferral.js";
 import { notifyAdmins } from "../services/adminNotify.js";
 import {
@@ -985,6 +985,42 @@ router.get(
       base: base.status === "fulfilled" ? base.value : { erreur: base.reason?.message },
       storage: storage.status === "fulfilled" ? storage.value : { erreur: storage.reason?.message },
     });
+  })
+);
+
+// ─── Egress Storage : correctifs ────────────────────────────────────────────
+// Applique cache-control immutable (secondes pures) sur TOUS les objets du
+// bucket public `photos` : les objets uploadés avant le correctif sont en
+// no-cache → chaque visiteur re-télécharge chaque image à chaque vue.
+// Idempotent : les objets déjà corrects sont comptés « skipped ».
+router.post(
+  "/storage/fix-image-cache",
+  ah(async (req, res) => {
+    const result = await fixBucketCacheControl();
+    await logAudit(
+      req.user.id,
+      "admin.storage_fix_cache",
+      `Cache images Storage : ${JSON.stringify(result)}`,
+      req.ip
+    );
+    res.json({ ok: !result.error, ...result });
+  })
+);
+
+// Convertit les photos stockées inline (data: URIs base64) en fichiers Storage :
+// un produit inline est renvoyé en entier dans CHAQUE réponse catalogue
+// (GET /api/products, dashboards, favoris…). Idempotent.
+router.post(
+  "/storage/migrate-inline-photos",
+  ah(async (req, res) => {
+    const result = await migrateInlinePhotos();
+    await logAudit(
+      req.user.id,
+      "admin.storage_migrate_inline",
+      `Migration photos inline : ${JSON.stringify(result)}`,
+      req.ip
+    );
+    res.json({ ok: !result.error, ...result });
   })
 );
 

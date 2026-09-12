@@ -130,7 +130,10 @@ export default function Admin() {
   useEffect(() => {
     if (gate) return undefined;
     if (!trackSaleId) {
-      const slow = setInterval(loadTracking, 60000);
+      const slow = setInterval(() => {
+        if (document.hidden) return;
+        loadTracking();
+      }, 60000);
       return () => clearInterval(slow);
     }
     const iv = setInterval(() => {
@@ -384,6 +387,8 @@ export default function Admin() {
   useEffect(() => {
     if (gate) return undefined;
     const id = setInterval(() => {
+      // Egress : ne consomme rien quand l'onglet est en arrière-plan.
+      if (document.hidden) return;
       load(true);
       api
         .adminVisits(visitDays, visitCountry)

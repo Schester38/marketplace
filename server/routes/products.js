@@ -320,7 +320,10 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
     return;
   }
   // Liste complète (favoris, rails, fiches similaires) : pas de plafond par
-  // boutique — le tri normal s'applique.
+  // boutique — le tri normal s'applique. SÉCURITÉ EGRESS : plafonnée aux 100
+  // plus récents (le catalogue complet est paginé via ?limit=&offset=).
+  // Plusieurs écrans (dashboards, favoris, page 404…) appellent cette route
+  // sans limite : sans plafond, chaque appel renvoie TOUT le catalogue.
   let orderSql = " ORDER BY ";
   if (countryNorm) {
     const countryParam = params.length + 1;
@@ -328,7 +331,7 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
       `CASE WHEN ${FOLD_TEXT(`u.country`)} = ${FOLD_TEXT(`$${countryParam}`)} THEN 0 ELSE 1 END, `;
   }
   orderSql += SORTS[sort] || SORTS.recent;
-  const fullSql = sql + orderSql;
+  const fullSql = sql + orderSql + " LIMIT 100";
   if (countryNorm) params.push(countryNorm);
   const products = (await q(fullSql, params)).map(productRow);
   res.json({ products });
