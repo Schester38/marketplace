@@ -12,7 +12,8 @@
 // reprend là où le précédent s'est arrêté. Garde finale :
 // `storage_maintenance_done`.
 import { getSetting, setSetting } from "./ikeepay.js";
-import { listBucketKeys, fixObjectCacheControl, migrateInlinePhotos } from "../storage.js";
+import { q } from "../db.js";
+import { fixObjectCacheControl, migrateInlinePhotos } from "../storage.js";
 
 const BUCKET = "photos";
 const SECONDS = "31536000";
@@ -63,20 +64,56 @@ export async function runStorageMaintenanceStep() {
 }
 
 // Prépare la liste des clés (une seule fois) ; false si Storage indisponible.
+// Les clés proviennent de la BASE (URLs des photos réellement référencées par
+// les produits/offres) : le listing Storage est ambigu (dossiers et fichiers
+// mélangés selon la version du Storage) et inutile — seules les images
+// référencées sont servies et pèsent sur l'egress.
 async function ensureKeysList() {
   const existing = await getSetting(KEYS_KEY);
   if (existing) return true;
   let keys;
   try {
-    keys = await listBucketKeys(BUCKET);
+    keys = await referencedPhotoKeys();
   } catch (err) {
     await writeLog({ step: "list", error: err.message });
+    return false;
+  }
+  if (!keys.length) {
+    // Aucune photo référencée → rien à faire : on pose la garde immédiatement.
+    await setSetting(DONE_KEY, new Date().toISOString());
+    await writeLog({ step: "done-empty" });
     return false;
   }
   await setSetting(KEYS_KEY, JSON.stringify(keys));
   await setSetting(CURSOR_KEY, "0");
   await writeLog({ step: "start", total: keys.length });
   return true;
+}
+
+// Extrait les clés Storage des photos référencées en base.
+async function referencedPhotoKeys() {
+  const rows = await q(
+    `SELECT photos::text AS photos, image FROM products WHERE photos IS NOT NULL
+     UNION ALL
+     SELECT photos::text AS photos, NULL FROM offers WHERE photos IS NOT NULL`
+  );
+  const keys = new Set();
+  const MARK = "/storage/v1/object/public/photos/";
+  for (const r of rows) {
+    const text = `${r.photos || ""}\n${r.image || ""}`;
+    for (const m of text.matchAll(/https?:\/\/[^"\\\s]+/g)) {
+      const url = m[0];
+      const i = url.indexOf(MARK);
+      if (i >= 0) {
+        try {
+          keys.add(decodeURIComponent(url.slice(i + MARK.length)));
+        } catch {
+          /* clé encodée invalide : ignorée */
+        }
+      }
+    }
+  }
+  return [...keys];
 }
 
 // Reprise des objets en échec : ré-upload (3 par step), max MAX_TRIES chacun.
@@ -140,6 +177,14 @@ async function stepMainQueue() {
 
 // Fin : migration des photos inline puis garde définitive.
 async function finish() {
+  const rawFailed = await getSetting(FAILED_KEY);
+  if (rawFailed) {
+    try {
+      if (JSON.parse(rawFailed).length) return; // échecs restants : la garde attend
+    } catch {
+      /* file illisible : on continue quand même */
+    }
+  }
   const migRes = await migrateInlinePhotos().catch((e) => ({ error: e.message }));
   console.warn("[maintenance storage] migration inline :", JSON.stringify(migRes));
   if (migRes.error) {
@@ -155,9 +200,13 @@ async function finish() {
 export async function runStorageMaintenanceNow() {
   let keys;
   try {
-    keys = await listBucketKeys(BUCKET);
+    keys = await referencedPhotoKeys();
   } catch (err) {
     return { error: err.message };
+  }
+  if (!keys.length) {
+    await setSetting(DONE_KEY, new Date().toISOString());
+    return { total: 0, fixed: 0, skipped: 0, failed: [], inline: { productsFixed: 0, offersFixed: 0 } };
   }
   let fixed = 0;
   let skipped = 0;
