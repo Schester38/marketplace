@@ -40,19 +40,21 @@ export function photoEntries(raw) {
   return parsePhotos(raw).map(entry).filter(Boolean).slice(0, 1);
 }
 
+import { proxyPhotoUrl } from "./photoProxy.js";
+
 /** Thumbnails — listes, catalogues, vignettes. */
 export function listPhotos(raw) {
-  return photoEntries(raw).map((e) => e.thumb);
+  return photoEntries(raw).map((e) => proxyPhotoUrl(e.thumb));
 }
 
 /** Version « medium » — affichage principal de la fiche produit. */
 export function mediumPhotos(raw) {
-  return photoEntries(raw).map((e) => e.medium || e.thumb);
+  return photoEntries(raw).map((e) => proxyPhotoUrl(e.medium || e.thumb));
 }
 
 /** Meilleure version disponible (large) — zoom, lightbox, og:image. */
 export function fullPhotos(raw) {
-  return photoEntries(raw).map((e) => e.large || e.medium || e.thumb);
+  return photoEntries(raw).map((e) => proxyPhotoUrl(e.large || e.medium || e.thumb));
 }
 
 /** Métadonnées d'optimisation (largeur, poids, format, original…). */

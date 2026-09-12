@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { q } from "./db.js";
+import { unproxyPhotoUrl } from "./photoProxy.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -301,7 +302,9 @@ export async function storePhotos(photoList, folder = "products") {
     for (const [name, value] of variants) {
       if (typeof value !== "string" || !value) continue;
       if (isStoredUrl(value)) {
-        entry[name] = value;
+        // Une URL proxée (/api/photo?p=…) n'est jamais persistée : on stocke
+        // l'URL canonique Supabase.
+        entry[name] = unproxyPhotoUrl(value);
       } else if (isBase64Photo(value)) {
         const url = await uploadPhoto(value, folder, name === "full" ? "full" : name);
         if (url) entry[name] = url;
@@ -322,7 +325,7 @@ export async function storePhotos(photoList, folder = "products") {
 export async function storePhotoStrings(photos, folder = "offers") {
   const out = [];
   for (const ph of photos || []) {
-    if (isStoredUrl(ph)) out.push(ph);
+    if (isStoredUrl(ph)) out.push(unproxyPhotoUrl(ph));
     else if (isBase64Photo(ph)) {
       const url = await uploadPhoto(ph, folder);
       if (url) out.push(url);

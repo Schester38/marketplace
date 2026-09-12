@@ -4,6 +4,7 @@ import { q, ensureColumn } from "../db.js";
 import { authOptional } from "../auth.js";
 import { defaultCurrencyFor, validCurrency } from "../currency.js";
 import { storePhotoStrings, collectStorageKeys, deleteStorageKeys } from "../storage.js";
+import { proxyPhotoUrl } from "../photoProxy.js";
 import { offerSchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
 
@@ -49,7 +50,7 @@ function offerRow(o) {
     original_price: Number(o.original_price),
     promo_price: Number(o.promo_price),
     quantity: Number(o.quantity),
-    photos,
+    photos: photos.map(proxyPhotoUrl),
   };
 }
 
