@@ -1977,7 +1977,7 @@ export default function Admin() {
         </h2>
         <p className="hint" style={{ marginBottom: 12 }}>
           {t(
-            "Les photos sont servies via le proxy /api/photo avec un cache « eternal » : Supabase n'est appelé qu'une fois par image. Ces boutons corrigent les objets existants et migrent les vieilles photos stockées en texte (0,4 Mo ajoutés à chaque appel du catalogue)."
+            "Les photos sont servies via le proxy /api/photo avec un cache « eternal » : chaque image n'est chargée depuis Supabase qu'une seule fois, puis est servie par le CDN. « Vérifier la santé » teste le chemin réel depuis ce navigateur — la migration des vieilles photos en texte est déjà faite."
           )}
         </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -1990,8 +1990,47 @@ export default function Admin() {
               setStorageMsg("");
               setStorageReport(null);
               try {
-                const r = await api.adminFixImageCache();
-                setStorageReport(r);
+                // Santé du proxy : test réel depuis ce navigateur (proxy + CDN + cache).
+                const d = await api.listProducts({ limit: 8 });
+                const photos = (d?.products || [])
+                  .map((p) => (p.photos || [])[0])
+                  .filter((u) => typeof u === "string" && u.includes("/api/photo"));
+                const sample = [...new Set(photos)].slice(0, 6);
+                if (!sample.length) {
+                  setStorageMsg(t("Aucune image proxée trouvée — vérifiez que le proxy est actif."));
+                  return;
+                }
+                const lines = [];
+                let bad = 0;
+                for (const u of sample) {
+                  const t0 = Date.now();
+                  let r;
+                  try {
+                    r = await fetch(u, { method: "HEAD" });
+                  } catch (err) {
+                    bad += 1;
+                    lines.push({ url: u.slice(-50), erreur: err.message });
+                    continue;
+                  }
+                  const cc = r.headers.get("cache-control") || "";
+                  const xc = r.headers.get("x-vercel-cache") || "";
+                  const good = r.status === 200 && cc.includes("max-age=31536000");
+                  if (!good) bad += 1;
+                  lines.push({
+                    p: (u.split("?p=")[1] || "").slice(0, 45) || u.slice(-45),
+                    status: r.status,
+                    cache: cc || "(aucun)",
+                    cdn: xc || "—",
+                    ms: Date.now() - t0,
+                  });
+                }
+                setStorageReport({
+                  ok: bad === 0,
+                  sample: lines,
+                  note: bad === 0
+                    ? t("Cache éternal confirmé : chaque image n'est chargée depuis Supabase qu'une seule fois.")
+                    : t("Problème détecté — voir le détail ci-dessous."),
+                });
               } catch (err) {
                 setStorageMsg(err.message);
               } finally {
@@ -1999,7 +2038,7 @@ export default function Admin() {
               }
             }}
           >
-            {storageBusy ? "…" : "⚡ " + t("Corriger le cache des images")}
+            {storageBusy ? "…" : "🩺 " + t("Vérifier la santé des images")}
           </button>
           <button
             type="button"
@@ -2023,19 +2062,27 @@ export default function Admin() {
         </div>
         {storageMsg && <p className="error">{storageMsg}</p>}
         {storageReport && (
-          <pre
-            className="hint"
-            style={{
-              marginTop: 8,
-              whiteSpace: "pre-wrap",
-              fontSize: 12,
-              background: "rgba(128,128,128,0.08)",
-              padding: 8,
-              borderRadius: 6,
-            }}
-          >
-            {JSON.stringify(storageReport, null, 2)}
-          </pre>
+          <>
+            {storageReport.note && (
+              <p className={storageReport.ok ? "success" : "error"} style={{ marginTop: 8 }}>
+                {storageReport.ok ? "✅ " : "⚠️ "}
+                {storageReport.note}
+              </p>
+            )}
+            <pre
+              className="hint"
+              style={{
+                marginTop: 8,
+                whiteSpace: "pre-wrap",
+                fontSize: 12,
+                background: "rgba(128,128,128,0.08)",
+                padding: 8,
+                borderRadius: 6,
+              }}
+            >
+              {JSON.stringify(storageReport.sample ?? storageReport, null, 2)}
+            </pre>
+          </>
         )}
       </div>
 

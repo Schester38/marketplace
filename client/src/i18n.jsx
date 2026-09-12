@@ -1302,6 +1302,12 @@ const EN = {
   "Contacter sur WhatsApp": "Contact on WhatsApp",
   "Produits de la boutique": "Shop products",
   "Suivi de commande": "Order tracking",
+  "Vérifier la santé des images": "Check image health",
+  "Aucune image proxée trouvée — vérifiez que le proxy est actif.":
+    "No proxied image found — check that the proxy is active.",
+  "Cache éternal confirmé : chaque image n'est chargée depuis Supabase qu'une seule fois.":
+    "Eternal cache confirmed: each image is fetched from Supabase only once.",
+  "Problème détecté — voir le détail ci-dessous.": "Issue detected — see details below.",
   "Numéro de commande (optionnel)": "Order number (optional)",
   "Entrez votre code de confirmation (reçu avec votre commande) pour suivre son état. Le numéro de commande est optionnel.":
     "Enter your confirmation code (received with your order) to track its status. The order number is optional.",
@@ -2862,6 +2868,12 @@ const AR = {
   "Contacter sur WhatsApp": "تواصل عبر واتساب",
   "Produits de la boutique": "منتجات المتجر",
   "Suivi de commande": "تتبع الطلب",
+  "Vérifier la santé des images": "فحص صحة الصور",
+  "Aucune image proxée trouvée — vérifiez que le proxy est actif.":
+    "لم يتم العثور على صورة معاد توجيهها — تأكد من أن الوكيل يعمل.",
+  "Cache éternal confirmé : chaque image n'est chargée depuis Supabase qu'une seule fois.":
+    "تم تأكيد التخزين المؤقت الدائم: يتم تحميل كل صورة من Supabase مرة واحدة فقط.",
+  "Problème détecté — voir le détail ci-dessous.": "تم اكتشاف مشكلة — انظر التفاصيل أدناه.",
   "Numéro de commande (optionnel)": "رقم الطلب (اختياري)",
   "Entrez votre code de confirmation (reçu avec votre commande) pour suivre son état. Le numéro de commande est optionnel.":
     "أدخل رمز التأكيد (الذي استلمته مع طلبك) لتتبع حالته. رقم الطلب اختياري.",
@@ -4370,6 +4382,12 @@ const ES = {
   "Contacter sur WhatsApp": "Contactar por WhatsApp",
   "Produits de la boutique": "Productos de la tienda",
   "Suivi de commande": "Seguimiento de pedido",
+  "Vérifier la santé des images": "Comprobar salud de imágenes",
+  "Aucune image proxée trouvée — vérifiez que le proxy est actif.":
+    "No se encontró ninguna imagen con proxy — comprueba que el proxy esté activo.",
+  "Cache éternal confirmé : chaque image n'est chargée depuis Supabase qu'une seule fois.":
+    "Caché eterno confirmado: cada imagen se carga desde Supabase solo una vez.",
+  "Problème détecté — voir le détail ci-dessous.": "Problema detectado — consulta el detalle a continuación.",
   "Numéro de commande (optionnel)": "Número de pedido (opcional)",
   "Entrez votre code de confirmation (reçu avec votre commande) pour suivre son état. Le numéro de commande est optionnel.":
     "Introduce tu código de confirmación (recibido con tu pedido) para seguir su estado. El número de pedido es opcional.",
