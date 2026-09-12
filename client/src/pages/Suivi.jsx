@@ -11,22 +11,28 @@ import CopyCode from "../components/CopyCode.jsx";
 import TrackMap from "../components/TrackMap.jsx";
 
 export default function Suivi() {
-  const { id } = useParams();
+  const { id: idParam } = useParams();
   const [params] = useSearchParams();
   const urlCode = (params.get("code") || "").trim().toUpperCase();
   const { t, locale } = useLang();
+  // Sans id dans l'URL (route /suivi), le numéro de commande est saisi dans le formulaire.
+  const [orderId, setOrderId] = useState("");
+  const id = idParam || orderId.trim();
   const [code, setCode] = useState(urlCode);
   const [sale, setSale] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Numéro réellement utilisé pour les actions (annulation, GPS, rafraîchissement) :
+  // celui de l'URL / du formulaire, sinon l'id renvoyé par la recherche par code seul.
+  const activeId = id || (sale ? sale.id : null);
 
   useEffect(() => {
-    if (!id || !urlCode) return;
+    if (!idParam || !urlCode) return;
     setCode(urlCode);
     setError("");
     setLoading(true);
     api
-      .trackSale(id, urlCode)
+      .trackSale(idParam, urlCode)
       .then((d) => {
         setSale(d.sale || null);
         if (!d.sale) setError(t("Aucune commande trouvée avec ce code."));
@@ -36,12 +42,12 @@ export default function Suivi() {
         setError(err.message);
       })
       .finally(() => setLoading(false));
-  }, [id, urlCode, t]);
+  }, [idParam, urlCode, t]);
 
   const refreshSale = () => {
-    if (!sale || !id || !code.trim()) return;
+    if (!sale || !activeId || !code.trim()) return;
     api
-      .trackSale(id, code.trim())
+      .trackSale(activeId, code.trim())
       .then((d) => d.sale && setSale(d.sale))
       .catch(() => {});
   };
@@ -81,7 +87,7 @@ export default function Suivi() {
     setError("");
     setLoading(true);
     try {
-      await api.cancelSale(id, code.trim());
+      await api.cancelSale(activeId, code.trim());
       setSale((prev) => (prev ? { ...prev, status: "cancelled" } : prev));
     } catch (err) {
       setError(err.message);
@@ -105,9 +111,9 @@ export default function Suivi() {
   const [gpsMsg, setGpsMsg] = useState("");
 
   const loadTrack = () => {
-    if (!id || !trackCode) return;
+    if (!activeId || !trackCode) return;
     api
-      .saleTrack(id, trackCode)
+      .saleTrack(activeId, trackCode)
       .then((d) => {
         setTrack(d);
         return d;
@@ -116,14 +122,14 @@ export default function Suivi() {
   };
 
   useEffect(() => {
-    if (!id || !trackCode) {
+    if (!activeId || !trackCode) {
       setTrack(null);
       return undefined;
     }
     let iv = null;
     const tick = () => {
       api
-        .saleTrack(id, trackCode)
+        .saleTrack(activeId, trackCode)
         .then((d) => {
           setTrack(d);
           // La livraison est terminée : un dernier rafraîchissement suffit,
@@ -140,7 +146,7 @@ export default function Suivi() {
     return () => {
       if (iv) clearInterval(iv);
     };
-  }, [id, trackCode, sale?.status]);
+  }, [activeId, trackCode, sale?.status]);
 
   const shareMyPosition = () => {
     if (!navigator.geolocation) {
@@ -151,7 +157,7 @@ export default function Suivi() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         api
-          .buyerPosition(id, {
+          .buyerPosition(activeId, {
             code: trackCode,
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
@@ -178,9 +184,21 @@ export default function Suivi() {
       <div className="card suivi-card">
         <h2>📦 {t("Suivi de commande")}</h2>
         <p className="hint">
-          {t("Entrez votre code de confirmation (reçu avec votre commande) pour suivre son état.")}
+          {idParam
+            ? t("Entrez votre code de confirmation (reçu avec votre commande) pour suivre son état.")
+            : t("Entrez votre code de confirmation (reçu avec votre commande) pour suivre son état. Le numéro de commande est optionnel.")}
         </p>
         <form onSubmit={submit} className="suivi-form">
+          {!idParam && (
+            <input
+              className="input"
+              placeholder={t("Numéro de commande (optionnel)")}
+              value={orderId}
+              onChange={(e) => setOrderId(e.target.value.replace(/[^0-9]/g, ""))}
+              inputMode="numeric"
+              autoComplete="off"
+            />
+          )}
           <input
             className="input"
             placeholder={t("Code de confirmation")}

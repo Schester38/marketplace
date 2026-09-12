@@ -1179,7 +1179,7 @@ export default function Navbar({ onLogout }) {
               <IconStore size={14} />
               <span>{t("Vendre sur Mboppi")}</span>
             </Link>
-            <Link to={user ? "/compte" : "/login"} onClick={close} className="quick-link">
+            <Link to="/suivi" onClick={close} className="quick-link">
               <IconPackage size={14} />
               <span>{t("Suivi de commande")}</span>
             </Link>

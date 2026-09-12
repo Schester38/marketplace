@@ -1302,6 +1302,9 @@ const EN = {
   "Contacter sur WhatsApp": "Contact on WhatsApp",
   "Produits de la boutique": "Shop products",
   "Suivi de commande": "Order tracking",
+  "Numéro de commande (optionnel)": "Order number (optional)",
+  "Entrez votre code de confirmation (reçu avec votre commande) pour suivre son état. Le numéro de commande est optionnel.":
+    "Enter your confirmation code (received with your order) to track its status. The order number is optional.",
   "Entrez votre code client (reçu avec votre commande) pour suivre son état.":
     "Enter your customer code (received with your order) to track its status.",
   "Code client, ex : AB12CD3": "Customer code, e.g.: AB12CD3",
@@ -2859,6 +2862,9 @@ const AR = {
   "Contacter sur WhatsApp": "تواصل عبر واتساب",
   "Produits de la boutique": "منتجات المتجر",
   "Suivi de commande": "تتبع الطلب",
+  "Numéro de commande (optionnel)": "رقم الطلب (اختياري)",
+  "Entrez votre code de confirmation (reçu avec votre commande) pour suivre son état. Le numéro de commande est optionnel.":
+    "أدخل رمز التأكيد (الذي استلمته مع طلبك) لتتبع حالته. رقم الطلب اختياري.",
   "Entrez votre code client (reçu avec votre commande) pour suivre son état.":
     "أدخل رمز العميل الخاص بك (الذي استلمته مع طلبك) لتتبع حالته.",
   "Code client, ex : AB12CD3": "رمز العميل، مثال: AB12CD3",
@@ -4364,6 +4370,9 @@ const ES = {
   "Contacter sur WhatsApp": "Contactar por WhatsApp",
   "Produits de la boutique": "Productos de la tienda",
   "Suivi de commande": "Seguimiento de pedido",
+  "Numéro de commande (optionnel)": "Número de pedido (opcional)",
+  "Entrez votre code de confirmation (reçu avec votre commande) pour suivre son état. Le numéro de commande est optionnel.":
+    "Introduce tu código de confirmación (recibido con tu pedido) para seguir su estado. El número de pedido es opcional.",
   "Entrez votre code client (reçu avec votre commande) pour suivre son état.":
     "Introduce tu código de cliente (recibido con tu pedido) para seguir su estado.",
   "Code client, ex : AB12CD3": "Código de cliente, p. ej.: AB12CD3",

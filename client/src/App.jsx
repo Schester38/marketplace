@@ -727,6 +727,7 @@ export default function App() {
               }
             />
             <Route path="/boutique/:id" element={<ShopPage />} />
+            <Route path="/suivi" element={<Suivi />} />
             <Route path="/suivi/:id" element={<Suivi />} />
             <Route path="/cgv" element={<Cgv />} />
             <Route path="/cgu" element={<Cgu />} />

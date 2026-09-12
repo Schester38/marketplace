@@ -248,7 +248,10 @@ export const api = {
   productReviews: (id) => request(`/reviews/product/${id}`),
   createReview: (payload) => request("/reviews", { method: "POST", body: JSON.stringify(payload) }),
   shop: (id) => request(`/shop/${id}`),
-  trackSale: (id, code) => request(`/sales/track/${id}?code=${encodeURIComponent(code)}`),
+  trackSale: (id, code) =>
+    id
+      ? request(`/sales/track/${id}?code=${encodeURIComponent(code)}`)
+      : request(`/sales/track?code=${encodeURIComponent(code)}`),
   cancelSale: (id, code) =>
     request(`/sales/${id}/cancel`, { method: "POST", body: JSON.stringify({ code }) }),
   exportSales: () => request("/sales/export"),

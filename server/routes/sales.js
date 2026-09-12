@@ -1449,10 +1449,16 @@ router.post(
 );
 
 router.get(
-  "/track/:id",
+  "/track/:id?",
   ah(async (req, res) => {
     const code = req.query.code ? String(req.query.code).trim().toUpperCase() : "";
     if (!code) return res.status(400).json({ error: "Code client requis" });
+    // L'id est optionnel : fourni (liens partagés /suivi/:id) la recherche est
+    // restreinte à cette commande ; sinon la commande est trouvée par son code
+    // de confirmation / code client seul (la plus récente en cas de doublon —
+    // le buyer_code d'un client peut se répéter d'une commande à l'autre).
+    const rawId = String(req.params.id || "").trim();
+    const hasId = /^\d+$/.test(rawId) && Number(rawId) > 0;
     const sale = (
       await q(
         `SELECT s.id, s.status, s.quantity, s.buyer_name, s.buyer_code, s.confirm_code, s.buyer_city, s.created_at,
@@ -1464,8 +1470,10 @@ router.get(
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
-       WHERE s.id = $1 AND (s.buyer_code = $2 OR s.confirm_code = $2)`,
-        [Number(req.params.id), code]
+       WHERE (s.buyer_code = $2 OR s.confirm_code = $2) ${hasId ? "AND s.id = $1" : ""}
+       ORDER BY s.created_at DESC
+       LIMIT 1`,
+        hasId ? [Number(rawId), code] : [code]
       )
     )[0];
     if (!sale) return res.status(404).json({ error: "Commande introuvable ou code incorrect" });

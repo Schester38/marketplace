@@ -464,9 +464,12 @@ router.post(
           name: "",
         }));
       } else {
-        const roleClause = roles ? "AND role = ANY($2::text[])" : "";
+        // NB : $1 doit être référencé dans le SQL même pour l'audience « all »,
+        // sinon Postgres rejette (« could not determine data type of
+        // parameter $1 » / « bind message supplies 1 parameters »).
+        const roleClause = roles ? " AND role = ANY($2::text[])" : "";
         recipients = await q(
-          `SELECT email, name FROM users WHERE email_verified = TRUE ${roleClause} LIMIT ${CAMPAIGN_EMAIL_CAP}`,
+          `SELECT email, name FROM users WHERE email_verified = $1${roleClause} LIMIT ${CAMPAIGN_EMAIL_CAP}`,
           roles ? [true, roles] : [true]
         );
       }
