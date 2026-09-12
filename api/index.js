@@ -1,6 +1,6 @@
 import app from '../server/app.js';
 import { initDb, getPool } from '../server/db.js';
-import { runStorageMaintenanceOnce } from '../server/services/storageMaintenance.js';
+import { runStorageMaintenanceStep } from '../server/services/storageMaintenance.js';
 
 // Pre-warm pool on module load (helps with cold starts)
 getPool().query('SELECT 1').catch(() => {});
@@ -20,13 +20,14 @@ function startDbInit() {
   });
 }
 
-// Lance immédiatement (pendant le démarrage à froid) puis à chaque requête
-// (no-op si déjà lancé) pour garantir une tentative de (re)initialisation.
+// Lance immédiatement (pendant le démarrage à froid) puis à chaque requête :
+// la maintenance Storage (pas à pas, ~3 s max par step) progresse à chaque
+// requête jusqu'à la garde `storage_maintenance_done` (no-op ensuite).
 startDbInit();
-// Maintenance Storage ponctuelle (cache images + migration inline) — non bloquant.
-runStorageMaintenanceOnce();
+runStorageMaintenanceStep().catch(() => {});
 app.use((req, res, next) => {
   startDbInit();
+  runStorageMaintenanceStep().catch(() => {});
   next();
 });
 

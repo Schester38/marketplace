@@ -450,6 +450,78 @@ export async function storageUsage() {
   return { count, bytes };
 }
 
+// Liste les clés de tous les objets d'un bucket (pagination 1000).
+export async function listBucketKeys(bucketName = BUCKET) {
+  const token = apiToken();
+  const keys = [];
+  let offset = 0;
+  for (;;) {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${bucketName}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, apikey: token, "Content-Type": "application/json" },
+      body: JSON.stringify({ prefix: "", limit: 1000, offset }),
+    });
+    if (!res.ok) throw new Error(`Liste du bucket échouée (${res.status})`);
+    const items = await res.json();
+    if (!Array.isArray(items) || !items.length) break;
+    for (const it of items) if (it?.name) keys.push(it.name);
+    offset += items.length;
+    if (items.length < 1000) break;
+  }
+  return keys;
+}
+
+// Header cache-control effectivement servi pour un objet public.
+export async function servedCacheControl(bucketName, key) {
+  try {
+    const h = await fetch(publicUrl(key, bucketName), { method: "HEAD" });
+    return (h.headers.get("cache-control") || "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+const encPath = (key) => key.split("/").map(encodeURIComponent).join("/");
+
+/**
+ * Corrige le cache-control d'UN objet :
+ *  - "skipped" : déjà correct (max-age >= secondes) ;
+ *  - "fixed-meta" : corrigé via la mise à jour de metadata (léger) ;
+ *  - "fixed-reupload" : corrigé en ré-uploadant le même contenu (x-upsert) ;
+ *  - "failed" : échec (l'objet est resté en no-cache).
+ */
+export async function fixObjectCacheControl(bucketName, key, seconds = IMMUTABLE_CACHE_SECONDS) {
+  const before = await servedCacheControl(bucketName, key);
+  if (before.includes(`max-age=${seconds}`)) return "skipped";
+  // 1) metadata update (léger — aucun transfert d'image)
+  try {
+    await request(
+      `object/${bucketName}/${encPath(key)}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cacheControl: seconds }) },
+      bucketName
+    );
+  } catch {
+    /* on vérifie le résultat réel ci-dessous */
+  }
+  if ((await servedCacheControl(bucketName, key)).includes(`max-age=${seconds}`)) return "fixed-meta";
+  // 2) fallback : ré-upload du même contenu avec x-upsert (URL inchangée)
+  const bin = await fetch(publicUrl(key, bucketName));
+  if (!bin.ok) return "failed";
+  const buf = Buffer.from(await bin.arrayBuffer());
+  const type = bin.headers.get("content-type") || "application/octet-stream";
+  try {
+    const re = await request(
+      `object/${bucketName}/${encPath(key)}`,
+      { method: "POST", headers: { "Content-Type": type, "Cache-Control": seconds, "x-upsert": "true" }, body: buf },
+      bucketName
+    );
+    if (!(re.ok || re.status === 409)) return "failed";
+  } catch {
+    return "failed";
+  }
+  return (await servedCacheControl(bucketName, key)).includes(`max-age=${seconds}`) ? "fixed-reupload" : "failed";
+}
+
 // ─── Cache des images : correction des objets existants ─────────────────────
 // Les objets uploadés AVANT le correctif « Cache-Control en secondes pures »
 // sont stockés avec cache-control no-cache → chaque visiteur re-télécharge

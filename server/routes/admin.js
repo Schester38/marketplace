@@ -6,7 +6,8 @@ import { authRequired, roleRequired, signToken } from "../auth.js";
 import { logAudit } from "../security.js";
 import { migrateImages } from "../migrate-images.js";
 import { cleanupOutOfStock, cleanupOldStats, dbUsageReport } from "../cleanup.js";
-import { storageUsage, fixBucketCacheControl, migrateInlinePhotos } from "../storage.js";
+import { storageUsage, migrateInlinePhotos } from "../storage.js";
+import { runStorageMaintenanceNow } from "../services/storageMaintenance.js";
 import { notifyActivationReferralPaid } from "../services/activationReferral.js";
 import { notifyAdmins } from "../services/adminNotify.js";
 import {
@@ -996,7 +997,7 @@ router.get(
 router.post(
   "/storage/fix-image-cache",
   ah(async (req, res) => {
-    const result = await fixBucketCacheControl();
+    const result = await runStorageMaintenanceNow();
     await logAudit(
       req.user.id,
       "admin.storage_fix_cache",
