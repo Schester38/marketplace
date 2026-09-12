@@ -1,5 +1,6 @@
 import app from "./app.js";
 import { initDb, purgeOldTransactions } from "./db.js";
+import { runStorageMaintenanceOnce } from "./services/storageMaintenance.js";
 
 const PORT = process.env.PORT || 4000;
 
@@ -11,6 +12,7 @@ async function main() {
     console.error("Impossible de se connecter à la base de données :", err.message);
     process.exit(1);
   }
+  runStorageMaintenanceOnce();
   app.listen(PORT, () => {
     console.warn(`API Mboppi démarrée sur http://localhost:${PORT}`);
   });
