@@ -2024,13 +2024,34 @@ export default function Admin() {
                     ms: Date.now() - t0,
                   });
                 }
-                setStorageReport({
+                                setStorageReport({
                   ok: bad === 0,
                   sample: lines,
                   note: bad === 0
                     ? t("Cache éternal confirmé : chaque image n'est chargée depuis Supabase qu'une seule fois.")
                     : t("Problème détecté — voir le détail ci-dessous."),
                 });
+                // Preuve du cache CDN : deux GET sur la première image
+                // (le 1ᵉʳ peuple le cache edge, le 2ᵉ doit être un HIT).
+                try {
+                  const u0 = sample[0];
+                  const g1 = await fetch(u0);
+                  await g1.arrayBuffer();
+                  const g2 = await fetch(u0);
+                  await g2.arrayBuffer();
+                  const c1 = g1.headers.get("x-vercel-cache") || "—";
+                  const c2 = g2.headers.get("x-vercel-cache") || "—";
+                  setStorageReport((prev) => ({
+                    ...prev,
+                    sample: [
+                      ...(prev?.sample || []),
+                      { preuve_cdn: "GET #1", x_vercel_cache: c1 },
+                      { preuve_cdn: "GET #2", x_vercel_cache: c2, attendu: "HIT" },
+                    ],
+                  }));
+                } catch {
+                  /* preuve CDN best-effort */
+                }
               } catch (err) {
                 setStorageMsg(err.message);
               } finally {
