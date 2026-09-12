@@ -32,10 +32,10 @@ const FAILED_KEY = "storage_fix_failed";
 const LOG_KEY = "storage_maintenance_log";
 const DONE_KEY = "storage_maintenance_done";
 
-const BATCH_META = 8; // 8 × (HEAD + POST) ≈ 1,5-2 s
+const BATCH_META = 3; // ré-upload léger : 3 × (HEAD + GET + POST) ≈ 1,5-2,5 s
 const BATCH_VERIFY = 12; // 12 × HEAD ≈ 1-1,5 s
-const BATCH_HARD = 2; // 2 × (4-6 appels) ≈ 1,5-2,5 s
-const MAX_TRIES = 2;
+const BATCH_HARD = 2; // 2 × (GET + POST + HEAD) ≈ 1,5-2,5 s
+const MAX_TRIES = 3;
 
 let running = false;
 let lastRun = 0;
@@ -60,8 +60,8 @@ export async function runStorageMaintenanceStep() {
     if (await getSetting(DONE_KEY)) return;
     if (!(await ensureKeysList())) return;
     if (await stepReupload()) return; // la file d'échec a la priorité
-    const phase = (await getSetting(PHASE_KEY)) || "meta";
-    if (phase === "meta") await stepMeta();
+    const phase = (await getSetting(PHASE_KEY)) || "fix";
+    if (phase === "fix") await stepMeta();
     else if (phase === "verify") await stepVerify();
   } catch (err) {
     console.warn("[maintenance storage] step échoué (renté) :", err.message);
@@ -72,14 +72,14 @@ export async function runStorageMaintenanceStep() {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 1 — metadata
+// Phase 1 — ré-upload léger (x-upsert), pas de vérification à chaud
 // ---------------------------------------------------------------------------
 async function stepMeta() {
   const { keys, page } = await keyPage(Number((await getSetting(CURSOR_KEY)) || 0), BATCH_META);
   if (!page.length) {
     await setSetting(PHASE_KEY, "verify");
     await setSetting(CURSOR_KEY, "0");
-    await writeLog({ step: "meta-done", total: keys.length });
+    await writeLog({ step: "fix-done", total: keys.length });
     return;
   }
   let fixed = 0;
@@ -170,7 +170,7 @@ async function ensureKeysList() {
   }
   await setSetting(KEYS_KEY, JSON.stringify(keys));
   await setSetting(CURSOR_KEY, "0");
-  await setSetting(PHASE_KEY, "meta");
+  await setSetting(PHASE_KEY, "fix");
   await writeLog({ step: "start", total: keys.length });
   return true;
 }

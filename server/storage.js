@@ -14,6 +14,9 @@ const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 // Une chaîne complète ("public, max-age=…, immutable") est IGNORÉE par le Storage
 // (metadata cache-control stockée à no-cache → aucune mise en cache, egress × N).
 const IMMUTABLE_CACHE_SECONDS = "31536000";
+// Format EXACT du header envoyé par supabase-js : `cache-control: max-age=N`.
+// (ni « N » seul, ni « public, max-age=N, immutable » ne sont acceptés.)
+const IMMUTABLE_CACHE_HEADER = `max-age=${IMMUTABLE_CACHE_SECONDS}`;
 
 // Le Storage valide l'Authorization Bearer comme JWT.
 // - Clé legacy (eyJ...) : utilisée telle quelle.
@@ -246,10 +249,9 @@ export async function uploadBuffer(buffer, type, folder = "products", variant = 
     method: "POST",
     headers: {
       "Content-Type": type,
-      // Secondes pures : le Storage accepte uniquement ce format (un header
-      // complet « public, max-age=…, immutable » est silencieusement ignoré
-      // et l'objet se retrouve en cache-control no-cache).
-      "Cache-Control": IMMUTABLE_CACHE_SECONDS,
+      // cache-control au format supabase-js : `max-age=<secondes>` — ni la
+      // valeur seule, ni "public, max-age=…, immutable" ne sont honorés.
+      "Cache-Control": IMMUTABLE_CACHE_HEADER,
     },
     body: buffer,
   }, bucketName);
@@ -488,56 +490,52 @@ export async function servedCacheControl(bucketName, key) {
 
 const encPath = (key) => key.split("/").map(encodeURIComponent).join("/");
 
-/**
- * HEAD (skip si déjà correct) puis POST metadata {cacheControl} — 2 appels
- * max, adapté aux steps de maintenance serverless (le serveur de fond est tué
- * dès que la réponse part).
- */
-export async function updateObjectCacheControl(bucketName, key, seconds = IMMUTABLE_CACHE_SECONDS) {
-  if ((await servedCacheControl(bucketName, key)).includes(`max-age=${seconds}`)) return "skipped";
+// Ré-upload du même contenu avec x-upsert : c'est LE SEUL moyen de changer le
+// cache-control d'un objet chez Supabase (il n'existe PAS d'endpoint de mise à
+// jour de metadata — le client officiel a cette méthode commentée).
+async function reuploadObject(bucketName, key, seconds) {
+  const bin = await fetch(publicUrl(key, bucketName));
+  if (!bin.ok) return false;
+  const buf = Buffer.from(await bin.arrayBuffer());
+  const type = bin.headers.get("content-type") || "application/octet-stream";
   try {
     const res = await request(
       `object/${bucketName}/${encPath(key)}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cacheControl: seconds }) },
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": type,
+          // Format exact supabase-js : `max-age=N` (ni N seul, ni la chaîne
+          // complète "public, max-age=…, immutable" ne sont honorés).
+          "Cache-Control": `max-age=${seconds}`,
+          "x-upsert": "true",
+        },
+        body: buf,
+      },
       bucketName
     );
-    return res.ok ? "fixed" : "failed";
+    return res.ok || res.status === 409;
   } catch {
-    return "failed";
+    return false;
   }
 }
 
 /**
- * Correction CONFIRMÉE d'un objet (phase ré-upload / admin) : HEAD, POST
- * metadata, vérification, puis en dernier recours ré-upload x-upsert du même
- * contenu (URL inchangée). ~4-6 appels réseau : réservé aux échecs.
+ * Ré-upload léger d'un objet (HEAD skip + GET + POST x-upsert). Adapté aux
+ * steps de maintenance serverless : pas de vérification à chaud.
+ */
+export async function updateObjectCacheControl(bucketName, key, seconds = IMMUTABLE_CACHE_SECONDS) {
+  if ((await servedCacheControl(bucketName, key)).includes(`max-age=${seconds}`)) return "skipped";
+  return (await reuploadObject(bucketName, key, seconds)) ? "fixed" : "failed";
+}
+
+/**
+ * Corrections CONFIRMÉE d'un objet : ré-upload x-upsert (URL inchangée) puis
+ * vérification du header servi. ~3-4 appels réseau : réservé aux échecs.
  */
 export async function fixObjectCacheControlHard(bucketName, key, seconds = IMMUTABLE_CACHE_SECONDS) {
   if ((await servedCacheControl(bucketName, key)).includes(`max-age=${seconds}`)) return "skipped";
-  try {
-    const upd = await request(
-      `object/${bucketName}/${encPath(key)}`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cacheControl: seconds }) },
-      bucketName
-    );
-    if (upd.ok && (await servedCacheControl(bucketName, key)).includes(`max-age=${seconds}`)) return "fixed-meta";
-  } catch {
-    /* on passe au ré-upload */
-  }
-  const bin = await fetch(publicUrl(key, bucketName));
-  if (!bin.ok) return "failed";
-  const buf = Buffer.from(await bin.arrayBuffer());
-  const type = bin.headers.get("content-type") || "application/octet-stream";
-  try {
-    const re = await request(
-      `object/${bucketName}/${encPath(key)}`,
-      { method: "POST", headers: { "Content-Type": type, "Cache-Control": seconds, "x-upsert": "true" }, body: buf },
-      bucketName
-    );
-    if (!(re.ok || re.status === 409)) return "failed";
-  } catch {
-    return "failed";
-  }
+  if (!(await reuploadObject(bucketName, key, seconds))) return "failed";
   return (await servedCacheControl(bucketName, key)).includes(`max-age=${seconds}`) ? "fixed-reupload" : "failed";
 }
 
