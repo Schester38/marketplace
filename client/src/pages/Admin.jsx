@@ -2035,9 +2035,11 @@ export default function Admin() {
                 // (le 1ᵉʳ peuple le cache edge, le 2ᵉ doit être un HIT).
                 try {
                   const u0 = sample[0];
-                  const g1 = await fetch(u0);
+                  // cache: "reload" force le réseau (sinon le 2ᵉ GET est servi
+                  // par le cache HTTP du navigateur et recopie le MISS du 1ᵉʳ).
+                  const g1 = await fetch(u0, { cache: "reload" });
                   await g1.arrayBuffer();
-                  const g2 = await fetch(u0);
+                  const g2 = await fetch(u0, { cache: "reload" });
                   await g2.arrayBuffer();
                   const c1 = g1.headers.get("x-vercel-cache") || "—";
                   const c2 = g2.headers.get("x-vercel-cache") || "—";
