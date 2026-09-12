@@ -489,27 +489,41 @@ export async function servedCacheControl(bucketName, key) {
 const encPath = (key) => key.split("/").map(encodeURIComponent).join("/");
 
 /**
- * Corrige le cache-control d'UN objet :
- *  - "skipped" : déjà correct (max-age >= secondes) ;
- *  - "fixed-meta" : corrigé via la mise à jour de metadata (léger) ;
- *  - "fixed-reupload" : corrigé en ré-uploadant le même contenu (x-upsert) ;
- *  - "failed" : échec (l'objet est resté en no-cache).
+ * HEAD (skip si déjà correct) puis POST metadata {cacheControl} — 2 appels
+ * max, adapté aux steps de maintenance serverless (le serveur de fond est tué
+ * dès que la réponse part).
  */
-export async function fixObjectCacheControl(bucketName, key, seconds = IMMUTABLE_CACHE_SECONDS) {
-  const before = await servedCacheControl(bucketName, key);
-  if (before.includes(`max-age=${seconds}`)) return "skipped";
-  // 1) metadata update (léger — aucun transfert d'image)
+export async function updateObjectCacheControl(bucketName, key, seconds = IMMUTABLE_CACHE_SECONDS) {
+  if ((await servedCacheControl(bucketName, key)).includes(`max-age=${seconds}`)) return "skipped";
   try {
-    await request(
+    const res = await request(
       `object/${bucketName}/${encPath(key)}`,
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cacheControl: seconds }) },
       bucketName
     );
+    return res.ok ? "fixed" : "failed";
   } catch {
-    /* on vérifie le résultat réel ci-dessous */
+    return "failed";
   }
-  if ((await servedCacheControl(bucketName, key)).includes(`max-age=${seconds}`)) return "fixed-meta";
-  // 2) fallback : ré-upload du même contenu avec x-upsert (URL inchangée)
+}
+
+/**
+ * Correction CONFIRMÉE d'un objet (phase ré-upload / admin) : HEAD, POST
+ * metadata, vérification, puis en dernier recours ré-upload x-upsert du même
+ * contenu (URL inchangée). ~4-6 appels réseau : réservé aux échecs.
+ */
+export async function fixObjectCacheControlHard(bucketName, key, seconds = IMMUTABLE_CACHE_SECONDS) {
+  if ((await servedCacheControl(bucketName, key)).includes(`max-age=${seconds}`)) return "skipped";
+  try {
+    const upd = await request(
+      `object/${bucketName}/${encPath(key)}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cacheControl: seconds }) },
+      bucketName
+    );
+    if (upd.ok && (await servedCacheControl(bucketName, key)).includes(`max-age=${seconds}`)) return "fixed-meta";
+  } catch {
+    /* on passe au ré-upload */
+  }
   const bin = await fetch(publicUrl(key, bucketName));
   if (!bin.ok) return "failed";
   const buf = Buffer.from(await bin.arrayBuffer());
