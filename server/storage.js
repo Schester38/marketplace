@@ -450,7 +450,10 @@ export async function storageUsage() {
   return { count, bytes };
 }
 
-// Liste les clés de tous les objets d'un bucket (pagination 1000).
+// Liste les clés des fichiers d'un bucket (pagination 1000).
+// Seuls les FICHIERS sont retournés : les dossiers ont `id: null` dans la
+// réponse du Storage (même s'ils ont un `name`) — les inclure briserait la
+// file de maintenance (tentative de correction sur un dossier).
 export async function listBucketKeys(bucketName = BUCKET) {
   const token = apiToken();
   const keys = [];
@@ -464,7 +467,7 @@ export async function listBucketKeys(bucketName = BUCKET) {
     if (!res.ok) throw new Error(`Liste du bucket échouée (${res.status})`);
     const items = await res.json();
     if (!Array.isArray(items) || !items.length) break;
-    for (const it of items) if (it?.name) keys.push(it.name);
+    for (const it of items) if (it?.id) keys.push(it.name);
     offset += items.length;
     if (items.length < 1000) break;
   }
