@@ -33,6 +33,29 @@ function reportServerError(path, status, detail) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const RETRYABLE_STATUS = new Set([500, 502, 503, 504]);
 
+// 401 sur une requête portant un jeton = session (JWT 24 h) expirée ou
+// fermée par l'admin : on prévient l'app (AuthProvider) qui déconnecte
+// l'utilisateur et affiche la page de connexion — au lieu de laisser le
+// site « faussement connecté » où chaque action échoue.
+// Exclusion : les routes /auth/* en écriture (login, inscription, mot de
+// passe, suppression de compte…) renvoient aussi 401 pour un mot de passe
+// ERRONÉ — déconnecter l'utilisateur dans ces cas serait une régression.
+function notifySessionExpired() {
+  try {
+    window.dispatchEvent(new Event("auth-expired"));
+  } catch {
+    /* jamais bloquant */
+  }
+}
+
+function notifyAdminSessionExpired() {
+  try {
+    window.dispatchEvent(new Event("admin-auth-expired"));
+  } catch {
+    /* jamais bloquant */
+  }
+}
+
 async function request(path, options = {}, retries = 2) {
   const token = storage.getItem("token");
   const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
@@ -43,6 +66,13 @@ async function request(path, options = {}, retries = 2) {
     const res = await fetch(API + path, { ...options, headers });
     data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      if (
+        res.status === 401 &&
+        token &&
+        !(method !== "GET" && path.startsWith("/auth/"))
+      ) {
+        notifySessionExpired();
+      }
       const err = new Error(data.error || `Erreur ${res.status}`);
       err.status = res.status;
       err.code = data.code;
@@ -90,6 +120,11 @@ async function adminRequest(path, options = {}) {
       if (RETRYABLE_STATUS.has(res.status) && method === "GET" && attempt > 0) {
         await sleep(attempt === 2 ? 800 : 2000);
         continue;
+      }
+      // Session admin (JWT 24 h) expirée → retour au portail mot de passe.
+      // /admin/pass exclus (401 = mot de passe erroné, pas une expiration).
+      if (res.status === 401 && token && path !== "/admin/pass") {
+        notifyAdminSessionExpired();
       }
       if (RETRYABLE_STATUS.has(res.status)) reportServerError(path, res.status, data.error || "");
       throw err;

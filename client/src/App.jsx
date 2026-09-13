@@ -22,6 +22,7 @@ import CityPage from "./pages/CityPage.jsx";
 import { LangProvider, useLang } from "./i18n.jsx";
 import { StoreProvider } from "./store.jsx";
 import { membershipActive, setMembershipGate, getMembershipGate } from "./auth-access.js";
+import { isTokenExpired } from "./token.js";
 
 const lazyRetry = (importer) =>
   React.lazy(async () => {
@@ -121,6 +122,14 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
+    // Session expirée (JWT 24 h) : purge immédiate → l'utilisateur voit la
+    // page de connexion dès la réouverture du site, au lieu d'une app
+    // « faussement connectée » où chaque action échoue avec « session expirée ».
+    if (isTokenExpired(storage.getItem("token"))) {
+      storage.removeItem("token");
+      storage.removeItem("user");
+      return null;
+    }
     try {
       let u = JSON.parse(storage.getItem("user"));
       // Auto-réparation : répare les sessions corrompues par l'ancien bug
@@ -171,15 +180,34 @@ export function AuthProvider({ children }) {
     logoutRef.current = logout;
   }, [logout]);
 
+  // Référence au user courant pour les handlers d'événements globaux.
+  const userRef = useRef(user);
   useEffect(() => {
-    const onAuthExpired = () => {
-      if (logoutRef.current) logoutRef.current();
-    };
-    window.addEventListener("auth-expired", onAuthExpired);
-    return () => window.removeEventListener("auth-expired", onAuthExpired);
-  }, []);
+    userRef.current = user;
+  }, [user]);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const onAuthExpired = () => {
+      // Session expirée (401 serveur ou JWT expiré) : déconnexion + retour
+      // à la page de connexion (banner « session expirée ») quand un compte
+      // était réellement connecté.
+      const wasLoggedIn = Boolean(userRef.current);
+      if (logoutRef.current) logoutRef.current();
+      if (wasLoggedIn) navigate("/login", { replace: true, state: { expired: true } });
+    };
+    window.addEventListener("auth-expired", onAuthExpired);
+    // Vérification périodique : si le JWT a expiré pendant que l'onglet reste
+    // ouvert sans activité réseau, même comportement qu'un 401 serveur.
+    const iv = setInterval(() => {
+      if (userRef.current && isTokenExpired(storage.getItem("token"))) onAuthExpired();
+    }, 60 * 1000);
+    return () => {
+      window.removeEventListener("auth-expired", onAuthExpired);
+      clearInterval(iv);
+    };
+  }, [navigate]);
 
   useEffect(() => {
     if (!user) return undefined;

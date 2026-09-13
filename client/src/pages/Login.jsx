@@ -109,6 +109,17 @@ export default function Login() {
         </div>
         <h2>{t("Connexion")}</h2>
 
+        {location.state?.expired && (
+          <div
+            className="card"
+            style={{ background: "#eef6ff", borderColor: "#bfdbfe", marginBottom: 16 }}
+          >
+            <p className="hint" style={{ margin: 0 }}>
+              🔒 {t("Votre session a expiré, reconnectez-vous.")}
+            </p>
+          </div>
+        )}
+
         {unverified && (
           <div
             className="card"

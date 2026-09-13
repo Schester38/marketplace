@@ -49,6 +49,15 @@ export default function Admin() {
   useEffect(() => {
     setGate(!storage.getItem("admin_token"));
   }, []);
+  // Session admin (JWT 24 h) expirée : retour au portail mot de passe.
+  useEffect(() => {
+    const onAdminExpired = () => {
+      storage.removeItem("admin_token");
+      setGate(true);
+    };
+    window.addEventListener("admin-auth-expired", onAdminExpired);
+    return () => window.removeEventListener("admin-auth-expired", onAdminExpired);
+  }, []);
   const [password, setPassword] = useState("");
   const [gateError, setGateError] = useState("");
   const [busy, setBusy] = useState(false);

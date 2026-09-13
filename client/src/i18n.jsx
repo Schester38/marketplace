@@ -11,6 +11,7 @@ export const LANGS = [
 const EN = {
   // Navbar / App
   Produits: "Products",
+  "Votre session a expiré, reconnectez-vous.": "Your session has expired, please sign in again.",
   "Vitrine d'offre": "Offers showcase",
   Connexion: "Sign in",
   "Créer un compte": "Create an account",
@@ -1634,6 +1635,7 @@ const EN = {
 };
 
 const AR = {
+  "Votre session a expiré, reconnectez-vous.": "انتهت صلاحية جلستك، يرجى تسجيل الدخول مرة أخرى.",
   // Navbar / App
   Produits: "المنتجات",
   "Vitrine d'offre": "عرض العروض",
@@ -3162,6 +3164,7 @@ const AR = {
 };
 
 const ES = {
+  "Votre session a expiré, reconnectez-vous.": "Tu sesión ha expirado, vuelve a iniciar sesión.",
   Produits: "Productos",
   "Vitrine d'offre": "Escaparate de ofertas",
   Connexion: "Iniciar sesión",

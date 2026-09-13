@@ -85,6 +85,14 @@ if (pathname.startsWith("/verone")) {
 }
 
 if ("serviceWorker" in navigator) {
+  // Mise à jour automatique : quand un nouveau SW prend le contrôle (nouvelle
+  // version déployée), la page se recharge avec la nouvelle version SANS
+  // action de l'utilisateur.
+  const openedAt = Date.now();
+  let interacted = false;
+  ["mousedown", "keydown", "touchstart", "scroll"].forEach((e) =>
+    window.addEventListener(e, () => { interacted = true; }, { once: true, passive: true })
+  );
   const reloadScheduler = (() => {
     let applied = false;
     const go = () => {
@@ -96,7 +104,13 @@ if ("serviceWorker" in navigator) {
       request() {
         if (applied) return;
         fetch("/", { cache: "no-store" }).catch(() => {});
-        if (document.visibilityState === "hidden") {
+        // Ouverture récente sans interaction (utilisateur vient d'ouvrir le
+        // site) : mise à jour immédiate, invisible. Sinon : au prochain
+        // passage en arrière-plan (pas d'interruption en pleine utilisation).
+        if (
+          document.visibilityState === "hidden" ||
+          (Date.now() - openedAt < 10000 && !interacted)
+        ) {
           go();
           return;
         }
@@ -106,39 +120,37 @@ if ("serviceWorker" in navigator) {
       },
     };
   })();
-
+  let registration = null;
+  const checkUpdate = () => {
+    if (registration) registration.update().catch(() => {});
+  };
   let registered = false;
   const hadController = Boolean(navigator.serviceWorker.controller);
   navigator.serviceWorker.addEventListener("message", (event) => {
     if (event.data && event.data.type === "APP_UPDATED") reloadScheduler.request();
   });
   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (registered && hadController) reloadScheduler.request();
+    // Un SW contrôlait déjà la page au chargement : tout nouveau contrôleur
+    // est une mise à jour → recharger (corrigé : « registered » était posé
+    // après la fin du register, la course masquait souvent la mise à jour).
+    if (hadController) reloadScheduler.request();
   });
   if (import.meta.env.PROD) {
     window.addEventListener("load", () => {
       navigator.serviceWorker
         .register("/sw.js")
-        .then(() => {
+        .then((reg) => {
           registered = true;
+          registration = reg;
+          // Détection régulière des nouvelles versions (onglet laissé ouvert)
+          // + immédiate au retour sur l'onglet.
+          checkUpdate();
+          setInterval(checkUpdate, 5 * 60 * 1000);
         })
         .catch((err) => console.error("SW error:", err));
     });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") checkUpdate();
+    });
   }
 }
-
-const Root = () => (
-  <React.StrictMode>
-    <BrowserRouter>
-      <StoreProvider>
-        <LangProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </LangProvider>
-      </StoreProvider>
-    </BrowserRouter>
-  </React.StrictMode>
-);
-
-ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
