@@ -122,12 +122,17 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    // Session expirée (JWT 24 h) : purge immédiate → l'utilisateur voit la
-    // page de connexion dès la réouverture du site, au lieu d'une app
-    // « faussement connectée » où chaque action échoue avec « session expirée ».
-    if (isTokenExpired(storage.getItem("token"))) {
+    // Session expirée (JWT 24 h) : purge immédiate + marqueur → la
+    // réouverture du site affiche directement la page de connexion (et non
+    // l'accueil en mode visiteur, comme si la session était toujours là).
+    const token = storage.getItem("token");
+    const hadSession = Boolean(token || storage.getItem("user"));
+    if (isTokenExpired(token)) {
       storage.removeItem("token");
       storage.removeItem("user");
+      if (hadSession) {
+        try { sessionStorage.setItem("mboppi_session_ended", "1"); } catch {}
+      }
       return null;
     }
     try {
@@ -207,6 +212,20 @@ export function AuthProvider({ children }) {
       window.removeEventListener("auth-expired", onAuthExpired);
       clearInterval(iv);
     };
+  }, [navigate]);
+
+  // Réouverture après une session expirée (marqueur posé au démarrage) :
+  // afficher directement la page de connexion. Le panneau admin (/admin)
+  // utilise sa propre authentification : pas de redirection ici.
+  useEffect(() => {
+    let ended = null;
+    try { ended = sessionStorage.getItem("mboppi_session_ended"); } catch {}
+    if (ended === "1") {
+      try { sessionStorage.removeItem("mboppi_session_ended"); } catch {}
+      if (!window.location.pathname.startsWith("/admin")) {
+        navigate("/login", { replace: true, state: { expired: true } });
+      }
+    }
   }, [navigate]);
 
   useEffect(() => {

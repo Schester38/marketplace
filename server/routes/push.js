@@ -15,6 +15,12 @@ router.post(
   "/subscribe",
   authRequired,
   ah(async (req, res) => {
+    // Push désactivé (clés VAPID absentes) : 503 propre au lieu d'un 500.
+    if (!vapidPublicKey) {
+      return res
+        .status(503)
+        .json({ error: "Notifications push désactivées", code: "PUSH_DISABLED" });
+    }
     const { endpoint, keys } = req.body || {};
     if (!endpoint || !keys || !keys.p256dh || !keys.auth) {
       return res.status(400).json({ error: "Abonnement push invalide" });
