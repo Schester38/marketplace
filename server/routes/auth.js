@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { q } from "../db.js";
+import { q, withTransaction } from "../db.js";
 import { signToken, authRequired, roleRequired, MEMBERSHIP_FEES } from "../auth.js";
 import { googleConfigured, googleAuthUrl, getGoogleProfile } from "../google.js";
 import { logAudit } from "../security.js";
@@ -778,7 +778,30 @@ router.delete(
     if (user.password && (!password || !bcrypt.compareSync(String(password), user.password))) {
       return res.status(401).json({ error: "Mot de passe incorrect" });
     }
-    await q("DELETE FROM users WHERE id = $1", [user.id]);
+    // Historiques comptables verrouillés par des FK « ON DELETE RESTRICT »
+    // (wallet_transactions, automatic_payouts) : sans purge préalable, la
+    // suppression du compte échoue avec une erreur 23503 → « Erreur interne
+    // du serveur ». On purge ces lignes DANS la même transaction que la
+    // suppression : tout réussit ou rien n'est supprimé.
+    try {
+      await withTransaction(async (tx) => {
+        await tx.query("DELETE FROM wallet_transactions WHERE user_id = $1", [user.id]);
+        await tx.query("DELETE FROM automatic_payouts WHERE user_id = $1", [user.id]);
+        await tx.query("DELETE FROM users WHERE id = $1", [user.id]);
+      });
+    } catch (err) {
+      // 23503 = violation de clé étrangère : une autre table (migration
+      // externe future) référence encore ce compte → message clair au lieu
+      // d'une 500, et le compte reste intact.
+      if (err && err.code === "23503") {
+        return res.status(409).json({
+          error:
+            "Impossible de supprimer ce compte : des données y sont encore rattachées. Contactez le support.",
+        });
+      }
+      throw err;
+    }
+    await logAudit(null, "account.deleted", `user=${user.id} role=${user.role} email=${user.email}`, req.ip);
     res.json({ ok: true });
   })
 );

@@ -102,8 +102,17 @@ app.use("/api/newsletter/subscribe", limiter(10 * 60 * 1000, 10));
 app.use("/api/auth/register", limiter(60 * 60 * 1000, 15));
 app.use("/api/auth/verify", limiter(60 * 60 * 1000, 20));
 app.use("/api/auth/resend", limiter(10 * 60 * 1000, 6));
-app.use("/api/auth/seller-code", limiter(10 * 60 * 1000, 5));
-app.use("/api/shop/code", limiter(10 * 60 * 1000, 5));
+// Lecture (GET) JAMAIS limitée : le tableau de bord appelle le GET du code à
+// CHAQUE affichage/re-focus — avec un quota de 5/10 min sur GET+POST, le code
+// vendeur et les liens de parrainage cessaient de s'afficher (429 silencieux
+// côté GET, échec du POST « Générer »). Le quota protège uniquement la
+// GÉNÉRATION (POST) et le rafraîchissement de code boutique.
+const sellerCodeLimiter = limiter(10 * 60 * 1000, 5);
+const shopCodeLimiter = limiter(10 * 60 * 1000, 5);
+const postOnlyLimit = (rate) => (req, res, next) =>
+  req.method === "GET" ? next() : rate(req, res, next);
+app.use("/api/auth/seller-code", postOnlyLimit(sellerCodeLimiter));
+app.use("/api/shop/code", postOnlyLimit(shopCodeLimiter));
 app.use("/api/purchases", limiter(10 * 60 * 1000, 30));
 app.use("/api/orders", limiter(10 * 60 * 1000, 30));
 app.use("/api/reviews", limiter(10 * 60 * 1000, 15));
