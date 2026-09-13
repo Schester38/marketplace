@@ -25,7 +25,8 @@
 
 export const PAYMENT_PROOF_CONFIG = {
   acceptedTypes: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
-  maxSourceFileBytes: 1 * 1024 * 1024,
+  /** Plafond hardware identique aux photos produit (aucun mobile ne l'atteint). */
+  maxSourceFileBytes: 15 * 1024 * 1024,
   alreadyOptimized: {
     formats: ["image/webp", "image/jpeg", "image/png"],
     maxBytes: 800 * 1024,
@@ -35,6 +36,15 @@ export const PAYMENT_PROOF_CONFIG = {
     maxDim: 1800,
     quality: 0.82,
   },
+  /**
+   * Compression « à la photo produit » : une preuve trop lourde n'est plus
+   * refusée, elle est compressée jusqu'à passer sous `targetBytes`.
+   * `minQuality` / `minDim` sont les planchers garantissant la lisibilité
+   * du justificatif (montant, référence de transaction…).
+   */
+  targetBytes: 800 * 1024,
+  minQuality: 0.6,
+  minDim: 1000,
 };
 
 export const IMAGE_CONFIG = {
@@ -363,9 +373,23 @@ export async function optimizePaymentProof(file) {
     throw new Error("Format de preuve non supporté ; choisissez une image JPG/PNG/WebP lisible.");
   }
 
-  const { canvas } = renderCanvas(img, PAYMENT_PROOF_CONFIG.resize.maxDim);
-  const targetType = file.type === "image/png" ? "image/png" : "image/jpeg";
-  const quality = targetType === "image/png" ? 0.95 : PAYMENT_PROOF_CONFIG.resize.quality;
+  // Compression systématique, comme une photo produit : WebP d'abord (repli
+  // PNG/JPEG automatique), puis descente progressive de la qualité puis des
+  // dimensions jusqu'à passer sous `targetBytes`. Les planchers minQuality /
+  // minDim évitent toute dégradation qui rendrait le justificatif illisible.
+  const { resize, targetBytes, minQuality, minDim } = PAYMENT_PROOF_CONFIG;
+  let maxDim = resize.maxDim;
+  let quality = resize.quality;
+  let out = canvasDataUrl(renderCanvas(img, maxDim).canvas, quality);
 
-  return canvas.toDataURL(targetType, quality);
+  while (dataUrlBytes(out) > targetBytes && (quality > minQuality || maxDim > minDim)) {
+    if (quality > minQuality) {
+      quality = Math.max(minQuality, Math.round((quality - 0.1) * 100) / 100);
+    } else {
+      maxDim = Math.max(minDim, Math.round(maxDim * 0.8));
+    }
+    out = canvasDataUrl(renderCanvas(img, maxDim).canvas, quality);
+  }
+
+  return out;
 }
