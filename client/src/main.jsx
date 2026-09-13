@@ -119,10 +119,15 @@ if ("serviceWorker" in navigator) {
         if (applied) return;
         if (!allowReload()) return;
         fetch("/", { cache: "no-store" }).catch(() => {});
+        // L'app n'a pas monté (splash encore affiché) = page bloquée sur un
+        // ancien shell dont les chunks manquent : recharger immédiatement,
+        // le nouveau SW (network-first) servira l'HTML frais.
+        const appMounted = !!document.querySelector(".app");
         // Ouverture récente sans interaction (utilisateur vient d'ouvrir le
         // site) : mise à jour immédiate, invisible. Sinon : au prochain
         // passage en arrière-plan (pas d'interruption en pleine utilisation).
         if (
+          !appMounted ||
           document.visibilityState === "hidden" ||
           (Date.now() - openedAt < 10000 && !interacted)
         ) {
