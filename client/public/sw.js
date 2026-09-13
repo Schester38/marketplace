@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v250';
+const CACHE_NAME = 'mboppi-v251';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/assistant-avatar.webp', '/og-image.svg', '/og-image.png', '/robots.txt', '/splash.js', '/diapo/MboppiShop_Developpez_votre_boutique.webp', '/diapo/MboppiShop_Gagner_telephone_connexion.webp', '/diapo/MboppiShop_Paiement_a_la_livraison_1x1.webp', '/diapo/MboppiShop_Shopify_optimise.webp'];
 
 // Endpoints GET publics : servis depuis le cache quand le reseau est lent ou coupe,
@@ -296,16 +296,25 @@ async function assetSwr(request) {
 }
 
 async function navSwr(request) {
-  const cached = await caches.match('/');
-  const net = fetch(request, { cache: 'no-store' })
-    .then((resp) => {
-      if (resp && resp.ok && /text\/html/i.test(resp.headers.get('content-type') || '')) {
-        const clone = resp.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put('/', clone));
-      }
-      return resp;
-    })
-    .catch(() => null);
-  if (cached && /text\/html/i.test(cached.headers.get('content-type') || '')) return cached;
-  return net.then((resp) => resp || new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' }));
+  // NAVIGATION : le RÉSEAU d'abord (HTML frais à chaque ouverture), le cache
+  // ne sert que HORS LIGNE. Avant v251, on servait le shell en cache immédiat
+  // (stale-while-revalidate) : après un déploiement, ce shell référençait des
+  // chunks de l'ancien build que la route SPA servait en text/html → « Failed
+  // to fetch dynamically imported module » → splash/loader infini.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000); // filet : cache si réseau lent
+  try {
+    const resp = await fetch(request, { signal: controller.signal, cache: 'no-store' });
+    clearTimeout(timer);
+    if (resp && resp.ok && /text\/html/i.test(resp.headers.get('content-type') || '')) {
+      const clone = resp.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put('/', clone));
+    }
+    return resp;
+  } catch (err) {
+    clearTimeout(timer);
+    const cached = await caches.match('/');
+    if (cached && /text\/html/i.test(cached.headers.get('content-type') || '')) return cached;
+    return new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
+  }
 }

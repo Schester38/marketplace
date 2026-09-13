@@ -95,6 +95,20 @@ if ("serviceWorker" in navigator) {
   );
   const reloadScheduler = (() => {
     let applied = false;
+    const allowReload = () => {
+      // Garde anti-boucle : au plus 1 rechargement déclenché par une mise à
+      // jour SW toutes les 10 s (protège contre un controllerchange répété).
+      try {
+        const K = "mboppi_sw_reload_ts";
+        const last = Number(sessionStorage.getItem(K) || 0);
+        const now = Date.now();
+        if (now - last < 10000) return false;
+        sessionStorage.setItem(K, String(now));
+        return true;
+      } catch {
+        return true;
+      }
+    };
     const go = () => {
       if (applied) return;
       applied = true;
@@ -103,6 +117,7 @@ if ("serviceWorker" in navigator) {
     return {
       request() {
         if (applied) return;
+        if (!allowReload()) return;
         fetch("/", { cache: "no-store" }).catch(() => {});
         // Ouverture récente sans interaction (utilisateur vient d'ouvrir le
         // site) : mise à jour immédiate, invisible. Sinon : au prochain
