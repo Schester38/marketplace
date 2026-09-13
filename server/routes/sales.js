@@ -1459,6 +1459,8 @@ router.get(
     // le buyer_code d'un client peut se répéter d'une commande à l'autre).
     const rawId = String(req.params.id || "").trim();
     const hasId = /^\d+$/.test(rawId) && Number(rawId) > 0;
+    // Placeholder du code : $2 quand l'id est fourni ($1 = id), $1 sinon.
+    const cp = hasId ? 2 : 1;
     const sale = (
       await q(
         `SELECT s.id, s.status, s.quantity, s.buyer_name, s.buyer_code, s.confirm_code, s.buyer_city, s.created_at,
@@ -1470,7 +1472,7 @@ router.get(
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
        JOIN users shop ON shop.id = p.shop_id
-       WHERE (s.buyer_code = $2 OR s.confirm_code = $2) ${hasId ? "AND s.id = $1" : ""}
+       WHERE (s.buyer_code = $${cp} OR s.confirm_code = $${cp}) ${hasId ? "AND s.id = $1" : ""}
        ORDER BY s.created_at DESC
        LIMIT 1`,
         hasId ? [Number(rawId), code] : [code]
