@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v253';
+const CACHE_NAME = 'mboppi-v254';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/assistant-avatar.webp', '/og-image.svg', '/og-image.png', '/robots.txt', '/splash.js', '/diapo/MboppiShop_Developpez_votre_boutique.webp', '/diapo/MboppiShop_Gagner_telephone_connexion.webp', '/diapo/MboppiShop_Paiement_a_la_livraison_1x1.webp', '/diapo/MboppiShop_Shopify_optimise.webp'];
 
 // Endpoints GET publics : servis depuis le cache quand le reseau est lent ou coupe,
@@ -49,8 +49,24 @@ self.addEventListener('activate', (event) => {
       )
       .then(() => self.clients.claim())
       .then(() =>
-        self.clients.matchAll({ includeUncontrolled: true }).then((clients) => {
-          clients.forEach((client) => client.postMessage({ type: 'APP_UPDATED' }));
+        self.clients.matchAll({ includeUncontrolled: true, type: 'window' }).then((clients) => {
+          clients.forEach((client) => {
+            try {
+              client.postMessage({ type: 'APP_UPDATED' });
+            } catch (e) {}
+            // Onglet en arrière-plan (ancien shell possiblement KO) :
+            // re-navigation automatique dès que la nouvelle version est
+            // active. La navigation passe alors par le mode « réseau
+            // d'abord » → HTML frais, plus jamais d'ancien shell dont les
+            // chunks ont disparu. Les onglets VISIBLES en plein usage ne
+            // sont pas forcés (respect du travail en cours) : ils reçoivent
+            // APP_UPDATED et l'app applique/retarde la mise à jour en SPA.
+            if (client.visibilityState === 'hidden' && typeof client.navigate === 'function') {
+              try {
+                client.navigate(client.url);
+              } catch (e) {}
+            }
+          });
         })
       )
   );

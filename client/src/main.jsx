@@ -174,3 +174,18 @@ if ("serviceWorker" in navigator) {
     });
   }
 }
+
+const Root = () => (
+  <React.StrictMode>
+    <BrowserRouter>
+      <StoreProvider>
+        <LangProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </LangProvider>
+      </StoreProvider>
+    </BrowserRouter>
+  </React.StrictMode>
+);
+ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
