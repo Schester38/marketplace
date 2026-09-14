@@ -226,6 +226,7 @@ export default function Admin() {
   const [schedBusy, setSchedBusy] = useState(false);
   const [schedMsg, setSchedMsg] = useState(null);
   const [cronTest, setCronTest] = useState(null);
+  const [schedRecipients, setSchedRecipients] = useState(null);
 
   useEffect(() => {
     if (gate) return;
@@ -234,6 +235,16 @@ export default function Admin() {
       .then(setSchedList)
       .catch(() => {});
   }, [gate, schedMsg]);
+
+  // Compteurs réels de destinataires (mêmes règles que l'envoi : prefs push
+  // filtrées, emails vérifiés) — rechargés quand l'audience change.
+  useEffect(() => {
+    if (gate) return;
+    api
+      .adminCampaignRecipients(schedAudience)
+      .then(setSchedRecipients)
+      .catch(() => {});
+  }, [gate, schedAudience]);
 
   const scheduleCampaign = async () => {
     if (!schedTitle.trim() || !schedMessage.trim() || !schedDate) return;
@@ -1693,12 +1704,23 @@ export default function Admin() {
           <label className="msg-radio">
             <input type="checkbox" checked={schedPush} onChange={(e) => setSchedPush(e.target.checked)} />
             🔔 {t("Push")}
+            {schedRecipients ? ` (${schedRecipients.push_count})` : ""}
           </label>
           <label className="msg-radio">
             <input type="checkbox" checked={schedEmail} onChange={(e) => setSchedEmail(e.target.checked)} />
             📧 {t("Email")}
+            {schedRecipients ? ` (${schedRecipients.email_count})` : ""}
           </label>
         </div>
+        {schedRecipients && schedRecipients.push_blocked > 0 && (
+          <p className="hint">
+            ⚠️{" "}
+            {t(
+              "{n} abonné(s) ont désactivé « Messages de Mboppi » (Mon compte) : ils ne recevront PAS cette campagne push.",
+              { n: schedRecipients.push_blocked }
+            )}
+          </p>
+        )}
         {schedMsg && (
           <p className={schedMsg.ok ? "success" : "error"} style={{ marginTop: 8 }}>
             {schedMsg.ok ? "✅ " : "⚠️ "}
