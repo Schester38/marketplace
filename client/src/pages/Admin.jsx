@@ -213,6 +213,92 @@ export default function Admin() {
     }
   };
   // --- fin campagne ---
+
+  // --- Campagnes programmées (1 par jour, envoi automatique par cron) ---
+  const [schedList, setSchedList] = useState(null);
+  const [schedDate, setSchedDate] = useState("");
+  const [schedTitle, setSchedTitle] = useState("");
+  const [schedMessage, setSchedMessage] = useState("");
+  const [schedUrl, setSchedUrl] = useState("/");
+  const [schedAudience, setSchedAudience] = useState("all");
+  const [schedPush, setSchedPush] = useState(true);
+  const [schedEmail, setSchedEmail] = useState(true);
+  const [schedBusy, setSchedBusy] = useState(false);
+  const [schedMsg, setSchedMsg] = useState(null);
+  const [cronTest, setCronTest] = useState(null);
+
+  useEffect(() => {
+    if (gate) return;
+    api
+      .adminScheduledCampaigns()
+      .then(setSchedList)
+      .catch(() => {});
+  }, [gate, schedMsg]);
+
+  const scheduleCampaign = async () => {
+    if (!schedTitle.trim() || !schedMessage.trim() || !schedDate) return;
+    const channels = [schedPush ? "push" : null, schedEmail ? "email" : null].filter(Boolean);
+    if (!channels.length) return;
+    setSchedBusy(true);
+    setSchedMsg(null);
+    try {
+      await api.adminScheduleCampaign({
+        title: schedTitle.trim(),
+        message: schedMessage.trim(),
+        audience: schedAudience,
+        channels,
+        url: schedUrl.trim() || "/",
+        send_date: schedDate,
+      });
+      setSchedTitle("");
+      setSchedMessage("");
+      setSchedUrl("/");
+      setSchedDate("");
+      setSchedMsg({ ok: true, text: t("Campagne programmée : elle partira automatiquement ce jour-là.") });
+    } catch (err) {
+      setSchedMsg({ ok: false, text: err.message });
+    } finally {
+      setSchedBusy(false);
+    }
+  };
+
+  const cancelScheduled = async (id) => {
+    if (!window.confirm(t("Annuler cette campagne programmée ?"))) return;
+    setSchedBusy(true);
+    try {
+      await api.adminDeleteScheduledCampaign(id);
+      setSchedMsg({ ok: true, text: t("Campagne annulée.") });
+    } catch (err) {
+      setSchedMsg({ ok: false, text: err.message });
+    } finally {
+      setSchedBusy(false);
+    }
+  };
+
+  const testCron = async () => {
+    if (!schedList?.cron_url) return;
+    setCronTest(null);
+    try {
+      const sep = schedList.cron_url.includes("?") ? "&" : "?";
+      const res = await fetch(`${schedList.cron_url}${sep}dry=1`);
+      const d = await res.json();
+      setCronTest(d);
+    } catch (err) {
+      setCronTest({ error: err.message });
+    }
+  };
+
+  const copyCronUrl = async () => {
+    if (!schedList?.cron_url) return;
+    try {
+      await navigator.clipboard.writeText(schedList.cron_url);
+      setCronTest({ copied: true });
+    } catch {
+      /* silencieux */
+    }
+  };
+  // --- fin campagnes programmées ---
+
   const [visitDays, setVisitDays] = useState(30);
   const [visitCountry, setVisitCountry] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1507,6 +1593,184 @@ export default function Admin() {
                   campResult.email_failed ? ` — ${campResult.email_failed} ${t("échecs")}` : ""
                 }`}
           </p>
+        )}
+      </section>
+
+      <h2 className="section-title">🗂️ {t("Campagnes programmées (1 par jour, automatique)")}</h2>
+      <section className="card msg-form">
+        <p className="hint">
+          {t(
+            "Préparez vos campagnes à l'avance avec une date d'envoi : la campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun), sans que vous ayez à intervenir. Maximum une campagne par jour."
+          )}
+        </p>
+        <input
+          type="date"
+          className="input"
+          value={schedDate}
+          min={schedList?.today || ""}
+          onChange={(e) => setSchedDate(e.target.value)}
+          style={{ marginBottom: 8 }}
+        />
+        <input
+          className="input"
+          placeholder={t("Titre de la campagne")}
+          value={schedTitle}
+          maxLength={120}
+          onChange={(e) => setSchedTitle(e.target.value)}
+          style={{ marginBottom: 8 }}
+        />
+        <textarea
+          className="msg-textarea"
+          rows="3"
+          maxLength={2000}
+          placeholder={t("Votre message…")}
+          value={schedMessage}
+          onChange={(e) => setSchedMessage(e.target.value)}
+        />
+        <input
+          className="input"
+          placeholder={t("Lien (optionnel, ex : /produit/12)")}
+          value={schedUrl}
+          onChange={(e) => setSchedUrl(e.target.value)}
+          style={{ margin: "8px 0" }}
+        />
+        <div className="msg-target-row" style={{ flexWrap: "wrap" }}>
+          {[
+            ["all", "Tous"],
+            ["clients", "Clients"],
+            ["sellers", "Vendeurs"],
+            ["shops", "Boutiques"],
+            ["livreurs", "Livreurs"],
+            ["newsletter", "Abonnés newsletter"],
+          ].map(([val, label]) => (
+            <label key={val} className="msg-radio">
+              <input
+                type="radio"
+                name="sched-audience"
+                checked={schedAudience === val}
+                onChange={() => setSchedAudience(val)}
+              />
+              {t(label)}
+            </label>
+          ))}
+        </div>
+        <div className="msg-target-row">
+          <label className="msg-radio">
+            <input type="checkbox" checked={schedPush} onChange={(e) => setSchedPush(e.target.checked)} />
+            🔔 {t("Push")}
+          </label>
+          <label className="msg-radio">
+            <input type="checkbox" checked={schedEmail} onChange={(e) => setSchedEmail(e.target.checked)} />
+            📧 {t("Email")}
+          </label>
+        </div>
+        {schedMsg && (
+          <p className={schedMsg.ok ? "success" : "error"} style={{ marginTop: 8 }}>
+            {schedMsg.ok ? "✅ " : "⚠️ "}
+            {schedMsg.text}
+          </p>
+        )}
+        <button
+          className="btn btn-primary btn-block"
+          disabled={schedBusy || !schedDate || !schedTitle.trim() || !schedMessage.trim() || (!schedPush && !schedEmail)}
+          onClick={scheduleCampaign}
+          style={{ marginTop: 10 }}
+        >
+          {schedBusy ? "…" : `🗓️ ${t("Programmer la campagne")}`}
+        </button>
+
+        {schedList && Array.isArray(schedList.campaigns) && schedList.campaigns.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <strong>{t("File d'attente")}</strong>
+            <table style={{ width: "100%", marginTop: 8, fontSize: 13, borderCollapse: "collapse" }}>
+              <tbody>
+                {schedList.campaigns.map((c) => (
+                  <tr key={c.id} style={{ borderBottom: "1px solid var(--border, #e5e7eb)" }}>
+                    <td style={{ padding: "6px 4px", whiteSpace: "nowrap" }}>
+                      {c.send_date} {c.status === "sent" ? "✅" : "⏳"}
+                    </td>
+                    <td style={{ padding: "6px 4px" }}>
+                      {c.title}
+                      <span className="hint" style={{ display: "block" }}>
+                        {c.audience} · {(c.channels || []).join(" + ")}
+                        {c.status === "sent" && c.result
+                          ? ` — ${t("Envoyée")} : ${c.result.push_sent || 0} push, ${c.result.email_sent || 0}/${
+                              c.result.email_total || 0
+                            } emails`
+                          : ""}
+                      </span>
+                    </td>
+                    <td style={{ padding: "6px 4px", textAlign: "right" }}>
+                      {c.status === "pending" && (
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-small"
+                          disabled={schedBusy}
+                          onClick={() => cancelScheduled(c.id)}
+                        >
+                          🗑️ {t("Annuler")}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {schedList?.cron_url && (
+          <div style={{ marginTop: 16, borderTop: "1px solid var(--border, #e5e7eb)", paddingTop: 12 }}>
+            <strong>⚙️ {t("Programmation automatique (cron quotidien)")}</strong>
+            <p className="hint" style={{ marginTop: 6 }}>
+              {t(
+                "Le cron est déjà configuré (Vercel, 07h00 UTC = 08h00 au Cameroun). Cette URL peut aussi être enregistrée chez un service de cron externe :"
+              )}
+            </p>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+              <code
+                style={{
+                  flex: "1 1 260px",
+                  fontSize: 12,
+                  wordBreak: "break-all",
+                  background: "var(--card, #f9fafb)",
+                  padding: "6px 8px",
+                  borderRadius: 8,
+                }}
+              >
+                {schedList.cron_url}
+              </code>
+              <button type="button" className="btn btn-outline btn-small" onClick={copyCronUrl}>
+                📋 {t("Copier")}
+              </button>
+              <button type="button" className="btn btn-outline btn-small" onClick={testCron}>
+                🧪 {t("Tester (simulation)")}
+              </button>
+            </div>
+            <p className="hint" style={{ marginTop: 6 }}>
+              {t("Dernière exécution")} :{" "}
+              {schedList.cron_last_run ? new Date(schedList.cron_last_run).toLocaleString() : t("jamais")}
+            </p>
+            {cronTest && (
+              <p className="hint" style={{ marginTop: 4 }}>
+                {cronTest.copied
+                  ? `✅ ${t("URL copiée")}`
+                  : cronTest.error
+                    ? `⚠️ ${cronTest.error}`
+                    : cronTest.dry
+                      ? `🧪 ${t("Simulation OK")}${
+                          cronTest.campaign
+                            ? ` — « ${cronTest.campaign.title} » (${cronTest.campaign.send_date})`
+                            : ` — ${t("aucune campagne due")}`
+                        }`
+                      : cronTest.reason === "already_sent_today"
+                        ? `✅ ${t("Une campagne a déjà été envoyée aujourd'hui")}`
+                        : cronTest.reason === "none_due"
+                          ? `✅ ${t("Aucune campagne due aujourd'hui")}`
+                          : `✅ ${t("Campagne envoyée automatiquement")}`}
+              </p>
+            )}
+          </div>
         )}
       </section>
 

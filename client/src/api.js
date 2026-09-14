@@ -327,6 +327,11 @@ export const api = {
     adminRequest(`/admin/campaign/recipients?audience=${encodeURIComponent(audience)}`),
   adminCampaignSend: (payload) =>
     adminRequest("/admin/campaign/send", { method: "POST", body: JSON.stringify(payload) }),
+  adminScheduledCampaigns: () => adminRequest("/admin/campaigns/scheduled"),
+  adminScheduleCampaign: (payload) =>
+    adminRequest("/admin/campaigns/schedule", { method: "POST", body: JSON.stringify(payload) }),
+  adminDeleteScheduledCampaign: (id) =>
+    adminRequest(`/admin/campaigns/scheduled/${id}`, { method: "DELETE" }),
   popupMessage: () => request("/messages/popup"),
   ackMessage: (id) => request(`/messages/${id}/ack`, { method: "POST" }),
   chat: (payload) => request("/chat", { method: "POST", body: JSON.stringify(payload) }),

@@ -21,6 +21,14 @@ import {
   purgePendingPayments,
 } from "../services/ikeepay.js";
 import { getMembershipGate, setMembershipGate } from "../services/membershipGate.js";
+import {
+  CAMPAIGN_AUDIENCES,
+  CAMPAIGN_EMAIL_CAP,
+  dispatchCampaign,
+  ensureScheduledCampaignsTable,
+  getCronSecret,
+  todayDouala,
+} from "../services/campaigns.js";
 import { sendPush, sendPushToUsers } from "../push.js";
 import { insertNotificationsForUsers } from "../services/notifications.js";
 import {
@@ -366,15 +374,8 @@ router.get(
 //    utilisateur (canal « messages ») ;
 //  - EMAIL : SMTP existant (mailer.js), uniquement les emails VÉRIFIÉS.
 // Aucun SMS : les passerelles SMS sont payantes à chaque message.
-const CAMPAIGN_AUDIENCES = {
-  all: null,
-  clients: ["client"],
-  sellers: ["seller", "creator"],
-  shops: ["shop"],
-  livreurs: ["livreur"],
-  newsletter: null,
-};
-const CAMPAIGN_EMAIL_CAP = 500;
+// Les constantes (audiences, plafond email) et la logique d'envoi sont
+// mutualisées avec le cron quotidien dans services/campaigns.js.
 
 router.get(
   "/campaign/recipients",
@@ -464,68 +465,9 @@ router.post(
     if (!doPush && !doEmail) {
       return res.status(400).json({ error: "Choisissez au moins un canal (push ou email)" });
     }
-    const roles = CAMPAIGN_AUDIENCES[audience];
-    const result = {
-      push_sent: 0,
-      email_sent: 0,
-      email_failed: 0,
-      email_simulated: false,
-      audience,
-    };
-
-    if (doPush) {
-      try {
-        const { sendPushToAll } = await import("../push.js");
-        result.push_sent = await sendPushToAll(
-          {
-            title: `📣 ${title}`,
-            body: message,
-            url,
-            tag: `campaign-${Date.now()}`,
-          },
-          { roles: roles || undefined, channel: "messages" }
-        );
-      } catch (err) {
-        console.error("[campaign] push échoué :", err.message);
-      }
-    }
-
-    if (doEmail) {
-      let recipients = [];
-      if (audience === "newsletter") {
-        recipients = (await q("SELECT email FROM newsletter_subscribers")).map((r) => ({
-          email: r.email,
-          name: "",
-        }));
-      } else {
-        // NB : $1 doit être référencé dans le SQL même pour l'audience « all »,
-        // sinon Postgres rejette (« could not determine data type of
-        // parameter $1 » / « bind message supplies 1 parameters »).
-        const roleClause = roles ? " AND role = ANY($2::text[])" : "";
-        recipients = await q(
-          `SELECT email, name FROM users WHERE email_verified = $1${roleClause} LIMIT ${CAMPAIGN_EMAIL_CAP}`,
-          roles ? [true, roles] : [true]
-        );
-      }
-      const { sendMail, mailConfigured, newsletterEmailHtml } = await import("../mailer.js");
-      result.email_simulated = !mailConfigured();
-      const unsubscribeUrl = `${process.env.SITE_URL || "https://mboppi-mboppi.vercel.app"}/`;
-      for (const r of recipients) {
-        try {
-          await sendMail({
-            to: r.email,
-            subject: `${title} — Mboppi`,
-            text: `${message}\n\n— Mboppi`,
-            html: newsletterEmailHtml({ title, body: message, unsubscribeUrl }),
-          });
-          result.email_sent += 1;
-        } catch (err) {
-          result.email_failed += 1;
-          console.warn(`[campaign] email échoué vers ${r.email} :`, err.message);
-        }
-      }
-      result.email_total = Math.min(recipients.length, CAMPAIGN_EMAIL_CAP);
-    }
+    // Envoi mutualisé avec le cron quotidien (services/campaigns.js) : le
+    // comportement est strictement identique entre envoi manuel et automatique.
+    const result = await dispatchCampaign({ title, message, url, audience, channels });
 
     await logAudit(
       req.user.id,
@@ -534,6 +476,116 @@ router.post(
       req.ip
     );
     res.json(result);
+  })
+);
+
+// ==================== CAMPAGNES PROGRAMMÉES (1 PAR JOUR, AUTOMATIQUE) ====================
+// File d'attente : l'admin programme les campagnes avec une date d'envoi ; le
+// cron quotidien (/api/cron/campaigns, voir vercel.json) envoie automatiquement
+// la campagne due. Un seul envoi par jour (index UNIQUE sur send_date).
+
+// Liste des campagnes programmées + état du cron.
+router.get(
+  "/campaigns/scheduled",
+  ah(async (req, res) => {
+    await ensureScheduledCampaignsTable();
+    const campaigns = await q(
+      `SELECT sc.id, sc.title, sc.message, sc.url, sc.audience, sc.channels,
+              sc.send_date, sc.status, sc.result, sc.created_at, sc.sent_at,
+              u.name AS created_by_name
+       FROM scheduled_campaigns sc
+       LEFT JOIN users u ON u.id = sc.created_by
+       ORDER BY sc.send_date DESC, sc.id DESC
+       LIMIT 60`
+    );
+    let cron_url = "";
+    try {
+      const secret = await getCronSecret();
+      const base = process.env.SITE_URL || "https://mboppi-mboppi.vercel.app";
+      cron_url = `${base}/api/cron/campaigns?k=${secret}`;
+    } catch (err) {
+      console.error("[campaigns] secret cron indisponible :", err.message);
+    }
+    const lastRun = await q(`SELECT value FROM platform_settings WHERE key = 'campaign_cron_last_run'`);
+    res.json({
+      campaigns,
+      cron_url,
+      cron_last_run: lastRun[0]?.value || null,
+      today: todayDouala(),
+    });
+  })
+);
+
+// Programmer une campagne à une date donnée (un seul envoi possible par date).
+router.post(
+  "/campaigns/schedule",
+  ah(async (req, res) => {
+    const title = String(req.body?.title || "").trim().slice(0, 120);
+    const message = String(req.body?.message || "").trim().slice(0, 2000);
+    const url = String(req.body?.url || "/").trim().slice(0, 200) || "/";
+    const audience = String(req.body?.audience || "all");
+    const channels = Array.isArray(req.body?.channels)
+      ? req.body.channels.filter((c) => c === "push" || c === "email")
+      : [];
+    const sendDate = String(req.body?.send_date || "").trim();
+
+    if (!title || !message) {
+      return res.status(400).json({ error: "Titre et message requis" });
+    }
+    if (!CAMPAIGN_AUDIENCES.hasOwnProperty(audience)) {
+      return res.status(400).json({ error: "Audience invalide" });
+    }
+    if (!channels.length) {
+      return res.status(400).json({ error: "Choisissez au moins un canal (push ou email)" });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(sendDate)) {
+      return res.status(400).json({ error: "Choisissez une date d'envoi" });
+    }
+    const today = todayDouala();
+    if (sendDate < today) {
+      return res.status(400).json({ error: "La date doit être aujourd'hui ou plus tard" });
+    }
+
+    await ensureScheduledCampaignsTable();
+    const existing = await q(`SELECT id FROM scheduled_campaigns WHERE send_date = $1::date`, [sendDate]);
+    if (existing.length) {
+      return res.status(400).json({ error: "Une campagne existe déjà pour cette date" });
+    }
+    const inserted = (
+      await q(
+        `INSERT INTO scheduled_campaigns (title, message, url, audience, channels, send_date, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6::date, $7) RETURNING *`,
+        [title, message, url, audience, channels, sendDate, req.user.id]
+      )
+    )[0];
+    await logAudit(req.user.id, "admin.campaign.schedule", `Campagne « ${title} » programmée pour ${sendDate}`, req.ip);
+    res.json({ ok: true, campaign: inserted });
+  })
+);
+
+// Annuler une campagne PROGRAMMÉE (jamais une campagne déjà envoyée).
+router.delete(
+  "/campaigns/scheduled/:id",
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Identifiant invalide" });
+    }
+    await ensureScheduledCampaignsTable();
+    const del = await q(
+      `DELETE FROM scheduled_campaigns WHERE id = $1 AND status = 'pending' RETURNING title, send_date`,
+      [id]
+    );
+    if (!del.length) {
+      return res.status(400).json({ error: "Campagne introuvable ou déjà envoyée" });
+    }
+    await logAudit(
+      req.user.id,
+      "admin.campaign.unschedule",
+      `Campagne « ${del[0].title} » annulée (${del[0].send_date})`,
+      req.ip
+    );
+    res.json({ ok: true });
   })
 );
 
