@@ -23,7 +23,7 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS scheduled_campaigns (
   url TEXT NOT NULL DEFAULT '/',
   audience TEXT NOT NULL DEFAULT 'all',
   channels TEXT[] NOT NULL DEFAULT ARRAY['push','email']::text[],
-  send_date DATE NOT NULL UNIQUE,
+  send_date DATE NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   result JSONB,
   created_by INT,
@@ -31,8 +31,29 @@ const TABLE_SQL = `CREATE TABLE IF NOT EXISTS scheduled_campaigns (
   sent_at TIMESTAMPTZ
 )`;
 
+// Historique : la table a d'abord été créée avec une contrainte UNIQUE sur
+// send_date (1 campagne/jour). Le quota est désormais configurable (1 ou 2
+// par jour) : on supprime la contrainte si elle existe encore.
 export async function ensureScheduledCampaignsTable() {
   await q(TABLE_SQL);
+  try {
+    await q(`ALTER TABLE scheduled_campaigns DROP CONSTRAINT IF EXISTS scheduled_campaigns_send_date_key`);
+  } catch (err) {
+    console.error("[campaigns] suppression contrainte UNIQUE impossible :", err.message);
+  }
+}
+
+// Quota de campagnes par jour, configurable dans le panneau Admin (1 par
+// défaut, jusqu'à 3). Chaque créneau du cron envoie UNE campagne.
+export async function getDailyLimit() {
+  const v = parseInt(await getSetting("campaign_daily_limit"), 10);
+  return Number.isInteger(v) && v >= 1 ? Math.min(v, 3) : 1;
+}
+
+export async function setDailyLimit(n) {
+  const v = Math.max(1, Math.min(3, Number(n) || 1));
+  await setSetting("campaign_daily_limit", String(v));
+  return v;
 }
 
 // Secret du cron : auto-généré une seule fois puis STABLE (l'URL peut être
@@ -136,23 +157,30 @@ export async function dispatchCampaign({ title, message, url = "/", audience = "
   return result;
 }
 
-// Exécution du cron : envoie la campagne due du jour (maximum UNE par jour).
-// Priorité : la plus ancienne programmée non encore envoyée. Si une campagne a
-// déjà été envoyée aujourd'hui (heure du Cameroun), on attend demain.
+// Exécution du cron : envoie UNE campagne due par appel (la plus ancienne).
+// Le nombre d'envois autorisés par jour est configurable (campaign_daily_limit,
+// défaut 1). Si le quota du jour est atteint (heure du Cameroun), on attend le
+// prochain créneau du cron.
 export async function runDueCampaigns({ dry = false } = {}) {
   await ensureScheduledCampaignsTable();
   const today = todayDouala();
+  const limit = await getDailyLimit();
 
-  const sentToday = (
-    await q(
-      `SELECT id, title FROM scheduled_campaigns
-       WHERE status = 'sent' AND (sent_at AT TIME ZONE 'Africa/Douala')::date = $1::date
-       LIMIT 1`,
-      [today]
-    )
-  )[0];
-  if (sentToday) {
-    return { ok: true, sent: 0, reason: "already_sent_today", today, campaign: sentToday };
+  const sentToday = await q(
+    `SELECT id, title FROM scheduled_campaigns
+     WHERE status = 'sent' AND (sent_at AT TIME ZONE 'Africa/Douala')::date = $1::date
+     ORDER BY sent_at ASC`,
+    [today]
+  );
+  if (sentToday.length >= limit) {
+    return {
+      ok: true,
+      sent: 0,
+      reason: limit > 1 ? "daily_limit_reached" : "already_sent_today",
+      today,
+      limit,
+      sent_today: sentToday.length,
+    };
   }
 
   const due = (

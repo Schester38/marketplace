@@ -297,6 +297,25 @@ export default function Admin() {
       /* silencieux */
     }
   };
+
+  const changeDailyLimit = async (limit) => {
+    setSchedBusy(true);
+    try {
+      await api.adminSetCampaignDailyLimit(limit);
+      setSchedList((s) => ({ ...s, daily_limit: limit }));
+      setSchedMsg({
+        ok: true,
+        text:
+          limit > 1
+            ? t("Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).", { n: limit })
+            : t("Quota mis à jour : 1 campagne par jour (08h00)."),
+      });
+    } catch (err) {
+      setSchedMsg({ ok: false, text: err.message });
+    } finally {
+      setSchedBusy(false);
+    }
+  };
   // --- fin campagnes programmées ---
 
   const [visitDays, setVisitDays] = useState(30);
@@ -1596,13 +1615,28 @@ export default function Admin() {
         )}
       </section>
 
-      <h2 className="section-title">🗂️ {t("Campagnes programmées (1 par jour, automatique)")}</h2>
+      <h2 className="section-title">🗂️ {t("Campagnes programmées (automatique)")}</h2>
       <section className="card msg-form">
         <p className="hint">
           {t(
-            "Préparez vos campagnes à l'avance avec une date d'envoi : la campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun), sans que vous ayez à intervenir. Maximum une campagne par jour."
+            "Préparez vos campagnes à l'avance avec une date d'envoi : les campagnes du jour partent automatiquement à 08h00 et 13h00 (heure du Cameroun), selon votre quota quotidien."
           )}
         </p>
+        <div className="msg-target-row" style={{ alignItems: "center", marginBottom: 8 }}>
+          <span>⚙️ {t("Campagnes par jour")} :</span>
+          {[1, 2, 3].map((n) => (
+            <label key={n} className="msg-radio">
+              <input
+                type="radio"
+                name="sched-limit"
+                checked={(schedList?.daily_limit || 1) === n}
+                disabled={schedBusy}
+                onChange={() => changeDailyLimit(n)}
+              />
+              {n}
+            </label>
+          ))}
+        </div>
         <input
           type="date"
           className="input"

@@ -332,6 +332,8 @@ export const api = {
     adminRequest("/admin/campaigns/schedule", { method: "POST", body: JSON.stringify(payload) }),
   adminDeleteScheduledCampaign: (id) =>
     adminRequest(`/admin/campaigns/scheduled/${id}`, { method: "DELETE" }),
+  adminSetCampaignDailyLimit: (limit) =>
+    adminRequest("/admin/campaigns/daily-limit", { method: "POST", body: JSON.stringify({ limit }) }),
   popupMessage: () => request("/messages/popup"),
   ackMessage: (id) => request(`/messages/${id}/ack`, { method: "POST" }),
   chat: (payload) => request("/chat", { method: "POST", body: JSON.stringify(payload) }),

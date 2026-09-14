@@ -583,6 +583,12 @@ const EN = {
   "Campagne envoyée automatiquement": "Campaign sent automatically",
   "Copier": "Copy",
   "Annuler": "Cancel",
+  "Campagnes programmées (automatique)": "Scheduled campaigns (automatic)",
+  "Préparez vos campagnes à l'avance avec une date d'envoi : les campagnes du jour partent automatiquement à 08h00 et 13h00 (heure du Cameroun), selon votre quota quotidien.":
+    "Prepare your campaigns in advance with a send date: the day's campaigns go out automatically at 8am and 1pm (Cameroon time), according to your daily quota.",
+  "Campagnes par jour": "Campaigns per day",
+  "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "Quota updated: {n} campaigns per day (8am and 1pm).",
+  "Quota mis à jour : 1 campagne par jour (08h00).": "Quota updated: 1 campaign per day (8am).",
   "SMTP simulé": "SMTP simulated",
   échecs: "failures",
   "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":
@@ -2204,6 +2210,12 @@ const AR = {
   "Campagne envoyée automatiquement": "أُرسلت الحملة تلقائياً",
   "Copier": "نسخ",
   "Annuler": "إلغاء",
+  "Campagnes programmées (automatique)": "حملات مجدولة (تلقائي)",
+  "Préparez vos campagnes à l'avance avec une date d'envoi : les campagnes du jour partent automatiquement à 08h00 et 13h00 (heure du Cameroun), selon votre quota quotidien.":
+    "جهّز حملاتك مسبقاً مع تاريخ إرسال: تُرسل حملات اليوم تلقائياً في الثامنة والواحدة ظهراً (توقيت الكاميرون) حسب حصتك اليومية.",
+  "Campagnes par jour": "حملات في اليوم",
+  "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "تم تحديث الحصة: {n} حملات يومياً (08h00 و13h00).",
+  "Quota mis à jour : 1 campagne par jour (08h00).": "تم تحديث الحصة: حملة واحدة يومياً (08h00).",
   "SMTP simulé": "SMTP محاكى",
   échecs: "إخفاقات",
   "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":
@@ -3736,6 +3748,12 @@ const ES = {
   "Campagne envoyée automatiquement": "Campaña enviada automáticamente",
   "Copier": "Copiar",
   "Annuler": "Cancelar",
+  "Campagnes programmées (automatique)": "Campañas programadas (automático)",
+  "Préparez vos campagnes à l'avance avec une date d'envoi : les campagnes du jour partent automatiquement à 08h00 et 13h00 (heure du Cameroun), selon votre quota quotidien.":
+    "Prepara tus campañas por adelantado con una fecha de envío: las campañas del día salen automáticamente a las 08h00 y 13h00 (hora de Camerún), según tu cuota diaria.",
+  "Campagnes par jour": "Campañas por día",
+  "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "Cuota actualizada: {n} campañas al día (08h00 y 13h00).",
+  "Quota mis à jour : 1 campagne par jour (08h00).": "Cuota actualizada: 1 campaña al día (08h00).",
   "SMTP simulé": "SMTP simulado",
   échecs: "fallos",
   "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":

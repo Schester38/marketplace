@@ -74,5 +74,40 @@ await q(`DELETE FROM scheduled_campaigns WHERE id = $1`, [testId]);
 const cnt = await q(`SELECT COUNT(*)::int AS n FROM scheduled_campaigns`);
 console.log(`   campagne test supprimée — table contient désormais ${cnt[0].n} ligne(s)`);
 
+console.log("8) Migration : contrainte UNIQUE supprimée ?…");
+await ensureScheduledCampaignsTable();
+const hasUnique = (
+  await q(
+    `SELECT 1 FROM pg_constraint WHERE conname = 'scheduled_campaigns_send_date_key' AND conrelid = 'scheduled_campaigns'::regclass`
+  )
+).length;
+console.log(`   contrainte UNIQUE encore présente : ${hasUnique ? "OUI ❌" : "NON ✅ (2 campagnes/jour possibles)"}`);
+
+console.log("9) Quota quotidien (set/get)…");
+const { setDailyLimit, getDailyLimit } = await import("../services/campaigns.js");
+await setDailyLimit(2);
+const limit2 = await getDailyLimit();
+await setDailyLimit(1);
+const limit1 = await getDailyLimit();
+console.log(`   quota 2 → ${limit2} ✅ (normalisé ${limit2 === 2 ? "OK" : "KO"})`);
+console.log(`   quota 1 → ${limit1} ✅ (normalisé ${limit1 === 1 ? "OK" : "KO"})`);
+
+console.log("10) Deux campagnes même date ?…");
+const sameDate = tomorrow;
+await q(`DELETE FROM scheduled_campaigns WHERE send_date = $1::date`, [sameDate]);
+const a = await q(
+  `INSERT INTO scheduled_campaigns (title, message, url, audience, channels, send_date)
+   VALUES ($1, $2, '/', 'all', ARRAY['push']::text[], $3::date) RETURNING id`,
+  ["[TEST] Quota A", "test", sameDate]
+);
+const b = await q(
+  `INSERT INTO scheduled_campaigns (title, message, url, audience, channels, send_date)
+   VALUES ($1, $2, '/', 'all', ARRAY['push']::text[], $3::date) RETURNING id`,
+  ["[TEST] Quota B", "test", sameDate]
+);
+console.log(`   deux lignes insérées : id=${a[0].id} et id=${b[0].id} ✅ (la contrainte UNIQUE a bien été levée)`);
+await q(`DELETE FROM scheduled_campaigns WHERE id = ANY($1::int[])`, [[a[0].id, b[0].id]]);
+console.log(`   nettoyé ✅`);
+
 await client.end();
 console.log("\nTerminé ✅");

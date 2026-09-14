@@ -27,6 +27,8 @@ import {
   dispatchCampaign,
   ensureScheduledCampaignsTable,
   getCronSecret,
+  getDailyLimit,
+  setDailyLimit,
   todayDouala,
 } from "../services/campaigns.js";
 import { sendPush, sendPushToUsers } from "../push.js";
@@ -512,6 +514,7 @@ router.get(
       cron_url,
       cron_last_run: lastRun[0]?.value || null,
       today: todayDouala(),
+      daily_limit: await getDailyLimit(),
     });
   })
 );
@@ -547,9 +550,12 @@ router.post(
     }
 
     await ensureScheduledCampaignsTable();
-    const existing = await q(`SELECT id FROM scheduled_campaigns WHERE send_date = $1::date`, [sendDate]);
-    if (existing.length) {
-      return res.status(400).json({ error: "Une campagne existe déjà pour cette date" });
+    const limit = await getDailyLimit();
+    const count = await q(`SELECT COUNT(*)::int AS n FROM scheduled_campaigns WHERE send_date = $1::date`, [sendDate]);
+    if ((count[0]?.n || 0) >= limit) {
+      return res
+        .status(400)
+        .json({ error: `Limite de ${limit} campagne(s) par jour atteinte pour cette date` });
     }
     const inserted = (
       await q(
@@ -586,6 +592,17 @@ router.delete(
       req.ip
     );
     res.json({ ok: true });
+  })
+);
+
+// Quota de campagnes par jour (1 à 3). Chaque créneau du cron (08h00 puis
+// 13h00, heure du Cameroun) envoie la campagne la plus ancienne non envoyée.
+router.post(
+  "/campaigns/daily-limit",
+  ah(async (req, res) => {
+    const limit = await setDailyLimit(req.body?.limit);
+    await logAudit(req.user.id, "admin.campaign.daily_limit", `Quota campagnes : ${limit}/jour`, req.ip);
+    res.json({ ok: true, daily_limit: limit });
   })
 );
 
