@@ -60,6 +60,23 @@ async function subscribeWithRetry(reg, publicKey) {
   }
 }
 
+// Retour Google : la redirection complète fait perdre le « geste utilisateur »
+// (le clic sur « Se connecter avec Google » date de trop longtemps) → la popup
+// native ne peut pas s'ouvrir au chargement. On l'arme donc sur le PREMIER
+// clic n'importe où sur le site : dès que l'utilisateur touche la page (menu,
+// lien, bouton…), la demande de permission s'ouvre automatiquement. Sans effet
+// si la permission est déjà accordée ou refusée.
+export function armPushPromptOnFirstInteraction() {
+  if (typeof Notification === "undefined" || Notification.permission !== "default") return;
+  const handler = () => {
+    window.removeEventListener("click", handler, true);
+    window.removeEventListener("touchend", handler, true);
+    requestPushPermission();
+  };
+  window.addEventListener("click", handler, { once: true, capture: true });
+  window.addEventListener("touchend", handler, { once: true, capture: true });
+}
+
 // Demande la permission de notification puis abonne l'utilisateur. À appeler
 // depuis un geste utilisateur (les navigateurs exigent un clic pour afficher
 // la demande de permission).
