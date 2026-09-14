@@ -97,6 +97,7 @@ import OfflinePage from "./pages/OfflinePage.jsx";
 import AdminMessagePopup from "./components/AdminMessagePopup.jsx";
 import FlashPromoPopup from "./components/FlashPromoPopup.jsx";
 import NotificationPrompt from "./components/NotificationPrompt.jsx";
+import InstallAppPrompt from "./components/InstallAppPrompt.jsx";
 import LiteBanner from "./components/LiteBanner.jsx";
 
 const AuthContext = createContext(null);
@@ -794,6 +795,7 @@ export default function App() {
       </ErrorBoundary>
       <CookiesBanner />
       <NotificationPrompt user={user} />
+      <InstallAppPrompt />
       <LiteBanner />
       <Footer />
       <BottomNav />

@@ -686,6 +686,16 @@ const EN = {
   "Aucune notification": "No notifications",
   "Supprimer la notification": "Delete notification",
   "Installer l'application": "Install the app",
+  "Installez Mboppi sur votre écran d'accueil": "Install Mboppi on your home screen",
+  "Sur iPhone : touchez Partager ⬆️ puis « Sur l'écran d'accueil » pour installer Mboppi.":
+    'On iPhone: tap Share ⬆️ then "Add to Home Screen" to install Mboppi.',
+  "Cette application (Facebook, Instagram…) bloque l'installation. Ouvrez Mboppi dans Chrome pour installer :":
+    "This app (Facebook, Instagram…) blocks installation. Open Mboppi in Chrome to install:",
+  "Ouvrir dans Chrome": "Open in Chrome",
+  "Copier le lien": "Copy the link",
+  "Lien copié": "Link copied",
+  "Lien copié ! Ouvrez Chrome, collez-le et installez Mboppi.":
+    "Link copied! Open Chrome, paste it and install Mboppi.",
   "Pour installer Mboppi : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil ».":
     'To install Mboppi: open your browser (Safari) Share menu, then choose "Add to Home Screen".',
   "Pour installer Mboppi : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application ».":
@@ -2271,6 +2281,16 @@ const AR = {
   "Aucune notification": "لا توجد إشعارات",
   "Supprimer la notification": "حذف الإشعار",
   "Installer l'application": "تثبيت التطبيق",
+  "Installez Mboppi sur votre écran d'accueil": "ثبّت Mboppi على شاشتك الرئيسية",
+  "Sur iPhone : touchez Partager ⬆️ puis « Sur l'écran d'accueil » pour installer Mboppi.":
+    "على آيفون: اضغط مشاركة ⬆️ ثم «إضافة إلى الشاشة الرئيسية» لتثبيت Mboppi.",
+  "Cette application (Facebook, Instagram…) bloque l'installation. Ouvrez Mboppi dans Chrome pour installer :":
+    "هذا التطبيق (فيسبوك، إنستغرام…) يمنع التثبيت. افتح Mboppi في كروم للتثبيت:",
+  "Ouvrir dans Chrome": "افتح في كروم",
+  "Copier le lien": "انسخ الرابط",
+  "Lien copié": "تم نسخ الرابط",
+  "Lien copié ! Ouvrez Chrome, collez-le et installez Mboppi.":
+    "تم نسخ الرابط! افتح كروم والصقه ثم ثبّت Mboppi.",
   "Pour installer Mboppi : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil ».":
     "لتثبيت Mboppi: افتح قائمة المشاركة في متصفحك (Safari) ثم اختر «إضافة إلى الشاشة الرئيسية».",
   "Pour installer Mboppi : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application ».":
@@ -3774,6 +3794,16 @@ const ES = {
   "Aucune notification": "Sin notificaciones",
   "Supprimer la notification": "Eliminar la notificación",
   "Installer l'application": "Instalar la aplicación",
+  "Installez Mboppi sur votre écran d'accueil": "Instala Mboppi en tu pantalla de inicio",
+  "Sur iPhone : touchez Partager ⬆️ puis « Sur l'écran d'accueil » pour installer Mboppi.":
+    "En iPhone: toca Compartir ⬆️ y luego «En la pantalla de inicio» para instalar Mboppi.",
+  "Cette application (Facebook, Instagram…) bloque l'installation. Ouvrez Mboppi dans Chrome pour installer :":
+    "Esta aplicación (Facebook, Instagram…) bloquea la instalación. Abre Mboppi en Chrome para instalar:",
+  "Ouvrir dans Chrome": "Abrir en Chrome",
+  "Copier le lien": "Copiar el enlace",
+  "Lien copié": "Enlace copiado",
+  "Lien copié ! Ouvrez Chrome, collez-le et installez Mboppi.":
+    "¡Enlace copiado! Abre Chrome, pégalo e instala Mboppi.",
   "Pour installer Mboppi : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil ».":
     "Para instalar Mboppi: abre el menú Compartir de tu navegador (Safari) y elige «En la pantalla de inicio».",
   "Pour installer Mboppi : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application ».":
