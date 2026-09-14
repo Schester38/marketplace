@@ -570,8 +570,8 @@ const EN = {
   "File d'attente": "Queue",
   "Envoyée": "Sent",
   "Programmation automatique (cron quotidien)": "Automatic scheduling (daily cron)",
-  "Le cron est déjà configuré (Vercel, 07h00 UTC = 08h00 au Cameroun). Cette URL peut aussi être enregistrée chez un service de cron externe :":
-    "The cron is already configured (Vercel, 07:00 UTC = 08:00 in Cameroon). This URL can also be registered with an external cron service:",
+  "Le cron principal est déjà configuré (Vercel, 07h00 UTC = 08h00 au Cameroun) : il envoie la première campagne du jour. Pour les créneaux suivants du quota (par exemple la 2ᵉ à 13h00), enregistrez cette URL chez un service de cron externe gratuit (ex. cron-job.org) :":
+    "The main cron is already configured (Vercel, 07:00 UTC = 08:00 in Cameroon): it sends the first campaign of the day. For the next quota slots (e.g. the 2nd at 1pm), register this URL with a free external cron service (e.g. cron-job.org):",
   "Tester (simulation)": "Test (simulation)",
   "Dernière exécution": "Last run",
   "jamais": "never",
@@ -584,8 +584,8 @@ const EN = {
   "Copier": "Copy",
   "Annuler": "Cancel",
   "Campagnes programmées (automatique)": "Scheduled campaigns (automatic)",
-  "Préparez vos campagnes à l'avance avec une date d'envoi : les campagnes du jour partent automatiquement à 08h00 et 13h00 (heure du Cameroun), selon votre quota quotidien.":
-    "Prepare your campaigns in advance with a send date: the day's campaigns go out automatically at 8am and 1pm (Cameroon time), according to your daily quota.",
+  "Préparez vos campagnes à l'avance avec une date d'envoi : la première campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun). Chaque appel du cron envoie une campagne (jusqu'à {n} par jour) ; les créneaux suivants sont déclenchés par le cron externe ci-dessous.":
+    "Prepare your campaigns in advance with a send date: the first campaign of the day goes out automatically every morning at 8am (Cameroon time). Each cron call sends one campaign (up to {n} per day); the next slots are triggered by the external cron below.",
   "Campagnes par jour": "Campaigns per day",
   "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "Quota updated: {n} campaigns per day (8am and 1pm).",
   "Quota mis à jour : 1 campagne par jour (08h00).": "Quota updated: 1 campaign per day (8am).",
@@ -2197,8 +2197,8 @@ const AR = {
   "File d'attente": "قائمة الانتظار",
   "Envoyée": "أُرسلت",
   "Programmation automatique (cron quotidien)": "جدولة تلقائية (cron يومي)",
-  "Le cron est déjà configuré (Vercel, 07h00 UTC = 08h00 au Cameroun). Cette URL peut aussi être enregistrée chez un service de cron externe :":
-    "الـ cron مُعد مسبقاً (Vercel، 07h00 UTC = 08h00 في الكاميرون). يمكن أيضاً تسجيل هذا الرابط لدى خدمة cron خارجية:",
+  "Le cron principal est déjà configuré (Vercel, 07h00 UTC = 08h00 au Cameroun) : il envoie la première campagne du jour. Pour les créneaux suivants du quota (par exemple la 2ᵉ à 13h00), enregistrez cette URL chez un service de cron externe gratuit (ex. cron-job.org) :":
+    "تم إعداد cron الرئيسي مسبقاً (Vercel، 07h00 UTC = 08h00 في الكاميرون): يرسل الحملة الأولى من اليوم. للمواعيد الأخرى من الحصة (مثل الثانية 13h00)، سجّل هذا الرابط لدى خدمة cron خارجية مجانية (مثل cron-job.org):",
   "Tester (simulation)": "تجربة (محاكاة)",
   "Dernière exécution": "آخر تشغيل",
   "jamais": "أبداً",
@@ -2211,8 +2211,8 @@ const AR = {
   "Copier": "نسخ",
   "Annuler": "إلغاء",
   "Campagnes programmées (automatique)": "حملات مجدولة (تلقائي)",
-  "Préparez vos campagnes à l'avance avec une date d'envoi : les campagnes du jour partent automatiquement à 08h00 et 13h00 (heure du Cameroun), selon votre quota quotidien.":
-    "جهّز حملاتك مسبقاً مع تاريخ إرسال: تُرسل حملات اليوم تلقائياً في الثامنة والواحدة ظهراً (توقيت الكاميرون) حسب حصتك اليومية.",
+  "Préparez vos campagnes à l'avance avec une date d'envoi : la première campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun). Chaque appel du cron envoie une campagne (jusqu'à {n} par jour) ; les créneaux suivants sont déclenchés par le cron externe ci-dessous.":
+    "جهّز حملاتك مسبقاً مع تاريخ إرسال: تُرسل الحملة الأولى تلقائياً كل صباح في الثامنة (توقيت الكاميرون). كل استدعاء للـ cron يرسل حملة واحدة (حتى {n} يومياً)؛ المواعيد التالية يطلقها cron خارجي بالأسفل.",
   "Campagnes par jour": "حملات في اليوم",
   "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "تم تحديث الحصة: {n} حملات يومياً (08h00 و13h00).",
   "Quota mis à jour : 1 campagne par jour (08h00).": "تم تحديث الحصة: حملة واحدة يومياً (08h00).",
@@ -3735,8 +3735,8 @@ const ES = {
   "File d'attente": "Cola",
   "Envoyée": "Enviada",
   "Programmation automatique (cron quotidien)": "Programación automática (cron diario)",
-  "Le cron est déjà configuré (Vercel, 07h00 UTC = 08h00 au Cameroun). Cette URL peut aussi être enregistrée chez un service de cron externe :":
-    "El cron ya está configurado (Vercel, 07h00 UTC = 08h00 en Camerún). Esta URL también puede registrarse en un servicio de cron externo:",
+  "Le cron principal est déjà configuré (Vercel, 07h00 UTC = 08h00 au Cameroun) : il envoie la première campagne du jour. Pour les créneaux suivants du quota (par exemple la 2ᵉ à 13h00), enregistrez cette URL chez un service de cron externe gratuit (ex. cron-job.org) :":
+    "El cron principal ya está configurado (Vercel, 07h00 UTC = 08h00 en Camerún): envía la primera campaña del día. Para los demás turnos de la cuota (p. ej. la 2.ª a las 13h00), registra esta URL en un servicio de cron externo gratuito (p. ej. cron-job.org):",
   "Tester (simulation)": "Probar (simulación)",
   "Dernière exécution": "Última ejecución",
   "jamais": "nunca",
@@ -3749,8 +3749,8 @@ const ES = {
   "Copier": "Copiar",
   "Annuler": "Cancelar",
   "Campagnes programmées (automatique)": "Campañas programadas (automático)",
-  "Préparez vos campagnes à l'avance avec une date d'envoi : les campagnes du jour partent automatiquement à 08h00 et 13h00 (heure du Cameroun), selon votre quota quotidien.":
-    "Prepara tus campañas por adelantado con una fecha de envío: las campañas del día salen automáticamente a las 08h00 y 13h00 (hora de Camerún), según tu cuota diaria.",
+  "Préparez vos campagnes à l'avance avec une date d'envoi : la première campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun). Chaque appel du cron envoie une campagne (jusqu'à {n} par jour) ; les créneaux suivants sont déclenchés par le cron externe ci-dessous.":
+    "Prepara tus campañas por adelantado con una fecha de envío: la primera campaña del día sale automáticamente cada mañana a las 08h00 (hora de Camerún). Cada llamada del cron envía una campaña (hasta {n} al día); los turnos siguientes los dispara el cron externo de abajo.",
   "Campagnes par jour": "Campañas por día",
   "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "Cuota actualizada: {n} campañas al día (08h00 y 13h00).",
   "Quota mis à jour : 1 campagne par jour (08h00).": "Cuota actualizada: 1 campaña al día (08h00).",

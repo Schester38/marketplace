@@ -1619,7 +1619,8 @@ export default function Admin() {
       <section className="card msg-form">
         <p className="hint">
           {t(
-            "Préparez vos campagnes à l'avance avec une date d'envoi : les campagnes du jour partent automatiquement à 08h00 et 13h00 (heure du Cameroun), selon votre quota quotidien."
+            "Préparez vos campagnes à l'avance avec une date d'envoi : la première campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun). Chaque appel du cron envoie une campagne (jusqu'à {n} par jour) ; les créneaux suivants sont déclenchés par le cron externe ci-dessous.",
+            { n: schedList?.daily_limit || 1 }
           )}
         </p>
         <div className="msg-target-row" style={{ alignItems: "center", marginBottom: 8 }}>
@@ -1758,7 +1759,7 @@ export default function Admin() {
             <strong>⚙️ {t("Programmation automatique (cron quotidien)")}</strong>
             <p className="hint" style={{ marginTop: 6 }}>
               {t(
-                "Le cron est déjà configuré (Vercel, 07h00 UTC = 08h00 au Cameroun). Cette URL peut aussi être enregistrée chez un service de cron externe :"
+                "Le cron principal est déjà configuré (Vercel, 07h00 UTC = 08h00 au Cameroun) : il envoie la première campagne du jour. Pour les créneaux suivants du quota (par exemple la 2ᵉ à 13h00), enregistrez cette URL chez un service de cron externe gratuit (ex. cron-job.org) :"
               )}
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
