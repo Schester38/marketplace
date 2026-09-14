@@ -8,6 +8,7 @@ import PasswordInput from "../components/PasswordInput.jsx";
 import Seo from "../components/Seo.jsx";
 import Logo from "../components/Logo.jsx";
 import { useLang } from "../i18n.jsx";
+import { requestPushPermission } from "../push.js";
 
 export default function Login() {
   const { login } = useAuth();
@@ -22,6 +23,20 @@ export default function Login() {
   // Plusieurs espaces (ex. boutique + livreur) sur le même email : attend le
   // choix de l'espace à ouvrir.
   const [accountChoice, setAccountChoice] = useState([]);
+
+  // Notifications push : le clic « Se connecter » est un geste utilisateur
+  // valide, on enchaîne donc IMMÉDIATEMENT la demande de permission du
+  // navigateur (popup native) — ou une réinscription silencieuse si déjà
+  // autorisé. Le flag de session évite que la bannière NotificationPrompt ne
+  // redemande en double juste après.
+  const promptPush = () => {
+    try {
+      sessionStorage.setItem("mboppi_push_prompted", "1");
+    } catch {
+      /* sessionStorage indisponible : pas grave */
+    }
+    requestPushPermission();
+  };
 
   const ROLE_LABEL = (role) =>
     role === "shop"
@@ -42,6 +57,7 @@ export default function Login() {
       const data = await api.login({ ...form, role });
       setAccountChoice([]);
       login(data.user, data.token);
+      promptPush();
       storage.setItem("mboppi_welcome", "login");
       navigate(postLoginPath(data.user));
     } catch (err) {
@@ -68,6 +84,7 @@ export default function Login() {
       setAccountChoice([]);
       console.log("[login] api.login role=", data.user?.role, "email=", data.user?.email);
       login(data.user, data.token);
+      promptPush();
       storage.setItem("mboppi_welcome", "login");
       const force = new URLSearchParams(location.search).get("force");
       const from = location.state?.from;

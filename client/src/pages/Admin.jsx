@@ -1475,6 +1475,15 @@ export default function Admin() {
             ⚠️ {t("SMTP non configuré : les emails seront simulés (non envoyés).")}
           </p>
         )}
+        {campRecipients && campRecipients.push_blocked > 0 && (
+          <p className="hint">
+            ⚠️{" "}
+            {t(
+              "{n} abonné(s) ont désactivé « Messages de Mboppi » (Mon compte) : ils ne recevront PAS cette campagne push.",
+              { n: campRecipients.push_blocked }
+            )}
+          </p>
+        )}
         <button
           className="btn btn-primary btn-block"
           disabled={campSending || !campTitle.trim() || !campMessage.trim() || (!campPush && !campEmail)}

@@ -310,6 +310,9 @@ export default function MyAccount() {
       const ok = await requestPushPermission();
       if (ok) {
         setPushSubscribed(true);
+        // Nouvelle autorisation → tous les canaux viennent d'être (ré)activés
+        // par requestPushPermission : on aligne les interrupteurs affichés.
+        setPushPrefs({ flash: true, digest: true, messages: true });
         try {
           const d = await api.pushStatus();
           if (d) setPushSubscribed(!!d.subscribed);

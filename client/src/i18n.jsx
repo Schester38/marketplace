@@ -558,6 +558,8 @@ const EN = {
   "Envoyer la campagne": "Send campaign",
   "Campagne envoyée : {push} push, {email}/{total} emails.":
     "Campaign sent: {push} push, {email}/{total} emails.",
+  "{n} abonné(s) ont désactivé « Messages de Mboppi » (Mon compte) : ils ne recevront PAS cette campagne push.":
+    "{n} subscriber(s) turned off “Mboppi Messages” (My account): they will NOT receive this push campaign.",
   "SMTP simulé": "SMTP simulated",
   échecs: "failures",
   "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":
@@ -2144,6 +2146,8 @@ const AR = {
   "Envoyer la campagne": "إرسال الحملة",
   "Campagne envoyée : {push} push, {email}/{total} emails.":
     "تم إرسال الحملة: {push} إشعار، {email}/{total} بريد إلكتروني.",
+  "{n} abonné(s) ont désactivé « Messages de Mboppi » (Mon compte) : ils ne recevront PAS cette campagne push.":
+    "{n} مشترك(ين) عطّلوا «رسائل Mboppi» (حسابي): لن يتلقّوا هذه الحملة.",
   "SMTP simulé": "SMTP محاكى",
   échecs: "إخفاقات",
   "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":
@@ -3641,6 +3645,8 @@ const ES = {
   "Envoyer la campagne": "Enviar la campaña",
   "Campagne envoyée : {push} push, {email}/{total} emails.":
     "Campaña enviada: {push} push, {email}/{total} emails.",
+  "{n} abonné(s) ont désactivé « Messages de Mboppi » (Mon compte) : ils ne recevront PAS cette campagne push.":
+    "{n} suscriptor(es) desactivaron «Mensajes de Mboppi» (Mi cuenta): NO recibirán esta campaña push.",
   "SMTP simulé": "SMTP simulado",
   échecs: "fallos",
   "Envoyer « {title} » à {audience} via {channels} ? Cette action est irréversible.":

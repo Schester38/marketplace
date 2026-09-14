@@ -6,6 +6,7 @@ import { useAuth, postLoginPath } from "../App.jsx";
 import Seo from "../components/Seo.jsx";
 import Logo from "../components/Logo.jsx";
 import { useLang } from "../i18n.jsx";
+import { requestPushPermission } from "../push.js";
 
 export default function AuthGoogle() {
   const { login } = useAuth();
@@ -36,6 +37,7 @@ export default function AuthGoogle() {
     try {
       const data = await api.googleChoose(chooseToken, role);
       login(data.user, data.token);
+      requestPushPermission();
       storage.setItem("mboppi_welcome", "login");
       navigate(postLoginPath(data.user), { replace: true });
     } catch (e) {
@@ -68,6 +70,10 @@ export default function AuthGoogle() {
       .then((data) => {
         console.log("[AuthGoogle] me response", data.user?.id, data.user?.email, data.user?.role);
         login(data.user, token);
+        // Déjà autorisé → réinscription silencieuse (idempotent) ; sinon la
+        // bannière NotificationPrompt prend le relais (le clic Google initial
+        // a été perdu dans la redirection : pas de popup native possible ici).
+        requestPushPermission();
         storage.setItem("mboppi_welcome", "login");
         navigate(postLoginPath(data.user), { replace: true });
       })

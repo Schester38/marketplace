@@ -21,7 +21,14 @@ export default function NotificationPrompt({ user }) {
       requestPushPermission();
       return;
     }
-    // permission === "default" → proposer à chaque connexion.
+    // permission === "default" → proposer à chaque connexion, SAUF si la popup
+    // native vient déjà d'être déclenchée par le clic « Se connecter »
+    // (flag posé par Login.promptPush) : on évite un double prompt.
+    try {
+      if (sessionStorage.getItem("mboppi_push_prompted")) return;
+    } catch {
+      /* sessionStorage indisponible : on affiche la bannière normalement */
+    }
     const timer = setTimeout(() => setVisible(true), 1200);
     return () => clearTimeout(timer);
   }, [user]);

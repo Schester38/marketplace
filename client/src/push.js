@@ -65,7 +65,8 @@ async function subscribeWithRetry(reg, publicKey) {
 // la demande de permission).
 export async function requestPushPermission() {
   if (typeof Notification === "undefined") return false;
-  let permission = Notification.permission;
+  const before = Notification.permission;
+  let permission = before;
   if (permission === "default") {
     try {
       permission = await Notification.requestPermission();
@@ -75,6 +76,18 @@ export async function requestPushPermission() {
     }
   }
   if (permission === "granted") {
+    // L'utilisateur vient d'AUTORISER les notifications : on active tous les
+    // canaux appropriés à son compte (promos éclair, nouveautés du jour,
+    // messages Mboppi). Uniquement lors d'une NOUVELLE autorisation
+    // (default → granted) : si l'utilisateur avait déjà accordé la permission
+    // puis ajusté ses canaux dans Mon compte, on n'écrase JAMAIS son choix.
+    if (before === "default") {
+      try {
+        await api.updatePushPrefs({ flash: true, digest: true, messages: true });
+      } catch {
+        /* pas bloquant : l'absence de ligne prefs = tout activé côté serveur */
+      }
+    }
     await subscribeToPush();
     return true;
   }

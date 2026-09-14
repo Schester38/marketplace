@@ -387,9 +387,28 @@ router.get(
     const { mailConfigured } = await import("../mailer.js");
     let email_count = 0;
     let push_count = 0;
+    let push_blocked = 0;
     if (audience === "newsletter") {
       email_count = (await q("SELECT COUNT(*)::int AS n FROM newsletter_subscribers"))[0].n;
-      push_count = (await q("SELECT COUNT(DISTINCT user_id)::int AS n FROM push_subscriptions"))[0].n;
+      // Même filtre que l'envoi réel (sendPushToAll, canal « messages ») :
+      // seuls les abonnés qui n'ont PAS désactivé « Messages de Mboppi »
+      // recevront la campagne.
+      push_count = (
+        await q(
+          `SELECT COUNT(DISTINCT ps.user_id)::int AS n
+           FROM push_subscriptions ps
+           LEFT JOIN push_prefs pp ON pp.user_id = ps.user_id
+          WHERE COALESCE(pp.messages_ok, TRUE) = TRUE`
+        )
+      )[0].n;
+      push_blocked = (
+        await q(
+          `SELECT COUNT(DISTINCT ps.user_id)::int AS n
+           FROM push_subscriptions ps
+           JOIN push_prefs pp ON pp.user_id = ps.user_id
+          WHERE pp.messages_ok = FALSE`
+        )
+      )[0].n;
     } else {
       const roleClause = roles ? "AND u.role = ANY($1::text[])" : "";
       const params = roles ? [roles] : [];
@@ -399,16 +418,30 @@ router.get(
           params
         )
       )[0].n;
+      // Filtre préférences identique à sendPushToAll (canal « messages ») :
+      // sans ligne push_prefs = activé ; messages_ok = FALSE = exclu.
       push_count = (
         await q(
           `SELECT COUNT(DISTINCT ps.user_id)::int AS n
-           FROM push_subscriptions ps JOIN users u ON u.id = ps.user_id
-          WHERE TRUE ${roleClause}`,
+           FROM push_subscriptions ps
+           JOIN users u ON u.id = ps.user_id
+           LEFT JOIN push_prefs pp ON pp.user_id = u.id
+          WHERE TRUE ${roleClause} AND COALESCE(pp.messages_ok, TRUE) = TRUE`,
+          params
+        )
+      )[0].n;
+      push_blocked = (
+        await q(
+          `SELECT COUNT(DISTINCT ps.user_id)::int AS n
+           FROM push_subscriptions ps
+           JOIN users u ON u.id = ps.user_id
+           JOIN push_prefs pp ON pp.user_id = u.id
+          WHERE TRUE ${roleClause} AND pp.messages_ok = FALSE`,
           params
         )
       )[0].n;
     }
-    res.json({ email_count, push_count, mail_configured: mailConfigured() });
+    res.json({ email_count, push_count, push_blocked, mail_configured: mailConfigured() });
   })
 );
 
