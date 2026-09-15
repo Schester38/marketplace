@@ -1,13 +1,13 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
-import SocialProof from "../components/SocialProof.jsx";
+// import SocialProof from "../components/SocialProof.jsx"; // réactiver avec la section (voir plus bas)
 import { useLang } from "../i18n.jsx";
 
 /**
- * Page d'atterrissage de recrutement vendeurs/boutiques : explique la valeur
- * de Mboppi (0 % de frais, parrainages, livraison suivie) et redirige vers
- * /register?role=seller (vendeur) ou /register?role=shop (boutique).
+ * Page d'atterrissage de recrutement VENDEURS indépendants uniquement :
+ * explique la valeur de Mboppi pour eux (0 % de frais, code vendeur,
+ * parrainages, livraison suivie) et redirige vers /register?role=seller.
  */
 export default function SellLanding() {
   const { t } = useLang();
@@ -17,14 +17,14 @@ export default function SellLanding() {
       emoji: "1️⃣",
       title: t("Créez votre compte"),
       text: t(
-        "Choisissez le rôle « Vendeur », « Boutique » ou « Créateur » : inscription gratuite et sans engagement."
+        "Inscription gratuite et sans engagement : votre compte vendeur est prêt en moins d'une minute."
       ),
     },
     {
       emoji: "2️⃣",
-      title: t("Publiez ou partagez"),
+      title: t("Partagez votre code vendeur"),
       text: t(
-        "Boutiques et créateurs publient leurs produits. Les vendeurs partagent leur code vendeur."
+        "Un code unique à 6 caractères : vos clients l'utilisent pour commander et vos commissions sont calculées automatiquement."
       ),
     },
     {
@@ -41,14 +41,14 @@ export default function SellLanding() {
       emoji: "🔥",
       title: t("0 % de frais de service"),
       text: t(
-        "Vous gardez 100 % de vos ventes. Vendeur : 1 500 F / 30 jours. Boutique & créateur : gratuit."
+        "Vous gardez 100 % de vos ventes. Seule l'adhésion est payante : 1 500 F pour 30 jours."
       ),
     },
     {
       emoji: "🤝",
       title: t("Parrainage = revenus complémentaires"),
       text: t(
-        "1 000 F par vendeur activé via votre lien + 2 % sur les achats de vos clients affiliés."
+        "1 000 F par vendeur que vous parrainez + 2 % sur les achats de vos clients affiliés."
       ),
     },
     {
@@ -72,28 +72,28 @@ export default function SellLanding() {
       <Seo
         title={`${t("Vendez où vous vivez, gardez 100 % de vos ventes.")} — Mboppi`}
         description={t(
-          "0 % de frais de service. Publiez vos produits gratuitement et recevez vos commandes par téléphone ou WhatsApp."
+          "0 % de frais de service. Recevez votre code vendeur, partagez-le sur WhatsApp et encaissez vos commissions sur chaque vente."
         )}
       />
       <section className="hero sell-hero">
-        <span className="hero-badge">🛍️ {t("VENDEURS & BOUTIQUES")}</span>
+        <span className="hero-badge">🧑🏾‍💼 {t("VENDEURS INDÉPENDANTS")}</span>
         <h1>{t("Vendez où vous vivez, gardez 100 % de vos ventes.")}</h1>
         <p>
           {t(
-            "0 % de frais de service. Publiez vos produits gratuitement et recevez vos commandes par téléphone ou WhatsApp."
+            "0 % de frais de service. Recevez votre code vendeur, partagez-le à vos contacts et encaissez vos commissions sur chaque vente — par téléphone ou WhatsApp."
           )}
         </p>
         <div className="hero-actions">
           <Link to="/register?role=seller" className="btn btn-primary">
             🚀 {t("Devenir vendeur")}
           </Link>
-          <Link to="/register?role=shop" className="btn btn-outline">
-            🏪 {t("Créer ma boutique")}
-          </Link>
         </div>
       </section>
 
+      {/* Preuve sociale désactivée : compteurs trop faibles pour convaincre.
+          Réactiver avec la page d'accueil quand les chiffres auront grandi :
       <SocialProof />
+      */}
 
       <section className="section">
         <h2 className="section-title">🚀 {t("3 étapes pour commencer")}</h2>

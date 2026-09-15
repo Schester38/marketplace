@@ -12,7 +12,7 @@ import HeroCarousel from "../components/HeroCarousel.jsx";
 import CategoryGrid from "../components/CategoryGrid.jsx";
 import TrustBadges from "../components/TrustBadges.jsx";
 import Reveal from "../components/Reveal.jsx";
-import SocialProof from "../components/SocialProof.jsx";
+// import SocialProof from "../components/SocialProof.jsx"; // réactiver avec la section (voir plus bas)
 import { useLang } from "../i18n.jsx";
 import { PRODUCT_CATEGORIES, currencySymbol } from "../config.js";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
@@ -424,10 +424,12 @@ export default function Home() {
         <HeroCarousel onExplore={goToProducts} />
       </Reveal>
 
-      {/* Preuve sociale : compteurs publics (boutiques, vendeurs, livraisons…) */}
+      {/* Preuve sociale désactivée pour l'instant : compteurs trop faibles pour galvaniser.
+          Réactiver plus tard en décommentant (le composant et GET /api/metrics/public restent prêts) :
       <Reveal delay={40}>
         <SocialProof />
       </Reveal>
+      */}
       <Reveal delay={70}>
         <CategoryGrid />
       </Reveal>
