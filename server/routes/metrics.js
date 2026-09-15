@@ -183,13 +183,13 @@ router.get("/public", async (req, res) => {
     const sales = await q(
       `SELECT COUNT(*)::int AS n FROM sales WHERE status = 'delivered'`
     );
-    const u = users.rows[0];
+    const u = users[0];
     res.json({
       boutiques: u.boutiques,
       vendeurs: u.vendeurs,
       livreurs: u.livreurs,
-      produits: products.rows[0].en_stock,
-      commandes_livrees: sales.rows[0].n,
+      produits: products[0].en_stock,
+      commandes_livrees: sales[0].n,
     });
   } catch (err) {
     console.error("[metrics/public] compteurs indisponibles :", err.message);
