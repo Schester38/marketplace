@@ -1178,7 +1178,7 @@ export default function Navbar({ onLogout }) {
             />
           </div>
           <div className="cat-quick" aria-label={t("Liens rapides")}>
-            <Link to="/register" onClick={close} className="quick-link quick-accent">
+            <Link to="/vendre" onClick={close} className="quick-link quick-accent">
               <IconStore size={14} />
               <span>{t("Vendre sur Mboppi")}</span>
             </Link>

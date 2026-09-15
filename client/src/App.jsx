@@ -72,6 +72,7 @@ const CreatorDashboard = lazyRetry(() => import("./pages/CreatorDashboard.jsx"))
 const VitrineOffre = lazyRetry(() => import("./pages/VitrineOffre.jsx"));
 const Verone = lazyRetry(() => import("./pages/Verone.jsx"));
 const OfferDetail = lazyRetry(() => import("./pages/OfferDetail.jsx"));
+const SellLanding = lazyRetry(() => import("./pages/SellLanding.jsx"));
 const ProductDetail = lazyRetry(() => import("./pages/ProductDetail.jsx"));
 const PurchasePage = lazyRetry(() => import("./pages/PurchasePage.jsx"));
 const MembershipPage = lazyRetry(() => import("./pages/MembershipPage.jsx"));
@@ -697,6 +698,7 @@ export default function App() {
             <Route path="/verone" element={<Verone />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/vendre" element={<SellLanding />} />
             <Route path="/verifier-email" element={<ConfirmEmail />} />
             <Route path="/auth-google" element={<AuthGoogle />} />
             <Route path="/livreur-inscription" element={<LivreurInscription />} />

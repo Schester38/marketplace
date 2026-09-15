@@ -346,6 +346,7 @@ export const api = {
   createFlashPromotion: (payload) =>
     request("/flash-promotions", { method: "POST", body: JSON.stringify(payload) }),
   trending: () => request("/metrics/trending"),
+  publicStats: () => request("/metrics/public"),
   createDonation: (payload) =>
     request("/donations", { method: "POST", body: JSON.stringify(payload) }),
   trackViews: (items) =>

@@ -41,7 +41,7 @@ export default function HeroCarousel({ onExplore }) {
         "Publiez vos produits en quelques minutes et recevez vos commandes par téléphone ou WhatsApp."
       ),
       cta: t("Devenir vendeur"),
-      to: "/register",
+      to: "/vendre",
       img: "/diapo/MboppiShop_Developpez_votre_boutique.webp",
       alt: t("Développez votre boutique sur MboppiShop"),
     },

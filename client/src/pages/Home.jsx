@@ -12,6 +12,7 @@ import HeroCarousel from "../components/HeroCarousel.jsx";
 import CategoryGrid from "../components/CategoryGrid.jsx";
 import TrustBadges from "../components/TrustBadges.jsx";
 import Reveal from "../components/Reveal.jsx";
+import SocialProof from "../components/SocialProof.jsx";
 import { useLang } from "../i18n.jsx";
 import { PRODUCT_CATEGORIES, currencySymbol } from "../config.js";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
@@ -421,6 +422,11 @@ export default function Home() {
       {/* Refonte 2026 : carrousel promo, grille de catégories illustrée et badges de confiance */}
       <Reveal>
         <HeroCarousel onExplore={goToProducts} />
+      </Reveal>
+
+      {/* Preuve sociale : compteurs publics (boutiques, vendeurs, livraisons…) */}
+      <Reveal delay={40}>
+        <SocialProof />
       </Reveal>
       <Reveal delay={70}>
         <CategoryGrid />

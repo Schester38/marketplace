@@ -163,4 +163,39 @@ router.get("/trending", async (req, res) => {
   res.json({ products });
 });
 
+// Compteurs publics (preuve sociale) pour l'accueil (boutiques actives,
+// vendeurs/créateurs, livreurs, commandes livrées, produits en stock). Lecture
+// seule et robuste : si une table manque (base neuve), on renvoie des zéros
+// plutôt que de casser la page d'accueil.
+router.get("/public", async (req, res) => {
+  res.set("Cache-Control", "public, s-maxage=300, max-age=120, stale-while-revalidate=60");
+  try {
+    const users = await q(
+      `SELECT
+          COUNT(*) FILTER (WHERE role = 'shop')::int AS boutiques,
+          COUNT(*) FILTER (WHERE role IN ('seller','creator'))::int AS vendeurs,
+          COUNT(*) FILTER (WHERE role = 'livreur')::int AS livreurs
+        FROM users`
+    );
+    const products = await q(
+      `SELECT COUNT(*)::int AS en_stock FROM products WHERE quantity > 0`
+    );
+    const sales = await q(
+      `SELECT COUNT(*)::int AS n FROM sales WHERE status = 'delivered'`
+    );
+    const u = users.rows[0];
+    res.json({
+      boutiques: u.boutiques,
+      vendeurs: u.vendeurs,
+      livreurs: u.livreurs,
+      produits: products.rows[0].en_stock,
+      commandes_livrees: sales.rows[0].n,
+    });
+  } catch (err) {
+    console.error("[metrics/public] compteurs indisponibles :", err.message);
+    res.set("Cache-Control", "no-store");
+    res.json({ boutiques: 0, vendeurs: 0, livreurs: 0, produits: 0, commandes_livrees: 0 });
+  }
+});
+
 export default router;
