@@ -32,6 +32,7 @@ import activationWithdrawalRoutes from "./routes/activationWithdrawals.js";
 import logRoutes from "./routes/logs.js";
 import seoRoutes from "./routes/seo.js";
 import paymentsRouter, { webhookRouter } from "./routes/payments.js";
+import whatsappBotRouter from "./routes/whatsappBot.js";
 import presentationRoutes, { pageRouter, imageRouter } from "./routes/presentation.js";
 import photoProxyRouter from "./routes/photoProxy.js";
 import geoRoutes from "./routes/geo.js";
@@ -86,6 +87,10 @@ app.use(
 // un header Origin non navigateur. La vérification se fait par correspondance
 // de référence + montant (processWebhook), pas par l'origine.
 app.use("/api/ikeepay", webhookRouter);
+
+// Webhook du robot WhatsApp (Meta Cloud API) : même logique — Meta envoie ses
+// notifications depuis ses serveurs (pas de navigateur). Auth par verify_token.
+app.use("/api/whatsapp", whatsappBotRouter);
 
 app.use(originCheck);
 

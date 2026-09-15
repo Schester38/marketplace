@@ -153,93 +153,91 @@ function fallback(lang, extra = {}) {
   return { reply: FALLBACKS[lang] || FALLBACKS.fr, ...extra };
 }
 
+// Moteur IA partagé : utilisé par le chat du site ET par le robot WhatsApp
+// (services/whatsappBot.js). Renvoie toujours une string (jamais de throw).
+// history : [{role:'user'|'assistant', text|content}] (formats site et bot).
+// extraSystem : instructions supplémentaires (prompts du robot WhatsApp).
+export async function askAI(message, history = [], extraSystem = "", lang = "fr") {
+  const clean = String(message || "").slice(0, MAX_MESSAGE).trim();
+  if (!clean || !API_KEY) return FALLBACKS[lang] || FALLBACKS.fr;
+
+  let sys = SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.fr;
+  if (extraSystem) sys += `\n\n${extraSystem}`;
+
+  let catalog = null;
+  try {
+    catalog = await catalogSnapshot(clean);
+  } catch (err) {
+    console.error("Chat : impossible de charger le catalogue ->", err.message);
+  }
+
+  const baseSys = catalog
+    ? sys +
+      `\n\nCATALOGUE EN TEMPS RÉEL (produits actuellement disponibles sur le site, vérifiés à la base de données) :\n${catalog}\n\nTu peux utiliser ces prix et cette disponibilité dans ta réponse. Ne cite que les prix/listes présents dans ce catalogue ; pour toute autre information, renvoie vers la fiche produit, la FAQ ou la page Contact.`
+    : sys;
+
+  const contents = [];
+  const hist = Array.isArray(history) ? history.slice(-MAX_HISTORY) : [];
+  for (const m of hist) {
+    const role = m && m.role === "user" ? "user" : "model";
+    const text = String(m?.text || m?.content || "").slice(0, 1000).trim();
+    if (text) contents.push({ role, parts: [{ text }] });
+  }
+  contents.push({ role: "user", parts: [{ text: clean }] });
+
+  const body = {
+    systemInstruction: { parts: [{ text: baseSys }] },
+    contents,
+    generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+  };
+
+  const models = [MODEL, ...MODEL_FALLBACKS.filter((m) => m !== MODEL)];
+
+  for (const model of models) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 25000);
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(API_KEY)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify(body),
+        }
+      );
+      if (!r.ok) {
+        const text = await r.text().catch(() => "");
+        console.error(`Gemini ${model} -> HTTP ${r.status}:`, text.slice(0, 300));
+        continue;
+      }
+      const data = await r.json();
+      const text = data.candidates?.[0]?.content?.parts
+        ?.map((p) => p.text || "")
+        .join("")
+        .trim();
+      if (text) return text;
+    } catch (err) {
+      if (err.name === "AbortError") console.error(`Gemini ${model} -> délai dépassé`);
+      else console.error(`Gemini ${model} ->`, err.message);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  return FALLBACKS[lang] || FALLBACKS.fr;
+}
+
 router.post(
   "/",
   ah(async (req, res) => {
     const { message, history, lang } = req.body || {};
     const clean = message ? String(message).slice(0, MAX_MESSAGE).trim() : "";
-    if (!clean) {
-      return res.status(400).json({ error: "Message vide" });
-    }
-
+    if (!clean) return res.status(400).json({ error: "Message vide" });
     if (!API_KEY) {
-      return res.json(fallback(lang, { offline: true }));
+      return res.json({ reply: FALLBACKS[lang] || FALLBACKS.fr, offline: true });
     }
-
-    const sys = SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.fr;
-
-    let catalog = null;
-    try {
-      catalog = await catalogSnapshot(clean);
-    } catch (err) {
-      console.error("Chat : impossible de charger le catalogue ->", err.message);
-    }
-
-    const baseSys = catalog
-      ? sys +
-        `
-
-CATALOGUE EN TEMPS RÉEL (produits actuellement disponibles sur le site, vérifiés à la base de données) :
-${catalog}
-
-Tu peux utiliser ces prix et cette disponibilité dans ta réponse. Ne cite que les prix/listes présents dans ce catalogue ; pour toute autre information, renvoie vers la fiche produit, la FAQ ou la page Contact.`
-      : sys;
-
-    const contents = [];
-    const hist = Array.isArray(history) ? history.slice(-MAX_HISTORY) : [];
-    for (const m of hist) {
-      const role = m && m.role === "user" ? "user" : "model";
-      const text = m && m.text ? String(m.text).slice(0, 1000).trim() : "";
-      if (text) contents.push({ role, parts: [{ text }] });
-    }
-    contents.push({ role: "user", parts: [{ text: clean }] });
-
-    const body = {
-      systemInstruction: { parts: [{ text: baseSys }] },
-      contents,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
-    };
-
-    const models = [MODEL, ...MODEL_FALLBACKS.filter((m) => m !== MODEL)];
-
-    for (const model of models) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 25000);
-      try {
-        const r = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(API_KEY)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            signal: controller.signal,
-            body: JSON.stringify(body),
-          }
-        );
-
-        if (!r.ok) {
-          const text = await r.text().catch(() => "");
-          console.error(`Gemini ${model} -> HTTP ${r.status}:`, text.slice(0, 300));
-          continue;
-        }
-
-        const data = await r.json();
-        const text = data.candidates?.[0]?.content?.parts
-          ?.map((p) => p.text || "")
-          .join("")
-          .trim();
-        if (text) return res.json({ reply: text });
-      } catch (err) {
-        if (err.name === "AbortError") {
-          console.error(`Gemini ${model} -> délai dépassé`);
-        } else {
-          console.error(`Gemini ${model} ->`, err.message);
-        }
-      } finally {
-        clearTimeout(timeout);
-      }
-    }
-
-    res.json(fallback(lang));
+    const reply = await askAI(clean, history, "", lang || "fr");
+    res.json({ reply });
   })
 );
 

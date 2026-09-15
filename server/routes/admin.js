@@ -39,6 +39,7 @@ import {
   sendWhatsApp,
   getAdminNotifyEmail,
 } from "../services/whatsapp.js";
+import { getBotSettings, setBotSettings } from "../services/whatsappBot.js";
 
 const router = Router();
 
@@ -1535,6 +1536,23 @@ router.post(
     res.json({ ok: true, ...(await getPublicWhatsAppSettings()) });
   })
 );
+
+// ─── Robot WhatsApp (assistant IA) ─────────────────────────────────────────
+router.get("/settings/whatsapp-bot", ah(async (req, res) => {
+  res.json(await getBotSettings());
+}));
+
+router.post("/settings/whatsapp-bot", ah(async (req, res) => {
+  const b = req.body || {};
+  await setBotSettings({
+    enabled: Boolean(b.enabled),
+    greeting: b.greeting !== undefined ? String(b.greeting).slice(0, 500) : undefined,
+    fallback: b.fallback !== undefined ? String(b.fallback).slice(0, 500) : undefined,
+    system_prompt: b.system_prompt !== undefined ? String(b.system_prompt).slice(0, 2000) : undefined,
+  });
+  await logAudit(req.user.id, "admin.whatsapp_bot_settings", `enabled=${Boolean(b.enabled)}`, req.ip);
+  res.json({ ok: true, ...(await getBotSettings()) });
+}));
 
 // Test d'envoi : verifie la configuration sans attendre une vraie demande.
 // Teste WhatsApp (si configuré) ET l'email de notification (si renseigné).

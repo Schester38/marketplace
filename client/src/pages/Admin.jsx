@@ -351,6 +351,16 @@ export default function Admin() {
   });
   const [waBusy, setWaBusy] = useState(false);
   const [waMsg, setWaMsg] = useState("");
+  // Robot WhatsApp (assistant IA sur le numéro Cloud API)
+  const [waBot, setWaBot] = useState(null);
+  const [waBotForm, setWaBotForm] = useState({
+    enabled: false,
+    greeting: "",
+    fallback: "",
+    system_prompt: "",
+  });
+  const [waBotBusy, setWaBotBusy] = useState(false);
+  const [waBotMsg, setWaBotMsg] = useState("");
   const [payPublicKey, setPayPublicKey] = useState("");
   const [paySecretKey, setPaySecretKey] = useState("");
   const [payments, setPayments] = useState(null);
@@ -466,6 +476,19 @@ export default function Admin() {
             admin_phone: d?.admin_phone_masked || "",
             notify_email: d?.notify_email || "",
             cloud_template: d?.cloud_template || "",
+          }));
+        })
+        .catch(() => {});
+      api
+        .adminWhatsAppBotSettings()
+        .then((d) => {
+          setWaBot(d || {});
+          setWaBotForm((f) => ({
+            ...f,
+            enabled: Boolean(d?.enabled),
+            greeting: d?.greeting || "",
+            fallback: d?.fallback || "",
+            system_prompt: d?.system_prompt || "",
           }));
         })
         .catch(() => {});
@@ -835,6 +858,26 @@ export default function Admin() {
       setWaMsg("❌ " + err.message);
     } finally {
       setWaBusy(false);
+    }
+  };
+
+  // Robot WhatsApp : enregistrement des réglages (activation, messages).
+  const saveWhatsAppBot = async (e) => {
+    e.preventDefault();
+    setWaBotMsg("");
+    setWaBotBusy(true);
+    try {
+      const d = await api.adminUpdateWhatsAppBotSettings(waBotForm);
+      setWaBot(d || {});
+      setWaBotMsg(
+        waBotForm.enabled
+          ? t("Robot WhatsApp activé ✅ — écrivez-lui depuis un autre numéro pour tester.")
+          : t("Robot WhatsApp désactivé.")
+      );
+    } catch (err) {
+      setWaBotMsg("❌ " + err.message);
+    } finally {
+      setWaBotBusy(false);
     }
   };
 
@@ -2313,6 +2356,74 @@ export default function Admin() {
             )}
           </form>
         </div>
+      </div>
+
+      {/* Robot WhatsApp : assistant IA connecté au numéro Cloud API */}
+      <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+        <h2 style={{ marginTop: 0, fontSize: "1.15rem" }}>
+          🤖 {t("Robot WhatsApp (assistant IA)")}
+        </h2>
+        <p className="hint" style={{ marginBottom: 12 }}>
+          {t(
+            "Connecte l'assistant IA du site (même moteur que le chat 💬) à votre numéro WhatsApp Cloud API : il répond automatiquement à toute personne qui écrit au numéro Mboppi (produits, prix, livraison, devenir vendeur). Nécessite le fournisseur « WhatsApp Cloud API (Meta) » ci-dessus, un webhook configuré chez Meta et la variable d'environnement WHATSAPP_VERIFY_TOKEN."
+          )}
+        </p>
+        <p className="hint" style={{ marginBottom: 12 }}>
+          {t("URL du webhook à configurer chez Meta :")}{" "}
+          <code style={{ userSelect: "all" }}>https://mboppi-mboppi.vercel.app/api/whatsapp/webhook</code>
+        </p>
+        <form onSubmit={saveWhatsAppBot} className="ikeepay-keys-form">
+          <div className="form-row">
+            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={waBotForm.enabled}
+                onChange={(e) => setWaBotForm((f) => ({ ...f, enabled: e.target.checked }))}
+              />
+              {t("Activer le robot WhatsApp")}
+            </label>
+          </div>
+          <div className="form-row">
+            <label>
+              {t("Message d'accueil (bonjour, salut…)")}
+              <textarea
+                rows={2}
+                placeholder="Bonjour 👋 Je suis l'assistant Mboppi. Posez votre question : produits, prix, livraison, devenir vendeur…"
+                value={waBotForm.greeting}
+                onChange={(e) => setWaBotForm((f) => ({ ...f, greeting: e.target.value }))}
+              />
+            </label>
+          </div>
+          <div className="form-row">
+            <label>
+              {t("Réponse de repli (si l'IA échoue)")}
+              <textarea
+                rows={2}
+                value={waBotForm.fallback}
+                onChange={(e) => setWaBotForm((f) => ({ ...f, fallback: e.target.value }))}
+              />
+            </label>
+          </div>
+          <div className="form-row">
+            <label>
+              {t("Instructions supplémentaires pour l'IA (optionnel)")}
+              <textarea
+                rows={3}
+                placeholder="Ex : Réponds toujours en français, sois court, invite à commander via le site."
+                value={waBotForm.system_prompt}
+                onChange={(e) => setWaBotForm((f) => ({ ...f, system_prompt: e.target.value }))}
+              />
+            </label>
+          </div>
+          {waBotMsg && (
+            <p className="hint" style={{ color: waBotMsg.startsWith("❌") ? "#c0392b" : "#1e7d32" }}>
+              {waBotMsg}
+            </p>
+          )}
+          <button type="submit" className="btn btn-primary btn-small" disabled={waBotBusy}>
+            {waBotBusy ? "…" : "💾 " + t("Enregistrer")}
+          </button>
+        </form>
       </div>
 {/* ─── Maintenance Storage (egress images) ─────────────────────────────── */}
       <div className="card" style={{ marginBottom: 20, padding: 18 }}>

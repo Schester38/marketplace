@@ -83,15 +83,18 @@ export async function setWhatsAppSettings({
   cloudTemplate,
 }) {
   const map = {
-    whatsapp_provider: provider || "",
-    whatsapp_admin_phone: adminPhone || "",
-    whatsapp_callmebot_key: callmebotKey || "",
-    whatsapp_cloud_token: cloudToken || "",
-    whatsapp_cloud_phone_id: cloudPhoneId || "",
-    notify_email: notifyEmail || "",
-    whatsapp_cloud_template: cloudTemplate || "",
+    whatsapp_provider: provider,
+    whatsapp_admin_phone: adminPhone,
+    whatsapp_callmebot_key: callmebotKey,
+    whatsapp_cloud_token: cloudToken,
+    whatsapp_cloud_phone_id: cloudPhoneId,
+    notify_email: notifyEmail,
+    whatsapp_cloud_template: cloudTemplate,
   };
   for (const [key, value] of Object.entries(map)) {
+    // undefined = champ non envoyé → inchangé (le formulaire du robot peut
+    // enregistrer ses réglages sans écraser la config notifications).
+    if (value === undefined) continue;
     await q(
       `INSERT INTO platform_settings (key, value, updated_at)
        VALUES ($1, $2, now())
@@ -188,6 +191,36 @@ export async function sendWhatsApp(message, templateParams) {
     return "cloud";
   }
   throw new Error("whatsapp non configuré");
+}
+
+// Envoi de texte libre à un numéro ARBITRAIRE (robot WhatsApp). Contrairement
+// à sendWhatsApp (qui écrit toujours à l'admin), ce texte part du numéro
+// Cloud API vers le client qui vient d'écrire (fenêtre 24 h ouverte).
+export async function sendWhatsAppText(to, message) {
+  const cfg = await getWhatsAppConfig();
+  if (cfg.provider !== "cloud" || !cfg.cloudToken || !cfg.cloudPhoneId) {
+    throw new Error("cloud api non configurée");
+  }
+  const res = await fetchWithTimeout(
+    `https://graph.facebook.com/v20.0/${cfg.cloudPhoneId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${cfg.cloudToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: "+" + normalizePhone(to),
+        type: "text",
+        text: { body: String(message).slice(0, 4000) },
+      }),
+    }
+  );
+  if (!res.ok) {
+    throw new Error(`cloud api HTTP ${res.status} : ${(await res.text()).slice(0, 200)}`);
+  }
+  return true;
 }
 
 // Envoi « sans risque » pour la requête métier : ne lève jamais, journalise.

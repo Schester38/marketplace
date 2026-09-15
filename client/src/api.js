@@ -394,6 +394,9 @@ export const api = {
   adminWhatsAppSettings: () => adminRequest("/admin/settings/whatsapp"),
   adminUpdateWhatsAppSettings: (payload) =>
     adminRequest("/admin/settings/whatsapp", { method: "POST", body: JSON.stringify(payload) }),
+  adminWhatsAppBotSettings: () => adminRequest("/admin/settings/whatsapp-bot"),
+  adminUpdateWhatsAppBotSettings: (payload) =>
+    adminRequest("/admin/settings/whatsapp-bot", { method: "POST", body: JSON.stringify(payload) }),
   adminTestWhatsApp: () => adminRequest("/admin/settings/whatsapp/test", { method: "POST" }),
   adminUpdatePaymentSettings: (payload) =>
     adminRequest("/admin/settings/payments", {
