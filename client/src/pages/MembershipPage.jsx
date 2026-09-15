@@ -7,6 +7,7 @@ import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { countrySymbol, getCountry } from "../config.js";
 import { api } from "../api.js";
+import SellContent from "../components/SellContent.jsx";
 
 export default function MembershipPage() {
   const { user, refreshUser } = useAuth();
@@ -16,6 +17,7 @@ export default function MembershipPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [showAdvantages, setShowAdvantages] = useState(false);
 
   useEffect(() => {
     api
@@ -195,6 +197,28 @@ export default function MembershipPage() {
             {t("pour 30 jours d'accès à votre espace professionnel")}
           </p>
         </div>
+
+        {/* Avantages vendeur : bouton + contenu mutualisé de /vendre.
+            Visible pour tout vendeur (simple ou parrainé). */}
+        {user?.role === "seller" && (
+          <>
+            <button
+              type="button"
+              className="btn btn-outline btn-block"
+              style={{ marginBottom: 24 }}
+              onClick={() => setShowAdvantages((v) => !v)}
+            >
+              {showAdvantages
+                ? `✕ ${t("Masquer les avantages")}`
+                : `🏆 ${t("AVANTAGE D'ÊTRE VENDEUR SUR MBOPPI")}`}
+            </button>
+            {showAdvantages && (
+              <div className="sell-landing" style={{ marginBottom: 24 }}>
+                <SellContent showRegisterCta={false} />
+              </div>
+            )}
+          </>
+        )}
 
         {/* Paiement en ligne — mode automatique iKeePay */}
         {!isManual && (

@@ -8958,3 +8958,39 @@ a.step {
     padding: 8px 4px;
   }
 }
+
+/* ---------- Landing /vendre : 3 étapes (centrées desktop, 1 ligne mobile) ---------- */
+.sell-landing .steps-grid {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+.sell-landing .steps-grid .step-emoji {
+  font-size: 1.6rem;
+  margin-bottom: 6px;
+}
+@media (max-width: 600px) {
+  .sell-landing .steps-grid {
+    gap: 6px;
+    max-width: none;
+    margin-bottom: 20px;
+  }
+  .sell-landing .steps-grid .card {
+    padding: 8px 5px;
+  }
+  .sell-landing .steps-grid .step-emoji {
+    font-size: 1rem;
+    margin-bottom: 3px;
+  }
+  .sell-landing .steps-grid .card h3 {
+    font-size: 0.66rem !important;
+    margin: 0 0 3px !important;
+    line-height: 1.25;
+  }
+  .sell-landing .steps-grid .card .hint {
+    font-size: 0.6rem;
+    line-height: 1.25;
+  }
+}
