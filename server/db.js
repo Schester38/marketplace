@@ -284,28 +284,28 @@ export async function initDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS confirm_code TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivered_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
-    // Signature du client (PNG data URI) capturée par le livreur à la
-    // livraison, réaffichée sur la facture PDF.
+    -- Signature du client (PNG data URI) capturée par le livreur à la
+    -- livraison, réaffichée sur la facture PDF.
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS signature TEXT;
-    // Marquage « prise en charge par un livreur » — posé quand un livreur
-    // authentifié consulte l'espace de la boutique (serve de preuve et
-    // déclenche la confirmation automatique de la commande).
+    -- Marquage « prise en charge par un livreur » — posé quand un livreur
+    -- authentifié consulte l'espace de la boutique (serve de preuve et
+    -- déclenche la confirmation automatique de la commande).
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_viewed_at TIMESTAMPTZ;
-    // Suivi GPS temps réel d'une livraison : position actuelle du livreur +
-    // trace (dernier ~60 points) + position GPS du client (partagée à la
-    // commande). Masquées dès que la vente n'est plus pending/confirmed.
+    -- Suivi GPS temps réel d'une livraison : position actuelle du livreur +
+    -- trace (dernier ~60 points) + position GPS du client (partagée à la
+    -- commande). Masquées dès que la vente n'est plus pending/confirmed.
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_lat DOUBLE PRECISION;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_lng DOUBLE PRECISION;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_pos_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_track JSONB NOT NULL DEFAULT '[]'::jsonb;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_lat DOUBLE PRECISION;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_lng DOUBLE PRECISION;
-    // Position GPS partagée volontairement par la boutique (carte de suivi).
+    -- Position GPS partagée volontairement par la boutique (carte de suivi).
     ALTER TABLE users ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;
-    // Fraîcheur de la position : un livreur « disponible » met à jour cette
-    // colonne à chaque ping → les cartes « à proximité » ne montrent que les
-    // acteurs réellement en ligne (position < 10 min), pas les anciennes.
+    -- Fraîcheur de la position : un livreur « disponible » met à jour cette
+    -- colonne à chaque ping → les cartes « à proximité » ne montrent que les
+    -- acteurs réellement en ligne (position < 10 min), pas les anciennes.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS position_updated_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
