@@ -1634,6 +1634,11 @@ export default function Admin() {
             { n: schedList?.daily_limit || 1 }
           )}
         </p>
+        <p className="hint" style={{ marginTop: 6 }}>
+          {t(
+            "Les campagnes envoyées disparaissent automatiquement de cette liste 30 minutes après l'envoi."
+          )}
+        </p>
         <div className="msg-target-row" style={{ alignItems: "center", marginBottom: 8 }}>
           <span>⚙️ {t("Campagnes par jour")} :</span>
           {[1, 2, 3].map((n) => (

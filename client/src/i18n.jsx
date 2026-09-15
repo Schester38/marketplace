@@ -586,6 +586,8 @@ const EN = {
   "Campagnes programmées (automatique)": "Scheduled campaigns (automatic)",
   "Préparez vos campagnes à l'avance avec une date d'envoi : la première campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun). Chaque appel du cron envoie une campagne (jusqu'à {n} par jour) ; les créneaux suivants sont déclenchés par le cron externe ci-dessous.":
     "Prepare your campaigns in advance with a send date: the first campaign of the day goes out automatically every morning at 8am (Cameroon time). Each cron call sends one campaign (up to {n} per day); the next slots are triggered by the external cron below.",
+  "Les campagnes envoyées disparaissent automatiquement de cette liste 30 minutes après l'envoi.":
+    "Sent campaigns disappear automatically from this list 30 minutes after they are sent.",
   "Campagnes par jour": "Campaigns per day",
   "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "Quota updated: {n} campaigns per day (8am and 1pm).",
   "Quota mis à jour : 1 campagne par jour (08h00).": "Quota updated: 1 campaign per day (8am).",
@@ -2213,6 +2215,8 @@ const AR = {
   "Campagnes programmées (automatique)": "حملات مجدولة (تلقائي)",
   "Préparez vos campagnes à l'avance avec une date d'envoi : la première campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun). Chaque appel du cron envoie une campagne (jusqu'à {n} par jour) ; les créneaux suivants sont déclenchés par le cron externe ci-dessous.":
     "جهّز حملاتك مسبقاً مع تاريخ إرسال: تُرسل الحملة الأولى تلقائياً كل صباح في الثامنة (توقيت الكاميرون). كل استدعاء للـ cron يرسل حملة واحدة (حتى {n} يومياً)؛ المواعيد التالية يطلقها cron خارجي بالأسفل.",
+  "Les campagnes envoyées disparaissent automatiquement de cette liste 30 minutes après l'envoi.":
+    "تختفي الحملات المُرسلة تلقائياً من هذه القائمة بعد 30 دقيقة من إرسالها.",
   "Campagnes par jour": "حملات في اليوم",
   "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "تم تحديث الحصة: {n} حملات يومياً (08h00 و13h00).",
   "Quota mis à jour : 1 campagne par jour (08h00).": "تم تحديث الحصة: حملة واحدة يومياً (08h00).",
@@ -3751,6 +3755,8 @@ const ES = {
   "Campagnes programmées (automatique)": "Campañas programadas (automático)",
   "Préparez vos campagnes à l'avance avec une date d'envoi : la première campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun). Chaque appel du cron envoie une campagne (jusqu'à {n} par jour) ; les créneaux suivants sont déclenchés par le cron externe ci-dessous.":
     "Prepara tus campañas por adelantado con una fecha de envío: la primera campaña del día sale automáticamente cada mañana a las 08h00 (hora de Camerún). Cada llamada del cron envía una campaña (hasta {n} al día); los turnos siguientes los dispara el cron externo de abajo.",
+  "Les campagnes envoyées disparaissent automatiquement de cette liste 30 minutes après l'envoi.":
+    "Las campañas enviadas desaparecen automáticamente de esta lista 30 minutos después de su envío.",
   "Campagnes par jour": "Campañas por día",
   "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "Cuota actualizada: {n} campañas al día (08h00 y 13h00).",
   "Quota mis à jour : 1 campagne par jour (08h00).": "Cuota actualizada: 1 campaña al día (08h00).",

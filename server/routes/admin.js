@@ -486,7 +486,11 @@ router.post(
 // cron quotidien (/api/cron/campaigns, voir vercel.json) envoie automatiquement
 // la campagne due. Un seul envoi par jour (index UNIQUE sur send_date).
 
-// Liste des campagnes programmées + état du cron.
+// Liste des campagnes programmées + état du cron. Les campagnes déjà envoyées
+// sont automatiquement masquées 30 minutes après leur envoi réussi (l'admin
+// garde un aperçu du résultat pendant cette fenêtre). On NE supprime PAS les
+// lignes en base : le compteur de quota quotidien (runDueCampaigns) s'appuie
+// sur les lignes status='sent' du jour pour borner les envois à 2/jour.
 router.get(
   "/campaigns/scheduled",
   ah(async (req, res) => {
@@ -497,6 +501,7 @@ router.get(
               u.name AS created_by_name
        FROM scheduled_campaigns sc
        LEFT JOIN users u ON u.id = sc.created_by
+       WHERE sc.status <> 'sent' OR sc.sent_at >= NOW() - INTERVAL '30 minutes'
        ORDER BY sc.send_date DESC, sc.id DESC
        LIMIT 60`
     );
