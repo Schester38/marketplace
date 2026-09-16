@@ -8609,13 +8609,122 @@ a.step {
   flex-shrink: 0;
 }
 
-/* Connexion : CTA visible en bas de liste */
+/* --- Liens du menu : pastilles colorées compactes ---
+   Chaque lien porte son accent via --dl-accent (pastille d'icône + chevron)
+   et son fond teinté via --dl-tint. Tailles volontairement réduites. */
+.drawer-nav a.drawer-link {
+  justify-content: flex-start;
+  gap: 9px;
+  min-height: 38px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  border-radius: 11px;
+  background: var(--dl-tint);
+  border: 1px solid transparent;
+  transition:
+    background var(--transition-smooth),
+    border-color var(--transition-smooth),
+    box-shadow var(--transition-smooth),
+    transform var(--transition-smooth);
+}
+.drawer-nav a.drawer-link .dl-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: var(--dl-accent);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(15, 20, 26, 0.14);
+}
+.drawer-nav a.drawer-link .dl-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.1;
+}
+.drawer-nav a.drawer-link .dl-label {
+  font-weight: 600;
+}
+.drawer-nav a.drawer-link::after {
+  color: var(--dl-accent);
+  font-size: 0.95rem;
+  opacity: 0.45;
+}
+.drawer-nav a.drawer-link:hover,
+.drawer-nav a.drawer-link:focus-visible {
+  background: var(--dl-tint);
+  border-color: var(--dl-accent);
+  box-shadow: var(--shadow-xs);
+  transform: translateX(2px);
+}
+.drawer-nav a.drawer-link:hover::after,
+.drawer-nav a.drawer-link:focus-visible::after {
+  opacity: 1;
+}
+[dir="rtl"] .drawer-nav a.drawer-link:hover,
+[dir="rtl"] .drawer-nav a.drawer-link:focus-visible {
+  transform: translateX(-2px);
+}
+
+/* Accents des liens (pastille + chevron + fond) */
+.drawer-link-products {
+  --dl-accent: #4f46e5;
+  --dl-tint: rgba(79, 70, 229, 0.09);
+}
+.drawer-link-creators {
+  --dl-accent: #db2777;
+  --dl-tint: rgba(219, 39, 119, 0.09);
+}
+.drawer-link-support {
+  --dl-accent: #f59e0b;
+  --dl-tint: rgba(245, 158, 11, 0.13);
+}
+.drawer-link-learn {
+  --dl-accent: #0ea5e9;
+  --dl-tint: rgba(14, 165, 233, 0.1);
+}
+.drawer-link-tuto {
+  --dl-accent: #14b8a6;
+  --dl-tint: rgba(20, 184, 166, 0.1);
+}
+.drawer-link-space {
+  --dl-accent: #6366f1;
+  --dl-tint: rgba(99, 102, 241, 0.09);
+}
+.drawer-link-pay {
+  --dl-accent: #16a34a;
+  --dl-tint: rgba(22, 163, 74, 0.1);
+}
+.drawer-link-admin {
+  --dl-accent: #64748b;
+  --dl-tint: rgba(100, 116, 139, 0.12);
+}
+.drawer-link-account {
+  --dl-accent: #7c3aed;
+  --dl-tint: rgba(124, 58, 237, 0.09);
+}
+
+/* Connexion : CTA visible en bas de liste (compact) */
 .drawer-nav a.drawer-login-btn {
   justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: 0.86rem;
   color: #fff;
   background: var(--grad-primary);
   box-shadow: var(--shadow-xs);
   margin-top: 8px;
+}
+.drawer-nav a.drawer-login-btn .dl-label {
+  font-weight: 600;
+}
+.drawer-nav a.drawer-login-btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
 }
 .drawer-nav a.drawer-login-btn::after {
   display: none;
@@ -8626,22 +8735,29 @@ a.step {
   color: #fff;
 }
 
-/* Rejoindre le groupe WhatsApp : CTA vert, icône + libellé alignés à gauche */
+/* Rejoindre le groupe WhatsApp : CTA vert compact */
 .drawer-nav a.drawer-group-btn {
   justify-content: flex-start;
-  gap: 10px;
-  margin-top: 8px;
+  gap: 9px;
+  min-height: 40px;
+  padding: 7px 12px;
+  font-size: 0.86rem;
   color: #fff;
   background: linear-gradient(135deg, #25d366, #128c7e);
   box-shadow: var(--shadow-xs);
 }
+.drawer-nav a.drawer-group-btn .dl-label {
+  font-weight: 600;
+}
 .drawer-nav a.drawer-group-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
 }
 .drawer-nav a.drawer-group-btn::after {
-  opacity: 0.75;
+  color: #fff;
+  font-size: 0.95rem;
+  opacity: 0.8;
 }
 .drawer-nav a.drawer-group-btn:hover,
 .drawer-nav a.drawer-group-btn:focus-visible {

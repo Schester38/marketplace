@@ -31,6 +31,16 @@ import {
   IconLeaf,
   IconWrench,
   IconWhatsApp,
+  IconShoppingBag,
+  IconPalette,
+  IconHeart,
+  IconHelp,
+  IconAward,
+  IconBanknote,
+  IconUser,
+  IconUserCheck,
+  IconTruck,
+  IconShield,
 } from "./icons.jsx";
 
 // Groupes de la barre de catégories statique : chaque groupe ouvre un
@@ -1026,30 +1036,47 @@ export default function Navbar({ onLogout }) {
 
   const navLinks = (
     <>
-      <Link to="/" onClick={close}>
-        {t("Produits")}
+      <Link to="/" onClick={close} className="drawer-link drawer-link-products">
+        <span className="dl-icon">
+          <IconShoppingBag size={15} />
+        </span>
+        <span className="dl-label">{t("Produits")}</span>
       </Link>
-      <Link to="/createurs" onClick={close}>
-        {t("Créateurs")}
+      <Link to="/createurs" onClick={close} className="drawer-link drawer-link-creators">
+        <span className="dl-icon">
+          <IconPalette size={15} />
+        </span>
+        <span className="dl-label">{t("Créateurs")}</span>
       </Link>
-      <Link to="/soutien" onClick={close}>
-        {t("Je soutiens")}
+      <Link to="/soutien" onClick={close} className="drawer-link drawer-link-support">
+        <span className="dl-icon">
+          <IconHeart size={15} />
+        </span>
+        <span className="dl-label">{t("Je soutiens")}</span>
       </Link>
       <a
         href="https://www.chariow.pics/U6Z28RUJ"
         target="_blank"
         rel="noopener noreferrer"
         onClick={close}
+        className="drawer-link drawer-link-learn"
       >
-        {t("Formations et Digital")}
+        <span className="dl-icon">
+          <IconBook size={15} />
+        </span>
+        <span className="dl-label">{t("Formations et Digital")}</span>
       </a>
       <a
         href="https://www.tiktok.com/@mboppishop?_r=1&_t=ZS-99TrzaxlgCD"
         target="_blank"
         rel="noopener noreferrer"
         onClick={close}
+        className="drawer-link drawer-link-tuto"
       >
-        {t("Tutoriel Mboppi")}
+        <span className="dl-icon">
+          <IconHelp size={15} />
+        </span>
+        <span className="dl-label">{t("Tutoriel Mboppi")}</span>
       </a>
       <a
         href="https://chat.whatsapp.com/IkP0cv2vjybDwOgmYYUmJv?s=cl&p=a&mlu=4&ilr=4"
@@ -1058,53 +1085,80 @@ export default function Navbar({ onLogout }) {
         onClick={close}
         className="drawer-group-btn"
       >
-        <IconWhatsApp size={16} />
-        <span>{t("Rejoindre le Groupe")}</span>
+        <IconWhatsApp size={15} />
+        <span className="dl-label">{t("Rejoindre le Groupe")}</span>
       </a>
       {user && user.role === "shop" && (
-        <Link to="/shop" onClick={close}>
-          {t("Ma boutique")}
+        <Link to="/shop" onClick={close} className="drawer-link drawer-link-space">
+          <span className="dl-icon">
+            <IconStore size={15} />
+          </span>
+          <span className="dl-label">{t("Ma boutique")}</span>
         </Link>
       )}
       {user && user.role === "seller" && (
-        <Link to="/seller" onClick={close}>
-          {t("Mon espace vendeur")}
+        <Link to="/seller" onClick={close} className="drawer-link drawer-link-space">
+          <span className="dl-icon">
+            <IconAward size={15} />
+          </span>
+          <span className="dl-label">{t("Mon espace vendeur")}</span>
         </Link>
       )}
       {user && user.role === "seller" && (
-        <Link to="/seller/paiements" onClick={close}>
-          {t("Mes moyens de paiement")}
+        <Link to="/seller/paiements" onClick={close} className="drawer-link drawer-link-pay">
+          <span className="dl-icon">
+            <IconBanknote size={15} />
+          </span>
+          <span className="dl-label">{t("Mes moyens de paiement")}</span>
         </Link>
       )}
       {user && user.role === "client" && (
-        <Link to="/client" onClick={close}>
-          {t("Mon espace client")}
+        <Link to="/client" onClick={close} className="drawer-link drawer-link-space">
+          <span className="dl-icon">
+            <IconUser size={15} />
+          </span>
+          <span className="dl-label">{t("Mon espace client")}</span>
         </Link>
       )}
       {user && user.role === "creator" && (
-        <Link to="/creator" onClick={close}>
-          {t("Mon espace créateur")}
+        <Link to="/creator" onClick={close} className="drawer-link drawer-link-creators">
+          <span className="dl-icon">
+            <IconBrush size={15} />
+          </span>
+          <span className="dl-label">{t("Mon espace créateur")}</span>
         </Link>
       )}
       {user && user.role === "livreur" && (
-        <Link to="/livreur" onClick={close}>
-          {t("Mes livraisons")}
+        <Link to="/livreur" onClick={close} className="drawer-link drawer-link-space">
+          <span className="dl-icon">
+            <IconTruck size={15} />
+          </span>
+          <span className="dl-label">{t("Mes livraisons")}</span>
         </Link>
       )}
       {user && user.role === "livreur" && (
-        <Link to="/livreur/paiements" onClick={close}>
-          {t("Mes moyens de paiement")}
+        <Link to="/livreur/paiements" onClick={close} className="drawer-link drawer-link-pay">
+          <span className="dl-icon">
+            <IconBanknote size={15} />
+          </span>
+          <span className="dl-label">{t("Mes moyens de paiement")}</span>
         </Link>
       )}
       {user && user.role === "admin" && (
-        <Link to="/admin" onClick={close}>
-          {t("Administration")}
+        <Link to="/admin" onClick={close} className="drawer-link drawer-link-admin">
+          <span className="dl-icon">
+            <IconShield size={15} />
+          </span>
+          <span className="dl-label">{t("Administration")}</span>
         </Link>
       )}
       {user && (
         <>
-          <Link to="/compte" onClick={close}>
-            {t("Mon compte")}
+          <Link to="/compte" onClick={close} className="drawer-link drawer-link-account">
+            <span className="dl-icon">
+              <IconUserCheck size={15} />
+            </span>
+            <span className="dl-label">{t("Mon compte")}</span>
           </Link>
           <span className="user-chip">
             {user.name} ({roleLabel})
@@ -1122,7 +1176,8 @@ export default function Navbar({ onLogout }) {
       )}
       {!user && (
         <Link to="/login" onClick={close} className="drawer-login-btn">
-          {t("Connexion")}
+          <IconUser size={15} />
+          <span className="dl-label">{t("Connexion")}</span>
         </Link>
       )}
     </>
