@@ -41,7 +41,6 @@ import {
   IconUserCheck,
   IconTruck,
   IconShield,
-  IconBell,
 } from "./icons.jsx";
 
 // Groupes de la barre de catégories statique : chaque groupe ouvre un
@@ -628,9 +627,7 @@ function NotifBell() {
           ensurePermission();
         }}
       >
-        <span className="bell-icon">
-          <IconBell size={22} />
-        </span>
+        <span className="bell-icon">🔔</span>
         {unread > 0 && <span className="notif-dot">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
@@ -908,7 +905,7 @@ export default function Navbar({ onLogout }) {
     </Link>
   );
 
-  // Cloche de notifications : dans la barre du haut, juste après les favoris.
+  // Cloche de notifications : dans la barre du haut, juste AVANT les favoris.
   const notifLink = user ? <NotifBell /> : null;
 
   const cartLink = (
@@ -1205,8 +1202,8 @@ export default function Navbar({ onLogout }) {
         <div className="nav-search-wrapper">{searchBox}</div>
 
         <div className="navbar-top-right">
-          {favLink}
           {notifLink}
+          {favLink}
           {cartLink}
           {accountLink}
           <button
