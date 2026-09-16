@@ -41,6 +41,7 @@ import {
   IconUserCheck,
   IconTruck,
   IconShield,
+  IconBell,
 } from "./icons.jsx";
 
 // Groupes de la barre de catégories statique : chaque groupe ouvre un
@@ -627,7 +628,9 @@ function NotifBell() {
           ensurePermission();
         }}
       >
-        <span className="bell-icon">🔔</span>
+        <span className="bell-icon">
+          <IconBell size={22} />
+        </span>
         {unread > 0 && <span className="notif-dot">{unread > 9 ? "9+" : unread}</span>}
       </button>
       {open && (
@@ -905,6 +908,9 @@ export default function Navbar({ onLogout }) {
     </Link>
   );
 
+  // Cloche de notifications : dans la barre du haut, juste après les favoris.
+  const notifLink = user ? <NotifBell /> : null;
+
   const cartLink = (
     <Link
       to="/panier"
@@ -980,7 +986,6 @@ export default function Navbar({ onLogout }) {
         <LangSwitcher />
         {themeToggle}
         {liteToggle}
-        {user && <NotifBell />}
       </div>
       <FollowUs />
       <SuggestionButton onOpened={close} />
@@ -1201,6 +1206,7 @@ export default function Navbar({ onLogout }) {
 
         <div className="navbar-top-right">
           {favLink}
+          {notifLink}
           {cartLink}
           {accountLink}
           <button

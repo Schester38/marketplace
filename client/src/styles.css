@@ -9093,37 +9093,84 @@ a.step {
   padding-top: 58px;
 }
 
-/* 4ᵉ cellule : cloche de notifications (connecté) */
-.drawer-tools .drawer-row {
-  grid-template-columns: minmax(0, 1fr) repeat(3, 44px);
-}
-.drawer-tools .notif-wrap {
-  width: 44px;
-}
-.drawer-tools .notif-bell {
-  width: 44px;
-  height: 44px;
+/* Cloche de notifications : BARRE DU HAUT, juste après les favoris.
+   (Les règles du drawer sont retirées : la rangée d'outils retrouve sa
+   grille d'origine — langue + thème + mode éco.) */
+.navbar-top-right .notif-wrap {
   display: flex;
   align-items: center;
+  /* static : le panneau se cale sur la navbar entière (sticky = positionné),
+     pas sur la cloche — sinon il s'ouvrirait vers la gauche et sortirait de
+     l'écran sur mobile (la cloche n'est pas au bord droit). */
+  position: static;
+}
+.navbar-top-right .notif-bell {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  border-radius: 10px;
+  color: #fff;
+  border-radius: var(--radius);
+}
+.navbar-top-right .notif-bell:hover,
+.navbar-top-right .notif-bell:focus-visible {
+  background: var(--nav-bg-hover);
+}
+.navbar-top-right .notif-bell svg {
+  width: 22px;
+  height: 22px;
+}
+/* Pastille du compteur ramenée DANS le bouton de 44px */
+.navbar-top-right .notif-dot {
+  top: 5px;
+  right: 5px;
+}
+[dir="rtl"] .navbar-top-right .notif-dot {
+  right: auto;
+  left: 5px;
 }
 
-/* Le menu des notifications dans le DRAWER ne doit pas déborder à gauche :
-   ancré sur la cloche (44px, relative), le panneau (320px) `right:0`
-   dépassait de l'autre côté du drawer (~340px) et hors de l'écran. On le
-   centre sur la fenêtre comme sur mobile, toujours visible. */
-.drawer-tools .notif-panel,
-[dir="rtl"] .drawer-tools .notif-panel {
-  position: fixed;
-  top: 58px;
-  left: 50%;
-  right: auto;
-  transform: translateX(-50%);
-  width: min(360px, 92vw);
-  max-width: 92vw;
+/* Panneau : sous TOUTE la navbar (donc sous la barre de catégories), calé au
+   bord droit/droit-RTL, largeur bornée à la fenêtre → jamais hors écran ni
+   sur la recherche, de 320px à 4K. Position dure (absolute, pas fixed) pour
+   neutraliser la règle mobile globale qui centrerait un panneau fixe. */
+.navbar-top-right .notif-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-end: 12px;
+  inset-inline-start: auto;
+  transform: none;
+  z-index: 300;
+  width: min(320px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+}
+
+/* Petits écrans : rangée d'icônes resserrée pour que la cloche en plus ne
+   fasse pas passer la barre sur deux lignes. */
+@media (max-width: 640px) {
+  .navbar-top-right {
+    gap: 6px;
+  }
+  .navbar-top-right .notif-bell {
+    width: 40px;
+    height: 40px;
+  }
+}
+@media (max-width: 400px) {
+  .navbar-top-right {
+    gap: 4px;
+  }
+  .navbar-top-right .nav-icon-link,
+  .navbar-top-right .hamburger {
+    width: 40px;
+    height: 40px;
+  }
+  .navbar-top-right .notif-bell {
+    width: 38px;
+    height: 38px;
+  }
 }
 
 /* Menus 🌐 langue et 👥 réseaux : contenu CENTRÉ (largeur naturelle bornée ;
