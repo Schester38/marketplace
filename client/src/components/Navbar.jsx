@@ -1,5 +1,5 @@
 import { storage, sessionStore } from "../storage";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../App.jsx";
@@ -329,6 +329,43 @@ function NotifBell() {
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+
+  // Panneau TOUJOURS collé sous la cloche — y compris sur téléphone. On mesure
+  // la position réelle de la cloche et on borne le panneau aux bords de l'écran
+  // (12px de marge) : sinon il sortirait de l'écran, la cloche n'étant pas au
+  // bord droit (favoris, panier, compte et le menu ☰ sont à sa droite). Si le
+  // JS échoue, le CSS garde un panneau ancré à la barre, jamais coupé.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const wrap = boxRef.current;
+    const panel = wrap && wrap.querySelector(".notif-panel");
+    if (!wrap || !panel) return;
+
+    const place = () => {
+      try {
+        const PAD = 12;
+        panel.style.removeProperty("top");
+        panel.style.removeProperty("left");
+        panel.style.removeProperty("right");
+        panel.style.removeProperty("width");
+        const r = wrap.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const width = Math.min(320, vw - PAD * 2);
+        const left = Math.min(Math.max(PAD, r.left), Math.max(PAD, vw - PAD - width));
+        panel.style.position = "fixed";
+        panel.style.top = Math.round(r.bottom + 8) + "px";
+        panel.style.left = Math.round(left) + "px";
+        panel.style.right = "auto";
+        panel.style.width = Math.round(width) + "px";
+      } catch {
+        /* silencieux : le CSS de repli s'applique */
+      }
+    };
+
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
   }, [open]);
 
   if (!user) return null;
@@ -880,7 +917,7 @@ export default function Navbar({ onLogout }) {
   const favLink = (
     <Link
       to="/favoris"
-      className="nav-icon-link"
+      className="nav-icon-link nav-icon-fav"
       onClick={close}
       aria-label={t("Mes favoris")}
       title={t("Mes favoris")}
@@ -911,7 +948,7 @@ export default function Navbar({ onLogout }) {
   const cartLink = (
     <Link
       to="/panier"
-      className="nav-icon-link"
+      className="nav-icon-link nav-icon-cart"
       onClick={close}
       aria-label={t("Mon panier")}
       title={t("Mon panier")}
@@ -941,7 +978,7 @@ export default function Navbar({ onLogout }) {
   const accountLink = (
     <Link
       to={user ? "/compte" : "/login"}
-      className="nav-icon-link"
+      className="nav-icon-link nav-icon-account"
       onClick={close}
       aria-label={user ? t("Mon compte") : t("Connexion")}
       title={user ? t("Mon compte") : t("Connexion")}

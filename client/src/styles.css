@@ -9116,10 +9116,51 @@ a.step {
   /* emoji 🔔 à la même taille optique que les icônes SVG 22px voisines */
   font-size: 1.3rem;
   border-radius: var(--radius);
+  /* fond doré discret, assorti à l'emoji */
+  background: rgba(255, 176, 32, 0.14);
 }
 .navbar-top-right .notif-bell:hover,
 .navbar-top-right .notif-bell:focus-visible {
-  background: var(--nav-bg-hover);
+  background: rgba(255, 176, 32, 0.3);
+}
+
+/* --- Icônes voisines colorées (favoris / panier / compte) ---
+   Chacune a sa teinte : fond translucide au repos + trait vif, fond renforcé
+   au survol. Le ☰ garde son style blanc (repère de navigation). */
+.navbar-top-right .nav-icon-fav {
+  background: rgba(255, 93, 143, 0.16);
+}
+.navbar-top-right .nav-icon-fav .nav-icon {
+  color: #ff5d8f;
+}
+.navbar-top-right .nav-icon-fav:hover,
+.navbar-top-right .nav-icon-fav:focus-visible {
+  background: rgba(255, 93, 143, 0.3);
+}
+.navbar-top-right .nav-icon-cart {
+  background: rgba(255, 176, 32, 0.16);
+}
+.navbar-top-right .nav-icon-cart .nav-icon {
+  color: #ffb020;
+}
+.navbar-top-right .nav-icon-cart:hover,
+.navbar-top-right .nav-icon-cart:focus-visible {
+  background: rgba(255, 176, 32, 0.3);
+}
+.navbar-top-right .nav-icon-account {
+  background: rgba(138, 180, 255, 0.16);
+}
+.navbar-top-right .nav-icon-account .nav-icon {
+  color: #8ab4ff;
+}
+.navbar-top-right .nav-icon-account:hover,
+.navbar-top-right .nav-icon-account:focus-visible {
+  background: rgba(138, 180, 255, 0.3);
+}
+/* Compteurs (favoris / panier) ramenés DANS la pastille colorée de 44px */
+.navbar-top-right .nav-badge {
+  top: 1px;
+  right: 1px;
 }
 /* Pastille du compteur ramenée DANS le bouton de 44px */
 .navbar-top-right .notif-dot {
@@ -9149,8 +9190,9 @@ a.step {
 
 /* Petits écrans : rangée d'icônes resserrée pour que la cloche en plus ne
    fasse pas passer la barre sur deux lignes, et panneau ré-ancré sur la
-   navbar entière (collé au bord droit de l'écran) : la cloche n'étant pas au
-   bord droit, un panneau « sous la cloche » de 320px sortirait de l'écran. */
+   navbar entière (collé au bord droit de l'écran). Le JS de `NotifBell` place
+   le panneau SOUS LA CLOCHE sur tous les écrans ; ce bloc reste le repli si le
+   JS ne tourne pas (jamais coupé, au prix d'un ancrage à la barre). */
 @media (max-width: 640px) {
   .navbar-top-right {
     gap: 6px;
