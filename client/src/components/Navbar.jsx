@@ -30,6 +30,7 @@ import {
   IconBook,
   IconLeaf,
   IconWrench,
+  IconWhatsApp,
 } from "./icons.jsx";
 
 // Groupes de la barre de catégories statique : chaque groupe ouvre un
@@ -1049,6 +1050,16 @@ export default function Navbar({ onLogout }) {
         onClick={close}
       >
         {t("Tutoriel Mboppi")}
+      </a>
+      <a
+        href="https://chat.whatsapp.com/IkP0cv2vjybDwOgmYYUmJv?s=cl&p=a&mlu=4&ilr=4"
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={close}
+        className="drawer-group-btn"
+      >
+        <IconWhatsApp size={16} />
+        <span>{t("Rejoindre le Groupe")}</span>
       </a>
       {user && user.role === "shop" && (
         <Link to="/shop" onClick={close}>

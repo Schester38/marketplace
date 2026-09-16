@@ -8626,6 +8626,29 @@ a.step {
   color: #fff;
 }
 
+/* Rejoindre le groupe WhatsApp : CTA vert, icône + libellé alignés à gauche */
+.drawer-nav a.drawer-group-btn {
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 8px;
+  color: #fff;
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  box-shadow: var(--shadow-xs);
+}
+.drawer-nav a.drawer-group-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.drawer-nav a.drawer-group-btn::after {
+  opacity: 0.75;
+}
+.drawer-nav a.drawer-group-btn:hover,
+.drawer-nav a.drawer-group-btn:focus-visible {
+  background: linear-gradient(135deg, #2ee06f, #0f7a6c);
+  color: #fff;
+}
+
 /* Chip utilisateur sur sa propre ligne */
 .drawer-nav .user-chip {
   align-self: flex-start;

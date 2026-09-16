@@ -73,6 +73,7 @@ const EN = {
   "Je soutiens": "Support us",
   "Formations et Digital": "Training & Digital",
   "Tutoriel Mboppi": "Mboppi Tutorial",
+  "Rejoindre le Groupe": "Join the group",
   "Je soutiens Mboppi": "Support Mboppi",
   "Chaque geste compte pour faire grandir Mboppi": "Every gesture counts to grow Mboppi",
   "Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.":
@@ -1782,6 +1783,7 @@ const AR = {
   "Je soutiens": "أدعم",
   "Formations et Digital": "تدريب ورقمنة",
   "Tutoriel Mboppi": "درس Mboppi",
+  "Rejoindre le Groupe": "انضم إلى المجموعة",
   "Je soutiens Mboppi": "أدعم مبوّي",
   "Chaque geste compte pour faire grandir Mboppi": "كل مساهمة تصنع الفرق لتنمية مبوّي",
   "Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.":
@@ -3388,6 +3390,7 @@ const ES = {
   "Je soutiens": "Apoyo",
   "Formations et Digital": "Formación y Digital",
   "Tutoriel Mboppi": "Tutorial de Mboppi",
+  "Rejoindre le Groupe": "Únete al grupo",
   "Je soutiens Mboppi": "Apoyo a Mboppi",
   "Chaque geste compte pour faire grandir Mboppi": "Cada gesto cuenta para hacer crecer a Mboppi",
   "Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.":
