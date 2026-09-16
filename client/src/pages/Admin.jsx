@@ -20,6 +20,21 @@ const VISIT_RANGES = [
   { days: 30, label: "1 mois" },
 ];
 
+// Onglets du panneau admin : chaque onglet regroupe des sections homogènes.
+// Les libellés sont des clés de traduction (i18n) ; le français sert de clé.
+const ADMIN_TABS = [
+  { id: "overview", emoji: "📊", label: "Vue d'ensemble" },
+  { id: "deliveries", emoji: "🛰️", label: "Livraisons" },
+  { id: "comms", emoji: "📣", label: "Communication" },
+  { id: "payments", emoji: "💰", label: "Paiements" },
+  { id: "users", emoji: "👥", label: "Utilisateurs" },
+  { id: "withdrawals", emoji: "💸", label: "Retraits d'activation" },
+  { id: "products", emoji: "🛍️", label: "Produits" },
+  { id: "system", emoji: "⚙️", label: "Système" },
+];
+
+const ADMIN_TAB_IDS = ADMIN_TABS.map((tab) => tab.id);
+
 function getMembershipCountdownState(expiresAt) {
   if (!expiresAt) {
     return { label: "—", tone: "neutral", daysLeft: null, blinking: false };
@@ -58,6 +73,20 @@ export default function Admin() {
     window.addEventListener("admin-auth-expired", onAdminExpired);
     return () => window.removeEventListener("admin-auth-expired", onAdminExpired);
   }, []);
+  // Onglet actif du panneau : une seule famille de sections est affichée à la
+  // fois (toutes les données restent chargées, seul l'affichage change).
+  const [adminTab, setAdminTab] = useState(() => {
+    const saved = storage.getItem("admin_tab");
+    return ADMIN_TAB_IDS.includes(saved) ? saved : "overview";
+  });
+  // L'onglet courant est mémorisé : l'admin retrouve sa dernière section.
+  useEffect(() => {
+    storage.setItem("admin_tab", adminTab);
+  }, [adminTab]);
+  // Changement d'onglet : retour en haut de page (les sections sont plus courtes).
+  useEffect(() => {
+    if (!gate) window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [adminTab, gate]);
   const [password, setPassword] = useState("");
   const [gateError, setGateError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1135,6 +1164,16 @@ export default function Admin() {
     return <span className={`badge ${st.cls}`}>{t(st.label)}</span>;
   };
 
+  // Pastilles des onglets : ce qui attend une action de l'admin.
+  const pendingWithdrawals = Array.isArray(withdrawals)
+    ? withdrawals.filter((w) => w.status === "pending").length
+    : 0;
+  const pendingOnlinePayments = !isManual
+    ? [...(payments?.memberships || []), ...(payments?.donations || [])].filter(
+        (p) => p && p.status === "pending"
+      ).length
+    : 0;
+
   if (gate) {
     return (
       <main className="container narrow">
@@ -1183,6 +1222,38 @@ export default function Admin() {
         </div>
       </section>
 
+      {/* Onglets : une seule famille de sections est affichée à la fois. Les
+          libellés sont des clés de traduction ; le panneau reste identique. */}
+      <nav className="admin-tabs" role="tablist" aria-label={t("Sections d'administration")}>
+        {ADMIN_TABS.map((tab) => {
+          const badge =
+            tab.id === "withdrawals"
+              ? pendingWithdrawals
+              : tab.id === "payments"
+                ? pendingOnlinePayments
+                : 0;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={adminTab === tab.id}
+              className={`admin-tab ${adminTab === tab.id ? "active" : ""}`}
+              onClick={() => setAdminTab(tab.id)}
+            >
+              <span className="admin-tab-emoji" aria-hidden="true">
+                {tab.emoji}
+              </span>
+              {t(tab.label)}
+              {badge > 0 && <span className="admin-tab-badge">{badge}</span>}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* ═══ Onglet « Vue d'ensemble » : compte admin, statistiques, visites ═══ */}
+      {adminTab === "overview" && (
+        <>
       {/* Compte administrateur : visible uniquement après le mot de passe admin */}
       <section className="card section" style={{ marginBottom: 18 }}>
         <h3 className="section-title" style={{ marginTop: 0 }}>
@@ -1333,6 +1404,9 @@ export default function Admin() {
         )}
       </section>
 
+        </>
+      )}
+
       {error && (
         <p className="error" role="alert">
           {error}
@@ -1342,6 +1416,8 @@ export default function Admin() {
         <p className="hint">{t("Chargement des données…")}</p>
       )}
 
+      {adminTab === "overview" && (
+        <>
       <section className="stats-grid">
         {card(t("Utilisateurs"), stats ? stats.users : "…")}
         {card(t("Boutiques"), stats ? stats.shops : "…")}
@@ -1393,7 +1469,10 @@ export default function Admin() {
         </section>
       )}
 
-      {visits && (
+        </>
+      )}
+
+      {adminTab === "overview" && visits && (
         <section aria-label={t("Analyse des visites")} className="visits-panel">
           <div className="visits-head">
             <h2 className="section-title">📈 {t("Analyse des visites")}</h2>
@@ -1436,6 +1515,9 @@ export default function Admin() {
         </section>
       )}
 
+      {/* ═══ Onglet « Livraisons » : suivi GPS des commandes ═══ */}
+      {adminTab === "deliveries" && (
+        <>
       <h2 className="section-title">🛰️ {t("Suivi GPS des livraisons")}</h2>
       <section className="card">
         <div className="row2" style={{ alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
@@ -1498,6 +1580,9 @@ export default function Admin() {
         )}
       </section>
 
+        </>
+      )}
+
       {/* Modale carte de suivi GPS (toutes positions de la commande) */}
       {trackSaleId && (
         <div className="modal-overlay" onClick={() => setTrackSaleId(null)}>
@@ -1523,6 +1608,9 @@ export default function Admin() {
         </div>
       )}
 
+      {/* ═══ Onglet « Communication » : campagnes, messages, newsletter ═══ */}
+      {adminTab === "comms" && (
+        <>
       <h2 className="section-title">📣 {t("Campagne (Push + Email gratuits)")}</h2>
       <section className="card msg-form">
         <p className="hint">
@@ -2074,7 +2162,12 @@ export default function Admin() {
           {nlBusy ? t("Envoi…") : t("Envoyer la newsletter")}
         </button>
       </form>
+        </>
+      )}
 
+      {/* ═══ Onglet « Paiements » : système de paiement + paiements en ligne ═══ */}
+      {adminTab === "payments" && (
+        <>
       {/* ===== Système de paiement : bascule manuel ↔ automatique (toujours visible) ===== */}
       <div className="card" style={{ marginBottom: 20, padding: 18 }}>
         <h2 className="section-title" style={{ marginTop: 0 }}>
@@ -2357,7 +2450,12 @@ export default function Admin() {
           </form>
         </div>
       </div>
+        </>
+      )}
 
+      {/* ═══ Onglet « Système » : robot WhatsApp & maintenance des images ═══ */}
+      {adminTab === "system" && (
+        <>
       {/* Robot WhatsApp : assistant IA connecté au numéro Cloud API */}
       <div className="card" style={{ marginBottom: 20, padding: 18 }}>
         <h2 style={{ marginTop: 0, fontSize: "1.15rem" }}>
@@ -2563,9 +2661,11 @@ export default function Admin() {
           </>
         )}
       </div>
+        </>
+      )}
 
       {/* Mode automatique : suivi des paiements en ligne (sections manuelles masquées) */}
-      {!isManual && (
+      {adminTab === "payments" && !isManual && (
         <div className="card" style={{ marginBottom: 20, padding: 18 }}>
           <h2 className="section-title" style={{ marginTop: 0 }}>
             📊 {t("Paiements en ligne (iKeePay)")}
@@ -2792,6 +2892,9 @@ export default function Admin() {
         </div>
       )}
 
+      {/* ═══ Onglet « Utilisateurs » : comptes, parrainages ═══ */}
+      {adminTab === "users" && (
+        <>
       {/* Utilisateurs : toujours visibles, quel que soit le mode (l'admin doit
           vérifier les comptes : ouvrir/fermer, vérifier, adhésion). */}
       <h2 className="section-title">👥 {t("Utilisateurs")}</h2>
@@ -2935,10 +3038,12 @@ export default function Admin() {
           </tbody>
         </table>
       </div>
+        </>
+      )}
 
       {/* Parrainages : actions manuelles de l'admin (mode manuel). En automatique,
           les adhésions parrainées se confirment via le webhook iKeePay. */}
-      {isManual && (
+      {adminTab === "users" && isManual && (
         <>
       <h2 className="section-title">🤝 {t("Parrainages (vendeurs / créateurs)")}</h2>
       <form onSubmit={searchReferrals} className="hero-search" role="search">
@@ -3021,7 +3126,7 @@ export default function Admin() {
       )}
 
       {/* Retraits d'activation : payés manuellement par l'admin dans les deux modes */}
-      {withdrawals && withdrawals.length > 0 && (
+      {adminTab === "withdrawals" && withdrawals && withdrawals.length > 0 && (
         <>
           <h2 className="section-title">💸 {t("Demandes de retrait (commissions d'activation)")}</h2>
           {wdError && <p className="error">{wdError}</p>}
@@ -3140,6 +3245,14 @@ export default function Admin() {
         </>
       )}
 
+      {/* Onglet « Retraits » sans demande en attente : message explicite. */}
+      {adminTab === "withdrawals" && !(withdrawals && withdrawals.length > 0) && (
+        <p className="hint">{t("Aucune demande de retrait pour le moment.")}</p>
+      )}
+
+      {/* ═══ Onglet « Produits » ═══ */}
+      {adminTab === "products" && (
+        <>
       <div
         style={{
           display: "flex",
@@ -3238,6 +3351,8 @@ export default function Admin() {
           </tbody>
         </table>
       </div>
+        </>
+      )}
 
     </main>
   );

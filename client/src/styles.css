@@ -5965,6 +5965,82 @@ a.step {
   color: var(--text);
 }
 
+/* Onglets du panneau admin : une famille de sections visible à la fois
+   (l'admin conserve toutes ses données, seul l'affichage change). */
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 22px;
+}
+.admin-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    background 0.16s ease;
+}
+.admin-tab .admin-tab-emoji {
+  font-size: 1rem;
+  line-height: 1;
+}
+.admin-tab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(238, 125, 0, 0.18);
+}
+.admin-tab:active {
+  transform: translateY(0) scale(0.97);
+}
+.admin-tab.active {
+  border-color: transparent;
+  color: #fff;
+  background: var(--grad);
+  box-shadow: 0 6px 18px rgba(238, 125, 0, 0.35);
+}
+.admin-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+.admin-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #dc3545;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.admin-tab.active .admin-tab-badge {
+  background: rgba(255, 255, 255, 0.28);
+}
+@media (max-width: 600px) {
+  .admin-tabs {
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+  .admin-tab {
+    padding: 7px 11px;
+    font-size: 0.82rem;
+  }
+}
+
 /* Divers */
 .stats-head {
   display: flex;
