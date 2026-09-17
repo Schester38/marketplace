@@ -112,6 +112,22 @@ Il retire le cumul via `activation-withdrawals` (montant **multiple de 1 000**, 
 - Form boutique : `ShopDashboard.jsx` (`flash-promo-form`), carte `FlashPromoCard` (partage 🔗 / annulation). URL directe : `/produit/{id}` = landing promo (badge, compte à rebours, ancien prix barré).
 - **État actuel (code)** : `POST /api/sales` ne vérifie **pas** `flash_promotions` — pendant une promo, le produit est seulement masqué des lectures catalogue, il n'y a pas de blocage serveur à l'écriture d'une vente.
 
+## Produits digitaux (fichiers téléchargeables)
+
+Le rôle **créateur** est **rouvert à l'inscription** (`Register.jsx` : radio « Créateur » actif — l'ancien blocage « Bientôt disponible » et la conversion créateur → vendeur ont été retirés ; l'ancien formulaire perdait aussi l'opérateur/numéro du créateur, désormais enregistrés dans `shop_payment_methods`). Rappel : si `platform_settings.membership_gate = "all"`, les créateurs deviennent payants.
+
+Un produit **digital** (`products.is_digital = TRUE`) est un fichier que le client télécharge sur son appareil — **aucun fallback manuel** (pas d'envoi par email/WhatsApp).
+
+- **Stockage** : bucket Supabase **PRIVÉ** `digital-products` (`SUPABASE_DIGITAL_BUCKET`), jamais d'URL publique. `server/storage.js` : `ensureDigitalBucket`, `uploadDigitalFile` (dédup par hash, sans conversion), `signedDigitalUrl(path, expiresSec)`, `digitalObjectExists`, `deleteDigitalFile`, `storageUsage(bucket)`.
+- **Envoi** : le vendeur joint le fichier au formulaire produit (`digital: { name, mime, data }`, data-URI base64) → `POST /api/products` / `PUT /api/products/:id` téléverse dans le bucket privé puis persiste `digital_path/digital_name/digital_mime/digital_size`. **Limite 3 Mo** (`DIGITAL_MAX_BYTES`, `products.js`) : le corps d'une fonction Vercel est plafonné à **4,5 Mo** et le base64 pèse ≈ 4/3. Extensions autorisées : PDF, ZIP/RAR/7Z, EPUB/MOBI, Office, TXT/CSV/JSON/XML, MP3/M4A/WAV/OGG, MP4/WEBM/MOV, images.
+- **Téléchargement** : `POST /api/digital/:saleId/download` (+ `GET /api/digital/:saleId` pour l'état, `GET /api/digital/mine` pour le vendeur) → vérifie le droit (acheteur `sales.buyer_id`, **ou** code de confirmation pour un achat invité, **ou** propriétaire), puis renvoie une **URL signée 10 min** ; le client force l'enregistrement (`&download=<nom>`). Le fichier ne traverse **jamais** l'API (pas de limite 4,5 Mo, aucun egress Vercel). Chaque téléchargement d'acheteur est journalisé dans `digital_downloads` et compté (quota `products.digital_download_limit`, défaut 5).
+- **Ouverture du droit** : `DIGITAL_REQUIRE_CONFIRMATION = true` (`server/routes/digital.js`) → téléchargement disponible dès que la **boutique confirme le paiement** (`shop_confirmed_at`, bouton « Confirmer ») ou que la vente est livrée. Passer la constante à `false` livre immédiatement à l'achat.
+- **Stock** : un produit digital ne réserve/décrémente **aucun** stock (`sales.js`, `orders.js`, `purchases.js` ignorent la réservation si `is_digital`), `delivery_fee` est forcé à 0 et la catégorie par défaut est « Digital » (un créateur n'est pas rangé en « Arts & Artisanat » pour un fichier).
+- **Édition/suppression** : remplacer le fichier supprime l'ancien objet s'il n'est plus référencé ; retirer le fichier est **refusé** si le produit a des ventes non annulées (les acheteurs doivent pouvoir retélécharger).
+- **UI** : `DigitalProductPicker.jsx` (boutique + créateur), `DigitalDownload.jsx` (espace client + page d'achat), badge « 📁 Produit digital » sur la fiche produit.
+- `digital_path` n'est **jamais** exposé par l'API produits (`productRow` le retire) ; `is_digital`, `digital_name`, `digital_size`, `digital_mime` sont publics.
+
+
 ## SEO (SSR)
 
 - `server/routes/seo.js` : lit `client/dist/index.html`, cache 30 s, `injectHead()` → title/description/canonical/og ; routes `/`, `/boutique/:id`, `/produit/:id`, `/sitemap.xml`. Base `https://mboppi-mboppi.vercel.app` (`PUBLIC_URL`).
@@ -133,6 +149,8 @@ Il retire le cumul via `activation-withdrawals` (montant **multiple de 1 000**, 
 Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push_subscriptions`, `newsletter_subscribers`, `seller_payment_methods`, `shop_payment_methods`, `livreur_payment_methods`, `notifications`, `reviews`, `audit_log`, `client_logs`, `admin_messages`, `admin_message_reads`, `wallet_accounts`, `wallet_transactions`, `automatic_payouts` (résidu), `payment_webhook_logs` (journal iKeePay — utilisé), `membership_payments` (adhésions en ligne — utilisé), `platform_payouts` (résidu), `donations`, `platform_settings` (mode de paiement, clés iKeePay, `ikeepay_webhook_secret`).
 
 > ⚠️ `initDb()` **ne crée pas** `flash_promotions`, `item_views`, `daily_visits`, `activation_withdrawals`, `activation_withdrawal_items` : ces tables existent en base via des migrations externes. Sur une base neuve, les routes associées échoueraient tant qu'elles n'existent pas.
+> Les **produits digitaux** sont, eux, créés par `initDb()` : colonnes `products.is_digital/digital_path/digital_name/digital_mime/digital_size/digital_version/digital_download_limit` + table `digital_downloads` (journal et compteur de téléchargements).
+
 
 `purgeOldTransactions` : notifications supprimées après 90 jours ; ventes/commandes **jamais** purgées (historique financier). `server/cleanup.js` : purge stats > 6 mois + stock épuisé (dry-run possible).
 

@@ -10,6 +10,7 @@ import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import CopyCode from "../components/CopyCode.jsx";
 import NearbyMap from "../components/NearbyMap.jsx";
+import DigitalDownload from "../components/DigitalDownload.jsx";
 
 const PURCHASE_STATUS = {
   pending: { key: "En attente", cls: "badge-pending" },
@@ -178,6 +179,9 @@ export default function ClientDashboard() {
                       📦 {t("Suivre ma commande")}
                     </Link>
                   )}
+                  {/* Produit digital : le fichier se télécharge directement sur
+                      l'appareil dès que la boutique a confirmé le paiement. */}
+                  <DigitalDownload sale={p} compact />
                   {p.status !== "delivered" && p.status !== "cancelled" && (
                     <button className="btn btn-danger btn-small" onClick={() => cancelPurchase(p)}>
                       🗙 {t("Annuler")}
@@ -246,6 +250,8 @@ export default function ClientDashboard() {
                     {countrySymbol(p.shop_country)}
                   </strong>
                 </div>
+                {/* Produit digital : nouveau téléchargement à volonté (quota). */}
+                <DigitalDownload sale={p} compact />
                 {p.confirm_code && (
                   <div className="buyer-code-box" style={{ margin: "8px 0" }}>
                     <span className="buyer-code-label">{t("Code de confirmation")} :</span>

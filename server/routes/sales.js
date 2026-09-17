@@ -81,17 +81,22 @@ router.post(
         throw error;
       }
 
-      const reserved = (
-        await tx.query(
-          `UPDATE products SET quantity = quantity - $1, reserved_quantity = COALESCE(reserved_quantity, 0) + $1
+      // Produit digital : le fichier ne s'épuise pas — aucune réservation de
+      // stock (sinon la 1re vente le rendrait « en rupture »).
+      const isDigital = product.is_digital === true;
+      if (!isDigital) {
+        const reserved = (
+          await tx.query(
+            `UPDATE products SET quantity = quantity - $1, reserved_quantity = COALESCE(reserved_quantity, 0) + $1
        WHERE id = $2 AND quantity >= $1 RETURNING id`,
-          [qty, product.id]
-        )
-      )[0];
-      if (!reserved) {
-        const error = new Error("Stock insuffisant");
-        error.statusCode = 409;
-        throw error;
+            [qty, product.id]
+          )
+        )[0];
+        if (!reserved) {
+          const error = new Error("Stock insuffisant");
+          error.statusCode = 409;
+          throw error;
+        }
       }
 
       const total = Math.round(Number(product.price) * qty * 100) / 100;
@@ -101,8 +106,8 @@ router.post(
       const created = (
         await tx.query(
           `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, stock_reserved)
-       VALUES ($1, $2, $3, $4, $5, TRUE) RETURNING id`,
-          [product.id, req.user.id, qty, total, commission]
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+          [product.id, req.user.id, qty, total, commission, !isDigital]
         )
       )[0];
       return { id: created.id };
@@ -901,7 +906,10 @@ router.post(
       )[0];
       // Les nouvelles ventes ont déjà réservé leur stock. Pour les anciennes ventes,
       // on décrémente encore la quantité disponible afin de préserver la compatibilité.
-      if (lockedSale.stock_reserved) {
+      if (product.is_digital === true) {
+        // Produit digital : aucun stock à décrémenter (la « livraison » est le
+        // téléchargement du fichier, pas la remise d'un colis).
+      } else if (lockedSale.stock_reserved) {
         await tx.query(
           "UPDATE products SET reserved_quantity = GREATEST(COALESCE(reserved_quantity, 0) - $1, 0) WHERE id = $2",
           [lockedSale.quantity, lockedSale.product_id]

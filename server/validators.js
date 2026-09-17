@@ -39,6 +39,20 @@ export const createProductSchema = z.object({
   contact: z.string().max(200).optional().nullable(),
   quantity: z.coerce.number().int("Quantité invalide").min(1, "Quantité minimale 1"),
   currency: z.string().max(10).optional(),
+  // Produit DIGITAL : le fichier (data-URI base64) est téléversé par le
+  // serveur dans le bucket PRIVÉ, puis remis à l'acheteur par URL signée.
+  // `data` est borné (garde-fou mémoire) : la limite réelle en octets est
+  // vérifiée dans la route (DIGITAL_MAX_BYTES).
+  digital: z
+    .object({
+      name: z.string().max(160).optional(),
+      mime: z.string().max(120).optional(),
+      data: z.string().max(4400000, "Fichier trop volumineux").optional(),
+      remove: z.boolean().optional(),
+    })
+    .optional()
+    .nullable(),
+  digital_download_limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 export const createSaleSchema = z.object({

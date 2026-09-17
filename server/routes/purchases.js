@@ -147,20 +147,26 @@ router.post(
 
     const result = await withTransaction(async (tx) => {
       // Réserve le stock atomiquement au moment de la commande.
-      const locked = (
-        await tx.query(
-          `UPDATE products
+      // Un produit DIGITAL ne réserve rien : le fichier ne s'épuise pas.
+      let stockReserved = true;
+      if (product.is_digital === true) {
+        stockReserved = false;
+      } else {
+        const locked = (
+          await tx.query(
+            `UPDATE products
        SET quantity = quantity - $1, reserved_quantity = COALESCE(reserved_quantity, 0) + $1
        WHERE id = $2 AND quantity >= $1
        RETURNING *`,
-          [qty, product.id]
-        )
-      )[0];
-      if (!locked) {
-        const stock = Number(product.quantity || 0);
-        const error = new Error(stock <= 0 ? "Produit en rupture de stock" : "Stock insuffisant");
-        error.statusCode = 409;
-        throw error;
+            [qty, product.id]
+          )
+        )[0];
+        if (!locked) {
+          const stock = Number(product.quantity || 0);
+          const error = new Error(stock <= 0 ? "Produit en rupture de stock" : "Stock insuffisant");
+          error.statusCode = 409;
+          throw error;
+        }
       }
 
       let confirmCode = null;
@@ -182,7 +188,7 @@ router.post(
 
       const created = await tx.query(
         `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, currency, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
-       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, TRUE) RETURNING id`,
+       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`,
         [
           product.id,
           seller ? seller.id : null,
@@ -201,6 +207,7 @@ router.post(
           referralCommission,
           referredBy,
           method,
+          stockReserved,
         ]
       );
 
@@ -250,7 +257,8 @@ router.post(
 
     const full = (
       await q(
-        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, u.name AS seller_name, shop.name AS shop_name, shop.country AS shop_country, shop.phone AS shop_phone, p.contact AS shop_contact
+        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.is_digital, p.digital_name, p.digital_size,
+                u.name AS seller_name, shop.name AS shop_name, shop.country AS shop_country, shop.phone AS shop_phone, p.contact AS shop_contact
        FROM sales s
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id
@@ -273,7 +281,9 @@ router.get(
   ah(async (req, res) => {
     const purchases = (
       await q(
-        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.photos, p.contact AS shop_contact, COALESCE(u.name, '—') AS seller_name, u.phone AS seller_phone, shop.name AS shop_name, shop.country AS shop_country
+        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.photos, p.contact AS shop_contact,
+                p.is_digital, p.digital_name, p.digital_size, p.digital_mime, p.digital_download_limit,
+                COALESCE(u.name, '—') AS seller_name, u.phone AS seller_phone, shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id
        LEFT JOIN users u ON u.id = s.seller_id

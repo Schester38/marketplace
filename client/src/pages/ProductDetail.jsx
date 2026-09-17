@@ -385,6 +385,16 @@ export default function ProductDetail() {
                 {categoryEmoji(product.category)} {t(product.category)}
               </span>
             )}
+{/* Produit DIGITAL : le client reçoit un fichier à télécharger
+                (URL signée du bucket privé) après confirmation du paiement. */}
+            {product.is_digital && (
+              <span
+                className="badge badge-warn"
+                title={t("Fichier à télécharger après confirmation du paiement")}
+              >
+                📁 {t("Produit digital")}
+              </span>
+            )}
           </div>
           <h2>{product.name}</h2>
           {product.review_count > 0 && (

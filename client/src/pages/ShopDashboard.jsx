@@ -10,6 +10,7 @@ import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { compressImage } from "../utils.js";
 import { smartProcessImageFile, formatBytes, optimizePaymentProof } from "../imageKit.js";
+import DigitalProductPicker from "../components/DigitalProductPicker.jsx";
 import { nativeShareWithImage, firstProductImage } from "../share.js";
 import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from "../config.js";
 import { useLang } from "../i18n.jsx";
@@ -43,6 +44,10 @@ const EMPTY_FORM = {
   commission_percent: "",
   commission_amount: "",
   photos: [],
+  // Produit DIGITAL : `data` = fichier (data-URI base64) à téléverser,
+  // `enabled` = case cochée dans le formulaire. Un produit sans fichier n'est
+  // jamais publié en digital (validation avant envoi).
+  digital: { enabled: false, name: null, size: 0, mime: null, data: null },
 };
 const MAX_PHOTOS = 1;
 
@@ -70,6 +75,9 @@ export default function ShopDashboard() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  // Fichier digital existant du produit en cours d'édition (permet de le
+  // conserver tel quel quand la boutique ne change que le titre ou le prix).
+  const [editingDigital, setEditingDigital] = useState(null);
   const [showDelivered, setShowDelivered] = useState(true);
   const [payForm, setPayForm] = useState(null);
   const [paying, setPaying] = useState(false);
@@ -194,6 +202,29 @@ export default function ShopDashboard() {
       setError(t("Prix invalide"));
       return;
     }
+    // --- Produit DIGITAL ---------------------------------------------------
+    // Le fichier est transmis au serveur (data-URI) : il le stocke dans le
+    // bucket PRIVÉ et le remettra à l'acheteur par URL signée. `remove: true`
+    // retire le fichier d'un produit digital existant (refusé par le serveur
+    // si des clients l'ont déjà acheté, pour ne pas casser leurs accès).
+    const wantsDigital = Boolean(form.digital?.enabled);
+    const hasNewDigitalFile = Boolean(form.digital?.data);
+    const wasDigital = Boolean(editingDigital?.name);
+    if (wantsDigital && !hasNewDigitalFile && !wasDigital) {
+      setError(t("Choisissez le fichier que le client téléchargera pour ce produit digital."));
+      return;
+    }
+    const digitalPayload = wantsDigital
+      ? hasNewDigitalFile
+        ? {
+            name: form.digital.name,
+            mime: form.digital.mime,
+            data: form.digital.data,
+          }
+        : undefined
+      : wasDigital
+        ? { remove: true }
+        : undefined;
     const payload = {
       ...form,
       price: priceNum !== null ? priceNum : oldNum,
@@ -210,6 +241,7 @@ export default function ShopDashboard() {
       quantity: Number(form.quantity || 1),
       warranty: form.warranty.trim() || null,
       contact: form.contact ? `${prefix}${form.contact.trim()}` : "",
+      digital: digitalPayload,
     };
     try {
       if (editingId) {
@@ -221,6 +253,7 @@ export default function ShopDashboard() {
       }
       setForm(EMPTY_FORM);
       setEditingId(null);
+      setEditingDigital(null);
       setShowForm(false);
       load();
     } catch (err) {
@@ -272,7 +305,21 @@ export default function ShopDashboard() {
           ? String(Math.round(Number(p.price) * Number(p.commission_percent)) / 100)
           : "",
       photos,
+      // Produit digital : le fichier existant est conservé (aucun envoi) tant
+      // que la boutique n'en choisit pas un nouveau ; le décocher le retire.
+      digital: {
+        enabled: p.is_digital === true,
+        name: null,
+        size: 0,
+        mime: null,
+        data: null,
+      },
     });
+    setEditingDigital(
+      p.is_digital === true
+        ? { name: p.digital_name || t("Fichier du produit"), size: Number(p.digital_size || 0) }
+        : null
+    );
     setEditingId(p.id);
     setShowForm(true);
     setError("");
@@ -589,6 +636,7 @@ export default function ShopDashboard() {
               if (showForm) {
                 setForm(EMPTY_FORM);
                 setEditingId(null);
+                setEditingDigital(null);
               }
               setShowForm(!showForm);
             }}
@@ -1119,6 +1167,11 @@ export default function ShopDashboard() {
                     ))}
                   </div>
                 </div>
+                <DigitalProductPicker
+                  value={form.digital}
+                  existing={editingDigital}
+                  onChange={(digital) => setForm((f) => ({ ...f, digital }))}
+                />
                 <label>{t("Nom du produit *")}</label>
                 <input
                   className="input"

@@ -13,6 +13,7 @@ import Seo from "../components/Seo.jsx";
 import Logo from "../components/Logo.jsx";
 import { formatMoney } from "../components/ProductCard.jsx";
 import CopyCode from "../components/CopyCode.jsx";
+import DigitalDownload from "../components/DigitalDownload.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 
@@ -257,6 +258,24 @@ export default function PurchasePage() {
               </span>
               <CopyCode code={purchase.confirm_code || purchase.buyer_code} />
             </div>
+          )}
+          {/* Produit DIGITAL : le fichier se télécharge directement sur
+              l'appareil (URL signée du bucket privé). Pour un achat sans
+              compte, le code de confirmation sert de preuve d'achat. */}
+          {purchase && purchase.is_digital && (
+            <>
+              <p className="hint" style={{ marginTop: 8 }}>
+                📁{" "}
+                {t(
+                  "Produit digital : cliquez ci-dessous pour télécharger votre fichier dès que la boutique a confirmé la réception de votre paiement."
+                )}
+              </p>
+              <DigitalDownload
+                sale={purchase}
+                code={purchase.confirm_code || purchase.buyer_code}
+                label={t("Télécharger mon fichier")}
+              />
+            </>
           )}
           {purchase && purchase.id && (
             <Link

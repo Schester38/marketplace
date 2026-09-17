@@ -156,10 +156,9 @@ router.post(
     if (!validEmail(email)) {
       return res.status(400).json({ error: "Adresse email invalide" });
     }
-    const walletName =
-      finalRole === "shop" || finalRole === "seller" ? String(operator || "").trim() : "";
-    const walletValue =
-      finalRole === "shop" || finalRole === "seller" ? String(phone || "").trim() : "";
+    const WALLET_ROLES = ["shop", "seller", "creator"];
+    const walletName = WALLET_ROLES.includes(finalRole) ? String(operator || "").trim() : "";
+    const walletValue = WALLET_ROLES.includes(finalRole) ? String(phone || "").trim() : "";
     if ((finalRole === "shop" || finalRole === "seller") && (!walletName || !walletValue)) {
       return res
         .status(400)
@@ -225,7 +224,9 @@ router.post(
         console.error("Enregistrement du portefeuille vendeur échoué:", err.message);
       }
     }
-    if (finalRole === "shop" && walletName && walletValue) {
+    // Le créateur partage les moyens de paiement des boutiques
+    // (shop_payment_methods) : son numéro sert aux versements manuels.
+    if ((finalRole === "shop" || finalRole === "creator") && walletName && walletValue) {
       await q(
         `INSERT INTO shop_payment_methods (shop_id, wallets, updated_at) VALUES ($1, $2::jsonb, now()) ON CONFLICT (shop_id) DO UPDATE SET wallets = EXCLUDED.wallets, updated_at = now()`,
         [user.id, JSON.stringify([{ name: walletName, value: walletValue }])]

@@ -3,7 +3,14 @@ import { q } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { listPhotos, mediumPhotos, fullPhotos, normalizeUploadPhotos } from "../photo.js";
 import { defaultCurrencyFor, validCurrency } from "../currency.js";
-import { storePhotos, collectStorageKeys, deleteStorageKeys } from "../storage.js";
+import {
+  storePhotos,
+  collectStorageKeys,
+  deleteStorageKeys,
+  uploadDigitalFile,
+  deleteDigitalFile,
+  safeFileExt,
+} from "../storage.js";
 import { broadcastNotification } from "../services/notifications.js";
 import { getSetting, setSetting } from "../services/ikeepay.js";
 import { sendPushToAll } from "../push.js";
@@ -23,6 +30,59 @@ async function preparePhotos(photos, folder) {
     console.error("[storage] upload échoué, fallback base64 :", err.message);
     return photoList;
   }
+}
+
+// ---------------------------------------------------------------------------
+// PRODUITS DIGITAUX (fichiers payants)
+// Le fichier est téléversé PAR LE SERVEUR dans le bucket PRIVÉ Supabase
+// (`digital-products`) puis remis à l'acheteur uniquement par URL SIGNÉE
+// (voir server/routes/digital.js). Aucune URL publique n'existe : le fichier
+// ne peut pas être téléchargé sans passer par la vérification du droit d'accès.
+//
+// Taille maximale : Vercel limite le corps d'une requête serverless à 4,5 Mo.
+// Le fichier voyage en data-URI base64 (≈ 4/3 de son poids) dans le JSON, donc
+// 3 Mo est le maximum sûr. Au-delà → message explicite (pas d'échec silencieux).
+// ---------------------------------------------------------------------------
+const DIGITAL_MAX_BYTES = 3 * 1024 * 1024;
+
+// Extensions acceptées (liste volontairement large : cours, ebooks, modèles,
+// logiciels, audio, vidéo…). Un type inconnu est refusé au lieu d'être stocké.
+const DIGITAL_EXT_ALLOWED = new Set([
+  "pdf", "zip", "rar", "7z", "epub", "mobi",
+  "doc", "docx", "odt", "xls", "xlsx", "ods", "ppt", "pptx", "odp",
+  "txt", "csv", "json", "xml",
+  "mp3", "m4a", "wav", "ogg", "mp4", "webm", "mov",
+  "png", "jpg", "jpeg", "webp", "svg",
+]);
+
+/**
+ * Décode le blob `digital` envoyé par le client.
+ * Retourne `{ error }` si le fichier est refusé (taille / extension), sinon
+ * `{ name, mime, ext, buffer }`, ou `null` si aucun fichier n'est fourni.
+ */
+function parseDigitalPayload(digital) {
+  if (!digital || typeof digital !== "object") return null;
+  const name = String(digital.name || "fichier").trim().slice(0, 160);
+  const raw = String(digital.data || "");
+  if (!raw) return null;
+  const m = /^data:([^;,]*);base64,([\s\S]+)$/.exec(raw);
+  const b64 = (m ? m[2] : raw).replace(/\s+/g, "");
+  if (!b64) return { error: "Fichier illisible : contenu encodé vide" };
+  const ext = safeFileExt(name);
+  if (!DIGITAL_EXT_ALLOWED.has(ext)) {
+    return {
+      error: `Type de fichier non pris en charge (.${ext}). Formats acceptés : PDF, ZIP, EPUB, Office, TXT/CSV, MP3, MP4, images…`,
+    };
+  }
+  const buffer = Buffer.from(b64, "base64");
+  if (!buffer.length) return { error: "Fichier illisible ou vide" };
+  if (buffer.length > DIGITAL_MAX_BYTES) {
+    return {
+      error: `Fichier trop volumineux (${(buffer.length / 1024 / 1024).toFixed(1)} Mo). Maximum ${DIGITAL_MAX_BYTES / 1024 / 1024} Mo pour le moment.`,
+    };
+  }
+  const mime = (m && m[1]) || String(digital.mime || "").trim() || "application/octet-stream";
+  return { name, mime: mime.slice(0, 120), ext, buffer };
 }
 
 // ---------------------------------------------------------------------------
@@ -87,6 +147,10 @@ function productRow(p, mode = "list") {
     flash_ends_at,
     flash_starts_at,
     flash_duration_minutes,
+    // La CLÉ Storage du fichier digital n'est JAMAIS exposée publiquement :
+    // le bucket est privé et l'accès passe par une URL signée délivrée après
+    // vérification du droit d'accès (POST /api/digital/:saleId/download).
+    digital_path,
     ...rest
   } = p;
   const price = Number(p.price);
@@ -412,16 +476,55 @@ router.post(
       contact,
       quantity,
       currency,
+      digital,
+      digital_download_limit,
     } = req.body;
+
+    // Produit digital : le fichier est téléversé AVANT l'insertion, de sorte
+    // qu'un produit « digital » ne puisse jamais exister sans son fichier.
+    const parsedDigital = parseDigitalPayload(digital);
+    if (parsedDigital?.error) return res.status(400).json({ error: parsedDigital.error });
+    const wantsDigital = Boolean(parsedDigital);
+    let digitalPath = null;
+    if (parsedDigital) {
+      try {
+        digitalPath = await uploadDigitalFile(parsedDigital.buffer, parsedDigital.name, {
+          folder: `users/${req.user.id}`,
+        });
+      } catch (err) {
+        console.error("[storage] upload du fichier digital échoué :", err.message);
+        return res
+          .status(502)
+          .json({ error: "Envoi du fichier impossible. Vérifiez sa taille puis réessayez." });
+      }
+      if (!digitalPath) {
+        return res
+          .status(503)
+          .json({ error: "Stockage des fichiers indisponible pour le moment. Réessayez plus tard." });
+      }
+    }
+
     const photoList = await preparePhotos(photos, `products/${req.user.id}`);
-    const cleanCategory =
-      req.user.role === "creator" ? "Arts & Artisanat" : category ? String(category).trim() : null;
+    // Un créateur est rangé dans « Arts & Artisanat » — SAUF pour un produit
+    // digital (un PDF ou une formation n'est pas une création artisanale).
+    const cleanCategory = wantsDigital
+      ? category
+        ? String(category).trim()
+        : "Digital"
+      : req.user.role === "creator"
+        ? "Arts & Artisanat"
+        : category
+          ? String(category).trim()
+          : null;
+    const downloadLimit =
+      Number(digital_download_limit) > 0 ? Math.min(Number(digital_download_limit), 100) : 5;
     const currencyCode = validCurrency(currency)
       ? String(currency).trim().toUpperCase()
       : defaultCurrencyFor(req.user.country);
     const created = await q(
-      `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
+      `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency,
+        is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id`,
       [
         req.user.id,
         String(name).trim(),
@@ -433,10 +536,17 @@ router.post(
         JSON.stringify(photoList),
         cleanCategory,
         warranty === "" || warranty === null ? null : String(warranty).trim().slice(0, 60),
-        Number(delivery_fee || 0),
+        // Un fichier ne se livre pas : frais de livraison forcés à 0.
+        wantsDigital ? 0 : Number(delivery_fee || 0),
         contact ? String(contact).trim() : null,
         Number(quantity || 1),
         currencyCode,
+        wantsDigital,
+        digitalPath,
+        wantsDigital ? parsedDigital.name : null,
+        wantsDigital ? parsedDigital.mime : null,
+        wantsDigital ? parsedDigital.buffer.length : null,
+        downloadLimit,
       ]
     );
     const product = productRow((await q(SELECT_PRODUCT + " WHERE p.id = $1", [created[0].id]))[0]);
@@ -491,6 +601,19 @@ router.delete("/:id", authRequired, roleRequired(...OWNER_ROLES), async (req, re
   } catch (err) {
     console.error("[storage] nettoyage produit échoué :", err.message);
   }
+  // Fichier digital du produit supprimé : retiré du bucket privé seulement s'il
+  // n'est plus référencé par un autre produit (déduplication par contenu).
+  if (product.digital_path) {
+    try {
+      const [still] = await q(
+        "SELECT 1 FROM products WHERE id <> $1 AND digital_path = $2 LIMIT 1",
+        [product.id, product.digital_path]
+      );
+      if (!still) await deleteDigitalFile(product.digital_path);
+    } catch (err) {
+      console.error("[storage] nettoyage fichier digital échoué :", err.message);
+    }
+  }
   res.json({ ok: true });
 });
 
@@ -501,8 +624,9 @@ router.post("/:id/duplicate", authRequired, roleRequired(...OWNER_ROLES), async 
     return res.status(403).json({ error: "Ce produit ne vous appartient pas" });
   }
   const created = await q(
-    `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id`,
+    `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency,
+       is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id`,
     [
       product.shop_id,
       `${String(product.name).trim()} (copie)`,
@@ -518,6 +642,13 @@ router.post("/:id/duplicate", authRequired, roleRequired(...OWNER_ROLES), async 
       product.contact,
       Number(product.quantity || 1),
       product.currency || "XAF",
+      // La copie partage le même fichier (dédupliqué par contenu côté Storage).
+      product.is_digital === true,
+      product.digital_path || null,
+      product.digital_name || null,
+      product.digital_mime || null,
+      product.digital_size || null,
+      Number(product.digital_download_limit) || 5,
     ]
   );
   const newProduct = productRow((await q(SELECT_PRODUCT + " WHERE p.id = $1", [created[0].id]))[0]);
@@ -549,10 +680,90 @@ router.put(
       contact,
       quantity,
       currency,
+      digital,
+      digital_download_limit,
     } = req.body;
+
+    // --- Fichier digital : nouveau fichier, retrait, ou conservation ---
+    const parsedDigital = parseDigitalPayload(digital);
+    if (parsedDigital?.error) return res.status(400).json({ error: parsedDigital.error });
+    const removeDigital = digital?.remove === true;
+    let newDigitalPath = null;
+    if (parsedDigital) {
+      try {
+        newDigitalPath = await uploadDigitalFile(parsedDigital.buffer, parsedDigital.name, {
+          folder: `users/${req.user.id}`,
+        });
+      } catch (err) {
+        console.error("[storage] upload du fichier digital échoué :", err.message);
+        return res
+          .status(502)
+          .json({ error: "Envoi du fichier impossible. Vérifiez sa taille puis réessayez." });
+      }
+      if (!newDigitalPath)
+        return res.status(503).json({ error: "Stockage des fichiers indisponible pour le moment." });
+    } else if (removeDigital && product.is_digital) {
+      // Retirer le fichier couperait l'accès des acheteurs déjà servis :
+      // interdit dès qu'une vente existe (annulées exclues).
+      const [sold] = await q(
+        "SELECT COUNT(*)::int AS n FROM sales WHERE product_id = $1 AND status <> 'cancelled'",
+        [product.id]
+      );
+      if (Number(sold?.n || 0) > 0) {
+        return res.status(409).json({
+          error:
+            "Impossible de retirer le fichier : des clients ont déjà acheté ce produit et doivent pouvoir le retélécharger.",
+        });
+      }
+    }
+
+    // Valeurs finales : le fichier existant est CONSERVÉ si aucun changement
+    // n'est demandé (sinon l'édition d'un simple titre effacerait le fichier).
+    const hasNewFile = Boolean(newDigitalPath);
+    const isDigitalAfter = hasNewFile
+      ? true
+      : removeDigital && product.is_digital
+        ? false
+        : product.is_digital === true;
+    const digitalPathAfter = hasNewFile
+      ? newDigitalPath
+      : isDigitalAfter
+        ? product.digital_path
+        : null;
+    const digitalNameAfter = hasNewFile
+      ? parsedDigital.name
+      : isDigitalAfter
+        ? product.digital_name
+        : null;
+    const digitalMimeAfter = hasNewFile
+      ? parsedDigital.mime
+      : isDigitalAfter
+        ? product.digital_mime
+        : null;
+    const digitalSizeAfter = hasNewFile
+      ? parsedDigital.buffer.length
+      : isDigitalAfter
+        ? product.digital_size
+        : null;
+    const downloadLimit =
+      Number(digital_download_limit) > 0
+        ? Math.min(Number(digital_download_limit), 100)
+        : Number(product.digital_download_limit) || 5;
+
     const photoList = await preparePhotos(photos, `products/${req.user.id}`);
-    const cleanCategory =
-      req.user.role === "creator" ? "Arts & Artisanat" : category ? String(category).trim() : null;
+    // Catégorie : un produit digital n'est jamais rangé dans « Arts &
+    // Artisanat » (catégorie forcée des créateurs pour le reste).
+    const cleanCategory = isDigitalAfter
+      ? category
+        ? String(category).trim()
+        : product.is_digital && product.category
+          ? product.category
+          : "Digital"
+      : req.user.role === "creator"
+        ? "Arts & Artisanat"
+        : category
+          ? String(category).trim()
+          : null;
     const currencyCode = validCurrency(currency)
       ? String(currency).trim().toUpperCase()
       : product.currency || defaultCurrencyFor(req.user.country);
@@ -560,8 +771,10 @@ router.put(
       `UPDATE products SET
        name = $1, description = $2, price = $3, old_price = $4, commission_percent = $5,
        image = $6, photos = $7, category = $8, warranty = $9, delivery_fee = $10,
-       contact = $11, quantity = $12, currency = $13
-     WHERE id = $14 RETURNING id`,
+       contact = $11, quantity = $12, currency = $13,
+       is_digital = $14, digital_path = $15, digital_name = $16, digital_mime = $17,
+       digital_size = $18, digital_download_limit = $19
+     WHERE id = $20 RETURNING id`,
       [
         String(name).trim(),
         description ? String(description).trim() : null,
@@ -572,16 +785,40 @@ router.put(
         JSON.stringify(photoList),
         cleanCategory,
         warranty === "" || warranty === null ? null : String(warranty).trim().slice(0, 60),
-        Number(delivery_fee || 0),
+        isDigitalAfter ? 0 : Number(delivery_fee || 0),
         contact ? String(contact).trim() : null,
         Number(quantity || 1),
         currencyCode,
+        isDigitalAfter,
+        digitalPathAfter,
+        digitalNameAfter,
+        digitalMimeAfter,
+        digitalSizeAfter,
+        downloadLimit,
         product.id,
       ]
     );
     const updatedProduct = productRow(
       (await q(SELECT_PRODUCT + " WHERE p.id = $1", [updated[0].id]))[0]
     );
+    // Ancien fichier digital remplacé : supprimé seulement s'il n'est plus
+    // référencé par un autre produit (déduplication par contenu).
+    if (hasNewFile && product.digital_path && product.digital_path !== newDigitalPath) {
+      try {
+        const [still] = await q(
+          "SELECT 1 FROM products WHERE id <> $1 AND digital_path = $2 LIMIT 1",
+          [product.id, product.digital_path]
+        );
+        if (!still) await deleteDigitalFile(product.digital_path);
+      } catch (err) {
+        console.error("[storage] nettoyage ancien fichier digital échoué :", err.message);
+      }
+    }
+    // Fichier retiré (aucune vente) : il n'est plus utile à personne.
+    if (!isDigitalAfter && product.digital_path && !hasNewFile) {
+      await deleteDigitalFile(product.digital_path);
+    }
+
     // Nettoyage des fichiers remplacés : on supprime les anciennes clés Storage
     // qui ne sont plus référencées par ce produit (ni par un autre produit, une
     // offre ou une commande). Best-effort, n'empêche jamais la réponse.

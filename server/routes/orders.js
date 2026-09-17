@@ -88,7 +88,8 @@ router.post("/", optionalAuth, async (req, res, next) => {
           e.statusCode = 400;
           throw e;
         }
-        if (Number(p.quantity) < qty) {
+        // Un produit digital ne s'épuise pas : le stock est illimité par nature.
+        if (!p.is_digital && Number(p.quantity) < qty) {
           const e = new Error(`Stock insuffisant pour « ${p.name} »`);
           e.statusCode = 409;
           throw e;
@@ -117,24 +118,26 @@ router.post("/", optionalAuth, async (req, res, next) => {
           if (referredBy) referralCommission = Math.round(price * qty * 0.02 * 100) / 100;
         }
 
-        const reserved = (
-          await tx.query(
-            `UPDATE products SET quantity = quantity - $1, reserved_quantity = COALESCE(reserved_quantity, 0) + $1
+        if (!p.is_digital) {
+          const reserved = (
+            await tx.query(
+              `UPDATE products SET quantity = quantity - $1, reserved_quantity = COALESCE(reserved_quantity, 0) + $1
            WHERE id = $2 AND quantity >= $1 RETURNING id`,
-            [qty, pid]
-          )
-        )[0];
-        if (!reserved) {
-          const e = new Error(`Stock insuffisant pour « ${p.name} »`);
-          e.statusCode = 409;
-          throw e;
+              [qty, pid]
+            )
+          )[0];
+          if (!reserved) {
+            const e = new Error(`Stock insuffisant pour « ${p.name} »`);
+            e.statusCode = 409;
+            throw e;
+          }
         }
 
         const code = await uniqueConfirmCodeTx(tx);
         const created = (
           await tx.query(
             `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, currency, buyer_id, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
-           VALUES ($1, NULL, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, TRUE) RETURNING id`,
+           VALUES ($1, NULL, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id`,
             [
               pid,
               qty,
@@ -151,6 +154,7 @@ router.post("/", optionalAuth, async (req, res, next) => {
               referralCommission,
               referredBy,
               method,
+              !p.is_digital,
             ]
           )
         )[0];

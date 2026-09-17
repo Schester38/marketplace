@@ -436,6 +436,33 @@ export async function initDb() {
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_external_reference TEXT;
   `);
 
+  // ------------------------------------- PRODUITS DIGITAUX (téléchargeables)
+  // Un produit digital n'est JAMAIS exposé par une URL publique : le fichier
+  // vit dans le bucket PRIVÉ `digital-products` (Supabase Storage) et n'est
+  // remis qu'en URL SIGNÉE à durée courte, après vérification du droit
+  // d'accès côté serveur (POST /api/digital/:saleId/download).
+  // `digital_downloads` sert de journal ET de compteur (quota par vente).
+  await pool.query(`
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS is_digital BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_path TEXT;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_name TEXT;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_mime TEXT;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_size BIGINT;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_version INTEGER NOT NULL DEFAULT 1;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_download_limit INTEGER NOT NULL DEFAULT 5;
+
+    CREATE TABLE IF NOT EXISTS digital_downloads (
+      id SERIAL PRIMARY KEY,
+      sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      ip TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_digital_downloads_sale ON digital_downloads(sale_id);
+    CREATE INDEX IF NOT EXISTS idx_digital_downloads_user ON digital_downloads(user_id);
+  `);
+
   await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_seller_code ON users(seller_code) WHERE seller_code IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_shop_code ON users(shop_code) WHERE shop_code IS NOT NULL;

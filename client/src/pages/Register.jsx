@@ -219,16 +219,18 @@ export default function Register() {
                     {t("Je livre les articles et finalise les commandes (code client, signature, paiement)")}
                   </small>
                 </label>
-                <label
-                  className={`role-option role-disabled ${form.role === "creator" ? "selected" : ""}`}
-                  title={t("Bientôt disponible")}
-                >
-                  <input type="radio" name="role" value="creator" disabled />
-                  <span>
-                    🎨 {t("Créateur")}{" "}
-                    <em className="role-soon">{t("Bientôt disponible")}</em>
-                  </span>
-                  <small>{t("Je présente et vends mes créations au marché Mboppi")}</small>
+                <label className={`role-option ${form.role === "creator" ? "selected" : ""}`}>
+                  <input
+                    type="radio"
+                    name="role"
+                    value="creator"
+                    checked={form.role === "creator"}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                  />
+                  <span>🎨 {t("Créateur")}</span>
+                  <small>
+                    {t("Je publie mes créations et mes produits digitaux (fichiers téléchargeables)")}
+                  </small>
                 </label>
               </div>
             </>
@@ -343,7 +345,7 @@ export default function Register() {
             onClick={() => {
               if (!ensureAccepted()) return;
               const params = new URLSearchParams({
-                role: refCode ? "client" : form.role === "creator" ? "seller" : form.role,
+                role: refCode ? "client" : form.role,
                 country: form.country || "",
               });
               if (refCode) params.set("ref", refCode);

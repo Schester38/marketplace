@@ -254,6 +254,17 @@ export const api = {
   purchaseCreate: (payload) =>
     request("/purchases", { method: "POST", body: JSON.stringify(payload) }),
   purchasesMy: () => request("/purchases/my"),
+  // Produits digitaux : le téléchargement passe par une URL SIGNÉE à durée
+  // courte délivrée par le serveur (bucket privé). Pour un achat fait sans
+  // compte, le code de confirmation de la commande fait office de preuve.
+  digitalStatus: (saleId, code) =>
+    request(`/digital/${saleId}${code ? `?code=${encodeURIComponent(code)}` : ""}`),
+  digitalDownload: (saleId, code) =>
+    request(`/digital/${saleId}/download`, {
+      method: "POST",
+      body: JSON.stringify(code ? { code } : {}),
+    }),
+  digitalMine: () => request("/digital/mine"),
   notifications: () => request("/notifications"),
   notificationsRead: () => request("/notifications/read", { method: "POST" }),
   deleteNotification: (id) => request(`/notifications/${id}`, { method: "DELETE" }),

@@ -5,6 +5,7 @@ import ProductCard, { formatMoney } from "../components/ProductCard.jsx";
 import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { smartProcessImageFile, formatBytes } from "../imageKit.js";
+import DigitalProductPicker from "../components/DigitalProductPicker.jsx";
 import { countryPhone, countrySymbol } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
@@ -25,6 +26,8 @@ const EMPTY_FORM = {
   commission_percent: "0",
   commission_amount: "",
   photos: [],
+  // Produit DIGITAL : `data` = fichier (data-URI base64) à téléverser.
+  digital: { enabled: false, name: null, size: 0, mime: null, data: null },
 };
 const MAX_PHOTOS = 1;
 
@@ -42,6 +45,8 @@ export default function CreatorDashboard() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  // Fichier digital existant de la création en cours d'édition.
+  const [editingDigital, setEditingDigital] = useState(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [picking, setPicking] = useState(false);
@@ -129,6 +134,24 @@ export default function CreatorDashboard() {
       setError(t("Renseignez au moins un prix (normal ou de vente)."));
       return;
     }
+    // --- Produit DIGITAL -----------------------------------------------
+    // Fichier transmis au serveur (data-URI) → bucket PRIVÉ Supabase, remis à
+    // l'acheteur par URL signée. `remove: true` retire le fichier (refusé côté
+    // serveur si des clients l'ont déjà acheté).
+    const wantsDigital = Boolean(form.digital?.enabled);
+    const hasNewDigitalFile = Boolean(form.digital?.data);
+    const wasDigital = Boolean(editingDigital?.name);
+    if (wantsDigital && !hasNewDigitalFile && !wasDigital) {
+      setError(t("Choisissez le fichier que le client téléchargera pour ce produit digital."));
+      return;
+    }
+    const digitalPayload = wantsDigital
+      ? hasNewDigitalFile
+        ? { name: form.digital.name, mime: form.digital.mime, data: form.digital.data }
+        : undefined
+      : wasDigital
+        ? { remove: true }
+        : undefined;
     const payload = {
       ...form,
       price: priceNum !== null ? priceNum : oldNum,
@@ -145,6 +168,7 @@ export default function CreatorDashboard() {
       quantity: Number(form.quantity || 1),
       warranty: form.warranty.trim() || null,
       contact: form.contact ? `${prefix}${form.contact.trim()}` : "",
+      digital: digitalPayload,
     };
     try {
       if (editingId) {
@@ -156,6 +180,7 @@ export default function CreatorDashboard() {
       }
       setForm(EMPTY_FORM);
       setEditingId(null);
+      setEditingDigital(null);
       setShowForm(false);
       load();
     } catch (err) {
@@ -206,7 +231,19 @@ export default function CreatorDashboard() {
           ? String(Math.round(Number(p.price) * Number(p.commission_percent)) / 100)
           : "",
       photos,
+      digital: {
+        enabled: p.is_digital === true,
+        name: null,
+        size: 0,
+        mime: null,
+        data: null,
+      },
     });
+    setEditingDigital(
+      p.is_digital === true
+        ? { name: p.digital_name || t("Fichier du produit"), size: Number(p.digital_size || 0) }
+        : null
+    );
     setEditingId(p.id);
     setShowForm(true);
   };
@@ -248,6 +285,7 @@ export default function CreatorDashboard() {
               if (showForm) {
                 setForm(EMPTY_FORM);
                 setEditingId(null);
+                setEditingDigital(null);
               }
               setShowForm(!showForm);
             }}
@@ -334,6 +372,11 @@ export default function CreatorDashboard() {
                 ))}
               </div>
             </div>
+            <DigitalProductPicker
+              value={form.digital}
+              existing={editingDigital}
+              onChange={(digital) => setForm((f) => ({ ...f, digital }))}
+            />
             <label>{t("Nom de la création *")}</label>
             <input
               className="input"

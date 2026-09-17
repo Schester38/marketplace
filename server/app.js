@@ -37,6 +37,7 @@ import presentationRoutes, { pageRouter, imageRouter } from "./routes/presentati
 import photoProxyRouter from "./routes/photoProxy.js";
 import geoRoutes from "./routes/geo.js";
 import usersRoutes from "./routes/users.js";
+import digitalRoutes from "./routes/digital.js";
 import { authRequired } from "./auth.js";
 import { securityHeaders, originCheck } from "./security.js";
 
@@ -124,6 +125,9 @@ app.use("/api/orders", limiter(10 * 60 * 1000, 30));
 app.use("/api/reviews", limiter(10 * 60 * 1000, 15));
 app.use("/api/chat", limiter(15 * 60 * 1000, 30));
 app.use("/api/sales/livreur", limiter(5 * 60 * 1000, 60));
+// Produits digitaux : quota volontairement serré (le code de confirmation d'un
+// achat invité sert de preuve — on borne les tentatives par IP).
+app.use("/api/digital", limiter(5 * 60 * 1000, 40));
 app.use("/api/admin/pass", limiter(60 * 1000, 5));
 app.use("/api/admin", limiter(5 * 60 * 1000, 60));
 app.use("/api", limiter(60 * 1000, 300));
@@ -176,6 +180,7 @@ app.use("/api/metrics", metricsRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/donations", donationsRoutes);
 app.use("/api/activation-withdrawals", activationWithdrawalRoutes);
+app.use("/api/digital", digitalRoutes);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/geo", limiter(60 * 1000, 30), geoRoutes);
 app.use("/api/logs", limiter(60 * 1000, 8));

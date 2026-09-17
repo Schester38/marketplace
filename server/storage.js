@@ -280,6 +280,122 @@ export async function uploadPaymentProof(dataUri, folder = "payments") {
   }
 }
 
+// ───────────────────────────── PRODUITS DIGITAUX (fichiers payants) ─────────
+// Bucket PRIVÉ : un produit digital ne doit JAMAIS être joignable par une URL
+// publique (sinon n'importe qui télécharge le fichier payant). Le fichier est
+// donc stocké dans `SUPABASE_DIGITAL_BUCKET` (défaut `digital-products`,
+// privé) et n'est remis que sous forme d'URL SIGNÉE à durée courte, générée
+// après vérification du droit d'accès côté serveur.
+const DIGITAL_BUCKET = process.env.SUPABASE_DIGITAL_BUCKET || "digital-products";
+
+export function digitalBucketName() {
+  return DIGITAL_BUCKET;
+}
+
+/**
+ * Crée le bucket privé des produits digitaux s'il n'existe pas (idempotent).
+ */
+export async function ensureDigitalBucket() {
+  await ensureBucket(DIGITAL_BUCKET, { public: false });
+}
+
+/** Extension de fichier normalisée (pdf, zip, mp3, mp4, epub…). */
+export function safeFileExt(name) {
+  const m = /\.([A-Za-z0-9]{1,8})$/.exec(String(name || ""));
+  return m ? m[1].toLowerCase() : "bin";
+}
+
+const encodeStoragePath = (p) => String(p).split("/").map(encodeURIComponent).join("/");
+
+/**
+ * Upload d'un fichier digital vers le bucket privé, sans aucune conversion
+ * (contrairement aux photos : un PDF ou un ZIP doit rester intact).
+ * Déduplication par hash de contenu ; Cache-Control « no-store » (fichier
+ * privé : il ne doit pas être mis en cache par un intermédiaire).
+ * Retourne la CLÉ Storage (ex. `files/3f8a…/file.pdf`) — jamais une URL.
+ */
+export async function uploadDigitalFile(buffer, originalName, { folder = "files" } = {}) {
+  if (!SUPABASE_URL || !SERVICE_KEY) return null;
+  if (!Buffer.isBuffer(buffer) || !buffer.length) return null;
+  await ensureDigitalBucket();
+  const path = `${folder}/${contentHash(buffer)}/file.${safeFileExt(originalName)}`;
+  const head = await request(`object/${DIGITAL_BUCKET}/${encodeStoragePath(path)}`, { method: "HEAD" }, DIGITAL_BUCKET);
+  if (head.ok) return path; // déjà présent (même contenu) → aucun octet transféré
+  const res = await request(
+    `object/${DIGITAL_BUCKET}/${encodeStoragePath(path)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream", "Cache-Control": "no-store" },
+      body: buffer,
+    },
+    DIGITAL_BUCKET
+  );
+  if (res.ok || res.status === 409) return path;
+  const text = await res.text().catch(() => "");
+  throw new Error(`Upload du fichier digital échoué (${res.status}) : ${text.slice(0, 160)}`);
+}
+
+/**
+ * URL SIGNÉE (durée limitée) de téléchargement d'un produit digital.
+ * C'est LE SEUL moyen d'accès au fichier : le bucket est privé.
+ * Retourne `null` si la signature échoue (l'appelant doit alors refuser).
+ */
+export async function signedDigitalUrl(path, expiresSec = 600) {
+  if (!path || !SUPABASE_URL || !SERVICE_KEY) return null;
+  try {
+    const token = apiToken();
+    const res = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/sign/${DIGITAL_BUCKET}/${encodeStoragePath(path)}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ expiresIn: expiresSec }),
+      }
+    );
+    if (!res.ok) throw new Error(`sign HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data?.signedURL) return null;
+    return `${SUPABASE_URL}/storage/v1${data.signedURL}`;
+  } catch (err) {
+    console.warn("[storage] URL signée produit digital impossible :", err.message);
+    return null;
+  }
+}
+
+/** Vrai si l'objet existe réellement dans le bucket digital privé. */
+export async function digitalObjectExists(path) {
+  if (!path || !SUPABASE_URL || !SERVICE_KEY) return false;
+  try {
+    const res = await request(
+      `object/${DIGITAL_BUCKET}/${encodeStoragePath(path)}`,
+      { method: "HEAD" },
+      DIGITAL_BUCKET
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Supprime un fichier digital (retrait du produit / remplacement). */
+export async function deleteDigitalFile(path) {
+  if (!path || !SUPABASE_URL || !SERVICE_KEY) return false;
+  try {
+    const token = apiToken();
+    const res = await fetch(
+      `${SUPABASE_URL}/storage/v1/object/${DIGITAL_BUCKET}/${encodeStoragePath(path)}`,
+      { method: "DELETE", headers: { Authorization: `Bearer ${token}`, apikey: token } }
+    );
+    return res.ok || res.status === 404;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Enregistre les photos d'un produit/offre.
  * Format d'entrée : liste d'entrées { thumb?, medium?, large?, full?, meta? }
@@ -421,14 +537,14 @@ export async function deleteStorageKeys(keys, { excludeProductId, force = false 
 
 // Estime l'occupation du bucket (nb de fichiers + taille totale) en listant les
 // objets par pages de 1000. Utile pour surveiller le quota gratuit du Storage.
-export async function storageUsage() {
+export async function storageUsage(bucketName = BUCKET) {
   if (!SUPABASE_URL || !SERVICE_KEY) return null;
   const token = apiToken();
   let count = 0;
   let bytes = 0;
   let offset = 0;
   for (;;) {
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${BUCKET}`, {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${bucketName}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -438,7 +554,7 @@ export async function storageUsage() {
       body: JSON.stringify({ prefix: "", limit: 1000, offset }),
     });
     if (!res.ok) {
-      throw new Error(`Liste du bucket ${BUCKET} échouée (${res.status})`);
+      throw new Error(`Liste du bucket ${bucketName} échouée (${res.status})`);
     }
     const items = await res.json();
     if (!Array.isArray(items) || items.length === 0) break;
