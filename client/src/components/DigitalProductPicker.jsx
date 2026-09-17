@@ -16,12 +16,14 @@ export const DIGITAL_MAX_BYTES = 3 * 1024 * 1024;
 const DIGITAL_ACCEPT =
   ".pdf,.zip,.rar,.7z,.epub,.mobi,.doc,.docx,.odt,.xls,.xlsx,.ods,.ppt,.pptx,.odp,.txt,.csv,.json,.xml,.mp3,.m4a,.wav,.ogg,.mp4,.webm,.mov,.png,.jpg,.jpeg,.webp,.svg";
 
-export default function DigitalProductPicker({ value, existing, onChange }) {
+export default function DigitalProductPicker({ value, existing, onChange, required = false }) {
   const { t } = useLang();
   const [error, setError] = useState("");
   const [reading, setReading] = useState(false);
   const inputRef = useRef(null);
-  const enabled = Boolean(value?.enabled);
+  // `required` : la case est cochée et NON décochable (compte créateur, dont
+  // chaque publication est un produit digital).
+  const enabled = required || Boolean(value?.enabled);
 
   const readFile = (file) => {
     if (!file) return;
@@ -62,11 +64,19 @@ export default function DigitalProductPicker({ value, existing, onChange }) {
         <input
           type="checkbox"
           checked={enabled}
+          disabled={required}
           onChange={(e) =>
             onChange({ ...(value || {}), enabled: e.target.checked })
           }
         />
-        <span>📁 {t("Produit digital : un fichier que le client télécharge")}</span>
+        <span>
+          📁{" "}
+          {required
+            ? t(
+                "Produit digital : joignez le fichier que le client téléchargera (obligatoire pour un compte créateur)"
+              )
+            : t("Produit digital : un fichier que le client télécharge")}
+        </span>
       </label>
 
       {enabled && (
@@ -106,13 +116,17 @@ export default function DigitalProductPicker({ value, existing, onChange }) {
               {value?.name ? t("Nouveau fichier :") : t("Fichier actuel :")}{" "}
               <strong>{current.name}</strong>
               {" — "}
-              <button
-                type="button"
-                className="link-button"
-                onClick={() => onChange({ enabled: true, name: null, data: null })}
-              >
-                {t("retirer")}
-              </button>
+              {required ? (
+                <span>{t("remplacez-le en choisissant un autre fichier.")}</span>
+              ) : (
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => onChange({ enabled: true, name: null, data: null })}
+                >
+                  {t("retirer")}
+                </button>
+              )}
             </p>
           )}
           {!current && (

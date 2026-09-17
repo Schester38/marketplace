@@ -127,7 +127,7 @@ export default function ProductDetail() {
   // Données structurées schema.org (Rich Results Google : prix, note, stock)
   useEffect(() => {
     if (!product) return;
-    const inStock = Number(product.quantity || 0) > 0;
+    const inStock = product.is_digital ? true : Number(product.quantity || 0) > 0;
     const fp = product.flash_promo || null;
     const fPrice = fp ? Number(fp.price) : Number(product.price);
     const jsonLd = {
@@ -243,7 +243,7 @@ export default function ProductDetail() {
   const isOwner = user && Number(user.id) === Number(product.shop_id);
   const deliveryFee = Number(product.delivery_fee || 0);
   const symbol = countrySymbol(product?.shop_country);
-  const inStock = Number(product.quantity || 0);
+  const inStock = product.is_digital ? 9999 : Number(product.quantity || 0);
   const flash = product.flash_promo || null;
   const displayPrice = flash ? Number(flash.price) : Number(product.price);
   const oldPrice = Number(
@@ -464,9 +464,11 @@ export default function ProductDetail() {
               </p>
             )}
             <p className={`offer-qty ${inStock > 0 ? "" : "out"}`}>
-              {inStock > 0
-                ? t("Disponibilité : {n} en stock", { n: inStock })
-                : t("Rupture de stock")}
+              {product.is_digital
+                ? t("Disponibilité : illimitée")
+                : inStock > 0
+                  ? t("Disponibilité : {n} en stock", { n: inStock })
+                  : t("Rupture de stock")}
             </p>
 
             <ul className="pd-assurance">
@@ -497,7 +499,7 @@ export default function ProductDetail() {
                   <span>{qty}</span>
                   <button
                     type="button"
-                    onClick={() => setQty((q) => Math.min(Number(product.quantity) || 99, q + 1))}
+                    onClick={() => setQty((q) => Math.min(product.is_digital ? 9999 : Number(product.quantity) || 99, q + 1))}
                     aria-label="+"
                   >
                     +

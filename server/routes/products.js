@@ -485,6 +485,25 @@ router.post(
     const parsedDigital = parseDigitalPayload(digital);
     if (parsedDigital?.error) return res.status(400).json({ error: parsedDigital.error });
     const wantsDigital = Boolean(parsedDigital);
+    // RÈGLE MÉTIER Mboppi — qui publie quoi :
+    //   • CRÉATEUR → uniquement des produits DIGITAUX (fichier téléchargeable) ;
+    //   • BOUTIQUE → uniquement des produits PHYSIQUES ;
+    //   • VENDEUR  → ne publie rien, mais VEND les deux (code vendeur).
+    // Le serveur fait autorité : l'interface ne peut pas contourner cette règle.
+    if (req.user.role === "shop" && wantsDigital) {
+      return res.status(403).json({
+        error:
+          "Les produits digitaux sont réservés aux comptes créateur. Une boutique publie des produits physiques.",
+        code: "DIGITAL_CREATOR_ONLY",
+      });
+    }
+    if (req.user.role === "creator" && !wantsDigital) {
+      return res.status(403).json({
+        error:
+          "Un compte créateur publie uniquement des produits digitaux : joignez le fichier que le client téléchargera.",
+        code: "CREATOR_DIGITAL_ONLY",
+      });
+    }
     let digitalPath = null;
     if (parsedDigital) {
       try {
@@ -623,6 +642,21 @@ router.post("/:id/duplicate", authRequired, roleRequired(...OWNER_ROLES), async 
   if (product.shop_id !== req.user.id) {
     return res.status(403).json({ error: "Ce produit ne vous appartient pas" });
   }
+  // Le duplicata doit respecter la règle de rôle (créateur → digital,
+  // boutique → physique) : inutile de créer une copie d'un type interdit.
+  if (req.user.role === "creator" && product.is_digital !== true) {
+    return res.status(403).json({
+      error:
+        "Un compte créateur publie uniquement des produits digitaux (joignez un fichier à la création d'origine).",
+      code: "CREATOR_DIGITAL_ONLY",
+    });
+  }
+  if (req.user.role === "shop" && product.is_digital === true) {
+    return res.status(403).json({
+      error: "Les produits digitaux sont réservés aux comptes créateur.",
+      code: "DIGITAL_CREATOR_ONLY",
+    });
+  }
   const created = await q(
     `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency,
        is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit)
@@ -725,6 +759,25 @@ router.put(
       : removeDigital && product.is_digital
         ? false
         : product.is_digital === true;
+    // RÈGLE MÉTIER — le type FINAL du produit doit correspondre au rôle :
+    //   • boutique → physique ; • créateur → digital.
+    // Un créateur qui détient encore un ancien produit physique peut le
+    // CONVERTIR en joignant un fichier (le type devient digital) ; sinon il
+    // doit le supprimer. Aucune donnée n'est modifiée avant ces contrôles.
+    if (req.user.role === "shop" && isDigitalAfter) {
+      return res.status(403).json({
+        error:
+          "Les produits digitaux sont réservés aux comptes créateur. Une boutique publie des produits physiques.",
+        code: "DIGITAL_CREATOR_ONLY",
+      });
+    }
+    if (req.user.role === "creator" && !isDigitalAfter) {
+      return res.status(403).json({
+        error:
+          "Un compte créateur publie uniquement des produits digitaux : joignez un fichier pour convertir ce produit, ou supprimez-le.",
+        code: "CREATOR_DIGITAL_ONLY",
+      });
+    }
     const digitalPathAfter = hasNewFile
       ? newDigitalPath
       : isDigitalAfter

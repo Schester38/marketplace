@@ -56,7 +56,7 @@ export default function ProductCard({
   const { isFav, toggleFav } = useFavs();
   const [added, setAdded] = useState(false);
   const photo = (product.photos && product.photos[0]) || product.image;
-  const qty = Number(product.quantity || 0);
+  const qty = product.is_digital ? 9999 : Number(product.quantity || 0);
   const symbol = countrySymbol(product?.shop_country);
   const fav = isFav(product.id);
   const sold = Number(product.sold || 0);
@@ -184,7 +184,7 @@ export default function ProductCard({
           )}
         </div>
         <p className={`stock-line ${qty > 0 ? "" : "out"}`}>
-          {qty > 0 ? t("En stock : {n}", { n: qty }) : t("Rupture de stock")}
+          {product.is_digital ? t("📁 Produit digital — téléchargement") : qty > 0 ? t("En stock : {n}", { n: qty }) : t("Rupture de stock")}
         </p>
       </Link>
       <div className="card-actions">

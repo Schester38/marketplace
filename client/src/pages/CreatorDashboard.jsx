@@ -26,8 +26,10 @@ const EMPTY_FORM = {
   commission_percent: "0",
   commission_amount: "",
   photos: [],
-  // Produit DIGITAL : `data` = fichier (data-URI base64) à téléverser.
-  digital: { enabled: false, name: null, size: 0, mime: null, data: null },
+  // Une CRÉATION est toujours un produit DIGITAL (fichier payant téléchargé
+  // par le client) : `data` = fichier (data-URI base64) à téléverser.
+  // Sans fichier, la publication est refusée (validation avant envoi).
+  digital: { enabled: true, name: null, size: 0, mime: null, data: null },
 };
 const MAX_PHOTOS = 1;
 
@@ -164,8 +166,11 @@ export default function CreatorDashboard() {
         if (!base || base <= 0 || !amt) return 0;
         return Math.min(100, Math.round((amt / base) * 1e8) / 1e6);
       })(),
-      delivery_fee: Number(form.delivery_fee || 0),
-      quantity: Number(form.quantity || 1),
+      // Un produit digital n'a NI stock NI livraison : valeurs imposées (le
+      // serveur force déjà delivery_fee à 0 et ne décrémente aucun stock pour
+      // un digital — les champs correspondants ont été retirés du formulaire).
+      delivery_fee: 0,
+      quantity: 1,
       warranty: form.warranty.trim() || null,
       contact: form.contact ? `${prefix}${form.contact.trim()}` : "",
       digital: digitalPayload,
@@ -232,7 +237,7 @@ export default function CreatorDashboard() {
           : "",
       photos,
       digital: {
-        enabled: p.is_digital === true,
+        enabled: true,
         name: null,
         size: 0,
         mime: null,
@@ -373,6 +378,7 @@ export default function CreatorDashboard() {
               </div>
             </div>
             <DigitalProductPicker
+              required
               value={form.digital}
               existing={editingDigital}
               onChange={(digital) => setForm((f) => ({ ...f, digital }))}
@@ -395,27 +401,16 @@ export default function CreatorDashboard() {
 
             <div className="row2">
               <div>
-                <label>{t("Quantité en stock *")}</label>
-                <input
-                  className="input"
-                  type="number"
-                  min="1"
-                  required
-                  value={form.quantity}
-                  onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                />
+                <label>{t("Quantité")}</label>
+                <p className="hint" style={{ margin: 0 }}>
+                  {t("Illimitée — un fichier ne s'épuise pas.")}
+                </p>
               </div>
               <div>
-                <label>{t("Frais de livraison ({symbol})", { symbol })}</label>
-                <input
-                  className="input"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="ex : 1000"
-                  value={form.delivery_fee}
-                  onChange={(e) => setForm({ ...form, delivery_fee: e.target.value })}
-                />
+                <label>{t("Livraison")}</label>
+                <p className="hint" style={{ margin: 0 }}>
+                  {t("Offerte — le client télécharge le fichier.")}
+                </p>
               </div>
             </div>
 

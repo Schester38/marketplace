@@ -27,7 +27,9 @@ export function StoreProvider({ children }) {
   const [favs, setFavs] = useLocalState("mboppi-favs", []);
 
   const addToCart = (product, qty = 1) => {
-    const max = Math.max(1, Number(product.quantity) || 99);
+    // Un produit DIGITAL ne s'épuise pas (le fichier ne se « consomme » pas :
+    // aucun stock n'est décrémenté côté serveur) → aucun plafond de quantité.
+    const max = product.is_digital ? 9999 : Math.max(1, Number(product.quantity) || 99);
     setCart((list) => {
       const existing = list.find((i) => i.id === Number(product.id));
       if (existing) {
