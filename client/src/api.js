@@ -486,4 +486,27 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  // Restauration d'une version (instantané complet du contenu).
+  genRestoreVersion: (id, versionId) =>
+    adminRequest(`/generator/documents/${id}/versions/${versionId}/restore`, { method: "POST" }),
+  // Vue DESIGN — « Modèle de design » … aucun souci.
+  // Assistant IA (Gemini) : renvoie du texte relu/inséré par l'utilisateur.
+  genAi: (payload) =>
+    adminRequest("/generator/ai", { method: "POST", body: JSON.stringify(payload) }),
+  // Publication « Vendre sur Mboppi » : URL d'upload signée (envoi direct du
+  // PDF vers Supabase) puis création/mise à jour du produit digital.
+  genUploadUrl: (id, payload) =>
+    adminRequest(`/generator/documents/${id}/upload-url`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  genPublish: (id, payload) =>
+    adminRequest(`/generator/documents/${id}/publish`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  genDeleteVersion: (id, versionId) =>
+    adminRequest(`/generator/documents/${id}/versions/${versionId}`, { method: "DELETE" }),
+  // Vérification PUBLIQUE d'authenticité (page /verifier/<référence>, QR du PDF).
+  genVerify: (ref) => request(`/generator/verify/${encodeURIComponent(ref)}`),
 };

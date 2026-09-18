@@ -72,6 +72,7 @@ const CreatorDashboard = lazyRetry(() => import("./pages/CreatorDashboard.jsx"))
 const VitrineOffre = lazyRetry(() => import("./pages/VitrineOffre.jsx"));
 const Verone = lazyRetry(() => import("./pages/Verone.jsx"));
 const OfferDetail = lazyRetry(() => import("./pages/OfferDetail.jsx"));
+const VerifyDoc = lazyRetry(() => import("./pages/VerifyDoc.jsx"));
 const SellLanding = lazyRetry(() => import("./pages/SellLanding.jsx"));
 const ProductDetail = lazyRetry(() => import("./pages/ProductDetail.jsx"));
 const PurchasePage = lazyRetry(() => import("./pages/PurchasePage.jsx"));
@@ -792,6 +793,8 @@ export default function App() {
             <Route path="/mentions-legales" element={<MentionsLegales />} />
             <Route path="/soutien" element={<Support />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/verifier" element={<VerifyDoc />} />
+            <Route path="/verifier/:ref" element={<VerifyDoc />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

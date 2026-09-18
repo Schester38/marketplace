@@ -118,6 +118,42 @@ export function getTemplate(id) {
   return GEN_TEMPLATES.find((tpl) => tpl.id === id) || GEN_TEMPLATES[0];
 }
 
+// ─── Surcharges de style par document (`style_overrides`, colonne JSONB) ────
+// Panneau « Typographie » du Générateur : l'utilisateur ajuste police, tailles,
+// couleurs, interligne, alignement et espacement de paragraphe sans changer de
+// modèle. Appliqué au même endroit que le modèle (pagination ET export PDF).
+export const SIZE_KEYS = ["h1", "h2", "h3", "h4", "body", "small"];
+export const COLOR_KEYS = ["heading", "body", "accent", "bg"];
+
+export function resolveTemplate(template, overrides) {
+  const ov = overrides && typeof overrides === "object" ? overrides : {};
+  const out = {
+    ...template,
+    sizes: { ...template.sizes },
+    colors: { ...template.colors },
+  };
+  if (ov.bodyFont && FONT_CSS[ov.bodyFont]) out.bodyFont = ov.bodyFont;
+  if (ov.headingFont && FONT_CSS[ov.headingFont]) out.headingFont = ov.headingFont;
+  if (ov.align === "left" || ov.align === "justify" || ov.align === "center") out.align = ov.align;
+  const lh = Number(ov.lineHeight);
+  if (Number.isFinite(lh) && lh >= 1.1 && lh <= 2.4) out.lineHeight = lh;
+  const ps = Number(ov.paraSpace);
+  if (Number.isFinite(ps) && ps >= 0 && ps <= 24) out.paraSpace = ps;
+  if (ov.sizes) {
+    for (const k of SIZE_KEYS) {
+      const v = Number(ov.sizes[k]);
+      if (Number.isFinite(v) && v >= 5 && v <= 60) out.sizes[k] = v;
+    }
+  }
+  if (ov.colors) {
+    for (const k of COLOR_KEYS) {
+      const v = ov.colors[k];
+      if (typeof v === "string" && /^#[0-9a-f]{3,8}$/i.test(v)) out.colors[k] = v;
+    }
+  }
+  return out;
+}
+
 // Formats de page (mm). « ebook » ≈ format liseuse 6"×9" réduit.
 export const PAGE_FORMATS = {
   A4: [210, 297],

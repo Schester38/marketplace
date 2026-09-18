@@ -9387,6 +9387,183 @@ a.step {
   }
 }
 
+/* ═══ Générateur — fonctionnalités avancées (IA, contrôle qualité, versions, publication) ═══ */
+
+/* Assistant IA */
+.gen-ai {
+  margin-top: 10px;
+  border: 1px dashed var(--border, #d8dee9);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fafbff;
+}
+.gen-ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.gen-ai-label {
+  font-weight: 600;
+  font-size: 13px;
+  margin-right: 4px;
+}
+.gen-ai-result {
+  margin-top: 10px;
+}
+.gen-ai-result pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #fff;
+  border: 1px solid var(--border, #d8dee9);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.55;
+  max-height: 260px;
+  overflow: auto;
+  margin: 0 0 8px;
+  font-family: inherit;
+}
+.gen-ai-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Contrôle qualité (DOCUMENT CHECK) */
+.gen-check-report {
+  border: 1px solid var(--border, #d8dee9);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: #fff;
+}
+.gen-check-report.has-errors {
+  border-color: #e5484d;
+  background: #fff5f5;
+}
+.gen-check-report.ok {
+  border-color: #46a758;
+}
+.gen-check-report h4 {
+  margin: 0 0 6px;
+}
+.gen-check-quality {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+.gen-quality {
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border, #d8dee9);
+  background: #f7f8fa;
+}
+.gen-quality-excellent { background: #e7f6ec; border-color: #46a758; }
+.gen-quality-good { background: #eef5ff; border-color: #3e63dd; }
+.gen-quality-warn { background: #fff7e0; border-color: #d8a437; }
+.gen-quality-bad { background: #fdecec; border-color: #e5484d; }
+.gen-check-group {
+  margin: 8px 0;
+  font-size: 13px;
+}
+.gen-check-group ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.gen-check-group li {
+  margin: 3px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.gen-check-errors strong { color: #e5484d; }
+.gen-check-warnings strong { color: #d8a437; }
+.gen-check-suggestions strong { color: #3e63dd; }
+.gen-check-fixables {
+  margin: 10px 0 6px;
+  font-size: 13px;
+}
+.gen-check-fix-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+/* Versions restaurables */
+.gen-versions {
+  margin: 6px 0 2px;
+  font-size: 13px;
+}
+.gen-versions summary {
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  padding: 4px 0;
+}
+.gen-versions ul {
+  list-style: none;
+  margin: 6px 0;
+  padding: 0;
+}
+.gen-versions li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 8px;
+  border-top: 1px solid var(--border, #eee);
+}
+
+/* Publication produit digital */
+.gen-publish {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 20, 30, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 16px;
+}
+.gen-publish-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  max-height: 90vh;
+  overflow: auto;
+}
+.gen-publish-card h4 {
+  margin: 0 0 8px;
+}
+.gen-publish-card label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 10px 0 4px;
+}
+.gen-publish-card textarea.input {
+  resize: vertical;
+}
+.gen-publish-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.gen-published-ok {
+  color: #1f7a35;
+  font-weight: 600;
+}
+
 /* ═══ Générateur de documents (ebooks/PDF) — module admin isolé ═══ */
 .gen-section .gen-head {
   display: flex;

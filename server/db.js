@@ -750,6 +750,9 @@ export async function initDb() {
       back_cover JSONB NOT NULL DEFAULT '{}'::jsonb,
       protection JSONB NOT NULL DEFAULT '{}'::jsonb,
       content_hash TEXT NOT NULL DEFAULT '',
+      -- Produit digital publié depuis le Générateur (« Vendre sur Mboppi ») :
+      -- une republication met à jour CE produit au lieu d'en créer un doublon.
+      published_product_id INTEGER,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
@@ -768,6 +771,16 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_gen_documents_owner ON gen_documents(owner_id, updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_gen_versions_doc ON gen_versions(doc_id, created_at DESC);
   `);
+
+  // Migration additive (bases déjà créées par une version antérieure) : lien
+  // vers le produit digital publié. Un échec ne bloque pas le démarrage.
+  try {
+    await pool.query(
+      `ALTER TABLE gen_documents ADD COLUMN IF NOT EXISTS published_product_id INTEGER`
+    );
+  } catch (err) {
+    console.warn("[db] migration gen_documents.published_product_id :", err.message);
+  }
 
   try {
     await purgeOldTransactions();

@@ -9,9 +9,12 @@ export async function sha256Hex(str) {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Payload encodé dans le QR code : référence + auteur + date + empreinte.
-// Sert à prouver l'origine du document (identifiant vérifiable auprès de
-// l'auteur), il ne rend pas la copie techniquement impossible.
+import { BASE_URL } from "../config.js";
+
+// Payload encodé dans le QR code : référence + auteur + date + empreinte +
+// lien PUBLIC de vérification (/verifier/<référence>) : le scan ouvre la page
+// d'authenticité Mboppi. Sert à prouver l'origine du document (identifiant
+// vérifiable), il ne rend pas la copie techniquement impossible.
 export function verificationPayload(doc, contentHash) {
   const created = doc.created_at ? new Date(doc.created_at).toISOString().slice(0, 10) : "";
   return [
@@ -19,7 +22,7 @@ export function verificationPayload(doc, contentHash) {
     doc.author ? `Auteur : ${doc.author}` : "",
     created ? `Créé le ${created}` : "",
     contentHash ? `SHA-256 : ${contentHash.slice(0, 32)}` : "",
-    "Vérification : contactez l'auteur avec la référence ci-dessus",
+    doc.doc_ref ? `Vérification : ${BASE_URL}/verifier/${doc.doc_ref}` : "Vérification : contactez l'auteur avec la référence ci-dessus",
   ]
     .filter(Boolean)
     .join("\n");

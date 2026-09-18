@@ -296,7 +296,9 @@ function drawWatermark(doc, docMeta, template, box) {
 // ─── Export PDF complet (même sortie paginée que l'aperçu HTML) ──────────────
 // docMeta = document complet (générateur.js) + doc.content (docModel TipTap)
 // + html (HTML sérialisé de l'éditeur, déjà paginé par paginateDocument).
-export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress }) {
+// Options : filename (nom imposé), download:false → renvoie l'instance jsPDF
+// sans télécharger (utilisé par la publication « Vendre sur Mboppi »).
+export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, filename, download = true }) {
   const { pages, box, contentWpx } = paginated;
   const { w, h } = box;
   const doc2 = new jsPDF({
@@ -361,13 +363,29 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress })
     }
   }
 
-  const name =
-    (docMeta.title || "document")
-      .replace(/[\\/:*?"<>|]+/g, "")
-      .slice(0, 60)
-      .trim() || "document";
-  doc2.save(`${name}.pdf`);
+  const name = String(
+    filename ||
+      (docMeta.title || "document")
+        .replace(/[\\/:*?"<>|]+/g, "")
+        .slice(0, 60)
+        .trim() ||
+      "document"
+  ).replace(/\.pdf$/i, "");
+  if (download) doc2.save(`${name}.pdf`);
   onProgress?.(100, total, total);
+  return doc2;
+}
+
+// Téléchargement d'un Blob (EPUB, HTML, JSON…) — même logique que le PDF.
+export function saveBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
 // Une ligne de tableau : bordures + texte cellule par cellule (positions mesurées).

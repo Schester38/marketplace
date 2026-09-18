@@ -23,8 +23,14 @@ import {
 } from "../generator/templates.js";
 import { detectStructureHtml } from "../generator/structure.js";
 import { paginateDocument } from "../generator/paginate.js";
-import { exportDocumentPdf } from "../generator/exportPdf.js";
-import { copyrightLines } from "../generator/protection.js";
+import { exportDocumentPdf, saveBlob } from "../generator/exportPdf.js";
+import { exportEpub } from "../generator/epub.js";
+import { checkDocument } from "../generator/check.js";
+import { renderCoverImage, libraryThumb } from "../generator/coverImage.js";
+import {
+  copyrightLines,
+  sha256Hex,
+} from "../generator/protection.js";
 
 const EMPTY_DOC = { type: "doc", content: [{ type: "paragraph" }] };
 
@@ -85,6 +91,28 @@ const fmtDate = (iso) => {
 // ═════════════════════════════════════════════════════════════════════════════
 // Panneau « Générateur » : bibliothèque + éditeur.
 // ═════════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════════════
+// Vignette de bibliothèque : première page (couverture) rendue par le même
+// moteur que l'aperçu (libraryThumb → canvas → dataURL), en 120 px de large.
+// ═════════════════════════════════════════════════════════════════════════════
+function DocThumb({ doc }) {
+  const [src, setSrc] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    libraryThumb(doc, 120)
+      .then((u) => alive && setSrc(u))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [doc.id, doc.template_id, doc.cover, doc.title, doc.author]);
+  return (
+    <span className="gen-thumb">
+      {src ? <img src={src} alt="" /> : <span className="gen-thumb-empty">📄</span>}
+    </span>
+  );
+}
+
 export default function GeneratorPanel() {
   const { t } = useLang();
   const [list, setList] = useState(null);
@@ -254,6 +282,7 @@ export default function GeneratorPanel() {
           <table>
             <thead>
               <tr>
+                <th></th>
                 <th>{t("Titre")}</th>
                 <th>{t("Référence")}</th>
                 <th>{t("Modèle")}</th>
@@ -266,6 +295,9 @@ export default function GeneratorPanel() {
             <tbody>
               {list.map((doc) => (
                 <tr key={doc.id}>
+                  <td className="gen-thumb-cell">
+                    <DocThumb doc={doc} />
+                  </td>
                   <td>
                     <strong>{doc.title}</strong>
                     {doc.author ? <div className="hint">{doc.author}</div> : null}
@@ -316,6 +348,16 @@ function GenEditor({ initialDoc, onBack }) {
   const [preview, setPreview] = useState(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [exportPct, setExportPct] = useState(null);
+  const [check, setCheck] = useState(null);
+  // Assistant IA (résultat relu puis inséré par l'utilisateur — jamais injecté
+  // sans validation), export EPUB, publication produit.
+  const [aiBusy, setAiBusy] = useState(null); // action en cours
+  const [aiResult, setAiResult] = useState(null); // { action, text, replaceSel }
+  const [epubStep, setEpubStep] = useState(null); // label progression EPUB
+  const [pub, setPub] = useState(null); // formulaire { price, description }
+  const [pubBusy, setPubBusy] = useState(null); // label d'étape ou null
+  const [published, setPublished] = useState(null); // { product_id, updated }
+  const hasAi = typeof meta.ai_available === "undefined" ? true : meta.ai_available;
 
   const contentRef = useRef(initialDoc.content || EMPTY_DOC);
   const metaRef = useRef(meta);
@@ -476,6 +518,236 @@ function GenEditor({ initialDoc, onBack }) {
     }
   };
 
+  // ═════════════════════════════════════════════════════════════════════════
+  // FONCTIONS AVANCÉES — assistant IA, contrôle qualité, EPUB, publication,
+  // versions restaurables. L'IA ne modifie JAMAIS le document directement :
+  // le résultat est proposé, relu puis inséré par l'utilisateur.
+  // ═════════════════════════════════════════════════════════════════════════
+
+  // ─── Assistant IA (Gemini — route /api/generator/ai) ───────────────────────
+  // Contrat serveur : { action, text (sélection), title, subtitle, author,
+  // instruction } → { text } ou { design } pour l'action "design".
+  const selectionText = () => {
+    const ed = editorRef.current;
+    if (!ed) return "";
+    const sel = ed.state.selection;
+    if (!sel || sel.empty) return "";
+    try {
+      return ed.state.doc.textBetween(sel.from, sel.to, "\n\n");
+    } catch {
+      return "";
+    }
+  };
+
+  const runAi = async (action, { instruction, tone, lang } = {}) => {
+    setError("");
+    setAiBusy(action);
+    setAiResult(null);
+    try {
+      const m = metaRef.current;
+      const d = await api.genAi({
+        action,
+        text: selectionText(),
+        title: m.title,
+        subtitle: m.subtitle,
+        author: m.author,
+        instruction: instruction || "",
+        tone: tone || "",
+        lang: lang || "",
+      });
+      // Action "design" : le serveur renvoie un objet { design } déjà validé.
+      if (action === "design") {
+        const design = d.design || null;
+        if (design?.template_id) {
+          patchMeta({
+            template_id: design.template_id,
+            cover: {
+              ...(metaRef.current.cover || {}),
+              ...(design.cover?.bg ? { bg: design.cover.bg } : {}),
+              ...(design.cover?.text ? { text: design.cover.text } : {}),
+            },
+          }, true);
+          setAiResult({ action, text: design.reason || t("Design appliqué.") });
+        } else {
+          throw new Error(t("L'IA n'a pas pu proposer de design valide. Réessayez."));
+        }
+        return;
+      }
+      setAiResult({ action, text: String(d.text || "").trim() });
+    } catch (e) {
+      const msg = e?.message || t("Assistant IA indisponible");
+      setError(/503|GEMINI|clé|activé|configuré/i.test(msg)
+        ? t("L'assistant IA n'est pas activé sur ce serveur (clé Gemini manquante). Le reste du Générateur fonctionne normalement.")
+        : msg);
+    } finally {
+      setAiBusy(null);
+    }
+  };
+
+  // Insère le résultat IA : remplace la sélection (actions sur passage) ou
+  // s'ajoute en fin de document (plan, quatrième, bio). L'action "structure"
+  // repasse par le détecteur pour produire un document structuré complet.
+  const applyAiResult = (replaceSelection) => {
+    const ed = editorRef.current;
+    const res = aiResult;
+    if (!ed || !res?.text) return;
+    if (res.action === "structure" && !replaceSelection) {
+      applyHtml(detectStructureHtml(res.text));
+    } else if (replaceSelection && !ed.state.selection.empty) {
+      ed.chain().focus().insertContentAt(ed.state.selection.from, res.text).run();
+      contentRef.current = ed.getJSON();
+      saveNow();
+    } else {
+      ed.chain().focus("end").insertContent(`<p>${res.text.replace(/\n/g, "</p><p>")}</p>`).run();
+      contentRef.current = ed.getJSON();
+      saveNow();
+    }
+    setAiResult(null);
+  };
+
+  // ─── Contrôle qualité (🔍 DOCUMENT CHECK — analyse de la sortie paginée) ───
+  const runCheck = async () => {
+    setError("");
+    const paginated = await buildPreview();
+    if (!paginated) return;
+    setCheck(checkDocument({ paginated, docMeta: metaRef.current }));
+    setView("preview");
+  };
+
+  const applyFix = async (code) => {
+    const prot = { ...(metaRef.current.protection || {}) };
+    const patch = { protection: prot };
+    if (code === "toc") prot.toc = true;
+    else if (code === "copyright") prot.copyright = true;
+    else if (code === "qr") prot.qrEnabled = true;
+    else if (code === "cover") patch.cover = { ...(metaRef.current.cover || {}), enabled: true };
+    else if (code === "cover_title") patch.cover = { ...(patch.cover || metaRef.current.cover || {}), title: metaRef.current.title };
+    else if (code === "compact_margins") {
+      const m = metaRef.current.margins || {};
+      patch.margins = {
+        top: Math.max(12, (m.top ?? 20) - 6),
+        bottom: Math.max(12, (m.bottom ?? m.top ?? 20) - 6),
+        left: Math.max(12, (m.left ?? 18) - 4),
+        right: Math.max(12, (m.right ?? m.left ?? 18) - 4),
+      };
+    } else if (code === "justify") {
+      editorRef.current?.chain().focus().setTextAlign("justify").run();
+      contentRef.current = editorRef.current.getJSON();
+    }
+    patchMeta(patch, true);
+    setCheck(null);
+    const paginated = await buildPreview();
+    if (paginated) setCheck(checkDocument({ paginated, docMeta: metaRef.current }));
+  };
+
+  // ─── Export EPUB 3 (reflowable, module indépendant du moteur PDF) ──────────
+  const doExportEpub = async () => {
+    setError("");
+    setEpubStep(t("Préparation…"));
+    try {
+      await exportEpub({
+        doc: contentRef.current,
+        docMeta: metaRef.current,
+        onProgress: (_p, label) => setEpubStep(label || `${_p} %`),
+      });
+    } catch (e) {
+      setError(e?.message || t("Export EPUB impossible"));
+    } finally {
+      setEpubStep(null);
+    }
+  };
+
+  // ─── Publication : PDF → produit digital Mboppi (chaîne réelle) ────────────
+  // 1) export jsPDF en mémoire → 2) hash SHA-256 → 3) URL signée → PUT Supabase
+  // direct → 4) le serveur vérifie l'objet puis crée/met à jour le produit.
+  async function sha256Buffer(buf) {
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  const openPublish = () => {
+    setError("");
+    setPub({ price: "", description: "", title: metaRef.current.title || "" });
+  };
+
+  const doPublish = async () => {
+    setError("");
+    const price = Number(String(pub.price).replace(",", "."));
+    if (!Number.isFinite(price) || price < 0) {
+      setError(t("Prix invalide : indiquez un montant positif."));
+      return;
+    }
+    setPubBusy(t("Génération du PDF…"));
+    try {
+      const paginated = preview || (await buildPreview());
+      if (!paginated) throw new Error(t("Aperçu indisponible"));
+      const pdf = await exportDocumentPdf({
+        docMeta: metaRef.current,
+        paginated,
+        download: false,
+        onProgress: (p) => setPubBusy(p < 100 ? `${t("Génération du PDF…")} ${p} %` : t("Préparation du téléversement…")),
+      });
+      const buf = pdf.output("arraybuffer");
+      if (!buf || buf.byteLength <= 0) throw new Error(t("PDF vide : réessayez."));
+      const hash = await sha256Buffer(buf);
+      setPubBusy(t("Téléversement du fichier…"));
+      const safe = (metaRef.current.title || "document").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "document";
+      const signed = await api.genUploadUrl(meta.id, { name: `${safe}.pdf`, size: buf.byteLength, hash });
+      await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", signed.uploadUrl);
+        xhr.setRequestHeader("x-upsert", "true");
+        xhr.setRequestHeader("Content-Type", "application/pdf");
+        xhr.onload = () =>
+          xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`HTTP ${xhr.status}`));
+        xhr.onerror = () => reject(new Error(t("Téléversement interrompu : vérifiez votre connexion.")));
+        xhr.send(buf);
+      });
+      setPubBusy(t("Création du produit…"));
+      let coverData = "";
+      try {
+        coverData = (await renderCoverImage(metaRef.current, { width: 480 })) || "";
+      } catch {
+        coverData = "";
+      }
+      const d = await api.genPublish(meta.id, {
+        key: signed.path,
+        price,
+        currency: "XAF",
+        title: pub.title || metaRef.current.title,
+        description: pub.description || "",
+        cover: coverData,
+      });
+      setMeta(d.document);
+      metaRef.current = d.document;
+      setPublished({ product_id: d.product_id, updated: d.updated });
+      setPub(null);
+    } catch (e) {
+      setError(e?.message || t("Publication impossible"));
+    } finally {
+      setPubBusy(null);
+    }
+  };
+
+  // ─── Restauration d'un instantané (versions enregistrées) ──────────────────
+  const restoreVersion = async (v) => {
+    if (!window.confirm(t("Restaurer cette version ? Le contenu actuel sera remplacé (les versions restent disponibles)."))) return;
+    setError("");
+    try {
+      await saveNow();
+      const d = await api.genRestoreVersion(meta.id, v.id);
+      setMeta(d.document);
+      metaRef.current = d.document;
+      contentRef.current = d.content || EMPTY_DOC;
+      editorRef.current?.commands.setContent(contentRef.current, false);
+      setPreview(null);
+      setCheck(null);
+      setView("edit");
+    } catch (e) {
+      setError(e?.message || t("Restauration impossible"));
+    }
+  };
+
   const setDocStatus = (status) => patchMeta({ status }, true);
 
   return (
@@ -544,13 +816,45 @@ function GenEditor({ initialDoc, onBack }) {
           <button type="button" className="btn btn-primary btn-small" onClick={doExport} disabled={exportPct !== null}>
             {exportPct !== null ? `PDF… ${exportPct} %` : `⬇ ${t("Exporter PDF")}`}
           </button>
+          <button type="button" className="btn btn-outline btn-small" onClick={doExportEpub} disabled={epubStep !== null} title={t("Livre numérique reflowable (EPUB 3)")}>
+            {epubStep !== null ? `EPUB… ${epubStep}` : `⬇ ${t("Exporter EPUB")}`}
+          </button>
+          <button
+            type="button"
+            className={`btn btn-small ${meta.published_product_id ? "btn-outline" : "btn-primary"}`}
+            onClick={openPublish}
+            disabled={pubBusy !== null}
+            title={t("Exporter le PDF puis le publier comme produit digital téléchargeable dans votre boutique Mboppi")}
+          >
+            {meta.published_product_id ? `🛒 ${t("Produit publié")}` : `🛒 ${t("Vendre sur Mboppi")}`}
+          </button>
         </div>
       </div>
       {meta.doc_ref && (
         <p className="hint gen-ref">
           {t("Référence")} : <strong>{meta.doc_ref}</strong>
+          {meta.published_product_id && (
+            <> — 🛒 {t("Produit digital")} <a href={`/produit/${meta.published_product_id}`} target="_blank" rel="noreferrer">#{meta.published_product_id}</a></>
+          )}
           {versions.length > 0 && <> — {versions.length} {t("version(s)")}</>}
         </p>
+      )}
+      {versions.length > 0 && (
+        <details className="gen-versions">
+          <summary>🕘 {t("Versions enregistrées")} ({versions.length})</summary>
+          <ul>
+            {versions.map((v) => (
+              <li key={v.id}>
+                <span>
+                  {v.label || `#${v.id}`} — {v.created_at ? new Date(v.created_at).toLocaleString("fr-FR") : ""}
+                </span>
+                <button type="button" className="btn btn-small btn-outline" onClick={() => restoreVersion(v)}>
+                  ↺ {t("Restaurer")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       {error && <p className="error" role="alert">{error}</p>}
 
@@ -619,6 +923,58 @@ function GenEditor({ initialDoc, onBack }) {
             </span>
           </div>
           <EditorContent editor={editor} className="gen-editor" />
+          {hasAi && (
+            <div className="gen-ai">
+              <div className="gen-ai-actions">
+                <span className="gen-ai-label">✨ {t("Assistant IA")}</span>
+                {[
+                  ["structure", t("Structurer le texte")],
+                  ["improve", t("Améliorer la sélection")],
+                  ["correct", t("Corriger la sélection")],
+                  ["rephrase", t("Reformuler")],
+                  ["summarize", t("Résumer")],
+                  ["expand", t("Développer")],
+                  ["tone", t("Changer le ton")],
+                  ["translate", t("Traduire (EN)")],
+                  ["blurb", t("Quatrième de couverture")],
+                  ["bio", t("Biographie d'auteur")],
+                  ["design", t("Proposer un design")],
+                ].map(([action, label]) => (
+                  <button
+                    key={action}
+                    type="button"
+                    className="btn btn-small btn-outline"
+                    disabled={aiBusy !== null}
+                    onClick={() => runAi(action)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {aiBusy && <p className="hint">{t("L'assistant travaille…")}</p>}
+              {aiResult?.text && (
+                <div className="gen-ai-result">
+                  <pre>{aiResult.text}</pre>
+                  <div className="gen-ai-result-actions">
+                    {editor && !editor.state.selection.empty && aiResult.action !== "design" && (
+                      <button type="button" className="btn btn-small btn-primary" onClick={() => applyAiResult(true)}>
+                        {t("Remplacer la sélection")}
+                      </button>
+                    )}
+                    {aiResult.action !== "design" && (
+                      <button type="button" className="btn btn-small btn-outline" onClick={() => applyAiResult(false)}>
+                        {aiResult.action === "structure" ? t("Remplacer tout le contenu") : t("Ajouter à la fin")}
+                      </button>
+                    )}
+                    <button type="button" className="btn btn-small btn-outline" onClick={() => setAiResult(null)}>
+                      {t("Ignorer")}
+                    </button>
+                  </div>
+                </div>
+              )}
+              <p className="hint">{t("Sélectionnez un passage pour les actions sur texte. L'IA propose — vous validez : rien n'est inséré sans votre confirmation.")}</p>
+            </div>
+          )}
         </>
       )}
 
@@ -801,6 +1157,61 @@ function GenEditor({ initialDoc, onBack }) {
               </span>
             )}
           </div>
+          {check && (
+            <div className={`gen-check-report ${check.errors?.length ? "has-errors" : "ok"}`}>
+              <h4>🔍 {t("DOCUMENT CHECK — contrôle qualité")}</h4>
+              {check.stats && (
+                <p className="hint">
+                  {check.stats.words} {t("mot(s)")} — {check.stats.headings} {t("titre(s)")} — {check.stats.images} {t("image(s)")}
+                </p>
+              )}
+              {Array.isArray(check.quality) && check.quality.length > 0 && (
+                <div className="gen-check-quality">
+                  {check.quality.map((q) => (
+                    <span key={q.key} className={`gen-quality gen-quality-${q.level}`} title={q.hint}>
+                      {q.label} : <strong>{q.label && q.level === "excellent" ? t("excellente") : q.level === "good" ? t("bonne") : q.level === "warn" ? t("correcte") : t("à revoir")}</strong>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {(["errors", "warnings", "suggestions"]).map((k) =>
+                check[k]?.length ? (
+                  <div key={k} className={`gen-check-group gen-check-${k}`}>
+                    <strong>{k === "errors" ? t("Erreurs") : k === "warnings" ? t("Avertissements") : t("Suggestions")}</strong>
+                    <ul>
+                      {check[k].map((c, i) => {
+                        const msg = c?.message || c?.label || (typeof c === "string" ? c : JSON.stringify(c));
+                        return (
+                          <li key={i}>
+                            {msg}
+                            {c?.fixable && (
+                              <button type="button" className="btn btn-small btn-outline" onClick={() => applyFix(c.code || c)}>
+                                🔧 {t("Corriger")}
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ) : null
+              )}
+              {check.fixables?.length > 0 && (
+                <div className="gen-check-fixables">
+                  <strong>🔧 {t("Corrections possibles")}</strong>
+                  <div className="gen-check-fix-buttons">
+                    {check.fixables.map((f) => (
+                      <button key={f.code} type="button" className="btn btn-small btn-outline" onClick={() => applyFix(f.code)}>
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {check.errors?.length === 0 && <p className="hint">✓ {t("Aucune erreur bloquante détectée.")}</p>}
+              <button type="button" className="btn btn-small btn-outline" onClick={() => setCheck(null)}>{t("Fermer")}</button>
+            </div>
+          )}
           {preview && (
             <div className="gen-pages">
               {preview.pages.map((page, i) => (
@@ -811,6 +1222,57 @@ function GenEditor({ initialDoc, onBack }) {
             </div>
           )}
         </div>
+      )}
+
+      {/* ─── Publication : produit digital (modale légère) ──────────────────── */}
+      {pub && (
+        <div className="gen-publish" role="dialog" aria-modal="true" aria-label={t("Publier comme produit digital")}>
+          <div className="gen-publish-card">
+            <h4>🛒 {meta.published_product_id ? t("Mettre à jour le produit digital") : t("Publier comme produit digital")}</h4>
+            <p className="hint">
+              {t("Le PDF est généré puis téléversé dans le stockage privé de Mboppi. Le produit apparaît dans votre catalogue et le fichier devient téléchargeable par l'acheteur après confirmation du paiement.")}
+            </p>
+            <label>
+              {t("Prix (XAF)")}
+              <input
+                className="input"
+                type="number"
+                min="0"
+                step="100"
+                value={pub.price}
+                onChange={(e) => setPub({ ...pub, price: e.target.value })}
+                placeholder="2500"
+              />
+            </label>
+            <label>
+              {t("Description (optionnelle)")}
+              <textarea
+                className="input"
+                rows={3}
+                maxLength={4000}
+                value={pub.description}
+                onChange={(e) => setPub({ ...pub, description: e.target.value })}
+                placeholder={t("Résumé du document, public visé, nombre de pages…")}
+              />
+            </label>
+            <div className="gen-publish-actions">
+              <button type="button" className="btn btn-primary" onClick={doPublish} disabled={pubBusy !== null}>
+                {pubBusy !== null ? pubBusy : meta.published_product_id ? t("Mettre à jour le produit") : t("Publier maintenant")}
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => setPub(null)} disabled={pubBusy !== null}>
+                {t("Annuler")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {published && !pub && (
+        <p className="hint gen-published-ok" role="status">
+          ✓ {published.updated ? t("Produit mis à jour") : t("Produit publié")} —{" "}
+          <a href={`/produit/${published.product_id}`} target="_blank" rel="noreferrer">
+            {t("voir le produit")} #{published.product_id}
+          </a>
+        </p>
       )}
     </section>
   );

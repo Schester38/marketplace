@@ -6,7 +6,7 @@
 //   - titres insécables (jamais seul en bas de page) + saut de chapitre ;
 //   - tableaux scindés par lignes, images redimensionnées à la boîte ;
 //   - table des matières avec numéros de page exacts (2 passes).
-import { FONT_CSS, getTemplate, resolvePageBox, blockSpacing } from "./templates.js";
+import { FONT_CSS, getTemplate, resolveTemplate, resolvePageBox, blockSpacing } from "./templates.js";
 
 export const PX_PER_MM = 96 / 25.4; // px CSS par mm (96 dpi)
 const PT_TO_PX = 96 / 72;
@@ -436,7 +436,9 @@ export function lineText(ln) {
 const TOC_LINE_FACTOR = 2.0;
 
 export async function paginateDocument({ html, doc, toc = true }) {
-  const template = getTemplate(doc.template_id);
+  // Modèle + surcharges typographiques du document (style_overrides) : la
+  // pagination ET l'export PDF consomment le même template résolu.
+  const template = resolveTemplate(getTemplate(doc.template_id), doc.style_overrides);
   const measured = await measureDocument(html, doc, template);
   const bodyLineH = template.sizes.body * template.lineHeight * PT_TO_PX;
   const flow = flowAtoms(measured.atoms, measured.contentHpx, template, bodyLineH);

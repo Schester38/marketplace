@@ -1,7 +1,7 @@
 {
   "name": "marketplace-client",
   "private": true,
-  "version": "1.57.57",
+  "version": "1.57.58",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -19,6 +19,7 @@
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
     "jspdf": "^4.2.1",
+    "jszip": "^3.10.2",
     "leaflet": "^1.9.4",
     "mammoth": "^1.12.3",
     "qrcode": "^1.5.4",

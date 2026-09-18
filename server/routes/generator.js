@@ -23,6 +23,17 @@ import { Router } from "express";
 import { q } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { logAudit } from "../security.js";
+import { askAI } from "./chat.js";
+import {
+  createDigitalUploadUrl,
+  digitalObjectKey,
+  digitalObjectMeta,
+  digitalObjectExists,
+  DIGITAL_MAX_BYTES,
+  DIGITAL_EXT_ALLOWED,
+  safeFileExt,
+  uploadPhoto,
+} from "../storage.js";
 
 const router = Router();
 
@@ -112,6 +123,7 @@ function docRow(row) {
     back_cover: row.back_cover || {},
     protection: row.protection || {},
     content_hash: row.content_hash,
+    published_product_id: row.published_product_id || null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -133,6 +145,41 @@ async function loadDoc(id) {
   }
   return row;
 }
+
+// ─── Vérification PUBLIQUE d'authenticité (QR code encodé dans le PDF) ───────
+// Montée AVANT la garde admin : le QR de chaque document pointe vers la page
+// publique /verifier/<référence> qui interroge cet endpoint. Informations NON
+// sensibles uniquement (jamais le contenu) ; empreinte TRONQUÉE.
+router.get("/verify/:ref", ah(async (req, res) => {
+  const ref = String(req.params.ref || "").trim().toUpperCase().slice(0, 40);
+  if (!/^DOC-\d{4}-[0-9A-F]{8}$/.test(ref)) {
+    return res.status(400).json({ verified: false, error: "Référence invalide (format attendu : DOC-2026-XXXXXXXX)." });
+  }
+  const row = (await q(
+    `SELECT doc_ref, title, subtitle, author, status, content_hash, created_at, updated_at
+       FROM gen_documents WHERE UPPER(doc_ref) = $1`,
+    [ref]
+  ))[0];
+  if (!row) {
+    return res.status(404).json({
+      verified: false,
+      doc_ref: ref,
+      error: "Aucun document Mboppi ne correspond à cette référence. Un document d'origine incertaine ne doit pas être considéré comme authentique.",
+    });
+  }
+  res.set("Cache-Control", "public, max-age=60");
+  res.json({
+    verified: true,
+    doc_ref: row.doc_ref,
+    title: row.title,
+    subtitle: row.subtitle,
+    author: row.author,
+    status: row.status,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    hash: String(row.content_hash || "").slice(0, 16),
+  });
+}));
 
 router.use((req, res, next) => {
   res.set("Cache-Control", "no-store");
@@ -322,6 +369,375 @@ router.delete(
     await q(`DELETE FROM gen_documents WHERE id = $1`, [row.id]);
     logAudit(req.user.id, "generator.doc_deleted", row.doc_ref, req.ip);
     res.json({ ok: true });
+  })
+);
+
+// ─── Versions : restauration et suppression d'un instantané ──────────────────
+router.post(
+  "/documents/:id/versions/:vid/restore",
+  ah(async (req, res) => {
+    const row = await loadDoc(Number(req.params.id));
+    const vid = Number(req.params.vid);
+    const version = (
+      await q(`SELECT id, label, content FROM gen_versions WHERE id = $1 AND doc_id = $2`, [
+        Number.isInteger(vid) && vid > 0 ? vid : 0,
+        row.id,
+      ])
+    )[0];
+    if (!version) {
+      const err = new Error("Version introuvable");
+      err.status = 404;
+      throw err;
+    }
+    // Sécurité : le contenu restauré doit rester conforme (taille + liens).
+    const content = parseContent(version.content);
+    await q(
+      `UPDATE gen_documents_data SET content = $2::jsonb, updated_at = now() WHERE doc_id = $1`,
+      [row.id, JSON.stringify(content)]
+    );
+    const updated = await q(
+      `UPDATE gen_documents SET content_hash = $2, updated_at = now() WHERE id = $1 RETURNING *`,
+      [row.id, contentHash(content)]
+    );
+    logAudit(req.user.id, "generator.version_restored", `${row.doc_ref} #${version.id}`, req.ip);
+    res.json({ document: docRow(updated[0]), content });
+  })
+);
+
+router.delete(
+  "/documents/:id/versions/:vid",
+  ah(async (req, res) => {
+    const row = await loadDoc(Number(req.params.id));
+    await q(`DELETE FROM gen_versions WHERE id = $1 AND doc_id = $2`, [
+      Number(req.params.vid) || 0,
+      row.id,
+    ]);
+    res.json({ ok: true });
+  })
+);
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ASSISTANT IA (Gemini) — même moteur que le chat 💬 du site (askAI de chat.js).
+// L'IA ne modifie JAMAIS le document : elle renvoie du texte que l'utilisateur
+// relit, modifie puis insère lui-même (l'utilisateur reste maître du résultat).
+// ═════════════════════════════════════════════════════════════════════════════
+
+const AI_MAX_INPUT = 1800; // askAI tronque à 2000 caractères côté chat.js
+const AI_TEMPLATE_IDS = [
+  "minimal", "moderne", "elegant", "professionnel", "business", "education",
+  "motivation", "finance", "technologie", "luxe", "jeunesse", "magazine",
+];
+
+// Chaque action = { instruction } ; le résultat est du TEXTE BRUT (Markdown
+// léger pour `structure`/`outline`, relu puis inséré par le client).
+const AI_ACTIONS = {
+  structure: {
+    instruction:
+      "Tu es un éditeur professionnel. Structure le texte fourni en document éditable : " +
+      "place un titre de chapitre en début de ligne précédé de « # » (un seul par section principale), " +
+      "les sous-sections avec « ## », les listes avec « - », les citations avec « > ». " +
+      "Ne change AUCUN mot du texte : tu ajoutes seulement les marqueurs de structure. " +
+      "Réponds uniquement par le texte structuré, sans commentaire ni bloc de code.",
+  },
+  outline: {
+    instruction:
+      "Tu es un éditeur professionnel. Rédige le PLAN détaillé d'un document sur le sujet fourni, " +
+      "adapté au public africain francophone. Un titre de chapitre par ligne préfixé de « # », " +
+      "des sous-parties préfixées de « ## ». Réponds uniquement par le plan, sans commentaire.",
+  },
+  improve: {
+    instruction:
+      "Tu es un éditeur professionnel. Améliore le passage fourni : style, fluidité, richesse du vocabulaire, " +
+      "clarté. Conserve le sens, la langue et la longueur approximative. Réponds uniquement par le texte amélioré.",
+  },
+  correct: {
+    instruction:
+      "Corrige l'orthographe, la grammaire et la ponctuation du passage fourni, sans en changer le style. " +
+      "Réponds uniquement par le texte corrigé.",
+  },
+  rephrase: {
+    instruction:
+      "Reformule le passage fourni autrement, avec le même sens et un style naturel. " +
+      "Réponds uniquement par le texte reformulé.",
+  },
+  summarize: {
+    instruction:
+      "Résume le passage fourni en un paragraphe dense d'une centaine de mots maximum. " +
+      "Réponds uniquement par le résumé.",
+  },
+  expand: {
+    instruction:
+      "Développe le passage fourni : ajoute des exemples concrets, des explications et des transitions, " +
+      "en conservant le ton et la langue. Réponds uniquement par le texte développé.",
+  },
+  tone: {
+    instruction:
+      "Réécris le passage fourni dans le ton demandé (simple, professionnel, inspirant ou pédagogique). " +
+      "Réponds uniquement par le texte réécrit.",
+  },
+  titles: {
+    instruction:
+      "Propose 5 titres accrocheurs pour le document décrit (un par ligne, sans numérotation, sans commentaire).",
+  },
+  blurb: {
+    instruction:
+      "Rédige la quatrième de couverture du document décrit : 90 à 130 mots, accrocheur, orienté bénéfice lecteur, " +
+      "terminé par un appel à l'action. Réponds uniquement par ce texte.",
+  },
+  bio: {
+    instruction:
+      "Rédige une courte biographie d'auteur (60 à 90 mots) au nom de l'auteur indiqué, dans un style sobre et crédible. " +
+      "Réponds uniquement par la biographie.",
+  },
+  translate: {
+    instruction:
+      "Traduis fidèlement le passage fourni dans la langue demandée, en conservant le formatage. " +
+      "Réponds uniquement par la traduction.",
+  },
+  design: {
+    json: true,
+    instruction:
+      "Choisis le modèle de design le plus adapté au document décrit. " +
+      `Modèles disponibles (identifiants exacts) : ${AI_TEMPLATE_IDS.join(", ")}. ` +
+      "Réponds UNIQUEMENT par un objet JSON valide, sans texte autour, au format : " +
+      '{"template_id":"moderne","cover":{"bg":"#1d4ed8","text":"#ffffff"},"reason":"une phrase courte"}. ' +
+      "Les couleurs doivent être des codes hexadécimaux contrastés avec un texte lisible.",
+  },
+};
+
+function aiJson(text) {
+  const m = /\{[\s\S]*\}/.exec(String(text || ""));
+  if (!m) return null;
+  try {
+    return JSON.parse(m[0]);
+  } catch {
+    return null;
+  }
+}
+
+// POST /api/generator/ai — { action, text?, instruction?, title?, author?, subtitle? }
+// Renvoie { action, text } ou { action:"design", design:{template_id, cover, reason} }.
+// Le prompt système est celui de l'assistante du site, complété par l'instruction
+// de l'action : même qualité de rédaction, aucun accès aux données privées.
+router.post(
+  "/ai",
+  ah(async (req, res) => {
+    const body = req.body || {};
+    const action = String(body.action || "").trim();
+    const def = AI_ACTIONS[action];
+    if (!def) {
+      const err = new Error("Action IA inconnue");
+      err.status = 400;
+      throw err;
+    }
+    // Sans clé Gemini, l'assistant est simplement absent : le générateur reste
+    // entièrement utilisable (message clair au lieu d'une réponse incohérente).
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({
+        error: "L'assistant IA n'est pas configuré sur cette installation (GEMINI_API_KEY absente). Le reste du Générateur fonctionne normalement.",
+        code: "AI_NOT_CONFIGURED",
+      });
+    }
+    const text = String(body.text || "").slice(0, AI_MAX_INPUT).trim();
+    const docContext = [
+      body.title ? `Titre du document : ${String(body.title).slice(0, 200)}` : "",
+      body.subtitle ? `Sous-titre : ${String(body.subtitle).slice(0, 300)}` : "",
+      body.author ? `Auteur : ${String(body.author).slice(0, 200)}` : "",
+      body.instruction ? `Consigne complémentaire de l'utilisateur : ${String(body.instruction).slice(0, 400)}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const needsText = ["structure", "improve", "correct", "rephrase", "summarize", "expand", "tone", "translate"].includes(action);
+    if (needsText && !text) {
+      const err = new Error("Sélectionnez d'abord un passage dans le document.");
+      err.status = 422;
+      throw err;
+    }
+    if (!needsText && !text && !docContext) {
+      const err = new Error("Renseignez le titre du document pour que l'IA puisse travailler.");
+      err.status = 422;
+      throw err;
+    }
+
+    const message = [def.instruction, docContext, text ? `\n---\n${text}` : ""]
+      .filter(Boolean)
+      .join("\n\n");
+    const reply = await askAI(message, [], "Tu réponds à un auteur qui met en page un document professionnel.", "fr");
+    const out = String(reply || "").trim();
+    if (!out || /je ne peux pas répondre|can't answer|لا أستطيع الإجابة/.test(out)) {
+      const err = new Error("L'assistant IA est momentanément indisponible. Réessayez dans un instant.");
+      err.status = 502;
+      throw err;
+    }
+    logAudit(req.user.id, `generator.ai_${action}`, String(body.title || "").slice(0, 80), req.ip);
+
+    if (def.json) {
+      const parsed = aiJson(out) || {};
+      const templateId = AI_TEMPLATE_IDS.includes(parsed.template_id) ? parsed.template_id : null;
+      if (!templateId) {
+        const err = new Error("L'IA n'a pas pu proposer de design valide. Réessayez.");
+        err.status = 502;
+        throw err;
+      }
+      const hex = (v, fallback) => (typeof v === "string" && /^#[0-9a-f]{3,8}$/i.test(v) ? v : fallback);
+      return res.json({
+        action,
+        design: {
+          template_id: templateId,
+          cover: { bg: hex(parsed.cover?.bg, null), text: hex(parsed.cover?.text, null) },
+          reason: String(parsed.reason || "").slice(0, 200),
+        },
+      });
+    }
+
+    if (!out) {
+      const err = new Error("L'IA n'a rien renvoyé. Réessayez dans un instant.");
+      err.status = 502;
+      throw err;
+    }
+    res.json({ action, text: out });
+  })
+);
+
+// ─── Publication : export PDF → produit digital Mboppi ───────────────────────
+// Chaîne complète (aucune simulation) :
+//   1. POST /documents/:id/upload-url  → le navigateur téléverse le PDF
+//      DIRECTEMENT vers Supabase (bucket PRIVÉ `digital-products`) ;
+//   2. POST /documents/:id/publish     → le serveur VÉRIFIE l'objet (existence
+//      + taille) puis crée (ou met à jour) le produit digital correspondant :
+//      il devient achetable sur la marketplace comme n'importe quel fichier.
+const PUBLISH_EXT = new Set(["pdf", "epub", "zip"]);
+
+router.post(
+  "/documents/:id/upload-url",
+  ah(async (req, res) => {
+    await loadDoc(Number(req.params.id));
+    const { name, size, hash } = req.body || {};
+    const fileName = String(name || "document.pdf").trim().slice(0, 160);
+    const ext = safeFileExt(fileName);
+    if (!PUBLISH_EXT.has(ext)) {
+      return res.status(400).json({ error: "Formats acceptés pour la publication : PDF, EPUB ou ZIP." });
+    }
+    const bytes = Number(size || 0);
+    if (!Number.isFinite(bytes) || bytes <= 0) {
+      return res.status(400).json({ error: "Fichier illisible ou vide." });
+    }
+    if (bytes > DIGITAL_MAX_BYTES) {
+      return res.status(400).json({
+        error: `Fichier trop volumineux (${(bytes / 1024 / 1024).toFixed(1)} Mo). Maximum ${Math.round(
+          DIGITAL_MAX_BYTES / 1024 / 1024
+        )} Mo.`,
+      });
+    }
+    const hex = String(hash || "").toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(hex)) {
+      return res.status(400).json({ error: "Empreinte de fichier invalide : réessayez (recalcul du hash)." });
+    }
+    const path = digitalObjectKey(req.user.id, hex, fileName);
+    try {
+      const signed = await createDigitalUploadUrl(path, 3600);
+      if (!signed) {
+        return res.status(503).json({ error: "Stockage des fichiers indisponible pour le moment." });
+      }
+      res.json({ path: signed.path, uploadUrl: signed.uploadUrl, token: signed.token });
+    } catch (err) {
+      console.error("[generator] URL d'upload impossible :", err.message);
+      res.status(503).json({ error: "Stockage des fichiers indisponible pour le moment." });
+    }
+  })
+);
+
+router.post(
+  "/documents/:id/publish",
+  ah(async (req, res) => {
+    const row = await loadDoc(Number(req.params.id));
+    const body = req.body || {};
+    const key = String(body.key || "").trim();
+    // La clé est contrainte au dossier du compte : impossible de publier le
+    // fichier d'un autre (même logique que POST /api/digital/upload-url).
+    if (!key || !key.startsWith(`users/${req.user.id}/`) || key.includes("..")) {
+      return res.status(400).json({ error: "Fichier invalide : téléversez-le de nouveau." });
+    }
+    if (!PUBLISH_EXT.has(safeFileExt(key))) {
+      return res.status(400).json({ error: "Formats acceptés pour la publication : PDF, EPUB ou ZIP." });
+    }
+    const meta = await digitalObjectMeta(key);
+    if (!meta.exists || meta.size <= 0) {
+      return res.status(400).json({ error: "Le fichier n'a pas été correctement téléversé. Réessayez l'export." });
+    }
+    const price = Number(body.price);
+    if (!Number.isFinite(price) || price < 0) {
+      return res.status(400).json({ error: "Prix invalide." });
+    }
+    const currency = /^[A-Z]{3}$/.test(String(body.currency || "").toUpperCase())
+      ? String(body.currency).toUpperCase()
+      : "XAF";
+    const title = String(body.title || row.title || "Document").trim().slice(0, 160);
+    const description = String(body.description || "").trim().slice(0, 4000) || null;
+    const category = String(body.category || "Digital").trim().slice(0, 60) || "Digital";
+
+    // Image de couverture : data-URL compressée côté client → URL publique du
+    // bucket `photos` (comme les produits classiques). Un échec n'empêche pas
+    // la publication (le produit existe alors sans vignette).
+    let image = null;
+    const coverData = String(body.cover || "");
+    if (coverData.startsWith("data:image/")) {
+      try {
+        image = await uploadPhoto(coverData, `products/${req.user.id}`, "thumb");
+      } catch (err) {
+        console.warn("[generator] couverture non stockée :", err.message);
+      }
+    }
+    const photos = JSON.stringify(
+      image ? [{ thumb: image, medium: image, large: image, full: image }] : []
+    );
+    const mime = safeFileExt(key) === "pdf" ? "application/pdf" : "application/octet-stream";
+
+    // Republication : on MET À JOUR le produit existant (même lien de partage)
+    // au lieu de créer un doublon dans le catalogue.
+    const existing = row.published_product_id
+      ? (await q(`SELECT id FROM products WHERE id = $1 AND shop_id = $2`, [
+          row.published_product_id,
+          req.user.id,
+        ]))[0]
+      : null;
+
+    let productId;
+    if (existing) {
+      productId = existing.id;
+      await q(
+        `UPDATE products SET name = $2, description = $3, price = $4, currency = $5, category = $6,
+            image = COALESCE($7, image), photos = $8::jsonb, digital_path = $9, digital_name = $10,
+            digital_mime = $11, digital_size = $12, delivery_fee = 0
+          WHERE id = $1`,
+        [
+          productId, title, description, price, currency, category, image, photos,
+          key, `${title}.${safeFileExt(key)}`, mime, meta.size,
+        ]
+      );
+    } else {
+      const inserted = await q(
+        `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos,
+            category, warranty, delivery_fee, contact, quantity, currency,
+            is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit)
+         VALUES ($1, $2, $3, $4, NULL, 0, $5, $6::jsonb, $7, NULL, 0, NULL, 1, $8,
+            TRUE, $9, $10, $11, $12, 5) RETURNING id`,
+        [
+          req.user.id, title, description, price, image, photos, category, currency,
+          key, `${title}.${safeFileExt(key)}`, mime, meta.size,
+        ]
+      );
+      productId = inserted[0].id;
+    }
+
+    const updated = await q(
+      `UPDATE gen_documents SET published_product_id = $2, status = 'ready'
+        WHERE id = $1 RETURNING *`,
+      [row.id, productId]
+    );
+    logAudit(req.user.id, "generator.doc_published", `${row.doc_ref} → #${productId}`, req.ip);
+    res.json({ document: docRow(updated[0]), product_id: productId, size: meta.size, updated: Boolean(existing) });
   })
 );
 
