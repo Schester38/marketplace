@@ -2970,6 +2970,51 @@ textarea {
     border-radius: 2rem;
   }
 }
+/* Achat digital en ligne : modale de téléchargement (après le paiement iKeePay) */
+.digital-buy-modal {
+  height: auto;
+  max-height: 88vh;
+  min-height: 220px;
+  background: #fff;
+  border-radius: 1rem;
+  padding: 24px 20px;
+  overflow: auto;
+}
+[data-theme="dark"] .digital-buy-modal {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+.digital-buy-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 12px 4px;
+}
+.digital-buy-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin: 0;
+}
+.digital-buy-congrats {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin: 0;
+}
+/* Carte « Gains en ligne » (créateur / vendeur) */
+.online-earnings-card .big-amount {
+  font-size: 1.7rem;
+  font-weight: 800;
+  margin: 4px 0 10px;
+}
+.online-earnings-card .muted-line {
+  color: #6b7280;
+  font-size: 0.85rem;
+  margin: 2px 0;
+}
+
 /* Bascule manuel ↔ automatique (panneau admin) */
 .payment-mode-toggle {
   display: flex;

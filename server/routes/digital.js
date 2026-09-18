@@ -16,8 +16,9 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { q } from "../db.js";
-import { roleRequired } from "../auth.js";
+import { roleRequired, authOptional } from "../auth.js";
 import { signedDigitalUrl } from "../storage.js";
+import { reconcileDigitalSale } from "../services/ikeepay.js";
 
 const router = Router();
 
@@ -78,6 +79,12 @@ async function usedDownloads(saleId) {
   return Number(row?.n || 0);
 }
 
+// Le téléchargement s'ouvre automatiquement dès que la vente est confirmée
+// (shop_confirmed_at posé par la boutique OU par le webhook iKeePay pour un
+// achat en ligne). Le client sonde GET /:saleId : le garde-fou s'ouvre seul.
+// Si le webhook a été perdu (crash serverless, réseau), le sondage rattrape
+// la confirmation via reconcileDigitalSale (logs de webhooks non rattachés,
+// cooldown 5 s — même mécanisme que l'adhésion).
 const isOwnerCaller = (sale, user) =>
   Boolean(user) && Number(user.id) === Number(sale.shop_id);
 
@@ -93,9 +100,28 @@ const downloadLimitOf = (sale) => {
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_DOWNLOAD_LIMIT;
 };
 
+// Ventes payées EN LIGNE (iKeePay) : le client ne fait qu'UN téléchargement.
+// Fenêtre de grâce de 10 min après le 1er téléchargement pour réessayer en cas
+// d'échec (réseau interrompu, page fermée trop tôt), puis le quota tombe à 1.
+const ONLINE_GRACE_MS = 10 * 60 * 1000;
+async function effectiveLimitOf(sale, now = Date.now()) {
+  const base = downloadLimitOf(sale);
+  const online = (
+    await q(
+      `SELECT id, completed_at FROM digital_payments
+        WHERE sale_id = $1 AND status = 'completed' LIMIT 1`,
+      [sale.sale_id]
+    ).catch(() => [])
+  )[0];
+  if (!online) return base; // vente classique (confirmation manuelle boutique)
+  const completedAt = online.completed_at ? new Date(online.completed_at).getTime() : 0;
+  const inGrace = completedAt && now - completedAt < ONLINE_GRACE_MS;
+  return inGrace ? Math.max(base, 2) : 1;
+}
+
 /** État du téléchargement pour l'appelant (le droit est déjà vérifié). */
 async function digitalState(sale, user) {
-  const limit = downloadLimitOf(sale);
+  const limit = await effectiveLimitOf(sale);
   const used = await usedDownloads(sale.sale_id);
   const owner = isOwnerCaller(sale, user);
   const confirmed = Boolean(sale.shop_confirmed_at || sale.delivered_at);
@@ -161,7 +187,51 @@ router.get(
     if (!isOwnerCaller(sale, req.user) && !isBuyerCaller(sale, req.user, req.query.code)) {
       return res.status(403).json({ error: "Ce téléchargement ne concerne pas votre compte" });
     }
-    res.json({ digital: await digitalState(sale, req.user) });
+    let state = await digitalState(sale, req.user);
+    // Sondage client : si la vente attend toujours le paiement, on tente la
+    // réconciliation (webhook perdu). Idempotent + cooldown 5 s.
+    if (state.waiting_confirmation) {
+      await reconcileDigitalSale(saleId).catch(() => {});
+      const fresh = await loadSale(saleId);
+      if (fresh) {
+        state = await digitalState(fresh, req.user);
+      }
+    }
+    res.json({ digital: state });
+  })
+);
+
+router.post(
+  "/:saleId/reconcile",
+  optionalAuth,
+  ah(async (req, res) => {
+    const saleId = Number(req.params.saleId);
+    if (!Number.isInteger(saleId) || saleId < 1)
+      return res.status(400).json({ error: "Vente invalide" });
+    const sale = await loadSale(saleId);
+    if (!sale) return res.status(404).json({ error: "Vente introuvable" });
+    if (!sale.is_digital || !sale.digital_path)
+      return res.status(400).json({ error: "Ce produit n'est pas un produit digital" });
+    const code = req.body?.code;
+    const owner = isOwnerCaller(sale, req.user);
+    if (!owner && !isBuyerCaller(sale, req.user, code)) {
+      return res.status(403).json({ error: "Ce téléchargement ne concerne pas votre compte" });
+    }
+    // Paiement déjà confirmé : rien à faire.
+    const state = await digitalState(sale, req.user);
+    if (!state.waiting_confirmation) {
+      return res.json({ ok: true, digital: state });
+    }
+    // Filet : complète le paiement à partir des logs de webhooks non rattachés
+    // (même principe que /api/payments/membership-status). Cooldown global 5 s.
+    const ok = await reconcileDigitalSale(saleId);
+    const fresh = await loadSale(saleId);
+    const freshState = await digitalState(fresh, req.user);
+    res.json({
+      ok: Boolean(ok?.ok) || !freshState.waiting_confirmation,
+      reconciled: Boolean(ok?.reconciled || ok?.settled),
+      digital: freshState,
+    });
   })
 );
 
@@ -191,9 +261,16 @@ router.post(
     if (state.cancelled)
       return res.status(409).json({ error: "Cette commande a été annulée", digital: state });
     if (state.waiting_confirmation) {
+      // Filet de sécurité : si le webhook a déjà confirmé le paiement mais que
+      // la confirmation de la vente a été interrompue (serverless arrêté après
+      // la réponse), on la rattrape ici. Idempotent.
+      const reconciliation = await reconcileDigitalSale(sale.sale_id).catch(() => null);
+      if (reconciliation && reconciliation.ok) {
+        return res.json({ reconciled: true, digital: await digitalState(await loadSale(saleId), req.user) });
+      }
       return res.status(409).json({
         error:
-          "Le téléchargement sera disponible dès que la boutique confirme avoir reçu votre paiement.",
+          "Le téléchargement sera disponible dès que le paiement est confirmé (quelques secondes après le paiement iKeePay).",
         code: "AWAITING_CONFIRMATION",
         digital: state,
       });
@@ -250,3 +327,37 @@ router.post(
 );
 
 export default router;
+
+// Sondage du client pendant l'attente du paiement en ligne (toutes les 4 s).
+// Si le webhook a été manqué (serverless arrêté, référence non reconnue), on
+// tente la réconciliation depuis les logs de webhooks non rattachés — même
+// mécanisme auto-réparateur que l'adhésion (cooldown 5 s, budget 4 s).
+router.get(
+  "/:saleId/wait-online",
+  optionalAuth,
+  ah(async (req, res) => {
+    const saleId = Number(req.params.saleId);
+    if (!Number.isInteger(saleId) || saleId < 1)
+      return res.status(400).json({ error: "Vente invalide" });
+    const sale = await loadSale(saleId);
+    if (!sale) return res.status(404).json({ error: "Vente introuvable" });
+    const code = req.query?.code;
+    const owner = isOwnerCaller(sale, req.user);
+    if (!owner && !isBuyerCaller(sale, req.user, code))
+      return res.status(403).json({ error: "Ce téléchargement ne concerne pas votre compte" });
+
+    let confirmed = Boolean(sale.shop_confirmed_at || sale.delivered_at);
+    if (!confirmed && !owner) {
+      await reconcileDigitalSale(saleId).catch((err) =>
+        console.error("[digital] réconciliation impossible :", err.message)
+      );
+      const fresh = await loadSale(saleId);
+      if (fresh) {
+        confirmed = Boolean(fresh.shop_confirmed_at || fresh.delivered_at);
+        if (confirmed) Object.assign(sale, fresh);
+      }
+    }
+    const state = await digitalState(sale, req.user);
+    res.json({ confirmed, digital: state });
+  })
+);

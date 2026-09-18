@@ -295,6 +295,15 @@ export default function LivreurDashboard() {
         </span>
       </section>
 
+      <div className="info-banner">
+        <strong>💳 {t("Paiements automatiques disponibles")}</strong>
+        <p>
+          {t(
+            "Configurez votre moyen de paiement pour recevoir automatiquement vos frais de livraison après confirmation de la livraison."
+          )}
+        </p>
+      </div>
+
       {!code ? (
         <section className="card form-card" style={{ maxWidth: 480, margin: "24px auto" }}>
           <h2>🔑 {t("Code de la boutique")}</h2>

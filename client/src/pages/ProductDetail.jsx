@@ -12,6 +12,7 @@ import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { nativeShareWithImage, firstProductImage } from "../share.js";
 import Reviews from "../components/Reviews.jsx";
+import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 import Logo from "../components/Logo.jsx";
 import ReviewQuote from "../components/ReviewQuote.jsx";
 import { useLite, isLite } from "../liteMode.js";
@@ -48,6 +49,12 @@ export default function ProductDetail() {
   const [added, setAdded] = useState(false);
   const [shared, setShared] = useState(false);
   const [related, setRelated] = useState([]);
+  // Achat en ligne d'un produit digital (iKeePay) : tunnel de paiement →
+  // attente de confirmation webhook → téléchargement UNIQUE → félicitations →
+  // retour automatique à la vitrine (fermeture de la modale).
+  const [dBuy, setDBuy] = useState(null);
+  const dBuyRef = useRef(null);
+  const dPollRef = useRef(null);
 
   useEffect(() => {
     setProduct(null);
@@ -246,6 +253,91 @@ export default function ProductDetail() {
   const inStock = product.is_digital ? 9999 : Number(product.quantity || 0);
   const flash = product.flash_promo || null;
   const displayPrice = flash ? Number(flash.price) : Number(product.price);
+
+  // ---------------- ACHAT DIGITAL EN LIGNE (iKeePay) ----------------
+  const stopDigitalPoll = () => {
+    if (dPollRef.current) {
+      clearInterval(dPollRef.current);
+      dPollRef.current = null;
+    }
+  };
+  useEffect(() => {
+    dBuyRef.current = dBuy;
+  }, [dBuy]);
+  useEffect(
+    () => () => {
+      stopDigitalPoll();
+    },
+    []
+  );
+
+  // Sondage (4 s) : le serveur confirme dès le webhook iKeePay, et répare
+  // tout webhook manqué (réconciliation par les logs — même mécanisme que
+  // l'adhésion). Dès confirmation → page de téléchargement.
+  const startDigitalWaiting = (saleId, code) => {
+    setDBuy((b) => ({ ...b, stage: "waiting" }));
+    stopDigitalPoll();
+    const check = async () => {
+      try {
+        const d = await api.digitalWaitOnline(saleId, code);
+        if (d.confirmed && dBuyRef.current && dBuyRef.current.saleId === saleId) {
+          stopDigitalPoll();
+          setDBuy((b) => (b && b.saleId === saleId ? { ...b, stage: "ready", err: "" } : b));
+        }
+      } catch {
+        /* réseau/timeout : on réessaie au prochain tick */
+      }
+    };
+    check();
+    dPollRef.current = setInterval(check, 4000);
+  };
+
+  const startDigitalBuy = async () => {
+    setDBuy({ stage: "creating" });
+    try {
+      const d = await api.digitalPayin({ product_id: product.id });
+      setDBuy({
+        stage: "checkout",
+        saleId: d.sale_id,
+        code: d.confirm_code,
+        checkoutUrl: d.checkout_url,
+      });
+    } catch (e) {
+      setDBuy({ stage: "error", err: e.message });
+    }
+  };
+
+  const closeDigitalBuy = () => {
+    stopDigitalPoll();
+    setDBuy(null);
+  };
+
+  // Téléchargement UNIQUE : pendant l'envoi le bouton est désactivé ; dès que
+  // le fichier part sur l'appareil → félicitations, puis retour automatique à
+  // la vitrine (fermeture de la modale après quelques secondes).
+  const downloadDigitalNow = async () => {
+    const current = dBuyRef.current;
+    if (!current) return;
+    setDBuy((b) => ({ ...b, stage: "downloading", err: "" }));
+    try {
+      const d = await api.digitalDownload(current.saleId, current.code);
+      const a = document.createElement("a");
+      a.href = d.url;
+      a.rel = "noopener";
+      if (d.file_name) a.download = d.file_name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setDBuy((b) => ({ ...b, stage: "done", fileName: d.file_name || b.fileName }));
+      setTimeout(() => {
+        // Retour automatique à la vitrine du produit.
+        setDBuy((b) => (b && b.stage === "done" ? null : b));
+      }, 6000);
+    } catch (e) {
+      setDBuy((b) => ({ ...b, stage: "ready", err: e.message }));
+    }
+  };
+  // ------------------------------------------------------------------
   const oldPrice = Number(
     flash
       ? Number(product.price)
@@ -486,7 +578,18 @@ export default function ProductDetail() {
               </li>
             </ul>
 
-            {inStock > 0 && !isOwner && (
+            {product.is_digital && !isOwner && (
+              <button
+                type="button"
+                className="btn btn-cart btn-block"
+                onClick={startDigitalBuy}
+                disabled={Boolean(dBuy)}
+              >
+                ⬇️ {t("Télécharger")} — {formatMoney(displayPrice)} {symbol}
+              </button>
+            )}
+
+            {!product.is_digital && inStock > 0 && !isOwner && (
               <div className="buy-row">
                 <div className="qty-stepper">
                   <button
@@ -630,6 +733,82 @@ export default function ProductDetail() {
             </button>
           )}
         </div>
+      )}
+
+      {/* ---------- ACHAT DIGITAL : paiement → téléchargement → félicitations ---------- */}
+      {dBuy && dBuy.stage !== "checkout" && (
+        <div className="ikeepay-overlay" style={{ display: "flex" }} role="dialog" aria-label="Téléchargement">
+          <div className="ikeepay-modal digital-buy-modal">
+            <button type="button" className="ikeepay-close" aria-label={t("Fermer")} onClick={closeDigitalBuy}>
+              ✕
+            </button>
+            {dBuy.stage === "creating" && (
+              <div className="digital-buy-center">
+                <span className="ikepay-spinner" role="status" aria-live="polite" />
+                <p>{t("Préparation de votre commande…")}</p>
+              </div>
+            )}
+            {dBuy.stage === "waiting" && (
+              <div className="digital-buy-center">
+                <span className="ikepay-spinner" role="status" aria-live="polite" />
+                <p>
+                  ⏳ {t("Paiement reçu — confirmation en cours…")}
+                  <br />
+                  <span className="hint">{t("La page de téléchargement s'ouvrira automatiquement (quelques secondes).")}</span>
+                </p>
+              </div>
+            )}
+            {(dBuy.stage === "ready" || dBuy.stage === "downloading") && (
+              <div className="digital-buy-center">
+                <p className="digital-buy-title">📁 {product.name}</p>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-block"
+                  onClick={downloadDigitalNow}
+                  disabled={dBuy.stage === "downloading"}
+                >
+                  {dBuy.stage === "downloading" ? `⏳ ${t("Téléchargement en cours…")}` : `⬇️ ${t("Télécharger mon fichier")}`}
+                </button>
+                <p className="hint">{t("Un seul téléchargement est autorisé pour cet achat.")}</p>
+                {dBuy.err && <p className="error">{dBuy.err}</p>}
+              </div>
+            )}
+            {dBuy.stage === "done" && (
+              <div className="digital-buy-center">
+                <p className="digital-buy-congrats">🎉 {t("Félicitations !")}</p>
+                <p>
+                  {t("Votre fichier a été téléchargé sur votre appareil.")}
+                  {dBuy.fileName ? (
+                    <br />
+                  ) : null}
+                  {dBuy.fileName && <span className="hint">📁 {dBuy.fileName}</span>}
+                </p>
+                <button type="button" className="btn btn-outline btn-block" onClick={closeDigitalBuy}>
+                  {t("Retour au produit")}
+                </button>
+              </div>
+            )}
+            {dBuy.stage === "error" && (
+              <div className="digital-buy-center">
+                <p className="error">{dBuy.err || t("Une erreur est survenue.")}</p>
+                <button type="button" className="btn btn-outline btn-block" onClick={closeDigitalBuy}>
+                  {t("Fermer")}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {dBuy && dBuy.stage === "checkout" && (
+        <IkeepayCheckout
+          checkoutUrl={dBuy.checkoutUrl}
+          onSuccess={() => startDigitalWaiting(dBuy.saleId, dBuy.code)}
+          onClose={() => {
+            // Paiement abandonné : on revient à la vitrine.
+            stopDigitalPoll();
+            setDBuy(null);
+          }}
+        />
       )}
     </main>
   );

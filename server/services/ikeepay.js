@@ -354,6 +354,33 @@ export async function activateMembershipUser(userId) {
   return true;
 }
 
+// ------------------------------------- ACHAT DIGITAL (produit téléchargeable)
+// Marque le paiement digital comme complété, puis « livre » la vente : le
+// passage à `shop_confirmed_at` ouvre le téléchargement (le garde-fou existant
+// de /api/digital s'appuie dessus — aucune règle à dupliquer), et la vente est
+// confirmée (le fichier est déjà payé, aucune confirmation boutique à attendre).
+async function completeDigitalPayment(payment, providerRef) {
+  const changed = await q(
+    `UPDATE digital_payments
+     SET status = 'completed', completed_at = now(),
+         provider_reference = COALESCE(provider_reference, $2)
+     WHERE id = $1 AND status IN ('pending','expired')
+     RETURNING sale_id`,
+    [payment.id, providerRef]
+  );
+  if (!changed.length) return false; // déjà traité (idempotent)
+  // Livraison + répartition déportées hors du webhook : si le serverless meurt
+  // avant la fin, le sondage client (GET /api/digital/:saleId) rattrape via
+  // settleDigitalSale (idempotent : paid_online_at IS NULL).
+  const saleId = changed[0].sale_id;
+  setImmediate(() => {
+    settleDigitalSale(saleId).catch((err) =>
+      console.error("[ikeepay] livraison digitale asynchrone impossible :", err.message)
+    );
+  });
+  return true;
+}
+
 // Marque un don comme complété.
 async function completeDonation(donation, providerRef) {
   const updated = await q(
@@ -371,6 +398,125 @@ async function completeDonation(donation, providerRef) {
       amount: Number(donation.amount),
     });
   }
+}
+
+// Confirme la vente d'un produit digital payé en ligne + crédite chaque
+// bénéficiaire (créateur, vendeur, parrain) dans `online_earnings`.
+// Garde atomique : seul l'UPDATE qui pose paid_online_at fait la répartition.
+export async function settleDigitalSale(saleId) {
+  const sale = (
+    await q(
+      `SELECT s.id, s.total_price, s.commission, s.referral_commission,
+              s.seller_id, s.referred_by, s.buyer_name, s.confirm_code,
+              p.name AS product_name, p.shop_id,
+              u.name AS owner_name, u.role AS owner_role
+         FROM sales s
+         JOIN products p ON p.id = s.product_id
+         JOIN users u ON u.id = p.shop_id
+        WHERE s.id = $1`,
+      [saleId]
+    )
+  )[0];
+  if (!sale) return false;
+  const upd = await q(
+    `UPDATE sales
+     SET shop_confirmed_at = COALESCE(shop_confirmed_at, now()),
+         paid_online_at = now(),
+         status = CASE WHEN status = 'pending' THEN 'confirmed' ELSE status END
+     WHERE id = $1 AND paid_online_at IS NULL
+     RETURNING id`,
+    [saleId]
+  );
+  if (!upd.length) return false; // déjà livré (idempotent)
+
+  // Répartition : l'argent est encaissé par la plateforme (iKeePay). Le
+  // créateur touche le prix payé MOINS la commission du vendeur (si code
+  // vendeur utilisé) MOINS le 2 % de parrainage (si client affilié) —
+  // achat direct : le créateur affiche la totalité sur ses stats.
+  const total = Number(sale.total_price) || 0;
+  const sellerCommission = sale.seller_id ? Number(sale.commission) || 0 : 0;
+  const referralAmount = sale.referred_by ? Number(sale.referral_commission) || 0 : 0;
+  const creatorAmount =
+    Math.max(0, Math.round((total - sellerCommission - referralAmount) * 100) / 100);
+  const rows = [];
+  if (creatorAmount > 0) {
+    rows.push([sale.id, sale.shop_id, "creator", "sale", creatorAmount]);
+  }
+  if (sale.seller_id && sellerCommission > 0) {
+    rows.push([sale.id, sale.seller_id, "seller", "sale", sellerCommission]);
+  }
+  if (sale.referred_by && referralAmount > 0) {
+    rows.push([sale.id, sale.referred_by, "seller", "referral", referralAmount]);
+  }
+  for (const [sid, beneficiaryId, role, kind, amount] of rows) {
+    await q(
+      `INSERT INTO online_earnings (sale_id, beneficiary_id, beneficiary_role, kind, amount)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (sale_id, beneficiary_id, kind) DO NOTHING`,
+      [sid, beneficiaryId, role, kind, amount]
+    ).catch((err) =>
+      console.error("[ikeepay] crédit gain en ligne impossible :", err.message)
+    );
+  }
+
+  notifyAdmins({
+    title: "Produit digital vendu en ligne 📁",
+    body: `${sale.product_name} — ${total} XAF (iKeePay)${sale.buyer_name ? `, client : ${sale.buyer_name}` : ""}.`,
+    amount: total,
+  });
+  return true;
+}
+
+// Filet de rattrapage : le webhook peut être perdu (timeout serverless, panne
+// iKeePay). Le client sonde GET /api/digital/:saleId ; si la vente attend
+// toujours, on balaye les logs de webhooks non rattachés à la recherche de la
+// référence de CE paiement (précise : nous possédons la référence — pas de
+// réconciliation floue par montant). Cooldown 5 s comme pour l'adhésion.
+const digitalReconcileState = { lastRun: 0 };
+export async function reconcileDigitalSale(saleId) {
+  const now = Date.now();
+  if (now - digitalReconcileState.lastRun < 5000) {
+    return { ok: false, reason: "cooldown" };
+  }
+  digitalReconcileState.lastRun = now;
+  const payment = (
+    await q(
+      `SELECT id, amount, currency, external_reference, status
+         FROM digital_payments WHERE sale_id = $1
+       ORDER BY created_at DESC LIMIT 1`,
+      [saleId]
+    )
+  )[0];
+  if (!payment) return { ok: false, reason: "no_payment" };
+  if (payment.status === "completed") {
+    await settleDigitalSale(saleId);
+    return { ok: true, id: payment.id, settled: true };
+  }
+  const startedAt = Date.now();
+  const logs = await q(
+    `SELECT id, payload FROM payment_webhook_logs
+      WHERE handled = FALSE AND created_at >= now() - interval '24 hours'
+      ORDER BY created_at DESC LIMIT 30`
+  );
+  for (const log of logs) {
+    if (Date.now() - startedAt > 4000) break; // budget serverless
+    let body = log.payload;
+    if (typeof body === "string") {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        continue;
+      }
+    }
+    const n = normalizeWebhook(body);
+    if (!n || !n.orderId || n.orderId !== payment.external_reference) continue;
+    if (!amountMatches(n.amount, payment.amount) || !currencyMatches(n.currency, payment.currency)) continue;
+    await completeDigitalPayment(payment, n.providerRef || null);
+    await q(`UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1`, [log.id]).catch(() => {});
+    await settleDigitalSale(saleId).catch(() => {});
+    return { ok: true, id: payment.id, reconciled: true };
+  }
+  return { ok: false, reason: "no_unmatched_webhook" };
 }
 
 // Journalise chaque webhook reçu (table payment_webhook_logs, déjà créée par
@@ -468,6 +614,32 @@ async function handleWebhook(body, normalized) {
       await completeMembershipPayment(membership, providerRef);
     }
     result = { ok: true, kind: "membership", id: membership.id };
+    return result;
+  }
+
+  // Achat de produit DIGITAL en ligne (MBP-DIG) ? On marque le paiement comme
+  // complété : completeDigitalPayment déclenche ensuite (hors du webhook)
+  // settleDigitalSale → vente confirmée (shop_confirmed_at : le garde-fou du
+  // téléchargement s'ouvre tout seul) + répartition des gains + notifications.
+  const digitalPayment = (
+    await q(
+      `SELECT id, sale_id, amount, currency, status FROM digital_payments
+       WHERE external_reference = $1`,
+      [orderId]
+    )
+  )[0];
+  if (digitalPayment) {
+    if (
+      !amountMatches(amount, digitalPayment.amount) ||
+      !currencyMatches(currency, digitalPayment.currency)
+    ) {
+      result = { ok: false, reason: "mismatch" };
+      return result;
+    }
+    if (digitalPayment.status === "pending" || digitalPayment.status === "expired") {
+      await completeDigitalPayment(digitalPayment, providerRef);
+    }
+    result = { ok: true, kind: "digital", id: digitalPayment.id, sale_id: digitalPayment.sale_id };
     return result;
   }
 
@@ -571,7 +743,7 @@ export async function purgePendingPayments() {
   const cutoff = new Date(Date.now() - PENDING_MAX_AGE_MS).toISOString();
   // On archive (status='expired') au lieu de supprimer : un webhook tardif
   // peut ainsi encore completer le paiement (reconciliation par reference).
-  const [donations, memberships] = await Promise.all([
+  const [donations, memberships, digitals] = await Promise.all([
     q(
       `UPDATE donations SET status = 'expired'
        WHERE status = 'pending' AND created_at < $1 RETURNING id`,
@@ -582,8 +754,13 @@ export async function purgePendingPayments() {
        WHERE status = 'pending' AND created_at < $1 RETURNING id`,
       [cutoff]
     ),
+    q(
+      `UPDATE digital_payments SET status = 'expired'
+       WHERE status = 'pending' AND created_at < $1 RETURNING id`,
+      [cutoff]
+    ),
   ]);
-  return { donations: donations.length, memberships: memberships.length };
+  return { donations: donations.length, memberships: memberships.length, digitals: digitals.length };
 }
 
 // Auto-réparation : retrouve dans le journal des webhooks un

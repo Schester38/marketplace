@@ -13,6 +13,7 @@ import MiniChart from "../components/MiniChart.jsx";
 import { dailyBuckets } from "../utils.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 import CopyCode from "../components/CopyCode.jsx";
+import OnlineEarningsCard from "../components/OnlineEarningsCard.jsx";
 
 const EMPTY_FORM = {
   name: "",
@@ -308,6 +309,8 @@ export default function CreatorDashboard() {
           )}
         </p>
       </div>
+
+      <OnlineEarningsCard role="creator" />
 
       {showForm && (
         <div className="card form-card">

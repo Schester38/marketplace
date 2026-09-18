@@ -1425,6 +1425,218 @@ router.post(
   })
 );
 
+// ------------------------------------ GAINS EN LIGNE (produits digitaux)
+// L'admin voit chaque vente digitale payée en ligne avec TOUS ses acteurs
+// (client, créateur, vendeur, parrain) et paie manuellement les retraits.
+router.get(
+  "/digital-payments",
+  ah(async (req, res) => {
+    const rows = await q(
+      `SELECT dp.id, dp.sale_id, dp.amount, dp.currency, dp.status, dp.external_reference,
+              dp.provider_reference, dp.created_at, dp.completed_at,
+              s.buyer_name, s.buyer_phone, s.confirm_code, s.paid_online_at,
+              p.name AS product_name,
+              u.name AS owner_name, u.id AS owner_id,
+              v.name AS seller_name, v.id AS seller_id, v.seller_code,
+              pa.name AS referrer_name, pa.id AS referrer_id
+         FROM digital_payments dp
+         JOIN sales s ON s.id = dp.sale_id
+         JOIN products p ON p.id = s.product_id
+         JOIN users u ON u.id = p.shop_id
+         LEFT JOIN users v ON v.id = s.seller_id
+         LEFT JOIN users pa ON pa.id = s.referred_by
+        ORDER BY dp.created_at DESC
+        LIMIT 300`
+    );
+    const ids = rows.map((r) => r.sale_id);
+    const earnings = ids.length
+      ? await q(
+          `SELECT e.sale_id, e.beneficiary_id, e.beneficiary_role, e.kind, e.amount,
+                  b.name AS beneficiary_name
+             FROM online_earnings e JOIN users b ON b.id = e.beneficiary_id
+            WHERE e.sale_id = ANY($1)`,
+          [ids]
+        )
+      : [];
+    const [totals] = await q(
+      `SELECT COUNT(*)::int AS cnt, COALESCE(SUM(amount), 0) AS total
+         FROM digital_payments WHERE status = 'completed'`
+    );
+    res.json({
+      total_paid: Number(totals?.total || 0),
+      count: Number(totals?.cnt || 0),
+      payments: rows.map((r) => ({
+        id: Number(r.id),
+        sale_id: Number(r.sale_id),
+        amount: Number(r.amount),
+        currency: r.currency,
+        status: r.status,
+        external_reference: r.external_reference,
+        created_at: r.created_at,
+        completed_at: r.completed_at,
+        paid_online: Boolean(r.paid_online_at),
+        product_name: r.product_name,
+        buyer: r.buyer_name || "Client",
+        buyer_phone: r.buyer_phone,
+        confirm_code: r.confirm_code,
+        actors: {
+          creator: r.owner_name ? { id: Number(r.owner_id), name: r.owner_name } : null,
+          seller: r.seller_name
+            ? { id: Number(r.seller_id), name: r.seller_name, code: r.seller_code }
+            : null,
+          referrer: r.referrer_name
+            ? { id: Number(r.referrer_id), name: r.referrer_name }
+            : null,
+        },
+        earnings: earnings
+          .filter((e) => Number(e.sale_id) === Number(r.sale_id))
+          .map((e) => ({
+            role: e.beneficiary_role,
+            kind: e.kind,
+            name: e.beneficiary_name,
+            amount: Number(e.amount),
+          })),
+      })),
+    });
+  })
+);
+
+// Retraits des gains en ligne (créateur + vendeur) : même principe que les
+// retraits d'activation — paiement manuel (espèces / Mobile Money).
+router.get(
+  "/online-withdrawals",
+  ah(async (req, res) => {
+    const rows = await q(
+      `SELECT w.id, w.amount, w.currency, w.status, w.payment_method, w.payment_detail,
+              w.admin_note, w.created_at, w.paid_at,
+              u.id AS user_id, u.name AS user_name, u.role AS user_role,
+              u.email AS user_email, u.phone AS user_phone
+         FROM online_withdrawals w
+         JOIN users u ON u.id = w.user_id
+        ORDER BY w.created_at DESC
+        LIMIT 300`
+    );
+    const ids = rows.map((r) => r.user_id);
+    const balances = ids.length
+      ? await q(
+          `SELECT e.beneficiary_id AS uid,
+                  COALESCE(SUM(e.amount), 0)::float - COALESCE((
+                    SELECT SUM(w2.amount) FROM online_withdrawals w2
+                     WHERE w2.user_id = e.beneficiary_id AND w2.status IN ('pending','paid')
+                  ), 0)::float AS available
+             FROM online_earnings e
+            WHERE e.beneficiary_id = ANY($1)
+            GROUP BY e.beneficiary_id`,
+          [ids]
+        )
+      : [];
+    const balanceByUser = new Map(balances.map((b) => [Number(b.uid), Number(b.available)]));
+    const payments = rows.length
+      ? await q(
+          `SELECT user_id, full_name, wallets FROM shop_payment_methods WHERE user_id = ANY($1)
+           UNION ALL
+           SELECT user_id, full_name, wallets FROM seller_payment_methods WHERE user_id = ANY($1)`,
+          [ids]
+        )
+      : [];
+    res.json({
+      withdrawals: rows.map((r) => {
+        const pm = payments.find((p) => Number(p.user_id) === Number(r.user_id));
+        return {
+          id: Number(r.id),
+          amount: Number(r.amount),
+          currency: r.currency,
+          status: r.status,
+          payment_method: r.payment_method,
+          payment_detail: r.payment_detail,
+          admin_note: r.admin_note,
+          created_at: r.created_at,
+          paid_at: r.paid_at,
+          user: {
+            id: Number(r.user_id),
+            name: r.user_name,
+            role: r.user_role,
+            email: r.user_email,
+            phone: r.user_phone,
+            available: balanceByUser.get(Number(r.user_id)) ?? 0,
+            paymentMethods: pm
+              ? { full_name: pm.full_name, wallets: Array.isArray(pm.wallets) ? pm.wallets : [] }
+              : null,
+          },
+        };
+      }),
+    });
+  })
+);
+
+router.post(
+  "/online-withdrawals/:id/pay",
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!isId(id)) return res.status(400).json({ error: "Identifiant invalide" });
+    const w = (
+      await q(
+        `SELECT w.*, u.name AS user_name, u.email AS user_email, u.role AS user_role
+           FROM online_withdrawals w JOIN users u ON u.id = w.user_id WHERE w.id = $1`,
+        [id]
+      )
+    )[0];
+    if (!w) return res.status(404).json({ error: "Demande introuvable" });
+    if (w.status !== "pending")
+      return res.status(409).json({ error: "Cette demande a déjà été traitée" });
+    const amount = Number(w.amount);
+    const up = await q(
+      `UPDATE online_withdrawals SET status = 'paid', paid_at = now(),
+              admin_note = COALESCE($2, admin_note)
+        WHERE id = $1 AND status = 'pending' RETURNING id`,
+      [id, String(req.body?.note || "").slice(0, 300) || null]
+    );
+    if (!up.length) return res.status(409).json({ error: "Cette demande a déjà été traitée" });
+    await q(
+      `INSERT INTO notifications (user_id, type, amount) VALUES ($1, 'online_withdrawal_paid', $2)`,
+      [w.user_id, amount]
+    );
+    try {
+      const { sendPush } = await import("../push.js");
+      await sendPush(w.user_id, {
+        title: "Retrait payé 💰",
+        body:
+          w.user_role === "creator"
+            ? `Votre retrait de ${amount} F (ventes de fichiers digitaux) a été payé.`
+            : `Votre retrait de ${amount} F (commissions ventes digitales) a été payé.`,
+        url: w.user_role === "seller" ? "/seller" : "/creator",
+      });
+    } catch (err) {
+      console.error("[admin] push online_withdrawal_paid impossible :", err.message);
+    }
+    const mailTo = (w.user_email || "").trim();
+    if (mailTo) {
+      try {
+        const { sendMail } = await import("../mailer.js");
+        await sendMail({
+          to: mailTo,
+          subject: "Votre retrait a été payé — Mboppi",
+          text:
+            `Bonjour ${w.user_name},\n\n` +
+            (w.user_role === "creator"
+              ? `Votre demande de retrait de ${amount} F (ventes de fichiers digitaux) a été payée par l'équipe Mboppi.`
+              : `Votre demande de retrait de ${amount} F (commissions sur ventes digitales) a été payée par l'équipe Mboppi.`) +
+            `\n\nMerci de votre confiance,\nL'équipe Mboppi`,
+        });
+      } catch (err) {
+        console.error("[admin] email online_withdrawal_paid impossible :", err.message);
+      }
+    }
+    await logAudit(
+      req.user.id,
+      "admin.online_withdrawal_paid",
+      `withdrawal=${id} user=${w.user_id} (${w.user_name}) amount=${amount}`,
+      req.ip
+    );
+    res.json({ ok: true });
+  })
+);
+
 
 // Basculer entre les deux systèmes de paiement (manuel ↔ automatique) et
 // configurer les clés iKeePay. En automatique, seuls les PAYIN (adhésion, don)

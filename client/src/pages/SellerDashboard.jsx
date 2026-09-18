@@ -12,6 +12,7 @@ import { nativeShareWithImage, firstProductImage, isTouchDevice } from "../share
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 import TrackMap from "../components/TrackMap.jsx";
 import NearbyMap from "../components/NearbyMap.jsx";
+import OnlineEarningsCard from "../components/OnlineEarningsCard.jsx";
 
 const SALE_STATUS = {
   pending: { key: "En attente de vente", cls: "badge-pending" },
@@ -474,6 +475,17 @@ export default function SellerDashboard() {
           <p>{t("Sélectionnez un produit des boutiques et enregistrez une vente.")}</p>
         </div>
       </section>
+
+      <div className="info-banner">
+        <strong>💳 {t("Paiements automatiques disponibles")}</strong>
+        <p>
+          {t(
+            "Configurez votre moyen de paiement pour recevoir automatiquement vos commissions de vente et de parrainage après confirmation du paiement client."
+          )}
+        </p>
+      </div>
+
+      <OnlineEarningsCard role="seller" />
 
       <section className="card seller-code-card">
         <div>

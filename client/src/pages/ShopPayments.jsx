@@ -102,7 +102,7 @@ export default function ShopPayments() {
           </p>
           <p className="hint" style={{ marginTop: 8 }}>
             {t(
-              "Les paiements sont manuels : la boutique vous règle directement en espèces ou par Mobile Money, sans frais, avec une preuve enregistrée sur la vente."
+              "Les paiements sont manuels : vos clients vous règlent directement en espèces ou par Mobile Money, sans frais."
             )}
           </p>
         </div>

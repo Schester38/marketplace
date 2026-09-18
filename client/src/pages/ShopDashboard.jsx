@@ -603,6 +603,15 @@ export default function ShopDashboard() {
         </div>
       </section>
 
+      <div className="info-banner">
+        <strong>💳 {t("Paiements automatiques disponibles")}</strong>
+        <p>
+          {t(
+            "Configurez vos moyens de paiement pour recevoir automatiquement les montants de vos ventes après confirmation du paiement client."
+          )}
+        </p>
+      </div>
+
       <div className="dash-shell">
         <nav className="dash-nav" aria-label={t("Navigation du tableau de bord")}>
           <a href="#dash-code">🔑 {t("Code livreur")}</a>

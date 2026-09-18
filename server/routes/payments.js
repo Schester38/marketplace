@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { timingSafeEqual } from "node:crypto";
-import { q } from "../db.js";
+import { q, withTransaction } from "../db.js";
 import { authRequired, authOptional, MEMBERSHIP_FEES } from "../auth.js";
+import { sendPush } from "../push.js";
 import { membershipRoles } from "../services/membershipGate.js";
 import {
   PAYMENT_MODE_AUTO,
@@ -258,6 +259,176 @@ router.post(
     });
   })
 );
+// Ouvre le checkout iKeePay pour l'achat d'un produit DIGITAL (fichier
+// téléchargeable). Disponible quel que soit le mode (manuel ou automatique) :
+// un fichier ne peut pas être remis en espèces — c'est le seul achat 100 %
+// en ligne de la plateforme. Client connecté OU invité (le code de confirmation
+// sert de preuve pour le téléchargement, comme pour un colis).
+const CONFIRM_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function randomConfirmCode() {
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += CONFIRM_CHARS[Math.floor(Math.random() * CONFIRM_CHARS.length)];
+  }
+  return code;
+}
+
+router.post(
+  "/digital-payin",
+  authOptional,
+  ah(async (req, res) => {
+    const productId = Number(req.body?.product_id);
+    if (!Number.isInteger(productId) || productId < 1)
+      return res.status(400).json({ error: "Produit invalide" });
+    const product = (await q("SELECT * FROM products WHERE id = $1", [productId]))[0];
+    if (!product) return res.status(404).json({ error: "Produit introuvable" });
+    if (!product.is_digital || !product.digital_path)
+      return res.status(400).json({ error: "Ce produit n'est pas un produit digital" });
+
+    const { publicKey } = await getIkeepayKeys();
+    if (!publicKey) {
+      return res.status(503).json({
+        error: "Le paiement en ligne n'est pas configuré par l'administration.",
+        code: "IKEEPAY_NOT_CONFIGURED",
+      });
+    }
+
+    // Code vendeur FACULTATIF (comme /api/purchases) : la commission du vendeur
+    // est calculée à la création et lui sera créditée à la confirmation.
+    const rawCode = req.body?.seller_code ? String(req.body.seller_code).trim().toUpperCase() : "";
+    let seller = null;
+    let sellerCode = null;
+    if (rawCode) {
+      seller = (
+        await q("SELECT id, name, seller_code FROM users WHERE seller_code = $1", [rawCode])
+      )[0];
+      if (!seller) return res.status(400).json({ error: "Code vendeur invalide" });
+      sellerCode = seller.seller_code;
+    }
+
+    // Prix de référence : catalogue OU promotion éclair active (jamais un prix
+    // client). Une commande digitale = 1 fichier (quantité forcée à 1).
+    const promo = (
+      await q(
+        "SELECT promo_price, commission_percent FROM flash_promotions WHERE product_id = $1 AND ends_at > now()",
+        [product.id]
+      ).catch(() => [])
+    )[0];
+    const price = promo ? Number(promo.promo_price) : Number(product.price);
+    if (!Number.isFinite(price) || price <= 0)
+      return res.status(500).json({ error: "Prix produit invalide" });
+
+    const buyer = req.user || null;
+    const commissionPercent = promo
+      ? Number(promo.commission_percent)
+      : Number(product.commission_percent);
+    const commission = seller
+      ? Math.round(price * (commissionPercent / 100) * 100) / 100
+      : 0; // achat direct : le créateur reçoit la totalité (aucune commission)
+    let referralCommission = 0;
+    let referredBy = null;
+    if (buyer) {
+      const b = (await q("SELECT referred_by FROM users WHERE id = $1", [buyer.id]))[0];
+      referredBy = b && b.referred_by ? Number(b.referred_by) : null;
+      if (referredBy) referralCommission = Math.round(((price * 2) / 100) * 100) / 100;
+    }
+
+    const name =
+      String(req.body?.buyer_name || "").trim() || (buyer ? buyer.name : "Client digital");
+    const phone = String(req.body?.buyer_phone || "").trim();
+    const externalRef = genExternalRef("MBP-DIG");
+
+    const created = await withTransaction(async (tx) => {
+      let confirmCode = null;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const candidate = randomConfirmCode();
+        const taken = (
+          await tx.query("SELECT id FROM sales WHERE confirm_code = $1 FOR SHARE", [candidate])
+        )[0];
+        if (!taken) {
+          confirmCode = candidate;
+          break;
+        }
+      }
+      if (!confirmCode) {
+        const err = new Error("Impossible de générer le code de confirmation");
+        err.statusCode = 503;
+        throw err;
+      }
+      const sale = (
+        await tx.query(
+          `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status,
+             purchase_price, currency, buyer_id, buyer_code, buyer_name, buyer_phone,
+             confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
+           VALUES ($1, $2, 1, $3, $4, 'pending', $3, $5, $6, $7, $8, $9, $10, $11, $12, 'automatic', FALSE)
+           RETURNING id`,
+          [
+            product.id,
+            seller ? seller.id : null,
+            price,
+            commission,
+            product.currency || "XAF",
+            buyer ? buyer.id : null,
+            sellerCode,
+            name,
+            phone,
+            confirmCode,
+            referralCommission,
+            referredBy,
+          ]
+        )
+      )[0];
+      await tx.query(
+        `INSERT INTO digital_payments (sale_id, amount, currency, external_reference)
+         VALUES ($1, $2, $3, $4)`,
+        [sale.id, price, "XAF", externalRef]
+      );
+      // Cloche : créateur (propriétaire du produit) + vendeur éventuel.
+      const notifValues = seller
+        ? `(${seller.id}, 'sale_order', ${sale.id}), (${product.shop_id}, 'sale_order', ${sale.id})`
+        : `(${product.shop_id}, 'sale_order', ${sale.id})`;
+      await tx.query(
+        `INSERT INTO notifications (user_id, type, sale_id) VALUES ${notifValues}`
+      );
+      return { id: sale.id, confirmCode };
+    });
+
+    // Push non bloquant (le webhook notifiera la vente confirmée ensuite).
+    sendPush(product.shop_id, {
+      title: "Nouvel achat digital 📁",
+      body: `${product.name} — ${name} va payer en ligne (${price} XAF).`,
+      url: "/creator",
+    }).catch(() => {});
+    if (seller) {
+      sendPush(seller.id, {
+        title: "Nouvelle commande 🛒",
+        body: `${product.name} — ${name} paie en ligne. Commission : ${commission} XAF.`,
+        url: "/seller",
+      }).catch(() => {});
+    }
+
+    const checkout = addPublicKey(
+      buildInlineCheckoutUrl({
+        amount: price,
+        currency: "XAF",
+        orderId: externalRef,
+        email: String(buyer?.email || req.body?.email || ""),
+      }),
+      publicKey
+    );
+    res.json({
+      ok: true,
+      sale_id: created.id,
+      order_id: externalRef,
+      amount: price,
+      currency: "XAF",
+      checkout_url: checkout,
+      confirm_code: created.confirmCode,
+    });
+  })
+);
+
+// Webhook iKeePay : iKeePay POST un JSON dès qu'une transaction est confirmée.
 
 // Webhook iKeePay : iKeePay POST un JSON dès qu'une transaction est confirmée.
 // Répond 200 dès que le payload est reconnu pour stopper les retries.

@@ -394,6 +394,10 @@ export default function Admin() {
   const [paySecretKey, setPaySecretKey] = useState("");
   const [payments, setPayments] = useState(null);
   const [webhookHealth, setWebhookHealth] = useState(null);
+  // Ventes digitales payées en ligne (iKeePay) + retraits des gains en ligne
+  // (créateur / vendeur) — visibles dans l'onglet 💰 Paiements, tous modes.
+  const [digitalPayments, setDigitalPayments] = useState(null);
+  const [onlineWithdrawals, setOnlineWithdrawals] = useState(null);
   const [migrateBusy, setMigrateBusy] = useState(false);
   const [migrateReport, setMigrateReport] = useState(null);
   const [prodSearch, setProdSearch] = useState("");
@@ -524,6 +528,15 @@ export default function Admin() {
       api
         .adminPayments()
         .then((d) => setPayments(d))
+        .catch(() => {});
+      // Ventes digitales en ligne + retraits des gains (créateur / vendeur).
+      api
+        .adminDigitalPayments()
+        .then((d) => setDigitalPayments(d))
+        .catch(() => {});
+      api
+        .adminOnlineWithdrawals()
+        .then((d) => setOnlineWithdrawals(d.withdrawals || d || []))
         .catch(() => {});
       // Santé du webhook : un paiement resté « en attente » sans trace est
       // presque toujours un webhook rejeté (URL iKeePay obsolète, token
@@ -773,6 +786,30 @@ export default function Admin() {
       );
     } catch (err) {
       setWdError(err.message);
+    }
+  };
+
+  // Retrait des gains en ligne (produit digital) : paiement manuel, même
+  // principe que les retraits d'activation.
+  const payOnlineWithdrawal = async (w) => {
+    if (
+      !window.confirm(
+        t("Payer la demande de retrait de {amount} F pour {name} ?", {
+          amount: formatMoney(w.amount),
+          name: w.user?.name || "—",
+        })
+      )
+    )
+      return;
+    try {
+      await api.adminPayOnlineWithdrawal(w.id);
+      setOnlineWithdrawals((ws) =>
+        ws.map((x) =>
+          x.id === w.id ? { ...x, status: "paid", paid_at: new Date().toISOString() } : x
+        )
+      );
+    } catch (err) {
+      window.alert(err.message);
     }
   };
 
@@ -2665,6 +2702,120 @@ export default function Admin() {
       )}
 
       {/* Mode automatique : suivi des paiements en ligne (sections manuelles masquées) */}
+      {/* ===== Ventes digitales payées en ligne (iKeePay) : tous les acteurs ===== */}
+      {adminTab === "payments" && digitalPayments && digitalPayments.sales && digitalPayments.sales.length > 0 && (
+        <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+          <h2 className="section-title" style={{ marginTop: 0 }}>
+            📁 {t("Ventes digitales payées en ligne")}
+          </h2>
+          <p className="muted-line" style={{ marginTop: 0 }}>
+            {t("Achats de fichiers digitaux confirmés par le webhook iKeePay. Argent encaissé par la plateforme — chacun retire via « Gains en ligne ».")}
+          </p>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t("Produit")}</th>
+                  <th>{t("Client")}</th>
+                  <th>{t("Créateur")}</th>
+                  <th>{t("Vendeur (code)")}</th>
+                  <th>{t("Parrain")}</th>
+                  <th>{t("Montant")}</th>
+                  <th>{t("Référence")}</th>
+                  <th>{t("Date")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {digitalPayments.sales.map((s) => (
+                  <tr key={s.sale_id}>
+                    <td>{s.product_name}</td>
+                    <td style={{ fontSize: 13 }}>{s.buyer_label || s.buyer_name || "—"}</td>
+                    <td style={{ fontSize: 13 }}>{s.creator_name || "—"}<br /><span className="muted-line">{s.creator_amount != null ? `${Number(s.creator_amount).toLocaleString("fr-FR")} F` : ""}</span></td>
+                    <td style={{ fontSize: 13 }}>{s.seller_name || "—"}{s.seller_code ? <> <code>{s.seller_code}</code></> : null}{s.seller_amount != null && s.seller_name ? <><br /><span className="muted-line">{Number(s.seller_amount).toLocaleString("fr-FR")} F</span></> : null}</td>
+                    <td style={{ fontSize: 13 }}>{s.referrer_name || "—"}{s.referrer_amount != null && s.referrer_name ? <><br /><span className="muted-line">{Number(s.referrer_amount).toLocaleString("fr-FR")} F</span></> : null}</td>
+                    <td><strong>{Number(s.total_price).toLocaleString("fr-FR")} F</strong></td>
+                    <td style={{ fontSize: 12 }}><code>{s.external_reference || "—"}</code></td>
+                    <td style={{ fontSize: 12 }}>{s.paid_online_at ? new Date(s.paid_online_at).toLocaleString("fr-FR") : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Retraits des gains en ligne (créateur / vendeur) : tous modes ===== */}
+      {adminTab === "payments" && onlineWithdrawals && onlineWithdrawals.length > 0 && (
+        <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+          <h2 className="section-title" style={{ marginTop: 0 }}>
+            💸 {t("Retraits des gains en ligne")}
+          </h2>
+          <p className="muted-line" style={{ marginTop: 0 }}>
+            {t("Demandes de retrait des gains digitaux (créateurs et vendeurs). L'argent encaissé par iKeePay leur est réglé manuellement.")}
+          </p>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t("Demandeur")}</th>
+                  <th>{t("Rôle")}</th>
+                  <th>{t("Montant")}</th>
+                  <th>{t("Coordonnées de paiement")}</th>
+                  <th>{t("Date")}</th>
+                  <th>{t("Statut")}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {onlineWithdrawals.map((w) => (
+                  <tr key={w.id}>
+                    <td style={{ fontSize: 13 }}>{w.user?.name || "—"}<br /><span className="muted-line">{w.user?.email || ""}</span></td>
+                    <td style={{ fontSize: 13 }}>{w.user?.role === "seller" ? "🛒 Vendeur" : "🎨 Créateur"}</td>
+                    <td><strong>{Number(w.amount).toLocaleString("fr-FR")} F</strong><br /><span className="muted-line">{t("dispo :")} {Number(w.user?.available ?? 0).toLocaleString("fr-FR")} F</span></td>
+                    <td style={{ fontSize: 12 }}>
+                      {w.user?.paymentMethods && w.user.paymentMethods.wallets && w.user.paymentMethods.wallets.length > 0 ? (
+                        <>
+                          {w.user.paymentMethods.full_name ? <div>{w.user.paymentMethods.full_name}</div> : null}
+                          {w.user.paymentMethods.wallets.map((m, i) => (
+                            <div key={i}>
+                              {m.primary ? "★ " : ""}
+                              {m.name} : <code style={{ userSelect: "all" }}>{m.value}</code>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <span className="muted-line">{t("Aucun moyen de paiement renseigné")}</span>
+                      )}
+                    </td>
+                    <td style={{ fontSize: 12 }}>{w.created_at ? new Date(w.created_at).toLocaleString("fr-FR") : "—"}</td>
+                    <td style={{ fontSize: 12 }}>
+                      {w.status === "paid" ? (
+                        <span>✅ {t("Payé")}{w.paid_at ? <><br /><span className="muted-line">{new Date(w.paid_at).toLocaleString("fr-FR")}</span></> : null}</span>
+                      ) : (
+                        <span>⏳ {t("En attente")}</span>
+                      )}
+                    </td>
+                    <td>
+                      {w.status !== "paid" && (
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-small"
+                          onClick={() => payOnlineWithdrawal(w)}
+                        >
+                          {t("Payé")}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+
+
       {adminTab === "payments" && !isManual && (
         <div className="card" style={{ marginBottom: 20, padding: 18 }}>
           <h2 className="section-title" style={{ marginTop: 0 }}>

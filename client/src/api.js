@@ -265,6 +265,16 @@ export const api = {
       body: JSON.stringify(code ? { code } : {}),
     }),
   digitalMine: () => request("/digital/mine"),
+  // Achat en ligne d'un produit digital (checkout iKeePay). Client connecté OU invité.
+  digitalPayin: (payload) =>
+    request("/payments/digital-payin", { method: "POST", body: JSON.stringify(payload) }),
+  // Sondage pendant l'attente du paiement en ligne (toutes les 4 s côté appelant).
+  digitalWaitOnline: (saleId, code) =>
+    request(`/digital/${saleId}/wait-online${code ? `?code=${encodeURIComponent(code)}` : ""}`),
+  // Gains en ligne (créateur / vendeur) + demande de retrait (min 5 000 XAF).
+  onlineEarningsMe: () => request("/online-earnings/me"),
+  onlineWithdraw: (amount) =>
+    request("/online-earnings/withdraw", { method: "POST", body: JSON.stringify({ amount }) }),
   notifications: () => request("/notifications"),
   notificationsRead: () => request("/notifications/read", { method: "POST" }),
   deleteNotification: (id) => request(`/notifications/${id}`, { method: "DELETE" }),
@@ -415,6 +425,16 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   adminPayments: () => adminRequest("/admin/payments"),
+  // Ventes digitales payées en ligne (iKeePay) : chaque vente avec TOUS ses
+  // acteurs (créateur, vendeur, parrain) + gains attribués.
+  adminDigitalPayments: () => adminRequest("/admin/digital-payments"),
+  // Retraits des gains en ligne (créateur / vendeur) : paiement manuel.
+  adminOnlineWithdrawals: () => adminRequest("/admin/online-withdrawals"),
+  adminPayOnlineWithdrawal: (id, note = "") =>
+    adminRequest(`/admin/online-withdrawals/${id}/pay`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    }),
   adminWebhooks: () => adminRequest("/admin/payments/webhooks"),
   adminFixImageCache: () =>
     adminRequest("/admin/storage/fix-image-cache", { method: "POST" }),

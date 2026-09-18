@@ -99,7 +99,7 @@ export default function LivreurPayments() {
           <h1>💳 {t("Mes moyens de paiement")}</h1>
           <p>
             {t(
-              "C'est sur ce portefeuille que la boutique vous verse les frais de livraison convenus, en espèces ou par Mobile Money."
+              "Ces informations seront visibles par les boutiques pour vous payer vos frais de livraison."
             )}
           </p>
           <p className="hint" style={{ marginTop: 8 }}>

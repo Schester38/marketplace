@@ -461,7 +461,64 @@ export async function initDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_digital_downloads_sale ON digital_downloads(sale_id);
     CREATE INDEX IF NOT EXISTS idx_digital_downloads_user ON digital_downloads(user_id);
+
+    -- ACHATS DIGITAUX EN LIGNE (iKeePay) : paiement par vente + répartition
+    -- des gains par bénéficiaire (créateur / vendeur / parrain). Le
+    -- téléchargement s'ouvre quand sales.shop_confirmed_at est posé (webhook).
+    CREATE TABLE IF NOT EXISTS digital_payments (
+      id SERIAL PRIMARY KEY,
+      sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+      amount REAL NOT NULL CHECK (amount > 0),
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      external_reference TEXT UNIQUE NOT NULL,
+      provider_reference TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','completed','expired')),
+      completed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_digital_payments_sale ON digital_payments(sale_id);
+    CREATE INDEX IF NOT EXISTS idx_digital_payments_status ON digital_payments(status, created_at);
+
+    CREATE TABLE IF NOT EXISTS online_earnings (
+      id SERIAL PRIMARY KEY,
+      sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
+      beneficiary_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      beneficiary_role TEXT NOT NULL CHECK (beneficiary_role IN ('creator','seller','referral')),
+      kind TEXT NOT NULL DEFAULT 'sale' CHECK (kind IN ('sale','referral')),
+      amount REAL NOT NULL CHECK (amount > 0),
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_online_earnings_sale_user ON online_earnings(sale_id, beneficiary_id, kind);
+    CREATE INDEX IF NOT EXISTS idx_online_earnings_user ON online_earnings(beneficiary_id);
+
+    -- Demandes de retrait (créateur + vendeur) : même principe que les
+    -- retraits d'activation — l'admin paie manuellement (espèces/Mobile Money).
+    CREATE TABLE IF NOT EXISTS online_withdrawals (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount REAL NOT NULL CHECK (amount > 0),
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','paid','rejected')),
+      payment_method TEXT,
+      payment_detail TEXT,
+      admin_note TEXT,
+      paid_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_online_withdrawals_user ON online_withdrawals(user_id);
   `);
+
+  // Horodatage du paiement EN LIGNE d'une vente digitale (webhook iKeePay).
+  await pool
+    .query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid_online_at TIMESTAMPTZ`)
+    .catch((err) =>
+      console.warn("[db] colonne sales.paid_online_at ignorée :", err.message)
+    );
+
+  // ------------------------------------- ACHATS DIGITAUX EN LIGNE (iKeePay)
+  // (tables déjà créées ci-dessus : digital_payments, online_earnings,
+  // online_withdrawals — ce bloc ne faisait que les dupliquer.)
 
   await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_seller_code ON users(seller_code) WHERE seller_code IS NOT NULL;
