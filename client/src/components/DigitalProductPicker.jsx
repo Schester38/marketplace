@@ -9,11 +9,11 @@ import { api } from "../api.js";
  * Le fichier est téléversé DIRECTEMENT par le navigateur vers le bucket PRIVÉ
  * Supabase via une URL d'upload signée délivrée par l'API (`/digital/upload-url`)
  * — le fichier ne traverse pas le serveur Mboppi, ce qui permet d'accepter
- * jusqu'à 50 Mo (le corps d'une requête API Vercel étant plafonné à 4,5 Mo, un
+ * jusqu'à 20 Mo (le corps d'une requête API Vercel étant plafonné à 4,5 Mo, un
  * envoi en base64 est limité à ~3 Mo ; il reste accepté en secours côté serveur,
  * mais le formulaire n'utilise plus que l'upload direct).
  */
-export const DIGITAL_MAX_BYTES = 50 * 1024 * 1024;
+export const DIGITAL_MAX_BYTES = 20 * 1024 * 1024;
 
 const DIGITAL_ACCEPT =
   ".pdf,.zip,.rar,.7z,.epub,.mobi,.doc,.docx,.odt,.xls,.xlsx,.ods,.ppt,.pptx,.odp,.txt,.csv,.json,.xml,.mp3,.m4a,.wav,.ogg,.mp4,.webm,.mov,.png,.jpg,.jpeg,.webp,.svg";

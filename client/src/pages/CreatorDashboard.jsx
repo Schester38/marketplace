@@ -29,7 +29,7 @@ const EMPTY_FORM = {
   photos: [],
   // Une CRÉATION est toujours un produit DIGITAL (fichier payant téléchargé
   // par le client) : `key` = clé Storage du fichier déjà téléversé DIRECTEMENT
-  // par le navigateur dans le bucket PRIVÉ (URL d'upload signée, jusqu'à 50 Mo).
+  // par le navigateur dans le bucket PRIVÉ (URL d'upload signée, jusqu'à 20 Mo).
   // Sans fichier, la publication est refusée (validation avant envoi).
   digital: { enabled: true, name: null, size: 0, mime: null, key: null },
 };

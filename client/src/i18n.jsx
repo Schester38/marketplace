@@ -1589,8 +1589,40 @@ const EN = {
   "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Mboppi ne demande jamais de paiement en ligne.":
     "No bank card is needed. Payment is made directly with the seller or delivery driver, on delivery or by mobile money. Mboppi never asks for online payment.",
   "Comment devenir vendeur ?": "How do I become a seller?",
-  "Créez un compte avec le rôle « vendeur ». Vous recevrez un code vendeur à partager avec vos clients. Pour chaque vente, vous gagnez la commission affichée sur le produit.":
-    'Create an account with the "seller" role. You will receive a seller code to share with your clients. For each sale, you earn the commission shown on the product.',
+  "Créez un compte avec le rôle « vendeur ». Vous recevrez un code vendeur à partager avec vos clients. L'accès à votre espace vendeur est soumis à l'adhésion de 30 jours (1 500 XAF), comme pour les boutiques et les créateurs (2 500 XAF). Pour chaque vente, vous gagnez la commission affichée sur le produit.":
+    'Create an account with the "seller" role. You will receive a seller code to share with your clients. Access to your seller space requires the 30-day membership (1,500 XAF), as for shops and creators (2,500 XAF). For each sale, you earn the commission shown on the product.',
+  "Qui doit payer l'adhésion ?": "Who has to pay the membership?",
+  "Les vendeurs (1 500 XAF), les boutiques et les créateurs (2 500 XAF) : l'adhésion, valable 30 jours, ouvre l'accès à l'espace professionnel correspondant et se renouvelle à son expiration. Les clients et les livreurs n'ont rien à payer.":
+    "Sellers (1,500 XAF), shops and creators (2,500 XAF): the membership, valid for 30 days, opens access to the corresponding professional space and renews upon expiry. Clients and delivery drivers have nothing to pay.",
+  "Qui peut publier des produits ?": "Who can publish products?",
+  "Les boutiques publient des produits physiques, les créateurs publient uniquement des produits digitaux (fichiers téléchargeables : ebooks, musiques, vidéos, documents…) et les vendeurs ne publient rien : ils vendent les deux types de produits avec leur code vendeur.":
+    "Shops publish physical products, creators publish digital products only (downloadable files: ebooks, music, videos, documents…) and sellers publish nothing: they sell both types of products with their seller code.",
+  "Comment télécharger un produit digital ?": "How do I download a digital product?",
+  "Un produit digital ne se livre pas : dès que la boutique confirme le paiement, vous le téléchargez depuis la page de confirmation d'achat ou votre espace client, via un lien sécurisé. Les téléchargements sont limités par acheteur (5 par défaut) et la livraison est toujours offerte.":
+    "A digital product is not delivered: as soon as the shop confirms the payment, you download it from the purchase confirmation page or your client space, through a secure link. Downloads are limited per buyer (5 by default) and delivery is always free.",
+  "L'accès aux espaces professionnels (boutique, vendeur, créateur) est soumis à une adhésion de 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur. Les clients et les livreurs n'ont rien à payer. Cette adhésion ne concerne pas les ventes : Mboppi ne prélève aucun frais sur les transactions entre les parties.":
+    "Access to the professional spaces (shop, seller, creator) requires a 30-day membership — 1,500 XAF for sellers, 2,500 XAF for shops and creators. Clients and delivery drivers have nothing to pay. This membership does not concern sales: Mboppi charges no fee on transactions between the parties.",
+  "Un produit digital (ebook, musique, vidéo, document…) n'est pas livré : il est téléchargé par l'acheteur depuis la page de confirmation d'achat ou son espace client, dès que la boutique confirme le paiement. Aucun frais de livraison ne s'applique.":
+    "A digital product (ebook, music, video, document…) is not delivered: the buyer downloads it from the purchase confirmation page or their client space, as soon as the shop confirms the payment. No delivery fee applies.",
+  "Votre paiement vous parviendra dans un délai maximum de 72 h après validation de votre demande.":
+    "Your payment will reach you within a maximum of 72 hours after your request is validated.",
+  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Votre paiement vous parviendra dans un délai maximum de 72 h.":
+    "Your withdrawal request for {amount} F has been received by the Mboppi team. Your payment will reach you within a maximum of 72 hours.",
+  "Demande envoyée ✓ L'administration vous paiera sur vos moyens de paiement configurés, dans un délai maximum de 72 h.":
+    "Request sent ✓ The administration will pay you on your configured payment methods, within a maximum of 72 hours.",
+  "Votre paiement vous parvient sous 72 h maximum après validation de votre demande.":
+    "Your payment reaches you within a maximum of 72 hours after your request is validated.",
+  "Tous (boutique, vendeur, créateur)": "Everyone (shop, seller, creator)",
+  "Vendeurs seulement": "Sellers only",
+  "Libérer boutiques et créateurs": "Unlock shops and creators",
+  "Bloquer aussi les boutiques et créateurs": "Also block shops and creators",
+  "Blocage global : boutiques, vendeurs et créateurs doivent payer l'adhésion (30 jours) pour accéder à leur espace. Les clients et livreurs ne sont pas concernés.":
+    "Global blocking: shops, sellers and creators must pay the membership (30 days) to access their space. Clients and delivery drivers are not affected.",
+  "Seuls les vendeurs paient l'adhésion : les boutiques et créateurs accèdent gratuitement à leur espace. Activez le blocage global pour les y soumettre aussi (état actuel de la production : blocage global ACTIVÉ).":
+    "Only sellers pay the membership: shops and creators access their space for free. Enable global blocking to require it from them too (current production state: global blocking ENABLED).",
+  "2.1. Adhésion et sécurité": "2.1. Membership and security",
+  "La création d'un compte est gratuite. L'utilisation des espaces professionnels (boutique, vendeur, créateur) est soumise à une adhésion valable 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur — à renouveler à son expiration, sauf validation par l'administration. Vous devez protéger vos identifiants, ne pas partager votre session et signaler rapidement toute utilisation non autorisée. Un compte peut être limité ou suspendu en cas de risque pour les utilisateurs ou la plateforme.":
+    "Creating an account is free. Using the professional spaces (shop, seller, creator) requires a membership valid for 30 days — 1,500 XAF for sellers, 2,500 XAF for shops and creators — renewed upon expiry, unless approved by the administration. You must protect your credentials, not share your session and quickly report any unauthorized use. An account may be limited or suspended in case of risk to users or the platform.",
   "Comment est calculée ma commission ?": "How is my commission calculated?",
   "La boutique choisit un pourcentage de commission pour chaque produit. Ce pourcentage est affiché sur la fiche produit. Le vendeur reçoit le montant total moins la commission de la boutique.":
     "The shop chooses a commission percentage for each product. This percentage is shown on the product page. The seller receives the total amount minus the shop's commission.",
@@ -3239,8 +3271,40 @@ const AR = {
   "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Mboppi ne demande jamais de paiement en ligne.":
     "لا حاجة لأي بطاقة مصرفية. يتم الدفع مباشرة مع البائع أو الموصّل، عند التسليم أو عبر المال المحمول. لا تطلب Mboppi أي دفع عبر الإنترنت.",
   "Comment devenir vendeur ?": "كيف أصبح بائعاً؟",
-  "Créez un compte avec le rôle « vendeur ». Vous recevrez un code vendeur à partager avec vos clients. Pour chaque vente, vous gagnez la commission affichée sur le produit.":
-    "أنشئ حساباً بدور «بائع». ستستلم رمز بائع لمشاركته مع عملائك. عن كل عملية بيع تربح العمولة المعروضة على المنتج.",
+  "Créez un compte avec le rôle « vendeur ». Vous recevrez un code vendeur à partager avec vos clients. L'accès à votre espace vendeur est soumis à l'adhésion de 30 jours (1 500 XAF), comme pour les boutiques et les créateurs (2 500 XAF). Pour chaque vente, vous gagnez la commission affichée sur le produit.":
+    "أنشئ حساباً بدور «بائع». ستستلم رمز بائع لمشاركته مع عملائك. الوصول إلى مساحة البائع يخضع لاشتراك مدته 30 يوماً (1500 فرنك)، كما هو الحال للمتاجر والمنشئين (2500 فرنك). عن كل عملية بيع تربح العمولة المعروضة على المنتج.",
+  "Qui doit payer l'adhésion ?": "من يجب أن يدفع الاشتراك؟",
+  "Les vendeurs (1 500 XAF), les boutiques et les créateurs (2 500 XAF) : l'adhésion, valable 30 jours, ouvre l'accès à l'espace professionnel correspondant et se renouvelle à son expiration. Les clients et les livreurs n'ont rien à payer.":
+    "البائعون (1500 فرنك)، والمتاجر والمنشئون (2500 فرنك): الاشتراك، الصالح لمدة 30 يوماً، يفتح الوصول إلى المساحة الاحترافية المقابلة ويُجدد عند انتهائه. العملاء والموصّلون لا يدفعون شيئاً.",
+  "Qui peut publier des produits ?": "من يمكنه نشر المنتجات؟",
+  "Les boutiques publient des produits physiques, les créateurs publient uniquement des produits digitaux (fichiers téléchargeables : ebooks, musiques, vidéos, documents…) et les vendeurs ne publient rien : ils vendent les deux types de produits avec leur code vendeur.":
+    "المتاجر تنشر منتجات مادية، والمنشئون ينشرون المنتجات الرقمية فقط (ملفات قابلة للتنزيل: كتب إلكترونية، موسيقى، فيديوهات، مستندات…)، والبائعون لا ينشرون شيئاً: يبيعون النوعين برمز البائع الخاص بهم.",
+  "Comment télécharger un produit digital ?": "كيف أُنزّل منتجاً رقمياً؟",
+  "Un produit digital ne se livre pas : dès que la boutique confirme le paiement, vous le téléchargez depuis la page de confirmation d'achat ou votre espace client, via un lien sécurisé. Les téléchargements sont limités par acheteur (5 par défaut) et la livraison est toujours offerte.":
+    "المنتج الرقمي لا يُسلَّم: بمجرد أن يؤكد المتجر الدفع، تُنزّله من صفحة تأكيد الشراء أو من مساحة العميل، عبر رابط آمن. عدد التنزيلات محدود لكل مشترٍ (5 افتراضياً) والتوصيل مجاني دائماً.",
+  "L'accès aux espaces professionnels (boutique, vendeur, créateur) est soumis à une adhésion de 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur. Les clients et les livreurs n'ont rien à payer. Cette adhésion ne concerne pas les ventes : Mboppi ne prélève aucun frais sur les transactions entre les parties.":
+    "الوصول إلى المساحات الاحترافية (متجر، بائع، منشئ) يخضع لاشتراك مدته 30 يوماً — 1500 فرنك للبائع، و2500 فرنك للمتجر والمنشئ. العملاء والموصّلون لا يدفعون شيئاً. هذا الاشتراك لا يخص المبيعات: لا تتقاضى Mboppi أي رسوم على المعاملات بين الأطراف.",
+  "Un produit digital (ebook, musique, vidéo, document…) n'est pas livré : il est téléchargé par l'acheteur depuis la page de confirmation d'achat ou son espace client, dès que la boutique confirme le paiement. Aucun frais de livraison ne s'applique.":
+    "المنتج الرقمي (كتاب إلكتروني، موسيقى، فيديو، مستند…) لا يتم توصيله: يُنزّله المشتري من صفحة تأكيد الشراء أو من مساحته كعميل، بمجرد أن يؤكد المتجر الدفع. لا تُطبَّق أي رسوم توصيل.",
+  "Votre paiement vous parviendra dans un délai maximum de 72 h après validation de votre demande.":
+    "سيصل إليك المبلغ في غضون 72 ساعة كحد أقصى بعد التحقق من طلبك.",
+  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Votre paiement vous parviendra dans un délai maximum de 72 h.":
+    "تم استلام طلب السحب بمبلغ {amount} فرنك من فريق Mboppi. سيصل إليك المبلغ في غضون 72 ساعة كحد أقصى.",
+  "Demande envoyée ✓ L'administration vous paiera sur vos moyens de paiement configurés, dans un délai maximum de 72 h.":
+    "تم إرسال الطلب ✓ ستدفع لك الإدارة عبر وسائل الدفع التي أعددتها، في غضون 72 ساعة كحد أقصى.",
+  "Votre paiement vous parvient sous 72 h maximum après validation de votre demande.":
+    "يصلك المبلغ خلال 72 ساعة كحد أقصى بعد التحقق من طلبك.",
+  "Tous (boutique, vendeur, créateur)": "الجميع (متجر، بائع، منشئ)",
+  "Vendeurs seulement": "البائعون فقط",
+  "Libérer boutiques et créateurs": "تحرير المتاجر والمنشئين",
+  "Bloquer aussi les boutiques et créateurs": "حجب المتاجر والمنشئين أيضاً",
+  "Blocage global : boutiques, vendeurs et créateurs doivent payer l'adhésion (30 jours) pour accéder à leur espace. Les clients et livreurs ne sont pas concernés.":
+    "حجب شامل: على المتاجر والبائعين والمنشئين دفع الاشتراك (30 يوماً) للوصول إلى مساحتهم. العملاء والموصّلون غير معنيين.",
+  "Seuls les vendeurs paient l'adhésion : les boutiques et créateurs accèdent gratuitement à leur espace. Activez le blocage global pour les y soumettre aussi (état actuel de la production : blocage global ACTIVÉ).":
+    "البائعون فقط يدفعون الاشتراك: المتاجر والمنشئون يدخلون مساحتهم مجاناً. فعّل الحجب الشامل ليشملهم أيضاً (الحالة الحالية في الإنتاج: الحجب الشامل مُفعّل).",
+  "2.1. Adhésion et sécurité": "2.1. الاشتراك والأمان",
+  "La création d'un compte est gratuite. L'utilisation des espaces professionnels (boutique, vendeur, créateur) est soumise à une adhésion valable 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur — à renouveler à son expiration, sauf validation par l'administration. Vous devez protéger vos identifiants, ne pas partager votre session et signaler rapidement toute utilisation non autorisée. Un compte peut être limité ou suspendu en cas de risque pour les utilisateurs ou la plateforme.":
+    "إنشاء الحساب مجاني. استخدام المساحات الاحترافية (متجر، بائع، منشئ) يخضع لاشتراك صالح لمدة 30 يوماً — 1500 فرنك للبائع، و2500 فرنك للمتجر والمنشئ — يُجدد عند انتهائه، إلا إذا اعتمدته الإدارة. عليك حماية بيانات دخولك، وعدم مشاركة جلستك، والإبلاغ سريعاً عن أي استخدام غير مصرح به. يمكن تقييد الحساب أو تعليقه في حال وجود خطر على المستخدمين أو المنصة.",
   "Comment est calculée ma commission ?": "كيف تُحسب عمولتي؟",
   "La boutique choisit un pourcentage de commission pour chaque produit. Ce pourcentage est affiché sur la fiche produit. Le vendeur reçoit le montant total moins la commission de la boutique.":
     "يختار المتجر نسبة عمولة لكل منتج. تُعرض هذه النسبة على صفحة المنتج. يتسلم البائع المبلغ الإجمالي ناقص عمولة المتجر.",
@@ -4840,8 +4904,40 @@ const ES = {
   "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Mboppi ne demande jamais de paiement en ligne.":
     "No se necesita ninguna tarjeta bancaria. El pago se hace directamente con el vendedor o el repartidor, a la entrega o por dinero móvil. Mboppi nunca pide un pago en línea.",
   "Comment devenir vendeur ?": "¿Cómo hacerse vendedor?",
-  "Créez un compte avec le rôle « vendeur ». Vous recevrez un code vendeur à partager avec vos clients. Pour chaque vente, vous gagnez la commission affichée sur le produit.":
-    "Crea una cuenta con el rol «vendedor». Recibirás un código de vendedor para compartir con tus clientes. Por cada venta, ganas la comisión mostrada en el producto.",
+  "Créez un compte avec le rôle « vendeur ». Vous recevrez un code vendeur à partager avec vos clients. L'accès à votre espace vendeur est soumis à l'adhésion de 30 jours (1 500 XAF), comme pour les boutiques et les créateurs (2 500 XAF). Pour chaque vente, vous gagnez la commission affichée sur le produit.":
+    "Crea una cuenta con el rol «vendedor». Recibirás un código de vendedor para compartir con tus clientes. El acceso a tu espacio de vendedor requiere la membresía de 30 días (1 500 XAF), igual que para las tiendas y los creadores (2 500 XAF). Por cada venta, ganas la comisión mostrada en el producto.",
+  "Qui doit payer l'adhésion ?": "¿Quién debe pagar la membresía?",
+  "Les vendeurs (1 500 XAF), les boutiques et les créateurs (2 500 XAF) : l'adhésion, valable 30 jours, ouvre l'accès à l'espace professionnel correspondant et se renouvelle à son expiration. Les clients et les livreurs n'ont rien à payer.":
+    "Vendedores (1 500 XAF), tiendas y creadores (2 500 XAF): la membresía, válida 30 días, abre el acceso al espacio profesional correspondiente y se renueva al vencer. Los clientes y los repartidores no pagan nada.",
+  "Qui peut publier des produits ?": "¿Quién puede publicar productos?",
+  "Les boutiques publient des produits physiques, les créateurs publient uniquement des produits digitaux (fichiers téléchargeables : ebooks, musiques, vidéos, documents…) et les vendeurs ne publient rien : ils vendent les deux types de produits avec leur code vendeur.":
+    "Las tiendas publican productos físicos, los creadores publican únicamente productos digitales (archivos descargables: ebooks, música, vídeos, documentos…) y los vendedores no publican nada: venden ambos tipos de productos con su código de vendedor.",
+  "Comment télécharger un produit digital ?": "¿Cómo descargar un producto digital?",
+  "Un produit digital ne se livre pas : dès que la boutique confirme le paiement, vous le téléchargez depuis la page de confirmation d'achat ou votre espace client, via un lien sécurisé. Les téléchargements sont limités par acheteur (5 par défaut) et la livraison est toujours offerte.":
+    "Un producto digital no se entrega: en cuanto la tienda confirma el pago, lo descargas desde la página de confirmación de compra o tu espacio de cliente, mediante un enlace seguro. Las descargas están limitadas por comprador (5 por defecto) y la entrega es siempre gratuita.",
+  "L'accès aux espaces professionnels (boutique, vendeur, créateur) est soumis à une adhésion de 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur. Les clients et les livreurs n'ont rien à payer. Cette adhésion ne concerne pas les ventes : Mboppi ne prélève aucun frais sur les transactions entre les parties.":
+    "El acceso a los espacios profesionales (tienda, vendedor, creador) requiere una membresía de 30 días — 1 500 XAF para el vendedor, 2 500 XAF para la tienda y el creador. Los clientes y los repartidores no pagan nada. Esta membresía no afecta a las ventas: Mboppi no cobra ninguna comisión sobre las transacciones entre las partes.",
+  "Un produit digital (ebook, musique, vidéo, document…) n'est pas livré : il est téléchargé par l'acheteur depuis la page de confirmation d'achat ou son espace client, dès que la boutique confirme le paiement. Aucun frais de livraison ne s'applique.":
+    "Un producto digital (ebook, música, vídeo, documento…) no se entrega: el comprador lo descarga desde la página de confirmación de compra o su espacio de cliente, en cuanto la tienda confirma el pago. No se aplica ningún gasto de envío.",
+  "Votre paiement vous parviendra dans un délai maximum de 72 h après validation de votre demande.":
+    "Tu pago te llegará en un plazo máximo de 72 h tras la validación de tu solicitud.",
+  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Votre paiement vous parviendra dans un délai maximum de 72 h.":
+    "Tu solicitud de retiro de {amount} F ha sido recibida por el equipo Mboppi. Tu pago te llegará en un plazo máximo de 72 h.",
+  "Demande envoyée ✓ L'administration vous paiera sur vos moyens de paiement configurés, dans un délai maximum de 72 h.":
+    "Solicitud enviada ✓ La administración te pagará en tus medios de pago configurados, en un plazo máximo de 72 h.",
+  "Votre paiement vous parvient sous 72 h maximum après validation de votre demande.":
+    "Tu pago te llega en un plazo máximo de 72 h tras la validación de tu solicitud.",
+  "Tous (boutique, vendeur, créateur)": "Todos (tienda, vendedor, creador)",
+  "Vendeurs seulement": "Solo vendedores",
+  "Libérer boutiques et créateurs": "Liberar tiendas y creadores",
+  "Bloquer aussi les boutiques et créateurs": "Bloquear también tiendas y creadores",
+  "Blocage global : boutiques, vendeurs et créateurs doivent payer l'adhésion (30 jours) pour accéder à leur espace. Les clients et livreurs ne sont pas concernés.":
+    "Bloqueo global: tiendas, vendedores y creadores deben pagar la membresía (30 días) para acceder a su espacio. Los clientes y repartidores no están afectados.",
+  "Seuls les vendeurs paient l'adhésion : les boutiques et créateurs accèdent gratuitement à leur espace. Activez le blocage global pour les y soumettre aussi (état actuel de la production : blocage global ACTIVÉ).":
+    "Solo los vendedores pagan la membresía: las tiendas y los creadores acceden gratis a su espacio. Activa el bloqueo global para exigírsela también (estado actual en producción: bloqueo global ACTIVADO).",
+  "2.1. Adhésion et sécurité": "2.1. Membresía y seguridad",
+  "La création d'un compte est gratuite. L'utilisation des espaces professionnels (boutique, vendeur, créateur) est soumise à une adhésion valable 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur — à renouveler à son expiration, sauf validation par l'administration. Vous devez protéger vos identifiants, ne pas partager votre session et signaler rapidement toute utilisation non autorisée. Un compte peut être limité ou suspendu en cas de risque pour les utilisateurs ou la plateforme.":
+    "Crear una cuenta es gratis. El uso de los espacios profesionales (tienda, vendedor, creador) está sujeto a una membresía válida de 30 días — 1 500 XAF para el vendedor, 2 500 XAF para la tienda y el creador — que se renueva al vencer, salvo validación por la administración. Debes proteger tus credenciales, no compartir tu sesión y reportar rápidamente cualquier uso no autorizado. Una cuenta puede limitarse o suspenderse en caso de riesgo para los usuarios o la plataforma.",
   "Comment est calculée ma commission ?": "¿Cómo se calcula mi comisión?",
   "La boutique choisit un pourcentage de commission pour chaque produit. Ce pourcentage est affiché sur la fiche produit. Le vendeur reçoit le montant total moins la commission de la boutique.":
     "La tienda elige un porcentaje de comisión para cada producto. Este porcentaje se muestra en la ficha del producto. El vendedor recibe el importe total menos la comisión de la tienda.",

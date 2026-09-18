@@ -7,11 +7,12 @@ Mboppi est une marketplace pour le Cameroun et l'Afrique. Elle met en relation d
 - **Boutique** : publie ses produits sans limite, définit les prix, le stock et la commission du vendeur, confirme les commandes et règle les commissions.
 - **Vendeur** : s'inscrit, génère un code vendeur, partage les produits et reçoit la commission prévue pour chaque vente.
 - **Client** : commande avec ou sans compte, reçoit un code de confirmation et suit sa commande.
-- **Créateur** : publie des créations et gère son espace.
+- **Créateur** : publie **uniquement des produits digitaux** (fichiers téléchargeables : ebooks, musiques, vidéos, documents…) et gère son espace.
 - **Livreur** : utilise le code de la boutique, saisit les frais de livraison et confirme la remise avec le code client.
 - **Administrateur** : consulte les statistiques, utilisateurs, ventes, messages, journaux et sauvegardes.
 - **Promotions éclair** : une promotion par semaine et par boutique, pendant 24 heures maximum. Le produit est masqué des catalogues et sa commission vendeur devient 0 %.
 - **SEO et partage** : pages publiques optimisées, sitemap, Open Graph, JSON-LD et liens de partage de produits, boutiques et offres.
+- **Produits digitaux** : un créateur publie des fichiers téléchargeables (20 Mo max par fichier, 2 produits par créateur) ; l'acheteur les télécharge depuis son espace après confirmation du paiement, sans livraison ni frais de livraison.
 
 ## Paiements et commissions
 
@@ -21,7 +22,7 @@ Les ventes sont payées **manuellement et directement** : espèces à la livrais
 - **Manuel** : paiement hors plateforme (Mobile Money, virement UBA, MoneyFusion) ; l'admin valide chaque compte.
 - **Automatique (iKeePay, PAYIN uniquement)** : adhésion et don payés en ligne via le checkout iKeePay ; un **webhook sécurisé par token** confirme le paiement → **activation immédiate** du compte et redirection automatique vers son espace, sans intervention admin. Les paiements en ligne restent visibles dans le panneau Admin (avec secours « Marquer complété »). **Aucun reversement automatique** : les versements vers vendeurs et parrains restent manuels dans les deux modes.
 
-**Seul le vendeur paie une adhésion** (1 500 XAF / 30 jours). Les boutiques, créateurs, clients et livreurs accèdent **directement** à leur espace, quel que soit le mode. Un vendeur parrain reçoit **1 000 XAF** lorsqu'un vendeur inscrit avec son code paie son adhésion ; le cumul se retire à partir de **5 000 XAF** (par multiples de 1 000), sur validation manuelle de l'admin.
+**L'adhésion est obligatoire pour les espaces professionnels** : vendeur **1 500 XAF**, boutique et créateur **2 500 XAF**, pour **30 jours** renouvelables. Le blocage global est **activé** (`platform_settings.membership_gate = "all"`) : sans adhésion payée (ou compte approuvé par l'admin), l'accès à l'espace est refusé (**402 MEMBERSHIP_REQUIRED**). Les **clients et livreurs** accèdent directement à leur espace, sans frais. Un vendeur parrain reçoit **1 000 XAF** lorsqu'un vendeur inscrit avec son code paie son adhésion ; le cumul se retire à partir de **5 000 XAF** (par multiples de 1 000), sur validation manuelle de l'admin.
 
 La commission du vendeur est définie par la boutique sur chaque produit (0 à 100 %). Le parrainage client rapporte **2 %** au vendeur référent lorsque le client est inscrit avec son code et authentifié lors de son achat ; le cumul est réclamé par le vendeur et versé manuellement par la boutique à partir de **5 000 XAF**.
 
@@ -57,7 +58,7 @@ JWT_SECRET=une-chaine-aleatoire-d-au-moins-32-caracteres
 ADMIN_PASSWORD=mot-de-passe-admin
 ```
 
-Variables optionnelles : `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, `SUPABASE_STORAGE_BUCKET` (défaut `photos`), `SUPABASE_PAYMENT_PROOF_BUCKET` (défaut `payment-proofs`), `SITE_URL`, `PUBLIC_URL`, `ALLOWED_ORIGIN`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `SENTRY_DSN`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, les variables SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`) et les rétentions (`TRANSACTION_RETENTION_DAYS`, `NOTIFICATION_RETENTION_DAYS`).
+Variables optionnelles : `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, `SUPABASE_STORAGE_BUCKET` (défaut `photos`), `SUPABASE_PAYMENT_PROOF_BUCKET` (défaut `payment-proofs`), `SUPABASE_DIGITAL_BUCKET` (défaut `digital-products`), `DIGITAL_USER_QUOTA_MB` (quota par compte, défaut 500, **100 en production**), `SITE_URL`, `PUBLIC_URL`, `ALLOWED_ORIGIN`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `SENTRY_DSN`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, les variables SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM`) et les rétentions (`TRANSACTION_RETENTION_DAYS`, `NOTIFICATION_RETENTION_DAYS`).
 
 ```powershell
 cd server
@@ -83,6 +84,8 @@ Le frontend est disponible sur http://localhost:5173 et l'API sur http://localho
 | POST | `/api/auth/login` | public | Connexion JWT |
 | GET | `/api/products` | public | Catalogue |
 | POST | `/api/products` | shop, creator | Publier un produit |
+| POST | `/api/digital/upload-url` | creator, shop | URL signée d'upload d'un fichier digital (20 Mo max) |
+| POST | `/api/digital/:saleId/download` | acheteur | Lien signé de téléchargement (10 min, quota par acheteur) |
 | POST | `/api/purchases` | public | Achat direct avec code vendeur |
 | POST | `/api/orders` | public | Commande du panier |
 | PATCH | `/api/sales/:id/status` | shop | Confirmer ou annuler |
@@ -94,7 +97,7 @@ Le frontend est disponible sur http://localhost:5173 et l'API sur http://localho
 | GET | `/api/wallet/me` | seller, creator, livreur | Consulter le wallet |
 | GET/POST | `/api/flash-promotions` | public / shop | Consulter ou créer une promotion |
 | GET/POST | `/api/activation-withdrawals` | seller | Retraits des commissions d'adhésion parrainée |
-| POST | `/api/payments/membership-payin` | seller | Ouvrir le checkout iKeePay pour l'adhésion (mode auto) |
+| POST | `/api/payments/membership-payin` | seller, shop, creator | Ouvrir le checkout iKeePay pour l'adhésion (mode auto) |
 | POST | `/api/payments/donation-payin` | public | Ouvrir le checkout iKeePay pour un don (mode auto) |
 | GET | `/api/payments/membership-status` | connecté | Statut d'adhésion + auto-réparation (sondage client) |
 | POST | `/api/ikeepay/webhook?k=SECRET` | iKeePay (token) | Confirmation de paiement (activation/complétion) |
@@ -102,7 +105,7 @@ Le frontend est disponible sur http://localhost:5173 et l'API sur http://localho
 
 ## Build et déploiement
 
-Le build frontend est lancé depuis la racine (version courante : **1.52.2** ; cache PWA `mboppi-v202`) :
+Le build frontend est lancé depuis la racine (version courante : **1.57.55** ; cache PWA `mboppi-v286`) :
 
 ```powershell
 npm run build
@@ -114,4 +117,4 @@ Les scripts de maintenance se trouvent dans [server/scripts](server/scripts) : s
 
 ## Sécurité et données
 
-Les mots de passe sont hachés avec bcrypt, les sessions utilisent JWT, les routes sensibles appliquent des rôles et des limites de débit, et les actions d'administration sont auditées. Les données métier sont conservées dans PostgreSQL ; les photos peuvent être stockées dans Supabase Storage (`photos`, `payment-proofs`).
+Les mots de passe sont hachés avec bcrypt, les sessions utilisent JWT, les routes sensibles appliquent des rôles et des limites de débit, et les actions d'administration sont auditées. Les données métier sont conservées dans PostgreSQL ; les photos peuvent être stockées dans Supabase Storage (`photos`, `payment-proofs`) et les fichiers digitaux dans le bucket **privé** `digital-products` (téléchargement uniquement par URL signée, jamais d'URL publique).

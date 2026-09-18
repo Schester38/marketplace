@@ -6416,6 +6416,19 @@ a.step {
   color: #fff;
   border-top-right-radius: 4px;
 }
+/* Liens donnés par Vérone : cliquables dans la bulle (site ou externe). */
+.chat-link {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: underline;
+  word-break: break-all;
+}
+.chat-link:hover {
+  text-decoration: none;
+}
+.chat-msg-user .chat-link {
+  color: #fff;
+}
 .chat-typing {
   display: flex;
   gap: 5px;

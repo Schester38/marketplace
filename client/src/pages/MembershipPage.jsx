@@ -29,9 +29,10 @@ export default function MembershipPage() {
   const isManual = settings.mode !== "auto";
   const isAutoReady = settings.mode === "auto" && settings.ikeepay_configured;
 
-  // Bascule admin : tant que le blocage global n'est pas activé
-  // (membership_gate = "seller"), boutiques et créateurs accèdent
-  // gratuitement à leur espace — aucun paiement à effectuer ici.
+  // Bascule admin (membership_gate) : seule la valeur "seller" laisse les
+  // boutiques et créateurs accéder gratuitement à leur espace. En production
+  // la valeur est "all" (blocage global activé) → tout rôle professionnel
+  // doit payer son adhésion, cette page affiche donc le paiement.
   const gateFree =
     (user?.role === "shop" || user?.role === "creator") &&
     settings.membership_gate !== "all";

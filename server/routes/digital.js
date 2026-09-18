@@ -17,7 +17,7 @@
 // UPLOAD (créateur / boutique) : `POST /upload-url` délivre une URL d'upload
 // signée — le navigateur téléverse le fichier DIRECTEMENT vers Supabase (PUT),
 // sans passer par l'API Vercel (dont le corps est plafonné à 4,5 Mo). Les
-// fichiers digitaux peuvent ainsi peser jusqu'à 50 Mo.
+// fichiers digitaux peuvent ainsi peser jusqu'à 20 Mo.
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { q } from "../db.js";

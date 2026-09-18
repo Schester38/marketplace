@@ -1,8 +1,9 @@
 // Bascule « adhésion obligatoire » — contrôlée par l'admin depuis le panneau
 // (Administration → Système de paiement). Stockée dans platform_settings
 // (clé membership_gate), le serveur fait autorité :
-//   — "seller" (défaut) : seuls les vendeurs paient l'adhésion ; boutiques et
-//     créateurs accèdent gratuitement à leur espace ;
+//   — "seller" (défaut du code) : seuls les vendeurs paient l'adhésion ;
+//     boutiques et créateurs accèdent gratuitement à leur espace
+//     (⚠️ valeur active en production = "all" : les trois rôles paient) ;
 //   — "all" : boutiques, vendeurs ET créateurs sont soumis à l'adhésion
 //     (30 jours, compte à rebours posé à chaque paiement ou approbation).
 // Module autonome (aucune dépendance circulaire) : réutilise le motif

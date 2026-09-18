@@ -39,7 +39,7 @@ async function preparePhotos(photos, folder) {
 // Deux modes d'envoi :
 //   1. DIRECT (défaut) : le navigateur téléverse le fichier lui-même vers
 //      Supabase via une URL d'upload SIGNÉE (POST /api/digital/upload-url),
-//      puis n'envoie ici que `digital.key` + métadonnées. Limite 50 Mo — le
+//      puis n'envoie ici que `digital.key` + métadonnées. Limite 20 Mo — le
 //      corps de l'API Vercel (4,5 Mo) n'est plus impliqué.
 //   2. LEGACY base64 : `digital.data` en data-URI (≤ 3 Mo, plafond du corps
 //      Vercel) — conservé pour compatibilité avec d'anciens clients.
@@ -53,6 +53,31 @@ import {
   digitalObjectMeta,
   safeFileExt,
 } from "../storage.js";
+
+// LIMITE DE PUBLICATIONS : un créateur (hors comptes dispensés ci-dessous) ne
+// peut pas publier plus de DIGITAL_MAX_PRODUCTS produits digitaux — chaque
+// fichier pouvant peser jusqu'à 20 Mo, cette limite protège le quota Supabase.
+const DIGITAL_MAX_PRODUCTS = 2;
+// Comptes créateurs DISPENSÉS de la limite (inscription existante) : le nom du
+// compte OU l'email commence par l'une de ces valeurs (insensible à la casse).
+const DIGITAL_UNLIMITED_CREATORS = ["bestrong"];
+
+function isUnlimitedCreator(user) {
+  const name = String(user?.name || "").trim().toLowerCase();
+  const email = String(user?.email || "").trim().toLowerCase();
+  return DIGITAL_UNLIMITED_CREATORS.some(
+    (s) => name.includes(s) || email.startsWith(s)
+  );
+}
+
+/** Nombre de produits digitaux déjà publiés par le compte. */
+async function countDigitalProducts(userId) {
+  const [r] = await q(
+    "SELECT COUNT(*)::int AS n FROM products WHERE shop_id = $1 AND is_digital = TRUE",
+    [userId]
+  );
+  return Number(r?.n || 0);
+}
 
 /**
  * Décode le blob `digital` envoyé par le client.
@@ -555,6 +580,17 @@ router.post(
         code: "CREATOR_DIGITAL_ONLY",
       });
     }
+    // LIMITE DE PUBLICATIONS : hors comptes dispensés (ex. « bestrong »), un
+    // créateur ne peut pas dépasser DIGITAL_MAX_PRODUCTS produits digitaux.
+    if (req.user.role === "creator" && !isUnlimitedCreator(req.user)) {
+      const existing = await countDigitalProducts(req.user.id);
+      if (existing >= DIGITAL_MAX_PRODUCTS) {
+        return res.status(403).json({
+          error: `Limite de ${DIGITAL_MAX_PRODUCTS} produits digitaux atteinte pour votre compte. Supprimez ou remplacez un produit existant pour en publier un nouveau.`,
+          code: "DIGITAL_PRODUCT_LIMIT",
+        });
+      }
+    }
     let digitalPath = null;
     let digitalSize = null;
     if (parsedDigital) {
@@ -702,6 +738,16 @@ router.post("/:id/duplicate", authRequired, roleRequired(...OWNER_ROLES), async 
       error: "Les produits digitaux sont réservés aux comptes créateur.",
       code: "DIGITAL_CREATOR_ONLY",
     });
+  }
+  // LIMITE DE PUBLICATIONS : même règle que la création (hors comptes dispensés).
+  if (req.user.role === "creator" && product.is_digital === true && !isUnlimitedCreator(req.user)) {
+    const existing = await countDigitalProducts(req.user.id);
+    if (existing >= DIGITAL_MAX_PRODUCTS) {
+      return res.status(403).json({
+        error: `Limite de ${DIGITAL_MAX_PRODUCTS} produits digitaux atteinte pour votre compte.`,
+        code: "DIGITAL_PRODUCT_LIMIT",
+      });
+    }
   }
   const created = await q(
     `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency,

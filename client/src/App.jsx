@@ -255,8 +255,9 @@ export function AuthProvider({ children }) {
   const userIdRef = useRef(user?.id);
 
   // Synchronisation de la bascule « adhésion obligatoire » (membership_gate) :
-  // "seller" (défaut) = boutiques et créateurs gratuits ; "all" = les trois
-  // rôles sont soumis à l'adhésion. Polling 30 s + retour sur l'onglet :
+  // "seller" (défaut du code) = boutiques et créateurs gratuits ; "all"
+  // (valeur active en production) = les trois rôles sont soumis à l'adhésion.
+  // Polling 30 s + retour sur l'onglet :
   // quand l'admin bascule le blocage, l'app des utilisateurs ouverts est
   // re-rendue immédiatement (state local) → RoleOnly ré-évalue
   // membershipActive et redirige vers /adhesion SANS recharger la page.

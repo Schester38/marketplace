@@ -56,7 +56,11 @@ export default function OnlineEarningsCard({ role = "creator" }) {
     setBusy(true);
     try {
       const d = await api.onlineWithdraw(amount);
-      setMsg(t("Demande envoyée ✓ L'administration vous paiera sur vos moyens de paiement configurés."));
+      setMsg(
+        t(
+          "Demande envoyée ✓ L'administration vous paiera sur vos moyens de paiement configurés, dans un délai maximum de 72 h."
+        )
+      );
       if (d && typeof d.available === "number") {
         setData((b) => ({ ...b, available: d.available }));
       } else {
@@ -103,6 +107,9 @@ export default function OnlineEarningsCard({ role = "creator" }) {
           >
             {busy ? "⏳ …" : `💸 ${t("Retirer")}`}
           </button>
+          <p className="hint" style={{ margin: "8px 0 0" }}>
+            {t("Votre paiement vous parvient sous 72 h maximum après validation de votre demande.")}
+          </p>
           {!canWithdraw && (
             <p className="hint" style={{ margin: "8px 0 0" }}>
               {t("Retrait disponible à partir de {min} XAF.", { min: min.toLocaleString("fr-FR") })}

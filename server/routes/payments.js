@@ -168,6 +168,8 @@ router.post(
     }
     // Bascule admin : si le blocage global n'est pas activé, boutiques et
     // créateurs accèdent gratuitement — aucun paiement à encaisser.
+    // (Valeur active en production : blocage global ACTIVÉ → les trois rôles
+    // professionnels paient ; ce cas ne se déclenche donc plus en prod.)
     const gatedRoles = await membershipRoles();
     if (!gatedRoles.includes(req.user.role)) {
       return res.status(400).json({

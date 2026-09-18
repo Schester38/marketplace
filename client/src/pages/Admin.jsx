@@ -2318,7 +2318,7 @@ export default function Admin() {
                   "Blocage global : boutiques, vendeurs et créateurs doivent payer l'adhésion (30 jours) pour accéder à leur espace. Les clients et livreurs ne sont pas concernés."
                 )
               : t(
-                  "Seuls les vendeurs paient l'adhésion. Les boutiques et créateurs accèdent gratuitement à leur espace — activez le blocage global le moment venu."
+                  "Seuls les vendeurs paient l'adhésion : les boutiques et créateurs accèdent gratuitement à leur espace. Activez le blocage global pour les y soumettre aussi (état actuel de la production : blocage global ACTIVÉ)."
                 )}
           </p>
         </div>
@@ -2548,7 +2548,7 @@ export default function Admin() {
         </h2>
         <p className="hint" style={{ marginBottom: 12 }}>
           {t(
-            "Consommation des buckets Supabase (fichiers digitaux jusqu'à 50 Mo par produit, photos, preuves de paiement). La purge retire les fichiers digitaux non rattachés à un produit (uploads abandonnés) depuis plus de 24 h."
+            "Consommation des buckets Supabase (fichiers digitaux jusqu'à 20 Mo par produit, photos, preuves de paiement). La purge retire les fichiers digitaux non rattachés à un produit (uploads abandonnés) depuis plus de 24 h."
           )}
         </p>
         {bucketUsage ? (

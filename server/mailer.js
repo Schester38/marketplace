@@ -9,6 +9,12 @@ const EMAIL_FROM =
   process.env.EMAIL_FROM ||
   (SMTP_USER ? `Mboppi <${SMTP_USER}>` : "Mboppi <noreply@mboppi.vercel.app>");
 
+// Domaine public du site (logo et liens des e-mails) — SITE_URL sur Vercel.
+const SITE_URL = String(process.env.SITE_URL || "https://mboppi-mboppi.vercel.app").replace(
+  /\/+$/,
+  ""
+);
+
 let transporter = null;
 
 export function mailConfigured() {
@@ -63,7 +69,7 @@ export function verificationEmailHtml({ name, link }) {
         <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
           <tr>
             <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:26px 28px;text-align:center;">
-              <img src="https://mboppi-mboppi.vercel.app/navbar-logo.png" alt="Mboppi" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
+              <img src="${SITE_URL}/navbar-logo.png" alt="Mboppi" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
               <div style="color:#fff;font-size:22px;font-weight:800;">Mboppi</div>
               <div style="color:#e0e7ff;font-size:13px;">Le marché de votre quartier en ligne</div>
             </td>
@@ -87,7 +93,7 @@ export function verificationEmailHtml({ name, link }) {
           </tr>
           <tr>
             <td style="padding:16px 28px;background:#f8fafc;font-size:11px;color:#94a3b8;text-align:center;">
-              © ${new Date().getFullYear()} Mboppi · mboppi-mboppi.vercel.app
+              © ${new Date().getFullYear()} Mboppi · ${SITE_URL.replace(/^https?:\/\//, "")}
             </td>
           </tr>
         </table>
@@ -110,7 +116,7 @@ export function newsletterEmailHtml({ title, body, unsubscribeUrl }) {
         <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
           <tr>
             <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:26px 28px;text-align:center;">
-              <img src="https://mboppi-mboppi.vercel.app/navbar-logo.png" alt="Mboppi" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
+              <img src="${SITE_URL}/navbar-logo.png" alt="Mboppi" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
               <div style="color:#fff;font-size:22px;font-weight:800;">Mboppi</div>
               <div style="color:#e0e7ff;font-size:13px;">Le marché de votre quartier en ligne</div>
             </td>

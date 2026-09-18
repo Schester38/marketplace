@@ -17,7 +17,19 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment devenir vendeur ?",
-    a: "Créez un compte avec le rôle « vendeur ». Vous recevrez un code vendeur à partager avec vos clients. Pour chaque vente, vous gagnez la commission affichée sur le produit.",
+    a: "Créez un compte avec le rôle « vendeur ». Vous recevrez un code vendeur à partager avec vos clients. L'accès à votre espace vendeur est soumis à l'adhésion de 30 jours (1 500 XAF), comme pour les boutiques et les créateurs (2 500 XAF). Pour chaque vente, vous gagnez la commission affichée sur le produit.",
+  },
+  {
+    q: "Qui doit payer l'adhésion ?",
+    a: "Les vendeurs (1 500 XAF), les boutiques et les créateurs (2 500 XAF) : l'adhésion, valable 30 jours, ouvre l'accès à l'espace professionnel correspondant et se renouvelle à son expiration. Les clients et les livreurs n'ont rien à payer.",
+  },
+  {
+    q: "Qui peut publier des produits ?",
+    a: "Les boutiques publient des produits physiques, les créateurs publient uniquement des produits digitaux (fichiers téléchargeables : ebooks, musiques, vidéos, documents…) et les vendeurs ne publient rien : ils vendent les deux types de produits avec leur code vendeur.",
+  },
+  {
+    q: "Comment télécharger un produit digital ?",
+    a: "Un produit digital ne se livre pas : dès que la boutique confirme le paiement, vous le téléchargez depuis la page de confirmation d'achat ou votre espace client, via un lien sécurisé. Les téléchargements sont limités par acheteur (5 par défaut) et la livraison est toujours offerte.",
   },
   {
     q: "Comment est calculée ma commission ?",
@@ -25,7 +37,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment recevoir mes gains ?",
-    a: "Enregistrez vos coordonnées de réception dans votre espace « Paiements ». Les paiements des commissions sont réalisés manuellement par la boutique, avec une preuve enregistrée sur la vente. Mboppi ne prélève aucun frais de plateforme.",
+    a: "Enregistrez vos coordonnées de réception dans votre espace « Paiements ». Les paiements des commissions sont réalisés manuellement par la boutique, avec une preuve enregistrée sur la vente. Pour les vendeurs et les créateurs, une demande de retrait est payée sur les moyens de paiement configurés dans un délai maximum de 72 h après validation. Mboppi ne prélève aucun frais de plateforme.",
   },
   {
     q: "Comment suivre ma commande ?",

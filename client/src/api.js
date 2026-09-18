@@ -267,7 +267,7 @@ export const api = {
   digitalMine: () => request("/digital/mine"),
   // Upload DIRECT d'un fichier digital : le serveur délivre une URL d'upload
   // signée (valide 1 h, un seul chemin d'objet) et le navigateur téléverse le
-  // fichier lui-même vers Supabase (PUT) — jusqu'à 50 Mo, sans passer par l'API.
+  // fichier lui-même vers Supabase (PUT) — jusqu'à 20 Mo, sans passer par l'API.
   digitalUploadUrl: (payload) =>
     request("/digital/upload-url", { method: "POST", body: JSON.stringify(payload) }),
   // Achat en ligne d'un produit digital (checkout iKeePay). Client connecté OU invité.

@@ -67,6 +67,10 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:4173",
   process.env.ALLOWED_ORIGIN,
+  // Domaine public (SITE_URL / PUBLIC_URL définis sur Vercel) — bascule de
+  // domaine sans modification du code.
+  process.env.SITE_URL,
+  process.env.PUBLIC_URL,
   "https://mboppi-mboppi.vercel.app",
   "https://ikeepay.com",
   "https://www.ikeepay.com",

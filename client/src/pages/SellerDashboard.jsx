@@ -1035,7 +1035,7 @@ export default function SellerDashboard() {
               <h2>🤝 {t("Vendeurs parrainés — commission de 1 000 F")}</h2>
               <p className="hint" style={{ marginTop: 4 }}>
                 {t(
-                  "Chaque vendeur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F, validé par l'administration. Retrait possible dès 5 000 F."
+                  "Chaque vendeur qui s'inscrit via votre lien et paie son adhésion (1 500 F) vous fait gagner 1 000 F, validé par l'administration. Retrait possible dès 5 000 F — le paiement vous parvient sous 72 h maximum."
                 )}
               </p>
             </div>
@@ -1219,6 +1219,11 @@ export default function SellerDashboard() {
                 value={withdrawForm.email}
                 onChange={(e) => setWithdrawForm((f) => ({ ...f, email: e.target.value }))}
               />
+              <p className="hint" style={{ marginTop: 12 }}>
+                {t(
+                  "Votre paiement vous parviendra dans un délai maximum de 72 h après validation de votre demande."
+                )}
+              </p>
               <div className="row2" style={{ justifyContent: "space-between", marginTop: 16 }}>
                 <button
                   type="button"
@@ -1259,7 +1264,7 @@ export default function SellerDashboard() {
             </div>
             <p style={{ lineHeight: 1.6 }}>
               {t(
-                "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Elle sera traitée dans un délai maximum de 24 h.",
+                "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Votre paiement vous parviendra dans un délai maximum de 72 h.",
                 { amount: formatMoney(withdrawDone.amount) }
               )}
             </p>

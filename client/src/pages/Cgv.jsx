@@ -40,6 +40,16 @@ export default function Cgv() {
               "Le paiement se fait directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne collecte pas les paiements et ne prélève aucun frais de plateforme. Les frais de livraison sont indiqués sur chaque fiche produit."
             )}
           </p>
+          <p>
+            {t(
+              "L'accès aux espaces professionnels (boutique, vendeur, créateur) est soumis à une adhésion de 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur. Les clients et les livreurs n'ont rien à payer. Cette adhésion ne concerne pas les ventes : Mboppi ne prélève aucun frais sur les transactions entre les parties."
+            )}
+          </p>
+          <p>
+            {t(
+              "Un produit digital (ebook, musique, vidéo, document…) n'est pas livré : il est téléchargé par l'acheteur depuis la page de confirmation d'achat ou son espace client, dès que la boutique confirme le paiement. Aucun frais de livraison ne s'applique."
+            )}
+          </p>
         </div>
         <div className="card">
           <h2>{t("4. Garanties et retours")}</h2>

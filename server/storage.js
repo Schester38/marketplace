@@ -288,12 +288,12 @@ export async function uploadPaymentProof(dataUri, folder = "payments") {
 // après vérification du droit d'accès côté serveur.
 const DIGITAL_BUCKET = process.env.SUPABASE_DIGITAL_BUCKET || "digital-products";
 
-// Taille maximale d'un fichier digital : 50 Mo. Les gros fichiers sont
+// Taille maximale d'un fichier digital : 20 Mo. Les gros fichiers sont
 // téléversés DIRECTEMENT par le navigateur vers Supabase via une URL d'upload
 // SIGNÉE (voir createDigitalUploadUrl ci-dessous) : le corps de l'API Vercel
 // (plafonné à 4,5 Mo) n'est plus impliqué. Le mode legacy base64 reste accepté
 // en dessous de 3 Mo (compat anciens clients).
-export const DIGITAL_MAX_BYTES = 50 * 1024 * 1024;
+export const DIGITAL_MAX_BYTES = 20 * 1024 * 1024;
 export const DIGITAL_INLINE_MAX_BYTES = 3 * 1024 * 1024;
 
 // Extensions acceptées (liste volontairement large : cours, ebooks, modèles,

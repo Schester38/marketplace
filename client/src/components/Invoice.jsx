@@ -1,3 +1,5 @@
+import { BASE_URL } from "../config.js";
+
 function money(v, symbol = "XAF") {
   return `${Number(v || 0).toLocaleString("fr-FR", { maximumFractionDigits: 0 })} ${symbol}`;
 }
@@ -252,7 +254,7 @@ export async function downloadInvoice(sale, t, symbol = "XAF") {
     16,
     y + 2
   );
-  doc.text("https://mboppi-mboppi.vercel.app", 16, y + 7);
+  doc.text(BASE_URL, 16, y + 7);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);

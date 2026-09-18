@@ -606,7 +606,7 @@ function NotifBell() {
     }
     if (n.type === "activation_withdrawal_requested") {
       return t(
-        "Votre demande de retrait de {amount} F a bien été reçue. Elle sera traitée dans un délai maximum de 24 h.",
+        "Votre demande de retrait de {amount} F a bien été reçue. Votre paiement vous parviendra dans un délai maximum de 72 h.",
         { amount: formatMoney(n.amount) }
       );
     }

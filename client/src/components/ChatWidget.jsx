@@ -1,8 +1,88 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
 
 const MAX_CONTEXT = 12;
+
+/**
+ * Pages internes dont le chemin peut apparaître dans une réponse de Vérone
+ * (ex. « /soutien ») : elles deviennent cliquables dans le chat.
+ * Liste volontairement limitée pour ne pas transformer des textes du genre
+ * « 1 500 F/mois » ou « 24 h/jour » en faux liens.
+ */
+const INTERNAL_PATHS = [
+  "soutien",
+  "contact",
+  "faq",
+  "cgu",
+  "cgv",
+  "donnees",
+  "suivi",
+  "register",
+  "login",
+  "produits",
+  "boutiques",
+  "createurs",
+  "vendre",
+  "verone",
+  "offres",
+  "panier",
+  "favoris",
+  "mon-compte",
+];
+
+const LINK_RE = new RegExp(
+  "(https?:\\/\\/[^\\s<>()\"']+|\\/(?:" + INTERNAL_PATHS.join("|") + ")(?![\\w-]))",
+  "g"
+);
+const TRAILING_PUNCT = /[.,;:!?]+$/;
+const EXTERNAL_RE = /^https?:\/\//i;
+
+/**
+ * Transforme le texte d'un message en nœuds React où les liens sont cliquables :
+ * - URL complètes (https://chat.whatsapp.com/… , https://mboppi-mboppi.vercel.app/…)
+ * - chemins internes du site (/soutien, /contact, /faq…) via React Router
+ * Un éventuel markdown [libellé](lien) produit par l'IA est d'abord aplati en
+ * « libellé lien » pour rester lisible et cliquable.
+ */
+function renderText(raw) {
+  const text = String(raw ?? "").replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, "$1 $2");
+  const parts = text.split(LINK_RE);
+  const out = [];
+  parts.forEach((part, i) => {
+    if (i % 2 === 0) {
+      if (part) out.push(part);
+      return;
+    }
+    let url = part;
+    let trailing = "";
+    const m = url.match(TRAILING_PUNCT);
+    if (m) {
+      trailing = m[0];
+      url = url.slice(0, -trailing.length);
+    }
+    if (!url) {
+      out.push(part);
+      return;
+    }
+    out.push(
+      <React.Fragment key={`link-${i}`}>
+        {EXTERNAL_RE.test(url) ? (
+          <a className="chat-link" href={url} target="_blank" rel="noopener noreferrer">
+            {url}
+          </a>
+        ) : (
+          <Link className="chat-link" to={url}>
+            {url}
+          </Link>
+        )}
+        {trailing}
+      </React.Fragment>
+    );
+  });
+  return out;
+}
 
 export default function ChatWidget() {
   const { t, lang } = useLang();
@@ -107,7 +187,7 @@ export default function ChatWidget() {
                 key={i}
                 className={`chat-msg ${m.role === "user" ? "chat-msg-user" : "chat-msg-bot"}`}
               >
-                {m.text}
+                {renderText(m.text)}
               </div>
             ))}
             {typing && (

@@ -38,10 +38,10 @@ export default function Cgu() {
           </p>
         </div>
         <div className="card">
-          <h2>{t("2.1. Accès gratuit et sécurité")}</h2>
+          <h2>{t("2.1. Adhésion et sécurité")}</h2>
           <p>
             {t(
-              "La création d’un compte et l’espace vendeur sont gratuits. Vous devez protéger vos identifiants, ne pas partager votre session et signaler rapidement toute utilisation non autorisée. Un compte peut être limité ou suspendu en cas de risque pour les utilisateurs ou la plateforme."
+              "La création d'un compte est gratuite. L'utilisation des espaces professionnels (boutique, vendeur, créateur) est soumise à une adhésion valable 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur — à renouveler à son expiration, sauf validation par l'administration. Vous devez protéger vos identifiants, ne pas partager votre session et signaler rapidement toute utilisation non autorisée. Un compte peut être limité ou suspendu en cas de risque pour les utilisateurs ou la plateforme."
             )}
           </p>
         </div>

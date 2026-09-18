@@ -1,6 +1,15 @@
 export const WHATSAPP_NUMBER = "237672886348";
 export const OFFERS_WHATSAPP_NUMBER = "237679475343";
-export const BASE_URL = "https://mboppi-mboppi.vercel.app";
+// Domaine public du site (partages, factures, liens) — piloté par la variable
+// d'environnement de build VITE_SITE_URL (Vercel → Settings → Environment
+// Variables). Sans elle, on retombe sur le domaine Vercel actuel : la bascule
+// vers un domaine personnalisé se fait donc SANS modification de code.
+const ENV_SITE_URL = import.meta.env?.VITE_SITE_URL || "";
+
+export const BASE_URL = (ENV_SITE_URL || "https://mboppi-mboppi.vercel.app").replace(
+  /\/+$/,
+  ""
+);
 
 export const COUNTRIES = [
   { name: "Afghanistan", flag: "🇦🇫", phone: "+93", symbol: "AFN" },

@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useLang } from "../i18n.jsx";
 import { nativeShareWithImage } from "../share.js";
+import { BASE_URL } from "../config.js";
 
-const VITRINE_URL = "https://mboppi-mboppi.vercel.app/vitrine-offre";
+const VITRINE_URL = `${BASE_URL}/vitrine-offre`;
 
 function shareMessage(t) {
   return t(
