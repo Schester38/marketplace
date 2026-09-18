@@ -726,6 +726,49 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_users_city ON users(city);
   `);
 
+  // GÉNÉRATEUR DE DOCUMENTS (ebooks/PDF) — module isolé, tables ADDITIVES.
+  // owner_id n'a volontairement PAS de FK vers users : l'admin « virtuel »
+  // (id 0, connexion par mot de passe admin) n'existe pas dans la table users
+  // et doit pouvoir créer/sauvegarder des documents.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS gen_documents (
+      id SERIAL PRIMARY KEY,
+      owner_id INTEGER NOT NULL DEFAULT 0,
+      doc_ref TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL DEFAULT 'Sans titre',
+      subtitle TEXT NOT NULL DEFAULT '',
+      author TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'ready')),
+      page_format TEXT NOT NULL DEFAULT 'A4',
+      page_width REAL,
+      page_height REAL,
+      orientation TEXT NOT NULL DEFAULT 'portrait',
+      margins JSONB NOT NULL DEFAULT '{}'::jsonb,
+      template_id TEXT NOT NULL DEFAULT 'moderne',
+      style_overrides JSONB NOT NULL DEFAULT '{}'::jsonb,
+      cover JSONB NOT NULL DEFAULT '{}'::jsonb,
+      back_cover JSONB NOT NULL DEFAULT '{}'::jsonb,
+      protection JSONB NOT NULL DEFAULT '{}'::jsonb,
+      content_hash TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS gen_documents_data (
+      doc_id INTEGER PRIMARY KEY REFERENCES gen_documents(id) ON DELETE CASCADE,
+      content JSONB NOT NULL DEFAULT '{"type":"doc","content":[{"type":"paragraph"}]}'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS gen_versions (
+      id BIGSERIAL PRIMARY KEY,
+      doc_id INTEGER NOT NULL REFERENCES gen_documents(id) ON DELETE CASCADE,
+      label TEXT NOT NULL DEFAULT '',
+      content JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_gen_documents_owner ON gen_documents(owner_id, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_gen_versions_doc ON gen_versions(doc_id, created_at DESC);
+  `);
+
   try {
     await purgeOldTransactions();
   } catch {

@@ -14,6 +14,7 @@ import { countrySymbol, COUNTRIES, BASE_URL } from "../config.js";
 import MiniChart from "../components/MiniChart.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
 import TrackMap from "../components/TrackMap.jsx";
+import GeneratorPanel from "./Generator.jsx";
 
 const VISIT_RANGES = [
   { days: 1, label: "1 jour" },
@@ -31,6 +32,7 @@ const ADMIN_TABS = [
   { id: "users", emoji: "👥", label: "Utilisateurs" },
   { id: "withdrawals", emoji: "💸", label: "Retraits d'activation" },
   { id: "products", emoji: "🛍️", label: "Produits" },
+  { id: "generator", emoji: "📚", label: "Générateur" },
   { id: "system", emoji: "⚙️", label: "Système" },
 ];
 
@@ -3617,6 +3619,9 @@ export default function Admin() {
       </div>
         </>
       )}
+
+      {/* ═══ Onglet « Générateur » : ebooks/PDF (module isolé, tables gen_*) ═══ */}
+      {adminTab === "generator" && <GeneratorPanel />}
 
     </main>
   );

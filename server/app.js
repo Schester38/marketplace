@@ -39,6 +39,7 @@ import photoProxyRouter from "./routes/photoProxy.js";
 import geoRoutes from "./routes/geo.js";
 import usersRoutes from "./routes/users.js";
 import digitalRoutes from "./routes/digital.js";
+import generatorRoutes from "./routes/generator.js";
 import { authRequired } from "./auth.js";
 import { securityHeaders, originCheck } from "./security.js";
 
@@ -187,6 +188,9 @@ app.use("/api/donations", donationsRoutes);
 app.use("/api/activation-withdrawals", activationWithdrawalRoutes);
 app.use("/api/online-earnings", onlineEarningsRoutes);
 app.use("/api/digital", digitalRoutes);
+// Générateur de documents (ebooks/PDF) : module admin isolé. Autosave
+// débouncé côté client → quota large ; lecture GET non bloquante.
+app.use("/api/generator", limiter(60 * 1000, 120), generatorRoutes);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/geo", limiter(60 * 1000, 30), geoRoutes);
 app.use("/api/logs", limiter(60 * 1000, 8));

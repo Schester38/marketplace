@@ -468,4 +468,22 @@ export const api = {
   adminWithdrawals: () => adminRequest("/admin/activation-withdrawals"),
   adminPayWithdrawal: (id) =>
     adminRequest(`/admin/activation-withdrawals/${id}/pay`, { method: "POST" }),
+
+  // ─── Générateur de documents (ebooks/PDF) — module admin isolé ──────────
+  genDocuments: () => adminRequest("/generator/documents"),
+  genDocument: (id) => adminRequest(`/generator/documents/${id}`),
+  genCreateDocument: (payload) =>
+    adminRequest("/generator/documents", { method: "POST", body: JSON.stringify(payload) }),
+  // Autosave : payload partiel (content, title, cover, design, protection…).
+  genSaveDocument: (id, payload) =>
+    adminRequest(`/generator/documents/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+  genDeleteDocument: (id) =>
+    adminRequest(`/generator/documents/${id}`, { method: "DELETE" }),
+  genDuplicateDocument: (id) =>
+    adminRequest(`/generator/documents/${id}/duplicate`, { method: "POST" }),
+  genSaveVersion: (id, payload) =>
+    adminRequest(`/generator/documents/${id}/versions`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 };
