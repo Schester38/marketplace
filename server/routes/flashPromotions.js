@@ -47,11 +47,20 @@ function promoRow(row) {
 }
 
 // Liste publique des promotions actives (les expirées sont purgées de la base).
+// Économie Vercel : la purge (DELETE) tournait sur CHAQUE requête — le popup la
+// rafraîchit toutes les 30 s sur chaque onglet ouvert. Elle est throttlée à une
+// fois par minute par instance ; les promos expirées restent filtrées de toute
+// façon par le `WHERE ends_at > now()` de la requête, donc aucun impact visuel.
+let lastPurge = 0;
 router.get(
   "/",
   ah(async (req, res) => {
     res.set("Cache-Control", "public, s-maxage=30, max-age=15, stale-while-revalidate=15");
-    await purgeExpired();
+    const now = Date.now();
+    if (now - lastPurge > 60000) {
+      lastPurge = now;
+      await purgeExpired();
+    }
     const rows = await q(
       `SELECT fp.*, p.name, p.price, p.category, p.image, p.photos, p.currency,
             u.name AS shop_name, u.verified AS shop_verified, u.country AS shop_country

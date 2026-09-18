@@ -20,14 +20,29 @@ function startDbInit() {
   });
 }
 
-// Lance immédiatement (pendant le démarrage à froid) puis à chaque requête :
-// la maintenance Storage (pas à pas, ~3 s max par step) progresse à chaque
-// requête jusqu'à la garde `storage_maintenance_done` (no-op ensuite).
+// Lance immédiatement (pendant le démarrage à froid), PUIS au plus toutes les
+// 5 minutes par instance : la maintenance Storage (pas à pas, ~3 s max par
+// step) progresse jusqu'à la garde `storage_maintenance_done` (no-op ensuite).
+// ⚠️ Économie de fonctions Vercel : lancée sur CHAQUE requête, elle ajoutait un
+// aller-retour base + (pendant la course) des appels Supabase à la durée de
+// quasiment toutes les invocations — un consommateur majeur d'heures de
+// fonctions. Le pas-à-pas reste assuré (les requêtes sont fréquentes), mais la
+// surcoût par requête tombe à zéro dans 99 % des cas.
+let lastMaintenanceRun = 0;
+const MAINTENANCE_MIN_INTERVAL_MS = 5 * 60 * 1000;
+
+function maybeRunMaintenance() {
+  const now = Date.now();
+  if (now - lastMaintenanceRun < MAINTENANCE_MIN_INTERVAL_MS) return;
+  lastMaintenanceRun = now;
+  runStorageMaintenanceStep().catch(() => {});
+}
+
 startDbInit();
-runStorageMaintenanceStep().catch(() => {});
+maybeRunMaintenance();
 app.use((req, res, next) => {
   startDbInit();
-  runStorageMaintenanceStep().catch(() => {});
+  maybeRunMaintenance();
   next();
 });
 
