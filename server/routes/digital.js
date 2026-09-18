@@ -13,11 +13,23 @@
 //
 // Aucun fallback « manuel » (email/WhatsApp) : le client télécharge
 // directement sur son appareil, l'URL signée étant le seul moyen d'accès.
+//
+// UPLOAD (créateur / boutique) : `POST /upload-url` délivre une URL d'upload
+// signée — le navigateur téléverse le fichier DIRECTEMENT vers Supabase (PUT),
+// sans passer par l'API Vercel (dont le corps est plafonné à 4,5 Mo). Les
+// fichiers digitaux peuvent ainsi peser jusqu'à 50 Mo.
 import { Router } from "express";
 import jwt from "jsonwebtoken";
 import { q } from "../db.js";
-import { roleRequired, authOptional } from "../auth.js";
-import { signedDigitalUrl } from "../storage.js";
+import { roleRequired, authRequired, authOptional } from "../auth.js";
+import {
+  signedDigitalUrl,
+  createDigitalUploadUrl,
+  digitalObjectKey,
+  DIGITAL_MAX_BYTES,
+  DIGITAL_EXT_ALLOWED,
+  safeFileExt,
+} from "../storage.js";
 import { reconcileDigitalSale } from "../services/ikeepay.js";
 
 const router = Router();
@@ -26,6 +38,18 @@ const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 
 // Durée de vie de l'URL signée : courte par nature (le temps du téléchargement).
 const SIGNED_TTL_SECONDS = 600;
+
+// Durée de vie de l'URL d'UPLOAD signée : le temps de téléverser un gros
+// fichier (50 Mo sur une connexion lente d'Afrique centrale ≈ quelques minutes).
+const UPLOAD_TTL_SECONDS = 3600;
+
+// Quota de STOCKAGE par compte créateur/boutique (somme des fichiers digitaux
+// rattachés à ses produits publiés). Protège le quota Supabase : sans ce
+// plafond, un compte pourrait accumuler des dizaines de fichiers de 50 Mo.
+// Réglable via la variable d'environnement DIGITAL_USER_QUOTA_MB (défaut 500).
+const DIGITAL_USER_QUOTA_BYTES =
+  Math.max(50, Number(process.env.DIGITAL_USER_QUOTA_MB) || 500) * 1024 * 1024;
+
 
 // Le téléchargement est ouvert dès que la BOUTIQUE a confirmé le paiement
 // (bouton « Confirmer » de son espace, qui pose `shop_confirmed_at`) ou que la
@@ -38,6 +62,89 @@ const DIGITAL_REQUIRE_CONFIRMATION = true;
 const DEFAULT_DOWNLOAD_LIMIT = 5;
 
 const OWNER_ROLES = ["shop", "creator"];
+
+/**
+ * POST /api/digital/upload-url — prépare le téléversement DIRECT d'un fichier
+ * digital vers le bucket PRIVÉ (navigateur → Supabase, sans passer par l'API).
+ * Le client fournit : name, size, hash (SHA-256 hex calculé dans le navigateur).
+ * La clé Storage est contrainte au dossier de l'utilisateur, ce qui garantit
+ * qu'un compte ne peut jamais téléverser dans le dossier d'un autre.
+ * Le fichier n'est réellement vérifié (existence + taille) qu'au moment où le
+ * produit est enregistré (products.js), via digitalObjectMeta.
+ */
+router.post(
+  "/upload-url",
+  authRequired,
+  roleRequired(...OWNER_ROLES),
+  ah(async (req, res) => {
+    const { name, size, hash } = req.body || {};
+    const fileName = String(name || "fichier").trim().slice(0, 160);
+    if (!fileName || fileName === "fichier") {
+      return res.status(400).json({ error: "Nom de fichier requis." });
+    }
+    const ext = safeFileExt(fileName);
+    if (!DIGITAL_EXT_ALLOWED.has(ext)) {
+      return res.status(400).json({
+        error: `Type de fichier non pris en charge (.${ext}). Formats acceptés : PDF, ZIP, EPUB, Office, TXT/CSV, MP3, MP4, images…`,
+      });
+    }
+    const bytes = Number(size || 0);
+    if (!Number.isFinite(bytes) || bytes <= 0) {
+      return res.status(400).json({ error: "Fichier illisible ou vide." });
+    }
+    if (bytes > DIGITAL_MAX_BYTES) {
+      return res.status(400).json({
+        error: `Fichier trop volumineux (${(bytes / 1024 / 1024).toFixed(1)} Mo). Maximum ${Math.round(
+          DIGITAL_MAX_BYTES / 1024 / 1024
+        )} Mo.`,
+      });
+    }
+    const hex = String(hash || "").toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(hex)) {
+      return res
+        .status(400)
+        .json({ error: "Empreinte de fichier invalide : réessayez (recalcul du hash)." });
+    }
+    // Quota de stockage par compte : somme des fichiers digitaux déjà publiés
+    // + ce nouveau fichier. (Le remplacement d'un fichier libère sa place
+    // après la sauvegarde du produit — le quota reste volontairement strict.)
+    try {
+      const [used] = await q(
+        `SELECT COALESCE(SUM(digital_size), 0)::bigint AS used
+           FROM products
+          WHERE shop_id = $1 AND is_digital = TRUE AND digital_path IS NOT NULL`,
+        [req.user.id]
+      );
+      const usedBytes = Number(used?.used || 0);
+      if (usedBytes + bytes > DIGITAL_USER_QUOTA_BYTES) {
+        const mb = (n) => (n / 1024 / 1024).toFixed(0);
+        return res.status(413).json({
+          error: `Quota de stockage atteint : ${mb(usedBytes)} Mo utilisés sur ${mb(
+            DIGITAL_USER_QUOTA_BYTES
+          )} Mo. Remplacez ou supprimez un fichier existant pour libérer de la place.`,
+        });
+      }
+    } catch (err) {
+      // Table/colonne indisponible : on n'empêche pas l'upload pour autant.
+      console.warn("[digital] quota stockage non vérifié :", err.message);
+    }
+    const key = digitalObjectKey(req.user.id, hex, fileName);
+    try {
+      const signed = await createDigitalUploadUrl(key, UPLOAD_TTL_SECONDS);
+      if (!signed || !signed.uploadUrl) {
+        return res
+          .status(503)
+          .json({ error: "Stockage des fichiers indisponible pour le moment. Réessayez plus tard." });
+      }
+      return res.json({ key: signed.path, uploadUrl: signed.uploadUrl, token: signed.token });
+    } catch (err) {
+      console.error("[digital] URL d'upload signée échouée :", err.message);
+      return res
+        .status(502)
+        .json({ error: "Stockage des fichiers indisponible pour le moment. Réessayez plus tard." });
+    }
+  })
+);
 
 // Authentification FACULTATIVE : un achat peut avoir été fait sans compte
 // (le code de confirmation fait alors office de preuve, comme pour la remise

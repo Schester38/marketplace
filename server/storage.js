@@ -288,6 +288,65 @@ export async function uploadPaymentProof(dataUri, folder = "payments") {
 // après vérification du droit d'accès côté serveur.
 const DIGITAL_BUCKET = process.env.SUPABASE_DIGITAL_BUCKET || "digital-products";
 
+// Taille maximale d'un fichier digital : 50 Mo. Les gros fichiers sont
+// téléversés DIRECTEMENT par le navigateur vers Supabase via une URL d'upload
+// SIGNÉE (voir createDigitalUploadUrl ci-dessous) : le corps de l'API Vercel
+// (plafonné à 4,5 Mo) n'est plus impliqué. Le mode legacy base64 reste accepté
+// en dessous de 3 Mo (compat anciens clients).
+export const DIGITAL_MAX_BYTES = 50 * 1024 * 1024;
+export const DIGITAL_INLINE_MAX_BYTES = 3 * 1024 * 1024;
+
+// Extensions acceptées (liste volontairement large : cours, ebooks, modèles,
+// logiciels, audio, vidéo…). Un type inconnu est refusé au lieu d'être stocké.
+export const DIGITAL_EXT_ALLOWED = new Set([
+  "pdf", "zip", "rar", "7z", "epub", "mobi",
+  "doc", "docx", "odt", "xls", "xlsx", "ods", "ppt", "pptx", "odp",
+  "txt", "csv", "json", "xml",
+  "mp3", "m4a", "wav", "ogg", "mp4", "webm", "mov",
+  "png", "jpg", "jpeg", "webp", "svg",
+]);
+
+/** Clé Storage d'un fichier digital : `users/{userId}/{hash64hex}/file.{ext}`. */
+export function digitalObjectKey(userId, hashHex, originalName) {
+  return `users/${userId}/${String(hashHex).toLowerCase()}/file.${safeFileExt(originalName)}`;
+}
+
+/**
+ * URL d'UPLOAD SIGNÉE Supabase : le navigateur téléverse le fichier DIRECTEMENT
+ * dans le bucket PRIVÉ (méthode PUT, corps = fichier brut) sans passer par
+ * l'API Vercel — c'est ce qui lève la limite des 4,5 Mo de corps de requête.
+ * Le jeton signé n'autorise qu'UN SEUL chemin d'objet, pour une durée courte.
+ * Retourne `{ path, uploadUrl, token }` (uploadUrl = URL absolue avec token).
+ */
+export async function createDigitalUploadUrl(path, expiresSec = 900) {
+  if (!path || !SUPABASE_URL || !SERVICE_KEY) return null;
+  await ensureDigitalBucket();
+  const token = apiToken();
+  const res = await fetch(
+    `${SUPABASE_URL}/storage/v1/object/upload/sign/${DIGITAL_BUCKET}/${encodeStoragePath(path)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: token,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expiresIn: expiresSec }),
+    }
+  );
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`URL d'upload signée impossible (${res.status}) : ${text.slice(0, 160)}`);
+  }
+  const data = await res.json();
+  if (!data?.url) return null;
+  return {
+    path,
+    uploadUrl: `${SUPABASE_URL}/storage/v1${data.url}`,
+    token: data.token || null,
+  };
+}
+
 export function digitalBucketName() {
   return DIGITAL_BUCKET;
 }
@@ -378,6 +437,26 @@ export async function digitalObjectExists(path) {
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Meta d'un objet digital via HEAD : `{ exists, size }`.
+ * Sert à vérifier qu'un fichier téléversé DIRECTEMENT par le navigateur
+ * (URL d'upload signée) est bien présent avant de rattacher un produit.
+ */
+export async function digitalObjectMeta(path) {
+  if (!path || !SUPABASE_URL || !SERVICE_KEY) return { exists: false, size: 0 };
+  try {
+    const res = await request(
+      `object/${DIGITAL_BUCKET}/${encodeStoragePath(path)}`,
+      { method: "HEAD" },
+      DIGITAL_BUCKET
+    );
+    if (!res.ok) return { exists: false, size: 0 };
+    return { exists: true, size: Number(res.headers.get("content-length") || 0) };
+  } catch {
+    return { exists: false, size: 0 };
   }
 }
 
@@ -595,6 +674,38 @@ export async function listBucketKeys(bucketName = BUCKET) {
     if (items.length < 1000) break;
   }
   return keys;
+}
+
+// Liste les objets du bucket digital privé : [{ key, size, updatedAt }]
+// (pagination 1000, fichiers seulement). Sert à la purge des orphelins et au
+// suivi de consommation du panneau Admin.
+export async function listDigitalObjects() {
+  if (!SUPABASE_URL || !SERVICE_KEY) return null;
+  const token = apiToken();
+  const out = [];
+  let offset = 0;
+  for (;;) {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${DIGITAL_BUCKET}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, apikey: token, "Content-Type": "application/json" },
+      body: JSON.stringify({ prefix: "", limit: 1000, offset }),
+    });
+    if (!res.ok) throw new Error(`Liste du bucket ${DIGITAL_BUCKET} échouée (${res.status})`);
+    const items = await res.json();
+    if (!Array.isArray(items) || !items.length) break;
+    for (const it of items) {
+      if (it?.id && it?.metadata && typeof it.metadata === "object") {
+        out.push({
+          key: it.name,
+          size: Number(it.metadata.size || it.metadata.contentLength || 0) || 0,
+          updatedAt: it.updated_at ? Date.parse(it.updated_at) : 0,
+        });
+      }
+    }
+    offset += items.length;
+    if (items.length < 1000) break;
+  }
+  return out;
 }
 
 // Header cache-control effectivement servi pour un objet public.

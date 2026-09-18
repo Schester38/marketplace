@@ -265,6 +265,11 @@ export const api = {
       body: JSON.stringify(code ? { code } : {}),
     }),
   digitalMine: () => request("/digital/mine"),
+  // Upload DIRECT d'un fichier digital : le serveur délivre une URL d'upload
+  // signée (valide 1 h, un seul chemin d'objet) et le navigateur téléverse le
+  // fichier lui-même vers Supabase (PUT) — jusqu'à 50 Mo, sans passer par l'API.
+  digitalUploadUrl: (payload) =>
+    request("/digital/upload-url", { method: "POST", body: JSON.stringify(payload) }),
   // Achat en ligne d'un produit digital (checkout iKeePay). Client connecté OU invité.
   digitalPayin: (payload) =>
     request("/payments/digital-payin", { method: "POST", body: JSON.stringify(payload) }),
@@ -334,6 +339,14 @@ export const api = {
   adminDeleteUser: (id) => adminRequest(`/admin/users/${id}`, { method: "DELETE" }),
   adminProducts: () => adminRequest("/admin/products"),
   adminDeleteProduct: (id) => adminRequest(`/admin/products/${id}`, { method: "DELETE" }),
+  // Consommation du Storage Supabase (buckets) + purge des fichiers digitaux
+  // orphelins — carte « 💾 Stockage Supabase » (Admin ⚙️ Système).
+  adminStorageUsage: () => adminRequest("/admin/storage/usage"),
+  adminPurgeDigitalOrphans: () =>
+    adminRequest("/admin/storage/purge-digital-orphans", {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
   adminMessages: () => adminRequest("/admin/messages"),
   adminDeleteMessage: (id) => adminRequest(`/admin/messages/${id}`, { method: "DELETE" }),
   adminSendMessage: (payload) =>

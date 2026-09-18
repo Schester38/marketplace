@@ -9,7 +9,8 @@ import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { formatMoney } from "../components/ProductCard.jsx";
-import { countrySymbol, COUNTRIES } from "../config.js";
+import { formatBytes } from "../imageKit.js";
+import { countrySymbol, COUNTRIES, BASE_URL } from "../config.js";
 import MiniChart from "../components/MiniChart.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
 import TrackMap from "../components/TrackMap.jsx";
@@ -366,6 +367,13 @@ export default function Admin() {
   const [refError, setRefError] = useState("");
   const [withdrawals, setWithdrawals] = useState(null);
   const [wdError, setWdError] = useState("");
+  // Stockage Supabase (onglet Système) : consommation des buckets + purge
+  // des fichiers digitaux orphelins. (Préfixe « bucket » pour ne pas entrer
+  // en conflit avec les états de maintenance des images ci-dessous.)
+  const [bucketUsage, setBucketUsage] = useState(null);
+  const [bucketBusy, setBucketBusy] = useState(false);
+  const [bucketPurgeBusy, setBucketPurgeBusy] = useState(false);
+  const [bucketPurgeMsg, setBucketPurgeMsg] = useState("");
   // Système de paiement (manuel ↔ automatique)
   const [paySettings, setPaySettings] = useState(null);
   const [waSettings, setWaSettings] = useState(null);
@@ -575,6 +583,46 @@ export default function Admin() {
     if (!gate) load();
   }, [gate, load]);
   useRefreshOnFocus(load);
+
+  const loadStorageInfo = useCallback(() => {
+    setBucketBusy(true);
+    api
+      .adminStorageUsage()
+      .then((d) => setBucketUsage(d))
+      .catch(() => setBucketUsage(null))
+      .finally(() => setBucketBusy(false));
+  }, []);
+
+  const purgeOrphans = async () => {
+    setBucketPurgeBusy(true);
+    setBucketPurgeMsg("");
+    try {
+      const d = await api.adminPurgeDigitalOrphans();
+      setBucketPurgeMsg(
+        t("Purge terminée : {n} fichier(s) supprimé(s), {o} libérés.", {
+          n: Number(d.supprimes || 0),
+          o: formatBytes(Number(d.orphelins_octets || 0)),
+        })
+      );
+      loadStorageInfo();
+    } catch (e) {
+      setBucketPurgeMsg(t("Purge impossible : {msg}", { msg: e.message }));
+    } finally {
+      setBucketPurgeBusy(false);
+    }
+  };
+
+  // Stockage Supabase : chargé au montage + toutes les 30 s, quel que soit
+  // l'onglet affiché (seul l'affichage de la carte est conditionné par l'onglet).
+  useEffect(() => {
+    if (gate) return undefined;
+    loadStorageInfo();
+    const id = setInterval(() => {
+      if (document.hidden) return;
+      loadStorageInfo();
+    }, 30000);
+    return () => clearInterval(id);
+  }, [gate, loadStorageInfo]);
 
   // Temps réel : actualisation silencieuse des statistiques, transactions et
   // visites toutes les 30 s, quel que soit le mode de paiement.
@@ -2490,9 +2538,74 @@ export default function Admin() {
         </>
       )}
 
-      {/* ═══ Onglet « Système » : robot WhatsApp & maintenance des images ═══ */}
+      {/* ═══ Onglet « Système » : stockage, robot WhatsApp & maintenance des images ═══ */}
       {adminTab === "system" && (
         <>
+      {/* Stockage Supabase : consommation des buckets + purge des orphelins */}
+      <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+        <h2 style={{ marginTop: 0, fontSize: "1.15rem" }}>
+          💾 {t("Stockage Supabase")}
+        </h2>
+        <p className="hint" style={{ marginBottom: 12 }}>
+          {t(
+            "Consommation des buckets Supabase (fichiers digitaux jusqu'à 50 Mo par produit, photos, preuves de paiement). La purge retire les fichiers digitaux non rattachés à un produit (uploads abandonnés) depuis plus de 24 h."
+          )}
+        </p>
+        {bucketUsage ? (
+          <>
+            <div style={{ display: "grid", gap: 4 }}>
+              <span>
+                📁 {t("Produits digitaux")} :{" "}
+                <strong>{formatBytes(bucketUsage.digital?.bytes)}</strong>{" "}
+                ({bucketUsage.digital?.count ?? "—"} {t("fichier(s)")})
+              </span>
+              <span>
+                🖼️ {t("Photos")} :{" "}
+                <strong>{formatBytes(bucketUsage.photos?.bytes)}</strong>{" "}
+                ({bucketUsage.photos?.count ?? "—"} {t("fichier(s)")})
+              </span>
+              <span>
+                🧾 {t("Preuves de paiement")} :{" "}
+                <strong>{formatBytes(bucketUsage.proofs?.bytes)}</strong>{" "}
+                ({bucketUsage.proofs?.count ?? "—"} {t("fichier(s)")})
+              </span>
+              {bucketUsage.orphelins_digitaux?.erreur && (
+                <span className="error">{bucketUsage.orphelins_digitaux.erreur}</span>
+              )}
+              {Number.isFinite(bucketUsage.orphelins_digitaux?.orphelins) && (
+                <span>
+                  🧹 {t("Orphelins digitaux")} :{" "}
+                  <strong>{bucketUsage.orphelins_digitaux.orphelins}</strong>{" "}
+                  ({formatBytes(Number(bucketUsage.orphelins_digitaux.orphelins_octets || 0))}{" "}
+                  {t("récupérables")})
+                </span>
+              )}
+            </div>
+            <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="btn btn-outline btn-small"
+                onClick={loadStorageInfo}
+                disabled={bucketBusy}
+              >
+                🔄 {bucketBusy ? t("Actualisation…") : t("Actualiser")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline btn-small"
+                onClick={purgeOrphans}
+                disabled={bucketPurgeBusy || !bucketUsage.orphelins_digitaux?.orphelins}
+              >
+                🧹 {bucketPurgeBusy ? t("Purge en cours…") : t("Purger les orphelins")}
+              </button>
+            </div>
+            {bucketPurgeMsg && <p className="hint" style={{ marginTop: 8 }}>{bucketPurgeMsg}</p>}
+          </>
+        ) : (
+          <p className="hint">{t("Chargement du stockage…")}</p>
+        )}
+      </div>
+
       {/* Robot WhatsApp : assistant IA connecté au numéro Cloud API */}
       <div className="card" style={{ marginBottom: 20, padding: 18 }}>
         <h2 style={{ marginTop: 0, fontSize: "1.15rem" }}>
@@ -2505,7 +2618,7 @@ export default function Admin() {
         </p>
         <p className="hint" style={{ marginBottom: 12 }}>
           {t("URL du webhook à configurer chez Meta :")}{" "}
-          <code style={{ userSelect: "all" }}>https://mboppi-mboppi.vercel.app/api/whatsapp/webhook</code>
+          <code style={{ userSelect: "all" }}>{BASE_URL + "/api/whatsapp/webhook"}</code>
         </p>
         <form onSubmit={saveWhatsAppBot} className="ikeepay-keys-form">
           <div className="form-row">

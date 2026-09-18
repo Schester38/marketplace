@@ -5,8 +5,8 @@ import { q, ensureColumn, withTransaction } from "../db.js";
 import { authRequired, roleRequired, signToken } from "../auth.js";
 import { logAudit } from "../security.js";
 import { migrateImages } from "../migrate-images.js";
-import { cleanupOutOfStock, cleanupOldStats, dbUsageReport } from "../cleanup.js";
-import { storageUsage, migrateInlinePhotos } from "../storage.js";
+import { cleanupOutOfStock, cleanupOldStats, dbUsageReport, purgeDigitalOrphans } from "../cleanup.js";
+import { storageUsage, migrateInlinePhotos, digitalBucketName } from "../storage.js";
 import { runStorageMaintenanceNow } from "../services/storageMaintenance.js";
 import { notifyActivationReferralPaid } from "../services/activationReferral.js";
 import { notifyAdmins } from "../services/adminNotify.js";
@@ -1094,6 +1094,48 @@ router.get(
       base: base.status === "fulfilled" ? base.value : { erreur: base.reason?.message },
       storage: storage.status === "fulfilled" ? storage.value : { erreur: storage.reason?.message },
     });
+  })
+);
+
+// ─── Consommation du Storage Supabase (buckets) + purge des orphelins ───────
+// Carte « 💾 Stockage Supabase » de l'onglet ⚙️ Système : permet de surveiller
+// le quota Storage (gratuit : ~1 Go) alors que les fichiers digitaux peuvent
+// peser 50 Mo chacun. La purge supprime les fichiers digitaux présents dans le
+// bucket mais rattachés à aucun produit (uploads abandonnés), en épargnant les
+// objets récents (un créateur peut être en train de remplir son formulaire).
+router.get(
+  "/storage/usage",
+  ah(async (req, res) => {
+    const [photos, digital, proofs] = await Promise.allSettled([
+      storageUsage(),
+      storageUsage(digitalBucketName()),
+      storageUsage("payment-proofs"),
+    ]);
+    const orphelins = await purgeDigitalOrphans({ dryRun: true }).catch((e) => ({
+      erreur: e.message,
+    }));
+    res.json({
+      ok: true,
+      photos: photos.status === "fulfilled" ? photos.value : { erreur: photos.reason?.message },
+      digital: digital.status === "fulfilled" ? digital.value : { erreur: digital.reason?.message },
+      proofs: proofs.status === "fulfilled" ? proofs.value : { erreur: proofs.reason?.message },
+      orphelins_digitaux: orphelins,
+    });
+  })
+);
+
+router.post(
+  "/storage/purge-digital-orphans",
+  ah(async (req, res) => {
+    const minAgeHours = Math.max(1, Number(req.body?.min_age_hours) || 24);
+    const result = await purgeDigitalOrphans({ dryRun: false, minAgeHours });
+    await logAudit(
+      req.user.id,
+      "admin.storage_purge_orphans",
+      JSON.stringify(result),
+      req.ip
+    );
+    res.json({ ok: !result.erreur, ...result });
   })
 );
 

@@ -39,14 +39,17 @@ export const createProductSchema = z.object({
   contact: z.string().max(200).optional().nullable(),
   quantity: z.coerce.number().int("Quantité invalide").min(1, "Quantité minimale 1"),
   currency: z.string().max(10).optional(),
-  // Produit DIGITAL : le fichier (data-URI base64) est téléversé par le
-  // serveur dans le bucket PRIVÉ, puis remis à l'acheteur par URL signée.
-  // `data` est borné (garde-fou mémoire) : la limite réelle en octets est
-  // vérifiée dans la route (DIGITAL_MAX_BYTES).
+  // Produit DIGITAL : deux modes d'envoi.
+  //  1. DIRECT : le fichier a été téléversé par le navigateur directement dans
+  //     le bucket PRIVÉ via une URL d'upload signée (`key` + métadonnées).
+  //     Jusqu'à 50 Mo — le corps de l'API n'est plus impliqué.
+  //  2. LEGACY : `data` (data-URI base64 ≤ 3 Mo), téléversé par le serveur.
   digital: z
     .object({
       name: z.string().max(160).optional(),
       mime: z.string().max(120).optional(),
+      key: z.string().max(300).optional(),
+      size: z.coerce.number().int().min(0).max(52 * 1024 * 1024).optional(),
       data: z.string().max(4400000, "Fichier trop volumineux").optional(),
       remove: z.boolean().optional(),
     })

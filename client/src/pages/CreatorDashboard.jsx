@@ -28,9 +28,10 @@ const EMPTY_FORM = {
   commission_amount: "",
   photos: [],
   // Une CRÉATION est toujours un produit DIGITAL (fichier payant téléchargé
-  // par le client) : `data` = fichier (data-URI base64) à téléverser.
+  // par le client) : `key` = clé Storage du fichier déjà téléversé DIRECTEMENT
+  // par le navigateur dans le bucket PRIVÉ (URL d'upload signée, jusqu'à 50 Mo).
   // Sans fichier, la publication est refusée (validation avant envoi).
-  digital: { enabled: true, name: null, size: 0, mime: null, data: null },
+  digital: { enabled: true, name: null, size: 0, mime: null, key: null },
 };
 const MAX_PHOTOS = 1;
 
@@ -138,11 +139,12 @@ export default function CreatorDashboard() {
       return;
     }
     // --- Produit DIGITAL -----------------------------------------------
-    // Fichier transmis au serveur (data-URI) → bucket PRIVÉ Supabase, remis à
-    // l'acheteur par URL signée. `remove: true` retire le fichier (refusé côté
-    // serveur si des clients l'ont déjà acheté).
+    // Fichier téléversé DIRECTEMENT par le navigateur vers le bucket PRIVÉ
+    // Supabase (URL d'upload signée) → le produit ne transporte que `key`.
+    // `remove: true` retire le fichier (refusé côté serveur si des clients
+    // l'ont déjà acheté).
     const wantsDigital = Boolean(form.digital?.enabled);
-    const hasNewDigitalFile = Boolean(form.digital?.data);
+    const hasNewDigitalFile = Boolean(form.digital?.key);
     const wasDigital = Boolean(editingDigital?.name);
     if (wantsDigital && !hasNewDigitalFile && !wasDigital) {
       setError(t("Choisissez le fichier que le client téléchargera pour ce produit digital."));
@@ -150,7 +152,12 @@ export default function CreatorDashboard() {
     }
     const digitalPayload = wantsDigital
       ? hasNewDigitalFile
-        ? { name: form.digital.name, mime: form.digital.mime, data: form.digital.data }
+        ? {
+            name: form.digital.name,
+            mime: form.digital.mime,
+            size: form.digital.size,
+            key: form.digital.key,
+          }
         : undefined
       : wasDigital
         ? { remove: true }
@@ -242,7 +249,7 @@ export default function CreatorDashboard() {
         name: null,
         size: 0,
         mime: null,
-        data: null,
+        key: null,
       },
     });
     setEditingDigital(

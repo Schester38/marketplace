@@ -1,5 +1,5 @@
 import { q } from "./db.js";
-import { collectStorageKeys, deleteStorageKeys } from "./storage.js";
+import { collectStorageKeys, deleteStorageKeys, listDigitalObjects, deleteDigitalFile } from "./storage.js";
 
 // Purge des statistiques datant de plus de 6 mois : daily_visits, item_views,
 // client_logs et audit_log. Ces tables grossissent chaque jour sans servir au-delà
@@ -125,5 +125,44 @@ export async function cleanupOutOfStock({ dryRun = false } = {}) {
     offres_supprimees: removedOffers,
     produits_gardes_avec_historique: Number(keptProducts[0]?.n || 0),
     fichiers_storage_supprimes: deletedFiles,
+  };
+}
+
+// Purge des fichiers digitaux ORPHELINS du bucket privé `digital-products` :
+// objets présents dans le Storage mais rattachés à AUCUN produit (upload
+// abandonné avant l'enregistrement du produit, crash entre upload et INSERT…).
+// Sécurité : les objets de moins de `minAgeHours` heures sont toujours
+// conservés (un créateur peut être en train de remplir son formulaire).
+// Retourne aussi les totaux en mode dry-run (aucune suppression).
+export async function purgeDigitalOrphans({ dryRun = false, minAgeHours = 24 } = {}) {
+  const objects = await listDigitalObjects();
+  if (!objects) {
+    return { erreur: "Stockage non configuré (SUPABASE_URL / SUPABASE_SERVICE_KEY absents)" };
+  }
+  const rows = await q(`SELECT digital_path FROM products WHERE digital_path IS NOT NULL`);
+  const referenced = new Set(rows.map((r) => r.digital_path));
+  const cutoff = Date.now() - Math.max(1, minAgeHours) * 3600 * 1000;
+  const orphans = objects.filter(
+    (o) => !referenced.has(o.key) && o.updatedAt > 0 && o.updatedAt < cutoff
+  );
+  const orphansBytes = orphans.reduce((s, o) => s + Number(o.size || 0), 0);
+  let deleted = 0;
+  if (!dryRun) {
+    for (const o of orphans) {
+      try {
+        if (await deleteDigitalFile(o.key)) deleted += 1;
+      } catch (err) {
+        console.error("[cleanup] purge orphelin digital échouée :", o.key, err.message);
+      }
+    }
+  }
+  return {
+    mode: dryRun ? "dry-run" : "effectif",
+    min_age_heures: Math.max(1, minAgeHours),
+    objets_total: objects.length,
+    objets_references: referenced.size,
+    orphelins: orphans.length,
+    orphelins_octets: orphansBytes,
+    supprimes: dryRun ? 0 : deleted,
   };
 }

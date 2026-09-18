@@ -6,11 +6,12 @@ Contexte de travail pour toute session IA sur ce dépôt. Lire ce fichier avant 
 
 Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiques, vendeurs indépendants, créateurs, livreurs, commandes par téléphone/WhatsApp et paiement mobile.
 
-- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.52.2`.
+- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.57.46`.
 - **Serveur** : Express 4 (`server/`, port 4000), PostgreSQL via Supabase (`server/db.js` : `DATABASE_URL_POOLED`, fallback `DATABASE_URL`, `ssl rejectUnauthorized: false` ; exports `q()`, `withTransaction()`, `initDb()`).
 - **Finance** : `server/services/payouts.js` — `computeRedistribution`, `normalizeWalletPrimary`, seuils de commission. Il n'existe **pas** de `server/finance.js`.
 - **Déploiement** : Vercel, entrée serverless `api/index.js` → `server/app.js` + `initDb()`. `vercel.json` route `/api/*`, `/produit/:id`, `/boutique/:id`, `/createur/:id`, `/ville/:x`, `/offre/:id`, `/sitemap.xml`, `/` vers l'API, le reste vers le SPA.
 - **Prod** : `https://mboppi-mboppi.vercel.app` (client + API). `BASE_URL`, `SITE_URL`, `PUBLIC_URL` par défaut sur ce domaine.
+- **Domaine personnalisé** : `mboppi.qd.je` (gratuit, namespace DigitalPlat) enregistré le 17/09/2026 — mais **inutilisable sur Vercel** : l'ajout au projet renvoie `Error: Not authorized to use mboppi.qd.je (403)` et l'apex parent `qd.je` répond `Error: The domain qd.je already exists under a different context` ⇒ la zone `qd.je` est **déjà rattachée à un autre compte Vercel** (même cas pour `*.dpdns.org` de DigitalPlat), donc Vercel refuse tous ses sous-domaines. Contrôles effectués en CLI le 17/09/2026 (puis annulés) : `mboppitest.duckdns.org` ✅ accepté, `mboppi-test2.eu.org` ✅ accepté, `mboppitest.example.com` ❌ 403, `mboppi-check-tmp.dpdns.org` ❌ 403. ⇒ Règle observée : **un sous-domaine n'est accepté que si sa zone parente n'est pas déjà revendiquée par un autre compte Vercel** (`eu.org` et `duckdns.org` OK, DigitalPlat ❌). Solutions : `mboppi.eu.org` (gratuit, validation manuelle de plusieurs jours chez NIC.EU.ORG + DNS gratuit chez deSEC/Hurricane Electric) **ou** un vrai domaine (candidats **libres** vérifiés par RDAP le 17/09/2026 : `mboppishop.com`, `mboppimarket.com`, `mboppiafrica.com`, `mboppi.shop`, `mboppi.store`, `mboppi.online`, `mboppimarket.xyz`). ⚠️ `mboppi.com` **n'appartient pas** au projet (parqué, en vente ~1 895 $ via Afternic/HugeDomains) : retiré du compte Vercel le 17/09/2026 (le compte n'a alors **aucun domaine** propre). La bascule du code vers un domaine personnalisé est **déjà préparée** et pilotée par l'environnement (`VITE_SITE_URL`, `SITE_URL`, `PUBLIC_URL`) — voir « Bascule vers un domaine personnalisé ».
 
 ## Rôles utilisateurs
 
@@ -119,7 +120,9 @@ Le rôle **créateur** est **rouvert à l'inscription** (`Register.jsx` : radio 
 Un produit **digital** (`products.is_digital = TRUE`) est un fichier que le client télécharge sur son appareil — **aucun fallback manuel** (pas d'envoi par email/WhatsApp).
 
 - **Stockage** : bucket Supabase **PRIVÉ** `digital-products` (`SUPABASE_DIGITAL_BUCKET`), jamais d'URL publique. `server/storage.js` : `ensureDigitalBucket`, `uploadDigitalFile` (dédup par hash, sans conversion), `signedDigitalUrl(path, expiresSec)`, `digitalObjectExists`, `deleteDigitalFile`, `storageUsage(bucket)`.
-- **Envoi** : le vendeur joint le fichier au formulaire produit (`digital: { name, mime, data }`, data-URI base64) → `POST /api/products` / `PUT /api/products/:id` téléverse dans le bucket privé puis persiste `digital_path/digital_name/digital_mime/digital_size`. **Limite 3 Mo** (`DIGITAL_MAX_BYTES`, `products.js`) : le corps d'une fonction Vercel est plafonné à **4,5 Mo** et le base64 pèse ≈ 4/3. Extensions autorisées : PDF, ZIP/RAR/7Z, EPUB/MOBI, Office, TXT/CSV/JSON/XML, MP3/M4A/WAV/OGG, MP4/WEBM/MOV, images.
+- **Envoi (50 Mo)** : le navigateur téléverse le fichier **DIRECTEMENT** vers Supabase via une **URL d'upload signée** (`POST /api/digital/upload-url`, auth créateur/boutique ; hash SHA-256 calculé côté client, progression via XHR) puis n'envoie que `digital: { name, mime, size, key }` → `POST /api/products` / `PUT /api/products/:id` vérifie la présence et la taille de l'objet (`digitalObjectMeta`, HEAD) puis persiste `digital_path/digital_name/digital_mime/digital_size`. **Limite 50 Mo** (`DIGITAL_MAX_BYTES`, `storage.js`) — le corps Vercel (4,5 Mo) n'est plus impliqué. **Quota par compte : réglé à 100 Mo en production** (env Vercel `DIGITAL_USER_QUOTA_MB`, min 50, défaut 500 ; somme des `digital_size` des produits du compte + nouveau fichier, 413 au-delà). Mode **legacy base64** (`digital.data`) conservé ≤ 3 Mo (`DIGITAL_INLINE_MAX_BYTES`) pour compatibilité. Clé contrainte à `users/{userId}/{sha256}/file.{ext}` (impossible de téléverser dans le dossier d'un autre compte ; même fichier re-téléversé = même clé = no-op `x-upsert`). Extensions autorisées : PDF, ZIP/RAR/7Z, EPUB/MOBI, Office, TXT/CSV/JSON/XML, MP3/M4A/WAV/OGG, MP4/WEBM/MOV, images. CSP : `connect-src` inclut `https://*.supabase.co` (`server/security.js` + `vercel.json`). UI : bouton « Téléversement… N % » dans `DigitalProductPicker.jsx`.
+**Purge des orphelins** : `purgeDigitalOrphans()` (`server/cleanup.js`) supprime les objets du bucket non rattachés à un produit (uploads abandonnés) de plus de 24 h — exposée via `GET /api/admin/storage/usage` (consommation des 3 buckets + comptage des orphelins) et `POST /api/admin/storage/purge-digital-orphans` (purge effective, journalisée) ; carte « 💾 Stockage Supabase » de l'onglet ⚙️ **Système** (chargée au montage + 30 s comme le reste du panneau).
+
 - **Téléchargement** : `POST /api/digital/:saleId/download` (+ `GET /api/digital/:saleId` pour l'état, `GET /api/digital/mine` pour le vendeur) → vérifie le droit (acheteur `sales.buyer_id`, **ou** code de confirmation pour un achat invité, **ou** propriétaire), puis renvoie une **URL signée 10 min** ; le client force l'enregistrement (`&download=<nom>`). Le fichier ne traverse **jamais** l'API (pas de limite 4,5 Mo, aucun egress Vercel). Chaque téléchargement d'acheteur est journalisé dans `digital_downloads` et compté (quota `products.digital_download_limit`, défaut 5).
 - **Ouverture du droit** : `DIGITAL_REQUIRE_CONFIRMATION = true` (`server/routes/digital.js`) → téléchargement disponible dès que la **boutique confirme le paiement** (`shop_confirmed_at`, bouton « Confirmer ») ou que la vente est livrée. Passer la constante à `false` livre immédiatement à l'achat.
 - **Qui publie quoi (RÈGLE MÉTIER)** : un **créateur** publie **uniquement** des produits **digitaux** ; une **boutique** publie **uniquement** des produits **physiques** ; le **vendeur** ne publie rien mais **vend les deux** (via son code vendeur). Appliquée par le **serveur** (`products.js` POST/PUT/duplicate → 403 `CREATOR_DIGITAL_ONLY` / `DIGITAL_CREATOR_ONLY`) : l'interface ne peut pas la contourner. Côté UI, le sélecteur de fichier est **obligatoire et verrouillé** dans `CreatorDashboard.jsx` (plus de champs « quantité en stock » ni « frais de livraison » : mentions « Illimitée » / « Offerte ») et **retiré** de `ShopDashboard.jsx`.
@@ -127,7 +130,6 @@ Un produit **digital** (`products.is_digital = TRUE`) est un fichier que le clie
 - **Édition/suppression** : remplacer le fichier supprime l'ancien objet s'il n'est plus référencé ; retirer le fichier est **refusé** si le produit a des ventes non annulées (les acheteurs doivent pouvoir retélécharger).
 - **UI** : `DigitalProductPicker.jsx` (boutique + créateur), `DigitalDownload.jsx` (espace client + page d'achat), badge « 📁 Produit digital » sur la fiche produit.
 - `digital_path` n'est **jamais** exposé par l'API produits (`productRow` le retire) ; `is_digital`, `digital_name`, `digital_size`, `digital_mime` sont publics.
-
 
 ## SEO (SSR)
 
@@ -152,17 +154,17 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 > ⚠️ `initDb()` **ne crée pas** `flash_promotions`, `item_views`, `daily_visits`, `activation_withdrawals`, `activation_withdrawal_items` : ces tables existent en base via des migrations externes. Sur une base neuve, les routes associées échoueraient tant qu'elles n'existent pas.
 > Les **produits digitaux** sont, eux, créés par `initDb()` : colonnes `products.is_digital/digital_path/digital_name/digital_mime/digital_size/digital_version/digital_download_limit` + table `digital_downloads` (journal et compteur de téléchargements).
 
-
 `purgeOldTransactions` : notifications supprimées après 90 jours ; ventes/commandes **jamais** purgées (historique financier). `server/cleanup.js` : purge stats > 6 mois + stock épuisé (dry-run possible).
 
 ## Autres fonctionnalités notables
 
 - **Chat IA** (`server/routes/chat.js`) : Gemini (`GEMINI_MODEL`, fallbacks), max 2000 caractères, historique 12, injecte les produits en stock.
+- **Robot WhatsApp** (assistant IA sur WhatsApp Cloud API) : `server/routes/whatsappBot.js` (`GET`/`POST /api/whatsapp/webhook`, monté **avant** `originCheck` dans `app.js` ; le POST répond `200 EVENT_RECEIVED` puis traite) + `server/services/whatsappBot.js` (même moteur `askAI` que le chat 💬, réglages `platform_settings` `wa_bot_enabled`/`wa_bot_greeting`/`wa_bot_fallback`/`wa_bot_system_prompt`, historique 12 par `wa_id`, anti-boucle, purge RAM > 500 sessions). Envoi via `sendWhatsAppText()` (`server/services/whatsapp.js`) qui **exige** `whatsapp_provider = cloud` + `whatsapp_cloud_token` + `whatsapp_cloud_phone_id` (mode `callmebot` ⇒ pas de robot). Prérequis : `WHATSAPP_VERIFY_TOKEN` (Vercel, repli `platform_settings.wa_bot_verify_token`) et `GEMINI_API_KEY` ; webhook `https://mboppi-mboppi.vercel.app/api/whatsapp/webhook` à déclarer chez Meta. Réglages admin : `GET/POST /api/admin/settings/whatsapp[-bot]`, UI carte « 🤖 Robot WhatsApp » (onglet ⚙️ Système) et « 📱 Notifications WhatsApp » (onglet 💰 Paiements). **Blocage production** : Meta n'autorise l'envoi vers n'importe quel numéro qu'après **vérification de l'entreprise** (Advanced Access `whatsapp_business_messaging`), pas après un « App Review » ; en mode développement le numéro de test gratuit suffit (5 destinataires, aucun document). Procédure complète + dossier de vérification (Cameroun) + alternatives : `WHATSAPP_META_VERIFICATION.md`.
 - **Push** (`server/push.js`) : VAPID **uniquement** via env — **aucune clé par défaut** ; sans clés, push désactivés. Nettoyage 404/410. Consentement requis pour inscription shop.
 - **Verone / Vitrine** (`server/routes/offers.js`, `server/routes/presentation.js`) : `GET /api/offers` public ; `POST /api/offers` et `DELETE /api/offers/:id` **non authentifiés** (état actuel — la protection documentée en V2 n'existe plus) ; `GET /api/offers/mine` renvoie toutes les offres. `pageRouter` → `/p`, `imageRouter` → `/api/img`. Pages Verone.jsx, VitrineOffre.jsx, OfferDetail.jsx.
 - **Métriques** : `POST /api/metrics/views`, `POST /api/metrics/visit` (X-Visitor-Id), `GET /api/metrics/trending` (exclut les promos, cache s-maxage 120).
 - **i18n** : toutes les traductions (fr/en/es/ar) dans `client/src/i18n.jsx` (`I18N = { fr: {}, en: {...EN, ...RICH_EN}, ar: {...AR, ...RICH_AR}, es: {...ES, ...RICH_ES} }`), clés françaises. `client/src/i18n/{en,es,ar}.js` supprimés (jamais importés). RTL pour ar.
-- **PWA** : `client/public/sw.js`, cache `mboppi-v208`, app shell + API_SWR + push + 4 manifests.
+- **PWA** : `client/public/sw.js`, cache `mboppi-v277`, app shell + API_SWR + push + 4 manifests.
 - **Audit/sécurité** : `server/security.js`, rate limits, originCheck, CSP.
  - **Photos** : `server/storage.js` — buckets publics `photos` et `payment-proofs` ; clé `sb_secret_...` signée HS256 (`SUPABASE_JWT_SECRET`) ; fallback base64. `server/photo.js` : `{thumb, medium, large}`. **Conversion WebP automatique** : tout upload (produits, offres, preuves de paiement) passe par `toWebp()` (sharp, qualité 80, max 2000px, EXIF/rotate) — JPEG/PNG/HEIC convertis, GIF/AVIF/WebP conservés tels quels, micro-images < 8 ko et conversions « plus lourdes » ignorées ; en cas d'échec, l'image originale est conservée (aucune rupture d'upload).
 - **Menu** (Navbar.jsx) : Produits, Créateurs, Je soutiens, Formations et Digital (chariow.pics), Tutoriel Mboppi (TikTok @mboppishop), espaces par rôle, Administration 🛡️.
@@ -172,16 +174,29 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 ## Conventions de dev (IMPORTANT)
 
 1. **Ne jamais committer sans demande explicite.** Quand le user demande « deployer » / « mettre en ligne » : bump + commit + push.
-2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.52.2 / mboppi-v208**.
+2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.57.46 / mboppi-v277**.
 3. **Build** : `npm run build` dans `client/` (le hash du JS local diffère de celui de Vercel pour des raisons d'environnement ; vérifier le déploiement via le CSS hash ou en cherchant une chaîne caractéristique du nouveau code dans le JS servi).
 4. **Vérifier le déploiement** : attendre ~75–90 s après push, puis `curl` sur `https://mboppi-mboppi.vercel.app/` (header `Accept: text/html` pour le HTML SEO) et chercher le hash CSS/JS du build local ; tester les API concernées.
 5. Commandes utiles : `node --check server/routes/*.js` pour la syntaxe serveur.
 6. Lignes de commande Windows : PowerShell — ne pas utiliser `&&`, utiliser `;` / `if ($?)`. Test-Path avant de créer des dossiers. `curl.exe` (pas l'alias PowerShell).
 7. Le produit sous promo est invisible SAUF via son lien direct `/produit/:id` (landing promo) — c'est voulu.
 
+### Bascule vers un domaine personnalisé (déjà préparée — 17/09/2026)
+
+Le code est **piloté par l'environnement** : changer de domaine ne demande **aucune modification de code**.
+
+1. Acheter le domaine puis Vercel → *Settings → Domains* → **Add** ; créer les enregistrements affichés (`A @ → 76.76.21.21`, `CNAME www → cname.vercel-dns.com`) ; attendre « Valid Configuration » (SSL automatique).
+2. Vercel → *Settings → Environment Variables* (Production) : `VITE_SITE_URL`, `SITE_URL`, `PUBLIC_URL` = `https://mondomaine` (+ `ALLOWED_ORIGIN` si utilisé) → **Redeploy**. ⚠️ `SITE_URL` est marquée **Sensitive** (valeur illisible) : l'écraser via `vercel env rm SITE_URL production` puis `vercel env add SITE_URL production` (ou directement dans le dashboard).
+3. Vérifier : `curl -s https://mondomaine/ -H "Accept: text/html"` doit montrer `canonical`/`og:url` sur le nouveau domaine ; `/sitemap.xml` idem.
+4. Garder l'ancienne adresse en **redirection 301** (Vercel → *Domains → Edit → Redirect to*) pour ne casser aucun lien déjà partagé.
+5. Hors code : mettre à jour l'URL du webhook chez **Meta** (WhatsApp), re-soumettre le **sitemap** à Google, et le profil **Trustpilot** (le lien `Footer.jsx` + le meta `trustpilot-one-time-domain-verification-id` sont liés au domaine).
+
+Pilotés par l'environnement : `client/src/config.js` (`BASE_URL` ← `VITE_SITE_URL`), `client/vite.config.js` (remplace `__SITE_URL__` dans `index.html`), `client/index.html`, `client/src/components/{ShareVitrine,Invoice}.jsx`, `client/src/pages/Admin.jsx`, `server/app.js` + `server/security.js` (CORS ← `SITE_URL`/`PUBLIC_URL`), `server/mailer.js`, `server/chat-knowledge.js`, `server/routes/{seo,auth,newsletter,admin}.js`, `server/services/campaigns.js`.
+Restent en dur **volontairement** : `client/src/components/Footer.jsx` (lien Trustpilot, attaché au profil) et `.github/workflows/keepalive.yml` (ping sur l'alias `vercel.app`, toujours valide).
+
 ## Historique récent des modifications
 
-(Changelog partiel — version courante **1.52.2** / cache PWA **v202**.)
+(Changelog partiel — version courante **1.57.46** / cache PWA **mboppi-v277**. Les entrées ci-dessous s'arrêtent à 1.52.2 : le dépôt est depuis monté à 1.57.46 sans que ce changelog soit alimenté.)
 
 - **1.10.0 / v51** : refonte promotion éclair (masquage catalogue, règles serveur, UI shop).
 - **1.11.0 / v52** : masquage SEO complet, commission promo 0, partage promo, offres Verone dans l'accueil (rail), suppression commission duo.

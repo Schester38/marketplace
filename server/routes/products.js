@@ -7,9 +7,6 @@ import {
   storePhotos,
   collectStorageKeys,
   deleteStorageKeys,
-  uploadDigitalFile,
-  deleteDigitalFile,
-  safeFileExt,
 } from "../storage.js";
 import { broadcastNotification } from "../services/notifications.js";
 import { getSetting, setSetting } from "../services/ikeepay.js";
@@ -34,35 +31,67 @@ async function preparePhotos(photos, folder) {
 
 // ---------------------------------------------------------------------------
 // PRODUITS DIGITAUX (fichiers payants)
-// Le fichier est téléversé PAR LE SERVEUR dans le bucket PRIVÉ Supabase
-// (`digital-products`) puis remis à l'acheteur uniquement par URL SIGNÉE
-// (voir server/routes/digital.js). Aucune URL publique n'existe : le fichier
-// ne peut pas être téléchargé sans passer par la vérification du droit d'accès.
+// Le fichier vit dans le bucket PRIVÉ Supabase (`digital-products`) et est
+// remis à l'acheteur uniquement par URL SIGNÉE (voir server/routes/digital.js).
+// Aucune URL publique n'existe : le fichier ne peut pas être téléchargé sans
+// passer par la vérification du droit d'accès.
 //
-// Taille maximale : Vercel limite le corps d'une requête serverless à 4,5 Mo.
-// Le fichier voyage en data-URI base64 (≈ 4/3 de son poids) dans le JSON, donc
-// 3 Mo est le maximum sûr. Au-delà → message explicite (pas d'échec silencieux).
+// Deux modes d'envoi :
+//   1. DIRECT (défaut) : le navigateur téléverse le fichier lui-même vers
+//      Supabase via une URL d'upload SIGNÉE (POST /api/digital/upload-url),
+//      puis n'envoie ici que `digital.key` + métadonnées. Limite 50 Mo — le
+//      corps de l'API Vercel (4,5 Mo) n'est plus impliqué.
+//   2. LEGACY base64 : `digital.data` en data-URI (≤ 3 Mo, plafond du corps
+//      Vercel) — conservé pour compatibilité avec d'anciens clients.
 // ---------------------------------------------------------------------------
-const DIGITAL_MAX_BYTES = 3 * 1024 * 1024;
-
-// Extensions acceptées (liste volontairement large : cours, ebooks, modèles,
-// logiciels, audio, vidéo…). Un type inconnu est refusé au lieu d'être stocké.
-const DIGITAL_EXT_ALLOWED = new Set([
-  "pdf", "zip", "rar", "7z", "epub", "mobi",
-  "doc", "docx", "odt", "xls", "xlsx", "ods", "ppt", "pptx", "odp",
-  "txt", "csv", "json", "xml",
-  "mp3", "m4a", "wav", "ogg", "mp4", "webm", "mov",
-  "png", "jpg", "jpeg", "webp", "svg",
-]);
+import {
+  DIGITAL_MAX_BYTES,
+  DIGITAL_INLINE_MAX_BYTES,
+  DIGITAL_EXT_ALLOWED,
+  uploadDigitalFile,
+  deleteDigitalFile,
+  digitalObjectMeta,
+  safeFileExt,
+} from "../storage.js";
 
 /**
  * Décode le blob `digital` envoyé par le client.
- * Retourne `{ error }` si le fichier est refusé (taille / extension), sinon
- * `{ name, mime, ext, buffer }`, ou `null` si aucun fichier n'est fourni.
+ * Retourne `{ error }` si le fichier est refusé (taille / extension / clé),
+ * sinon `{ name, mime, ext, key?, size, direct, buffer? }`, ou `null` si
+ * aucun fichier n'est fourni.
+ *  - direct=true : fichier DÉJÀ téléversé par le navigateur (`digital.key`) ;
+ *    sa présence et sa taille seront vérifiées dans le bucket avant usage.
+ *  - direct=false : mode legacy (data-URI base64), buffer à téléverser ici.
  */
-function parseDigitalPayload(digital) {
+function parseDigitalPayload(digital, userId) {
   if (!digital || typeof digital !== "object") return null;
   const name = String(digital.name || "fichier").trim().slice(0, 160);
+  const key = String(digital.key || "").trim();
+
+  // --- Mode 1 : upload direct (clé Storage déjà en place) -------------------
+  if (key) {
+    const expectedPrefix = `users/${userId}/`;
+    if (!key.startsWith(expectedPrefix) || !/^[^/]+\/[^/]+\/[0-9a-f]{64}\/file\.[a-z0-9]{1,8}$/.test(key)) {
+      return { error: "Clé de fichier invalide : retéléversez le fichier." };
+    }
+    const ext = safeFileExt(key);
+    if (!DIGITAL_EXT_ALLOWED.has(ext)) {
+      return {
+        error: `Type de fichier non pris en charge (.${ext}). Formats acceptés : PDF, ZIP, EPUB, Office, TXT/CSV, MP3, MP4, images…`,
+      };
+    }
+    const size = Math.floor(Number(digital.size || 0));
+    if (!Number.isFinite(size) || size <= 0) return { error: "Fichier illisible ou vide" };
+    if (size > DIGITAL_MAX_BYTES) {
+      return {
+        error: `Fichier trop volumineux (${(size / 1024 / 1024).toFixed(1)} Mo). Maximum ${Math.round(DIGITAL_MAX_BYTES / 1024 / 1024)} Mo.`,
+      };
+    }
+    const mime = String(digital.mime || "").trim() || "application/octet-stream";
+    return { name, mime: mime.slice(0, 120), ext, key, size, direct: true };
+  }
+
+  // --- Mode 2 : legacy data-URI base64 -------------------------------------
   const raw = String(digital.data || "");
   if (!raw) return null;
   const m = /^data:([^;,]*);base64,([\s\S]+)$/.exec(raw);
@@ -76,13 +105,35 @@ function parseDigitalPayload(digital) {
   }
   const buffer = Buffer.from(b64, "base64");
   if (!buffer.length) return { error: "Fichier illisible ou vide" };
-  if (buffer.length > DIGITAL_MAX_BYTES) {
+  if (buffer.length > DIGITAL_INLINE_MAX_BYTES) {
     return {
-      error: `Fichier trop volumineux (${(buffer.length / 1024 / 1024).toFixed(1)} Mo). Maximum ${DIGITAL_MAX_BYTES / 1024 / 1024} Mo pour le moment.`,
+      error: `Fichier trop volumineux (${(buffer.length / 1024 / 1024).toFixed(1)} Mo). Utilisez un fichier de ${Math.round(DIGITAL_MAX_BYTES / 1024 / 1024)} Mo maximum (téléversement direct).`,
     };
   }
   const mime = (m && m[1]) || String(digital.mime || "").trim() || "application/octet-stream";
-  return { name, mime: mime.slice(0, 120), ext, buffer };
+  return { name, mime: mime.slice(0, 120), ext, buffer, size: buffer.length, direct: false };
+}
+
+/**
+ * Résout le chemin du fichier digital pour la création / l'édition :
+ *   - mode direct : vérifie la présence du fichier dans le bucket (HEAD) ;
+ *   - mode legacy : téléverse le buffer serveur → bucket.
+ * Retourne `{ error }` (400) ou `{ path, size }`.
+ */
+async function resolveDigitalFile(parsed, req) {
+  if (parsed.direct) {
+    const meta = await digitalObjectMeta(parsed.key).catch(() => ({ exists: false, size: 0 }));
+    if (!meta.exists) {
+      return { error: "Fichier introuvable dans le stockage : retéléversez-le depuis le formulaire." };
+    }
+    // Taille réelle du bucket prioritaire (têtière de confiance).
+    return { path: parsed.key, size: meta.size > 0 ? meta.size : parsed.size };
+  }
+  const path = await uploadDigitalFile(parsed.buffer, parsed.name, {
+    folder: `users/${req.user.id}`,
+  });
+  if (!path) return { error: "__STORAGE_UNAVAILABLE__" };
+  return { path, size: parsed.size };
 }
 
 // ---------------------------------------------------------------------------
@@ -480,9 +531,9 @@ router.post(
       digital_download_limit,
     } = req.body;
 
-    // Produit digital : le fichier est téléversé AVANT l'insertion, de sorte
+    // Produit digital : le fichier est rattaché AVANT l'insertion, de sorte
     // qu'un produit « digital » ne puisse jamais exister sans son fichier.
-    const parsedDigital = parseDigitalPayload(digital);
+    const parsedDigital = parseDigitalPayload(digital, req.user.id);
     if (parsedDigital?.error) return res.status(400).json({ error: parsedDigital.error });
     const wantsDigital = Boolean(parsedDigital);
     // RÈGLE MÉTIER Mboppi — qui publie quoi :
@@ -505,22 +556,17 @@ router.post(
       });
     }
     let digitalPath = null;
+    let digitalSize = null;
     if (parsedDigital) {
-      try {
-        digitalPath = await uploadDigitalFile(parsedDigital.buffer, parsedDigital.name, {
-          folder: `users/${req.user.id}`,
-        });
-      } catch (err) {
-        console.error("[storage] upload du fichier digital échoué :", err.message);
-        return res
-          .status(502)
-          .json({ error: "Envoi du fichier impossible. Vérifiez sa taille puis réessayez." });
-      }
-      if (!digitalPath) {
+      const resolved = await resolveDigitalFile(parsedDigital, req);
+      if (resolved.error === "__STORAGE_UNAVAILABLE__") {
         return res
           .status(503)
           .json({ error: "Stockage des fichiers indisponible pour le moment. Réessayez plus tard." });
       }
+      if (resolved.error) return res.status(400).json({ error: resolved.error });
+      digitalPath = resolved.path;
+      digitalSize = resolved.size;
     }
 
     const photoList = await preparePhotos(photos, `products/${req.user.id}`);
@@ -564,7 +610,7 @@ router.post(
         digitalPath,
         wantsDigital ? parsedDigital.name : null,
         wantsDigital ? parsedDigital.mime : null,
-        wantsDigital ? parsedDigital.buffer.length : null,
+        wantsDigital ? digitalSize : null,
         downloadLimit,
       ]
     );
@@ -719,23 +765,19 @@ router.put(
     } = req.body;
 
     // --- Fichier digital : nouveau fichier, retrait, ou conservation ---
-    const parsedDigital = parseDigitalPayload(digital);
+    const parsedDigital = parseDigitalPayload(digital, req.user.id);
     if (parsedDigital?.error) return res.status(400).json({ error: parsedDigital.error });
     const removeDigital = digital?.remove === true;
     let newDigitalPath = null;
+    let newDigitalSize = null;
     if (parsedDigital) {
-      try {
-        newDigitalPath = await uploadDigitalFile(parsedDigital.buffer, parsedDigital.name, {
-          folder: `users/${req.user.id}`,
-        });
-      } catch (err) {
-        console.error("[storage] upload du fichier digital échoué :", err.message);
-        return res
-          .status(502)
-          .json({ error: "Envoi du fichier impossible. Vérifiez sa taille puis réessayez." });
-      }
-      if (!newDigitalPath)
+      const resolved = await resolveDigitalFile(parsedDigital, req);
+      if (resolved.error === "__STORAGE_UNAVAILABLE__") {
         return res.status(503).json({ error: "Stockage des fichiers indisponible pour le moment." });
+      }
+      if (resolved.error) return res.status(400).json({ error: resolved.error });
+      newDigitalPath = resolved.path;
+      newDigitalSize = resolved.size;
     } else if (removeDigital && product.is_digital) {
       // Retirer le fichier couperait l'accès des acheteurs déjà servis :
       // interdit dès qu'une vente existe (annulées exclues).
@@ -794,7 +836,7 @@ router.put(
         ? product.digital_mime
         : null;
     const digitalSizeAfter = hasNewFile
-      ? parsedDigital.buffer.length
+      ? newDigitalSize
       : isDigitalAfter
         ? product.digital_size
         : null;

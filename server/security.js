@@ -4,6 +4,10 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:4173",
   process.env.ALLOWED_ORIGIN,
+  // Domaine public (SITE_URL / PUBLIC_URL définis sur Vercel) : la bascule vers
+  // un domaine personnalisé ne demande donc aucune modification du code.
+  process.env.SITE_URL,
+  process.env.PUBLIC_URL,
   "https://mboppi-mboppi.vercel.app",
   // iKeePay (webhook de confirmation de paiement, origine du tunnel en iframe)
   "https://ikeepay.com",
@@ -16,7 +20,7 @@ const CSP =
   "style-src 'self' 'unsafe-inline' https://widget.trustpilot.com https://cdn.trustpilot.net; " +
   "img-src 'self' data: blob: https:; " +
   "font-src 'self' data: https://cdn.trustpilot.net; " +
-  "connect-src 'self' https://www.google.com https://www.gstatic.com https://widget.trustpilot.com https://cdn.trustpilot.net; " +
+  "connect-src 'self' https://www.google.com https://www.gstatic.com https://widget.trustpilot.com https://cdn.trustpilot.net https://*.supabase.co; " +
   "frame-src 'self' https://www.google.com https://widget.trustpilot.com https://ikeepay.com https://www.ikeepay.com; " +
   "object-src 'none'; " +
   "base-uri 'self'; " +
