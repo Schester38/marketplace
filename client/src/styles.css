@@ -9392,10 +9392,10 @@ a.step {
 /* Assistant IA */
 .gen-ai {
   margin-top: 10px;
-  border: 1px dashed var(--border, #d8dee9);
+  border: 1px dashed var(--border-strong, #d8dee9);
   border-radius: 10px;
   padding: 10px 12px;
-  background: #fafbff;
+  background: var(--soft, #fafbff);
 }
 .gen-ai-actions {
   display: flex;
@@ -9403,7 +9403,27 @@ a.step {
   gap: 6px;
   align-items: center;
 }
+/* Boutons IA : lisibles en clair ET en sombre (le .btn-outline global est trop
+   peu contrasté sur une carte sombre). */
+.gen-ai-actions .btn,
+.gen-ai-result-actions .btn-outline {
+  background: var(--input-bg, #fff);
+  border: 1px solid var(--border-strong, #cbd5e1);
+  color: var(--text, #111827);
+  box-shadow: none;
+}
+.gen-ai-actions .btn:hover,
+.gen-ai-result-actions .btn-outline:hover {
+  background: var(--card-hover, #f1f5f9);
+  border-color: var(--primary);
+  color: var(--primary);
+  filter: none;
+}
+.gen-ai-actions .btn:disabled {
+  opacity: 0.55;
+}
 .gen-ai-label {
+  color: var(--text);
   font-weight: 600;
   font-size: 13px;
   margin-right: 4px;
@@ -9414,7 +9434,7 @@ a.step {
 .gen-ai-result pre {
   white-space: pre-wrap;
   word-break: break-word;
-  background: #fff;
+  background: var(--input-bg, #fff);
   border: 1px solid var(--border, #d8dee9);
   border-radius: 8px;
   padding: 10px 12px;
@@ -9437,11 +9457,11 @@ a.step {
   border-radius: 12px;
   padding: 12px 14px;
   margin-bottom: 14px;
-  background: #fff;
+  background: var(--card, #fff);
 }
 .gen-check-report.has-errors {
   border-color: #e5484d;
-  background: #fff5f5;
+  background: rgba(229, 72, 77, 0.12);
 }
 .gen-check-report.ok {
   border-color: #46a758;
@@ -9460,12 +9480,12 @@ a.step {
   padding: 3px 8px;
   border-radius: 999px;
   border: 1px solid var(--border, #d8dee9);
-  background: #f7f8fa;
+  background: var(--soft, #f7f8fa);
 }
-.gen-quality-excellent { background: #e7f6ec; border-color: #46a758; }
-.gen-quality-good { background: #eef5ff; border-color: #3e63dd; }
-.gen-quality-warn { background: #fff7e0; border-color: #d8a437; }
-.gen-quality-bad { background: #fdecec; border-color: #e5484d; }
+.gen-quality-excellent { background: rgba(70, 167, 88, 0.16); border-color: #46a758; }
+.gen-quality-good { background: rgba(62, 99, 221, 0.16); border-color: #3e63dd; }
+.gen-quality-warn { background: rgba(216, 164, 55, 0.18); border-color: #d8a437; }
+.gen-quality-bad { background: rgba(229, 72, 77, 0.14); border-color: #e5484d; }
 .gen-check-group {
   margin: 8px 0;
   font-size: 13px;
@@ -9532,7 +9552,7 @@ a.step {
   padding: 16px;
 }
 .gen-publish-card {
-  background: #fff;
+  background: var(--card, #fff);
   border-radius: 14px;
   padding: 18px 20px;
   width: 100%;
@@ -9563,6 +9583,9 @@ a.step {
   color: #1f7a35;
   font-weight: 600;
 }
+[data-theme="dark"] .gen-published-ok {
+  color: #4ade80;
+}
 
 /* Styles avancés (surcharge du modèle de design) */
 .gen-style-grid {
@@ -9574,7 +9597,7 @@ a.step {
 .gen-mini-label {
   font-size: 11px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--text-muted, #64748b);
   margin-bottom: 2px;
   display: block;
 }
@@ -9584,7 +9607,7 @@ a.step {
   padding: 2px 3px;
   border: 1px solid var(--border, #d8dee9);
   border-radius: 8px;
-  background: #fff;
+  background: var(--input-bg, #fff);
   cursor: pointer;
 }
 
@@ -9595,9 +9618,13 @@ a.step {
   position: sticky;
   top: calc(var(--header-height, 60px) + 6px);
   z-index: 40;
+  /* Marges négatives = padding de la carte (.card : 20px) : le ruban touche les
+     bords de la carte, donc plus aucun contenu ne défile dans la bande au-dessus. */
+  margin: -20px -20px 0;
+  padding: 16px 20px 10px;
   background: var(--card, #ffffff);
   box-shadow: 0 10px 14px -14px rgba(15, 23, 42, 0.45);
-  border-radius: 10px;
+  border-radius: var(--radius, 8px) var(--radius, 8px) 0 0;
 }
 @media (min-width: 1024px) {
   .gen-section .gen-headwrap {
@@ -9897,3 +9924,131 @@ a.step {
   }
   .gen-pages { gap: 10px; }
 }
+/* ═══ Générateur — mode sombre (contraste) + grilles mobiles ═══ */
+
+/* Bordures/fonds thémables : les rgba(0,0,0,…) étaient invisibles en sombre */
+.gen-section .gen-form,
+.gen-section .gen-design-block {
+  border-color: var(--border);
+}
+.gen-section .gen-toolbar {
+  border-bottom-color: var(--border);
+}
+.gen-section .gen-color {
+  border-color: var(--border-strong);
+}
+.gen-section .gen-preview-zone {
+  background: var(--soft);
+}
+.gen-section .gen-editor .tiptap {
+  border-color: var(--border-strong);
+}
+.gen-section .gen-ai-result pre {
+  color: var(--text);
+}
+.gen-section .gen-template-card {
+  border-color: transparent;
+}
+.gen-section .gen-template-card:hover {
+  background: var(--card-hover);
+}
+.gen-section .gen-template-card.active {
+  border-color: var(--primary);
+  background: var(--card-hover);
+}
+.gen-section .gen-template-card .gen-tpl-name {
+  color: var(--text-secondary);
+}
+.gen-section .gen-tab.active {
+  background: rgba(59, 130, 246, 0.16);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+.gen-section .gen-status.ok { color: #15803d; }
+.gen-section .gen-check-errors strong { color: #dc2626; }
+.gen-section .gen-check-warnings strong { color: #b45309; }
+.gen-section .gen-check-suggestions strong { color: #2563eb; }
+[data-theme="dark"] .gen-section .gen-tab.active {
+  background: rgba(96, 165, 250, 0.22);
+  border-color: rgba(96, 165, 250, 0.6);
+}
+[data-theme="dark"] .gen-section .gen-status.ok { color: #4ade80; }
+[data-theme="dark"] .gen-section .gen-save.saved { color: #4ade80; }
+[data-theme="dark"] .gen-section .gen-save.error { color: #f87171; }
+[data-theme="dark"] .gen-section .gen-save.saving { color: #fbbf24; }
+[data-theme="dark"] .gen-section .gen-check-errors strong { color: #f87171; }
+[data-theme="dark"] .gen-section .gen-check-warnings strong { color: #fbbf24; }
+[data-theme="dark"] .gen-section .gen-check-suggestions strong { color: #93c5fd; }
+[data-theme="dark"] .gen-section .gen-quality { background: var(--soft-2); }
+[data-theme="dark"] .gen-section .gen-ai-actions .btn,
+[data-theme="dark"] .gen-section .gen-ai-result-actions .btn-outline {
+  background: var(--soft-2);
+  border-color: var(--border-strong);
+}
+[data-theme="dark"] .gen-section .gen-ai-actions .btn:hover,
+[data-theme="dark"] .gen-section .gen-ai-result-actions .btn-outline:hover {
+  background: var(--card-hover);
+  border-color: var(--primary-light);
+  color: var(--primary-light);
+}
+/* Fin de module : la zone d'aperçu et le rapport de contrôle conservent un
+   fond thémable même si le thème change sans rechargement. */
+[data-theme="dark"] .gen-section .gen-check-report {
+  background: var(--card);
+}
+[data-theme="dark"] .gen-section .gen-check-report.has-errors {
+  background: rgba(229, 72, 77, 0.18);
+}
+[data-theme="dark"] .gen-section .gen-versions li {
+  border-top-color: var(--border);
+}
+
+/* Modèles de design : grille régulière (au lieu d'un flex-wrap irrégulier) */
+.gen-section .gen-templates {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 8px;
+}
+
+/* ——— Téléphone : 4 modèles par ligne, 2 champs par ligne partout ——— */
+@media (max-width: 640px) {
+  .gen-section .gen-templates {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .gen-section .gen-tpl-swatch {
+    width: 100%;
+    height: 38px;
+  }
+  .gen-section .gen-tpl-name {
+    font-size: 10.5px;
+    text-align: center;
+  }
+  /* Format et mise en page · Couverture · Styles avancés : 2 par ligne */
+  .gen-section .gen-form-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .gen-section .gen-form-row .gen-grow {
+    grid-column: 1 / -1;
+  }
+  .gen-section .gen-style-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Assistant IA : 2 boutons par ligne, libellés lisibles */
+  .gen-section .gen-ai-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .gen-section .gen-ai-actions .gen-ai-label {
+    grid-column: 1 / -1;
+  }
+  .gen-section .gen-ai-actions .btn {
+    text-align: center;
+  }
+  .gen-section .gen-design-block {
+    padding: 12px;
+  }
+}
+
