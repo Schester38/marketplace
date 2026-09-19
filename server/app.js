@@ -228,7 +228,11 @@ app.use((err, req, res, next) => {
     console.error(err);
   }
   const status =
-    Number(err?.statusCode) >= 400 && Number(err?.statusCode) < 600 ? Number(err.statusCode) : 500;
+    Number(err?.statusCode) >= 400 && Number(err?.statusCode) < 600
+      ? Number(err.statusCode)
+      : Number(err?.status) >= 400 && Number(err?.status) < 600
+        ? Number(err.status)
+        : 500;
   res.status(status).json({
     error: status === 500 ? "Erreur interne du serveur" : err.message || "Requête invalide",
   });

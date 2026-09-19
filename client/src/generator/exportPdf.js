@@ -37,7 +37,12 @@ async function toDataUrl(src) {
   }
 }
 
-// Dessine les mots d'une ligne à leurs positions exactes (px → mm).
+// Dessine les mots d'une ligne (px → mm). Les métriques des polices natives
+// jsPDF diffèrent légèrement de celles mesurées côté navigateur : chaque mot
+// est donc CENTRÉ sur son point milieu mesuré, avec la largeur CALCULÉE par
+// jsPDF (getTextWidth). L'écart ne s'accumule jamais d'un mot au suivant
+// (pas de dérive → pas de texte écrasé/superposé), et les traits de
+// soulignement/barré utilisent la même largeur que le texte réellement posé.
 function drawLine(doc, ln, offsetXmm = 0, offsetYmm = 0) {
   const lineH = ln.bottom - ln.top;
   const baselinePx = ln.bottom - lineH * 0.21;
@@ -49,20 +54,21 @@ function drawLine(doc, ln, offsetXmm = 0, offsetYmm = 0) {
     const col = style.color || "#000000";
     doc.setTextColor(col);
     for (const w of run.words) {
-      const xMm = offsetXmm + pxToMm(w.x);
+      const pdfWmm = doc.getTextWidth(w.text);
+      const xMm = offsetXmm + pxToMm(w.x + w.w / 2) - pdfWmm / 2;
       doc.text(w.text, xMm, baselineMm, { baseline: "alphabetic" });
       if (style.underline) {
         doc.setDrawColor(col);
-        doc.setLineWidth(0.22);
-        doc.line(xMm, baselineMm + 0.5, xMm + pxToMm(w.w), baselineMm + 0.5);
+        doc.setLineWidth(0.2);
+        doc.line(xMm, baselineMm + 0.5, xMm + pdfWmm, baselineMm + 0.5);
       }
       if (style.strike) {
         doc.setDrawColor(col);
-        doc.setLineWidth(0.22);
-        doc.line(xMm, baselineMm - 1.0, xMm + pxToMm(w.w), baselineMm - 1.0);
+        doc.setLineWidth(0.2);
+        doc.line(xMm, baselineMm - 1.0, xMm + pdfWmm, baselineMm - 1.0);
       }
       if (run.href) {
-        doc.link(xMm, offsetYmm + pxToMm(ln.top), pxToMm(w.w), pxToMm(lineH), {
+        doc.link(offsetXmm + pxToMm(w.x), offsetYmm + pxToMm(ln.top), pxToMm(w.w), pxToMm(lineH), {
           url: run.href,
         });
       }

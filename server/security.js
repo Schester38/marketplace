@@ -44,8 +44,12 @@ export function originCheck(req, res, next) {
 }
 
 export function logAudit(userId, action, detail, ip) {
+  // L'admin « virtuel » (id 0) n'existe pas dans users : on enregistre l'action
+  // avec user_id NULL (colonne nullable) au lieu de perdre la trace d'audit
+  // par violation de clé étrangère.
+  const uid = Number(userId);
   return q("INSERT INTO audit_log (user_id, action, detail, ip) VALUES ($1, $2, $3, $4)", [
-    userId,
+    Number.isInteger(uid) && uid > 0 ? uid : null,
     action,
     detail || null,
     ip || null,

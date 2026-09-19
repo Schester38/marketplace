@@ -12,7 +12,7 @@ const RATIO = 1.5; // hauteur / largeur (format livre portrait)
 
 function loadImage(src) {
   return new Promise((resolve) => {
-    const img = new Image();
+    const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);

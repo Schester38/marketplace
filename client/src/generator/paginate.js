@@ -281,6 +281,10 @@ export async function measureDocument(html, docMeta, template) {
   document.body.appendChild(host);
 
   try {
+    // Attendre les polices (webfonts en cours de chargement) : sans cela, la
+    // mesure utiliserait une police de repli dont les largeurs diffèrent de
+    // celles réellement rendues → texte superposé dans l'aperçu et le PDF.
+    if (document.fonts?.ready) await document.fonts.ready;
     const tpl = document.createElement("template");
     tpl.innerHTML = String(html || "<p></p>");
     // Précharge les images (dataURL incluses) : sans chargement effectif,
@@ -291,7 +295,7 @@ export async function measureDocument(html, docMeta, template) {
           new Promise((resolve) => {
             const src = img.getAttribute("src") || "";
             if (!src) return resolve();
-            const probe = new Image();
+            const probe = new window.Image();
             probe.onload = () => resolve();
             probe.onerror = () => resolve();
             probe.src = src;

@@ -60,7 +60,7 @@ function walkValidate(node) {
           (k === "src" && /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(v));
         if (!ok) {
           const err = new Error("Valeur d'attribut non autorisée dans le document");
-          err.status = 422;
+          err.statusCode = 422;
           throw err;
         }
       }
@@ -73,13 +73,13 @@ function parseContent(raw) {
   if (raw === undefined || raw === null) return null;
   if (typeof raw !== "object" || Array.isArray(raw)) {
     const err = new Error("Contenu de document invalide");
-    err.status = 422;
+    err.statusCode = 422;
     throw err;
   }
   const size = Buffer.byteLength(JSON.stringify(raw) || "", "utf8");
   if (size > MAX_CONTENT_BYTES) {
     const err = new Error("Document trop volumineux (contenu limité à 3,5 Mo)");
-    err.status = 413;
+    err.statusCode = 413;
     throw err;
   }
   walkValidate(raw);
@@ -134,16 +134,34 @@ const SELECT_DOC = `SELECT * FROM gen_documents WHERE id = $1`;
 async function loadDoc(id) {
   if (!Number.isInteger(id) || id <= 0) {
     const err = new Error("Identifiant invalide");
-    err.status = 400;
+    err.statusCode = 400;
     throw err;
   }
   const row = (await q(SELECT_DOC, [id]))[0];
   if (!row) {
     const err = new Error("Document introuvable");
-    err.status = 404;
+    err.statusCode = 404;
     throw err;
   }
   return row;
+}
+
+// Propriétaire réel d'un produit publié. L'admin « virtuel » (mot de passe
+// admin, id 0) n'existe pas dans la table users — or products.shop_id porte
+// une clé étrangère vers users(id) : publier avec l'id 0 échouerait en 500.
+// On utilise donc le vrai compte d'administration (rôle admin) quand il
+// existe ; sinon on explique précisément quoi faire (message clair, pas
+// d'erreur technique).
+async function resolveOwnerId(req) {
+  const uid = Number(req.user?.id);
+  if (Number.isInteger(uid) && uid > 0) return uid;
+  const admin = (await q(`SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1`))[0];
+  if (admin) return admin.id;
+  const err = new Error(
+    "La publication nécessite un compte réel : créez d'abord le compte administrateur (Admin → onglet Vue d'ensemble → 👤 Compte administrateur), puis reconnectez-vous avec."
+  );
+  err.statusCode = 422;
+  throw err;
 }
 
 // ─── Vérification PUBLIQUE d'authenticité (QR code encodé dans le PDF) ───────
@@ -348,7 +366,7 @@ router.post(
       const data = (await q(`SELECT content FROM gen_documents_data WHERE doc_id = $1`, [row.id]))[0];
       if (!data) {
         const err = new Error("Aucun contenu à archiver");
-        err.status = 422;
+        err.statusCode = 422;
         throw err;
       }
       content = data.content;
@@ -386,7 +404,7 @@ router.post(
     )[0];
     if (!version) {
       const err = new Error("Version introuvable");
-      err.status = 404;
+      err.statusCode = 404;
       throw err;
     }
     // Sécurité : le contenu restauré doit rester conforme (taille + liens).
@@ -527,7 +545,7 @@ router.post(
     const def = AI_ACTIONS[action];
     if (!def) {
       const err = new Error("Action IA inconnue");
-      err.status = 400;
+      err.statusCode = 400;
       throw err;
     }
     // Sans clé Gemini, l'assistant est simplement absent : le générateur reste
@@ -551,12 +569,12 @@ router.post(
     const needsText = ["structure", "improve", "correct", "rephrase", "summarize", "expand", "tone", "translate"].includes(action);
     if (needsText && !text) {
       const err = new Error("Sélectionnez d'abord un passage dans le document.");
-      err.status = 422;
+      err.statusCode = 422;
       throw err;
     }
     if (!needsText && !text && !docContext) {
       const err = new Error("Renseignez le titre du document pour que l'IA puisse travailler.");
-      err.status = 422;
+      err.statusCode = 422;
       throw err;
     }
 
@@ -567,7 +585,7 @@ router.post(
     const out = String(reply || "").trim();
     if (!out || /je ne peux pas répondre|can't answer|لا أستطيع الإجابة/.test(out)) {
       const err = new Error("L'assistant IA est momentanément indisponible. Réessayez dans un instant.");
-      err.status = 502;
+      err.statusCode = 502;
       throw err;
     }
     logAudit(req.user.id, `generator.ai_${action}`, String(body.title || "").slice(0, 80), req.ip);
@@ -577,7 +595,7 @@ router.post(
       const templateId = AI_TEMPLATE_IDS.includes(parsed.template_id) ? parsed.template_id : null;
       if (!templateId) {
         const err = new Error("L'IA n'a pas pu proposer de design valide. Réessayez.");
-        err.status = 502;
+        err.statusCode = 502;
         throw err;
       }
       const hex = (v, fallback) => (typeof v === "string" && /^#[0-9a-f]{3,8}$/i.test(v) ? v : fallback);
@@ -593,7 +611,7 @@ router.post(
 
     if (!out) {
       const err = new Error("L'IA n'a rien renvoyé. Réessayez dans un instant.");
-      err.status = 502;
+      err.statusCode = 502;
       throw err;
     }
     res.json({ action, text: out });
@@ -634,7 +652,8 @@ router.post(
     if (!/^[0-9a-f]{64}$/.test(hex)) {
       return res.status(400).json({ error: "Empreinte de fichier invalide : réessayez (recalcul du hash)." });
     }
-    const path = digitalObjectKey(req.user.id, hex, fileName);
+    const ownerId = await resolveOwnerId(req);
+    const path = digitalObjectKey(ownerId, hex, fileName);
     try {
       const signed = await createDigitalUploadUrl(path, 3600);
       if (!signed) {
@@ -653,10 +672,11 @@ router.post(
   ah(async (req, res) => {
     const row = await loadDoc(Number(req.params.id));
     const body = req.body || {};
+    const ownerId = await resolveOwnerId(req);
     const key = String(body.key || "").trim();
     // La clé est contrainte au dossier du compte : impossible de publier le
     // fichier d'un autre (même logique que POST /api/digital/upload-url).
-    if (!key || !key.startsWith(`users/${req.user.id}/`) || key.includes("..")) {
+    if (!key || !key.startsWith(`users/${ownerId}/`) || key.includes("..")) {
       return res.status(400).json({ error: "Fichier invalide : téléversez-le de nouveau." });
     }
     if (!PUBLISH_EXT.has(safeFileExt(key))) {
@@ -684,7 +704,7 @@ router.post(
     const coverData = String(body.cover || "");
     if (coverData.startsWith("data:image/")) {
       try {
-        image = await uploadPhoto(coverData, `products/${req.user.id}`, "thumb");
+        image = await uploadPhoto(coverData, `products/${ownerId}`, "thumb");
       } catch (err) {
         console.warn("[generator] couverture non stockée :", err.message);
       }
@@ -699,7 +719,7 @@ router.post(
     const existing = row.published_product_id
       ? (await q(`SELECT id FROM products WHERE id = $1 AND shop_id = $2`, [
           row.published_product_id,
-          req.user.id,
+          ownerId,
         ]))[0]
       : null;
 
@@ -724,7 +744,7 @@ router.post(
          VALUES ($1, $2, $3, $4, NULL, 0, $5, $6::jsonb, $7, NULL, 0, NULL, 1, $8,
             TRUE, $9, $10, $11, $12, 5) RETURNING id`,
         [
-          req.user.id, title, description, price, image, photos, category, currency,
+          ownerId, title, description, price, image, photos, category, currency,
           key, `${title}.${safeFileExt(key)}`, mime, meta.size,
         ]
       );

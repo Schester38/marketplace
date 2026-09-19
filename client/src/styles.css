@@ -9564,6 +9564,60 @@ a.step {
   font-weight: 600;
 }
 
+/* Styles avancés (surcharge du modèle de design) */
+.gen-style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
+  margin: 6px 0 12px;
+}
+.gen-mini-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 2px;
+  display: block;
+}
+.gen-color-input {
+  width: 100%;
+  height: 34px;
+  padding: 2px 3px;
+  border: 1px solid var(--border, #d8dee9);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+/* ─── Ruban statique — les barres d'en-tête (retour, titre, onglets, actions)
+   restent collées sous la barre de navigation du site pendant que SEULE la
+   zone de texte de l'éditeur défile (scroll interne de .tiptap). ─── */
+.gen-section .gen-headwrap {
+  position: sticky;
+  top: calc(var(--header-height, 60px) + 6px);
+  z-index: 40;
+  background: var(--card, #ffffff);
+  box-shadow: 0 10px 14px -14px rgba(15, 23, 42, 0.45);
+  border-radius: 10px;
+}
+@media (min-width: 1024px) {
+  .gen-section .gen-headwrap {
+    top: calc(var(--header-height-lg, 100px) + 6px);
+  }
+}
+/* La zone de texte seule défile : hauteur bornée à la fenêtre (moins les
+   barres statiques), barre de défilement interne stable. */
+.gen-editor .tiptap {
+  max-height: calc(100vh - 340px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+@media (max-width: 760px) {
+  .gen-editor .tiptap {
+    max-height: calc(100vh - 280px);
+  }
+}
+
 /* ═══ Générateur de documents (ebooks/PDF) — module admin isolé ═══ */
 .gen-section .gen-head {
   display: flex;

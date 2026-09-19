@@ -8,7 +8,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Image from "@tiptap/extension-image";
+import ImageExtension from "@tiptap/extension-image";
 import { TableKit } from "@tiptap/extension-table";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyleKit } from "@tiptap/extension-text-style";
@@ -20,6 +20,9 @@ import {
   getTemplate,
   FONT_CSS,
   resolvePageBox,
+  resolveTemplate,
+  SIZE_KEYS,
+  COLOR_KEYS,
 } from "../generator/templates.js";
 import { detectStructureHtml } from "../generator/structure.js";
 import { paginateDocument } from "../generator/paginate.js";
@@ -57,7 +60,10 @@ async function readDocxHtml(file) {
 function compressImage(file, maxSide = 1400, quality = 0.78) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
-    const img = new Image();
+    // window.Image : le symbole `Image` du module est l'extension TipTap
+    // (un objet Node.create, pas un constructeur) — il masquerait sinon
+    // le constructeur natif <img> et ferait échouer tout insertion.
+    const img = new window.Image();
     img.onload = () => {
       try {
         const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
@@ -368,7 +374,7 @@ function GenEditor({ initialDoc, onBack }) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
-      Image.configure({ inline: false, allowBase64: true }),
+      ImageExtension.configure({ inline: false, allowBase64: true }),
       TableKit.configure({ table: { resizable: true } }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TextStyleKit,
@@ -393,6 +399,7 @@ function GenEditor({ initialDoc, onBack }) {
         author: m.author,
         status: m.status,
         template_id: m.template_id,
+        style_overrides: m.style_overrides || {},
         page_format: m.page_format,
         page_width: m.page_width,
         page_height: m.page_height,
@@ -750,9 +757,19 @@ function GenEditor({ initialDoc, onBack }) {
 
   const setDocStatus = (status) => patchMeta({ status }, true);
 
+  // ─── Styles avancés : surcharges typographiques (style_overrides) ──────────
+  // Chaque champ vide = valeur du modèle de design (placeholder). La surcharge
+  // est validée puis fusionnée par resolveTemplate (pagination + aperçu + PDF).
+  const styleOv = meta.style_overrides || {};
+  const setStyleOv = (patch) => patchMeta({ style_overrides: { ...styleOv, ...patch } }, true);
+  const tpl = getTemplate(meta.template_id);
+  const FONT_LABELS = { serif: t("Serif (Times)"), sans: t("Sans (Arial)"), mono: t("Mono (Courier)") };
+  const COLOR_LABELS = { heading: t("Titres"), body: t("Texte"), accent: t("Accent"), bg: t("Fond") };
+
   return (
     <section className="card section gen-section">
-      {/* ─── Barre supérieure : retour, titre/auteur, sauvegarde, export ─── */}
+      {/* ─── Barres d'en-tête collantes (ruban statique) ─── */}
+      <div className="gen-headwrap">
       <div className="gen-head">
         <button type="button" className="btn btn-outline btn-small" onClick={onBack}>
           ← {t("Bibliothèque")}
@@ -813,6 +830,14 @@ function GenEditor({ initialDoc, onBack }) {
           >
             {meta.status === "ready" ? t("Repasser en brouillon") : t("Marquer prêt")}
           </button>
+          <button
+            type="button"
+            className="btn btn-outline btn-small"
+            onClick={runCheck}
+            title={t("Analyser le document (structure, pagination, images) avant l'export")}
+          >
+            🔍 {t("Vérifier")}
+          </button>
           <button type="button" className="btn btn-primary btn-small" onClick={doExport} disabled={exportPct !== null}>
             {exportPct !== null ? `PDF… ${exportPct} %` : `⬇ ${t("Exporter PDF")}`}
           </button>
@@ -829,6 +854,7 @@ function GenEditor({ initialDoc, onBack }) {
             {meta.published_product_id ? `🛒 ${t("Produit publié")}` : `🛒 ${t("Vendre sur Mboppi")}`}
           </button>
         </div>
+      </div>
       </div>
       {meta.doc_ref && (
         <p className="hint gen-ref">
@@ -1141,6 +1167,126 @@ function GenEditor({ initialDoc, onBack }) {
               {t("Chaque document porte une référence unique (DOC-2026-XXXXXXXX) et une empreinte SHA-256 calculée sur le contenu — affichées dans le PDF et encodées dans le QR code.")}
             </p>
           </div>
+
+          <div className="gen-design-block">
+            <h4>⚙️ {t("Styles avancés")}</h4>
+            <p className="hint">
+              {t("Surchargez la typographie et les couleurs sans changer de modèle. Un champ vide garde la valeur du modèle.")}
+            </p>
+            <div className="gen-form-row">
+              <div>
+                <label>{t("Police du corps")}</label>
+                <select
+                  className="input"
+                  value={styleOv.bodyFont || ""}
+                  onChange={(e) => setStyleOv({ bodyFont: e.target.value || undefined })}
+                >
+                  <option value="">{`${t("Modèle")} — ${FONT_LABELS[tpl.bodyFont]}`}</option>
+                  <option value="serif">{FONT_LABELS.serif}</option>
+                  <option value="sans">{FONT_LABELS.sans}</option>
+                  <option value="mono">{FONT_LABELS.mono}</option>
+                </select>
+              </div>
+              <div>
+                <label>{t("Police des titres")}</label>
+                <select
+                  className="input"
+                  value={styleOv.headingFont || ""}
+                  onChange={(e) => setStyleOv({ headingFont: e.target.value || undefined })}
+                >
+                  <option value="">{`${t("Modèle")} — ${FONT_LABELS[tpl.headingFont]}`}</option>
+                  <option value="serif">{FONT_LABELS.serif}</option>
+                  <option value="sans">{FONT_LABELS.sans}</option>
+                  <option value="mono">{FONT_LABELS.mono}</option>
+                </select>
+              </div>
+              <div>
+                <label>{t("Alignement du texte")}</label>
+                <select
+                  className="input"
+                  value={styleOv.align || ""}
+                  onChange={(e) => setStyleOv({ align: e.target.value || undefined })}
+                >
+                  <option value="">{`${t("Modèle")} — ${tpl.align === "justify" ? t("justifié") : tpl.align === "center" ? t("centré") : t("gauche")}`}</option>
+                  <option value="left">{t("Gauche")}</option>
+                  <option value="justify">{t("Justifié")}</option>
+                  <option value="center">{t("Centré")}</option>
+                </select>
+              </div>
+            </div>
+            <div className="gen-form-row">
+              <div>
+                <label>{t("Interligne (1,1 – 2,4)")}</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="1.1"
+                  max="2.4"
+                  step="0.05"
+                  value={styleOv.lineHeight ?? ""}
+                  placeholder={tpl.lineHeight}
+                  onChange={(e) => setStyleOv({ lineHeight: e.target.value === "" ? undefined : Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <label>{t("Espacement des paragraphes (0 – 24 pt)")}</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  max="24"
+                  step="1"
+                  value={styleOv.paraSpace ?? ""}
+                  placeholder={tpl.paraSpace}
+                  onChange={(e) => setStyleOv({ paraSpace: e.target.value === "" ? undefined : Number(e.target.value) })}
+                />
+              </div>
+            </div>
+            <label>{t("Tailles (pt) — vides = valeurs du modèle")}</label>
+            <div className="gen-style-grid">
+              {SIZE_KEYS.map((k) => (
+                <div key={k}>
+                  <label className="gen-mini-label">{k.toUpperCase()}</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min="5"
+                    max="60"
+                    step="0.5"
+                    value={styleOv.sizes?.[k] ?? ""}
+                    placeholder={tpl.sizes[k]}
+                    onChange={(e) =>
+                      setStyleOv({ sizes: { ...(styleOv.sizes || {}), [k]: e.target.value === "" ? undefined : Number(e.target.value) } })
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+            <label>{t("Couleurs — vides = couleurs du modèle")}</label>
+            <div className="gen-style-grid">
+              {COLOR_KEYS.map((k) => (
+                <div key={k}>
+                  <label className="gen-mini-label">{COLOR_LABELS[k]}</label>
+                  <input
+                    type="color"
+                    className="gen-color-input"
+                    value={styleOv.colors?.[k] || tpl.colors[k]}
+                    title={`${COLOR_LABELS[k]} — ${styleOv.colors?.[k] || tpl.colors[k]}`}
+                    onChange={(e) => setStyleOv({ colors: { ...(styleOv.colors || {}), [k]: e.target.value } })}
+                  />
+                </div>
+              ))}
+            </div>
+            {Object.keys(styleOv).length > 0 && (
+              <button
+                type="button"
+                className="btn btn-small btn-outline"
+                onClick={() => patchMeta({ style_overrides: {} }, true)}
+              >
+                ↺ {t("Réinitialiser au style du modèle")}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -1150,6 +1296,9 @@ function GenEditor({ initialDoc, onBack }) {
           <div className="dash-actions" style={{ marginBottom: 12 }}>
             <button type="button" className="btn btn-outline btn-small" onClick={buildPreview} disabled={previewBusy}>
               {previewBusy ? t("Recalcul…") : `⟳ ${t("Régénérer l'aperçu")}`}
+            </button>
+            <button type="button" className="btn btn-outline btn-small" onClick={runCheck}>
+              🔍 {t("Contrôle qualité")}
             </button>
             {preview && (
               <span className="hint">
