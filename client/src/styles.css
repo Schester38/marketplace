@@ -9866,6 +9866,9 @@ a.step {
   background: rgba(0, 0, 0, 0.03);
   border-radius: 12px;
   padding: 14px;
+  /* La page d'aperçu est maintenant à l'échelle réelle (75 %) : sur un écran
+     étroit on fait défiler horizontalement au lieu de rogner la page. */
+  overflow-x: auto;
 }
 .gen-pages {
   display: flex;
@@ -9922,7 +9925,7 @@ a.step {
     padding: 14px;
     min-height: 300px;
   }
-  .gen-pages { gap: 10px; }
+  .gen-pages { gap: 10px; justify-content: flex-start; }
 }
 /* ═══ Générateur — mode sombre (contraste) + grilles mobiles ═══ */
 

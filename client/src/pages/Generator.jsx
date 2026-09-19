@@ -25,7 +25,7 @@ import {
   COLOR_KEYS,
 } from "../generator/templates.js";
 import { detectStructureHtml } from "../generator/structure.js";
-import { paginateDocument } from "../generator/paginate.js";
+import { paginateDocument, PX_PER_MM, PT_TO_PX } from "../generator/paginate.js";
 import { exportDocumentPdf, saveBlob } from "../generator/exportPdf.js";
 import { exportEpub } from "../generator/epub.js";
 import { checkDocument } from "../generator/check.js";
@@ -1435,27 +1435,34 @@ const GEN_PREVIEW_SCALE = 0.75;
 function GenPage({ page, paginated, docMeta }) {
   const { box, template, contentWpx, contentHpx } = paginated;
   const { w, h, m } = box;
-  const s = GEN_PREVIEW_SCALE;
+  const s = GEN_PREVIEW_SCALE; // zoom : 0.75 = 75 % d'une page au 96 dpi
+  // Toutes les valeurs du modèle sont en mm (page, marges) ou en pt (polices) :
+  // on les convertit en px CSS (96 dpi) AVANT le zoom, comme la boîte de
+  // contenu mesurée. Sans cette conversion, la boîte de contenu (px réels) était
+  // 3,8 × plus large que la page et se retrouvait rognée.
+  const mm = (v) => v * PX_PER_MM * s;
+  const pt = (v) => v * PT_TO_PX * s;
+  const pageStyle = { width: mm(w), height: mm(h) };
 
   if (page.kind === "cover") {
     const cover = docMeta.cover || {};
     const bg = cover.bg || template.coverBg;
     const fg = cover.text || template.coverText;
     return (
-      <div className="gen-page" style={{ width: w * s, height: h * s, background: bg, color: fg }}>
+      <div className="gen-page" style={{ ...pageStyle, background: bg, color: fg }}>
         {cover.image && <img src={cover.image} alt="" className="gen-cover-img" style={{ opacity: 1 - (cover.imageDim ?? 0.35) }} />}
-        <div className="gen-cover-body" style={{ top: "32%", left: 15, right: 15 }}>
-          <div style={{ fontWeight: "bold", fontSize: (template.sizes.h1 + 8) * s, fontFamily: FONT_CSS[template.headingFont] }}>
+        <div className="gen-cover-body" style={{ top: "32%", left: mm(15), right: mm(15) }}>
+          <div style={{ fontWeight: "bold", fontSize: pt(template.sizes.h1 + 8), fontFamily: FONT_CSS[template.headingFont] }}>
             {cover.title || docMeta.title}
           </div>
           {(cover.subtitle || docMeta.subtitle) && (
-            <div style={{ fontSize: template.sizes.h3 * s, marginTop: 10, fontFamily: FONT_CSS[template.headingFont] }}>
+            <div style={{ fontSize: pt(template.sizes.h3), marginTop: mm(3), fontFamily: FONT_CSS[template.headingFont] }}>
               {cover.subtitle || docMeta.subtitle}
             </div>
           )}
         </div>
         {docMeta.author && (
-          <div className="gen-cover-author" style={{ bottom: 24, fontSize: template.sizes.h4 * s }}>
+          <div className="gen-cover-author" style={{ bottom: mm(6), fontSize: pt(template.sizes.h4) }}>
             {docMeta.author}
           </div>
         )}
@@ -1465,10 +1472,10 @@ function GenPage({ page, paginated, docMeta }) {
 
   if (page.kind === "copyright") {
     return (
-      <div className="gen-page" style={{ width: w * s, height: h * s, background: template.colors.bg, color: template.colors.body }}>
-        <div className="gen-cover-body" style={{ top: "40%", left: m.left, right: m.right, fontSize: template.sizes.small * s, lineHeight: 1.6, whiteSpace: "pre-line" }}>
+      <div className="gen-page" style={{ ...pageStyle, background: template.colors.bg, color: template.colors.body }}>
+        <div className="gen-cover-body" style={{ top: "40%", left: mm(m.left), right: mm(m.right), fontSize: pt(template.sizes.small), lineHeight: 1.6, whiteSpace: "pre-line" }}>
           {copyrightLines(docMeta).join("\n")}
-          <div style={{ marginTop: 12, color: template.colors.accent }}>Référence : {docMeta.doc_ref}</div>
+          <div style={{ marginTop: mm(4), color: template.colors.accent }}>Référence : {docMeta.doc_ref}</div>
         </div>
       </div>
     );
@@ -1476,13 +1483,13 @@ function GenPage({ page, paginated, docMeta }) {
 
   if (page.kind === "toc") {
     return (
-      <div className="gen-page" style={{ width: w * s, height: h * s, background: template.colors.bg, color: template.colors.body, fontFamily: FONT_CSS[template.bodyFont] }}>
-        <div style={{ padding: `${m.top}px ${m.right}px 0 ${m.left}px` }}>
-          <div style={{ fontWeight: "bold", fontSize: template.sizes.h2 * s, color: template.colors.heading }}>
+      <div className="gen-page" style={{ ...pageStyle, background: template.colors.bg, color: template.colors.body, fontFamily: FONT_CSS[template.bodyFont] }}>
+        <div style={{ padding: `${mm(m.top)}px ${mm(m.right)}px 0 ${mm(m.left)}px` }}>
+          <div style={{ fontWeight: "bold", fontSize: pt(template.sizes.h2), color: template.colors.heading }}>
             Table des matières
           </div>
           {page.entries.map((e, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 4, fontSize: template.sizes.body * s, marginTop: 5, paddingLeft: e.level === 1 ? 0 : 12 }}>
+            <div key={i} style={{ display: "flex", alignItems: "baseline", gap: mm(1), fontSize: pt(template.sizes.body), marginTop: mm(1.5), paddingLeft: e.level === 1 ? 0 : mm(3) }}>
               <span style={{ fontWeight: e.level === 1 ? "bold" : "normal", color: e.level === 1 ? template.colors.heading : template.colors.body }}>
                 {e.text.length > 62 ? e.text.slice(0, 62) + "…" : e.text}
               </span>
@@ -1497,12 +1504,12 @@ function GenPage({ page, paginated, docMeta }) {
 
   // Page de contenu.
   return (
-    <div className="gen-page" style={{ width: w * s, height: h * s, background: template.colors.bg }}>
+    <div className="gen-page" style={{ ...pageStyle, background: template.colors.bg }}>
       {docMeta.protection?.watermark?.enabled && (
         <div
           className="gen-watermark"
           style={{
-            fontSize: 42 * s,
+            fontSize: pt(42),
             color: docMeta.protection.watermark.color || "#555555",
             opacity: docMeta.protection.watermark.mode === "visible" ? 0.16 : 0.06,
           }}
@@ -1510,11 +1517,12 @@ function GenPage({ page, paginated, docMeta }) {
           {docMeta.protection.watermark.text || `© ${docMeta.author || "Auteur"}`}
         </div>
       )}
+      {/* Boîte de texte utile : même repère que le PDF (marges incluses). */}
       <div
         style={{
           position: "absolute",
-          top: m.top,
-          left: m.left,
+          top: mm(m.top),
+          left: mm(m.left),
           width: contentWpx,
           height: contentHpx,
           transform: `scale(${s})`,
@@ -1525,7 +1533,7 @@ function GenPage({ page, paginated, docMeta }) {
           <GenItem key={i} item={item} template={template} />
         ))}
       </div>
-      <div className="gen-page-footer" style={{ bottom: 4, fontSize: template.sizes.small * s, color: template.colors.accent }}>
+      <div className="gen-page-footer" style={{ bottom: mm(1.5), fontSize: pt(template.sizes.small), color: template.colors.accent }}>
         {page.number}
       </div>
     </div>
@@ -1584,14 +1592,17 @@ function GenItem({ item, template }) {
   return (
     <>
       {(item.lines || []).map((ln, i) => (
-        <GenLine key={i} ln={ln} />
+        // `ln.top` est relatif à la boîte de l'atome : on y ajoute la position
+        // de l'atome dans la page (sinon toutes les 3ᵉ lignes des blocs se
+        // superposaient en haut de page).
+        <GenLine key={i} ln={ln} top={item.top} />
       ))}
     </>
   );
 }
 
 // Une ligne : chaque mot à sa position mesurée (fidélité aperçu = PDF).
-function GenLine({ ln }) {
+function GenLine({ ln, top = 0 }) {
   return (
     <>
       {(ln.runs || []).map((run, i) => (
@@ -1602,7 +1613,7 @@ function GenLine({ ln }) {
               style={{
                 position: "absolute",
                 left: wd.x,
-                top: ln.top,
+                top: top + ln.top,
                 fontWeight: run.style.bold ? "bold" : "normal",
                 fontStyle: run.style.italic ? "italic" : "normal",
                 textDecoration: [run.style.underline ? "underline" : "", run.style.strike ? "line-through" : ""].filter(Boolean).join(" ") || "none",

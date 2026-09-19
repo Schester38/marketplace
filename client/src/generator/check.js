@@ -31,8 +31,10 @@ function itemBottom(item) {
     return b;
   }
   if (item.kind === "image" || item.kind === "hr") return item.top + (item.h || 0);
+  // `ln.bottom` est relatif à la boîte de l'atome (top 0) : le bas réel de
+  // l'atome dans la page est donc item.top + ln.bottom.
   let b = item.top;
-  for (const ln of item.lines || []) b = Math.max(b, ln.bottom || ln.top);
+  for (const ln of item.lines || []) b = Math.max(b, item.top + (ln.bottom || ln.top));
   return b;
 }
 

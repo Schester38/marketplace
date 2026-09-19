@@ -306,7 +306,7 @@ function drawWatermark(doc, docMeta, template, box) {
 // sans télécharger (utilisé par la publication « Vendre sur Mboppi »).
 export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, filename, download = true }) {
   const { pages, box, contentWpx } = paginated;
-  const { w, h } = box;
+  const { w, h, m } = box;
   const doc2 = new jsPDF({
     unit: "mm",
     format: [w, h],
@@ -342,13 +342,16 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
     } else if (page.kind === "toc") {
       drawToc(doc2, page, template, box);
     } else {
-      // Page de contenu : les atomes mesurés portent leurs positions exactes.
+      // Page de contenu : les atomes mesurés portent leurs positions exactes
+      // DANS la boîte de texte utile → on ajoute la marge de page (m.left/m.top)
+      // et la position de l'atome (item.top), comme le fait l'aperçu HTML.
       for (const item of page.items) {
+        const itemTopMm = m.top + pxToMm(item.top);
         if (item.kind === "image") {
           const data = await toDataUrl(item.src);
           if (data) {
             try {
-              doc2.addImage(data, item.x, item.top, item.w, item.h);
+              doc2.addImage(data, m.left + pxToMm(item.x || 0), itemTopMm, pxToMm(item.w), pxToMm(item.h));
             } catch {
               /* format image non supporté par jsPDF : ignorée */
             }
@@ -356,12 +359,12 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
         } else if (item.kind === "hr") {
           setStroke(doc2, template.colors.accent);
           doc2.setLineWidth(0.3);
-          const yMm = pxToMm(item.top + 2);
-          doc2.line(pxToMm(contentWpx * 0.2), yMm, pxToMm(contentWpx * 0.8), yMm);
+          const yMm = itemTopMm + pxToMm(2);
+          doc2.line(m.left + pxToMm(contentWpx * 0.2), yMm, m.left + pxToMm(contentWpx * 0.8), yMm);
         } else if (item.kind === "tableRow") {
-          drawTableRow(doc2, item, template);
+          drawTableRow(doc2, item, template, box);
         } else {
-          for (const ln of item.lines || []) drawLine(doc2, ln);
+          for (const ln of item.lines || []) drawLine(doc2, ln, m.left, itemTopMm);
         }
       }
       drawWatermark(doc2, docMeta, template, box);
@@ -394,11 +397,16 @@ export function saveBlob(blob, filename) {
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
-// Une ligne de tableau : bordures + texte cellule par cellule (positions mesurées).
-function drawTableRow(doc, item, template) {
+// Une ligne de tableau : bordures + texte cellule par cellule. Les mots sont
+// mesurés dans le repère de LEUR cellule → on ajoute la marge de page et la
+// position de la cellule (x) / de la ligne de tableau (item.top).
+function drawTableRow(doc, item, template, box) {
+  const { m } = box;
+  const rowY = m.top + pxToMm(item.top);
   for (const cell of item.cells) {
+    const cellX = m.left + pxToMm(cell.x);
     setFill(doc, cell.header ? template.colors.accent + "22" : "#ffffff");
-    doc.rect(cell.x / PX_PER_MM, item.top / PX_PER_MM, cell.w / PX_PER_MM, cell.h / PX_PER_MM, "FD");
-    for (const ln of cell.lines || []) drawLine(doc, ln);
+    doc.rect(cellX, rowY, pxToMm(cell.w), pxToMm(cell.h), "FD");
+    for (const ln of cell.lines || []) drawLine(doc, ln, cellX, rowY);
   }
 }

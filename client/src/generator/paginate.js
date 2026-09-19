@@ -2,14 +2,24 @@
 // l'API Range (chaque mot obtient sa position exacte — identique dans
 // l'aperçu HTML et le PDF jsPDF, d'où une fidélité garantie), puis flux en
 // pages avec règles typographiques professionnelles :
-//   - veuves/orphelines : au moins 2 lignes de chaque côté d'une coupure ;
+//   - veuves/orphelines : au moins 2 lignes de chaque côté d'une coupure
+//     (la ligne orpheline est REPORTÉE en tête de la page suivante, jamais
+//     supprimée) ;
 //   - titres insécables (jamais seul en bas de page) + saut de chapitre ;
 //   - tableaux scindés par lignes, images redimensionnées à la boîte ;
 //   - table des matières avec numéros de page exacts (2 passes).
+//
+// CONVENTION DE COORDONNÉES (source des 2 rendus) :
+//   - `item.top`  : position verticale de l'atome dans la BOÎTE DE CONTENU (px) ;
+//   - `ln.top`    : 0..hauteur de ligne, DANS la boîte de l'atome ;
+//   - `wd.x`      : position horizontale du mot dans la LARGEUR DE CONTENU (px) ;
+//   - mm et pt   : uniquement dans le modèle (templates.js) et l'export PDF.
+// L'aperçu ajoute `item.top` à `ln.top`, le PDF ajoute en plus la marge de
+// page (m.left/m.top) : les deux affichent donc exactement la même chose.
 import { FONT_CSS, getTemplate, resolveTemplate, resolvePageBox, blockSpacing } from "./templates.js";
 
 export const PX_PER_MM = 96 / 25.4; // px CSS par mm (96 dpi)
-const PT_TO_PX = 96 / 72;
+export const PT_TO_PX = 96 / 72; // px CSS par point typographique
 
 export function rgbToHex(rgb) {
   const m = String(rgb).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -149,12 +159,18 @@ function blockInlineStyle(kind, template) {
   return map[kind] || map.p;
 }
 
+// Un atome = UNE ligne. La position verticale mesurée (relative au bloc mesuré)
+// est ramenée dans la boîte de l'atome (`top: 0`) : c'est `item.top` — calculé
+// par flowAtoms — qui place ensuite la ligne sur la page. Sans cette remise à
+// zéro, la 3ᵉ ligne d'un paragraphe serait peinte à 3 interlignes du HAUT DE LA
+// PAGE : tous les blocs se superposaient (aperçu comme PDF). Les `x` des mots
+// restent relatifs à la largeur de contenu (aucun décalage horizontal).
 function pushLineAtoms(atoms, lines, kind, sp, groupId, marker) {
   if (!lines.length) return;
   lines.forEach((ln, i) => {
     atoms.push({
       kind,
-      lines: [ln],
+      lines: [{ ...ln, top: 0, bottom: ln.bottom - ln.top }],
       marker: i === 0 ? marker : null,
       sp: i === 0 ? sp : { before: 0, after: 0 },
       groupId,
@@ -220,7 +236,10 @@ function atomsFromBlock(el, host, hostRect, template, groupId) {
           w: rect.width,
           h: rect.height,
           header: /^th$/i.test(td.tagName),
-          lines: collectLines(td, hostRect, template),
+          // Lignes mesurées dans le repère de LA CELLULE : l'aperçu comme le PDF
+          // peignent la cellule à (x, item.top) puis son texte à l'intérieur
+          // (sinon le texte était décalé de la position de la cellule).
+          lines: collectLines(td, { left: rect.left, top: rect.top }, template),
         };
       });
       if (!cells.length) return;
@@ -337,23 +356,39 @@ function findGroupStart(items, groupId) {
 export function flowAtoms(atoms, contentHpx, template, bodyLineH) {
   const pages = [];
   const headings = [];
-  let items = [];
+  let items = []; // atomes placés sur la page courante
+  let carry = []; // atomes reportés en tête de la page suivante (jamais perdus)
   let y = 0;
   let prevAfter = 0;
   let firstPlaced = false;
-
-  const flush = () => {
-    pages.push(items);
-    items = [];
-    y = 0;
-    prevAfter = 0;
-  };
 
   const atomH = (a) => {
     if (a.kind === "image" || a.kind === "tableRow") return a.h;
     if (a.kind === "hr") return 4;
     const ln = a.lines?.[0];
     return ln ? ln.bottom - ln.top : 0;
+  };
+
+  // (Ré)empile une liste d'atomes à partir de `startY` et renvoie la hauteur
+  // consommée + l'espacement « after » courant (sert au report de page).
+  const restack = (list, startY) => {
+    let yy = startY;
+    let prev = 0;
+    for (const it of list) {
+      const spBefore = Math.max(it.sp.before * PT_TO_PX, prev * PT_TO_PX);
+      it.spBefore = spBefore;
+      it.top = yy + spBefore;
+      yy = it.top + atomH(it) + it.sp.after * PT_TO_PX;
+      prev = it.sp.after;
+    }
+    return { y: yy, prevAfter: prev };
+  };
+
+  const flush = () => {
+    pages.push(items);
+    items = carry;
+    carry = [];
+    ({ y, prevAfter } = restack(items, 0));
   };
 
   for (let raw of atoms) {
@@ -382,21 +417,16 @@ export function flowAtoms(atoms, contentHpx, template, bodyLineH) {
       let needsBreak = y + before + h + reserve > contentHpx;
 
       if (needsBreak && atom.breakable && atom.groupLines > 1 && !atom.keepNext) {
-        // Veuves/orphelines : ajuste la coupure au sein du groupe.
+        // Veuves/orphelines : si une SEULE ligne du bloc tient en fin de page,
+        // elle est reportée avec les lignes suivantes sur la page suivante.
+        // (L'ancienne version retirait la ligne de la page sans la replacer :
+        // du texte disparaissait silencieusement à chaque coupure.)
         const startIdx = findGroupStart(items, atom.groupId);
-        if (startIdx >= 0) {
-          const placedCount = items.length - startIdx;
-          const remaining = atom.groupLines - atom.lineIndex; // lignes restantes (courante incluse)
-          let cut = startIdx;
-          if (remaining === 1 && placedCount >= 2) {
-            cut = items.length - 1; // déplace une ligne de plus (orpheline)
-          }
-          if (placedCount - (cut - startIdx) >= 1 || cut > startIdx) {
-            const removed = items.splice(cut);
-            y = removed.length ? removed[0].top - removed[0].spBefore : 0;
-            prevAfter = 0;
-            needsBreak = false;
-          }
+        const placedCount = startIdx >= 0 ? items.length - startIdx : 0;
+        if (placedCount === 1) {
+          carry = items.splice(startIdx);
+          flush();
+          needsBreak = false;
         }
       }
 
