@@ -12,7 +12,7 @@ import { ResizableImage } from "../generator/GenImage.jsx";
 import { TableKit } from "@tiptap/extension-table";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyleKit } from "@tiptap/extension-text-style";
-import { api } from "../api.js";
+import { api, setGeneratorScope } from "../api.js";
 import { useLang } from "../i18n.jsx";
 import {
   GEN_TEMPLATES,
@@ -123,8 +123,17 @@ function DocThumb({ doc }) {
   );
 }
 
-export default function GeneratorPanel() {
+// variant : "creator" (page /generateur, portée utilisateur — défaut) ou
+// "admin" (onglet 📚 du panneau, portée admin : tous les documents).
+export default function GeneratorPanel({ variant = "creator" }) {
   const { t } = useLang();
+  useEffect(() => {
+    setGeneratorScope(variant === "admin");
+    // Nettoyage : en quittant le panneau admin, on rend la portée créateur.
+    return () => {
+      if (variant === "admin") setGeneratorScope(false);
+    };
+  }, [variant]);
   const [list, setList] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -497,6 +506,28 @@ function GenEditor({ initialDoc, onBack }) {
     }
   }, []);
 
+  // ─── Aperçu paginé : invalidation + (re)construction ────────────────────────
+  // L'aperçu est périmé dès qu'un paramètre de mise en page change (modèle de
+  // design, styles avancés, format, orientation, marges, table des matières).
+  // Sans invalidation, l'aperçu — ET LE PDF EXPORTÉ, calculé à partir de
+  // l'aperçu — gardaient l'ancien modèle : changer de design semblait sans
+  // aucun effet. On invalide partout, puis on reconstruit à l'ouverture.
+  const layoutKey = JSON.stringify([
+    meta.template_id,
+    meta.style_overrides || {},
+    meta.page_format,
+    meta.page_width,
+    meta.page_height,
+    meta.orientation,
+    meta.margins || {},
+    meta.protection?.toc !== false,
+  ]);
+  const layoutKeyRef = useRef(layoutKey);
+  useEffect(() => {
+    if (layoutKeyRef.current === layoutKey) return;
+    layoutKeyRef.current = layoutKey;
+    setPreview(null);
+  }, [layoutKey]);
   useEffect(() => {
     if (view === "preview" && !preview && !previewBusy) buildPreview();
   }, [view, preview, previewBusy, buildPreview]);

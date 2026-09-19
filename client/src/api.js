@@ -134,11 +134,19 @@ async function adminRequest(path, options = {}) {
   throw new Error("Erreur réseau");
 }
 
-// Générateur de documents : jeton ADMIN quand il existe (panneau
-// d'administration), sinon jeton UTILISATEUR (page /generateur des créateurs).
-// Le serveur applique alors la portée par propriétaire + la garde d'adhésion.
+// Générateur de documents : la portée est EXPLICITE, posée par le composant
+// qui rend le panneau (Admin.jsx → "admin", page /generateur → "creator").
+// On ne SNIFFE PAS les jetons : l'admin_token reste dans le navigateur après
+// une session panneau, et un créateur ouvrant /generateur dans le même
+// navigateur aurait sinon envoyé le jeton ADMIN → accès à tous les documents.
+let genScopeAdmin = false;
+export function setGeneratorScope(admin) {
+  genScopeAdmin = !!admin;
+}
 function generatorRequest(path, options = {}) {
-  return storage.getItem("admin_token") ? adminRequest(path, options) : request(path, options);
+  return genScopeAdmin && storage.getItem("admin_token")
+    ? adminRequest(path, options)
+    : request(path, options);
 }
 
 export const api = {

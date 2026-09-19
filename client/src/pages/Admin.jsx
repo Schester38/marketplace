@@ -3621,7 +3621,7 @@ export default function Admin() {
       )}
 
       {/* ═══ Onglet « Générateur » : ebooks/PDF (module isolé, tables gen_*) ═══ */}
-      {adminTab === "generator" && <GeneratorPanel />}
+      {adminTab === "generator" && <GeneratorPanel variant="admin" />}
 
     </main>
   );
