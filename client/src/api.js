@@ -134,6 +134,13 @@ async function adminRequest(path, options = {}) {
   throw new Error("Erreur réseau");
 }
 
+// Générateur de documents : jeton ADMIN quand il existe (panneau
+// d'administration), sinon jeton UTILISATEUR (page /generateur des créateurs).
+// Le serveur applique alors la portée par propriétaire + la garde d'adhésion.
+function generatorRequest(path, options = {}) {
+  return storage.getItem("admin_token") ? adminRequest(path, options) : request(path, options);
+}
+
 export const api = {
   register: (payload) =>
     request("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
@@ -470,43 +477,43 @@ export const api = {
     adminRequest(`/admin/activation-withdrawals/${id}/pay`, { method: "POST" }),
 
   // ─── Générateur de documents (ebooks/PDF) — module admin isolé ──────────
-  genDocuments: () => adminRequest("/generator/documents"),
-  genDocument: (id) => adminRequest(`/generator/documents/${id}`),
+  genDocuments: () => generatorRequest("/generator/documents"),
+  genDocument: (id) => generatorRequest(`/generator/documents/${id}`),
   genCreateDocument: (payload) =>
-    adminRequest("/generator/documents", { method: "POST", body: JSON.stringify(payload) }),
+    generatorRequest("/generator/documents", { method: "POST", body: JSON.stringify(payload) }),
   // Autosave : payload partiel (content, title, cover, design, protection…).
   genSaveDocument: (id, payload) =>
-    adminRequest(`/generator/documents/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
+    generatorRequest(`/generator/documents/${id}`, { method: "PATCH", body: JSON.stringify(payload) }),
   genDeleteDocument: (id) =>
-    adminRequest(`/generator/documents/${id}`, { method: "DELETE" }),
+    generatorRequest(`/generator/documents/${id}`, { method: "DELETE" }),
   genDuplicateDocument: (id) =>
-    adminRequest(`/generator/documents/${id}/duplicate`, { method: "POST" }),
+    generatorRequest(`/generator/documents/${id}/duplicate`, { method: "POST" }),
   genSaveVersion: (id, payload) =>
-    adminRequest(`/generator/documents/${id}/versions`, {
+    generatorRequest(`/generator/documents/${id}/versions`, {
       method: "POST",
       body: JSON.stringify(payload),
     }),
   // Restauration d'une version (instantané complet du contenu).
   genRestoreVersion: (id, versionId) =>
-    adminRequest(`/generator/documents/${id}/versions/${versionId}/restore`, { method: "POST" }),
+    generatorRequest(`/generator/documents/${id}/versions/${versionId}/restore`, { method: "POST" }),
   // Vue DESIGN — « Modèle de design » … aucun souci.
   // Assistant IA (Gemini) : renvoie du texte relu/inséré par l'utilisateur.
   genAi: (payload) =>
-    adminRequest("/generator/ai", { method: "POST", body: JSON.stringify(payload) }),
+    generatorRequest("/generator/ai", { method: "POST", body: JSON.stringify(payload) }),
   // Publication « Vendre sur Mboppi » : URL d'upload signée (envoi direct du
   // PDF vers Supabase) puis création/mise à jour du produit digital.
   genUploadUrl: (id, payload) =>
-    adminRequest(`/generator/documents/${id}/upload-url`, {
+    generatorRequest(`/generator/documents/${id}/upload-url`, {
       method: "POST",
       body: JSON.stringify(payload),
     }),
   genPublish: (id, payload) =>
-    adminRequest(`/generator/documents/${id}/publish`, {
+    generatorRequest(`/generator/documents/${id}/publish`, {
       method: "POST",
       body: JSON.stringify(payload),
     }),
   genDeleteVersion: (id, versionId) =>
-    adminRequest(`/generator/documents/${id}/versions/${versionId}`, { method: "DELETE" }),
+    generatorRequest(`/generator/documents/${id}/versions/${versionId}`, { method: "DELETE" }),
   // Vérification PUBLIQUE d'authenticité (page /verifier/<référence>, QR du PDF).
   genVerify: (ref) => request(`/generator/verify/${encodeURIComponent(ref)}`),
 };

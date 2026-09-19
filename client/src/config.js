@@ -194,6 +194,28 @@ export function offerSavings(offer) {
   return Math.max(0, Math.round(offer.original_price - offer.promo_price));
 }
 
+// Catégories orientées produits DIGITAUX (ebooks, guides, formations, IA,
+// développement personnel, religion…) : proposées aux créateurs et à la
+// publication du Générateur. Miroir serveur : PUBLISH_CATEGORIES dans
+// server/routes/generator.js.
+export const DIGITAL_CATEGORIES = [
+  "Digital",
+  "IA & Technologies",
+  "Éducation & Formation",
+  "Développement personnel",
+  "Religion & Spiritualité",
+  "Business & Entrepreneuriat",
+  "Finance & Investissement",
+  "Santé & Bien-être",
+  "Langues",
+  "Cuisine & Recettes",
+  "Informatique & Programmation",
+  "Art & Culture",
+  "Roman & Fiction",
+  "Parentalité & Famille",
+  "Voyage & Guides pratiques",
+];
+
 export const PRODUCT_CATEGORIES = [
   "Électronique & Téléphones",
   "Téléphones & Tablettes",
@@ -228,6 +250,8 @@ export const PRODUCT_CATEGORIES = [
   "Services & Prestations",
   "Immobilier",
   "Autre",
+  // Catégories digitales (ebooks, formations, IA, développement personnel…).
+  ...DIGITAL_CATEGORIES,
 ];
 
 export const OPERATORS_BY_COUNTRY = {

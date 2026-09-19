@@ -157,8 +157,14 @@ function fallback(lang, extra = {}) {
 // (services/whatsappBot.js). Renvoie toujours une string (jamais de throw).
 // history : [{role:'user'|'assistant', text|content}] (formats site et bot).
 // extraSystem : instructions supplémentaires (prompts du robot WhatsApp).
-export async function askAI(message, history = [], extraSystem = "", lang = "fr") {
-  const clean = String(message || "").slice(0, MAX_MESSAGE).trim();
+// opts (optionnel) : { maxInputChars, maxOutputTokens } — le chat du site et le
+// robot WhatsApp gardent les défauts ; le Générateur passe des plafonds plus
+// larges (passages longs à traduire/développer) sans quoi les réponses étaient
+// coupées (entrée tronquée à 2000 caractères, sortie limitée à 800 tokens).
+export async function askAI(message, history = [], extraSystem = "", lang = "fr", opts = {}) {
+  const maxIn = Number(opts.maxInputChars) > 0 ? Number(opts.maxInputChars) : MAX_MESSAGE;
+  const maxOut = Number(opts.maxOutputTokens) > 0 ? Number(opts.maxOutputTokens) : 800;
+  const clean = String(message || "").slice(0, maxIn).trim();
   if (!clean || !API_KEY) return FALLBACKS[lang] || FALLBACKS.fr;
 
   let sys = SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.fr;
@@ -188,7 +194,7 @@ export async function askAI(message, history = [], extraSystem = "", lang = "fr"
   const body = {
     systemInstruction: { parts: [{ text: baseSys }] },
     contents,
-    generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+    generationConfig: { temperature: 0.7, maxOutputTokens: maxOut },
   };
 
   const models = [MODEL, ...MODEL_FALLBACKS.filter((m) => m !== MODEL)];

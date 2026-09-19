@@ -89,6 +89,7 @@ const Creators = lazyRetry(() => import("./pages/Creators.jsx"));
 const Suivi = lazyRetry(() => import("./pages/Suivi.jsx"));
 const NotFound = lazyRetry(() => import("./pages/NotFound.jsx"));
 const Admin = lazyRetry(() => import("./pages/Admin.jsx"));
+const GeneratorPage = lazyRetry(() => import("./pages/GeneratorPage.jsx"));
 const Cgv = lazyRetry(() => import("./pages/Cgv.jsx"));
 const Cgu = lazyRetry(() => import("./pages/Cgu.jsx"));
 const Faq = lazyRetry(() => import("./pages/Faq.jsx"));
@@ -454,6 +455,16 @@ function RoleOnly({ role, children }) {
   return children;
 }
 
+// Générateur de documents : accessible aux CRÉATEURS (adhésion active, comme
+// pour publier un produit) et à l'admin (même page hors du panneau).
+function CreatorSpace({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== "creator" && user.role !== "admin") return <Navigate to="/" replace />;
+  if (user.role === "creator" && !membershipActive(user)) return <Navigate to="/adhesion" replace />;
+  return children;
+}
+
 function LivreurOnly({ children }) {
   const { user } = useAuth();
   if (!user || user.role !== "livreur") return <Navigate to="/livreur-inscription" replace />;
@@ -782,6 +793,14 @@ export default function App() {
                 <RoleOnly role="creator">
                   <CreatorPayments />
                 </RoleOnly>
+              }
+            />
+            <Route
+              path="/generateur"
+              element={
+                <CreatorSpace>
+                  <GeneratorPage />
+                </CreatorSpace>
               }
             />
             <Route path="/boutique/:id" element={<ShopPage />} />

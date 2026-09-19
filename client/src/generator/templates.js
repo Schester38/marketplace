@@ -12,6 +12,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#111111", body: "#1a1a1a", accent: "#6b7280", bg: "#ffffff" },
     align: "justify", chapterNewPage: true,
     coverBg: "#111111", coverText: "#ffffff", headingUpper: true,
+    headingRule: "h1", headingBar: "none", coverLayout: "center", coverRule: false,
   },
   {
     id: "moderne", name: "Moderne", category: "Ebook",
@@ -21,6 +22,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#1d4ed8", body: "#1f2937", accent: "#3b82f6", bg: "#ffffff" },
     align: "justify", chapterNewPage: true,
     coverBg: "#1d4ed8", coverText: "#ffffff", headingUpper: false,
+    headingRule: "h1", headingBar: "left", coverLayout: "band", coverRule: false,
   },
   {
     id: "elegant", name: "Élégant", category: "Ebook",
@@ -30,6 +32,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#4a3728", body: "#2d2a26", accent: "#8b6f47", bg: "#fffdf8" },
     align: "justify", chapterNewPage: true,
     coverBg: "#4a3728", coverText: "#f5ead9", headingUpper: false,
+    headingRule: "none", headingBar: "none", coverLayout: "center", coverRule: true,
   },
   {
     id: "professionnel", name: "Professionnel", category: "Ebook",
@@ -39,6 +42,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#0f172a", body: "#334155", accent: "#0ea5e9", bg: "#ffffff" },
     align: "left", chapterNewPage: false,
     coverBg: "#0f172a", coverText: "#e2e8f0", headingUpper: false,
+    headingRule: "h1", headingBar: "none", coverLayout: "left", coverRule: true,
   },
   {
     id: "business", name: "Business", category: "Ebook",
@@ -48,6 +52,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#1e3a5f", body: "#2f3b4c", accent: "#c9a227", bg: "#ffffff" },
     align: "justify", chapterNewPage: true,
     coverBg: "#1e3a5f", coverText: "#ffffff", headingUpper: true,
+    headingRule: "h1h2", headingBar: "none", coverLayout: "band", coverRule: false,
   },
   {
     id: "education", name: "Éducation", category: "Ebook",
@@ -57,6 +62,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#14532d", body: "#1f2937", accent: "#16a34a", bg: "#ffffff" },
     align: "justify", chapterNewPage: true,
     coverBg: "#14532d", coverText: "#dcfce7", headingUpper: true,
+    headingRule: "h1", headingBar: "left", coverLayout: "top", coverRule: true,
   },
   {
     id: "motivation", name: "Motivation", category: "Ebook",
@@ -66,6 +72,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#c2410c", body: "#292524", accent: "#f59e0b", bg: "#fffbeb" },
     align: "justify", chapterNewPage: true,
     coverBg: "#c2410c", coverText: "#fff7ed", headingUpper: true,
+    headingRule: "none", headingBar: "left", coverLayout: "band", coverRule: false,
   },
   {
     id: "finance", name: "Finance", category: "Ebook",
@@ -75,6 +82,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#064e3b", body: "#1f2937", accent: "#059669", bg: "#ffffff" },
     align: "justify", chapterNewPage: true,
     coverBg: "#064e3b", coverText: "#d1fae5", headingUpper: false,
+    headingRule: "h1h2", headingBar: "none", coverLayout: "left", coverRule: false,
   },
   {
     id: "technologie", name: "Technologie", category: "Ebook",
@@ -84,6 +92,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#312e81", body: "#1e293b", accent: "#6366f1", bg: "#ffffff" },
     align: "left", chapterNewPage: true,
     coverBg: "#312e81", coverText: "#e0e7ff", headingUpper: false,
+    headingRule: "none", headingBar: "left", coverLayout: "top", coverRule: true,
   },
   {
     id: "luxe", name: "Luxe", category: "Ebook",
@@ -93,6 +102,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#1c1917", body: "#292524", accent: "#b8860b", bg: "#fffef9" },
     align: "justify", chapterNewPage: true,
     coverBg: "#1c1917", coverText: "#d4af37", headingUpper: false,
+    headingRule: "h1", headingBar: "none", coverLayout: "center", coverRule: true,
   },
   {
     id: "jeunesse", name: "Jeunesse", category: "Ebook",
@@ -102,6 +112,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#be185d", body: "#312e81", accent: "#ec4899", bg: "#fff5fb" },
     align: "left", chapterNewPage: true,
     coverBg: "#be185d", coverText: "#fce7f3", headingUpper: false,
+    headingRule: "none", headingBar: "none", coverLayout: "band", coverRule: false,
   },
   {
     id: "magazine", name: "Magazine", category: "Ebook",
@@ -111,6 +122,7 @@ export const GEN_TEMPLATES = [
     colors: { heading: "#111827", body: "#1f2937", accent: "#dc2626", bg: "#ffffff" },
     align: "justify", chapterNewPage: false,
     coverBg: "#111827", coverText: "#ffffff", headingUpper: true,
+    headingRule: "h1", headingBar: "none", coverLayout: "top", coverRule: true,
   },
 ];
 
@@ -152,6 +164,71 @@ export function resolveTemplate(template, overrides) {
     }
   }
   return out;
+}
+
+// ─── Couverture : options normalisées (aperçu HTML, PDF, miniature produit) ──
+// Toutes les valeurs sont bornées ici : l'utilisateur peut tout régler sans
+// jamais produire de mise en page cassée. `imageOpacity` (0-100, réglage
+// manuel) prime sur `imageDim` (ancien voile fixe) — rétrocompatible.
+export function resolveCover(docMeta, template) {
+  const c = (docMeta && docMeta.cover) || {};
+  const num = (v, min, max, fallback) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+  };
+  const dim = Number.isFinite(Number(c.imageOpacity))
+    ? 1 - num(c.imageOpacity, 0, 100, 65) / 100
+    : num(c.imageDim, 0, 0.9, 0.35);
+  return {
+    bg: c.bg || template.coverBg,
+    fg: c.text || template.coverText,
+    accent: template.colors.accent,
+    image: c.image || null,
+    dim,
+    showTitle: c.showTitle !== false,
+    title: String(c.title || (docMeta && docMeta.title) || "Sans titre"),
+    subtitle: String(c.subtitle || (docMeta && docMeta.subtitle) || ""),
+    author: String((docMeta && docMeta.author) || ""),
+    align: ["left", "center", "right"].includes(c.titleAlign) ? c.titleAlign : "center",
+    x: num(c.titleX, 5, 95, 50),
+    y: num(c.titleY, 5, 95, 32),
+    customX: c.titleX !== undefined && c.titleX !== null,
+    customY: c.titleY !== undefined && c.titleY !== null,
+    layout: ["center", "left", "band", "top"].includes(template.coverLayout)
+      ? template.coverLayout
+      : "center",
+    rule: !!template.coverRule,
+  };
+}
+
+// Géométrie de la couverture, calculée UNE fois et exprimée dans l'unité de la
+// largeur de page (mm pour l'aperçu et le PDF, px pour le canvas produit) :
+// les trois rendus appliquent donc exactement la même mise en page.
+export function coverLayoutBox(cover, pageW) {
+  const layout = cover.layout;
+  const band = layout === "band";
+  const pad = layout === "left" ? pageW * 0.08 : 16;
+  let maxW = Math.max(20, pageW - pad * 2);
+  // Position horizontale manuelle (titleX) : le bloc titre est rétréci à 62 %
+  // de la page pour que le curseur déplace RÉELLEMENT le texte — sinon le bloc
+  // pleine largeur est clampé au centre et le réglage reste sans effet.
+  if (cover.customX) maxW = Math.min(maxW, pageW * 0.62);
+  let x = pad;
+  if (cover.align === "center") {
+    const cx = Math.min(pageW - pad - maxW / 2, Math.max(pad + maxW / 2, (cover.x / 100) * pageW));
+    x = cx - maxW / 2;
+  } else if (cover.align === "right") {
+    // Le texte est calé à DROITE du bloc : le curseur pousse le bord droit.
+    x = Math.min(pageW - pad - maxW, Math.max(pad, (cover.x / 100) * pageW - maxW));
+  } else {
+    x = Math.min(pageW - pad - maxW, Math.max(pad, (cover.x / 100) * pageW));
+  }
+  // Position verticale : les mises en page « bande » et « haut » imposent leur
+  // zone par défaut, l'utilisateur garde la main dès qu'il règle titleY.
+  let yPct = cover.y;
+  if (band) yPct = cover.customY ? Math.min(92, Math.max(64, yPct)) : 68;
+  else if (layout === "top" && !cover.customY) yPct = 14;
+  return { layout, band, leftish: layout === "left" || band, pad, maxW, x, yPct, align: cover.align };
 }
 
 // Formats de page (mm). « ebook » ≈ format liseuse 6"×9" réduit.

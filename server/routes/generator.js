@@ -1,6 +1,8 @@
 // Générateur de documents (ebooks, guides, rapports, brochures…) — module
-// isolé du reste du marketplace Mboppi. Réservé à l'administration (même
-// garde que /api/admin : token admin). Toutes les tables sont ADDITIVES
+// isolé du reste du marketplace Mboppi. Accessible à l'administration (token
+// admin) ET aux CRÉATEURS (jeton utilisateur) : chacun ne voit alors QUE ses
+// propres documents (portée par owner_id), et la publication crée le produit
+// digital sous SON compte (resolveOwnerId). Toutes les tables sont ADDITIVES
 // (préfixe gen_*) : aucune table métier (ventes, produits, paiements) n'est
 // modifiée — le module ne peut pas affecter le reste de l'application.
 //
@@ -24,6 +26,7 @@ import { q } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { logAudit } from "../security.js";
 import { askAI } from "./chat.js";
+import { defaultCurrencyFor, validCurrency } from "../currency.js";
 import {
   createDigitalUploadUrl,
   digitalObjectKey,
@@ -131,20 +134,47 @@ function docRow(row) {
 
 const SELECT_DOC = `SELECT * FROM gen_documents WHERE id = $1`;
 
-async function loadDoc(id) {
+// `req` (optionnel) active la PORTÉE multi-utilisateur : l'admin voit tous les
+// documents, un créateur uniquement les siens (les autres répondent 404 — on
+// ne révèle pas leur existence).
+async function loadDoc(id, req = null) {
   if (!Number.isInteger(id) || id <= 0) {
     const err = new Error("Identifiant invalide");
     err.statusCode = 400;
     throw err;
   }
   const row = (await q(SELECT_DOC, [id]))[0];
-  if (!row) {
+  const mine = row && Number(row.owner_id) === Number(req?.user?.id);
+  if (!row || (req && req.user?.role !== "admin" && !mine)) {
     const err = new Error("Document introuvable");
     err.statusCode = 404;
     throw err;
   }
   return row;
 }
+
+const isAdminReq = (req) => req.user?.role === "admin";
+
+// Catégories proposées à la publication d'un produit digital (miroir de
+// DIGITAL_CATEGORIES côté client, client/src/config.js) : toute autre valeur
+// retombe sur « Digital » — jamais de catégorie arbitraire en base.
+const PUBLISH_CATEGORIES = new Set([
+  "Digital",
+  "IA & Technologies",
+  "Éducation & Formation",
+  "Développement personnel",
+  "Religion & Spiritualité",
+  "Business & Entrepreneuriat",
+  "Finance & Investissement",
+  "Santé & Bien-être",
+  "Langues",
+  "Cuisine & Recettes",
+  "Informatique & Programmation",
+  "Art & Culture",
+  "Roman & Fiction",
+  "Parentalité & Famille",
+  "Voyage & Guides pratiques",
+]);
 
 // Propriétaire réel d'un produit publié. L'admin « virtuel » (mot de passe
 // admin, id 0) n'existe pas dans la table users — or products.shop_id porte
@@ -204,16 +234,25 @@ router.use((req, res, next) => {
   next();
 });
 
-router.use(authRequired, roleRequired("admin"));
+// Garde commune : admin (panneau) ou créateur (page /generateur). Le rôle
+// `roleRequired` applique aussi le blocage d'adhésion aux créateurs.
+router.use(authRequired, roleRequired("admin", "creator"));
 
 // ─── Bibliothèque ────────────────────────────────────────────────────────────
 router.get(
   "/documents",
   ah(async (req, res) => {
-    const rows = await q(
-      `SELECT d.*, (SELECT COUNT(*)::int FROM gen_versions v WHERE v.doc_id = d.id) AS versions
-       FROM gen_documents d ORDER BY d.updated_at DESC LIMIT 500`
-    );
+    // Portée : l'admin voit tout, un créateur uniquement SA bibliothèque.
+    const rows = isAdminReq(req)
+      ? await q(
+          `SELECT d.*, (SELECT COUNT(*)::int FROM gen_versions v WHERE v.doc_id = d.id) AS versions
+           FROM gen_documents d ORDER BY d.updated_at DESC LIMIT 500`
+        )
+      : await q(
+          `SELECT d.*, (SELECT COUNT(*)::int FROM gen_versions v WHERE v.doc_id = d.id) AS versions
+           FROM gen_documents d WHERE d.owner_id = $1 ORDER BY d.updated_at DESC LIMIT 500`,
+          [Number(req.user.id)]
+        );
     res.json({ documents: rows.map((r) => ({ ...docRow(r), versions: r.versions })) });
   })
 );
@@ -258,7 +297,7 @@ router.post(
 router.get(
   "/documents/:id",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id));
+    const row = await loadDoc(Number(req.params.id), req);
     const data = (
       await q(`SELECT content FROM gen_documents_data WHERE doc_id = $1`, [row.id])
     )[0];
@@ -278,7 +317,7 @@ router.get(
 router.patch(
   "/documents/:id",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id));
+    const row = await loadDoc(Number(req.params.id), req);
     const body = req.body || {};
     const sets = [];
     const params = [];
@@ -334,7 +373,7 @@ router.patch(
 router.post(
   "/documents/:id/duplicate",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id));
+    const row = await loadDoc(Number(req.params.id), req);
     const inserted = await q(
       `INSERT INTO gen_documents (owner_id, doc_ref, title, subtitle, author, status, page_format,
                                   page_width, page_height, orientation, margins, template_id,
@@ -359,7 +398,7 @@ router.post(
 router.post(
   "/documents/:id/versions",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id));
+    const row = await loadDoc(Number(req.params.id), req);
     const label = String(req.body?.label || "").trim().slice(0, 100) || "Instantané";
     let content = parseContent(req.body?.content);
     if (content === null) {
@@ -383,7 +422,7 @@ router.post(
 router.delete(
   "/documents/:id",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id));
+    const row = await loadDoc(Number(req.params.id), req);
     await q(`DELETE FROM gen_documents WHERE id = $1`, [row.id]);
     logAudit(req.user.id, "generator.doc_deleted", row.doc_ref, req.ip);
     res.json({ ok: true });
@@ -394,7 +433,7 @@ router.delete(
 router.post(
   "/documents/:id/versions/:vid/restore",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id));
+    const row = await loadDoc(Number(req.params.id), req);
     const vid = Number(req.params.vid);
     const version = (
       await q(`SELECT id, label, content FROM gen_versions WHERE id = $1 AND doc_id = $2`, [
@@ -425,7 +464,7 @@ router.post(
 router.delete(
   "/documents/:id/versions/:vid",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id));
+    const row = await loadDoc(Number(req.params.id), req);
     await q(`DELETE FROM gen_versions WHERE id = $1 AND doc_id = $2`, [
       Number(req.params.vid) || 0,
       row.id,
@@ -440,7 +479,8 @@ router.delete(
 // relit, modifie puis insère lui-même (l'utilisateur reste maître du résultat).
 // ═════════════════════════════════════════════════════════════════════════════
 
-const AI_MAX_INPUT = 1800; // askAI tronque à 2000 caractères côté chat.js
+const AI_MAX_INPUT = 4000; // limite du PASSAGE sélectionné (l'appel askAI
+// reçoit maxInputChars: 8000 — instruction + contexte + passage tiennent tous).
 const AI_TEMPLATE_IDS = [
   "minimal", "moderne", "elegant", "professionnel", "business", "education",
   "motivation", "finance", "technologie", "luxe", "jeunesse", "magazine",
@@ -581,7 +621,16 @@ router.post(
     const message = [def.instruction, docContext, text ? `\n---\n${text}` : ""]
       .filter(Boolean)
       .join("\n\n");
-    const reply = await askAI(message, [], "Tu réponds à un auteur qui met en page un document professionnel.", "fr");
+    const reply = await askAI(
+      message,
+      [],
+      "Tu réponds à un auteur qui met en page un document professionnel.",
+      "fr",
+      // Plafonds élargis : sans eux, l'entrée était tronquée à 2000 caractères
+      // (le passage fourni perdait sa fin) et la sortie à 800 tokens (réponses
+      // coupées au milieu d'une phrase sur traduire/développer/structurer).
+      { maxInputChars: 8000, maxOutputTokens: 4096 }
+    );
     const out = String(reply || "").trim();
     if (!out || /je ne peux pas répondre|can't answer|لا أستطيع الإجابة/.test(out)) {
       const err = new Error("L'assistant IA est momentanément indisponible. Réessayez dans un instant.");
@@ -630,7 +679,7 @@ const PUBLISH_EXT = new Set(["pdf", "epub", "zip"]);
 router.post(
   "/documents/:id/upload-url",
   ah(async (req, res) => {
-    await loadDoc(Number(req.params.id));
+    await loadDoc(Number(req.params.id), req);
     const { name, size, hash } = req.body || {};
     const fileName = String(name || "document.pdf").trim().slice(0, 160);
     const ext = safeFileExt(fileName);
@@ -670,7 +719,7 @@ router.post(
 router.post(
   "/documents/:id/publish",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id));
+    const row = await loadDoc(Number(req.params.id), req);
     const body = req.body || {};
     const ownerId = await resolveOwnerId(req);
     const key = String(body.key || "").trim();
@@ -690,12 +739,22 @@ router.post(
     if (!Number.isFinite(price) || price < 0) {
       return res.status(400).json({ error: "Prix invalide." });
     }
-    const currency = /^[A-Z]{3}$/.test(String(body.currency || "").toUpperCase())
-      ? String(body.currency).toUpperCase()
-      : "XAF";
+    // Devise : celle du PAYS du compte (comme products.js) — XAF au Cameroun,
+    // XOF au Sénégal/Côte d'Ivoire, etc. Le client envoie countrySymbol(user.country) ;
+    // toute devise inconnue retombe sur la devise du pays du compte.
+    const currency = validCurrency(body.currency)
+      ? String(body.currency).trim().toUpperCase()
+      : defaultCurrencyFor(req.user.country);
     const title = String(body.title || row.title || "Document").trim().slice(0, 160);
     const description = String(body.description || "").trim().slice(0, 4000) || null;
-    const category = String(body.category || "Digital").trim().slice(0, 60) || "Digital";
+    // Catégorie : liste blanche (miroir de DIGITAL_CATEGORIES côté client) —
+    // toute autre valeur retombe sur « Digital ».
+    const rawCategory = String(body.category || "").trim().slice(0, 60);
+    const category = PUBLISH_CATEGORIES.has(rawCategory) ? rawCategory : "Digital";
+    // Commission reversée au VENDEUR qui vend le produit avec son code (0-100 %).
+    const commission = Number.isFinite(Number(body.commission))
+      ? Math.min(100, Math.max(0, Math.round(Number(body.commission))))
+      : 0;
 
     // Image de couverture : data-URL compressée côté client → URL publique du
     // bucket `photos` (comme les produits classiques). Un échec n'empêche pas
@@ -728,11 +787,11 @@ router.post(
       productId = existing.id;
       await q(
         `UPDATE products SET name = $2, description = $3, price = $4, currency = $5, category = $6,
-            image = COALESCE($7, image), photos = $8::jsonb, digital_path = $9, digital_name = $10,
-            digital_mime = $11, digital_size = $12, delivery_fee = 0
+            commission_percent = $7, image = COALESCE($8, image), photos = $9::jsonb,
+            digital_path = $10, digital_name = $11, digital_mime = $12, digital_size = $13, delivery_fee = 0
           WHERE id = $1`,
         [
-          productId, title, description, price, currency, category, image, photos,
+          productId, title, description, price, currency, category, commission, image, photos,
           key, `${title}.${safeFileExt(key)}`, mime, meta.size,
         ]
       );
@@ -741,10 +800,10 @@ router.post(
         `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos,
             category, warranty, delivery_fee, contact, quantity, currency,
             is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit)
-         VALUES ($1, $2, $3, $4, NULL, 0, $5, $6::jsonb, $7, NULL, 0, NULL, 1, $8,
-            TRUE, $9, $10, $11, $12, 5) RETURNING id`,
+         VALUES ($1, $2, $3, $4, NULL, $5, $6, $7::jsonb, $8, NULL, 0, NULL, 1, $9,
+            TRUE, $10, $11, $12, $13, 5) RETURNING id`,
         [
-          ownerId, title, description, price, image, photos, category, currency,
+          ownerId, title, description, price, commission, image, photos, category, currency,
           key, `${title}.${safeFileExt(key)}`, mime, meta.size,
         ]
       );

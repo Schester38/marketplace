@@ -8,7 +8,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import ImageExtension from "@tiptap/extension-image";
+import { ResizableImage } from "../generator/GenImage.jsx";
 import { TableKit } from "@tiptap/extension-table";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyleKit } from "@tiptap/extension-text-style";
@@ -21,9 +21,13 @@ import {
   FONT_CSS,
   resolvePageBox,
   resolveTemplate,
+  resolveCover,
+  coverLayoutBox,
   SIZE_KEYS,
   COLOR_KEYS,
 } from "../generator/templates.js";
+import { useAuth } from "../App.jsx";
+import { DIGITAL_CATEGORIES, countrySymbol } from "../config.js";
 import { detectStructureHtml } from "../generator/structure.js";
 import { paginateDocument, PX_PER_MM, PT_TO_PX } from "../generator/paginate.js";
 import { exportDocumentPdf, saveBlob } from "../generator/exportPdf.js";
@@ -346,6 +350,10 @@ export default function GeneratorPanel() {
 // ═════════════════════════════════════════════════════════════════════════════
 function GenEditor({ initialDoc, onBack }) {
   const { t } = useLang();
+  const { user } = useAuth();
+  // Devise du PAYS du compte (XAF au Cameroun, XOF au Sénégal…), affichée sur
+  // le champ prix et envoyée au serveur — plus de « XAF » en dur.
+  const priceCurrency = countrySymbol(user?.country) || "XAF";
   const [meta, setMeta] = useState(initialDoc.document);
   const [versions, setVersions] = useState(initialDoc.versions || []);
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
@@ -374,7 +382,7 @@ function GenEditor({ initialDoc, onBack }) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
-      ImageExtension.configure({ inline: false, allowBase64: true }),
+      ResizableImage.configure({ inline: false, allowBase64: true }),
       TableKit.configure({ table: { resizable: true } }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TextStyleKit,
@@ -674,7 +682,13 @@ function GenEditor({ initialDoc, onBack }) {
 
   const openPublish = () => {
     setError("");
-    setPub({ price: "", description: "", title: metaRef.current.title || "" });
+    setPub({
+      price: "",
+      description: "",
+      title: metaRef.current.title || "",
+      category: "Digital",
+      commission: "",
+    });
   };
 
   const doPublish = async () => {
@@ -720,9 +734,14 @@ function GenEditor({ initialDoc, onBack }) {
       const d = await api.genPublish(meta.id, {
         key: signed.path,
         price,
-        currency: "XAF",
+        currency: priceCurrency,
         title: pub.title || metaRef.current.title,
         description: pub.description || "",
+        category: pub.category || "Digital",
+        commission: Math.min(
+          100,
+          Math.max(0, Math.round(Number(String(pub.commission || "0").replace(",", ".")) || 0))
+        ),
         cover: coverData,
       });
       setMeta(d.document);
@@ -924,7 +943,7 @@ function GenEditor({ initialDoc, onBack }) {
               title={t("Lien")}
             >🔗</button>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().unsetLink().run()} title={t("Retirer le lien")}>🔗✕</button>
-            <label className="btn btn-small btn-outline" title={t("Insérer une image (compressée)")}>
+            <label className="btn btn-small btn-outline" title={t("Insérer une image (compressée) — cliquez sur l'image puis glissez la poignée ↔ pour la redimensionner")}>
               🖼️
               <input type="file" accept="image/*" hidden onChange={onInsertImage} />
             </label>
@@ -1112,6 +1131,98 @@ function GenEditor({ initialDoc, onBack }) {
                 )}
               </div>
             </div>
+            {/* Mise en page du titre : affichage/masquage, position libre, opacité. */}
+            <div className="gen-form-row">
+              <div>
+                <label className="gen-check">
+                  <input
+                    type="checkbox"
+                    checked={meta.cover?.showTitle !== false}
+                    onChange={(e) => patchMeta({ cover: { ...(meta.cover || {}), showTitle: e.target.checked } })}
+                  />
+                  {t("Afficher le titre et le sous-titre")}
+                </label>
+              </div>
+              <div>
+                <label>{t("Alignement du titre")}</label>
+                <select
+                  className="input"
+                  value={meta.cover?.titleAlign || "center"}
+                  onChange={(e) => patchMeta({ cover: { ...(meta.cover || {}), titleAlign: e.target.value } })}
+                >
+                  <option value="left">{t("Gauche")}</option>
+                  <option value="center">{t("Centre")}</option>
+                  <option value="right">{t("Droite")}</option>
+                </select>
+              </div>
+            </div>
+            <div className="gen-form-row">
+              <div className="gen-grow">
+                <label>
+                  {t("Position horizontale du titre")} — {Math.round(meta.cover?.titleX ?? 50)} %
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="95"
+                  step="1"
+                  value={meta.cover?.titleX ?? 50}
+                  onChange={(e) => patchMeta({ cover: { ...(meta.cover || {}), titleX: Number(e.target.value) } })}
+                />
+              </div>
+              <div className="gen-grow">
+                <label>
+                  {t("Position verticale du titre")} — {Math.round(meta.cover?.titleY ?? 32)} %
+                </label>
+                <input
+                  type="range"
+                  min="5"
+                  max="95"
+                  step="1"
+                  value={meta.cover?.titleY ?? 32}
+                  onChange={(e) => patchMeta({ cover: { ...(meta.cover || {}), titleY: Number(e.target.value) } })}
+                />
+              </div>
+            </div>
+            {meta.cover?.image && (
+              <div className="gen-form-row">
+                <div className="gen-grow">
+                  <label>
+                    {t("Opacité de l'image de fond")} —{" "}
+                    {Math.round(
+                      meta.cover?.imageOpacity ?? Math.round((1 - (meta.cover?.imageDim ?? 0.35)) * 100)
+                    )}{" "}
+                    %
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={meta.cover?.imageOpacity ?? Math.round((1 - (meta.cover?.imageDim ?? 0.35)) * 100)}
+                    onChange={(e) =>
+                      patchMeta({
+                        cover: { ...(meta.cover || {}), imageOpacity: Number(e.target.value), imageDim: undefined },
+                      })
+                    }
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-small btn-outline"
+                  onClick={() =>
+                    patchMeta({
+                      cover: { ...(meta.cover || {}), showTitle: true, titleAlign: "center", titleX: 50, titleY: undefined },
+                    })
+                  }
+                >
+                  {t("Réinitialiser la position du titre")}
+                </button>
+              </div>
+            )}
+            <p className="hint">
+              {t("Le modèle de design impose la mise en page de la couverture (centrée, à gauche, en bande ou en haut) : ces réglages déplacent le titre et règlent la visibilité de la photo.")}
+            </p>
           </div>
 
           <div className="gen-design-block">
@@ -1382,7 +1493,7 @@ function GenEditor({ initialDoc, onBack }) {
               {t("Le PDF est généré puis téléversé dans le stockage privé de Mboppi. Le produit apparaît dans votre catalogue et le fichier devient téléchargeable par l'acheteur après confirmation du paiement.")}
             </p>
             <label>
-              {t("Prix (XAF)")}
+              {t("Prix")} ({priceCurrency})
               <input
                 className="input"
                 type="number"
@@ -1393,6 +1504,38 @@ function GenEditor({ initialDoc, onBack }) {
                 placeholder="2500"
               />
             </label>
+            <div className="gen-form-row">
+              <div className="gen-grow">
+                <label>{t("Commission vendeur (%)")}</label>
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={pub.commission}
+                  onChange={(e) => setPub({ ...pub, commission: e.target.value })}
+                  placeholder="0"
+                />
+              </div>
+              <div className="gen-grow">
+                <label>{t("Catégorie")}</label>
+                <select
+                  className="input"
+                  value={pub.category || "Digital"}
+                  onChange={(e) => setPub({ ...pub, category: e.target.value })}
+                >
+                  {DIGITAL_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="hint">
+              {t("La commission est reversée au vendeur qui vend votre produit avec son code vendeur (paiement manuel par vous, comme pour les produits physiques).")}
+            </p>
             <label>
               {t("Description (optionnelle)")}
               <textarea
@@ -1445,25 +1588,77 @@ function GenPage({ page, paginated, docMeta }) {
   const pageStyle = { width: mm(w), height: mm(h) };
 
   if (page.kind === "cover") {
-    const cover = docMeta.cover || {};
-    const bg = cover.bg || template.coverBg;
-    const fg = cover.text || template.coverText;
+    // Mêmes règles que le PDF et la miniature produit : resolveCover +
+    // coverLayoutBox (géométrie en mm convertie en % de la page).
+    const cover = resolveCover(docMeta, template);
+    const geo = coverLayoutBox(cover, w);
+    const fg = geo.band ? "#ffffff" : cover.fg;
+    const align = geo.leftish ? "left" : cover.align;
+    const leftPct = (geo.x / w) * 100;
+    const widthPct = (geo.maxW / w) * 100;
     return (
-      <div className="gen-page" style={{ ...pageStyle, background: bg, color: fg }}>
-        {cover.image && <img src={cover.image} alt="" className="gen-cover-img" style={{ opacity: 1 - (cover.imageDim ?? 0.35) }} />}
-        <div className="gen-cover-body" style={{ top: "32%", left: mm(15), right: mm(15) }}>
-          <div style={{ fontWeight: "bold", fontSize: pt(template.sizes.h1 + 8), fontFamily: FONT_CSS[template.headingFont] }}>
-            {cover.title || docMeta.title}
-          </div>
-          {(cover.subtitle || docMeta.subtitle) && (
-            <div style={{ fontSize: pt(template.sizes.h3), marginTop: mm(3), fontFamily: FONT_CSS[template.headingFont] }}>
-              {cover.subtitle || docMeta.subtitle}
+      <div className="gen-page" style={{ ...pageStyle, background: cover.bg, color: fg }}>
+        {cover.image && (
+          <img src={cover.image} alt="" className="gen-cover-img" style={{ opacity: 1 - cover.dim }} />
+        )}
+        {geo.band && (
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: "62%",
+              height: "38%",
+              background: cover.accent,
+            }}
+          />
+        )}
+        {cover.showTitle && (
+          <div
+            style={{
+              position: "absolute",
+              top: `${geo.yPct}%`,
+              left: `${leftPct}%`,
+              width: `${widthPct}%`,
+              textAlign: align,
+              fontFamily: FONT_CSS[template.headingFont],
+            }}
+          >
+            <div
+              style={{
+                fontWeight: "bold",
+                fontSize: pt(geo.band ? template.sizes.h1 + 4 : template.sizes.h1 + 8),
+              }}
+            >
+              {cover.title}
             </div>
-          )}
-        </div>
-        {docMeta.author && (
-          <div className="gen-cover-author" style={{ bottom: mm(6), fontSize: pt(template.sizes.h4) }}>
-            {docMeta.author}
+            {cover.subtitle && (
+              <div style={{ fontSize: pt(template.sizes.h3), marginTop: mm(3) }}>{cover.subtitle}</div>
+            )}
+            {cover.rule && !geo.band && (
+              <div
+                style={{
+                  height: mm(0.9),
+                  background: cover.accent,
+                  width: align === "center" ? "30%" : "45%",
+                  margin: align === "center" ? `${mm(3)}px auto 0` : `${mm(3)}px 0 0`,
+                }}
+              />
+            )}
+          </div>
+        )}
+        {cover.author && (
+          <div
+            className="gen-cover-author"
+            style={{
+              bottom: geo.band ? mm(4) : mm(6),
+              left: `${(geo.pad / w) * 100}%`,
+              width: `${((w - geo.pad * 2) / w) * 100}%`,
+              textAlign: geo.band ? "right" : align,
+              fontSize: pt(template.sizes.h4),
+            }}
+          >
+            {cover.author}
           </div>
         )}
       </div>
@@ -1589,14 +1784,62 @@ function GenItem({ item, template }) {
       </>
     );
   }
+  const decor =
+    item.kind === "h1" || item.kind === "h2" ? <GenHeadingDecor item={item} template={template} /> : null;
   return (
     <>
+      {decor}
       {(item.lines || []).map((ln, i) => (
         // `ln.top` est relatif à la boîte de l'atome : on y ajoute la position
         // de l'atome dans la page (sinon toutes les 3ᵉ lignes des blocs se
         // superposaient en haut de page).
         <GenLine key={i} ln={ln} top={item.top} />
       ))}
+    </>
+  );
+}
+
+// Décor de titre du modèle — miroir EXACT du PDF (drawHeadingDecor) : barre
+// d'accent à gauche de h1 et règle sous le titre (h1, ou h1 + h2 selon le
+// modèle). Sans cela, tous les designs se ressemblaient dans l'aperçu.
+function GenHeadingDecor({ item, template }) {
+  const ln = (item.lines || [])[0];
+  if (!ln) return null;
+  const lineH = ln.bottom - ln.top;
+  const isH1 = item.kind === "h1";
+  const rule = template.headingRule || "none";
+  const bar = template.headingBar || "none";
+  const lineIndex = item.lineIndex ?? 0;
+  const isLast = lineIndex === (item.groupLines || 1) - 1;
+  const applyRule = rule === "h1h2" || (rule === "h1" && isH1);
+  const words = ln.words || [];
+  const textW = words.length ? Math.max(...words.map((wd) => wd.x + wd.w)) : 0;
+  return (
+    <>
+      {bar === "left" && isH1 && lineIndex === 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: -5 * PX_PER_MM,
+            top: item.top,
+            width: 1.6 * PX_PER_MM,
+            height: lineH * Math.max(1, item.groupLines || 1),
+            background: template.colors.accent,
+          }}
+        />
+      )}
+      {isLast && applyRule && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: item.top + lineH + 1.4 * PX_PER_MM,
+            width: isH1 ? "100%" : textW,
+            height: (isH1 ? 0.7 : 0.4) * PX_PER_MM,
+            background: template.colors.accent,
+          }}
+        />
+      )}
     </>
   );
 }

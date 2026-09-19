@@ -16,6 +16,7 @@ import CopyCode from "../components/CopyCode.jsx";
 import DigitalDownload from "../components/DigitalDownload.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
+import { PriceEquivalent } from "../money.jsx";
 
 
 export default function PurchasePage() {
@@ -215,6 +216,10 @@ export default function PurchasePage() {
             <span className={`price ${flash ? "price-flash" : ""}`}>
               {formatMoney(displayPrice)} {symbol}
             </span>
+            <PriceEquivalent
+              amount={displayPrice}
+              fromCode={product.currency || product.shop_country}
+            />
           </p>
           <p className="product-shop" style={{ marginTop: 6 }}>
             {t("Boutique : {shop}", { shop: product.shop_name })}

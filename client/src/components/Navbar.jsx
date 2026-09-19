@@ -1167,6 +1167,14 @@ export default function Navbar({ onLogout }) {
           <span className="dl-label">{t("Mon espace créateur")}</span>
         </Link>
       )}
+      {user && user.role === "creator" && (
+        <Link to="/generateur" onClick={close} className="drawer-link drawer-link-creators">
+          <span className="dl-icon">
+            <IconBook size={15} />
+          </span>
+          <span className="dl-label">{t("Générateur de documents")}</span>
+        </Link>
+      )}
       {user && user.role === "livreur" && (
         <Link to="/livreur" onClick={close} className="drawer-link drawer-link-space">
           <span className="dl-icon">

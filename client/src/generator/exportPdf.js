@@ -7,7 +7,7 @@
 // puis converties (échec silencieux → image ignorée). Métadonnées complètes,
 // watermark optionnel, QR code de vérification, en-têtes/pieds paramétrables.
 import { jsPDF } from "jspdf";
-import { FONT_PDF } from "./templates.js";
+import { FONT_PDF, resolveCover, coverLayoutBox } from "./templates.js";
 import { PX_PER_MM } from "./paginate.js";
 import { copyrightLines, makeQrDataUrl, verificationPayload } from "./protection.js";
 
@@ -125,6 +125,7 @@ function drawParagraphText(doc, text, xMm, yMm, maxWmm, opts) {
   for (const ln of lines) {
     let x = xMm;
     if (align === "center") x = xMm + (maxWmm - doc.getTextWidth(ln)) / 2;
+    else if (align === "right") x = xMm + maxWmm - doc.getTextWidth(ln);
     doc.text(ln, x, y);
     y += lh;
   }
@@ -135,14 +136,14 @@ function drawParagraphText(doc, text, xMm, yMm, maxWmm, opts) {
 
 async function drawCover(doc, page, docMeta, template, box, qrDataUrl) {
   const { w, h } = box;
-  const cover = docMeta.cover || {};
-  const bg = cover.bg || template.coverBg;
-  const fg = cover.text || template.coverText;
+  const cover = resolveCover(docMeta, template);
+  const geo = coverLayoutBox(cover, w);
 
-  setFill(doc, bg);
+  setFill(doc, cover.bg);
   doc.rect(0, 0, w, h, "F");
 
-  // Image de couverture (cover-fit : débordement clipé par la page).
+  // Image de fond (cover-fit) + voile RÉGLABLE (« Opacité de l'image » :
+  // 100 % = photo nette sans voile, 0 % = fond uni du modèle).
   if (cover.image) {
     const data = await toDataUrl(cover.image);
     if (data) {
@@ -152,36 +153,55 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl) {
         const iw = size.width * scale;
         const ih = size.height * scale;
         doc.addImage(data, "JPEG", (w - iw) / 2, (h - ih) / 2, iw, ih);
-        // Voile pour la lisibilité du texte.
-        doc.saveGraphicsState();
-        doc.setGState(new doc.GState({ opacity: cover.imageDim ?? 0.35 }));
-        setFill(doc, bg);
-        doc.rect(0, 0, w, h, "F");
-        doc.restoreGraphicsState();
+        if (cover.dim > 0) {
+          doc.saveGraphicsState();
+          doc.setGState(new doc.GState({ opacity: cover.dim }));
+          setFill(doc, cover.bg);
+          doc.rect(0, 0, w, h, "F");
+          doc.restoreGraphicsState();
+        }
       } catch {
         /* image inexploitable : couverture couleur seule */
       }
     }
   }
 
-  const titleSize = template.sizes.h1 + 8;
-  let y = h * 0.32;
-  if (cover.title || docMeta.title) {
-    y = drawParagraphText(doc, cover.title || docMeta.title, 15, y, w - 30, {
+  // Mise en page « bande » : tiers inférieur aux couleurs d'accent du modèle.
+  if (geo.band) {
+    setFill(doc, cover.accent);
+    doc.rect(0, h * 0.62, w, h * 0.38, "F");
+  }
+
+  const fg = geo.band ? "#ffffff" : cover.fg;
+  const align = geo.leftish ? "left" : geo.align;
+  const titleSize = geo.band ? template.sizes.h1 + 4 : template.sizes.h1 + 8;
+
+  // Titre + sous-titre : affichables/masquables et positionnables (titleX/titleY).
+  let y = (geo.yPct / 100) * h;
+  if (cover.showTitle) {
+    y = drawParagraphText(doc, cover.title, geo.x, y, geo.maxW, {
       size: titleSize, font: FONT_PDF[template.headingFont], styleName: "bold",
-      color: fg, align: "center", lineHeight: 1.2,
+      color: fg, align, lineHeight: 1.2,
     });
+    if (cover.subtitle) {
+      y = drawParagraphText(doc, cover.subtitle, geo.x, y + 6, geo.maxW, {
+        size: template.sizes.h3, font: FONT_PDF[template.headingFont], styleName: "normal",
+        color: fg, align, lineHeight: 1.3,
+      });
+    }
+    // Règle d'accent sous le bloc titre (identité du modèle).
+    if (cover.rule && !geo.band) {
+      const rw = align === "center" ? geo.maxW * 0.3 : Math.min(geo.maxW * 0.45, 60);
+      const rx = align === "center" ? geo.x + (geo.maxW - rw) / 2 : geo.x;
+      setStroke(doc, cover.accent);
+      doc.setLineWidth(0.9);
+      doc.line(rx, y + 3, rx + rw, y + 3);
+    }
   }
-  if (cover.subtitle || docMeta.subtitle) {
-    y = drawParagraphText(doc, cover.subtitle || docMeta.subtitle, 20, y + 8, w - 40, {
-      size: template.sizes.h3, font: FONT_PDF[template.headingFont], styleName: "normal",
-      color: fg, align: "center", lineHeight: 1.3,
-    });
-  }
-  if (docMeta.author) {
-    drawParagraphText(doc, docMeta.author, 15, h - 28, w - 30, {
+  if (cover.author) {
+    drawParagraphText(doc, cover.author, geo.pad, geo.band ? h - 14 : h - 24, w - geo.pad * 2, {
       size: template.sizes.h4, font: FONT_PDF[template.bodyFont], styleName: "normal",
-      color: fg, align: "center",
+      color: fg, align: geo.band ? "right" : geo.leftish ? "left" : "center",
     });
   }
   if (qrDataUrl) {
@@ -190,8 +210,46 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl) {
   }
 }
 
+// Décor de titre du modèle : barre d'accent à gauche de h1 et règle sous le
+// titre (h1 seul, ou h1 + h2 pour les modèles « h1h2 »). C'est ce qui rend les
+// designs immédiatement reconnaissables dans le PDF.
+function drawHeadingDecor(doc, item, template, box) {
+  const ln = (item.lines || [])[0];
+  if (!ln) return;
+  const isH1 = item.kind === "h1";
+  const isH2 = item.kind === "h2";
+  if (!isH1 && !isH2) return;
+  const { w, m } = box;
+  const lineH = ln.bottom - ln.top;
+  const itemTopMm = m.top + pxToMm(item.top);
+  const rule = template.headingRule || "none";
+  const bar = template.headingBar || "none";
+  const lineIndex = item.lineIndex ?? 0;
+  if (bar === "left" && isH1 && lineIndex === 0) {
+    const barH = pxToMm(lineH) * Math.max(1, item.groupLines || 1);
+    setFill(doc, template.colors.accent);
+    doc.rect(Math.max(4, m.left - 5), itemTopMm, 1.6, barH, "F");
+  }
+  if (
+    lineIndex === (item.groupLines || 1) - 1 &&
+    rule !== "none" &&
+    (isH1 || (isH2 && rule === "h1h2"))
+  ) {
+    const words = ln.words || [];
+    const textW = words.length ? Math.max(...words.map((wd) => wd.x + wd.w)) : 0;
+    const contentW = w - m.left - m.right;
+    const rw = isH1 ? contentW : Math.min(textW, contentW);
+    setStroke(doc, template.colors.accent);
+    doc.setLineWidth(isH1 ? 0.7 : 0.4);
+    const ry = itemTopMm + pxToMm(lineH) + 1.4;
+    doc.line(m.left, ry, m.left + Math.max(10, rw), ry);
+  }
+}
+
 function drawCopyright(doc, docMeta, template, box, contentHash) {
   const { w, h } = box;
+  setFill(doc, template.colors.bg);
+  doc.rect(0, 0, w, h, "F");
   const lines = copyrightLines(docMeta);
   let y = h * 0.42;
   doc.setFont(FONT_PDF[template.bodyFont], "normal");
@@ -222,6 +280,8 @@ const TOC_LH = 1.9;
 
 function drawToc(doc, page, template, box) {
   const { w, m } = box;
+  setFill(doc, template.colors.bg);
+  doc.rect(0, 0, w, box.h, "F");
   const s = template.sizes;
   let y = m.top + 14;
   doc.setFont(FONT_PDF[template.headingFont], "bold");
@@ -342,9 +402,14 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
     } else if (page.kind === "toc") {
       drawToc(doc2, page, template, box);
     } else {
-      // Page de contenu : les atomes mesurés portent leurs positions exactes
-      // DANS la boîte de texte utile → on ajoute la marge de page (m.left/m.top)
-      // et la position de l'atome (item.top), comme le fait l'aperçu HTML.
+      // Page de contenu : fond du modèle (thèmes crème, rosé, ambré, ivoire…)
+      // puis les atomes mesurés — positions exactes DANS la boîte de texte
+      // utile → on ajoute la marge de page (m.left/m.top) et la position de
+      // l'atome (item.top), comme le fait l'aperçu HTML.
+      if (template.colors.bg && template.colors.bg !== "#ffffff") {
+        setFill(doc2, template.colors.bg);
+        doc2.rect(0, 0, w, h, "F");
+      }
       for (const item of page.items) {
         const itemTopMm = m.top + pxToMm(item.top);
         if (item.kind === "image") {
@@ -365,6 +430,8 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
           drawTableRow(doc2, item, template, box);
         } else {
           for (const ln of item.lines || []) drawLine(doc2, ln, m.left, itemTopMm);
+          // Barre latérale / règle de titre propres au modèle de design.
+          drawHeadingDecor(doc2, item, template, box);
         }
       }
       drawWatermark(doc2, docMeta, template, box);

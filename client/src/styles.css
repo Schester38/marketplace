@@ -1814,10 +1814,23 @@ textarea {
 
 .price-box {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
   margin-top: auto;
+}
+/* Équivalent converti (≈) — AFFICHAGE SEUL : devise du visiteur ≠ devise du
+   produit (client/src/money.jsx). Toujours discret, jamais le prix principal. */
+.price-conv {
+  flex-basis: 100%;
+  width: 100%;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.price-conv-lg {
+  font-size: 0.85rem;
 }
 .price-box .price-line {
   display: inline-flex;
@@ -9701,6 +9714,54 @@ a.step {
   border-radius: 10px;
   display: grid;
   gap: 10px;
+}
+/* Rangées de réglages (couverture) : les curseurs occupent toute la largeur. */
+.gen-form-row input[type="range"] {
+  width: 100%;
+  accent-color: var(--primary);
+}
+/* Image redimensionnable de l'éditeur : poignée de glissement + largeur (%). */
+.gen-img-node {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+.gen-img-node img {
+  display: block;
+  height: auto;
+  border-radius: 4px;
+}
+.gen-img-node.is-selected img {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.gen-img-handle {
+  position: absolute;
+  right: -9px;
+  bottom: -9px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 1;
+  cursor: nwse-resize;
+  touch-action: none;
+  user-select: none;
+}
+.gen-img-pct {
+  position: absolute;
+  top: -12px;
+  left: 0;
+  background: var(--primary);
+  color: #fff;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 8px;
 }
 .gen-form-row {
   display: flex;

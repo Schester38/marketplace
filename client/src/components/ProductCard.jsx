@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { countrySymbol, waLink } from "../config.js";
 import { useAuth } from "../App.jsx";
+import { PriceEquivalent } from "../money.jsx";
 import { useLang } from "../i18n.jsx";
 import { useCart, useFavs } from "../store.jsx";
 import {
@@ -177,6 +178,10 @@ export default function ProductCard({
               {formatMoney(displayPrice)} {symbol}
             </span>
           </span>
+          <PriceEquivalent
+            amount={displayPrice}
+            fromCode={product.currency || product.shop_country}
+          />
           {showCommission && (
             <span className="commission">
               +{formatMoney(commission)} {symbol}

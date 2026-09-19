@@ -4,8 +4,8 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
 import ProductCard, { formatMoney } from "../components/ProductCard.jsx";
-import { countrySymbol, BASE_URL } from "../config.js";
-import { whatsappLink, categoryEmoji } from "../config.js";
+import { countrySymbol, BASE_URL, whatsappLink, categoryEmoji } from "../config.js";
+import { PriceEquivalent } from "../money.jsx";
 import { useAuth } from "../App.jsx";
 import { useCart, useFavs } from "../store.jsx";
 import { useLang } from "../i18n.jsx";
@@ -548,6 +548,11 @@ export default function ProductDetail() {
               <span className={`promo-price ${flash ? "price-flash" : ""}`}>
                 {formatMoney(displayPrice)} {symbol}
               </span>
+              <PriceEquivalent
+                amount={displayPrice}
+                fromCode={product.currency || product.shop_country}
+                className="price-conv price-conv-lg"
+              />
             </div>
             {flash && (
               <p className="flash-detail-hint">
