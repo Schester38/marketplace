@@ -11,7 +11,7 @@
 import JSZip from "jszip";
 import { FONT_CSS, getTemplate, resolveTemplate } from "./templates.js";
 import { renderCoverImage } from "./coverImage.js";
-import { copyrightLines } from "./protection.js";
+import { copyrightLines, makeQrDataUrl, verificationPayload } from "./protection.js";
 
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ESC[c]);
@@ -52,7 +52,8 @@ function inlineNode(node) {
   }
   if (t === "hardBreak") return "<br/>";
   if (t === "image" && node.attrs?.src) {
-    return `<img src="${esc(node.attrs.src)}" alt="${esc(node.attrs.alt || "")}"${
+    const w = node.attrs.width ? ` style="width:${esc(String(node.attrs.width))}"` : "";
+    return `<img src="${esc(node.attrs.src)}" alt="${esc(node.attrs.alt || "")}"${w}${
       node.attrs.title ? ` title="${esc(node.attrs.title)}"` : ""
     }/>`;
   }
@@ -221,6 +222,40 @@ export async function exportEpub({ doc, docMeta, onProgress }) {
   onProgress?.(35, "Extraction des images…");
   collectImages(docModel.content || []);
   for (const [src, info] of imageMap) oebps.file(info.file, dataUrlToUint8(src));
+
+  // Marqueur [QR] : le QR de vérification (même payload que le PDF) devient une
+  // image EPUB classique — déclaré dans le manifeste via imageMap, chaque
+  // paragraphe contenant exactement « [QR] » est remplacé par cette image.
+  const qrDataUrl =
+    docMeta.protection?.qrEnabled === false
+      ? null
+      : await makeQrDataUrl(verificationPayload(docMeta, docMeta.content_hash || ""), 320);
+  let qrFile = null;
+  if (qrDataUrl) {
+    imageMap.set(qrDataUrl, { file: "media/qr.png", mime: "image/png" });
+    oebps.file("media/qr.png", dataUrlToUint8(qrDataUrl));
+    qrFile = "media/qr.png";
+  }
+  const isQrMarker = (n) => {
+    if (n?.type !== "paragraph") return false;
+    const txt = (n.content || []).map((c) => c.text || "").join("").trim();
+    return /^\[\s*qr\s*\]$/i.test(txt);
+  };
+  const withQr = (nodes) =>
+    (nodes || []).map((n) => {
+      if (isQrMarker(n)) {
+        // Image INLINE dans un paragraphe : blockToXhtml ne sait rendre que des
+        // blocs — un nœud image nu en tête de chapitre serait perdu.
+        return qrFile
+          ? {
+              type: "paragraph",
+              content: [{ type: "image", attrs: { src: qrFile, alt: "QR de vérification", width: "60%" } }],
+            }
+          : { type: "paragraph", content: [] };
+      }
+      if (n.content) return { ...n, content: withQr(n.content) };
+      return n;
+    });
   // Réécriture des src dataURL → chemins EPUB (les nœuds ne sont jamais mutés :
   // clonage superficiel de l'attr src uniquement).
   const withImages = (nodes) =>
@@ -260,7 +295,7 @@ export async function exportEpub({ doc, docMeta, onProgress }) {
   for (let i = 0; i < chapters.length; i++) {
     onProgress?.(40 + Math.round(((i + 1) / total) * 40), `Chapitre ${i + 1}/${total}…`);
     const ch = chapters[i];
-    const body = withImages(ch.nodes).map((n) => blockToXhtml(n)).join("\n");
+    const body = withImages(withQr(ch.nodes)).map((n) => blockToXhtml(n)).join("\n");
     const heading = ch.title ? `<header><h1>${esc(ch.title)}</h1></header>` : "";
     const chTitle = ch.title || `Chapitre ${i + 1}`;
     documents.push({

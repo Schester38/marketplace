@@ -152,7 +152,10 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl) {
         const scale = Math.max(w / size.width, h / size.height);
         const iw = size.width * scale;
         const ih = size.height * scale;
-        doc.addImage(data, "JPEG", (w - iw) / 2, (h - ih) / 2, iw, ih);
+        // Cadrage vertical réglable (`imageY`, 0 % = haut conservé) : identique
+        // à l'aperçu HTML et à la miniature produit (coverImage.js).
+        const oy = ((cover.imageY ?? 30) / 100) * Math.max(0, ih - h);
+        doc.addImage(data, "JPEG", (w - iw) / 2, -oy, iw, ih);
         if (cover.dim > 0) {
           doc.saveGraphicsState();
           doc.setGState(new doc.GState({ opacity: cover.dim }));
@@ -426,6 +429,24 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
           doc2.setLineWidth(0.3);
           const yMm = itemTopMm + pxToMm(2);
           doc2.line(m.left + pxToMm(contentWpx * 0.2), yMm, m.left + pxToMm(contentWpx * 0.8), yMm);
+        } else if (item.kind === "qr") {
+          // Emplacement [QR] : le vrai QR de vérification est dessiné dans la
+          // boîte réservée (pagination identique à une image, insécable).
+          const s = pxToMm(item.w);
+          const xMm = m.left + pxToMm(item.x || 0);
+          if (qrDataUrl) {
+            try {
+              doc2.addImage(qrDataUrl, "PNG", xMm, itemTopMm, s, s);
+            } catch {
+              /* QR indisponible : cadre seul */
+            }
+          }
+          // Cadre discret autour de l'emplacement (utile aussi si QR désactivé).
+          setStroke(doc2, template.colors.accent);
+          doc2.setLineWidth(0.3);
+          doc2.setLineDashPattern([1.5, 1.5], 0);
+          doc2.rect(xMm, itemTopMm, s, s, "S");
+          doc2.setLineDashPattern([], 0);
         } else if (item.kind === "tableRow") {
           drawTableRow(doc2, item, template, box);
         } else {

@@ -20,6 +20,10 @@ import { FONT_CSS, getTemplate, resolveTemplate, resolvePageBox, blockSpacing } 
 
 export const PX_PER_MM = 96 / 25.4; // px CSS par mm (96 dpi)
 export const PT_TO_PX = 96 / 72; // px CSS par point typographique
+// Boîte du marqueur [QR] : un paragraphe contenant exactement « [QR] » réserve
+// cet emplacement (40 mm, scannable à l'impression) ; le PDF y dessine le vrai
+// QR de vérification, l'aperçu un cadre en pointillés, l'EPUB l'image réelle.
+export const QR_BOX_MM = 40;
 
 export function rgbToHex(rgb) {
   const m = String(rgb).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -177,7 +181,9 @@ function pushLineAtoms(atoms, lines, kind, sp, groupId, marker) {
       groupLines: lines.length,
       lineIndex: i,
       keepNext: /^h[1-4]$/.test(kind),
-      chapterStart: (kind === "h1" || kind === "h2") && i === 0,
+      // Seul un h1 (chapitre) ouvre une nouvelle page : les h2 sont des
+      // sections, qui restent dans le flux (titre jamais isolé en bas de page).
+      chapterStart: kind === "h1" && i === 0,
       breakable: true,
     });
   });
@@ -215,6 +221,22 @@ function atomsFromBlock(el, host, hostRect, template, groupId) {
 
   if (lower === "hr") {
     return [{ kind: "hr", sp: blockSpacing(template, "hr"), groupId, groupLines: 1, breakable: false }];
+  }
+
+  // Marqueur [QR] : un paragraphe contenant exactement ce texte (insensible à
+  // la casse/espaces) réserve l'emplacement du QR code de vérification. La
+  // boîte est centrée dans la largeur de contenu ; sa hauteur guide la
+  // pagination comme une image (insécable, jamais coupée entre deux pages).
+  if (lower === "p" && /^\[\s*qr\s*\]$/i.test(el.textContent.trim())) {
+    const size = QR_BOX_MM * PX_PER_MM;
+    return [{
+      kind: "qr",
+      x: Math.max(0, (hostRect.width - size) / 2),
+      w: size,
+      h: size,
+      sp: blockSpacing(template, "image"),
+      groupId: groupId + "-qr", groupLines: 1, breakable: false,
+    }];
   }
 
   if (lower === "table") {
@@ -346,6 +368,10 @@ export async function measureDocument(html, docMeta, template) {
 
 // ─── Flux en pages ──────────────────────────────────────────────────────────
 
+// Retrait d'ouverture de chapitre (fraction de la hauteur utile) : la première
+// page d'un chapitre respire, comme dans un livre imprimé.
+const CHAPTER_DROP = 0.1;
+
 function findGroupStart(items, groupId) {
   for (let i = 0; i < items.length; i++) {
     if (items[i].groupId === groupId) return i;
@@ -363,7 +389,7 @@ export function flowAtoms(atoms, contentHpx, template, bodyLineH) {
   let firstPlaced = false;
 
   const atomH = (a) => {
-    if (a.kind === "image" || a.kind === "tableRow") return a.h;
+    if (a.kind === "image" || a.kind === "tableRow" || a.kind === "qr") return a.h;
     if (a.kind === "hr") return 4;
     const ln = a.lines?.[0];
     return ln ? ln.bottom - ln.top : 0;
@@ -406,9 +432,19 @@ export function flowAtoms(atoms, contentHpx, template, bodyLineH) {
     const before = Math.max(atom.sp.before * PT_TO_PX, prevAfter * PT_TO_PX);
     const after = atom.sp.after * PT_TO_PX;
 
-    // Saut de chapitre (jamais sur la toute première page de contenu).
+    // Ouverture de chapitre : un h1 (chapitre) commence TOUJOURS sur une
+    // nouvelle page quand le modèle le demande — jamais sur la toute première
+    // page de contenu (sinon la première page serait vide). Les h2 sont des
+    // sections : ils restent dans le flux (titre insécable + garde avec la
+    // suite), sinon chaque ligne en majuscules couperait la page.
     if (atom.chapterStart && template.chapterNewPage && firstPlaced) {
       flush();
+      // Retrait « ouverture de chapitre » : la page respire, comme dans un
+      // livre imprimé (le PDF et l'aperçu consomment la même position).
+      if (items.length === 0) {
+        y = contentHpx * CHAPTER_DROP;
+        prevAfter = 0;
+      }
     }
 
     if (items.length > 0) {

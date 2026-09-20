@@ -192,6 +192,9 @@ export function resolveCover(docMeta, template) {
     align: ["left", "center", "right"].includes(c.titleAlign) ? c.titleAlign : "center",
     x: num(c.titleX, 5, 95, 50),
     y: num(c.titleY, 5, 95, 32),
+    // Cadrage vertical de la photo de fond : 0 % = haut de l'image conservé
+    // (le haut n'est plus coupé), 100 % = bas de l'image. Défaut 30 %.
+    imageY: num(c.imageY, 0, 100, 30),
     customX: c.titleX !== undefined && c.titleX !== null,
     customY: c.titleY !== undefined && c.titleY !== null,
     layout: ["center", "left", "band", "top"].includes(template.coverLayout)

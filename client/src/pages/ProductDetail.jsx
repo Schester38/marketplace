@@ -226,6 +226,27 @@ export default function ProductDetail() {
     pdTouchX.current = null;
   };
 
+  // ---------------- ACHAT DIGITAL EN LIGNE (iKeePay) ----------------
+  // IMPORTANT : ces hooks restent AVANT les retours anticipés ci-dessous.
+  // Un hook appelé après un `return` conditionnel change le nombre de hooks
+  // entre deux rendus → « Rendered more hooks than during the previous render »
+  // (React #310) dès que la fiche produit finit de charger.
+  const stopDigitalPoll = () => {
+    if (dPollRef.current) {
+      clearInterval(dPollRef.current);
+      dPollRef.current = null;
+    }
+  };
+  useEffect(() => {
+    dBuyRef.current = dBuy;
+  }, [dBuy]);
+  useEffect(
+    () => () => {
+      stopDigitalPoll();
+    },
+    []
+  );
+
   if (error) {
     return (
       <main className="container pd-page">
@@ -255,21 +276,7 @@ export default function ProductDetail() {
   const displayPrice = flash ? Number(flash.price) : Number(product.price);
 
   // ---------------- ACHAT DIGITAL EN LIGNE (iKeePay) ----------------
-  const stopDigitalPoll = () => {
-    if (dPollRef.current) {
-      clearInterval(dPollRef.current);
-      dPollRef.current = null;
-    }
-  };
-  useEffect(() => {
-    dBuyRef.current = dBuy;
-  }, [dBuy]);
-  useEffect(
-    () => () => {
-      stopDigitalPoll();
-    },
-    []
-  );
+  // (hooks déplacés AVANT les retours anticipés — voir plus haut.)
 
   // Sondage (4 s) : le serveur confirme dès le webhook iKeePay, et répare
   // tout webhook manqué (réconciliation par les logs — même mécanisme que

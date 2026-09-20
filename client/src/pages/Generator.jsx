@@ -29,6 +29,7 @@ import {
 import { useAuth } from "../App.jsx";
 import { DIGITAL_CATEGORIES, countrySymbol } from "../config.js";
 import { detectStructureHtml } from "../generator/structure.js";
+import { HeadingAutoDetect, formatHeadings } from "../generator/headings.js";
 import { paginateDocument, PX_PER_MM, PT_TO_PX } from "../generator/paginate.js";
 import { exportDocumentPdf, saveBlob } from "../generator/exportPdf.js";
 import { exportEpub } from "../generator/epub.js";
@@ -380,6 +381,8 @@ function GenEditor({ initialDoc, onBack }) {
   const [pub, setPub] = useState(null); // formulaire { price, description }
   const [pubBusy, setPubBusy] = useState(null); // label d'étape ou null
   const [published, setPublished] = useState(null); // { product_id, updated }
+  const [delBusy, setDelBusy] = useState(false); // suppression du produit publié
+  const [formatMsg, setFormatMsg] = useState(""); // résultat de « Détecter les titres »
   const hasAi = typeof meta.ai_available === "undefined" ? true : meta.ai_available;
 
   const contentRef = useRef(initialDoc.content || EMPTY_DOC);
@@ -391,6 +394,9 @@ function GenEditor({ initialDoc, onBack }) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3, 4] } }),
+      // Détection intelligente des titres : conversion en direct (Entrée en
+      // fin de ligne-titre) + collage automatique d'un texte structuré.
+      HeadingAutoDetect,
       ResizableImage.configure({ inline: false, allowBase64: true }),
       TableKit.configure({ table: { resizable: true } }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
@@ -400,6 +406,9 @@ function GenEditor({ initialDoc, onBack }) {
     onUpdate: ({ editor: ed }) => {
       contentRef.current = ed.getJSON();
       scheduleSave();
+      // L'aperçu paginé (et donc le PDF exporté) est périmé dès que le texte
+      // change : invalidation automatique, ~0,8 s après la dernière frappe.
+      markContentDirty();
     },
   });
   editorRef.current = editor;
@@ -439,6 +448,25 @@ function GenEditor({ initialDoc, onBack }) {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => saveNow(), 1500);
   }, [saveNow]);
+
+  // ─── Aperçu : invalidation AUTOMATIQUE dès que le texte change ─────────────
+  // Avant, seul le bouton « 🔍 Vérifier » (qui appelait buildPreview) rafraîchissait
+  // l'aperçu : les modifications semblaient ne s'appliquer qu'après ce clic.
+  // Désormais toute frappe marque l'aperçu comme périmé (debounce 0,8 s pour ne
+  // pas relancer la mesure à chaque caractère) ; l'aperçu est reconstruit dès
+  // qu'il est affiché (effet plus bas), et le rapport qualité suit.
+  const previewStaleTimer = useRef(null);
+  const markContentDirty = useCallback(() => {
+    if (previewStaleTimer.current) clearTimeout(previewStaleTimer.current);
+    previewStaleTimer.current = setTimeout(() => setPreview(null), 800);
+  }, []);
+
+  // Le rapport « 🔍 DOCUMENT CHECK » reste cohérent : dès qu'un nouvel aperçu
+  // paginé est construit alors que le rapport est ouvert, il est recalculé.
+  useEffect(() => {
+    if (!preview) return;
+    setCheck((cur) => (cur ? checkDocument({ paginated: preview, docMeta: metaRef.current }) : cur));
+  }, [preview]);
 
   const patchMeta = (patch, immediate = false) => {
     setMeta((cur) => ({ ...cur, ...patch }));
@@ -651,6 +679,33 @@ function GenEditor({ initialDoc, onBack }) {
     setAiResult(null);
   };
 
+  // ─── Détection intelligente des titres (passe complète) ────────────────────
+  // Convertit les paragraphes qui sont des titres et propose de numéroter les
+  // chapitres sans numéro (série continue : CHAPITRE 1, 2, 3…). Le texte n'est
+  // jamais réécrit ailleurs ; tout est annulable (Ctrl+Z).
+  const detectTitles = () => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    const number = window.confirm(
+      t(
+        "Numéroter automatiquement les chapitres qui n'ont pas de numéro (CHAPITRE 1, 2, 3…) ? Les titres déjà numérotés ne sont pas modifiés."
+      )
+    );
+    const res = formatHeadings(ed, { number });
+    setFormatMsg(
+      res.headings === 0
+        ? t("Aucun titre détecté : ajoutez « Chapitre 1 », « INTRODUCTION », « 1.2 … » ou une ligne en MAJUSCULES.")
+        : t("{n} titre(s) mis en forme{m}", {
+            n: res.headings,
+            m: res.numbered ? ` — ${res.numbered} chapitre(s) numéroté(s)` : "",
+          })
+    );
+    if (res.headings) {
+      contentRef.current = ed.getJSON();
+      saveNow();
+    }
+  };
+
   // ─── Contrôle qualité (🔍 DOCUMENT CHECK — analyse de la sortie paginée) ───
   const runCheck = async () => {
     setError("");
@@ -786,6 +841,38 @@ function GenEditor({ initialDoc, onBack }) {
     }
   };
 
+  // ─── Suppression TOTALE du produit publié (base + fichiers) ─────────────────
+  // Route dédiée du Générateur : ouverte à l'admin ET au créateur propriétaire
+  // (la portée owner_id est vérifiée côté serveur). Le produit, ses photos, le
+  // PDF du bucket privé, ses ventes/téléchargements/avis liés sont supprimés et
+  // le document redevient publiable.
+  const doDeleteProduct = async () => {
+    const pid = Number(meta.published_product_id);
+    if (!pid || delBusy) return;
+    if (
+      !window.confirm(
+        t(
+          "Supprimer DÉFINITIVEMENT ce produit publié et son fichier ? Le produit disparaît du catalogue et toutes ses données liées (ventes, téléchargements, avis) sont supprimées. Action irréversible."
+        )
+      )
+    ) {
+      return;
+    }
+    setDelBusy(true);
+    setError("");
+    try {
+      await api.genDeleteProduct(meta.id);
+      setPublished(null);
+      // Le serveur a déjà posé published_product_id = NULL ; on synchronise
+      // l'état local sans recharger la bibliothèque.
+      setMeta((cur) => ({ ...cur, published_product_id: null }));
+    } catch (e) {
+      setError(e?.message || t("Suppression impossible"));
+    } finally {
+      setDelBusy(false);
+    }
+  };
+
   // ─── Restauration d'un instantané (versions enregistrées) ──────────────────
   const restoreVersion = async (v) => {
     if (!window.confirm(t("Restaurer cette version ? Le contenu actuel sera remplacé (les versions restent disponibles)."))) return;
@@ -883,6 +970,16 @@ function GenEditor({ initialDoc, onBack }) {
           <button
             type="button"
             className="btn btn-outline btn-small"
+            onClick={detectTitles}
+            title={t(
+              "Analyser tout le texte et transformer les lignes qui sont des titres (CHAPITRE 3, INTRODUCTION, 1.2 Mesure, lignes en MAJUSCULES…) en vrais titres, avec numérotation des chapitres"
+            )}
+          >
+            🧠 {t("Détecter les titres")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline btn-small"
             onClick={runCheck}
             title={t("Analyser le document (structure, pagination, images) avant l'export")}
           >
@@ -910,7 +1007,17 @@ function GenEditor({ initialDoc, onBack }) {
         <p className="hint gen-ref">
           {t("Référence")} : <strong>{meta.doc_ref}</strong>
           {meta.published_product_id && (
-            <> — 🛒 {t("Produit digital")} <a href={`/produit/${meta.published_product_id}`} target="_blank" rel="noreferrer">#{meta.published_product_id}</a></>
+            <> — 🛒 {t("Produit digital")} <a href={`/produit/${meta.published_product_id}`} target="_blank" rel="noreferrer">#{meta.published_product_id}</a>{" "}
+              <button
+                type="button"
+                className="btn btn-small btn-outline"
+                onClick={doDeleteProduct}
+                disabled={delBusy}
+                title={t("Supprimer définitivement ce produit publié (base de données + fichier)")}
+              >
+                {delBusy ? "…" : `🗑 ${t("Supprimer")}`}
+              </button>
+            </>
           )}
           {versions.length > 0 && <> — {versions.length} {t("version(s)")}</>}
         </p>
@@ -933,6 +1040,14 @@ function GenEditor({ initialDoc, onBack }) {
         </details>
       )}
       {error && <p className="error" role="alert">{error}</p>}
+      {formatMsg && (
+        <p className="hint gen-format-msg" role="status">
+          {formatMsg}{" "}
+          <button type="button" className="btn btn-small btn-outline" onClick={() => setFormatMsg("")}>
+            {t("OK")}
+          </button>
+        </p>
+      )}
 
       {/* ─── Vue CONTENU : éditeur TipTap + import + mise en forme ────────── */}
       {view === "edit" && (
@@ -979,6 +1094,21 @@ function GenEditor({ initialDoc, onBack }) {
               <input type="file" accept="image/*" hidden onChange={onInsertImage} />
             </label>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().insertTable({ rows: 2, cols: 3, withHeaderRow: true }).run()} title={t("Tableau")}>▦</button>
+            <button
+              type="button"
+              className="btn btn-small btn-outline"
+              onClick={() =>
+                editor
+                  ?.chain()
+                  .focus()
+                  .insertContent({
+                    type: "paragraph",
+                    content: [{ type: "text", text: "[QR]" }],
+                  })
+                  .run()
+              }
+              title={t("Emplacement du QR de vérification — insère un paragraphe « [QR] » qui devient le QR code dans l'aperçu, le PDF et l'EPUB (réservez l'espace à cet endroit sur votre affiche)")}
+            >▩</button>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().setTextAlign("left").run()} title={t("Aligner à gauche")}>⯇</button>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().setTextAlign("center").run()} title={t("Centrer")}>≡</button>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().setTextAlign("justify").run()} title={t("Justifier")}>☰</button>
@@ -1238,12 +1368,33 @@ function GenEditor({ initialDoc, onBack }) {
                     }
                   />
                 </div>
+                <div className="gen-grow">
+                  <label>
+                    {t("Cadrage vertical de l'image")} — {Math.round(meta.cover?.imageY ?? 30)} %
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value={meta.cover?.imageY ?? 30}
+                    onChange={(e) => patchMeta({ cover: { ...(meta.cover || {}), imageY: Number(e.target.value) } })}
+                    title={t("0 % = haut de la photo conservé (plus de coupe en haut), 100 % = bas de la photo")}
+                  />
+                </div>
                 <button
                   type="button"
                   className="btn btn-small btn-outline"
                   onClick={() =>
                     patchMeta({
-                      cover: { ...(meta.cover || {}), showTitle: true, titleAlign: "center", titleX: 50, titleY: undefined },
+                      cover: {
+                        ...(meta.cover || {}),
+                        showTitle: true,
+                        titleAlign: "center",
+                        titleX: 50,
+                        titleY: undefined,
+                        imageY: undefined,
+                      },
                     })
                   }
                 >
@@ -1564,9 +1715,6 @@ function GenEditor({ initialDoc, onBack }) {
                 </select>
               </div>
             </div>
-            <p className="hint">
-              {t("La commission est reversée au vendeur qui vend votre produit avec son code vendeur (paiement manuel par vous, comme pour les produits physiques).")}
-            </p>
             <label>
               {t("Description (optionnelle)")}
               <textarea
@@ -1579,10 +1727,21 @@ function GenEditor({ initialDoc, onBack }) {
               />
             </label>
             <div className="gen-publish-actions">
-              <button type="button" className="btn btn-primary" onClick={doPublish} disabled={pubBusy !== null}>
+              <button type="button" className="btn btn-primary" onClick={doPublish} disabled={pubBusy !== null || delBusy}>
                 {pubBusy !== null ? pubBusy : meta.published_product_id ? t("Mettre à jour le produit") : t("Publier maintenant")}
               </button>
-              <button type="button" className="btn btn-outline" onClick={() => setPub(null)} disabled={pubBusy !== null}>
+              {meta.published_product_id && (
+                <button
+                  type="button"
+                  className="btn btn-outline gen-danger"
+                  onClick={doDeleteProduct}
+                  disabled={pubBusy !== null || delBusy}
+                  title={t("Supprimer définitivement ce produit publié (base de données + fichier)")}
+                >
+                  {delBusy ? t("Suppression…") : `🗑 ${t("Supprimer le produit publié")}`}
+                </button>
+              )}
+              <button type="button" className="btn btn-outline" onClick={() => setPub(null)} disabled={pubBusy !== null || delBusy}>
                 {t("Annuler")}
               </button>
             </div>
@@ -1630,7 +1789,12 @@ function GenPage({ page, paginated, docMeta }) {
     return (
       <div className="gen-page" style={{ ...pageStyle, background: cover.bg, color: fg }}>
         {cover.image && (
-          <img src={cover.image} alt="" className="gen-cover-img" style={{ opacity: 1 - cover.dim }} />
+          <img
+            src={cover.image}
+            alt=""
+            className="gen-cover-img"
+            style={{ opacity: 1 - cover.dim, objectPosition: `50% ${cover.imageY ?? 30}%` }}
+          />
         )}
         {geo.band && (
           <div
@@ -1788,6 +1952,16 @@ function GenItem({ item, template }) {
           borderTop: `1px solid ${template.colors.accent}`,
         }}
       />
+    );
+  }
+  if (item.kind === "qr") {
+    return (
+      <div
+        className="gen-qr-slot"
+        style={{ position: "absolute", top: item.top, left: item.x ?? 0, width: item.w, height: item.h }}
+      >
+        <span>QR</span>
+      </div>
     );
   }
   if (item.kind === "tableRow") {

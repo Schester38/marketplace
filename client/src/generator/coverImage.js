@@ -45,9 +45,9 @@ export async function renderCoverImage(docMeta, { width = 480 } = {}) {
     docMeta.style_overrides
   );
   const cover = resolveCover(docMeta, template);
-  const geo = coverLayoutBox(cover, w);
   const w = Math.max(120, Math.round(width));
   const h = Math.round(w * RATIO);
+  const geo = coverLayoutBox(cover, w);
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
@@ -64,7 +64,10 @@ export async function renderCoverImage(docMeta, { width = 480 } = {}) {
       const scale = Math.max(w / img.width, h / img.height);
       const dw = img.width * scale;
       const dh = img.height * scale;
-      ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh);
+      // Cadrage vertical réglable (`imageY`, 0 % = haut de la photo conservé,
+      // 100 % = bas) — par défaut 30 % : le haut de l'image n'est plus coupé.
+      const oy = ((cover.imageY ?? 30) / 100) * Math.max(0, dh - h);
+      ctx.drawImage(img, (w - dw) / 2, -oy, dw, dh);
       if (cover.dim > 0) {
         ctx.globalAlpha = cover.dim;
         ctx.fillStyle = cover.bg;

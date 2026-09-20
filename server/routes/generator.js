@@ -32,6 +32,9 @@ import {
   digitalObjectKey,
   digitalObjectMeta,
   digitalObjectExists,
+  deleteDigitalFile,
+  collectStorageKeys,
+  deleteStorageKeys,
   DIGITAL_MAX_BYTES,
   DIGITAL_EXT_ALLOWED,
   safeFileExt,
@@ -787,7 +790,8 @@ router.post(
       productId = existing.id;
       await q(
         `UPDATE products SET name = $2, description = $3, price = $4, currency = $5, category = $6,
-            commission_percent = $7, image = COALESCE($8, image), photos = $9::jsonb,
+            commission_percent = $7, image = COALESCE($8, image),
+            photos = CASE WHEN $9::jsonb = '[]'::jsonb THEN photos ELSE $9::jsonb END,
             digital_path = $10, digital_name = $11, digital_mime = $12, digital_size = $13, delivery_fee = 0
           WHERE id = $1`,
         [
@@ -817,6 +821,73 @@ router.post(
     );
     logAudit(req.user.id, "generator.doc_published", `${row.doc_ref} → #${productId}`, req.ip);
     res.json({ document: docRow(updated[0]), product_id: productId, size: meta.size, updated: Boolean(existing) });
+  })
+);
+
+// ─── Suppression du produit publié (admin ET créateur propriétaire) ──────────
+// Retire TOTALEMENT de la base le produit digital issu de la publication :
+//  - les tables liées partent en cascade (ventes, téléchargements, avis — FK
+//    ON DELETE CASCADE) ou sont nettoyées explicitement quand elles n'ont pas
+//    de contrainte (vues, promos éclair) ;
+//  - les fichiers sont supprimés des buckets (photos publiques + PDF privé),
+//    sauf s'ils sont encore référencés par un autre produit ;
+//  - le document redevient publiable (`published_product_id = NULL`).
+// L'admin (jeton admin) et le créateur propriétaire passent tous les deux par
+// ici : la portée est celle du document (loadDoc + owner_id).
+router.delete(
+  "/documents/:id/product",
+  ah(async (req, res) => {
+    const row = await loadDoc(Number(req.params.id), req);
+    const productId = Number(row.published_product_id);
+    if (!Number.isInteger(productId) || productId <= 0) {
+      return res.status(404).json({ error: "Aucun produit publié pour ce document." });
+    }
+    const product = (await q(`SELECT * FROM products WHERE id = $1`, [productId]))[0];
+    // Le lien est rompu en premier : même si le nettoyage échoue ensuite, le
+    // document peut être republié (aucune référence fantôme).
+    await q(`UPDATE gen_documents SET published_product_id = NULL WHERE id = $1`, [row.id]);
+    if (!product) {
+      logAudit(req.user.id, "generator.product_deleted", `${row.doc_ref} → #${productId} (déjà absent)`, req.ip);
+      return res.json({ ok: true, deleted: false, product_id: productId });
+    }
+
+    const storageKeys = collectStorageKeys(product.photos);
+    await q(`DELETE FROM products WHERE id = $1`, [productId]);
+
+    // Tables métier sans contrainte de clé étrangère : nettoyage « best effort »
+    // (absentes sur une base neuve → erreur ignorée).
+    for (const sql of [
+      `DELETE FROM item_views WHERE product_id = $1`,
+      `DELETE FROM flash_promotions WHERE product_id = $1`,
+    ]) {
+      try {
+        await q(sql, [productId]);
+      } catch {
+        /* table absente : rien à nettoyer */
+      }
+    }
+
+    // Fichiers : photos du bucket public puis PDF du bucket privé.
+    try {
+      const removed = await deleteStorageKeys(storageKeys, { excludeProductId: productId });
+      if (removed) console.warn(`[generator] ${removed} photo(s) supprimée(s) pour le produit #${productId}`);
+    } catch (err) {
+      console.error("[generator] nettoyage des photos échoué :", err.message);
+    }
+    if (product.digital_path) {
+      try {
+        const [still] = await q(
+          `SELECT 1 FROM products WHERE id <> $1 AND digital_path = $2 LIMIT 1`,
+          [productId, product.digital_path]
+        );
+        if (!still) await deleteDigitalFile(product.digital_path);
+      } catch (err) {
+        console.error("[generator] nettoyage du fichier digital échoué :", err.message);
+      }
+    }
+
+    logAudit(req.user.id, "generator.product_deleted", `${row.doc_ref} → #${productId}`, req.ip);
+    res.json({ ok: true, deleted: true, product_id: productId });
   })
 );
 

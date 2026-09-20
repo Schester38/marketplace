@@ -522,6 +522,9 @@ export const api = {
     }),
   genDeleteVersion: (id, versionId) =>
     generatorRequest(`/generator/documents/${id}/versions/${versionId}`, { method: "DELETE" }),
+  // Suppression TOTALE du produit digital publié (base + fichiers) : le
+  // document redevient publiable. Ouvert à l'admin et au créateur propriétaire.
+  genDeleteProduct: (id) => generatorRequest(`/generator/documents/${id}/product`, { method: "DELETE" }),
   // Vérification PUBLIQUE d'authenticité (page /verifier/<référence>, QR du PDF).
   genVerify: (ref) => request(`/generator/verify/${encodeURIComponent(ref)}`),
 };

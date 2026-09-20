@@ -9592,6 +9592,38 @@ a.step {
   margin-top: 14px;
   flex-wrap: wrap;
 }
+/* Bouton dangereux du Générateur : suppression DÉFINITIVE du produit publié. */
+.gen-danger {
+  color: var(--danger-600);
+  border-color: var(--danger-300);
+}
+.gen-danger:hover:not(:disabled) {
+  color: var(--danger-700);
+  border-color: var(--danger-500);
+  background: var(--danger-50);
+}
+[data-theme="dark"] .gen-danger {
+  color: var(--danger-400);
+  border-color: var(--danger-700);
+}
+[data-theme="dark"] .gen-danger:hover:not(:disabled) {
+  color: var(--danger-300);
+  border-color: var(--danger-500);
+  background: var(--danger-700);
+}
+/* Message de la détection de titres (🧠 Détecter les titres). */
+.gen-format-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--text);
+}
+
 .gen-published-ok {
   color: #1f7a35;
   font-weight: 600;
@@ -9931,6 +9963,38 @@ a.step {
      étroit on fait défiler horizontalement au lieu de rogner la page. */
   overflow-x: auto;
 }
+/* Emplacement réservé du QR code (marqueur [QR]) : cadre en pointillés +
+   étiquette, même visuel que le cadre discret dessiné dans le PDF. */
+.gen-qr-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--border-strong, #9aa4b2);
+  border-radius: 8px;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 6px,
+    rgba(127, 127, 127, 0.06) 6px,
+    rgba(127, 127, 127, 0.06) 12px
+  );
+  color: var(--text-muted, #8b93a1);
+  font: 700 11px/1 system-ui, sans-serif;
+  letter-spacing: 2px;
+  box-sizing: border-box;
+}
+.gen-qr-slot::after {
+  content: "emplacement du QR de vérification";
+  position: absolute;
+  bottom: -16px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font: 400 10px/1.2 system-ui, sans-serif;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.gen-pages {
 .gen-pages {
   display: flex;
   flex-wrap: wrap;
