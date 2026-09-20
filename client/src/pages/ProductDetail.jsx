@@ -484,7 +484,7 @@ export default function ProductDetail() {
                 {categoryEmoji(product.category)} {t(product.category)}
               </span>
             )}
-{/* Produit DIGITAL : le client reçoit un fichier à télécharger
+            {/* Produit DIGITAL : le client reçoit un fichier à télécharger
                 (URL signée du bucket privé) après confirmation du paiement. */}
             {product.is_digital && (
               <span
@@ -509,7 +509,8 @@ export default function ProductDetail() {
           <p className="product-shop">
             <Link
               to={
-                product.shop_role === "creator"
+                // Produit DIGITAL → toujours la vitrine du CRÉATEUR.
+                product.shop_role === "creator" || product.is_digital === true
                   ? `/createur/${product.shop_id}`
                   : `/boutique/${product.shop_id}`
               }
@@ -524,17 +525,22 @@ export default function ProductDetail() {
                   decoding="async"
                 />
               )}
-              {product.shop_role === "creator"
+              {product.shop_role === "creator" || product.is_digital === true
                 ? t("Créateur : {shop}", { shop: product.shop_name })
                 : t("Boutique : {shop}", { shop: product.shop_name })}
               {product.shop_verified && (
                 <span
                   className="badge badge-verified"
                   title={
-                    product.shop_role === "creator" ? t("Compte vérifié") : t("Boutique vérifiée")
+                    product.shop_role === "creator" || product.is_digital === true
+                      ? t("Compte vérifié")
+                      : t("Boutique vérifiée")
                   }
                 >
-                  ✓ {product.shop_role === "creator" ? t("Vérifié") : t("Vérifiée")}
+                  ✓{" "}
+                  {product.shop_role === "creator" || product.is_digital === true
+                    ? t("Vérifié")
+                    : t("Vérifiée")}
                 </span>
               )}
             </Link>
@@ -556,7 +562,9 @@ export default function ProductDetail() {
                   className="meta-chip"
                   href={waLink(
                     product.shop_phone,
-                    t("Bonjour, je suis intéressé par « {name} » sur Mboppi.", { name: product.name })
+                    t("Bonjour, je suis intéressé par « {name} » sur Mboppi.", {
+                      name: product.name,
+                    })
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -677,7 +685,11 @@ export default function ProductDetail() {
                   <span>{qty}</span>
                   <button
                     type="button"
-                    onClick={() => setQty((q) => Math.min(product.is_digital ? 9999 : Number(product.quantity) || 99, q + 1))}
+                    onClick={() =>
+                      setQty((q) =>
+                        Math.min(product.is_digital ? 9999 : Number(product.quantity) || 99, q + 1)
+                      )
+                    }
                     aria-label="+"
                   >
                     +
@@ -724,7 +736,12 @@ export default function ProductDetail() {
                   });
                   try {
                     if (navigator.share) {
-                      await nativeShareWithImage({ title: product.name, text, url, imageUrl: firstProductImage(product) });
+                      await nativeShareWithImage({
+                        title: product.name,
+                        text,
+                        url,
+                        imageUrl: firstProductImage(product),
+                      });
                     } else {
                       await navigator.clipboard.writeText(url);
                       setShared(true);
@@ -812,9 +829,19 @@ export default function ProductDetail() {
 
       {/* ---------- ACHAT DIGITAL : paiement → téléchargement → félicitations ---------- */}
       {dBuy && dBuy.stage !== "checkout" && (
-        <div className="ikeepay-overlay" style={{ display: "flex" }} role="dialog" aria-label="Téléchargement">
+        <div
+          className="ikeepay-overlay"
+          style={{ display: "flex" }}
+          role="dialog"
+          aria-label="Téléchargement"
+        >
           <div className="ikeepay-modal digital-buy-modal">
-            <button type="button" className="ikeepay-close" aria-label={t("Fermer")} onClick={closeDigitalBuy}>
+            <button
+              type="button"
+              className="ikeepay-close"
+              aria-label={t("Fermer")}
+              onClick={closeDigitalBuy}
+            >
               ✕
             </button>
             {dBuy.stage === "creating" && (
@@ -829,7 +856,9 @@ export default function ProductDetail() {
                 <p>
                   ⏳ {t("Paiement reçu — confirmation en cours…")}
                   <br />
-                  <span className="hint">{t("La page de téléchargement s'ouvrira automatiquement (quelques secondes).")}</span>
+                  <span className="hint">
+                    {t("La page de téléchargement s'ouvrira automatiquement (quelques secondes).")}
+                  </span>
                 </p>
               </div>
             )}
@@ -842,7 +871,9 @@ export default function ProductDetail() {
                   onClick={downloadDigitalNow}
                   disabled={dBuy.stage === "downloading"}
                 >
-                  {dBuy.stage === "downloading" ? `⏳ ${t("Téléchargement en cours…")}` : `⬇️ ${t("Télécharger mon fichier")}`}
+                  {dBuy.stage === "downloading"
+                    ? `⏳ ${t("Téléchargement en cours…")}`
+                    : `⬇️ ${t("Télécharger mon fichier")}`}
                 </button>
                 <p className="hint">{t("Un seul téléchargement est autorisé pour cet achat.")}</p>
                 {dBuy.err && <p className="error">{dBuy.err}</p>}
@@ -853,12 +884,14 @@ export default function ProductDetail() {
                 <p className="digital-buy-congrats">🎉 {t("Félicitations !")}</p>
                 <p>
                   {t("Votre fichier a été téléchargé sur votre appareil.")}
-                  {dBuy.fileName ? (
-                    <br />
-                  ) : null}
+                  {dBuy.fileName ? <br /> : null}
                   {dBuy.fileName && <span className="hint">📁 {dBuy.fileName}</span>}
                 </p>
-                <button type="button" className="btn btn-outline btn-block" onClick={closeDigitalBuy}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-block"
+                  onClick={closeDigitalBuy}
+                >
                   {t("Retour au produit")}
                 </button>
               </div>
@@ -866,7 +899,11 @@ export default function ProductDetail() {
             {dBuy.stage === "error" && (
               <div className="digital-buy-center">
                 <p className="error">{dBuy.err || t("Une erreur est survenue.")}</p>
-                <button type="button" className="btn btn-outline btn-block" onClick={closeDigitalBuy}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-block"
+                  onClick={closeDigitalBuy}
+                >
                   {t("Fermer")}
                 </button>
               </div>

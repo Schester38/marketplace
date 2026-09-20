@@ -150,7 +150,10 @@ export default function ProductCard({
           <p className="card-shop">
             <Link
               to={
-                product.shop_role === "creator"
+                // Un produit DIGITAL est publié par un CRÉATEUR : l'étiquette et
+                // le lien suivent la nature du produit, pas seulement le rôle du
+                // compte (un compte de service peut aussi publier du digital).
+                product.shop_role === "creator" || product.is_digital === true
                   ? `/createur/${product.shop_id}`
                   : `/boutique/${product.shop_id}`
               }
@@ -165,14 +168,18 @@ export default function ProductCard({
                   decoding="async"
                 />
               )}
-              {product.shop_role === "creator" ? `${t("Créateur")} : ` : ""}
+              {product.shop_role === "creator" || product.is_digital === true
+                ? `${t("Créateur")} : `
+                : ""}
               {product.shop_name}{" "}
               {product.shop_verified && (
                 <IconShieldCheck
                   size={12}
                   style={{ color: "#2563eb", verticalAlign: "-2px", display: "inline-block" }}
                   title={
-                    product.shop_role === "creator" ? t("Compte vérifié") : t("Boutique vérifiée")
+                    product.shop_role === "creator" || product.is_digital === true
+                      ? t("Compte vérifié")
+                      : t("Boutique vérifiée")
                   }
                 />
               )}
@@ -201,7 +208,11 @@ export default function ProductCard({
           )}
         </div>
         <p className={`stock-line ${product.is_digital ? "" : qty > 0 ? "" : "out"}`}>
-          {product.is_digital ? t("📁 Produit digital — téléchargement") : qty > 0 ? t("En stock : {n}", { n: qty }) : t("Rupture de stock")}
+          {product.is_digital
+            ? t("📁 Produit digital — téléchargement")
+            : qty > 0
+              ? t("En stock : {n}", { n: qty })
+              : t("Rupture de stock")}
         </p>
         {product.is_digital && (product.shop_phone || product.contact) && (
           <p className="card-contact">

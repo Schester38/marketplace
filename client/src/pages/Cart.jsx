@@ -8,6 +8,7 @@ import { useAuth } from "../App.jsx";
 import { useCart } from "../store.jsx";
 import { useLang } from "../i18n.jsx";
 import CopyCode from "../components/CopyCode.jsx";
+import DigitalBuyTunnel from "../components/DigitalBuyTunnel.jsx";
 
 /** Normalise un numéro de boutique au format international (wa.me). */
 function waDigits(raw, country) {
@@ -23,7 +24,8 @@ export default function Cart() {
   const { user } = useAuth();
   const { t } = useLang();
   const navigate = useNavigate();
-  const { cart, setQty, removeFromCart, clearCart, cartCount, cartTotal } = useCart();
+  const { cart, setQty, removeFromCart, clearCart, setItemDigital, cartCount, cartTotal } =
+    useCart();
   const [buyerName, setBuyerName] = useState(user ? user.name : "");
   // La session est restaurée de façon asynchrone : si l'utilisateur arrive
   // après coup (rafraîchissement de la page), on pré-remplit le nom.
@@ -38,6 +40,36 @@ export default function Cart() {
   const [sales, setSales] = useState(null);
   // Groupes WhatsApp (une entrée par boutique concernée par la commande).
   const [waGroups, setWaGroups] = useState([]);
+  // Produits DIGITAUX du panier : achat en ligne (iKeePay) → téléchargement
+  // automatique du fichier. Aucun formulaire de livraison pour eux.
+  const [tunnelItems, setTunnelItems] = useState(null);
+  const [digitalDone, setDigitalDone] = useState(0);
+
+  const digitalItems = cart.filter((i) => i.is_digital === true);
+  const physicalItems = cart.filter((i) => i.is_digital !== true);
+
+  // Panier enregistré avant l'ajout du champ `is_digital` : on complète la
+  // nature de chaque article inconnu une seule fois (produits digitaux rares).
+  useEffect(() => {
+    const unknown = cart.filter((i) => typeof i.is_digital !== "boolean");
+    if (!unknown.length) return;
+    let alive = true;
+    Promise.all(
+      unknown.map((i) =>
+        api
+          .getProduct(i.id)
+          .then((d) => ({ id: i.id, digital: d?.product?.is_digital === true }))
+          .catch(() => null)
+      )
+    ).then((res) => {
+      if (!alive) return;
+      for (const r of res) if (r) setItemDigital(r.id, r.digital);
+    });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart]);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -57,7 +89,10 @@ export default function Cart() {
     const popup = window.open("", "_blank");
     try {
       const data = await api.createOrder({
-        items: cart.map((i) => ({ product_id: i.id, quantity: i.qty })),
+        // Seuls les articles PHYSIQUES passent par la commande à la livraison :
+        // les produits digitaux sont payés en ligne (tunnel iKeePay) et leur
+        // fichier est téléchargé automatiquement — aucun formulaire.
+        items: physicalItems.map((i) => ({ product_id: i.id, quantity: i.qty })),
         buyer_name: buyerName.trim(),
         buyer_phone: phone.trim(),
         buyer_city: city.trim(),
@@ -93,15 +128,17 @@ export default function Cart() {
           "🛒 *Nouvelle commande Mboppi*",
           "",
           "📦 Articles :",
-          ...g.items.map(
-            (s) => [
+          ...g.items.map((s) =>
+            [
               `• ${s.product_name} ×${Number(s.quantity)} — ${formatMoney(
                 s.total_price
               )} F${s.flash_promo ? " (prix promo)" : ""}${s.confirm_code ? ` (code : ${s.confirm_code})` : ""}`,
               s.id && s.confirm_code
                 ? `📦 Suivi : ${BASE_URL}/suivi/${s.id}?code=${encodeURIComponent(s.confirm_code)}`
                 : null,
-            ].filter(Boolean).join("\n")
+            ]
+              .filter(Boolean)
+              .join("\n")
           ),
           "",
           "— Coordonnées du client —",
@@ -132,6 +169,22 @@ export default function Cart() {
     } finally {
       setPlacing(false);
     }
+  };
+
+  // ---------- Produits DIGITAUX : paiement en ligne → téléchargement ----------
+  // Aucun formulaire de livraison : le tunnel iKeePay s'ouvre, et dès que le
+  // webhook confirme le paiement, le fichier part automatiquement sur
+  // l'appareil (même comportement que la fiche produit).
+  const digitalTotal = digitalItems.reduce((s, i) => s + i.price * i.qty, 0);
+  const digitalSymbol = countrySymbol(digitalItems[0] ? digitalItems[0].country : null);
+
+  const openDigitalTunnel = () =>
+    setTunnelItems(digitalItems.map((i) => ({ product_id: i.id, name: i.name })));
+
+  const finishDigitalTunnel = () => {
+    // Le tunnel a lancé les téléchargements : on retire les fichiers du panier.
+    for (const i of digitalItems) removeFromCart(i.id);
+    setDigitalDone(digitalItems.length);
   };
 
   if (sales && sales.length > 0) {
@@ -242,6 +295,20 @@ export default function Cart() {
       <Seo title={t("Mon panier") + " — Mboppi"} noindex />
       <h1 className="section-title">{t("🛒 Mon panier")}</h1>
 
+      {/* Achat digital terminé : les fichiers ont été téléchargés et retirés du
+          panier — confirmation visible quand il ne reste rien d'autre. */}
+      {digitalDone > 0 && (
+        <div className="card page-center success-card">
+          <div className="auth-brand">🎉</div>
+          <h2>{t("Félicitations !")}</h2>
+          <p className="hint">
+            {digitalDone === 1
+              ? t("Votre fichier a été téléchargé sur votre appareil.")
+              : t("{n} fichiers ont été téléchargés sur votre appareil.", { n: digitalDone })}
+          </p>
+        </div>
+      )}
+
       {cart.length === 0 ? (
         <div className="card page-center">
           <p className="empty">{t("Votre panier est vide.")}</p>
@@ -272,23 +339,32 @@ export default function Cart() {
                       )}
                     </span>
                     <div className="cart-item-actions">
-                      <div className="qty-stepper">
-                        <button
-                          type="button"
-                          onClick={() => setQty(i.id, i.qty - 1)}
-                          aria-label="-"
-                        >
-                          −
-                        </button>
-                        <span>{i.qty}</span>
-                        <button
-                          type="button"
-                          onClick={() => setQty(i.id, i.qty + 1)}
-                          aria-label="+"
-                        >
-                          +
-                        </button>
-                      </div>
+                      {/* Un produit digital est un FICHIER, pas un colis : pas de
+                          quantité (1 fichier = 1 achat) — le paiement en ligne
+                          déclenche le téléchargement automatique. */}
+                      {i.is_digital === true ? (
+                        <span className="cart-item-digital">
+                          📁 {t("Produit digital — téléchargement automatique après paiement")}
+                        </span>
+                      ) : (
+                        <div className="qty-stepper">
+                          <button
+                            type="button"
+                            onClick={() => setQty(i.id, i.qty - 1)}
+                            aria-label="-"
+                          >
+                            −
+                          </button>
+                          <span>{i.qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => setQty(i.id, i.qty + 1)}
+                            aria-label="+"
+                          >
+                            +
+                          </button>
+                        </div>
+                      )}
                       <button
                         type="button"
                         className="btn btn-outline btn-sm"
@@ -315,80 +391,124 @@ export default function Cart() {
             </div>
             <p className="hint">{t("Les frais de livraison sont confirmés avec la boutique.")}</p>
 
-            <div className="wallet-card">
-              <p className="hint" style={{ marginTop: 0 }}>
-                💵{" "}
-                {t(
-                  "Paiement à la livraison : réglez la commande au livreur en espèces ou par Mobile Money, selon ce qui est convenu avec la boutique."
-                )}
-              </p>
-            </div>
-
-            <form onSubmit={submit}>
-              {/* Bandeau anti-fraude : rappel d'exiger le formulaire du livreur. */}
-              <div
-                style={{
-                  background: "#fff8e1",
-                  border: "2px solid #d97706",
-                  borderRadius: 10,
-                  padding: "12px 14px",
-                  marginBottom: 14,
-                  color: "#78350f",
-                }}
-              >
-                <strong style={{ display: "block", fontSize: 15, color: "#7c2d12" }}>
-                  🛡️ {t("CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.")}
-                </strong>
-                <p style={{ margin: "6px 0 2px", fontSize: 13, lineHeight: 1.5, color: "#78350f" }}>
+            {/* ---------- Produits DIGITAUX : paiement en ligne → fichier ----------
+                Aucun formulaire de livraison (nom/ville/adresse inutiles pour un
+                fichier) : le tunnel iKeePay s'ouvre, puis le téléchargement est
+                lancé AUTOMATIQUEMENT dès la confirmation du paiement. */}
+            {digitalItems.length > 0 && (
+              <div className="wallet-card">
+                <p className="hint" style={{ marginTop: 0 }}>
+                  📁{" "}
                   {t(
-                    "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat."
+                    "Produits digitaux : paiement en ligne immédiat, puis téléchargement automatique du fichier. Aucun formulaire, aucune livraison."
                   )}
                 </p>
-                <small
-                  style={{ display: "block", textAlign: "right", fontWeight: 600, color: "#7c2d12" }}
+                <div className="info-row" style={{ margin: "6px 0" }}>
+                  <span className="label">{t("Total digital")}</span>
+                  <strong>
+                    {formatMoney(digitalTotal)} {digitalSymbol}
+                  </strong>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-block"
+                  onClick={openDigitalTunnel}
                 >
-                  — {t("L'Administration Mboppi")}
-                </small>
+                  ⬇️ {t("Payer et télécharger")} — {formatMoney(digitalTotal)} {digitalSymbol}
+                </button>
               </div>
-              <label>{t("Votre nom *")}</label>
-              <input
-                className="input"
-                required
-                value={buyerName}
-                onChange={(e) => setBuyerName(e.target.value)}
-              />
-              <label>{t("Votre téléphone *")}</label>
-              <input
-                className="input"
-                type="tel"
-                required
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+237 6XX XX XX XX"
-              />
-              <label>{t("Votre ville *")}</label>
-              <input
-                className="input"
-                required
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder={t("Ville")}
-              />
-              <label>{t("Adresse de livraison *")}</label>
-              <input
-                className="input"
-                required
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder={t("Quartier, ville…")}
-              />
-              {error && <p className="error">{error}</p>}
-              <button className="btn btn-checkout btn-block" disabled={placing}>
-                {placing ? t("Commande en cours…") : `✅ ${t("Passer la commande")}`}
-              </button>
-            </form>
+            )}
+
+            {/* ---------- Produits PHYSIQUES : commande à la livraison ---------- */}
+            {physicalItems.length > 0 && (
+              <form onSubmit={submit}>
+                {/* Bandeau anti-fraude : rappel d'exiger le formulaire du livreur. */}
+                <div
+                  style={{
+                    background: "#fff8e1",
+                    border: "2px solid #d97706",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    marginBottom: 14,
+                    color: "#78350f",
+                  }}
+                >
+                  <strong style={{ display: "block", fontSize: 15, color: "#7c2d12" }}>
+                    🛡️ {t("CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.")}
+                  </strong>
+                  <p
+                    style={{ margin: "6px 0 2px", fontSize: 13, lineHeight: 1.5, color: "#78350f" }}
+                  >
+                    {t(
+                      "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat."
+                    )}
+                  </p>
+                  <small
+                    style={{
+                      display: "block",
+                      textAlign: "right",
+                      fontWeight: 600,
+                      color: "#7c2d12",
+                    }}
+                  >
+                    — {t("L'Administration Mboppi")}
+                  </small>
+                </div>
+                <label>{t("Votre nom *")}</label>
+                <input
+                  className="input"
+                  required
+                  value={buyerName}
+                  onChange={(e) => setBuyerName(e.target.value)}
+                />
+                <label>{t("Votre téléphone *")}</label>
+                <input
+                  className="input"
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+237 6XX XX XX XX"
+                />
+                <label>{t("Votre ville *")}</label>
+                <input
+                  className="input"
+                  required
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder={t("Ville")}
+                />
+                <label>{t("Adresse de livraison *")}</label>
+                <input
+                  className="input"
+                  required
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder={t("Quartier, ville…")}
+                />
+                {error && <p className="error">{error}</p>}
+                <button className="btn btn-checkout btn-block" disabled={placing}>
+                  {placing ? t("Commande en cours…") : `✅ ${t("Passer la commande")}`}
+                </button>
+              </form>
+            )}
           </div>
         </>
+      )}
+
+      {/* Tunnel d'achat digital : paiement en ligne (iKeePay) puis
+          téléchargement automatique — un fichier après l'autre. */}
+      {tunnelItems && (
+        <DigitalBuyTunnel
+          items={tunnelItems}
+          buyer={{
+            name: buyerName || (user && user.name) || "",
+            phone: phone || (user && user.phone) || "",
+          }}
+          autoCloseMs={6000}
+          onClose={() => setTunnelItems(null)}
+          onDone={finishDigitalTunnel}
+        />
       )}
     </main>
   );

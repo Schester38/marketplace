@@ -3044,6 +3044,21 @@ textarea {
   font-weight: 800;
   margin: 0;
 }
+/* Panier : un produit digital est un FICHIER (pas de quantité à régler) */
+.cart-item-digital {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+/* Fiche « /acheter/:id » d'un produit digital : appel au téléchargement */
+.digital-cta-card .pd-assurance {
+  margin: 0;
+}
 /* Carte « Gains en ligne » (créateur / vendeur) */
 .online-earnings-card .big-amount {
   font-size: 1.7rem;
@@ -10247,7 +10262,6 @@ a.step {
   letter-spacing: 0;
   white-space: nowrap;
 }
-.gen-pages {
 .gen-pages {
   display: flex;
   flex-wrap: wrap;

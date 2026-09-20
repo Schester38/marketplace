@@ -14,11 +14,11 @@ import Logo from "../components/Logo.jsx";
 import { formatMoney } from "../components/ProductCard.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 import DigitalDownload from "../components/DigitalDownload.jsx";
+import DigitalBuyTunnel from "../components/DigitalBuyTunnel.jsx";
 import PaymentMethodsStrip from "../components/PaymentMethodsStrip.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { PriceEquivalent } from "../money.jsx";
-
 
 export default function PurchasePage() {
   const { id } = useParams();
@@ -46,9 +46,12 @@ export default function PurchasePage() {
   const [purchase, setPurchase] = useState(null);
   const [waUrl, setWaUrl] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  // Produit digital : le formulaire complet ne s'affiche qu'après un clic sur
-  // « Télécharger » (pas de formulaire de livraison imposé).
-  const [digitalFormOpen, setDigitalFormOpen] = useState(false);
+  // Produit DIGITAL : aucun formulaire (ni livraison, ni quantité, ni code) —
+  // le bouton « Télécharger » ouvre le tunnel de paiement en ligne (iKeePay),
+  // puis le fichier se télécharge AUTOMATIQUEMENT après confirmation. Le code
+  // vendeur reste transmis (lien /acheter/:id?code=XXX) pour sa commission.
+  const [tunnelOpen, setTunnelOpen] = useState(false);
+  const [tunnelDone, setTunnelDone] = useState(false);
 
   useEffect(() => {
     api
@@ -186,26 +189,16 @@ export default function PurchasePage() {
   };
 
   /**
-   * Produit DIGITAL : « Télécharger » lance directement l'achat lorsque le
-   * compte connecté fournit déjà le nom et le téléphone (aucune donnée de
-   * livraison n'est demandée). Sinon, un mini-formulaire (nom + téléphone)
-   * s'ouvre — pas de ville, pas d'adresse, pas de quantité.
+   * Produit DIGITAL : « Télécharger » ouvre le tunnel de paiement en ligne
+   * (iKeePay) — strictement le même flux que la fiche produit : aucun
+   * formulaire de livraison, paiement dans le tunnel, puis TÉLÉCHARGEMENT
+   * AUTOMATIQUE du fichier dès que le paiement est confirmé.
+   * Le code vendeur du lien (/acheter/:id?code=XXX) est transmis pour la
+   * commission éventuelle du vendeur.
    */
-  const quickDigitalDownload = async () => {
-    const accountName = String(user?.name || "").trim();
-    const accountPhone = String(user?.phone || "").trim();
-    if (accountName && accountPhone) {
-      await createPurchase({
-        product_id: id,
-        seller_code: (form.seller_code || "").trim() || undefined,
-        buyer_name: accountName,
-        buyer_phone: accountPhone,
-        quantity: 1,
-        payment_method: "mobile",
-      });
-      return;
-    }
-    setDigitalFormOpen(true);
+  const openDigitalTunnel = () => {
+    setError("");
+    setTunnelOpen(true);
   };
 
   if (notFound) {
@@ -293,7 +286,9 @@ export default function PurchasePage() {
             />
           </p>
           <p className="product-shop" style={{ marginTop: 6 }}>
-            {t("Boutique : {shop}", { shop: product.shop_name })}
+            {product.is_digital || product.shop_role === "creator"
+              ? t("Créateur : {shop}", { shop: product.shop_name })
+              : t("Boutique : {shop}", { shop: product.shop_name })}
             {product.shop_location ? (
               <span className="shop-loc"> · 📍 {product.shop_location}</span>
             ) : null}
@@ -301,7 +296,21 @@ export default function PurchasePage() {
         </div>
       </div>
 
-      {done ? (
+      {tunnelDone ? (
+        <div className="card page-center">
+          <h2>🎉 {t("Félicitations !")}</h2>
+          <p className="hint">{t("Votre fichier a été téléchargé sur votre appareil.")}</p>
+          {user ? (
+            <Link className="btn btn-primary" to="/client">
+              {t("Voir mes achats")}
+            </Link>
+          ) : (
+            <Link className="btn btn-primary" to="/">
+              {t("Continuer mes achats")}
+            </Link>
+          )}
+        </div>
+      ) : done ? (
         <div className="card page-center">
           <h2>
             {purchase?.is_digital
@@ -324,12 +333,7 @@ export default function PurchasePage() {
                   ? t("Réglez maintenant avec le créateur : la commande est préremplie.")
                   : t("La commande n'a pas été transmise sur WhatsApp ? Envoyez-la en un clic :")}
               </p>
-              <a
-                className="btn btn-primary"
-                href={waUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a className="btn btn-primary" href={waUrl} target="_blank" rel="noopener noreferrer">
                 📲
                 {purchase?.is_digital
                   ? ` ${t("Payer et confirmer sur WhatsApp")}`
@@ -381,12 +385,10 @@ export default function PurchasePage() {
             {t("Continuer mes achats")}
           </Link>
         </div>
-      ) : product.is_digital && !digitalFormOpen ? (
-        // Produit DIGITAL : aucune donnée de livraison demandée — le bouton
-        // « Télécharger » enchaîne directement sur la commande (paiement direct
-        // puis téléchargement dès confirmation). Un client connecté dont le
-        // compte porte nom + téléphone n'a rien à saisir ; sinon un mini
-        // formulaire (nom + téléphone) s'ouvre juste après ce clic.
+      ) : product.is_digital ? (
+        // Produit DIGITAL : AUCUN formulaire ni donnée de livraison — le bouton
+        // « Télécharger » ouvre le tunnel iKeePay, et le fichier se télécharge
+        // automatiquement dès la confirmation du paiement.
         <div className="card form-card digital-cta-card">
           <h2>⬇️ {t("Télécharger")}</h2>
           <p className="hint">
@@ -399,15 +401,8 @@ export default function PurchasePage() {
             <li>✅ {t("Satisfaction garantie")}</li>
             <li>🔒 {t("Aucun compte requis — paiement direct au créateur")}</li>
           </ul>
-          <button
-            type="button"
-            className="btn btn-primary btn-block"
-            onClick={quickDigitalDownload}
-            disabled={submitting}
-          >
-            {submitting
-              ? `⏳ ${t("Préparation…")}`
-              : `⬇️ ${t("Télécharger")} — ${formatMoney(displayPrice)} ${symbol}`}
+          <button type="button" className="btn btn-primary btn-block" onClick={openDigitalTunnel}>
+            {`⬇️ ${t("Télécharger")} — ${formatMoney(displayPrice)} ${symbol}`}
           </button>
           {error && <p className="error">{error}</p>}
         </div>
@@ -573,6 +568,24 @@ export default function PurchasePage() {
       {/* Moyens de paiement acceptés (iKeepay) : carte bancaire, USDT et
           Mobile Money — affichés sous le formulaire d'achat. */}
       {product && <PaymentMethodsStrip />}
+
+      {/* Tunnel d'achat digital (iKeePay) : paiement en ligne, puis
+          TÉLÉCHARGEMENT AUTOMATIQUE du fichier — strictement le même flux que
+          la fiche produit. Le code vendeur du lien est transmis pour la
+          commission éventuelle du vendeur. */}
+      {product && product.is_digital && tunnelOpen && (
+        <DigitalBuyTunnel
+          items={[{ product_id: product.id, name: product.name }]}
+          sellerCode={(form.seller_code || linkCode || "").trim().toUpperCase() || undefined}
+          buyer={{
+            name: user?.name || form.buyer_name,
+            phone: user?.phone || form.buyer_phone,
+          }}
+          autoCloseMs={4000}
+          onDone={() => setTunnelDone(true)}
+          onClose={() => setTunnelOpen(false)}
+        />
+      )}
     </main>
   );
 }

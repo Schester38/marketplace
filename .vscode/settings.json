@@ -1,0 +1,10 @@
+{
+  // Schema package.json servi localement : le téléchargement depuis
+  // schemastore.org échoue sur ce réseau (erreur de certificat TLS).
+  "json.schemas": [
+    {
+      "fileMatch": ["package.json"],
+      "url": "./package.schema.json"
+    }
+  ]
+}

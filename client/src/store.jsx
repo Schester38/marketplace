@@ -46,6 +46,10 @@ export function StoreProvider({ children }) {
           old_price: product.flash_promo ? Number(product.price) : null,
           photo: (product.photos && product.photos[0]) || product.image || null,
           country: product.shop_country || null,
+          // Un produit digital ne suit pas le circuit de livraison : le panier
+          // doit le savoir pour ouvrir le tunnel de paiement iKeePay (téléchargement
+          // automatique) au lieu du formulaire de livraison.
+          is_digital: product.is_digital === true,
           stock: max,
           qty: Math.min(qty, max),
         },
@@ -62,6 +66,12 @@ export function StoreProvider({ children }) {
 
   const removeFromCart = (id) => setCart((list) => list.filter((i) => i.id !== Number(id)));
   const clearCart = () => setCart([]);
+  // Un panier enregistré AVANT l'ajout du champ `is_digital` ne connaît pas la
+  // nature du produit : Cart.jsx la récupère une fois puis la pose ici.
+  const setItemDigital = (id, isDigital) =>
+    setCart((list) =>
+      list.map((i) => (i.id === Number(id) ? { ...i, is_digital: isDigital === true } : i))
+    );
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
   const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
@@ -74,7 +84,16 @@ export function StoreProvider({ children }) {
 
   return (
     <CartContext.Provider
-      value={{ cart, addToCart, setQty, removeFromCart, clearCart, cartCount, cartTotal }}
+      value={{
+        cart,
+        addToCart,
+        setQty,
+        removeFromCart,
+        clearCart,
+        setItemDigital,
+        cartCount,
+        cartTotal,
+      }}
     >
       <FavContext.Provider value={{ favs, isFav, toggleFav }}>{children}</FavContext.Provider>
     </CartContext.Provider>
