@@ -4,6 +4,7 @@ import { q, withTransaction } from "../db.js";
 import { authRequired } from "../auth.js";
 import { sendPush } from "../push.js";
 import { notifyAdmins } from "../services/adminNotify.js";
+import { sendSaleEmails } from "../mailer.js";
 import { listPhotos } from "../photo.js";
 import { SALES_LIST_COLUMNS } from "./sales.js";
 
@@ -234,6 +235,37 @@ router.post("/", optionalAuth, async (req, res, next) => {
         .join(", "),
       amount: orderTotalAll,
     });
+    // E-mail non bloquant : un message par boutique/créateur concerné.
+    try {
+      const shopIds = [
+        ...new Set(result.createdSales.map((s) => Number(s.shop_id)).filter((v) => v > 0)),
+      ];
+      if (shopIds.length) {
+        const emailRows = await q(
+          "SELECT id, email FROM users WHERE id = ANY($1::int[]) AND email IS NOT NULL AND email <> ''",
+          [shopIds]
+        );
+        const emailById = new Map(emailRows.map((r) => [Number(r.id), r.email]));
+        const byShop = new Map();
+        for (const s of result.createdSales) {
+          if (!byShop.has(s.shop_id)) byShop.set(s.shop_id, []);
+          byShop.get(s.shop_id).push(s);
+        }
+        for (const [sid, items] of byShop) {
+          const shopTotal =
+            Math.round(items.reduce((a, s) => a + Number(s.total || 0), 0) * 100) / 100;
+          sendSaleEmails({
+            shopEmail: emailById.get(Number(sid)),
+            buyerName: String(buyer_name).trim(),
+            productName: items.map((s) => `${s.name} ×${s.quantity}`).join(", "),
+            quantity: items.length,
+            total: shopTotal,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("[orders] e-mails de commande impossibles :", err.message);
+    }
     const sales = await q(
       `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.price, p.contact AS shop_contact, shop.name AS shop_name, shop.country AS shop_country, shop.location AS shop_location, shop.phone AS shop_phone
        FROM sales s JOIN products p ON p.id = s.product_id JOIN users shop ON shop.id = p.shop_id WHERE s.id = ANY($1::int[]) ORDER BY s.id`,

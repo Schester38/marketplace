@@ -146,7 +146,7 @@ router.get(
       params.push(norm);
     }
     const sql = `
-    SELECT u.id, u.role, u.name, u.city, u.location, u.country, u.phone, u.verified,
+    SELECT u.id, u.role, u.name, u.city, u.location, u.country, u.phone, u.verified, u.avatar,
            COUNT(p.id) FILTER (WHERE p.quantity > 0 AND NOT EXISTS (SELECT 1 FROM flash_promotions fp WHERE fp.product_id = p.id AND fp.ends_at > now()))::int AS product_count,
            (SELECT image FROM products p2 WHERE p2.shop_id = u.id AND p2.quantity > 0
                   AND NOT EXISTS (SELECT 1 FROM flash_promotions fp WHERE fp.product_id = p2.id AND fp.ends_at > now())
@@ -167,7 +167,7 @@ router.get(
     res.set("Cache-Control", "public, s-maxage=120, max-age=60, stale-while-revalidate=30");
     const shop = (
       await q(
-        `SELECT id, name, role, location, country, phone, verified, shop_code, created_at
+        `SELECT id, name, role, location, country, phone, verified, shop_code, avatar, created_at
        FROM users WHERE id = $1 AND role IN ('shop', 'creator')`,
         [Number(req.params.id)]
       )

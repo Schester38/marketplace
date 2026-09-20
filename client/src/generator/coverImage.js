@@ -6,7 +6,8 @@
 // Le rendu reprend exactement les codes du modèle (fond, texte, titre,
 // sous-titre, auteur, image de fond, cadrage) : l'aperçu de l'éditeur, le PDF
 // et la miniature du catalogue montrent donc la même couverture.
-import { FONT_CSS, resolveTemplate, resolveCover, coverLayoutBox } from "./templates.js";
+import { FONT_CSS, resolveTemplate, resolveCover, coverLayoutBox, withAlpha } from "./templates.js";
+import { makeQrDataUrl, verificationPayload } from "./protection.js";
 
 const RATIO = 1.5; // hauteur / largeur (format livre portrait)
 
@@ -78,9 +79,16 @@ export async function renderCoverImage(docMeta, { width = 480 } = {}) {
   }
 
   // Mise en page « bande » : tiers inférieur aux couleurs d'accent du modèle.
+  // Bande DÉGRADÉE : la photo de couverture reste perceptible sous la couleur
+  // (rendu identique au PDF et à l'aperçu HTML).
   if (geo.band) {
-    ctx.fillStyle = cover.accent;
-    ctx.fillRect(0, h * 0.62, w, h * 0.38);
+    const top = h * 0.62;
+    const bh = h * 0.38;
+    const grad = ctx.createLinearGradient(0, top, 0, top + bh);
+    grad.addColorStop(0, withAlpha(cover.accent, 0.55));
+    grad.addColorStop(1, withAlpha(cover.accent, 0.95));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, top, w, bh);
   }
 
   const fg = geo.band ? "#ffffff" : cover.fg;
@@ -138,6 +146,26 @@ export async function renderCoverImage(docMeta, { width = 480 } = {}) {
     );
   }
 
+  // QR de vérification sur l'affiche du produit publié (et les miniatures) :
+  // même payload que le PDF, dessiné sur plaque blanche en bas à gauche quand
+  // la protection QR est active. L'affiche vendue au catalogue prouve donc
+  // elle-même l'origine du document.
+  if (docMeta.protection?.qrEnabled !== false && docMeta.doc_ref) {
+    try {
+      const qr = await makeQrDataUrl(verificationPayload(docMeta, docMeta.content_hash), 240);
+      const qimg = qr ? await loadImage(qr) : null;
+      if (qimg) {
+        const size = Math.round(w * 0.18);
+        const pad = Math.round(w * 0.045);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(pad - 2, h - size - pad - 2, size + 4, size + 4);
+        ctx.drawImage(qimg, pad, h - size - pad, size, size);
+      }
+    } catch {
+      /* QR indisponible : couverture sans QR */
+    }
+  }
+
   try {
     return canvas.toDataURL("image/jpeg", 0.86);
   } catch {
@@ -159,9 +187,9 @@ function coverageFont(token, px) {
 const thumbCache = new Map();
 
 export async function libraryThumb(docMeta, width = 120) {
-  const key = `${docMeta.id}:${width}:${docMeta.updated_at}:${docMeta.template_id}:${JSON.stringify(
-    docMeta.cover || {}
-  )}`;
+  const key = `${docMeta.id}:${width}:${docMeta.updated_at}:${docMeta.template_id}:${
+    docMeta.protection?.qrEnabled !== false
+  }:${JSON.stringify(docMeta.cover || {})}`;
   if (thumbCache.has(key)) return thumbCache.get(key);
   const url = await renderCoverImage(docMeta, { width });
   if (thumbCache.size > 60) thumbCache.clear();

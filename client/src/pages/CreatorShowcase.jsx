@@ -66,13 +66,25 @@ export default function CreatorShowcase() {
 
       <div className="card shop-header-card">
         <div className="shop-header">
-          <span className="shop-avatar creator-avatar">🎨</span>
+          {creator.avatar ? (
+            <img
+              src={creator.avatar}
+              alt={creator.name}
+              className="shop-avatar creator-avatar"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <span className="shop-avatar creator-avatar creator-avatar-fallback">
+              {String(creator.name || "?").trim().charAt(0).toUpperCase()}
+            </span>
+          )}
           <div>
             <h2>
               {creator.name}
               {creator.verified && (
-                <span className="badge badge-verified" title={t("Boutique vérifiée")}>
-                  ✓ {t("Vérifiée")}
+                <span className="badge badge-verified" title={t("Compte vérifié")}>
+                  ✓ {t("Vérifié")}
                 </span>
               )}
             </h2>

@@ -209,6 +209,7 @@ export const productListQuerySchema = z.object({
   search: z.string().max(200).optional(),
   shop: z.coerce.number().int().positive("Boutique invalide").optional(),
   category: z.string().max(100).optional(),
+  type: z.enum(["digital", "physical"]).optional(),
   sort: z.enum(["recent", "popular", "sales", "price_asc", "price_desc", "rating"]).optional(),
   scope: z.enum(["shop", "creation"]).optional(),
   min_price: z.coerce.number().min(0, "Prix minimum invalide").optional(),

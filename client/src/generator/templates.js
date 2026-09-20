@@ -13,6 +13,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#111111", coverText: "#ffffff", headingUpper: true,
     headingRule: "h1", headingBar: "none", coverLayout: "center", coverRule: false,
+    pageDecor: "toprule", // double filet éditorial en tête de page
   },
   {
     id: "moderne", name: "Moderne", category: "Ebook",
@@ -23,6 +24,8 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#1d4ed8", coverText: "#ffffff", headingUpper: false,
     headingRule: "h1", headingBar: "left", coverLayout: "band", coverRule: false,
+    coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
+    pageDecor: "topbar", // fin barre d'accent en haut de chaque page de contenu
   },
   {
     id: "elegant", name: "Élégant", category: "Ebook",
@@ -33,6 +36,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#4a3728", coverText: "#f5ead9", headingUpper: false,
     headingRule: "none", headingBar: "none", coverLayout: "center", coverRule: true,
+    pageDecor: "doublerule", // double filet en tête et en pied (édition classique)
   },
   {
     id: "professionnel", name: "Professionnel", category: "Ebook",
@@ -43,6 +47,7 @@ export const GEN_TEMPLATES = [
     align: "left", chapterNewPage: false,
     coverBg: "#0f172a", coverText: "#e2e8f0", headingUpper: false,
     headingRule: "h1", headingBar: "none", coverLayout: "left", coverRule: true,
+    pageDecor: "sidebartint", // colonne latérale teintée « classeur »
   },
   {
     id: "business", name: "Business", category: "Ebook",
@@ -53,6 +58,8 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#1e3a5f", coverText: "#ffffff", headingUpper: true,
     headingRule: "h1h2", headingBar: "none", coverLayout: "band", coverRule: false,
+    coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
+    pageDecor: "headerband", // bandeau titre du document en tête de page (style rapport)
   },
   {
     id: "education", name: "Éducation", category: "Ebook",
@@ -63,6 +70,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#14532d", coverText: "#dcfce7", headingUpper: true,
     headingRule: "h1", headingBar: "left", coverLayout: "top", coverRule: true,
+    pageDecor: "noterule", // marge de cahier : filet vertical gauche
   },
   {
     id: "motivation", name: "Motivation", category: "Ebook",
@@ -73,6 +81,8 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#c2410c", coverText: "#fff7ed", headingUpper: true,
     headingRule: "none", headingBar: "left", coverLayout: "band", coverRule: false,
+    coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
+    pageDecor: "bottomband", // bande d'accent ambrée au pied de chaque page
   },
   {
     id: "finance", name: "Finance", category: "Ebook",
@@ -83,6 +93,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#064e3b", coverText: "#d1fae5", headingUpper: false,
     headingRule: "h1h2", headingBar: "none", coverLayout: "left", coverRule: false,
+    pageDecor: "doubleband", // filet haut + bande pleine au pied (rapport)
   },
   {
     id: "technologie", name: "Technologie", category: "Ebook",
@@ -93,6 +104,8 @@ export const GEN_TEMPLATES = [
     align: "left", chapterNewPage: true,
     coverBg: "#312e81", coverText: "#e0e7ff", headingUpper: false,
     headingRule: "none", headingBar: "left", coverLayout: "top", coverRule: true,
+    coverDimDefault: 0.15,
+    pageDecor: "sideline", // filet vertical gradué (fiche technique)
   },
   {
     id: "luxe", name: "Luxe", category: "Ebook",
@@ -103,6 +116,8 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#1c1917", coverText: "#d4af37", headingUpper: false,
     headingRule: "h1", headingBar: "none", coverLayout: "center", coverRule: true,
+    coverDimDefault: 0.15,
+    pageDecor: "frame", // cadre doré du livre de luxe
   },
   {
     id: "jeunesse", name: "Jeunesse", category: "Ebook",
@@ -113,6 +128,8 @@ export const GEN_TEMPLATES = [
     align: "left", chapterNewPage: true,
     coverBg: "#be185d", coverText: "#fce7f3", headingUpper: false,
     headingRule: "none", headingBar: "none", coverLayout: "band", coverRule: false,
+    coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
+    pageDecor: "sidestrip", // colonne d'accent rose sur le bord gauche
   },
   {
     id: "magazine", name: "Magazine", category: "Ebook",
@@ -123,11 +140,27 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: false,
     coverBg: "#111827", coverText: "#ffffff", headingUpper: true,
     headingRule: "h1", headingBar: "none", coverLayout: "top", coverRule: true,
+    coverDimDefault: 0.15,
+    pageDecor: "masthead", // bandeau portant le titre sur chaque page
   },
 ];
 
 export function getTemplate(id) {
   return GEN_TEMPLATES.find((tpl) => tpl.id === id) || GEN_TEMPLATES[0];
+}
+
+// Convertisseur hex → rgba() : utilisé par l'aperçu HTML et les couvertures
+// (bandes dégradées qui laissent voir la photo au lieu d'un aplat opaque).
+export function withAlpha(hex, alpha = 1) {
+  const h = String(hex || "").trim();
+  const m = h.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!m) return h || "transparent";
+  let v = m[1];
+  if (v.length === 3) v = v.split("").map((c) => c + c).join("");
+  const r = parseInt(v.slice(0, 2), 16);
+  const g = parseInt(v.slice(2, 4), 16);
+  const b = parseInt(v.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${Math.min(1, Math.max(0, alpha))})`;
 }
 
 // ─── Surcharges de style par document (`style_overrides`, colonne JSONB) ────
@@ -176,9 +209,19 @@ export function resolveCover(docMeta, template) {
     const n = Number(v);
     return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
   };
+  // Voile de lisibilité au-dessus de la photo de fond :
+  // 1. `imageOpacity` (curseur manuel) prime toujours ;
+  // 2. sinon l'ancien `imageDim` explicite ;
+  // 3. sinon le défaut DU MODÈLE (`coverDimDefault`) — les modèles « réalistes »
+  //    (moderne, magazine, technologie, luxe, business) affichent la photo
+  //    presque telle quelle (voile léger 0,15) au lieu de l'ancien voile
+  //    uniforme 0,35 qui ternissait toutes les couvertures ;
+  // 4. repli général 0,2.
   const dim = Number.isFinite(Number(c.imageOpacity))
     ? 1 - num(c.imageOpacity, 0, 100, 65) / 100
-    : num(c.imageDim, 0, 0.9, 0.35);
+    : Number.isFinite(Number(c.imageDim))
+      ? num(c.imageDim, 0, 0.9, 0.35)
+      : num(template.coverDimDefault, 0, 0.9, 0.2);
   return {
     bg: c.bg || template.coverBg,
     fg: c.text || template.coverText,
@@ -270,18 +313,23 @@ export const FONT_CSS = {
 
 export const FONT_PDF = { serif: "times", sans: "helvetica", mono: "courier" };
 
-// Espacements typographiques autour des titres (en pt).
+// Espacements typographiques autour des titres (en pt). Valeurs resserrées
+// façon Word : les anciens coefficients (h1 ×2.2, h2 ×1.9…) laissaient des
+// vides excessifs autour des titres et entre les listes — les documents
+// semblaient « aérés » au point de faire apparaître des pages à moitié vides.
 export function blockSpacing(template, kind) {
   const s = template.sizes;
   switch (kind) {
-    case "h1": return { before: s.h1 * 2.2, after: s.h1 * 1.0 };
-    case "h2": return { before: s.h2 * 1.9, after: s.h2 * 0.75 };
-    case "h3": return { before: s.h3 * 1.6, after: s.h3 * 0.6 };
-    case "h4": return { before: s.h4 * 1.5, after: s.h4 * 0.5 };
-    case "quote": return { before: s.body * 1.4, after: s.body * 1.4 };
-    case "list": return { before: s.body * 0.8, after: s.body * 1.2 };
-    case "image": return { before: s.body * 1.2, after: s.body * 1.4 };
-    case "hr": return { before: s.body * 1.6, after: s.body * 1.8 };
+    case "h1": return { before: s.h1 * 0.9, after: s.h1 * 0.45 };
+    case "h2": return { before: s.h2 * 0.8, after: s.h2 * 0.4 };
+    case "h3": return { before: s.h3 * 0.7, after: s.h3 * 0.3 };
+    case "h4": return { before: s.h4 * 0.6, after: s.h4 * 0.25 };
+    case "quote": return { before: s.body * 0.8, after: s.body * 0.8 };
+    case "list": return { before: 0, after: s.body * 0.22 };
+    case "listFirst": return { before: s.body * 0.45, after: s.body * 0.22 };
+    case "listLast": return { before: 0, after: s.body * 0.7 };
+    case "image": return { before: s.body * 0.9, after: s.body };
+    case "hr": return { before: s.body, after: s.body * 1.2 };
     default: return { before: 0, after: template.paraSpace };
   }
 }

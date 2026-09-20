@@ -807,6 +807,14 @@ main {
   font-size: 0.85rem;
   color: var(--muted);
 }
+.user-chip-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 6px;
+  vertical-align: -5px;
+}
 
 .hero {
   background: linear-gradient(135deg, #232f3e, #131a22);
@@ -6665,6 +6673,93 @@ a.step {
   margin-top: 12px;
 }
 
+/* ---------- Photo de profil (compte) & fiches créateur ---------- */
+.creator-avatar {
+  object-fit: cover;
+  overflow: hidden;
+}
+.creator-avatar-fallback {
+  font-weight: 700;
+  color: #b45309;
+  font-size: 26px;
+}
+.creator-card-main {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.creator-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.creator-contact .meta-chip {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.card-shop-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 6px;
+  vertical-align: -4px;
+  display: inline-block;
+  background: var(--bg);
+}
+.avatar-editor {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 6px 0 18px;
+  flex-wrap: wrap;
+}
+.avatar-lg {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid var(--border);
+  background: var(--bg);
+}
+.avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.avatar-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.avatar-editor-actions .hint,
+.avatar-editor-actions .success,
+.avatar-editor-actions .error {
+  flex-basis: 100%;
+  margin: 0;
+}
+@media (max-width: 480px) {
+  .avatar-editor {
+    gap: 12px;
+  }
+  .avatar-lg {
+    width: 72px;
+    height: 72px;
+  }
+  .avatar-fallback {
+    font-size: 28px;
+  }
+}
+
 /* Page "Contacter un livreur" */
 .search-bar {
   display: flex;
@@ -6869,6 +6964,76 @@ a.step {
     width: auto;
     flex-wrap: nowrap;
   }
+}
+
+/* ---------- Volets Produits physiques / Produits digitaux ---------- */
+.ptype-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+.ptype-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
+}
+.ptype-tab:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+.ptype-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+@media (max-width: 480px) {
+  .ptype-tabs {
+    gap: 8px;
+  }
+  .ptype-tab {
+    padding: 9px 10px;
+    font-size: 0.88rem;
+  }
+}
+
+/* Contact créateur sur la carte produit digital */
+.card-contact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+}
+.card-contact a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+.product-creator-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.product-creator-contact .meta-chip {
+  text-decoration: none;
 }
 
 /* ---------- Rails de recommandations ---------- */
@@ -9907,6 +10072,48 @@ a.step {
   border-radius: 10px;
   padding: 14px;
 }
+
+/* -------------------------------------------------------------------------
+   Bande « moyens de paiement acceptés » (page d'achat — iKeepay)
+   ------------------------------------------------------------------------- */
+.pay-strip {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  display: grid;
+  gap: 8px;
+}
+.pay-strip-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+.pay-strip-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.pay-strip-badges > span {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+.pay-strip-hint {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+@media (max-width: 640px) {
+  .pay-strip {
+    padding: 10px 12px;
+  }
+  .pay-strip-badges > span {
+    font-size: 10px;
+    padding: 3px 7px;
+  }
+}
 .gen-design-block h4 {
   margin: 0 0 10px;
 }
@@ -9936,6 +10143,52 @@ a.step {
   place-items: center;
   font-weight: bold;
   font-size: 15px;
+  /* Aperçu miniature du décor du modèle (barres/bandes/cadres) : les marques
+     sont positionnées en pourcentage DANS la pastille → overflow hidden. */
+  position: relative;
+  overflow: hidden;
+}
+/* Carte « Design suggéré selon votre contenu » (onglet Design). */
+.gen-scope-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 4px;
+}
+.gen-scope-badge {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--soft, #eef2ff);
+  color: var(--text-secondary, #475569);
+  border: 1px solid var(--border, #e2e8f0);
+}
+.gen-scope-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0;
+}
+@media (max-width: 640px) {
+  .gen-scope-actions .btn {
+    flex: 1 1 46%;
+  }
+}
+/* Séparateur vertical du ruban d'édition (groupes « façon Word »). */
+.gen-toolbar-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 4px;
+  background: var(--border, #e2e8f0);
+  display: inline-block;
+}
+/* Indication d'édition manuelle sous l'éditeur. */
+.gen-edit-hint {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary, #475569);
 }
 .gen-tpl-name {
   font-size: 11.5px;

@@ -6,7 +6,7 @@ import Seo from "../components/Seo.jsx";
 import { useAuth } from "../App.jsx";
 import { smartProcessImageFile, formatBytes } from "../imageKit.js";
 import DigitalProductPicker from "../components/DigitalProductPicker.jsx";
-import { countryPhone, countrySymbol } from "../config.js";
+import { countryPhone, countrySymbol, DIGITAL_CATEGORIES } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import MiniChart from "../components/MiniChart.jsx";
@@ -18,6 +18,9 @@ import OnlineEarningsCard from "../components/OnlineEarningsCard.jsx";
 const EMPTY_FORM = {
   name: "",
   description: "",
+  // Catégorie du produit digital (métadonnée de classement ; miroir serveur
+  // PUBLISH_CATEGORIES du Générateur).
+  category: "Digital",
   warranty: "",
   delivery_fee: "",
   contact: "",
@@ -232,6 +235,7 @@ export default function CreatorDashboard() {
     setForm({
       name: p.name || "",
       description: p.description || "",
+      category: p.category || "Digital",
       warranty: p.warranty || "",
       delivery_fee: p.delivery_fee != null ? String(p.delivery_fee) : "",
       contact,
@@ -408,6 +412,19 @@ export default function CreatorDashboard() {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
+
+            <label>{t("Catégorie du fichier")}</label>
+            <select
+              className="input"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            >
+              {DIGITAL_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {t(c)}
+                </option>
+              ))}
+            </select>
 
             <div className="row2">
               <div>

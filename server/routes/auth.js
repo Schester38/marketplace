@@ -11,6 +11,7 @@ import { registerSchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
 import { membershipRoles } from "../services/membershipGate.js";
 import { notifyAdmins } from "../services/adminNotify.js";
+import { uploadPhoto } from "../storage.js";
 
 const router = Router();
 
@@ -66,6 +67,8 @@ async function publicUser(u) {
     quartier: u.quartier || null,
     country: u.country || null,
     phone: u.phone || null,
+    // Photo de profil (tous les rôles) — URL publique WebP, null si absente.
+    avatar: u.avatar || null,
     seller_code: u.seller_code || null,
     reference_number: u.reference_number || null,
     email_verified: !!u.email_verified,
@@ -715,6 +718,47 @@ router.put(
       }
     }
     res.json({ user: await publicUser(updated[0]), email_changed: emailChanged });
+  })
+);
+
+// Photo de profil — OUVERTE À TOUS LES RÔLES (le nom du compte reste modifiable
+// ailleurs). Le client envoie une data-URI déjà redimensionnée
+// (`smartProcessImageFile`, WebP ≤ 1024 px) et le stockage reconvertit en WebP
+// avant dépôt dans le bucket public `photos` : la base ne conserve qu'une URL
+// légère, jamais le binaire. `avatar: null` retire la photo (l'ancien fichier
+// reste dans le bucket : la déduplication par hash peut le partager avec
+// d'autres comptes, on ne le supprime donc jamais ici).
+router.put(
+  "/avatar",
+  authRequired,
+  ah(async (req, res) => {
+    const { avatar } = req.body || {};
+    if (avatar === null || avatar === "") {
+      const cleared = (
+        await q("UPDATE users SET avatar = NULL WHERE id = $1 RETURNING *", [req.user.id])
+      )[0];
+      if (!cleared) return res.status(404).json({ error: "Compte introuvable" });
+      return res.json({ user: await publicUser(cleared) });
+    }
+    if (typeof avatar !== "string" || !/^data:image\/[a-z0-9+.-]+;base64,/i.test(avatar)) {
+      return res.status(400).json({ error: "Image invalide (data-URI base64 attendue)" });
+    }
+    // Garde-fou : le corps JSON est plafonné à 12 Mo par Express ; une image
+    // redimensionnée côté navigateur pèse quelques centaines de ko au maximum.
+    if (avatar.length > 6 * 1024 * 1024) {
+      return res.status(413).json({ error: "Image trop lourde (6 Mo maximum)" });
+    }
+    const url = await uploadPhoto(avatar, "avatars", "thumb").catch((err) => {
+      console.error("[auth] upload avatar impossible :", err.message);
+      return null;
+    });
+    if (!url) return res.status(503).json({ error: "Stockage d'images indisponible" });
+    const updated = (
+      await q("UPDATE users SET avatar = $1 WHERE id = $2 RETURNING *", [url, req.user.id])
+    )[0];
+    if (!updated) return res.status(404).json({ error: "Compte introuvable" });
+    logAudit(req.user.id, "profile.avatar", { url });
+    res.json({ user: await publicUser(updated) });
   })
 );
 

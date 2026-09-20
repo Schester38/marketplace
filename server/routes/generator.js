@@ -754,10 +754,23 @@ router.post(
     // toute autre valeur retombe sur « Digital ».
     const rawCategory = String(body.category || "").trim().slice(0, 60);
     const category = PUBLISH_CATEGORIES.has(rawCategory) ? rawCategory : "Digital";
-    // Commission reversée au VENDEUR qui vend le produit avec son code (0-100 %).
-    const commission = Number.isFinite(Number(body.commission))
-      ? Math.min(100, Math.max(0, Math.round(Number(body.commission))))
-      : 0;
+    // Commission reversée au VENDEUR qui vend le produit avec son code.
+    // Deux formats acceptés (même convention que l'espace créateur) :
+    //  - `commission_amount` : MONTANT en devise du prix (recommandé — c'est
+    //    comme cela que les créateurs saisissent ailleurs) → converti en % ;
+    //  - `commission` : pourcentage direct 0-100 (compatibilité).
+    // Un montant brut envoyé dans `commission` était auparavant bridé à 100,
+    // ce qui donnait une commission ÉGALE au prix de vente (bug signalé).
+    let commission = 0;
+    if (body.commission_amount != null && body.commission_amount !== "") {
+      const amt = Number(body.commission_amount);
+      commission =
+        Number.isFinite(amt) && amt > 0 && Number(price) > 0
+          ? Math.min(100, Math.round((amt / Number(price)) * 1e8) / 1e6)
+          : 0;
+    } else if (Number.isFinite(Number(body.commission))) {
+      commission = Math.min(100, Math.max(0, Math.round(Number(body.commission))));
+    }
 
     // Image de couverture : data-URL compressée côté client → URL publique du
     // bucket `photos` (comme les produits classiques). Un échec n'empêche pas

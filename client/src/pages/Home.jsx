@@ -39,6 +39,9 @@ export default function Home() {
   const [search, setSearch] = useState(() => params.get("q") || "");
   const [debouncedSearch, setDebouncedSearch] = useState(() => params.get("q") || "");
   const [category, setCategory] = useState(() => params.get("cat") || "");
+  // Volets produits : « physiques » (défaut) et « digitaux » — jamais mélangés
+  // dans la même liste (serveur `type=` + filtre client des rails).
+  const [ptype, setPtype] = useState(() => (params.get("type") === "digital" ? "digital" : "physical"));
   const [sort, setSort] = useState("popular");
   const [scope, setScope] = useState("product");
   const [minPrice, setMinPrice] = useState("");
@@ -117,6 +120,22 @@ export default function Home() {
     setPage(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.get("cat")]);
+
+  useEffect(() => {
+    setPtype(params.get("type") === "digital" ? "digital" : "physical");
+    setOffset(0);
+    setPage(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.get("type")]);
+
+  useEffect(() => {
+    const next = new URLSearchParams(params);
+    if ((next.get("type") || "physical") !== ptype) {
+      next.set("type", ptype);
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ptype]);
 
   useEffect(() => {
     const next = new URLSearchParams(params);
@@ -247,6 +266,8 @@ export default function Home() {
           search: debouncedSearch || undefined,
           category: category || undefined,
           sort: sort || undefined,
+          // Volet actif : produits physiques OU digitaux (jamais les deux).
+          type: ptype,
           ...(scope && scope !== "product" ? { scope } : {}),
           ...(minPrice ? { min_price: Number(minPrice) } : {}),
           ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
@@ -260,7 +281,7 @@ export default function Home() {
             const next = d.products || [];
             const unfiltered =
               !debouncedSearch && !category && !minPrice && !maxPrice && scope === "product";
-            if (next.length === 0 && hasData.current && unfiltered) {
+            if (next.length === 0 && hasData.current && unfiltered && ptype === "physical") {
               setError("");
             } else {
               setHasMore(Boolean(d.hasMore));
@@ -290,6 +311,7 @@ export default function Home() {
               !minPrice &&
               !maxPrice &&
               scope === "product" &&
+              ptype === "physical" &&
               retryRef.current < 2
             ) {
               retryRef.current += 1;
@@ -298,7 +320,7 @@ export default function Home() {
           }
         });
     },
-    [debouncedSearch, category, sort, scope, minPrice, maxPrice, offset, page, localOnly, geoCountry]
+    [debouncedSearch, category, sort, scope, minPrice, maxPrice, offset, page, localOnly, geoCountry, ptype]
   );
 
   useEffect(() => {
@@ -404,6 +426,16 @@ export default function Home() {
   // Découpage en lignes de 10 produits glissables (10 lignes par page).
   const productRows = [];
   for (let i = 0; i < products.length; i += 10) productRows.push(products.slice(i, i + 10));
+
+  // Rails filtrés par le volet actif (physique / digital) — jamais mélangés.
+  const filterType = (list) =>
+    ptype === "digital" ? list.filter((p) => p.is_digital) : list.filter((p) => !p.is_digital);
+  const fTrending = filterType(trending);
+  const fBestSellers = filterType(bestSellers);
+  const fPopular = filterType(popular);
+  const fNewArrivals = filterType(newArrivals);
+  const fRecent = filterType(recent);
+  const fCityProducts = filterType(cityProducts);
 
   const goToPage = (p) => {
     setPage(p);
@@ -544,7 +576,8 @@ export default function Home() {
       <section ref={produitsRef} aria-label={t("Produits")} style={{ scrollMarginTop: 80 }}>
         <div className="section-head">
           <h2 className="section-title">
-            <Logo className="logo-inline" /> {t("Produits et créations")}
+            <Logo className="logo-inline" />{" "}
+            {ptype === "digital" ? t("Produits digitaux") : t("Produits et créations")}
           </h2>
           {category || minPrice || maxPrice ? (
             <button
@@ -560,6 +593,40 @@ export default function Home() {
             </button>
           ) : null}
         </div>
+        {/* Volets « Produits physiques » / « Produits digitaux » : deux familles
+            jamais mélangées (filtre serveur + rails filtrés côté client). */}
+        {mode === "products" && (
+          <div className="ptype-tabs" role="tablist" aria-label={t("Type de produits")}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={ptype === "physical"}
+              className={`ptype-tab ${ptype === "physical" ? "active" : ""}`}
+              onClick={() => {
+                setPtype("physical");
+                setOffset(0);
+                setPage(0);
+                goToProducts();
+              }}
+            >
+              📦 {t("Produits physiques")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={ptype === "digital"}
+              className={`ptype-tab ${ptype === "digital" ? "active" : ""}`}
+              onClick={() => {
+                setPtype("digital");
+                setOffset(0);
+                setPage(0);
+                goToProducts();
+              }}
+            >
+              📁 {t("Produits digitaux")}
+            </button>
+          </div>
+        )}
         {browseMode && (
             <>
               <div className="home-tabs-wrap">
@@ -579,7 +646,7 @@ export default function Home() {
                   >
                     <span className="tab-emoji">👀</span> <span>{t("Vus récemment")}</span>
                   </button>
-                  {trending.length > 0 && (
+                  {fTrending.length > 0 && (
                     <button
                       type="button"
                       className={`home-tab t-trending ${activeRail === "trending" ? "active" : ""}`}
@@ -589,7 +656,7 @@ export default function Home() {
                       <span>{t("Tendances de la semaine")}</span>
                     </button>
                   )}
-                  {bestSellers.length > 0 && (
+                  {fBestSellers.length > 0 && (
                     <button
                       type="button"
                       className={`home-tab t-best ${activeRail === "best" ? "active" : ""}`}
@@ -598,7 +665,7 @@ export default function Home() {
                       <span className="tab-emoji">🔥</span> <span>{t("Meilleures ventes")}</span>
                     </button>
                   )}
-                  {popular.length > 0 && (
+                  {fPopular.length > 0 && (
                     <button
                       type="button"
                       className={`home-tab t-popular ${activeRail === "popular" ? "active" : ""}`}
@@ -627,50 +694,50 @@ export default function Home() {
                 </button>
               </div>
               {activeRail === "recent" &&
-                (recent.length > 0 ? (
+                (fRecent.length > 0 ? (
                   <ProductRail
                     title={t("Vus récemment")}
                     hint={t("Reprenez là où vous vous étiez arrêté.")}
                     emoji="👀"
-                    products={recent}
+                    products={fRecent}
                   />
                 ) : (
                   <p className="hint home-tabs-empty">
                     {t("Vous n'avez pas encore consulté de produit.")}
                   </p>
                 ))}
-              {activeRail === "trending" && trending.length > 0 && (
+              {activeRail === "trending" && fTrending.length > 0 && (
                 <ProductRail
                   title={t("Tendances de la semaine")}
                   hint={t("Les produits les plus consultés ces 7 derniers jours.")}
                   emoji="⚡"
-                  products={trending}
+                  products={fTrending}
                   badge={{ cls: "badge-hot", text: t("⭐ Populaire") }}
                 />
               )}
-              {activeRail === "best" && bestSellers.length > 0 && (
+              {activeRail === "best" && fBestSellers.length > 0 && (
                 <ProductRail
                   title={t("Meilleures ventes")}
                   hint={t("Les produits les plus commandés.")}
                   emoji="🔥"
-                  products={bestSellers}
+                  products={fBestSellers}
                 />
               )}
               {/* Rail « Nouveautés » toujours visible (max 10, glissable). */}
-              {newArrivals.length > 0 && (
+              {fNewArrivals.length > 0 && (
                 <ProductRail
                   title={t("Nouveautés")}
                   hint={t("Les derniers produits publiés sur Mboppi.")}
                   emoji="✨"
-                  products={newArrivals}
+                  products={fNewArrivals}
                 />
               )}
-              {activeRail === "popular" && popular.length > 0 && (
+              {activeRail === "popular" && fPopular.length > 0 && (
                 <ProductRail
                   title={t("Plus populaires")}
                   hint={t("Les produits les plus consultés et commandés.")}
                   emoji="🔥"
-                  products={popular}
+                  products={fPopular}
                 />
               )}
               {activeRail === "promos" &&
@@ -930,13 +997,13 @@ export default function Home() {
                       </div>
                     </section>
                   )}
-                  {cityProducts.length > 0 && (
+                  {fCityProducts.length > 0 && (
                     <section aria-label={t("Produits")}>
                       <h3 className="section-title">
                         <Logo className="logo-inline" /> {t("Produits")}
                       </h3>
                       <div className="grid">
-                        {cityProducts.map((p) => (
+                        {fCityProducts.map((p) => (
                           <ProductCard key={p.id} product={p} />
                         ))}
                       </div>
@@ -965,7 +1032,9 @@ export default function Home() {
                 ? t("Aucun produit dans cette catégorie.")
                 : search
                   ? t("Aucun résultat pour votre recherche.")
-                  : t("Aucun produit disponible.")}
+                  : ptype === "digital"
+                    ? t("Aucun produit digital pour le moment.")
+                    : t("Aucun produit disponible.")}
             </p>
           </div>
         ) : browseMode ? (

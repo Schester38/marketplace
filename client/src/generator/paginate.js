@@ -51,12 +51,21 @@ function styleOf(el, template) {
   else if (/times|georgia|garamond|serif/i.test(fam) && !/sans/i.test(fam)) font = "serif";
   else if (/arial|helvetica|sans/i.test(fam)) font = "sans";
   const deco = String(cs.textDecorationLine || cs.textDecoration || "");
+  const va = String(cs.verticalAlign || "");
+  // Surlignage : couleur de fond effective (ignorée si transparente).
+  const bgRaw = String(cs.backgroundColor || "");
+  const bg = bgRaw && bgRaw !== "transparent" && !/^rgba\(0, 0, 0, 0\)/.test(bgRaw)
+    ? decodeColor(bgRaw)
+    : null;
   return {
     bold: fw >= 600,
     italic: /italic/i.test(cs.fontStyle || ""),
     underline: /underline/.test(deco),
     strike: /line-through/.test(deco),
     color: decodeColor(cs.color) || template.colors.body,
+    bg,
+    sup: va === "super",
+    sub: va === "sub",
     sizePx: parseFloat(cs.fontSize) || template.sizes.body * PT_TO_PX,
     font,
   };
@@ -64,7 +73,8 @@ function styleOf(el, template) {
 
 function styleKey(s, href) {
   return [s.bold ? 1 : 0, s.italic ? 1 : 0, s.underline ? 1 : 0, s.strike ? 1 : 0,
-    s.color, Math.round(s.sizePx * 10) / 10, s.font, href || ""].join("|");
+    s.color, s.bg || "", s.sup ? 1 : 0, s.sub ? 1 : 0,
+    Math.round(s.sizePx * 10) / 10, s.font, href || ""].join("|");
 }
 
 // Collecte mot par mot (positions exactes via Range), regroupement en lignes.
@@ -223,11 +233,16 @@ function atomsFromBlock(el, host, hostRect, template, groupId) {
     return [{ kind: "hr", sp: blockSpacing(template, "hr"), groupId, groupLines: 1, breakable: false }];
   }
 
-  // Marqueur [QR] : un paragraphe contenant exactement ce texte (insensible à
-  // la casse/espaces) réserve l'emplacement du QR code de vérification. La
-  // boîte est centrée dans la largeur de contenu ; sa hauteur guide la
-  // pagination comme une image (insécable, jamais coupée entre deux pages).
-  if (lower === "p" && /^\[\s*qr\s*\]$/i.test(el.textContent.trim())) {
+  // Marqueur [QR] : un bloc contenant exactement ce texte (insensible à la
+  // casse/espaces) réserve l'emplacement du QR code de vérification. Accepté
+  // dans un paragraphe OU un titre (documents anciens où la détection avait
+  // transformé « [QR] » en titre). La boîte est centrée dans la largeur de
+  // contenu ; sa hauteur guide la pagination comme une image (insécable,
+  // jamais coupée entre deux pages).
+  if (
+    (lower === "p" || /^h[1-6]$/.test(lower)) &&
+    /^\[\s*qr\s*\]$/i.test(el.textContent.trim())
+  ) {
     const size = QR_BOX_MM * PX_PER_MM;
     return [{
       kind: "qr",
@@ -475,11 +490,16 @@ export function flowAtoms(atoms, contentHpx, template, bodyLineH) {
     prevAfter = atom.sp.after;
 
     if ((atom.kind === "h1" || atom.kind === "h2") && atom.lineIndex === 0) {
-      headings.push({
-        level: atom.kind === "h1" ? 1 : 2,
-        text: lineText(atom.lines[0]),
-        pageIndex: pages.length,
-      });
+      const hText = lineText(atom.lines[0]);
+      // Marqueur [QR] : jamais dans la table des matières (documents anciens
+      // où la détection l'avait transformé en titre).
+      if (!/^\[\s*qr\s*\]$/i.test(hText.trim())) {
+        headings.push({
+          level: atom.kind === "h1" ? 1 : 2,
+          text: hText,
+          pageIndex: pages.length,
+        });
+      }
     }
     items.push(item);
     firstPlaced = true;

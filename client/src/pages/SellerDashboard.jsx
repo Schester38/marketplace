@@ -65,6 +65,8 @@ export default function SellerDashboard() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [copied, setCopied] = useState("");
+  // Volets produits : « physiques » (défaut) et « digitaux » — jamais mélangés.
+  const [stype, setStype] = useState("physical");
   const [proofSale, setProofSale] = useState(null);
 
   // --- Suivi GPS temps réel (carte livreur/client/boutique) ---
@@ -623,23 +625,48 @@ export default function SellerDashboard() {
             "Le montant « + » affiché en vert sur chaque produit est la commission que vous gagnez à sa vente."
           )}
         </p>
+        {/* Volets « Produits physiques » / « Produits digitaux » : deux familles
+            distinctes (livraison vs téléchargement), jamais mélangées. */}
+        <div className="ptype-tabs" role="tablist" aria-label={t("Type de produits")}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={stype === "physical"}
+            className={`ptype-tab ${stype === "physical" ? "active" : ""}`}
+            onClick={() => setStype("physical")}
+          >
+            📦 {t("Produits physiques")}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={stype === "digital"}
+            className={`ptype-tab ${stype === "digital" ? "active" : ""}`}
+            onClick={() => setStype("digital")}
+          >
+            📁 {t("Produits digitaux")}
+          </button>
+        </div>
         {products.length === 0 ? (
           <p className="empty">{t("Aucun produit disponible à vendre pour le moment.")}</p>
         ) : (
           <div className="grid">
-            {products.map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                showCommission
-                action={t("Vendre")}
-                onAction={() => shareSale(p)}
-                extraAction={{
-                  label: "🔗 " + (copied === "product-" + p.id ? t("Lien copié !") : t("Partager")),
-                  onClick: () => shareProduct(p),
-                }}
-              />
-            ))}
+            {products
+              .filter((p) => (stype === "digital" ? p.is_digital === true : p.is_digital !== true))
+              .map((p) => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  showCommission
+                  action={t("Vendre")}
+                  onAction={() => shareSale(p)}
+                  extraAction={{
+                    label:
+                      "🔗 " + (copied === "product-" + p.id ? t("Lien copié !") : t("Partager")),
+                    onClick: () => shareProduct(p),
+                  }}
+                />
+              ))}
           </div>
         )}
       </section>

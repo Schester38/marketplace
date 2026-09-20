@@ -52,6 +52,12 @@ export function detectHeading(raw, { first = false, caps = true } = {}) {
   const md = text.match(/^(#{1,6})\s+(.+)$/);
   if (md) return { level: Math.min(md[1].length, 4), kind: "md", text: md[2].trim() };
 
+  // Marqueurs entre crochets (« [QR] », « [PHOTO] ») : jamais des titres —
+  // sinon le marqueur [QR] (MAJUSCULES, sans ponctuation) serait converti en
+  // titre par l'Entrée en direct ou la passe « 🧠 Détecter les titres », et le
+  // QR code ne serait plus rendu (la pagination n'attend qu'un paragraphe).
+  if (/^\[[^\]]+\]$/.test(text)) return null;
+
   if (text.length > 100) return null; // ligne longue → paragraphe
   if (/[.;,:]$/.test(text)) return null; // ponctuation finale → phrase, pas un titre
 
@@ -68,6 +74,11 @@ export function detectHeading(raw, { first = false, caps = true } = {}) {
   // Sections nommées (INTRODUCTION, CONCLUSION, ANNEXE…) → h1 également.
   if (SECTION_RE.test(text) && text.length <= 60) return { level: 1, kind: "section" };
 
+  // Sous-titres explicites (« Sous-titre : … », « Sous-partie 2 … ») → h3.
+  if (/^(sous[- ]?(titre|partie|chapitre|section)|sub(title|section)?)\b/i.test(text) && text.length <= 80) {
+    return { level: 3, kind: "subtitle" };
+  }
+
   // Sous-titres hiérarchiques uniquement (« 1.1 Titre », « 2.3.1 Titre ») : les
   // simples « 1. » / « 2) » restent des listes numérotées (règle de l'import).
   const num = text.match(/^(\d{1,2}(?:\.\d{1,2})+)\.?\s+\S/);
@@ -78,6 +89,18 @@ export function detectHeading(raw, { first = false, caps = true } = {}) {
 
   // Ligne EN MAJUSCULES courte, sans ponctuation finale.
   if (caps && isUpperTitle(text)) return { level: 2, kind: "caps" };
+
+  // « Title Case » : chaque mot commence par une majuscule (au moins 2 mots,
+  // pas de verbe conjugué détectable — heuristique sûre uniquement si la ligne
+  // est courte et sans ponctuation interne forte). Ex. « L'Art de Convaincre »,
+  // « Comment Réussir Sa Vie ». → sous-titre h3 (les majuscules intégrales sont
+  // déjà captées au-dessus comme h2).
+  if (caps && text.length <= 60 && !/[;,]/.test(text)) {
+    const words = text.split(/\s+/).filter((w) => /[a-zA-ZÀ-ÿ]/.test(w));
+    if (words.length >= 2 && words.every((w) => /^[A-ZÀ-ÖØ-Þ]/.test(w.replace(/^[’'“”]+/, "")))) {
+      return { level: 3, kind: "titlecase" };
+    }
+  }
 
   return null;
 }
@@ -109,6 +132,8 @@ export function looksStructured(raw) {
       /^[-*•]\s+/.test(l) ||
       /^\d{1,3}[.)]\s+/.test(l) ||
       /^>\s?/.test(l) ||
+      /^«\s*.+\s*»$/.test(l) ||
+      /^[“"]\s*.+\s*[”"]$/.test(l) ||
       /^(-{3,}|\*{3,}|_{3,})$/.test(l)
   );
 }
@@ -190,11 +215,24 @@ export function detectStructureHtml(rawText) {
     }
     firstMeaningfulSeen = true;
 
-    // Citations.
+    // Citations : préfixe « > », ligne entièrement entre guillemets (« … »,
+    // “ … ”, " … "), ou attribution courte après un tiret cadratin (« — Auteur »).
     if (/^>\s?/.test(line)) {
       flushPara();
       flushList();
       out.push(`<blockquote><p>${escapeHtml(line.replace(/^>\s?/, ""))}</p></blockquote>`);
+      continue;
+    }
+    if (
+      /^«\s*.+\s*»$/.test(line) ||
+      /^[“"]\s*.+\s*[”"]$/.test(line) ||
+      (/^[—–]\s*\S.{0,60}$/.test(line) && !/[.!?]$/.test(line))
+    ) {
+      flushPara();
+      flushList();
+      out.push(
+        `<blockquote><p>${escapeHtml(line.replace(/^[—–]\s*/, ""))}</p></blockquote>`
+      );
       continue;
     }
 

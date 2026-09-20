@@ -163,6 +163,9 @@ export const api = {
     request("/auth/google-choose", { method: "POST", body: JSON.stringify({ ct, role }) }),
   me: () => request("/auth/me"),
   updateProfile: (payload) => request("/auth/me", { method: "PUT", body: JSON.stringify(payload) }),
+  // Photo de profil (tous rôles) : data-URI déjà redimensionnée en WebP par le
+  // navigateur ; `avatar: null` retire la photo.
+  updateAvatar: (avatar) => request("/auth/avatar", { method: "PUT", body: JSON.stringify({ avatar }) }),
   changePassword: (payload) =>
     request("/auth/password", { method: "PUT", body: JSON.stringify(payload) }),
   deleteAccount: (payload) =>

@@ -12,6 +12,9 @@ import { ResizableImage } from "../generator/GenImage.jsx";
 import { TableKit } from "@tiptap/extension-table";
 import TextAlign from "@tiptap/extension-text-align";
 import { TextStyleKit } from "@tiptap/extension-text-style";
+import Highlight from "@tiptap/extension-highlight";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
 import { api, setGeneratorScope } from "../api.js";
 import { useLang } from "../i18n.jsx";
 import {
@@ -23,12 +26,14 @@ import {
   resolveTemplate,
   resolveCover,
   coverLayoutBox,
+  withAlpha,
   SIZE_KEYS,
   COLOR_KEYS,
 } from "../generator/templates.js";
 import { useAuth } from "../App.jsx";
 import { DIGITAL_CATEGORIES, countrySymbol } from "../config.js";
 import { detectStructureHtml } from "../generator/structure.js";
+import { detectScope } from "../generator/scope.js";
 import { HeadingAutoDetect, formatHeadings } from "../generator/headings.js";
 import { paginateDocument, PX_PER_MM, PT_TO_PX } from "../generator/paginate.js";
 import { exportDocumentPdf, saveBlob } from "../generator/exportPdf.js";
@@ -383,6 +388,8 @@ function GenEditor({ initialDoc, onBack }) {
   const [published, setPublished] = useState(null); // { product_id, updated }
   const [delBusy, setDelBusy] = useState(false); // suppression du produit publié
   const [formatMsg, setFormatMsg] = useState(""); // résultat de « Détecter les titres »
+  // Portée du contenu détectée → design suggéré (onglet Design).
+  const [scopeInfo, setScopeInfo] = useState(null);
   const hasAi = typeof meta.ai_available === "undefined" ? true : meta.ai_available;
 
   const contentRef = useRef(initialDoc.content || EMPTY_DOC);
@@ -401,6 +408,11 @@ function GenEditor({ initialDoc, onBack }) {
       TableKit.configure({ table: { resizable: true } }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       TextStyleKit,
+      // Mise en forme « façon Word » : surlignage multicolore, exposant,
+      // indice (couleur/taille/police viennent de TextStyleKit).
+      Highlight.configure({ multicolor: true }),
+      Subscript,
+      Superscript,
     ],
     content: contentRef.current,
     onUpdate: ({ editor: ed }) => {
@@ -534,6 +546,17 @@ function GenEditor({ initialDoc, onBack }) {
     }
   }, []);
 
+  // ─── Portée du contenu → design suggéré ────────────────────────────────────
+  // Analyse locale (aucun appel réseau) du texte de l'éditeur : le Générateur
+  // propose les modèles adaptés au SUJET (finance, roman, jeunesse, formation…)
+  // et laisse l'utilisateur décider — rien n'est appliqué automatiquement.
+  const analyzeScope = useCallback(() => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    const text = typeof ed.getText === "function" ? ed.getText() : "";
+    setScopeInfo(detectScope(text, { templateIds: GEN_TEMPLATES.map((tpl) => tpl.id) }));
+  }, []);
+
   // ─── Aperçu paginé : invalidation + (re)construction ────────────────────────
   // L'aperçu est périmé dès qu'un paramètre de mise en page change (modèle de
   // design, styles avancés, format, orientation, marges, table des matières).
@@ -559,6 +582,11 @@ function GenEditor({ initialDoc, onBack }) {
   useEffect(() => {
     if (view === "preview" && !preview && !previewBusy) buildPreview();
   }, [view, preview, previewBusy, buildPreview]);
+
+  // Suggestion de design : (re)analysée à chaque ouverture de l'onglet Design.
+  useEffect(() => {
+    if (view === "design") analyzeScope();
+  }, [view, analyzeScope]);
 
   // ─── Export PDF réel (jsPDF, mêmes positions que l'aperçu) ─────────────────
   const doExport = async () => {
@@ -824,10 +852,10 @@ function GenEditor({ initialDoc, onBack }) {
         title: pub.title || metaRef.current.title,
         description: pub.description || "",
         category: pub.category || "Digital",
-        commission: Math.min(
-          100,
-          Math.max(0, Math.round(Number(String(pub.commission || "0").replace(",", ".")) || 0))
-        ),
+        // Commission saisie en MONTANT (comme dans l'espace créateur) — le
+        // serveur la convertit en pourcentage. (Avant : la valeur saisie était
+        // traitée comme un % et bridée à 100 → commission = prix de vente.)
+        commission_amount: Math.max(0, Number(String(pub.commission || "").replace(",", ".")) || 0),
         cover: coverData,
       });
       setMeta(d.document);
@@ -1053,10 +1081,6 @@ function GenEditor({ initialDoc, onBack }) {
       {view === "edit" && (
         <>
           <div className="gen-toolbar" role="toolbar" aria-label={t("Mise en forme")}>
-            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleBold().run()} title="Gras (Ctrl+B)"><strong>G</strong></button>
-            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleItalic().run()} title="Italique (Ctrl+I)"><em>I</em></button>
-            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleUnderline().run()} title="Souligné (Ctrl+U)"><u>S</u></button>
-            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleStrike().run()} title="Barré">S̶</button>
             <select
               className="input gen-inline-select"
               value=""
@@ -1075,6 +1099,29 @@ function GenEditor({ initialDoc, onBack }) {
               <option value="4">H4</option>
               <option value="p">{t("Paragraphe")}</option>
             </select>
+            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleBold().run()} title="Gras (Ctrl+B)"><strong>G</strong></button>
+            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleItalic().run()} title="Italique (Ctrl+I)"><em>I</em></button>
+            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleUnderline().run()} title="Souligné (Ctrl+U)"><u>S</u></button>
+            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleStrike().run()} title="Barré">S̶</button>
+            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleCode().run()} title="Code (monospace)">‹›</button>
+            {/* Couleur du texte + surlignage (rendus dans l'aperçu ET le PDF) */}
+            <input
+              type="color"
+              className="gen-color-input"
+              defaultValue="#1a1a2e"
+              onChange={(e) => editor?.chain().focus().setColor(e.target.value).run()}
+              title={t("Couleur du texte")}
+            />
+            <input
+              type="color"
+              className="gen-color-input"
+              defaultValue="#fff3a0"
+              onChange={(e) => editor?.chain().focus().toggleHighlight({ color: e.target.value }).run()}
+              title={t("Surlignage")}
+            />
+            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().unsetColor().run()} title={t("Retirer la couleur")}>A✕</button>
+            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleSuperscript().run()} title={t("Exposant")}>X²</button>
+            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleSubscript().run()} title={t("Indice")}>X₂</button>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleBulletList().run()} title={t("Liste à puces")}>•≡</button>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleOrderedList().run()} title={t("Liste numérotée")}>1≡</button>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().toggleBlockquote().run()} title={t("Citation")}>❝</button>
@@ -1111,9 +1158,21 @@ function GenEditor({ initialDoc, onBack }) {
             >▩</button>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().setTextAlign("left").run()} title={t("Aligner à gauche")}>⯇</button>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().setTextAlign("center").run()} title={t("Centrer")}>≡</button>
+            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().setTextAlign("right").run()} title={t("Aligner à droite")}>⯈</button>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().setTextAlign("justify").run()} title={t("Justifier")}>☰</button>
+            <span className="gen-toolbar-sep" />
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().undo().run()} title="Annuler (Ctrl+Z)">↺</button>
             <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().redo().run()} title="Rétablir (Ctrl+Y)">↻</button>
+            <button type="button" className="btn btn-small btn-outline" onClick={() => editor?.chain().focus().selectAll().deleteSelection().run()} title={t("Tout effacer")}>🗑</button>
+            <button
+              type="button"
+              className="btn btn-small btn-outline"
+              onClick={() => {
+                const text = window.prompt(t("Texte à insérer"));
+                if (text) editor?.chain().focus().insertContent(text).run();
+              }}
+              title={t("Insérer du texte")}
+            >⌨</button>
           </div>
           <div className="gen-toolbar gen-toolbar-import">
             <label className="btn btn-small btn-primary">
@@ -1129,6 +1188,11 @@ function GenEditor({ initialDoc, onBack }) {
             </span>
           </div>
           <EditorContent editor={editor} className="gen-editor" />
+          <p className="hint gen-edit-hint">
+            {t(
+              "✏️ Ce document est entièrement éditable : cliquez dans le texte pour le modifier, utilisez le ruban ci-dessus. Chaque modification met à jour l'aperçu, le PDF et l'EPUB."
+            )}
+          </p>
           {hasAi && (
             <div className="gen-ai">
               <div className="gen-ai-actions">
@@ -1187,6 +1251,66 @@ function GenEditor({ initialDoc, onBack }) {
       {/* ─── Vue DESIGN : modèle, format, couverture, protection ──────────── */}
       {view === "design" && (
         <div className="gen-design">
+          {/* Suggestion par portée du contenu : analyse locale du texte, le
+              Générateur propose les modèles adaptés au sujet — l'utilisateur
+              reste libre (aucun changement automatique). */}
+          <div className="gen-design-block gen-scope">
+            <h4>🧠 {t("Design suggéré selon votre contenu")}</h4>
+            {scopeInfo ? (
+              <>
+                <p className="gen-scope-head">
+                  <strong>
+                    {scopeInfo.emoji} {t(scopeInfo.label)}
+                  </strong>
+                  {scopeInfo.confidence > 0 && (
+                    <span className="gen-scope-badge">
+                      {t("correspondance {n} %", { n: scopeInfo.confidence })}
+                    </span>
+                  )}
+                </p>
+                {scopeInfo.reason && (
+                  <p className="hint">
+                    {t("Repéré dans votre texte : {words}.", { words: scopeInfo.reason })}
+                  </p>
+                )}
+                <div className="gen-scope-actions">
+                  {scopeInfo.suggestions.map((sug) => {
+                    const tpl = GEN_TEMPLATES.find((x) => x.id === sug.id);
+                    if (!tpl) return null;
+                    return (
+                      <button
+                        key={sug.id}
+                        type="button"
+                        className={`btn btn-small ${meta.template_id === sug.id ? "btn-primary" : "btn-outline"}`}
+                        onClick={() => patchMeta({ template_id: sug.id })}
+                        title={t("Appliquer ce modèle")}
+                      >
+                        <span className="gen-tpl-swatch" style={{ background: tpl.coverBg, color: tpl.coverText }}>
+                          Aa
+                        </span>{" "}
+                        {tpl.name}
+                      </button>
+                    );
+                  })}
+                  <button type="button" className="btn btn-small btn-outline" onClick={analyzeScope}>
+                    🔄 {t("Relancer l'analyse")}
+                  </button>
+                </div>
+                <p className="hint">
+                  {t(
+                    "Suggestion indicative : les 12 modèles restent disponibles ci-dessous, et vos réglages de couleurs et de polices sont conservés."
+                  )}
+                </p>
+              </>
+            ) : (
+              <p className="hint">
+                {t(
+                  "Ajoutez quelques paragraphes à votre document : le Générateur détecte alors son sujet et vous propose les modèles de design adaptés."
+                )}
+              </p>
+            )}
+          </div>
+
           <div className="gen-design-block">
             <h4>🎨 {t("Modèle de design")}</h4>
             <div className="gen-templates">
@@ -1200,6 +1324,9 @@ function GenEditor({ initialDoc, onBack }) {
                 >
                   <span className="gen-tpl-swatch" style={{ background: tpl.coverBg, color: tpl.coverText }}>
                     Aa
+                    {decorMarks(tpl).map((st, i) => (
+                      <span key={i} style={st} />
+                    ))}
                   </span>
                   <span className="gen-tpl-name">{tpl.name}</span>
                 </button>
@@ -1351,7 +1478,7 @@ function GenEditor({ initialDoc, onBack }) {
                   <label>
                     {t("Opacité de l'image de fond")} —{" "}
                     {Math.round(
-                      meta.cover?.imageOpacity ?? Math.round((1 - (meta.cover?.imageDim ?? 0.35)) * 100)
+                      meta.cover?.imageOpacity ?? Math.round((1 - (meta.cover?.imageDim ?? 0.2)) * 100)
                     )}{" "}
                     %
                   </label>
@@ -1360,7 +1487,7 @@ function GenEditor({ initialDoc, onBack }) {
                     min="0"
                     max="100"
                     step="5"
-                    value={meta.cover?.imageOpacity ?? Math.round((1 - (meta.cover?.imageDim ?? 0.35)) * 100)}
+                    value={meta.cover?.imageOpacity ?? Math.round((1 - (meta.cover?.imageDim ?? 0.2)) * 100)}
                     onChange={(e) =>
                       patchMeta({
                         cover: { ...(meta.cover || {}), imageOpacity: Number(e.target.value), imageDim: undefined },
@@ -1587,6 +1714,9 @@ function GenEditor({ initialDoc, onBack }) {
       {view === "preview" && (
         <div className="gen-preview-zone">
           <div className="dash-actions" style={{ marginBottom: 12 }}>
+            <button type="button" className="btn btn-primary btn-small" onClick={() => setView("edit")}>
+              ✏️ {t("Modifier le contenu")}
+            </button>
             <button type="button" className="btn btn-outline btn-small" onClick={buildPreview} disabled={previewBusy}>
               {previewBusy ? t("Recalcul…") : `⟳ ${t("Régénérer l'aperçu")}`}
             </button>
@@ -1688,17 +1818,29 @@ function GenEditor({ initialDoc, onBack }) {
             </label>
             <div className="gen-form-row">
               <div className="gen-grow">
-                <label>{t("Commission vendeur (%)")}</label>
+                <label>{t("Commission vendeur (montant)")}</label>
                 <input
                   className="input"
                   type="number"
                   min="0"
-                  max="100"
-                  step="1"
+                  step="100"
                   value={pub.commission}
                   onChange={(e) => setPub({ ...pub, commission: e.target.value })}
-                  placeholder="0"
+                  placeholder="500"
                 />
+                {(() => {
+                  const amt = Number(String(pub.commission || "").replace(",", ".")) || 0;
+                  const base = Number(String(pub.price || "").replace(",", ".")) || 0;
+                  if (amt <= 0 || base <= 0) return null;
+                  const pct = Math.round((amt / base) * 1e8) / 1e6;
+                  if (pct > 100)
+                    return (
+                      <p className="hint">
+                        {t("Montant supérieur au prix : la commission est limitée au prix de vente.")}
+                      </p>
+                    );
+                  return <p className="hint">{t("≈ {p} % du prix", { p: pct })}</p>;
+                })()}
               </div>
               <div className="gen-grow">
                 <label>{t("Catégorie")}</label>
@@ -1765,6 +1907,271 @@ function GenEditor({ initialDoc, onBack }) {
 // ═════════════════════════════════════════════════════════════════════════════
 const GEN_PREVIEW_SCALE = 0.75;
 
+// Décor de page du modèle de design, rendu en HTML à l'identique du PDF
+// (mêmes formes, mêmes coordonnées en millimètres — voir drawPageDecor dans
+// exportPdf.js). C'est ce qui rend le changement de modèle immédiatement
+// visible dans l'aperçu : bandeau titre, filets, colonne, cadre, marge…
+function PageDecor({ template, box, docMeta, scale }) {
+  const decor = template.pageDecor;
+  if (!decor) return null;
+  const { w, h, m } = box;
+  const mm = (v) => v * PX_PER_MM * scale;
+  const accent = template.colors.accent;
+  const title = String(docMeta?.title || "");
+  const abs = { position: "absolute" };
+  const rule = (style) => <div style={{ ...abs, background: accent, ...style }} />;
+  const lw = Math.max(1, mm(0.5));
+
+  switch (decor) {
+    case "toprule":
+      return (
+        <>
+          {rule({ left: mm(m.left), top: mm(m.top * 0.5), width: mm(w - m.right - m.left), height: mm(0.9) })}
+          <div
+            style={{
+              ...abs,
+              left: mm(m.left),
+              top: mm(m.top * 0.5 + 2.2),
+              width: mm(w - m.right - m.left),
+              height: mm(0.25),
+              background: template.colors.heading,
+            }}
+          />
+        </>
+      );
+    case "topbar":
+      return <div style={{ ...abs, left: 0, top: 0, width: "100%", height: mm(4.5), background: accent }} />;
+    case "headerband": {
+      const bh = Math.max(9, m.top * 0.62);
+      return (
+        <>
+          <div
+            style={{
+              ...abs,
+              left: 0,
+              top: 0,
+              width: "100%",
+              height: mm(bh),
+              background: accent,
+              opacity: 0.14,
+            }}
+          />
+          <div style={{ ...abs, left: 0, top: mm(bh), width: "100%", height: lw, background: accent }} />
+          {title && (
+            <div
+              style={{
+                ...abs,
+                left: mm(m.left),
+                top: mm(bh / 2 - 3),
+                fontSize: mm(3.1),
+                fontWeight: "bold",
+                color: accent,
+                fontFamily: FONT_CSS[template.headingFont],
+              }}
+            >
+              {title.length > 58 ? `${title.slice(0, 58)}…` : title}
+            </div>
+          )}
+        </>
+      );
+    }
+    case "bottomband":
+      return (
+        <div style={{ ...abs, left: 0, bottom: 0, width: "100%", height: mm(5.5), background: accent }} />
+      );
+    case "sidestrip":
+      return <div style={{ ...abs, left: 0, top: 0, width: mm(4), height: "100%", background: accent }} />;
+    case "frame": {
+      const pad = Math.max(4, m.left * 0.42);
+      return (
+        <>
+          <div
+            style={{
+              ...abs,
+              left: mm(pad),
+              top: mm(pad),
+              width: mm(w - pad * 1.5),
+              height: mm(h - pad),
+              border: `${lw}px solid ${accent}`,
+              boxSizing: "border-box",
+            }}
+          />
+          {rule({ left: mm(m.left), top: mm(m.top * 0.5), width: mm(w - m.right - m.left), height: mm(0.6) })}
+        </>
+      );
+    }
+    case "doublerule":
+      return (
+        <>
+          {rule({ left: mm(m.left), top: mm(m.top * 0.45), width: mm(w - m.right - m.left), height: mm(1) })}
+          {rule({ left: mm(m.left), top: mm(m.top * 0.45 + 2), width: mm(w - m.right - m.left), height: mm(0.3) })}
+          {rule({ left: mm(m.left), bottom: mm(m.bottom * 0.55), width: mm(w - m.right - m.left), height: mm(1) })}
+          {rule({ left: mm(m.left), bottom: mm(m.bottom * 0.55 + 2), width: mm(w - m.right - m.left), height: mm(0.3) })}
+        </>
+      );
+    case "noterule": {
+      const x = Math.max(5, m.left - 6);
+      const top = m.top * 0.6;
+      const bottom = h - m.bottom * 0.6;
+      return (
+        <>
+          <div
+            style={{
+              ...abs,
+              left: mm(x),
+              top: mm(top),
+              width: mm(0.7),
+              height: mm(bottom - top),
+              background: accent,
+            }}
+          />
+          <div style={{ ...abs, left: mm(x - 1.2), top: mm(top - 1.2), width: mm(4.8), height: mm(2.4), background: accent }} />
+          <div style={{ ...abs, left: mm(x - 1.2), top: mm(bottom - 1.2), width: mm(4.8), height: mm(2.4), background: accent }} />
+        </>
+      );
+    }
+    case "sidebartint": {
+      const bw = Math.max(12, m.left * 0.8);
+      return (
+        <>
+          <div style={{ ...abs, left: 0, top: 0, width: mm(bw), height: "100%", background: accent, opacity: 0.12 }} />
+          {rule({ left: mm(bw), top: 0, width: lw, height: "100%" })}
+        </>
+      );
+    }
+    case "doubleband":
+      return (
+        <>
+          {rule({ left: mm(m.left), top: mm(m.top * 0.45), width: mm(w - m.right - m.left), height: mm(1.1) })}
+          <div style={{ ...abs, left: 0, bottom: 0, width: "100%", height: mm(4.2), background: accent }} />
+        </>
+      );
+    case "sideline": {
+      const x = Math.min(w - 6, w - m.right + 6);
+      const top = m.top * 0.6;
+      const bottom = h - m.bottom * 0.6;
+      const ticks = [];
+      for (let y = top; y <= bottom; y += 20) {
+        ticks.push(rule({ left: mm(x - 2.4), top: mm(y), width: mm(2.4), height: mm(0.5) }));
+      }
+      return (
+        <>
+          <div
+            style={{
+              ...abs,
+              left: mm(x),
+              top: mm(top),
+              width: mm(0.6),
+              height: mm(bottom - top),
+              background: accent,
+            }}
+          />
+          {ticks}
+        </>
+      );
+    }
+    case "masthead": {
+      // Hauteur bornée SOUS la ligne d'en-tête (m.top - 7), comme le PDF.
+      const bh = Math.max(8, Math.min(m.top * 0.55, m.top - 8));
+      return (
+        <>
+          <div style={{ ...abs, left: 0, top: 0, width: "100%", height: mm(bh), background: accent }} />
+          {title && (
+            <div
+              style={{
+                ...abs,
+                left: mm(m.left),
+                top: mm(bh / 2 - 3.4),
+                fontSize: mm(4.2),
+                fontWeight: "bold",
+                color: "#ffffff",
+                fontFamily: FONT_CSS[template.headingFont],
+              }}
+            >
+              {title.length > 52 ? `${title.slice(0, 52)}…` : title}
+            </div>
+          )}
+          <div
+            style={{
+              ...abs,
+              left: 0,
+              top: mm(bh),
+              width: "100%",
+              height: mm(0.6),
+              background: template.colors.heading,
+            }}
+          />
+        </>
+      );
+    }
+    default:
+      return null;
+  }
+}
+
+// Aperçu miniature du décor d'un modèle (barre, bandeau, cadre, colonne…) :
+// rendu DANS la pastille de la grille de choix, pour que la différence entre
+// modèles soit visible AVANT d'appliquer (l'utilisateur ne découvre plus le
+// design après coup).
+function decorMarks(tpl) {
+  const a = tpl.colors.accent;
+  const base = { position: "absolute", background: a };
+  switch (tpl.pageDecor) {
+    case "topbar":
+      return [{ ...base, top: 0, left: 0, right: 0, height: "13%" }];
+    case "bottomband":
+      return [{ ...base, bottom: 0, left: 0, right: 0, height: "15%" }];
+    case "sidestrip":
+      return [{ ...base, top: 0, bottom: 0, left: 0, width: "13%" }];
+    case "sidebartint":
+      return [
+        { ...base, top: 0, bottom: 0, left: 0, width: "24%", opacity: 0.4 },
+        { ...base, top: 0, bottom: 0, left: "24%", width: "2%" },
+      ];
+    case "toprule":
+      return [
+        { ...base, top: "10%", left: "10%", right: "10%", height: "4%" },
+        { ...base, top: "18%", left: "10%", right: "10%", height: "2%", opacity: 0.7 },
+      ];
+    case "doublerule":
+      return [
+        { ...base, top: "10%", left: "10%", right: "10%", height: "4%" },
+        { ...base, bottom: "10%", left: "10%", right: "10%", height: "4%" },
+      ];
+    case "doubleband":
+      return [
+        { ...base, top: "10%", left: "10%", right: "10%", height: "4%" },
+        { ...base, bottom: 0, left: 0, right: 0, height: "12%" },
+      ];
+    case "sideline":
+      return [
+        { ...base, top: "10%", bottom: "10%", right: "14%", width: "3%" },
+        { ...base, top: "30%", right: "8%", width: "6%", height: "3%" },
+        { ...base, top: "55%", right: "8%", width: "6%", height: "3%" },
+      ];
+    case "headerband":
+      return [{ ...base, top: 0, left: 0, right: 0, height: "28%", opacity: 0.38 }];
+    case "masthead":
+      return [{ ...base, top: 0, left: 0, right: 0, height: "32%" }];
+    case "noterule":
+      return [{ ...base, top: "12%", bottom: "12%", left: "18%", width: "3%" }];
+    case "frame":
+      return [
+        {
+          position: "absolute",
+          top: "10%",
+          left: "8%",
+          right: "8%",
+          bottom: "10%",
+          background: "transparent",
+          border: `1.5px solid ${a}`,
+        },
+      ];
+    default:
+      return [];
+  }
+}
+
 function GenPage({ page, paginated, docMeta }) {
   const { box, template, contentWpx, contentHpx } = paginated;
   const { w, h, m } = box;
@@ -1804,7 +2211,9 @@ function GenPage({ page, paginated, docMeta }) {
               right: 0,
               top: "62%",
               height: "38%",
-              background: cover.accent,
+              // Dégradé (et non aplat) : la photo de couverture reste visible
+              // sous la bande, comme dans le PDF (drawCover → tranches).
+              background: `linear-gradient(to bottom, ${withAlpha(cover.accent, 0.55)}, ${withAlpha(cover.accent, 0.95)})`,
             }}
           />
         )}
@@ -1874,6 +2283,7 @@ function GenPage({ page, paginated, docMeta }) {
   if (page.kind === "toc") {
     return (
       <div className="gen-page" style={{ ...pageStyle, background: template.colors.bg, color: template.colors.body, fontFamily: FONT_CSS[template.bodyFont] }}>
+        <PageDecor template={template} box={box} docMeta={docMeta} scale={s} />
         <div style={{ padding: `${mm(m.top)}px ${mm(m.right)}px 0 ${mm(m.left)}px` }}>
           <div style={{ fontWeight: "bold", fontSize: pt(template.sizes.h2), color: template.colors.heading }}>
             Table des matières
@@ -1895,6 +2305,7 @@ function GenPage({ page, paginated, docMeta }) {
   // Page de contenu.
   return (
     <div className="gen-page" style={{ ...pageStyle, background: template.colors.bg }}>
+      <PageDecor template={template} box={box} docMeta={docMeta} scale={s} />
       {docMeta.protection?.watermark?.enabled && (
         <div
           className="gen-watermark"

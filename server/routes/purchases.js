@@ -4,6 +4,7 @@ import { q, withTransaction } from "../db.js";
 import { authRequired } from "../auth.js";
 import { sendPush } from "../push.js";
 import { notifyAdmins } from "../services/adminNotify.js";
+import { sendSaleEmails } from "../mailer.js";
 import { listPhotos } from "../photo.js";
 import { SALES_LIST_COLUMNS } from "./sales.js";
 
@@ -114,7 +115,16 @@ router.post(
 
     const buyer = req.user || null;
     const name = (buyer_name && String(buyer_name).trim()) || (buyer ? buyer.name : "");
-    const phone = buyer_phone ? String(buyer_phone).trim() : "";
+    // Téléphone : saisi dans le formulaire, sinon celui du compte connecté —
+    // un client authentifié n'a rien à ressaisir (achat digital en un clic).
+    // Le jeton ne transporte pas le téléphone : on le lit en base au besoin.
+    let phone =
+      (buyer_phone && String(buyer_phone).trim()) ||
+      (buyer ? String(buyer.phone || "").trim() : "");
+    if (!phone && buyer && buyer.id) {
+      const row = (await q("SELECT phone FROM users WHERE id = $1", [buyer.id]))[0];
+      phone = String(row?.phone || "").trim();
+    }
     const city = buyer_city ? String(buyer_city).trim() : "";
     const address = buyer_address ? String(buyer_address).trim() : "";
     if (!name) {
@@ -123,10 +133,11 @@ router.post(
     if (!phone) {
       return res.status(400).json({ error: "Le numéro de téléphone est requis" });
     }
-    if (!city) {
+    // Produit digital : pas de livraison — ville et adresse facultatives.
+    if (!city && product.is_digital !== true) {
       return res.status(400).json({ error: "La ville est requise" });
     }
-    if (!address) {
+    if (!address && product.is_digital !== true) {
       return res.status(400).json({ error: "L'adresse de livraison est requise" });
     }
     const total = Math.round(price * qty * 100) / 100;
@@ -222,16 +233,21 @@ router.post(
     });
 
     const productName = String(product.name || "article");
+    // Produit digital : aucun colis — la boutique/créateur doit confirmer le
+    // paiement pour débloquer le téléchargement de l'acheteur.
+    const isDigitalSale = product.is_digital === true;
     if (seller) {
       await sendPush(seller.id, {
-        title: "Nouvelle commande 🛒",
-        body: `${productName} — ${name} attend la livraison.`,
+        title: isDigitalSale ? "Nouvelle vente digitale 📁" : "Nouvelle commande 🛒",
+        body: isDigitalSale
+          ? `${productName} — ${name} attend la confirmation du paiement (téléchargement).`
+          : `${productName} — ${name} attend la livraison.`,
         url: "/seller",
       });
     }
     await sendPush(product.shop_id, {
-      title: "Nouvelle commande 🛒",
-      body: `${productName} — ${seller ? `vendeur : ${seller.name} (${code}), ` : "commande directe, "}${name}${result.confirmCode ? `, code : ${result.confirmCode}` : ""}${referredBy ? `, client parrainé (2% pour le parrain : ${referralCommission} F)` : ""}.`,
+      title: isDigitalSale ? "Nouvelle vente digitale 📁" : "Nouvelle commande 🛒",
+      body: `${productName} — ${seller ? `vendeur : ${seller.name} (${code}), ` : "commande directe, "}${name}${isDigitalSale ? " — confirmez le paiement pour débloquer le téléchargement" : ""}${result.confirmCode ? `, code : ${result.confirmCode}` : ""}${referredBy ? `, client parrainé (2% pour le parrain : ${referralCommission} F)` : ""}.`,
       url: "/shop",
     });
     notifyAdmins({
@@ -242,6 +258,26 @@ router.post(
       product_name: productName,
       amount: total,
     });
+    // E-mail non bloquant à la boutique/créateur et au vendeur (si code fourni).
+    try {
+      const emailRows = await q(
+        "SELECT id, email FROM users WHERE id = ANY($1::int[]) AND email IS NOT NULL AND email <> ''",
+        [[product.shop_id, seller ? seller.id : null].filter((v) => v != null)]
+      );
+      const emailById = new Map(emailRows.map((r) => [Number(r.id), r.email]));
+      sendSaleEmails({
+        shopEmail: emailById.get(Number(product.shop_id)),
+        sellerEmail: seller ? emailById.get(Number(seller.id)) : null,
+        buyerName: name,
+        productName,
+        quantity: qty,
+        total,
+        confirmCode: result.confirmCode,
+        digital: product.is_digital === true,
+      });
+    } catch (err) {
+      console.error("[purchases] e-mail de vente impossible :", err.message);
+    }
     if (referredBy) {
       const referrer = (await q("SELECT name FROM users WHERE id = $1", [referredBy]))[0];
       await q(

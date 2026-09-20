@@ -1,5 +1,5 @@
 import { storage, sessionStore } from "../storage";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
@@ -11,6 +11,7 @@ import { useLang } from "../i18n.jsx";
 import { formatMoney } from "../components/ProductCard.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
 import { requestPushPermission } from "../push.js";
+import { smartProcessImageFile } from "../imageKit.js";
 
 function todayStr() {
   const d = new Date();
@@ -252,6 +253,13 @@ export default function MyAccount() {
   const [country, setCountry] = useState(user?.country || "");
   const [profileMsg, setProfileMsg] = useState("");
   const [profileError, setProfileError] = useState("");
+  // Photo de profil — ouverte à TOUS les rôles. L'image est redimensionnée en
+  // WebP dans le navigateur avant l'envoi : la base ne reçoit qu'une URL légère.
+  const avatarInputRef = useRef(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarMsg, setAvatarMsg] = useState("");
+  const [avatarError, setAvatarError] = useState("");
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -374,6 +382,46 @@ export default function MyAccount() {
     }
   };
 
+  // Photo de profil : le fichier est d'abord optimisé (WebP ≤ 1024 px) par
+  // `smartProcessImageFile`, affiché en aperçu immédiat, puis déposé sur le
+  // stockage par le serveur qui ne conserve que l'URL.
+  const pickAvatar = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // permet de re-sélectionner le même fichier ensuite
+    if (!file) return;
+    setAvatarMsg("");
+    setAvatarError("");
+    setAvatarBusy(true);
+    try {
+      const { entry } = await smartProcessImageFile(file);
+      setAvatarPreview(entry.thumb);
+      const { user: updated } = await api.updateAvatar(entry.thumb);
+      login(updated, storage.getItem("token"));
+      setAvatarPreview(null);
+      setAvatarMsg(t("Photo de profil mise à jour."));
+    } catch (err) {
+      setAvatarError(err.message);
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    setAvatarMsg("");
+    setAvatarError("");
+    setAvatarBusy(true);
+    try {
+      const { user: updated } = await api.updateAvatar(null);
+      login(updated, storage.getItem("token"));
+      setAvatarPreview(null);
+      setAvatarMsg(t("Photo de profil retirée."));
+    } catch (err) {
+      setAvatarError(err.message);
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
   const changePassword = async (e) => {
     e.preventDefault();
     setPwError("");
@@ -481,6 +529,48 @@ export default function MyAccount() {
           <p className="contact-hint">
             {t("Votre nom, votre adresse e-mail, votre numéro de téléphone et votre pays.")}
           </p>
+          {/* Photo de profil — affichée sur vos produits, votre fiche créateur
+              et vos partages. Optimisée en WebP côté navigateur (image légère). */}
+          <div className="avatar-editor">
+            {avatarPreview || user?.avatar ? (
+              <img
+                className="avatar-lg"
+                src={avatarPreview || user.avatar}
+                alt={t("Photo de profil")}
+              />
+            ) : (
+              <span className="avatar-lg avatar-fallback" aria-hidden="true">
+                {String(user?.name || "?").trim().charAt(0).toUpperCase()}
+              </span>
+            )}
+            <div className="avatar-editor-actions">
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={pickAvatar}
+              />
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => avatarInputRef.current && avatarInputRef.current.click()}
+                disabled={avatarBusy}
+              >
+                {avatarBusy ? t("Envoi…") : "📷 " + t("Changer la photo")}
+              </button>
+              {(user?.avatar || avatarPreview) && !avatarBusy && (
+                <button type="button" className="btn btn-danger" onClick={removeAvatar}>
+                  {t("Retirer")}
+                </button>
+              )}
+              <p className="hint">
+                {t("JPG, PNG ou WebP — convertie automatiquement en WebP (fichier léger).")}
+              </p>
+              {avatarMsg && <p className="success">{avatarMsg}</p>}
+              {avatarError && <p className="error">{avatarError}</p>}
+            </div>
+          </div>
           <form className="contact-form" onSubmit={saveProfile}>
             <label className="field">
               <span>{t("Nom")}</span>

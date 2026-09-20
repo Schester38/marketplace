@@ -264,7 +264,7 @@ function productRow(p, mode = "list") {
 
 const SELECT_PRODUCT = `
   SELECT p.*, u.name AS shop_name, u.role AS shop_role, u.location AS shop_location, u.city AS shop_city, u.country AS shop_country,
-         u.verified AS shop_verified, u.phone AS shop_phone,
+         u.verified AS shop_verified, u.phone AS shop_phone, u.avatar AS shop_avatar,
          s.n, s.n_month, s.pending_n, r.review_count, r.rating_avg, v.w1_views,
          fp.id AS flash_promo_id, fp.promo_price AS flash_price, fp.commission_percent AS flash_commission_percent,
          fp.starts_at AS flash_starts_at, fp.ends_at AS flash_ends_at, fp.duration_minutes AS flash_duration_minutes
@@ -329,7 +329,7 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
   // Cache mémoire 10 min pour n'exécuter la vérification qu'au plus toutes les
   // 10 minutes par instance serverless.
   maybeSendProductsDigest().catch(() => {});
-  const { search, shop, category, sort, scope, min_price, max_price, city, country, limit, offset } =
+  const { search, shop, category, type, sort, scope, min_price, max_price, city, country, limit, offset } =
     req.query;
   let sql = SELECT_PRODUCT;
   const params = [];
@@ -375,6 +375,13 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
   if (category) {
     where.push("p.category = $" + (params.length + 1));
     params.push(String(category).trim());
+  }
+  // Volets « Produits physiques » / « Produits digitaux » (accueil, espaces) :
+  // un seul filtre pour ne jamais mélanger les deux familles de produits.
+  if (type === "digital") {
+    where.push("p.is_digital = TRUE");
+  } else if (type === "physical") {
+    where.push("p.is_digital IS NOT TRUE");
   }
   if (city) {
     const norm = String(city)

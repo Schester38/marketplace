@@ -14,6 +14,7 @@ import Logo from "../components/Logo.jsx";
 import { formatMoney } from "../components/ProductCard.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 import DigitalDownload from "../components/DigitalDownload.jsx";
+import PaymentMethodsStrip from "../components/PaymentMethodsStrip.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { PriceEquivalent } from "../money.jsx";
@@ -45,6 +46,9 @@ export default function PurchasePage() {
   const [purchase, setPurchase] = useState(null);
   const [waUrl, setWaUrl] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  // Produit digital : le formulaire complet ne s'affiche qu'après un clic sur
+  // « Télécharger » (pas de formulaire de livraison imposé).
+  const [digitalFormOpen, setDigitalFormOpen] = useState(false);
 
   useEffect(() => {
     api
@@ -61,6 +65,17 @@ export default function PurchasePage() {
       .catch(() => setNotFound(true));
   }, [id]);
 
+  // Pré-remplissage depuis le compte connecté (nom / téléphone) : rien à
+  // ressaisir, en particulier pour un produit digital.
+  useEffect(() => {
+    if (!user) return;
+    setForm((f) => ({
+      ...f,
+      buyer_name: f.buyer_name || String(user.name || ""),
+      buyer_phone: f.buyer_phone || String(user.phone || ""),
+    }));
+  }, [user]);
+
   const copyWallet = async (value) => {
     try {
       await navigator.clipboard.writeText(value);
@@ -69,32 +84,39 @@ export default function PurchasePage() {
     } catch {}
   };
 
-  /** URL WhatsApp de la boutique avec le récapitulatif de la commande prérempli. */
-  const buildShopWaUrl = (sale) => {
+  /**
+   * URL WhatsApp de la boutique avec le récapitulatif de la commande prérempli.
+   * `info` porte les coordonnées réellement utilisées (achat digital en un clic
+   * depuis le compte, sans formulaire) ; par défaut, celles du formulaire.
+   */
+  const buildShopWaUrl = (sale, info) => {
+    const src = info || form;
     let digits = String(product.shop_phone || "").replace(/[^0-9]/g, "");
     if (!digits) return null;
     if (digits.startsWith("00")) digits = digits.slice(2);
     const dial = countryPhone(product.shop_country).replace("+", "");
     if (!digits.startsWith(dial)) digits = dial + digits.replace(/^0+/, "");
-    const qty = Number(form.quantity) || 1;
+    const isDigital = product.is_digital === true;
+    const qty = Number(src.quantity) || 1;
     const code = sale && (sale.confirm_code || sale.buyer_code);
     const pay =
-      paymentMethod === "espece"
-        ? "En espèces (à la livraison)"
-        : "Mobile Money direct";
+      src.payLabel ||
+      (paymentMethod === "espece" ? "En espèces (à la livraison)" : "Mobile Money direct");
     const lines = [
       "🛒 *Nouvelle commande Mboppi*",
       "",
       `📦 Produit : ${product.name}`,
-      `🔢 Quantité : ${qty}`,
+      isDigital ? null : `🔢 Quantité : ${qty}`,
       `💰 Prix : ${formatMoney(displayPrice)} ${symbol}${sale && sale.flash_promo ? " (prix promo)" : ""}`,
-      `💳 Paiement : ${pay}`,
+      isDigital
+        ? "📁 Produit digital — téléchargement après confirmation du paiement"
+        : `💳 Paiement : ${pay}`,
       "",
       "— Coordonnées du client —",
-      `👤 Nom : ${form.buyer_name}`,
-      `📞 Téléphone : ${form.buyer_phone}`,
-      `🏙️ Ville : ${form.buyer_city}`,
-      `📍 Adresse : ${form.buyer_address}`,
+      `👤 Nom : ${src.buyer_name}`,
+      `📞 Téléphone : ${src.buyer_phone}`,
+      isDigital ? null : `🏙️ Ville : ${src.buyer_city}`,
+      isDigital ? null : `📍 Adresse : ${src.buyer_address}`,
       code ? `🔑 Code de confirmation : ${code}` : null,
       sale && sale.id
         ? `📦 Suivi de votre commande : ${BASE_URL}/suivi/${sale.id}?code=${encodeURIComponent(
@@ -102,34 +124,36 @@ export default function PurchasePage() {
           )}`
         : null,
       "",
-      `👉 Gérez cette commande dans votre espace livreur : ${BASE_URL}/livreur`,
+      isDigital
+        ? `👉 Produit digital à confirmer dans votre espace : ${BASE_URL}/shop`
+        : `👉 Gérez cette commande dans votre espace livreur : ${BASE_URL}/livreur`,
     ].filter(Boolean);
     return `https://wa.me/${digits}?text=${encodeURIComponent(lines.join("\n"))}`;
   };
 
-  const submit = async (e) => {
-    e.preventDefault();
+  /**
+   * Création de la commande — utilisée par le formulaire complet (produit
+   * physique) ET par le bouton « Télécharger » d'un produit digital (un clic,
+   * aucune donnée de livraison). Le mécanisme est ensuite identique : la
+   * commande est enregistrée, le client règle directement (Mobile Money /
+   * WhatsApp) puis télécharge son fichier dès la confirmation de la boutique.
+   */
+  const createPurchase = async (payload) => {
     setError("");
     setSubmitting(true);
     // Réservation de l'ouverture pendant l'activation utilisateur (anti pop-up blocker) ;
     // la vraie URL WhatsApp y est placée une fois la commande confirmée.
     const popup = window.open("", "_blank");
     try {
-      const qty = Number(form.quantity) || 1;
-      const d = await api.purchaseCreate({
-        product_id: id,
-        // Code vendeur facultatif : présent si le client vient d'un lien de
-        // partage vendeur, absent pour un achat direct (vente sans vendeur).
-        seller_code: (form.seller_code || "").trim() || undefined,
-        buyer_name: form.buyer_name,
-        buyer_city: form.buyer_city,
-        buyer_address: form.buyer_address,
-        buyer_phone: form.buyer_phone,
-        quantity: qty,
-        payment_method: paymentMethod,
-      });
+      const d = await api.purchaseCreate(payload);
       setPurchase(d.sale || null);
-      const url = buildShopWaUrl(d.sale);
+      const url = buildShopWaUrl(d.sale, {
+        buyer_name: payload.buyer_name || user?.name || "",
+        buyer_phone: payload.buyer_phone || user?.phone || "",
+        buyer_city: payload.buyer_city || "",
+        buyer_address: payload.buyer_address || "",
+        quantity: payload.quantity || 1,
+      });
       setWaUrl(url);
       setDone(true);
       if (url && popup && !popup.closed) {
@@ -143,6 +167,45 @@ export default function PurchasePage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    await createPurchase({
+      product_id: id,
+      // Code vendeur facultatif : présent si le client vient d'un lien de
+      // partage vendeur, absent pour un achat direct (vente sans vendeur).
+      seller_code: (form.seller_code || "").trim() || undefined,
+      buyer_name: form.buyer_name,
+      buyer_city: form.buyer_city,
+      buyer_address: form.buyer_address,
+      buyer_phone: form.buyer_phone,
+      quantity: Number(form.quantity) || 1,
+      payment_method: paymentMethod,
+    });
+  };
+
+  /**
+   * Produit DIGITAL : « Télécharger » lance directement l'achat lorsque le
+   * compte connecté fournit déjà le nom et le téléphone (aucune donnée de
+   * livraison n'est demandée). Sinon, un mini-formulaire (nom + téléphone)
+   * s'ouvre — pas de ville, pas d'adresse, pas de quantité.
+   */
+  const quickDigitalDownload = async () => {
+    const accountName = String(user?.name || "").trim();
+    const accountPhone = String(user?.phone || "").trim();
+    if (accountName && accountPhone) {
+      await createPurchase({
+        product_id: id,
+        seller_code: (form.seller_code || "").trim() || undefined,
+        buyer_name: accountName,
+        buyer_phone: accountPhone,
+        quantity: 1,
+        payment_method: "mobile",
+      });
+      return;
+    }
+    setDigitalFormOpen(true);
   };
 
   if (notFound) {
@@ -185,7 +248,15 @@ export default function PurchasePage() {
           <h1>
             <Logo className="logo-inline" /> {t("Acheter")}
           </h1>
-          <p>{t("Confirmez votre commande : la boutique et le vendeur seront notifiés.")}</p>
+          <p>
+            {product?.is_digital
+              ? t(
+                  "Merci de faire confiance à Mboppi ! 🙏 Chaque création est publiée par un créateur vérifié : payez en toute sécurité, et votre fichier se débloque dès la confirmation du paiement. Notre équipe suit chaque vente pour vous protéger."
+                )
+              : t(
+                  "Merci de faire confiance à Mboppi ! 🙏 Votre commande est transmise immédiatement à la boutique, au créateur et au vendeur, qui vous contactent pour la livraison. Vous recevez un code de confirmation : gardez-le précieusement, c'est votre preuve d'achat le jour de la remise. Notre équipe suit chaque vente du début à la fin."
+                )}
+          </p>
         </div>
       </section>
 
@@ -232,18 +303,26 @@ export default function PurchasePage() {
 
       {done ? (
         <div className="card page-center">
-          <h2>✅ {t("Commande confirmée !")}</h2>
+          <h2>
+            {purchase?.is_digital
+              ? `✅ ${t("Commande enregistrée — paiement à confirmer")}`
+              : `✅ ${t("Commande confirmée !")}`}
+          </h2>
           <p className="hint">
-            {t(
-              "Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison."
-            )}
+            {purchase?.is_digital
+              ? t(
+                  "Votre fichier se débloque ici même dès que le créateur a confirmé la réception de votre paiement. Réglez directement avec lui (Mobile Money ou en ligne), puis revenez cliquer sur « Télécharger mon fichier »."
+                )
+              : t(
+                  "Votre article est en attente de vente. La boutique et le vendeur ont été notifiés et vous contacteront pour la livraison."
+                )}
           </p>
           {waUrl && (
             <>
               <p className="hint" style={{ marginTop: 8 }}>
-                {t(
-                  "La commande n'a pas été transmise sur WhatsApp ? Envoyez-la en un clic :"
-                )}
+                {purchase?.is_digital
+                  ? t("Réglez maintenant avec le créateur : la commande est préremplie.")
+                  : t("La commande n'a pas été transmise sur WhatsApp ? Envoyez-la en un clic :")}
               </p>
               <a
                 className="btn btn-primary"
@@ -251,7 +330,10 @@ export default function PurchasePage() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                📲 {t("Envoyer ma commande sur WhatsApp")}
+                📲
+                {purchase?.is_digital
+                  ? ` ${t("Payer et confirmer sur WhatsApp")}`
+                  : ` ${t("Envoyer ma commande sur WhatsApp")}`}
               </a>
             </>
           )}
@@ -272,7 +354,7 @@ export default function PurchasePage() {
               <p className="hint" style={{ marginTop: 8 }}>
                 📁{" "}
                 {t(
-                  "Produit digital : cliquez ci-dessous pour télécharger votre fichier dès que la boutique a confirmé la réception de votre paiement."
+                  "Produit digital : le bouton ci-dessous devient actif dès que le créateur a confirmé votre paiement. Conservez votre code : il vous permet de retélécharger à tout moment."
                 )}
               </p>
               <DigitalDownload
@@ -299,39 +381,94 @@ export default function PurchasePage() {
             {t("Continuer mes achats")}
           </Link>
         </div>
-      ) : (
-        <div className="card form-card">
-          {/* Bandeau anti-fraude : rappel d'exiger le formulaire du livreur. */}
-          <div
-            style={{
-              background: "#fff8e1",
-              border: "2px solid #d97706",
-              borderRadius: 10,
-              padding: "12px 14px",
-              marginBottom: 14,
-              color: "#78350f",
-            }}
-          >
-            <strong style={{ display: "block", fontSize: 15, color: "#7c2d12" }}>
-              🛡️ {t("CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.")}
-            </strong>
-            <p style={{ margin: "6px 0 2px", fontSize: 13, lineHeight: 1.5, color: "#78350f" }}>
-              {t(
-                "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat."
-              )}
-            </p>
-            <small
-              style={{ display: "block", textAlign: "right", fontWeight: 600, color: "#7c2d12" }}
-            >
-              — {t("L'Administration Mboppi")}
-            </small>
-          </div>
-
-          <h2>{t("Commander")}</h2>
+      ) : product.is_digital && !digitalFormOpen ? (
+        // Produit DIGITAL : aucune donnée de livraison demandée — le bouton
+        // « Télécharger » enchaîne directement sur la commande (paiement direct
+        // puis téléchargement dès confirmation). Un client connecté dont le
+        // compte porte nom + téléphone n'a rien à saisir ; sinon un mini
+        // formulaire (nom + téléphone) s'ouvre juste après ce clic.
+        <div className="card form-card digital-cta-card">
+          <h2>⬇️ {t("Télécharger")}</h2>
           <p className="hint">
             {t(
-              "Remplissez vos informations pour confirmer votre commande. Aucun compte requis. Le code du vendeur est utile seulement si un vendeur vous a proposé ce produit."
+              "Pas de livraison : votre fichier se télécharge sur votre appareil dès que le créateur a confirmé la réception de votre paiement."
             )}
+          </p>
+          <ul className="pd-assurance" style={{ margin: "10px 0 14px" }}>
+            <li>📁 {t("Fichier téléchargeable dès confirmation du paiement")}</li>
+            <li>✅ {t("Satisfaction garantie")}</li>
+            <li>🔒 {t("Aucun compte requis — paiement direct au créateur")}</li>
+          </ul>
+          <button
+            type="button"
+            className="btn btn-primary btn-block"
+            onClick={quickDigitalDownload}
+            disabled={submitting}
+          >
+            {submitting
+              ? `⏳ ${t("Préparation…")}`
+              : `⬇️ ${t("Télécharger")} — ${formatMoney(displayPrice)} ${symbol}`}
+          </button>
+          {error && <p className="error">{error}</p>}
+        </div>
+      ) : (
+        <div className="card form-card">
+          {product.is_digital ? (
+            <div
+              style={{
+                background: "#e8f5e9",
+                border: "2px solid #2e7d32",
+                borderRadius: 10,
+                padding: "12px 14px",
+                marginBottom: 14,
+                color: "#1b5e20",
+              }}
+            >
+              <strong style={{ display: "block", fontSize: 15, color: "#1b5e20" }}>
+                📁 {t("Produit digital — téléchargement après paiement")}
+              </strong>
+              <p style={{ margin: "6px 0 2px", fontSize: 13, lineHeight: 1.5, color: "#1b5e20" }}>
+                {t(
+                  "Indiquez juste votre nom et votre numéro : le créateur vous confirme le paiement (Mobile Money direct ou en ligne), puis votre fichier se débloque ici même. Aucune livraison, aucun frais de plateforme."
+                )}
+              </p>
+            </div>
+          ) : (
+            <div
+              style={{
+                background: "#fff8e1",
+                border: "2px solid #d97706",
+                borderRadius: 10,
+                padding: "12px 14px",
+                marginBottom: 14,
+                color: "#78350f",
+              }}
+            >
+              <strong style={{ display: "block", fontSize: 15, color: "#7c2d12" }}>
+                🛡️ {t("CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.")}
+              </strong>
+              <p style={{ margin: "6px 0 2px", fontSize: 13, lineHeight: 1.5, color: "#78350f" }}>
+                {t(
+                  "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat."
+                )}
+              </p>
+              <small
+                style={{ display: "block", textAlign: "right", fontWeight: 600, color: "#7c2d12" }}
+              >
+                — {t("L'Administration Mboppi")}
+              </small>
+            </div>
+          )}
+
+          <h2>{product.is_digital ? t("Vos coordonnées") : t("Commander")}</h2>
+          <p className="hint">
+            {product.is_digital
+              ? t(
+                  "Deux champs suffisent : le créateur vous contacte pour le paiement, puis vous téléchargez votre fichier. Aucune livraison, aucune adresse à saisir."
+                )
+              : t(
+                  "Remplissez vos informations pour confirmer votre commande. Aucun compte requis. Le code du vendeur est utile seulement si un vendeur vous a proposé ce produit."
+                )}
           </p>
           <form onSubmit={submit}>
             <label>{t("Nom et prénom *")}</label>
@@ -341,20 +478,6 @@ export default function PurchasePage() {
               value={form.buyer_name}
               onChange={(e) => setForm({ ...form, buyer_name: e.target.value })}
             />
-            <label>{t("Ville *")}</label>
-            <input
-              className="input"
-              required
-              value={form.buyer_city}
-              onChange={(e) => setForm({ ...form, buyer_city: e.target.value })}
-            />
-            <label>{t("Adresse / Quartier *")}</label>
-            <input
-              className="input"
-              required
-              value={form.buyer_address}
-              onChange={(e) => setForm({ ...form, buyer_address: e.target.value })}
-            />
             <label>{t("Numéro de téléphone *")}</label>
             <input
               className="input"
@@ -363,20 +486,38 @@ export default function PurchasePage() {
               value={form.buyer_phone}
               onChange={(e) => setForm({ ...form, buyer_phone: e.target.value })}
             />
-            <label>{t("Quantité *")}</label>
-            <input
-              className="input"
-              type="number"
-              min={1}
-              required
-              value={form.quantity}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  quantity: Math.max(1, Number(e.target.value) || 1),
-                })
-              }
-            />
+            {!product.is_digital && (
+              <>
+                <label>{t("Ville *")}</label>
+                <input
+                  className="input"
+                  required
+                  value={form.buyer_city}
+                  onChange={(e) => setForm({ ...form, buyer_city: e.target.value })}
+                />
+                <label>{t("Adresse / Quartier *")}</label>
+                <input
+                  className="input"
+                  required
+                  value={form.buyer_address}
+                  onChange={(e) => setForm({ ...form, buyer_address: e.target.value })}
+                />
+                <label>{t("Quantité *")}</label>
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  required
+                  value={form.quantity}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      quantity: Math.max(1, Number(e.target.value) || 1),
+                    })
+                  }
+                />
+              </>
+            )}
             <label>{t("Code du vendeur (facultatif)")}</label>
             <input
               className="input code-input"
@@ -387,37 +528,51 @@ export default function PurchasePage() {
               placeholder="ABC123"
             />
 
-            <>
-              <div className="payment-options">
-                <button
-                  type="button"
-                  className={`payment-option ${paymentMethod === "espece" ? "active" : ""}`}
-                  onClick={() => setPaymentMethod("espece")}
-                >
-                  💵 {t("En espèces (à la livraison)")}
-                </button>
-                <button
-                  type="button"
-                  className={`payment-option ${paymentMethod === "mobile" ? "active" : ""}`}
-                  onClick={() => setPaymentMethod("mobile")}
-                >
-                  📱 {t("Virement Mobile Money direct")}
-                </button>
-              </div>
+            {!product.is_digital && (
+              <>
+                <div className="payment-options">
+                  <button
+                    type="button"
+                    className={`payment-option ${paymentMethod === "espece" ? "active" : ""}`}
+                    onClick={() => setPaymentMethod("espece")}
+                  >
+                    💵 {t("En espèces (à la livraison)")}
+                  </button>
+                  <button
+                    type="button"
+                    className={`payment-option ${paymentMethod === "mobile" ? "active" : ""}`}
+                    onClick={() => setPaymentMethod("mobile")}
+                  >
+                    📱 {t("Virement Mobile Money direct")}
+                  </button>
+                </div>
 
-              {error && <p className="error">{error}</p>}
-              {paymentMethod === "mobile" && product && (
-                <p className="hint" style={{ marginTop: 8 }}>
-                  {t("Paiement à la Livraison. Aucun frais de plateforme.")}
-                </p>
-              )}
-            </>
+                {paymentMethod === "mobile" && product && (
+                  <p className="hint" style={{ marginTop: 8 }}>
+                    {t("Paiement à la Livraison. Aucun frais de plateforme.")}
+                  </p>
+                )}
+              </>
+            )}
+            {product.is_digital && (
+              <p className="hint" style={{ marginTop: 8 }}>
+                💳 {t("Paiement direct au créateur (Mobile Money) — aucun frais de plateforme.")}
+              </p>
+            )}
+            {error && <p className="error">{error}</p>}
             <button className="btn btn-primary btn-block" disabled={submitting}>
-              {submitting ? "…" : `✅ ${t("Confirmer la Commande")}`}
+              {submitting
+                ? "…"
+                : product.is_digital
+                  ? `⬇️ ${t("Payer et télécharger")}`
+                  : `✅ ${t("Confirmer la Commande")}`}
             </button>
           </form>
         </div>
       )}
+      {/* Moyens de paiement acceptés (iKeepay) : carte bancaire, USDT et
+          Mobile Money — affichés sous le formulaire d'achat. */}
+      {product && <PaymentMethodsStrip />}
     </main>
   );
 }

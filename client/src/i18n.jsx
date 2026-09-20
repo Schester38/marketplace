@@ -5033,6 +5033,92 @@ const ES = {
 };
 
 const RICH_EN = {
+  "Catégorie du fichier": "File category",
+  "Design suggéré selon votre contenu": "Suggested design based on your content",
+  "correspondance {n} %": "{n}% match",
+  "Repéré dans votre texte : {words}.": "Detected in your text: {words}.",
+  "Appliquer ce modèle": "Apply this template",
+  "Relancer l'analyse": "Re-run analysis",
+  "Suggestion indicative : les 12 modèles restent disponibles ci-dessous, et vos réglages de couleurs et de polices sont conservés.":
+    "This is only a suggestion: all 12 templates stay available below, and your colour and font settings are kept.",
+  "Ajoutez quelques paragraphes à votre document : le Générateur détecte alors son sujet et vous propose les modèles de design adaptés.":
+    "Add a few paragraphs to your document: the Generator then detects its topic and suggests suitable design templates.",
+  "Finance & investissement": "Finance & investment",
+  "Business & entrepreneuriat": "Business & entrepreneurship",
+  "Technologie & informatique": "Technology & computing",
+  "Éducation & formation": "Education & training",
+  "Développement personnel & motivation": "Personal development & motivation",
+  "Spiritualité & foi": "Spirituality & faith",
+  "Jeunesse & enfants": "Children & youth",
+  "Roman & fiction": "Novel & fiction",
+  "Magazine & actualité": "Magazine & news",
+  "Document général": "General document",
+  "Signature Mboppi en cours…": "Applying Mboppi signature…",
+  "Téléchargement lancé — signature Mboppi appliquée.":
+    "Download started — Mboppi signature applied.",
+  "Téléchargement lancé.": "Download started.",
+  "({n} restant(s)).": "({n} remaining).",
+  "Certificat Mboppi": "Mboppi certificate",
+  "Certificat indisponible pour le moment.": "Certificate unavailable right now.",
+  "IA & Technologies": "AI & Technology",
+  "Éducation & Formation": "Education & Training",
+  "Développement personnel": "Personal development",
+  "Religion & Spiritualité": "Religion & Spirituality",
+  "Business & Entrepreneuriat": "Business & Entrepreneurship",
+  "Commission vendeur (montant)": "Seller commission (amount)",
+  "≈ {p} % du prix": "≈ {p}% of the price",
+  "Montant supérieur au prix : la commission est limitée au prix de vente.":
+    "Amount higher than the price: the commission is capped at the sale price.",
+  "Paiements acceptés — sécurisés par iKeepay": "Accepted payments — secured by iKeepay",
+  "Carte bancaire (Visa / Mastercard), USDT et Mobile Money des pays couverts par iKeepay — transaction chiffrée et vérifiée.":
+    "Bank card (Visa / Mastercard), USDT and Mobile Money in countries covered by iKeepay — encrypted and verified transaction.",
+  "Type de produits": "Product type",
+  "Produits physiques": "Physical products",
+  "Produits digitaux": "Digital products",
+  "Achats physiques": "Physical purchases",
+  "Achats digitaux": "Digital purchases",
+  "Formations en ligne": "Online courses",
+  "Compte vérifié": "Verified account",
+  Vérifié: "Verified",
+  "Aucune création pour le moment.": "No creation yet.",
+  "{n} créations en ligne": "{n} creations online",
+  "Voir ses créations": "View their creations",
+  "Bonjour {name}, je vous contacte depuis Mboppi au sujet de vos créations.":
+    "Hello {name}, I am contacting you from Mboppi about your creations.",
+  "Photo de profil": "Profile picture",
+  "Changer la photo": "Change photo",
+  "Photo de profil mise à jour.": "Profile picture updated.",
+  "Photo de profil retirée.": "Profile picture removed.",
+  "JPG, PNG ou WebP — convertie automatiquement en WebP (fichier léger).":
+    "JPG, PNG or WebP — automatically converted to WebP (light file).",
+  "Satisfaction garantie": "Satisfaction guaranteed",
+  "Payer et télécharger": "Pay and download",
+  "Commande enregistrée — paiement à confirmer": "Order saved — payment to confirm",
+  "Payer et confirmer sur WhatsApp": "Pay and confirm on WhatsApp",
+  "Fichier téléchargeable dès confirmation du paiement":
+    "File available as soon as the payment is confirmed",
+  "Aucun compte requis — paiement direct au créateur":
+    "No account required — direct payment to the creator",
+  "Produit digital — téléchargement après paiement":
+    "Digital product — download after payment",
+  "Paiement direct au créateur (Mobile Money) — aucun frais de plateforme.":
+    "Direct payment to the creator (Mobile Money) — no platform fees.",
+  "Pas de livraison : votre fichier se télécharge sur votre appareil dès que le créateur a confirmé la réception de votre paiement.":
+    "No delivery: your file downloads to your device as soon as the creator confirms receiving your payment.",
+  "Indiquez juste votre nom et votre numéro : le créateur vous confirme le paiement (Mobile Money direct ou en ligne), puis votre fichier se débloque ici même. Aucune livraison, aucun frais de plateforme.":
+    "Just enter your name and phone number: the creator confirms the payment with you (direct Mobile Money or online), then your file unlocks right here. No delivery, no platform fees.",
+  "Deux champs suffisent : le créateur vous contacte pour le paiement, puis vous téléchargez votre fichier. Aucune livraison, aucune adresse à saisir.":
+    "Two fields are enough: the creator contacts you for payment, then you download your file. No delivery, no address to enter.",
+  "Votre fichier se débloque ici même dès que le créateur a confirmé la réception de votre paiement. Réglez directement avec lui (Mobile Money ou en ligne), puis revenez cliquer sur « Télécharger mon fichier ».":
+    "Your file unlocks right here as soon as the creator confirms receiving your payment. Pay directly with them (Mobile Money or online), then come back and click “Download my file”.",
+  "Réglez maintenant avec le créateur : la commande est préremplie.":
+    "Pay now with the creator: the order is pre-filled.",
+  "Produit digital : le bouton ci-dessous devient actif dès que le créateur a confirmé votre paiement. Conservez votre code : il vous permet de retélécharger à tout moment.":
+    "Digital product: the button below becomes active as soon as the creator confirms your payment. Keep your code: it lets you download again at any time.",
+  "Merci de faire confiance à Mboppi ! 🙏 Chaque création est publiée par un créateur vérifié : payez en toute sécurité, et votre fichier se débloque dès la confirmation du paiement. Notre équipe suit chaque vente pour vous protéger.":
+    "Thank you for trusting Mboppi! 🙏 Every creation is published by a verified creator: pay safely, and your file unlocks as soon as the payment is confirmed. Our team follows every sale to protect you.",
+  "Merci de faire confiance à Mboppi ! 🙏 Votre commande est transmise immédiatement à la boutique, au créateur et au vendeur, qui vous contactent pour la livraison. Vous recevez un code de confirmation : gardez-le précieusement, c'est votre preuve d'achat le jour de la remise. Notre équipe suit chaque vente du début à la fin.":
+    "Thank you for trusting Mboppi! 🙏 Your order is sent immediately to the shop, the creator and the seller, who will contact you for delivery. You receive a confirmation code: keep it safe, it is your proof of purchase on handover day. Our team follows every sale from start to finish.",
   "Une marketplace pensée pour le terrain": "A marketplace designed for real local commerce",
   "Mboppi rapproche la découverte en ligne de la relation commerciale locale.":
     "Mboppi brings online discovery closer to local business relationships.",
@@ -5080,9 +5166,75 @@ const RICH_EN = {
   "✉️ Vos droits": "✉️ Your rights",
   "Vous pouvez demander l’accès, la correction ou la suppression de vos données, ainsi que des précisions sur leur utilisation. Écrivez-nous depuis la page Contact en indiquant l’adresse e-mail associée à votre compte afin que nous puissions vérifier votre demande.":
     "You may request access, correction or deletion of your data, as well as information about its use. Contact us from the Contact page using the email address linked to your account so we can verify your request.",
+  "Modifier le contenu": "Edit content",
+  "Tout effacer": "Clear all",
+  "Insérer du texte": "Insert text",
+  "Texte à insérer": "Text to insert",
+  "Aligner à droite": "Align right",
+  "Sous-titre": "Subtitle",
+  "✏️ Ce document est entièrement éditable : cliquez dans le texte pour le modifier, utilisez le ruban ci-dessus. Chaque modification met à jour l'aperçu, le PDF et l'EPUB.":
+    "✏️ This document is fully editable: click in the text to modify it and use the toolbar above. Every change updates the preview, the PDF and the EPUB.",
 };
 
 const RICH_ES = {
+  "Catégorie du fichier": "Categoría del archivo",
+  "Design suggéré selon votre contenu": "Diseño sugerido según tu contenido",
+  "correspondance {n} %": "{n} % de coincidencia",
+  "Repéré dans votre texte : {words}.": "Detectado en tu texto: {words}.",
+  "Appliquer ce modèle": "Aplicar esta plantilla",
+  "Relancer l'analyse": "Volver a analizar",
+  "Suggestion indicative : les 12 modèles restent disponibles ci-dessous, et vos réglages de couleurs et de polices sont conservés.":
+    "Es solo una sugerencia: las 12 plantillas siguen disponibles abajo y se conservan tus ajustes de colores y fuentes.",
+  "Ajoutez quelques paragraphes à votre document : le Générateur détecte alors son sujet et vous propose les modèles de design adaptés.":
+    "Añade algunos párrafos a tu documento: el Generador detectará su tema y te propondrá las plantillas de diseño adecuadas.",
+  "Finance & investissement": "Finanzas e inversión",
+  "Business & entrepreneuriat": "Negocios y emprendimiento",
+  "Technologie & informatique": "Tecnología e informática",
+  "Éducation & formation": "Educación y formación",
+  "Développement personnel & motivation": "Desarrollo personal y motivación",
+  "Spiritualité & foi": "Espiritualidad y fe",
+  "Jeunesse & enfants": "Infancia y juventud",
+  "Roman & fiction": "Novela y ficción",
+  "Magazine & actualité": "Revista y actualidad",
+  "Document général": "Documento general",
+  "Signature Mboppi en cours…": "Aplicando la firma Mboppi…",
+  "Téléchargement lancé — signature Mboppi appliquée.":
+    "Descarga iniciada — firma Mboppi aplicada.",
+  "Téléchargement lancé.": "Descarga iniciada.",
+  "({n} restant(s)).": "({n} restante(s)).",
+  "Certificat Mboppi": "Certificado Mboppi",
+  "Certificat indisponible pour le moment.": "Certificado no disponible por el momento.",
+  "IA & Technologies": "IA y Tecnología",
+  "Éducation & Formation": "Educación y Formación",
+  "Développement personnel": "Desarrollo personal",
+  "Religion & Spiritualité": "Religión y Espiritualidad",
+  "Business & Entrepreneuriat": "Negocios y Emprendimiento",
+  "Commission vendeur (montant)": "Comisión del vendedor (importe)",
+  "≈ {p} % du prix": "≈ {p} % del precio",
+  "Montant supérieur au prix : la commission est limitée au prix de vente.":
+    "Importe superior al precio: la comisión se limita al precio de venta.",
+  "Paiements acceptés — sécurisés par iKeepay": "Pagos aceptados — asegurados por iKeepay",
+  "Carte bancaire (Visa / Mastercard), USDT et Mobile Money des pays couverts par iKeepay — transaction chiffrée et vérifiée.":
+    "Tarjeta bancaria (Visa / Mastercard), USDT y Mobile Money de los países cubiertos por iKeepay — transacción cifrada y verificada.",
+  "Type de produits": "Tipo de productos",
+  "Produits physiques": "Productos físicos",
+  "Produits digitaux": "Productos digitales",
+  "Achats physiques": "Compras físicas",
+  "Achats digitaux": "Compras digitales",
+  "Formations en ligne": "Formaciones en línea",
+  "Compte vérifié": "Cuenta verificada",
+  Vérifié: "Verificado",
+  "Aucune création pour le moment.": "Ninguna creación por el momento.",
+  "{n} créations en ligne": "{n} creaciones en línea",
+  "Voir ses créations": "Ver sus creaciones",
+  "Bonjour {name}, je vous contacte depuis Mboppi au sujet de vos créations.":
+    "Hola {name}, le contacto desde Mboppi acerca de sus creaciones.",
+  "Photo de profil": "Foto de perfil",
+  "Changer la photo": "Cambiar la foto",
+  "Photo de profil mise à jour.": "Foto de perfil actualizada.",
+  "Photo de profil retirée.": "Foto de perfil eliminada.",
+  "JPG, PNG ou WebP — convertie automatiquement en WebP (fichier léger).":
+    "JPG, PNG o WebP — convertida automáticamente a WebP (archivo ligero).",
   "Une marketplace pensée pour le terrain": "Un marketplace pensado para el comercio local",
   "Mboppi rapproche la découverte en ligne de la relation commerciale locale.":
     "Mboppi acerca el descubrimiento en línea a las relaciones comerciales locales.",
@@ -5124,9 +5276,75 @@ const RICH_ES = {
     "El pago se realiza directamente con la tienda, el vendedor o el repartidor: efectivo, Mobile Money directo o transferencia bancaria. Mboppi no cobra pagos ni comisiones de plataforma.",
   "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, Mboppi peut servir d’intermédiaire de médiation.":
     "Las garantías aparecen en cada producto. Las devoluciones se gestionan directamente con la tienda o el vendedor. En caso de conflicto, Mboppi puede actuar como mediador.",
+  "Modifier le contenu": "Editar el contenido",
+  "Tout effacer": "Borrar todo",
+  "Insérer du texte": "Insertar texto",
+  "Texte à insérer": "Texto a insertar",
+  "Aligner à droite": "Alinear a la derecha",
+  "Sous-titre": "Subtítulo",
+  "✏️ Ce document est entièrement éditable : cliquez dans le texte pour le modifier, utilisez le ruban ci-dessus. Chaque modification met à jour l'aperçu, le PDF et l'EPUB.":
+    "✏️ Este documento es totalmente editable: haz clic en el texto para modificarlo y usa la barra de herramientas. Cada cambio actualiza la vista previa, el PDF y el EPUB.",
 };
 
 const RICH_AR = {
+  "Catégorie du fichier": "فئة الملف",
+  "Design suggéré selon votre contenu": "التصميم المقترح حسب محتواك",
+  "correspondance {n} %": "تطابق {n} %",
+  "Repéré dans votre texte : {words}.": "تم العثور في نصك على: {words}.",
+  "Appliquer ce modèle": "تطبيق هذا النموذج",
+  "Relancer l'analyse": "إعادة التحليل",
+  "Suggestion indicative : les 12 modèles restent disponibles ci-dessous, et vos réglages de couleurs et de polices sont conservés.":
+    "هذا مجرد اقتراح: النماذج الاثنا عشر كلها متاحة أدناه، وتبقى إعداداتك للألوان والخطوط محفوظة.",
+  "Ajoutez quelques paragraphes à votre document : le Générateur détecte alors son sujet et vous propose les modèles de design adaptés.":
+    "أضف بعض الفقرات إلى مستندك: سيكتشف المُنشئ موضوعه ويقترح عليك نماذج التصميم المناسبة.",
+  "Finance & investissement": "المالية والاستثمار",
+  "Business & entrepreneuriat": "الأعمال وريادة الأعمال",
+  "Technologie & informatique": "التقنية والمعلوماتية",
+  "Éducation & formation": "التعليم والتدريب",
+  "Développement personnel & motivation": "التطوير الذاتي والتحفيز",
+  "Spiritualité & foi": "الروحانية والإيمان",
+  "Jeunesse & enfants": "الأطفال والناشئة",
+  "Roman & fiction": "الروايات والخيال",
+  "Magazine & actualité": "المجلات والأخبار",
+  "Document général": "مستند عام",
+  "Signature Mboppi en cours…": "جاري تطبيق توقيع مبوبي…",
+  "Téléchargement lancé — signature Mboppi appliquée.":
+    "بدأ التنزيل — تم تطبيق توقيع مبوبي.",
+  "Téléchargement lancé.": "بدأ التنزيل.",
+  "({n} restant(s)).": "({n} متبقٍ).",
+  "Certificat Mboppi": "شهادة مبوبي",
+  "Certificat indisponible pour le moment.": "الشهادة غير متوفرة حالياً.",
+  "IA & Technologies": "الذكاء الاصطناعي والتقنية",
+  "Éducation & Formation": "التعليم والتدريب",
+  "Développement personnel": "التطوير الذاتي",
+  "Religion & Spiritualité": "الدين والروحانية",
+  "Business & Entrepreneuriat": "الأعمال وريادة الأعمال",
+  "Commission vendeur (montant)": "عمولة البائع (المبلغ)",
+  "≈ {p} % du prix": "≈ {p} % من السعر",
+  "Montant supérieur au prix : la commission est limitée au prix de vente.":
+    "المبلغ أعلى من السعر: تُحَدّ العمولة بسعر البيع.",
+  "Paiements acceptés — sécurisés par iKeepay": "طرق الدفع المقبولة — مؤمَّنة عبر iKeepay",
+  "Carte bancaire (Visa / Mastercard), USDT et Mobile Money des pays couverts par iKeepay — transaction chiffrée et vérifiée.":
+    "بطاقة بنكية (فيزا / ماستركارد) وUSDT والموبايل موني في الدول التي يغطيها iKeepay — معاملة مشفّرة وموثّقة.",
+  "Type de produits": "نوع المنتجات",
+  "Produits physiques": "منتجات مادية",
+  "Produits digitaux": "منتجات رقمية",
+  "Achats physiques": "مشتريات مادية",
+  "Achats digitaux": "مشتريات رقمية",
+  "Formations en ligne": "دورات عبر الإنترنت",
+  "Compte vérifié": "حساب موثّق",
+  Vérifié: "موثّق",
+  "Aucune création pour le moment.": "لا يوجد إبداع حتى الآن.",
+  "{n} créations en ligne": "{n} إبداعات متاحة",
+  "Voir ses créations": "عرض إبداعاته",
+  "Bonjour {name}, je vous contacte depuis Mboppi au sujet de vos créations.":
+    "مرحبًا {name}، أتواصل معك من Mboppi بخصوص إبداعاتك.",
+  "Photo de profil": "الصورة الشخصية",
+  "Changer la photo": "تغيير الصورة",
+  "Photo de profil mise à jour.": "تم تحديث الصورة الشخصية.",
+  "Photo de profil retirée.": "تمت إزالة الصورة الشخصية.",
+  "JPG, PNG ou WebP — convertie automatiquement en WebP (fichier léger).":
+    "JPG أو PNG أو WebP — تُحوَّل تلقائيًا إلى WebP (ملف خفيف).",
   "Une marketplace pensée pour le terrain": "سوق إلكترونية مصممة للتجارة المحلية",
   "Mboppi rapproche la découverte en ligne de la relation commerciale locale.":
     "تقرّب Mboppi الاكتشاف عبر الإنترنت من العلاقات التجارية المحلية.",
@@ -5166,6 +5384,14 @@ const RICH_AR = {
     "الدفع يدوي ومباشر: نقداً عند التسليم أو تحويل Mobile Money أو تحويل بنكي. لا تحصّل Mboppi أي مدفوعات ولا تفرض رسوم منصة.",
   "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, Mboppi peut servir d’intermédiaire de médiation.":
     "تُذكر الضمانات المحتملة في صفحة كل منتج. تُعالج المرتجعات مباشرة مع المتجر أو البائع. عند النزاع يمكن لـ Mboppi التوسط.",
+  "Modifier le contenu": "تعديل المحتوى",
+  "Tout effacer": "حذف الكل",
+  "Insérer du texte": "إدراج نص",
+  "Texte à insérer": "النص المراد إدراجه",
+  "Aligner à droite": "محاذاة إلى اليمين",
+  "Sous-titre": "عنوان فرعي",
+  "✏️ Ce document est entièrement éditable : cliquez dans le texte pour le modifier, utilisez le ruban ci-dessus. Chaque modification met à jour l'aperçu, le PDF et l'EPUB.":
+    "✏️ هذا المستند قابل للتعديل بالكامل: انقر داخل النص لتغييره واستخدم شريط الأدوات أعلاه. كل تعديل يحدّث المعاينة وملف PDF وEPUB.",
 };
 
 export const I18N = {

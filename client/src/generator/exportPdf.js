@@ -10,6 +10,7 @@ import { jsPDF } from "jspdf";
 import { FONT_PDF, resolveCover, coverLayoutBox } from "./templates.js";
 import { PX_PER_MM } from "./paginate.js";
 import { copyrightLines, makeQrDataUrl, verificationPayload } from "./protection.js";
+import { BASE_URL } from "../config.js";
 
 const pxToMm = (v) => v / PX_PER_MM;
 
@@ -47,31 +48,94 @@ function drawLine(doc, ln, offsetXmm = 0, offsetYmm = 0) {
   const lineH = ln.bottom - ln.top;
   const baselinePx = ln.bottom - lineH * 0.21;
   const baselineMm = offsetYmm + pxToMm(baselinePx);
+  // Anti « mots collés » : les polices natives jsPDF sont parfois plus larges
+  // que la police mesurée côté navigateur — deux mots consécutifs peuvent
+  // alors se chevaucher. On impose un ESPACE MINIMAL entre mots (≈ 0,24 em) :
+  // 1) passage avant — un mot qui empiète est repoussé à droite ;
+  // 2) si la ligne déborde alors de son bord droit mesuré, passage arrière —
+  //    les mots sont ramenés à gauche avec le même espace minimal.
+  // Le mot peut s'écarter de quelques dixièmes de mm de son point milieu :
+  // c'est invisible et cela garantit une ligne toujours lisible.
+  const flat = [];
   for (const run of ln.runs || []) {
+    for (const w of run.words) flat.push({ run, w });
+  }
+  const pos = new Array(flat.length);
+  let prevEnd = -Infinity;
+  for (let i = 0; i < flat.length; i++) {
+    const { run, w } = flat[i];
+    doc.setFont(FONT_PDF[run.style.font] || "times", fontName(run.style));
+    doc.setFontSize(run.style.sizePx * 0.75);
+    const wMm = doc.getTextWidth(w.text);
+    const gapMm = ((run.style.sizePx * 0.75) / 2.83) * 0.24;
+    let xMm = offsetXmm + pxToMm(w.x + w.w / 2) - wMm / 2;
+    if (xMm < prevEnd + gapMm) xMm = prevEnd + gapMm;
+    pos[i] = { xMm, wMm };
+    prevEnd = xMm + wMm;
+  }
+  if (flat.length) {
+    const last = flat[flat.length - 1];
+    const rightEdgeMm = offsetXmm + pxToMm(last.w.x + last.w.w);
+    let nextStart = Infinity;
+    for (let i = flat.length - 1; i >= 0; i--) {
+      const { run } = flat[i];
+      doc.setFont(FONT_PDF[run.style.font] || "times", fontName(run.style));
+      doc.setFontSize(run.style.sizePx * 0.75);
+      const gapMm = ((run.style.sizePx * 0.75) / 2.83) * 0.24;
+      const limit = Math.min(nextStart - gapMm, rightEdgeMm);
+      if (pos[i].xMm + pos[i].wMm > rightEdgeMm + 0.1 || pos[i].xMm > limit) {
+        pos[i].xMm = Math.max(limit - pos[i].wMm, pos[i].xMm - (pos[i].xMm + pos[i].wMm - rightEdgeMm));
+        if (pos[i].xMm < 0) pos[i].xMm = 0;
+      }
+      nextStart = pos[i].xMm;
+    }
+  }
+  flat.forEach(({ run, w }, i) => {
     const style = run.style;
     doc.setFont(FONT_PDF[style.font] || "times", fontName(style));
     doc.setFontSize(style.sizePx * 0.75); // px → pt
     const col = style.color || "#000000";
     doc.setTextColor(col);
+    const { xMm, wMm } = pos[i];
+    // Exposant / indice : le navigateur place le mot plus haut/bas que la
+    // ligne (mesuré dans ln.top/bottom) — on décale la base du mot.
+    let baseMm = baselineMm;
+    if (style.sup) baseMm -= (style.sizePx * 0.75) / 2.83 * 0.33;
+    if (style.sub) baseMm += (style.sizePx * 0.75) / 2.83 * 0.18;
+    // Le surlignage est dessiné dans une passe dédiée (avant tous les textes).
+    if (!style.bg) doc.text(w.text, xMm, baseMm, { baseline: "alphabetic" });
+    if (style.underline) {
+      doc.setDrawColor(col);
+      doc.setLineWidth(0.2);
+      doc.line(xMm, baseMm + 0.5, xMm + wMm, baseMm + 0.5);
+    }
+    if (style.strike) {
+      doc.setDrawColor(col);
+      doc.setLineWidth(0.2);
+      doc.line(xMm, baseMm - 1.0, xMm + wMm, baseMm - 1.0);
+    }
+    if (run.href) {
+      doc.link(offsetXmm + pxToMm(w.x), offsetYmm + pxToMm(ln.top), pxToMm(w.w), pxToMm(lineH), {
+        url: run.href,
+      });
+    }
+  });
+}
+
+// Passe 1 : rects de surlignage (avant les textes, sinon ils les recouvrent).
+function drawHighlights(doc, ln, offsetXmm = 0, offsetYmm = 0) {
+  const lineH = ln.bottom - ln.top;
+  for (const run of ln.runs || []) {
+    if (!run.style.bg) continue;
+    setFill(doc, run.style.bg);
     for (const w of run.words) {
-      const pdfWmm = doc.getTextWidth(w.text);
-      const xMm = offsetXmm + pxToMm(w.x + w.w / 2) - pdfWmm / 2;
-      doc.text(w.text, xMm, baselineMm, { baseline: "alphabetic" });
-      if (style.underline) {
-        doc.setDrawColor(col);
-        doc.setLineWidth(0.2);
-        doc.line(xMm, baselineMm + 0.5, xMm + pdfWmm, baselineMm + 0.5);
-      }
-      if (style.strike) {
-        doc.setDrawColor(col);
-        doc.setLineWidth(0.2);
-        doc.line(xMm, baselineMm - 1.0, xMm + pdfWmm, baselineMm - 1.0);
-      }
-      if (run.href) {
-        doc.link(offsetXmm + pxToMm(w.x), offsetYmm + pxToMm(ln.top), pxToMm(w.w), pxToMm(lineH), {
-          url: run.href,
-        });
-      }
+      doc.rect(
+        offsetXmm + pxToMm(w.x),
+        offsetYmm + pxToMm(w.top),
+        pxToMm(w.w),
+        pxToMm(Math.max(lineH, w.bottom - w.top)),
+        "F"
+      );
     }
   }
 }
@@ -132,9 +196,158 @@ function drawParagraphText(doc, text, xMm, yMm, maxWmm, opts) {
   return y;
 }
 
+// ─── Décor de page propre au modèle de design ───────────────────────────────
+// C'est ce qui rend deux documents VISIBLEMENT différents à texte identique :
+// bandeau portant le titre, filets d'accent, colonne latérale, cadre, marge de
+// cahier… Chaque modèle déclare `pageDecor` (templates.js) ; la fonction est
+// appelée AVANT les atomes (décor = fond) sur les pages de contenu et la table
+// des matières. L'aperçu HTML (composant PageDecor de Generator.jsx) reproduit
+// les MÊMES formes aux mêmes coordonnées en millimètres.
+function withOpacity(doc, opacity, draw) {
+  if (!opacity || opacity >= 1) {
+    draw();
+    return;
+  }
+  doc.saveGraphicsState();
+  doc.setGState(new doc.GState({ opacity }));
+  draw();
+  doc.restoreGraphicsState();
+}
+
+export function drawPageDecor(doc, template, box, docMeta) {
+  const decor = template.pageDecor;
+  if (!decor) return;
+  const { w, h, m } = box;
+  const accent = template.colors.accent;
+  const title = String(docMeta?.title || "");
+
+  const band = (x, y, bw, bh, color, opacity) =>
+    withOpacity(doc, opacity, () => {
+      setFill(doc, color);
+      doc.rect(x, y, bw, bh, "F");
+    });
+  const rule = (x1, y1, x2, y2, width, color) => {
+    setStroke(doc, color || accent);
+    doc.setLineWidth(width);
+    doc.line(x1, y1, x2, y2);
+  };
+
+  switch (decor) {
+    // Filet + filet fin en tête : sobre, éditorial (Minimaliste).
+    case "toprule":
+      rule(m.left, m.top * 0.5, w - m.right, m.top * 0.5, 0.9);
+      rule(m.left, m.top * 0.5 + 2.2, w - m.right, m.top * 0.5 + 2.2, 0.25, template.colors.heading);
+      break;
+
+    // Fine barre d'accent pleine largeur en haut (Moderne).
+    case "topbar":
+      band(0, 0, w, 4.5, accent);
+      break;
+
+    // Bandeau clair portant le titre du document, souligné d'un filet
+    // (Business — code couleur « rapport »).
+    case "headerband": {
+      const bh = Math.max(9, m.top * 0.62);
+      band(0, 0, w, bh, accent, 0.14);
+      rule(0, bh, w, bh, 1.1);
+      if (title) {
+        doc.setFont(FONT_PDF[template.headingFont], "bold");
+        doc.setFontSize(template.sizes.small);
+        setText(doc, accent);
+        const label = title.length > 58 ? `${title.slice(0, 58)}…` : title;
+        doc.text(label, m.left, bh / 2 + 1.4);
+      }
+      break;
+    }
+
+    // Bande d'accent au pied de page (Motivation).
+    case "bottomband":
+      band(0, h - 5.5, w, 5.5, accent);
+      break;
+
+    // Colonne d'accent sur le bord gauche (Jeunesse).
+    case "sidestrip":
+      band(0, 0, 4, h, accent);
+      break;
+
+    // Cadre fin autour de la zone de texte : classique relié (Luxe, Élégant).
+    case "frame": {
+      const pad = Math.max(4, m.left * 0.42);
+      rule(pad, pad, w - pad / 2, pad, 0.45);
+      rule(w - pad / 2, pad, w - pad / 2, h - pad / 2, 0.45);
+      rule(w - pad / 2, h - pad / 2, pad, h - pad / 2, 0.45);
+      rule(pad, h - pad / 2, pad, pad, 0.45);
+      rule(m.left, m.top * 0.5, w - m.right, m.top * 0.5, 0.6);
+      break;
+    }
+
+    // Fine règle verticale dans la marge gauche (marge de cahier) : Éducation.
+    case "noterule": {
+      const x = Math.max(5, m.left - 6);
+      rule(x, m.top * 0.6, x, h - m.bottom * 0.6, 0.7);
+      band(x - 1.2, m.top * 0.6 - 1.2, 4.8, 2.4, accent);
+      band(x - 1.2, h - m.bottom * 0.6 - 1.2, 4.8, 2.4, accent);
+      break;
+    }
+
+    // Colonne latérale teintée + filet : « classeur » (Professionnel).
+    case "sidebartint": {
+      const bw = Math.max(12, m.left * 0.8);
+      band(0, 0, bw, h, accent, 0.12);
+      rule(bw, 0, bw, h, 0.9);
+      break;
+    }
+
+    // Filet haut + bande pleine au pied : rapport financier (Finance).
+    case "doubleband":
+      rule(m.left, m.top * 0.45, w - m.right, m.top * 0.45, 1.1);
+      band(0, h - 4.2, w, 4.2, accent);
+      break;
+
+    // Double filet en tête ET en pied : édition classique (Élégant).
+    case "doublerule":
+      rule(m.left, m.top * 0.45, w - m.right, m.top * 0.45, 1.0);
+      rule(m.left, m.top * 0.45 + 2, w - m.right, m.top * 0.45 + 2, 0.3);
+      rule(m.left, h - m.bottom * 0.55, w - m.right, h - m.bottom * 0.55, 1.0);
+      rule(m.left, h - m.bottom * 0.55 - 2, w - m.right, h - m.bottom * 0.55 - 2, 0.3);
+      break;
+
+    // Filet vertical à droite + graduations : fiche technique (Technologie).
+    case "sideline": {
+      const x = Math.min(w - 6, w - m.right + 6);
+      rule(x, m.top * 0.6, x, h - m.bottom * 0.6, 0.6);
+      for (let y = m.top * 0.6; y <= h - m.bottom * 0.6; y += 20) {
+        rule(x - 2.4, y, x, y, 0.5);
+      }
+      break;
+    }
+
+    // Bandeau plein largeur portant le titre en blanc : couverture de
+    // magazine déclinée sur chaque page (Magazine).
+    case "masthead": {
+      // Hauteur bornée SOUS la ligne d'en-tête (m.top - 7) pour que le texte
+      // d'en-tête standard ne se retrouve pas posé sur la bande colorée.
+      const bh = Math.max(8, Math.min(m.top * 0.55, m.top - 8));
+      band(0, 0, w, bh, accent);
+      if (title) {
+        doc.setFont(FONT_PDF[template.headingFont], "bold");
+        doc.setFontSize(template.sizes.h4);
+        doc.setTextColor("#ffffff");
+        const label = title.length > 52 ? `${title.slice(0, 52)}…` : title;
+        doc.text(label, m.left, bh / 2 + 1.6);
+      }
+      rule(0, bh, w, bh, 0.6, template.colors.heading);
+      break;
+    }
+
+    default:
+      break;
+  }
+}
+
 // ─── Rendu des pages spéciales ──────────────────────────────────────────────
 
-async function drawCover(doc, page, docMeta, template, box, qrDataUrl) {
+async function drawCover(doc, page, docMeta, template, box, qrDataUrl, hasQrMarker) {
   const { w, h } = box;
   const cover = resolveCover(docMeta, template);
   const geo = coverLayoutBox(cover, w);
@@ -170,9 +383,22 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl) {
   }
 
   // Mise en page « bande » : tiers inférieur aux couleurs d'accent du modèle.
+  // Bande DÉGRADÉE (et non aplat opaque) pour que la photo de couverture
+  // reste perceptible : c'est ce qui distingue une vraie couverture de livre
+  // d'un simple rectangle coloré. jsPDF n'a pas de dégradé natif → la bande est
+  // peinte en fines tranches d'opacité croissante (rendu identique à l'aperçu).
   if (geo.band) {
-    setFill(doc, cover.accent);
-    doc.rect(0, h * 0.62, w, h * 0.38, "F");
+    const steps = 14;
+    const top = h * 0.62;
+    const bh = h * 0.38;
+    for (let i = 0; i < steps; i++) {
+      const a = 0.55 + (0.4 * i) / (steps - 1);
+      doc.saveGraphicsState();
+      doc.setGState(new doc.GState({ opacity: a }));
+      setFill(doc, cover.accent);
+      doc.rect(0, top + (bh * i) / steps, w, bh / steps + 0.4, "F");
+      doc.restoreGraphicsState();
+    }
   }
 
   const fg = geo.band ? "#ffffff" : cover.fg;
@@ -207,7 +433,10 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl) {
       color: fg, align: geo.band ? "right" : geo.leftish ? "left" : "center",
     });
   }
-  if (qrDataUrl) {
+  // QR de couverture UNIQUEMENT en l'absence de marqueur [QR] dans le contenu
+  // (sinon le QR apparaît deux fois : à l'emplacement demandé + en coin fixe,
+  // ce qui donne l'impression qu'il est « mis ailleurs »).
+  if (qrDataUrl && !hasQrMarker) {
     const s = 22;
     doc.addImage(qrDataUrl, "PNG", w - s - 10, h - s - 10, s, s);
   }
@@ -254,7 +483,12 @@ function drawCopyright(doc, docMeta, template, box, contentHash) {
   setFill(doc, template.colors.bg);
   doc.rect(0, 0, w, h, "F");
   const lines = copyrightLines(docMeta);
-  let y = h * 0.42;
+  // Anti-débordement : le bloc complet (copyright + référence + empreinte +
+  // signature Mboppi) doit tenir au-dessus du bas de page, même quand la liste
+  // est longue — le départ remonte au besoin (plafonné à 42 % de la hauteur).
+  const lineH = (template.sizes.small * 1.6) / 2.83;
+  const blockH = lines.length * lineH + 12 + 5 + 12 + (contentHash ? 5 : 0);
+  let y = Math.min(h * 0.42, h - 18 - blockH);
   doc.setFont(FONT_PDF[template.bodyFont], "normal");
   doc.setFontSize(template.sizes.small);
   for (const line of lines) {
@@ -265,7 +499,7 @@ function drawCopyright(doc, docMeta, template, box, contentHash) {
     const tw = doc.getTextWidth(line);
     setText(doc, template.colors.body);
     doc.text(line, (w - tw) / 2, y);
-    y += (template.sizes.small * 1.6) / 2.83;
+    y += lineH;
   }
   y += 12;
   setText(doc, template.colors.accent);
@@ -276,6 +510,18 @@ function drawCopyright(doc, docMeta, template, box, contentHash) {
     doc.setFontSize(template.sizes.small - 1);
     const hashLine = `Empreinte SHA-256 : ${contentHash.slice(0, 32)}…`;
     doc.text(hashLine, (w - doc.getTextWidth(hashLine)) / 2, y);
+  }
+  // Signature Mboppi (anti-contrefaçon) : chaque téléchargement porte la
+  // mention d'authenticité + le lien public de vérification de la référence.
+  if (docMeta.doc_ref) {
+    doc.setFontSize(template.sizes.small - 1);
+    setText(doc, template.colors.accent);
+    y += 7;
+    const sign1 = "Authentifié sur Mboppi";
+    doc.text(sign1, (w - doc.getTextWidth(sign1)) / 2, y);
+    y += 4.5;
+    const sign2 = `${BASE_URL}/verifier/${docMeta.doc_ref}`;
+    doc.text(sign2, (w - doc.getTextWidth(sign2)) / 2, y);
   }
 }
 
@@ -393,16 +639,24 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
     verificationPayload(docMeta, contentHash),
     320
   );
+  // L'auteur a placé un marqueur [QR] dans le contenu ? Dans ce cas le QR est
+  // dessiné EXACTEMENT à cet emplacement (boîte réservée par la pagination) et
+  // PLUS en coin fixe de la couverture — sinon il apparaîtrait « ailleurs » et
+  // en double. Sans marqueur, le QR de couverture reste le filet de sécurité.
+  const hasQrMarker = pages.some((pg) =>
+    (pg.items || []).some((it) => it && it.kind === "qr")
+  );
 
   for (let i = 0; i < total; i++) {
     if (i > 0) doc2.addPage([w, h], w > h ? "landscape" : "portrait");
     const page = pages[i];
     onProgress?.(Math.round(((i + 1) / total) * 100), i + 1, total);
     if (page.kind === "cover") {
-      await drawCover(doc2, page, docMeta, template, box, qrDataUrl);
+      await drawCover(doc2, page, docMeta, template, box, qrDataUrl, hasQrMarker);
     } else if (page.kind === "copyright") {
       drawCopyright(doc2, docMeta, template, box, contentHash);
     } else if (page.kind === "toc") {
+      drawPageDecor(doc2, template, box, docMeta);
       drawToc(doc2, page, template, box);
     } else {
       // Page de contenu : fond du modèle (thèmes crème, rosé, ambré, ivoire…)
@@ -413,6 +667,8 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
         setFill(doc2, template.colors.bg);
         doc2.rect(0, 0, w, h, "F");
       }
+      // Décor propre au modèle (bandeau titre, filets, colonne, cadre…).
+      drawPageDecor(doc2, template, box, docMeta);
       for (const item of page.items) {
         const itemTopMm = m.top + pxToMm(item.top);
         if (item.kind === "image") {

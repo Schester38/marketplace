@@ -3,6 +3,8 @@ import { q, withTransaction } from "../db.js";
 import { authRequired, roleRequired, authOptional } from "../auth.js";
 import { sendPush } from "../push.js";
 import { notifyAdmins } from "../services/adminNotify.js";
+import { notifyUsers } from "../services/notifications.js";
+import { sendSaleEmails } from "../mailer.js";
 import { uploadPaymentProof, signedProofUrl } from "../storage.js";
 import {
   paySaleAutomatically,
@@ -134,6 +136,46 @@ router.post(
       product_name: sale.product_name,
       amount: Number(sale.total_price),
     });
+    // Cloche + push + e-mail pour la boutique/créateur propriétaire du produit.
+    try {
+      const owner = (
+        await q(
+          `SELECT u.id, u.email, p.is_digital
+             FROM products p JOIN users u ON u.id = p.shop_id
+            WHERE p.id = $1`,
+          [sale.product_id]
+        )
+      )[0];
+      // E-mail récapitulatif au VENDEUR (auteur de la vente) : trace écrite de
+      // sa vente, en plus de la notification envoyée à la boutique/créateur.
+      const sellerEmail = (
+        await q("SELECT email FROM users WHERE id = $1", [sale.seller_id])
+      )[0]?.email;
+      if (owner) {
+        notifyUsers({
+          userIds: [owner.id],
+          title: "Nouvelle vente 🛍️",
+          body: `${sale.product_name} ×${qty} — ${Number(sale.total_price)} F — vendeur : ${sale.seller_name}.`,
+          url: "/shop",
+          type: "sale_order",
+          sale_id: sale.id,
+          product_id: sale.product_id,
+          product_name: sale.product_name,
+          amount: Number(sale.total_price),
+        });
+        sendSaleEmails({
+          shopEmail: owner.email,
+          sellerEmail,
+          buyerName: `${sale.seller_name} (vendeur)`,
+          productName: sale.product_name,
+          quantity: qty,
+          total: Number(sale.total_price),
+          digital: owner.is_digital === true,
+        });
+      }
+    } catch (err) {
+      console.error("[sales] notification propriétaire impossible :", err.message);
+    }
     res.status(201).json({ sale });
   })
 );

@@ -1087,6 +1087,12 @@ export default function Navbar({ onLogout }) {
         </span>
         <span className="dl-label">{t("Créateurs")}</span>
       </Link>
+      <Link to="/?type=digital" onClick={close} className="drawer-link drawer-link-learn">
+        <span className="dl-icon">
+          <IconBook size={15} />
+        </span>
+        <span className="dl-label">{t("Formations et Digital")}</span>
+      </Link>
       <Link to="/soutien" onClick={close} className="drawer-link drawer-link-support">
         <span className="dl-icon">
           <IconHeart size={15} />
@@ -1098,12 +1104,12 @@ export default function Navbar({ onLogout }) {
         target="_blank"
         rel="noopener noreferrer"
         onClick={close}
-        className="drawer-link drawer-link-learn"
+        className="drawer-link drawer-link-tuto"
       >
         <span className="dl-icon">
           <IconBook size={15} />
         </span>
-        <span className="dl-label">{t("Formations et Digital")}</span>
+        <span className="dl-label">{t("Formations en ligne")}</span>
       </a>
       <a
         href="https://www.tiktok.com/@mboppishop?_r=1&_t=ZS-99TrzaxlgCD"
@@ -1208,6 +1214,9 @@ export default function Navbar({ onLogout }) {
             <span className="dl-label">{t("Mon compte")}</span>
           </Link>
           <span className="user-chip">
+            {user.avatar ? (
+              <img className="user-chip-avatar" src={user.avatar} alt="" />
+            ) : null}
             {user.name} ({roleLabel})
             {user.verified && (
               <span

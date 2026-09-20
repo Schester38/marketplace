@@ -156,12 +156,24 @@ export default function ProductCard({
               }
               onClick={(e) => e.stopPropagation()}
             >
+              {product.shop_avatar && (
+                <img
+                  className="card-shop-avatar"
+                  src={product.shop_avatar}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
+              {product.shop_role === "creator" ? `${t("Créateur")} : ` : ""}
               {product.shop_name}{" "}
               {product.shop_verified && (
                 <IconShieldCheck
                   size={12}
                   style={{ color: "#2563eb", verticalAlign: "-2px", display: "inline-block" }}
-                  title={t("Boutique vérifiée")}
+                  title={
+                    product.shop_role === "creator" ? t("Compte vérifié") : t("Boutique vérifiée")
+                  }
                 />
               )}
             </Link>
@@ -188,9 +200,36 @@ export default function ProductCard({
             </span>
           )}
         </div>
-        <p className={`stock-line ${qty > 0 ? "" : "out"}`}>
+        <p className={`stock-line ${product.is_digital ? "" : qty > 0 ? "" : "out"}`}>
           {product.is_digital ? t("📁 Produit digital — téléchargement") : qty > 0 ? t("En stock : {n}", { n: qty }) : t("Rupture de stock")}
         </p>
+        {product.is_digital && (product.shop_phone || product.contact) && (
+          <p className="card-contact">
+            {product.shop_phone && (
+              <a
+                href={`tel:${product.shop_phone}`}
+                onClick={(e) => e.stopPropagation()}
+                title={t("Appeler le créateur")}
+              >
+                📞 {product.shop_phone}
+              </a>
+            )}
+            {product.shop_phone && (
+              <a
+                href={waLink(
+                  product.shop_phone,
+                  t("Bonjour, je suis intéressé par « {name} » sur Mboppi.", { name: product.name })
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                title={t("Contacter sur WhatsApp")}
+              >
+                <IconWhatsApp size={14} /> WhatsApp
+              </a>
+            )}
+          </p>
+        )}
       </Link>
       <div className="card-actions">
         {action ? (

@@ -1,7 +1,7 @@
 {
   "name": "marketplace-client",
   "private": true,
-  "version": "1.57.64",
+  "version": "1.57.65",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@sentry/react": "^10.70.0",
+    "@tiptap/extension-highlight": "^3.31.3",
     "@tiptap/extension-image": "^3.31.3",
+    "@tiptap/extension-subscript": "^3.31.3",
+    "@tiptap/extension-superscript": "^3.31.3",
     "@tiptap/extension-table": "^3.31.3",
     "@tiptap/extension-text-align": "^3.31.3",
     "@tiptap/extension-text-style": "^3.31.3",
@@ -22,6 +25,7 @@
     "jszip": "^3.10.2",
     "leaflet": "^1.9.4",
     "mammoth": "^1.12.3",
+    "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

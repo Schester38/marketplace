@@ -34,6 +34,9 @@ export default function ClientDashboard() {
   const { t, locale } = useLang();
   const [purchases, setPurchases] = useState(null);
   const [error, setError] = useState("");
+  // Volets d'affichage : « physiques » (livraison) vs « digitaux »
+  // (téléchargement) — jamais mélangés, recherche facilitée.
+  const [ctype, setCtype] = useState("physical");
   const mounted = useRef(true);
 
   const load = useCallback(() => {
@@ -73,8 +76,10 @@ export default function ClientDashboard() {
     }
   };
 
-  const activePurchases = (purchases || []).filter((p) => p.status !== "delivered");
-  const deliveredPurchases = (purchases || []).filter((p) => p.status === "delivered");
+  const byType = (list) =>
+    list.filter((p) => (ctype === "digital" ? p.is_digital === true : p.is_digital !== true));
+  const activePurchases = byType((purchases || []).filter((p) => p.status !== "delivered"));
+  const deliveredPurchases = byType((purchases || []).filter((p) => p.status === "delivered"));
 
   const [showGreeting, setShowGreeting] = useState(true);
   useEffect(() => {
@@ -126,6 +131,28 @@ export default function ClientDashboard() {
 
       <section style={{ marginTop: 24 }}>
         <h2 className="section-title">{t("📦 Mes commandes")}</h2>
+        {/* Volets « Achats physiques » / « Achats digitaux » : deux familles
+            distinctes (livraison vs téléchargement), jamais mélangées. */}
+        <div className="ptype-tabs" role="tablist" aria-label={t("Type de produits")}>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={ctype === "physical"}
+            className={`ptype-tab ${ctype === "physical" ? "active" : ""}`}
+            onClick={() => setCtype("physical")}
+          >
+            📦 {t("Achats physiques")}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={ctype === "digital"}
+            className={`ptype-tab ${ctype === "digital" ? "active" : ""}`}
+            onClick={() => setCtype("digital")}
+          >
+            📁 {t("Achats digitaux")}
+          </button>
+        </div>
         {error && <p className="error">{error}</p>}
         {purchases === null ? (
           <div className="card page-center">

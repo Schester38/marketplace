@@ -60,6 +60,51 @@ export async function insertNotificationsForUsers(
 }
 
 /**
+ * Diffusion « cloche + push » à une liste précise d'utilisateurs (vendeur,
+ * boutique/créateur propriétaire d'un produit…) à l'occasion d'un événement
+ * (nouvelle vente, livraison confirmée…). Non bloquant pour l'appelant :
+ * chaque étape est isolée — un échec de notification ne fait jamais échouer
+ * la requête métier.
+ * @returns {Promise<number>} nombre de push réellement envoyés.
+ */
+export async function notifyUsers({
+  userIds,
+  title,
+  body,
+  url = "/",
+  type = "info",
+  sale_id = null,
+  product_id = null,
+  product_name = null,
+  amount = null,
+  channel,
+} = {}) {
+  const ids = [
+    ...new Set((userIds || []).map(Number).filter((v) => Number.isInteger(v) && v > 0)),
+  ];
+  if (!ids.length || !title || !body) return 0;
+  let sent = 0;
+  try {
+    sent = await sendPushToUsers(ids, { title, body, url }, { channel, timeoutMs: 2000 });
+  } catch (err) {
+    console.error("[notifications] push impossible :", err.message);
+  }
+  try {
+    await insertNotificationsForUsers(ids, {
+      type,
+      sale_id,
+      product_id,
+      product_name,
+      body: String(body).slice(0, 200),
+      amount,
+    });
+  } catch (err) {
+    console.error("[notifications] cloche impossible :", err.message);
+  }
+  return sent;
+}
+
+/**
  * Diffusion « cloche + push » à (quasi) tous les utilisateurs, avec les mêmes
  * filtres que sendPushToAll : country, roles, excludeUserId, channel.
  * - Le push est envoyé en DIRECT à tous les abonnements des utilisateurs

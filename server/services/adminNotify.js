@@ -1,6 +1,7 @@
 import { q } from "../db.js";
 import { sendPushToUsers } from "../push.js";
 import { insertNotificationsForUsers } from "./notifications.js";
+import { sendMail } from "../mailer.js";
 
 // ---------------------------------------------------------------------------
 // Notifications du compte administrateur (push + cloche 🔔).
@@ -18,19 +19,30 @@ import { insertNotificationsForUsers } from "./notifications.js";
 // ---------------------------------------------------------------------------
 
 let cachedIds = [];
+let cachedEmails = [];
 let cachedAt = 0;
 
-async function getAdminUserIds() {
+async function getAdminContacts() {
   const now = Date.now();
-  if (cachedIds.length && now - cachedAt < 60000) return cachedIds;
+  if (cachedIds.length && now - cachedAt < 60000) {
+    return { ids: cachedIds, emails: cachedEmails };
+  }
   try {
-    const rows = await q("SELECT id FROM users WHERE role = 'admin' AND email_verified");
+    const rows = await q("SELECT id, email FROM users WHERE role = 'admin' AND email_verified");
     cachedIds = rows.map((r) => Number(r.id)).filter(Number.isInteger);
+    // E-mail : la même liste sert à la trace écrite (aucune requête de plus).
+    cachedEmails = rows
+      .map((r) => String(r.email || "").trim())
+      .filter((e) => e.includes("@"));
     cachedAt = now;
   } catch (err) {
     console.error("[admin-notify] liste des comptes admin impossible :", err.message);
   }
-  return cachedIds;
+  return { ids: cachedIds, emails: cachedEmails };
+}
+
+async function getAdminUserIds() {
+  return (await getAdminContacts()).ids;
 }
 
 /**
@@ -70,6 +82,27 @@ export async function notifyAdmins({
       });
     } catch (err) {
       console.error("[admin-notify] cloche impossible :", err.message);
+    }
+    // E-mail : trace écrite sur la boîte de l'admin (en plus du push et de la
+    // cloche). Silencieux si le SMTP n'est pas configuré (mode simulé).
+    try {
+      const { emails } = await getAdminContacts();
+      for (const to of emails) {
+        try {
+          await sendMail({
+            to,
+            subject: `Mboppi — ${title}`,
+            text: `${body}\n\n${url ? `Détail : ${url}` : ""}`.trim(),
+            html: `<p>${String(title)}</p><p>${String(body)}</p>${
+              amount != null ? `<p><strong>Montant : ${Number(amount)}</strong></p>` : ""
+            }`,
+          });
+        } catch (err) {
+          console.error("[admin-notify] e-mail admin impossible :", err.message);
+        }
+      }
+    } catch (err) {
+      console.error("[admin-notify] e-mails admin impossibles :", err.message);
     }
     return sent;
   } catch (err) {

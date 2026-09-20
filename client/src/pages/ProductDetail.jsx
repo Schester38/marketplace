@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
 import ProductCard, { formatMoney } from "../components/ProductCard.jsx";
-import { countrySymbol, BASE_URL, whatsappLink, categoryEmoji } from "../config.js";
+import { countrySymbol, BASE_URL, whatsappLink, categoryEmoji, waLink } from "../config.js";
 import { PriceEquivalent } from "../money.jsx";
 import { useAuth } from "../App.jsx";
 import { useCart, useFavs } from "../store.jsx";
@@ -507,18 +507,68 @@ export default function ProductDetail() {
             <ReviewQuote productId={product.id} count={product.review_count} />
           )}
           <p className="product-shop">
-            <span className="shop-name-text">
-              {t("Boutique : {shop}", { shop: product.shop_name })}
+            <Link
+              to={
+                product.shop_role === "creator"
+                  ? `/createur/${product.shop_id}`
+                  : `/boutique/${product.shop_id}`
+              }
+              className="shop-name-text"
+            >
+              {product.shop_avatar && (
+                <img
+                  className="card-shop-avatar"
+                  src={product.shop_avatar}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
+              {product.shop_role === "creator"
+                ? t("Créateur : {shop}", { shop: product.shop_name })
+                : t("Boutique : {shop}", { shop: product.shop_name })}
               {product.shop_verified && (
-                <span className="badge badge-verified" title={t("Boutique vérifiée")}>
-                  ✓ {t("Vérifiée")}
+                <span
+                  className="badge badge-verified"
+                  title={
+                    product.shop_role === "creator" ? t("Compte vérifié") : t("Boutique vérifiée")
+                  }
+                >
+                  ✓ {product.shop_role === "creator" ? t("Vérifié") : t("Vérifiée")}
                 </span>
               )}
-            </span>
+            </Link>
             {product.shop_location ? (
               <span className="shop-loc"> · 📍 {product.shop_location}</span>
             ) : null}
           </p>
+          {/* Produit DIGITAL : le créateur (ou la boutique) est mis en avant avec
+              ses coordonnées directes — téléphone et WhatsApp cliquables. */}
+          {product.is_digital && (product.shop_phone || product.contact) && (
+            <p className="product-shop product-creator-contact">
+              {product.shop_phone && (
+                <a className="meta-chip" href={`tel:${product.shop_phone}`}>
+                  📞 {product.shop_phone}
+                </a>
+              )}
+              {product.shop_phone && (
+                <a
+                  className="meta-chip"
+                  href={waLink(
+                    product.shop_phone,
+                    t("Bonjour, je suis intéressé par « {name} » sur Mboppi.", { name: product.name })
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  💬 {t("WhatsApp")}
+                </a>
+              )}
+              {product.contact && !product.shop_phone && (
+                <span className="meta-chip">📞 {product.contact}</span>
+              )}
+            </p>
+          )}
           {product.description && <p>{product.description}</p>}
           <div className="product-meta">
             {Number(product.sold_month) > 0 && (
@@ -576,18 +626,31 @@ export default function ProductDetail() {
             </p>
 
             <ul className="pd-assurance">
-              <li>
-                <IconTruck size={15} />{" "}
-                {deliveryFee > 0
-                  ? t("Livraison {price} {symbol}", { price: formatMoney(deliveryFee), symbol })
-                  : t("Livraison gratuite")}
-              </li>
-              <li>
-                <IconBanknote size={15} /> {t("Paiement à la livraison")}
-              </li>
-              <li>
-                <IconShieldCheck size={15} /> {t("Satisfait ou remboursé")}
-              </li>
+              {product.is_digital ? (
+                <>
+                  <li>
+                    <IconPackage size={15} /> {t("Téléchargement immédiat après paiement")}
+                  </li>
+                  <li>
+                    <IconShieldCheck size={15} /> {t("Satisfaction garantie")}
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <IconTruck size={15} />{" "}
+                    {deliveryFee > 0
+                      ? t("Livraison {price} {symbol}", { price: formatMoney(deliveryFee), symbol })
+                      : t("Livraison gratuite")}
+                  </li>
+                  <li>
+                    <IconBanknote size={15} /> {t("Paiement à la livraison")}
+                  </li>
+                  <li>
+                    <IconShieldCheck size={15} /> {t("Satisfaction garantie")}
+                  </li>
+                </>
+              )}
             </ul>
 
             {product.is_digital && !isOwner && (

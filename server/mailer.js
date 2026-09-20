@@ -58,6 +58,66 @@ export async function sendMail({ to, subject, text, html }) {
   }
 }
 
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Email « nouvelle vente » à la boutique/créateur propriétaire du produit et
+ * au vendeur (le cas échéant). Non bloquant : ignoré si le SMTP n'est pas
+ * configuré, aucun destinataire valide, ou en cas d'échec d'envoi.
+ */
+export async function sendSaleEmails({
+  shopEmail,
+  sellerEmail,
+  buyerName,
+  productName,
+  quantity,
+  total,
+  currency = "F",
+  confirmCode,
+  digital = false,
+}) {
+  if (!mailConfigured()) return;
+  const to = [shopEmail, sellerEmail].filter((e) => e && String(e).includes("@"));
+  if (!to.length) return;
+  const subject = "Nouvelle vente sur Mboppi 🛍️";
+  const name = esc(productName);
+  const client = esc(buyerName);
+  const text = [
+    "Nouvelle vente enregistrée :",
+    `- Produit : ${productName} × ${quantity}`,
+    `- Total : ${total} ${currency}`,
+    buyerName ? `- Client : ${buyerName}` : "",
+    confirmCode ? `- Code de confirmation : ${confirmCode}` : "",
+    digital ? "Produit digital : l'acheteur télécharge son fichier après confirmation." : "",
+    "",
+    `Suivi : ${SITE_URL}/shop`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const html = `<p>Nouvelle vente sur Mboppi 🛍️</p><ul><li><strong>Produit :</strong> ${name} × ${quantity}</li><li><strong>Total :</strong> ${total} ${esc(
+    currency
+  )}</li>${buyerName ? `<li><strong>Client :</strong> ${client}</li>` : ""}${
+    confirmCode ? `<li><strong>Code de confirmation :</strong> ${esc(confirmCode)}</li>` : ""
+  }${
+    digital
+      ? "<li>Produit digital : l'acheteur télécharge son fichier après confirmation.</li>"
+      : ""
+  }</ul><p><a href="${SITE_URL}/shop">Ouvrir mon espace</a></p>`;
+  for (const email of to) {
+    try {
+      await sendMail({ to: email, subject, text, html });
+    } catch {
+      /* jamais bloquant pour la requête métier */
+    }
+  }
+}
+
 export function verificationEmailHtml({ name, link }) {
   const safeName = String(name || "").replace(/[<>&]/g, "");
   return `<!DOCTYPE html>
