@@ -376,16 +376,22 @@ function GenEditor({ initialDoc, onBack }) {
   const [view, setView] = useState("edit"); // edit | design | preview
   // Ajustement automatique de l'aperçu à la largeur disponible (téléphone :
   // la page entière est visible, plus besoin de faire défiler horizontalement).
+  // NB : computeFit est déclaré APRÈS `preview` (il lit preview.box.w).
   const previewZoneRef = useRef(null);
   const [fitScale, setFitScale] = useState(1);
+  const [error, setError] = useState("");
+  const [preview, setPreview] = useState(null);
+  const [previewBusy, setPreviewBusy] = useState(false);
+  const [exportPct, setExportPct] = useState(null);
+  const [check, setCheck] = useState(null);
   // La page d'aperçu fait : largeur mm × PX_PER_MM × 0.75. Si elle dépasse la
   // largeur de la zone (téléphone), on réduit tout le rendu (polices comprises
   // — le PDF reste au format exact, seul l'affichage est rétréci).
   const computeFit = useCallback(() => {
     const el = previewZoneRef.current;
     if (!el) return;
-    // Largeur réelle de la page (orientation paysage/gauche incluse) sinon
-    // le format par défaut.
+    // Largeur réelle de la page (orientation paysage incluse) sinon le
+    // format par défaut.
     const pageMmW =
       (preview && preview.box && Number(preview.box.w)) ||
       resolvePageBox(meta.page_format || "A4")[0];
@@ -410,11 +416,6 @@ function GenEditor({ initialDoc, onBack }) {
     }
     return undefined;
   }, [view, preview, computeFit]);
-  const [error, setError] = useState("");
-  const [preview, setPreview] = useState(null);
-  const [previewBusy, setPreviewBusy] = useState(false);
-  const [exportPct, setExportPct] = useState(null);
-  const [check, setCheck] = useState(null);
   // Assistant IA (résultat relu puis inséré par l'utilisateur — jamais injecté
   // sans validation), export EPUB, publication produit.
   const [aiBusy, setAiBusy] = useState(null); // action en cours
