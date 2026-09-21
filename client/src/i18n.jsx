@@ -5075,6 +5075,8 @@ const RICH_EN = {
   "Type de produits": "Product type",
   "Produits physiques": "Physical products",
   "Produits digitaux": "Digital products",
+  "Produits digitaux : paiement en ligne immédiat, puis téléchargement automatique du fichier.":
+    "Digital products: instant online payment, then automatic file download.",
   "Achats physiques": "Physical purchases",
   "Achats digitaux": "Digital purchases",
   "Formations en ligne": "Online courses",
@@ -5219,6 +5221,8 @@ const RICH_ES = {
   "Type de produits": "Tipo de productos",
   "Produits physiques": "Productos físicos",
   "Produits digitaux": "Productos digitales",
+  "Produits digitaux : paiement en ligne immédiat, puis téléchargement automatique du fichier.":
+    "Productos digitales: pago en línea instantáneo, luego descarga automática del archivo.",
   "Achats physiques": "Compras físicas",
   "Achats digitaux": "Compras digitales",
   "Formations en ligne": "Formaciones en línea",
@@ -5329,6 +5333,8 @@ const RICH_AR = {
   "Type de produits": "نوع المنتجات",
   "Produits physiques": "منتجات مادية",
   "Produits digitaux": "منتجات رقمية",
+  "Produits digitaux : paiement en ligne immédiat, puis téléchargement automatique du fichier.":
+    "منتجات رقمية: دفع فوري عبر الإنترنت، ثم تنزيل تلقائي للملف.",
   "Achats physiques": "مشتريات مادية",
   "Achats digitaux": "مشتريات رقمية",
   "Formations en ligne": "دورات عبر الإنترنت",

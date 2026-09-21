@@ -9,6 +9,7 @@ import { useCart } from "../store.jsx";
 import { useLang } from "../i18n.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 import DigitalBuyTunnel from "../components/DigitalBuyTunnel.jsx";
+import PaymentMethodsStrip from "../components/PaymentMethodsStrip.jsx";
 
 /** Normalise un numéro de boutique au format international (wa.me). */
 function waDigits(raw, country) {
@@ -389,7 +390,9 @@ export default function Cart() {
                 {formatMoney(cartTotal)} {countrySymbol(cart[0] ? cart[0].country : null)}
               </strong>
             </div>
-            <p className="hint">{t("Les frais de livraison sont confirmés avec la boutique.")}</p>
+            {physicalItems.length > 0 && (
+              <p className="hint">{t("Les frais de livraison sont confirmés avec la boutique.")}</p>
+            )}
 
             {/* ---------- Produits DIGITAUX : paiement en ligne → fichier ----------
                 Aucun formulaire de livraison (nom/ville/adresse inutiles pour un
@@ -400,7 +403,7 @@ export default function Cart() {
                 <p className="hint" style={{ marginTop: 0 }}>
                   📁{" "}
                   {t(
-                    "Produits digitaux : paiement en ligne immédiat, puis téléchargement automatique du fichier. Aucun formulaire, aucune livraison."
+                    "Produits digitaux : paiement en ligne immédiat, puis téléchargement automatique du fichier."
                   )}
                 </p>
                 <div className="info-row" style={{ margin: "6px 0" }}>
@@ -416,6 +419,8 @@ export default function Cart() {
                 >
                   ⬇️ {t("Payer et télécharger")} — {formatMoney(digitalTotal)} {digitalSymbol}
                 </button>
+                {/* Moyens de paiement acceptés (iKeePay) : bandeau défilant. */}
+                <PaymentMethodsStrip />
               </div>
             )}
 

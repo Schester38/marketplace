@@ -335,7 +335,6 @@ export default function MyAccount() {
     }
   };
 
-
   const copyReference = async () => {
     try {
       await navigator.clipboard.writeText(String(user?.reference_number || ""));
@@ -519,7 +518,8 @@ export default function MyAccount() {
           }`}
           style={{ marginBottom: 20 }}
         >
-          <strong>{t("Abonnement")}</strong> : {getMembershipCountdownState(user.membership_expires_at).label}
+          <strong>{t("Abonnement")}</strong> :{" "}
+          {getMembershipCountdownState(user.membership_expires_at).label}
         </div>
       )}
 
@@ -540,7 +540,10 @@ export default function MyAccount() {
               />
             ) : (
               <span className="avatar-lg avatar-fallback" aria-hidden="true">
-                {String(user?.name || "?").trim().charAt(0).toUpperCase()}
+                {String(user?.name || "?")
+                  .trim()
+                  .charAt(0)
+                  .toUpperCase()}
               </span>
             )}
             <div className="avatar-editor-actions">
@@ -564,9 +567,6 @@ export default function MyAccount() {
                   {t("Retirer")}
                 </button>
               )}
-              <p className="hint">
-                {t("JPG, PNG ou WebP — convertie automatiquement en WebP (fichier léger).")}
-              </p>
               {avatarMsg && <p className="success">{avatarMsg}</p>}
               {avatarError && <p className="error">{avatarError}</p>}
             </div>
@@ -739,9 +739,7 @@ export default function MyAccount() {
         <div className="card">
           <h2>🔔 {t("Notifications")}</h2>
           <p className="contact-hint">
-            {t(
-              "Choisissez les notifications push que vous souhaitez recevoir sur votre appareil."
-            )}
+            {t("Choisissez les notifications push que vous souhaitez recevoir sur votre appareil.")}
           </p>
           {/* Statut d'abonnement navigateur (nécessaire pour recevoir). */}
           {pushSubscribed !== null && (
@@ -806,7 +804,6 @@ export default function MyAccount() {
             </button>
           </div>
         </div>
-
 
         <div className="card danger-card">
           <h2>{t("Zone dangereuse")}</h2>

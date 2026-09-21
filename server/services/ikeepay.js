@@ -22,6 +22,7 @@ import { MEMBERSHIP_FEES } from "../fees.js";
 import { getMembershipGate } from "./membershipGate.js";
 import { notifyActivationReferralPaid } from "./activationReferral.js";
 import { notifyAdmins } from "./adminNotify.js";
+import { sendPush } from "../push.js";
 
 const IKEEPAY_CHECKOUT_URL = "https://ikeepay.com/checkout/v1/inline";
 export const PAYMENT_MODE_MANUAL = "manual";
@@ -457,6 +458,28 @@ export async function settleDigitalSale(saleId) {
     ).catch((err) =>
       console.error("[ikeepay] crédit gain en ligne impossible :", err.message)
     );
+  }
+
+  // Cloche + push : créateur (propriétaire du produit) et vendeur éventuel —
+  // SEULEMENT ici (paiement confirmé par iKeePay), jamais à la création de la
+  // vente : un clic sur « Télécharger » sans paiement ne sonne pas la cloche.
+  const notifValues = sale.seller_id
+    ? `(${sale.seller_id}, 'sale_order', ${sale.id}), (${sale.shop_id}, 'sale_order', ${sale.id})`
+    : `(${sale.shop_id}, 'sale_order', ${sale.id})`;
+  await q(`INSERT INTO notifications (user_id, type, sale_id) VALUES ${notifValues}`).catch(
+    (err) => console.error("[ikeepay] cloche vente digitale impossible :", err.message)
+  );
+  sendPush(sale.shop_id, {
+    title: "Nouvel achat digital payé 📁",
+    body: `${sale.product_name} — ${total} XAF payés en ligne${sale.buyer_name ? `, client : ${sale.buyer_name}` : ""}.`,
+    url: "/creator",
+  }).catch(() => {});
+  if (sale.seller_id && sellerCommission > 0) {
+    sendPush(sale.seller_id, {
+      title: "Nouvelle commande 🛒",
+      body: `${sale.product_name} — ${total} XAF payés en ligne. Commission : ${sellerCommission} XAF.`,
+      url: "/seller",
+    }).catch(() => {});
   }
 
   notifyAdmins({

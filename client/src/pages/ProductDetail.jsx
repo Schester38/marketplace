@@ -13,6 +13,7 @@ import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { nativeShareWithImage, firstProductImage } from "../share.js";
 import Reviews from "../components/Reviews.jsx";
 import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
+import PaymentMethodsStrip from "../components/PaymentMethodsStrip.jsx";
 import Logo from "../components/Logo.jsx";
 import ReviewQuote from "../components/ReviewQuote.jsx";
 import { useLite, isLite } from "../liteMode.js";
@@ -662,14 +663,18 @@ export default function ProductDetail() {
             </ul>
 
             {product.is_digital && !isOwner && (
-              <button
-                type="button"
-                className="btn btn-cart btn-block"
-                onClick={startDigitalBuy}
-                disabled={Boolean(dBuy)}
-              >
-                ⬇️ {t("Télécharger")} — {formatMoney(displayPrice)} {symbol}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn btn-cart btn-block"
+                  onClick={startDigitalBuy}
+                  disabled={Boolean(dBuy)}
+                >
+                  ⬇️ {t("Télécharger")} — {formatMoney(displayPrice)} {symbol}
+                </button>
+                {/* Moyens de paiement acceptés (iKeePay) : bandeau défilant. */}
+                <PaymentMethodsStrip />
+              </>
             )}
 
             {!product.is_digital && inStock > 0 && !isOwner && (

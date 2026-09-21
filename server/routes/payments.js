@@ -2,7 +2,6 @@ import { Router } from "express";
 import { timingSafeEqual } from "node:crypto";
 import { q, withTransaction } from "../db.js";
 import { authRequired, authOptional, MEMBERSHIP_FEES } from "../auth.js";
-import { sendPush } from "../push.js";
 import { membershipRoles } from "../services/membershipGate.js";
 import {
   PAYMENT_MODE_AUTO,
@@ -324,9 +323,7 @@ router.post(
     const commissionPercent = promo
       ? Number(promo.commission_percent)
       : Number(product.commission_percent);
-    const commission = seller
-      ? Math.round(price * (commissionPercent / 100) * 100) / 100
-      : 0; // achat direct : le créateur reçoit la totalité (aucune commission)
+    const commission = seller ? Math.round(price * (commissionPercent / 100) * 100) / 100 : 0; // achat direct : le créateur reçoit la totalité (aucune commission)
     let referralCommission = 0;
     let referredBy = null;
     if (buyer) {
@@ -385,29 +382,12 @@ router.post(
          VALUES ($1, $2, $3, $4)`,
         [sale.id, price, "XAF", externalRef]
       );
-      // Cloche : créateur (propriétaire du produit) + vendeur éventuel.
-      const notifValues = seller
-        ? `(${seller.id}, 'sale_order', ${sale.id}), (${product.shop_id}, 'sale_order', ${sale.id})`
-        : `(${product.shop_id}, 'sale_order', ${sale.id})`;
-      await tx.query(
-        `INSERT INTO notifications (user_id, type, sale_id) VALUES ${notifValues}`
-      );
+      // AUCUNE notification ici : un simple clic sur « Télécharger » (paiement
+      // jamais effectué, vente abandonnée) ne doit pas faire sonner de cloche
+      // « nouvelle vente ». Le créateur et le vendeur sont notifiés dans
+      // settleDigitalSale(), uniquement quand iKeePay confirme le paiement.
       return { id: sale.id, confirmCode };
     });
-
-    // Push non bloquant (le webhook notifiera la vente confirmée ensuite).
-    sendPush(product.shop_id, {
-      title: "Nouvel achat digital 📁",
-      body: `${product.name} — ${name} va payer en ligne (${price} XAF).`,
-      url: "/creator",
-    }).catch(() => {});
-    if (seller) {
-      sendPush(seller.id, {
-        title: "Nouvelle commande 🛒",
-        body: `${product.name} — ${name} paie en ligne. Commission : ${commission} XAF.`,
-        url: "/seller",
-      }).catch(() => {});
-    }
 
     const checkout = addPublicKey(
       buildInlineCheckoutUrl({
@@ -449,9 +429,7 @@ webhookRouter.post(
     // ce garde, '' === '' accepterait un webhook NON authentifié pendant une
     // panne de base.
     if (!expected) {
-      return res
-        .status(503)
-        .json({ received: false, error: "webhook_secret_unavailable" });
+      return res.status(503).json({ received: false, error: "webhook_secret_unavailable" });
     }
     const a = Buffer.from(String(given));
     const b = Buffer.from(String(expected));
@@ -472,12 +450,8 @@ webhookRouter.post(
            (provider, event, payload, status, handled, error)
          VALUES ('ikeepay', 'auth_rejected', $1, 'rejected:invalid_webhook_token', TRUE, 'invalid_webhook_token')`,
         [JSON.stringify({ event: evt, token_provided: given ? "yes" : "no" })]
-      ).catch((err) =>
-        console.error("[ikeepay] journalisation 403 impossible :", err.message)
-      );
-      return res
-        .status(403)
-        .json({ received: false, error: "invalid_webhook_token" });
+      ).catch((err) => console.error("[ikeepay] journalisation 403 impossible :", err.message));
+      return res.status(403).json({ received: false, error: "invalid_webhook_token" });
     }
     // Tolérance : certains clients envoient le JSON avec un content-type
     // différent → express.json ne l'a pas parsé (req.body = {}). On tente un

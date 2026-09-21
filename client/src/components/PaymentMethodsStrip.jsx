@@ -25,7 +25,11 @@ const badgeStyle = {
 function Badge({ bg, children, border }) {
   return (
     <span
-      style={{ ...badgeStyle, background: bg, ...(border ? { border: `1px solid ${border}` } : {}) }}
+      style={{
+        ...badgeStyle,
+        background: bg,
+        ...(border ? { border: `1px solid ${border}` } : {}),
+      }}
     >
       {children}
     </span>
@@ -99,21 +103,32 @@ const AirtelMoney = () => (
 
 export default function PaymentMethodsStrip() {
   const { t } = useLang();
+  // Bandeau DÉFILANT (de la droite vers la gauche, une seule ligne) : la piste
+  // contient DEUX fois la série de badges — quand la moitié gauche sort de
+  // l'écran, la seconde moitié est déjà entrée (boucle sans à-coup).
+  const badges = () => (
+    <>
+      <Visa />
+      <Mastercard />
+      <Usdt />
+      <MtnMomo />
+      <OrangeMoney />
+      <MoovMoney />
+      <Wave />
+      <MPesa />
+      <AirtelMoney />
+    </>
+  );
   return (
     <div className="pay-strip" role="note">
-      <div className="pay-strip-title">
-        🔐 {t("Paiements acceptés — sécurisés par iKeepay")}
-      </div>
-      <div className="pay-strip-badges">
-        <Visa />
-        <Mastercard />
-        <Usdt />
-        <MtnMomo />
-        <OrangeMoney />
-        <MoovMoney />
-        <Wave />
-        <MPesa />
-        <AirtelMoney />
+      <div className="pay-strip-title">🔐 {t("Paiements acceptés — sécurisés par iKeepay")}</div>
+      <div className="pay-strip-marquee">
+        <div className="pay-strip-track">
+          {badges()}
+          <span style={{ display: "contents" }} aria-hidden="true">
+            {badges()}
+          </span>
+        </div>
       </div>
       <p className="pay-strip-hint">
         {t(
