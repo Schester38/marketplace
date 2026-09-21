@@ -204,7 +204,7 @@ export default function CreatorDashboard() {
             key: form.digital.key,
           }
         : undefined
-      : wasDigital
+      : editingDigital
         ? { remove: true }
         : undefined;
     const payload = {

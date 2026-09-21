@@ -168,6 +168,8 @@ export function parseDesignCommand(text, opts = {}) {
   let cover = null;
   let templateId = null;
   let variants = null;
+  // Plusieurs propositions de couverture (§49 : « crée trois couvertures »).
+  let coverIdeas = null;
 
   const has = (...ks) => ks.some((k) => q.includes(` ${k}`) || q.includes(`${k} `));
 

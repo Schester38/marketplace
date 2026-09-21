@@ -2036,7 +2036,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
               <p className="hint">{t("Aucun modèle ne correspond à ces filtres.")}</p>
             )}
             <div className="gen-tpl-variant">
-              <button type="button" className="btn btn-small btn-outline" onClick={generateVariant} disabled={busy}>
+              <button type="button" className="btn btn-small btn-outline" onClick={generateVariant}>
                 🎲 {t("Générer une variante")}
               </button>
               <span className="hint">

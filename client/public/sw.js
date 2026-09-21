@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v306';
+const CACHE_NAME = 'mboppi-v307';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/assistant-avatar.webp', '/og-image.svg', '/og-image.png', '/robots.txt', '/splash.js', '/diapo/MboppiShop_Developpez_votre_boutique.webp', '/diapo/MboppiShop_Gagner_telephone_connexion.webp', '/diapo/MboppiShop_Paiement_a_la_livraison_1x1.webp', '/diapo/MboppiShop_Shopify_optimise.webp'];
 
 // Endpoints GET publics : servis depuis le cache quand le reseau est lent ou coupe,
@@ -54,13 +54,13 @@ self.addEventListener('activate', (event) => {
             try {
               client.postMessage({ type: 'APP_UPDATED' });
             } catch (e) {}
-            // Onglet en arriÃƒÂ¨re-plan (ancien shell possiblement KO) :
-            // re-navigation automatique dÃƒÂ¨s que la nouvelle version est
-            // active. La navigation passe alors par le mode Ã‚Â« rÃƒÂ©seau
-            // d'abord Ã‚Â» Ã¢â€ â€™ HTML frais, plus jamais d'ancien shell dont les
+            // Onglet en arriÃƒÆ’Ã‚Â¨re-plan (ancien shell possiblement KO) :
+            // re-navigation automatique dÃƒÆ’Ã‚Â¨s que la nouvelle version est
+            // active. La navigation passe alors par le mode Ãƒâ€šÃ‚Â« rÃƒÆ’Ã‚Â©seau
+            // d'abord Ãƒâ€šÃ‚Â» ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ HTML frais, plus jamais d'ancien shell dont les
             // chunks ont disparu. Les onglets VISIBLES en plein usage ne
-            // sont pas forcÃƒÂ©s (respect du travail en cours) : ils reÃƒÂ§oivent
-            // APP_UPDATED et l'app applique/retarde la mise ÃƒÂ  jour en SPA.
+            // sont pas forcÃƒÆ’Ã‚Â©s (respect du travail en cours) : ils reÃƒÆ’Ã‚Â§oivent
+            // APP_UPDATED et l'app applique/retarde la mise ÃƒÆ’Ã‚Â  jour en SPA.
             if (client.visibilityState === 'hidden' && typeof client.navigate === 'function') {
               try {
                 client.navigate(client.url);
@@ -79,8 +79,8 @@ self.addEventListener('push', (event) => {
   } catch (e) {}
   const title = data.title || 'Mboppi';
   // CRITIQUE : `renotify: true` exige un tag NON vide, sinon showNotification()
-  // jette une TypeError et la notification n'est jamais affichÃƒÆ’Ã‚Â©e. Le serveur
-  // envoie toujours un tag, mais on se protÃƒÆ’Ã‚Â¨ge si jamais il manque.
+  // jette une TypeError et la notification n'est jamais affichÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e. Le serveur
+  // envoie toujours un tag, mais on se protÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨ge si jamais il manque.
   const tag =
     data.tag ||
     'mboppi-' +
@@ -94,13 +94,13 @@ self.addEventListener('push', (event) => {
     badge: data.badge || '/favicon-32x32.png',
     tag,
     renotify: true,
-    // Son de notification (supportÃƒÆ’Ã‚Â© surtout sur Android/Chrome ; Chrome
-    // desktop ignore le champ "sound" comme documentÃƒÆ’Ã‚Â©). NB : quand l'app est
-    // FERMÃƒÆ’Ã¢â‚¬Â°E, le son vient du canal systÃƒÆ’Ã‚Â¨me de la PWA (RÃƒÆ’Ã‚Â©glages ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Applications
-    // ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ [nom] ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Notifications ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ activer le son) ; la vibration fonctionne, elle.
+    // Son de notification (supportÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© surtout sur Android/Chrome ; Chrome
+    // desktop ignore le champ "sound" comme documentÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©). NB : quand l'app est
+    // FERMÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â°E, le son vient du canal systÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¨me de la PWA (RÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©glages ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Applications
+    // ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ [nom] ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Notifications ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ activer le son) ; la vibration fonctionne, elle.
     sound: data.sound || '/notification.wav',
     vibrate: data.vibrate || [200, 100, 200],
-    // La notification reste affichÃƒÆ’Ã‚Â©e tant que l'utilisateur n'a pas rÃƒÆ’Ã‚Â©agi.
+    // La notification reste affichÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e tant que l'utilisateur n'a pas rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©agi.
     requireInteraction: data.requireInteraction !== false,
     data: { url: data.data && data.data.url ? data.data.url : '/' },
   };
@@ -108,9 +108,9 @@ self.addEventListener('push', (event) => {
 });
 
 // Rotation de l'abonnement push par le push service (FCM renouvelle les tokens,
-// dÃƒÆ’Ã‚Â©sinstallation temporaire/rÃƒÆ’Ã‚Â©installation du navigateurÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦) : on se rÃƒÆ’Ã‚Â©-abonne
-// aussitÃƒÆ’Ã‚Â´t et on met ÃƒÆ’Ã‚Â  jour le serveur. Sans ÃƒÆ’Ã‚Â§a, l'appareil perd le push pour
-// toujours jusqu'ÃƒÆ’Ã‚Â  la prochaine ouverture de l'app.
+// dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©sinstallation temporaire/rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©installation du navigateurÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦) : on se rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©-abonne
+// aussitÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´t et on met ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  jour le serveur. Sans ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§a, l'appareil perd le push pour
+// toujours jusqu'ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  la prochaine ouverture de l'app.
 self.addEventListener('pushsubscriptionchange', (event) => {
   event.waitUntil(handlePushSubscriptionChange(event.oldSubscription));
 });
@@ -149,7 +149,7 @@ async function handlePushSubscriptionChange(oldSub) {
     });
     const oldEndpoint = oldSub && oldSub.endpoint ? oldSub.endpoint : null;
     // L'ancien endpoint est un "capability URL" secret : le fournir suffit au
-    // serveur pour transfÃƒÆ’Ã‚Â©rer l'abonnement sans JWT (le SW ne lit pas le token).
+    // serveur pour transfÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rer l'abonnement sans JWT (le SW ne lit pas le token).
     if (oldEndpoint) {
       await fetch('/api/push/refresh', {
         method: 'POST',
@@ -176,7 +176,7 @@ function urlBase64ToUint8Array(base64String) {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data && event.notification.data.url ? event.notification.data.url : '/';
-  // Mesure d'ouverture : ping best-effort (keepalive survit ÃƒÆ’Ã‚Â  la fermeture).
+  // Mesure d'ouverture : ping best-effort (keepalive survit ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  la fermeture).
   try {
     const tag = event.notification.tag || '';
     event.waitUntil(
@@ -207,8 +207,8 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   // Images produits (origin Supabase Storage) : cache-first pour que les photos
-  // dÃƒÆ’Ã‚Â©jÃƒÆ’Ã‚Â  vues restent visibles hors connexion. Les URLs sont uniques par upload
-  // (timestamp + uuid), donc pas de risque de servir une version pÃƒÆ’Ã‚Â©rimÃƒÆ’Ã‚Â©e.
+  // dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  vues restent visibles hors connexion. Les URLs sont uniques par upload
+  // (timestamp + uuid), donc pas de risque de servir une version pÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©rimÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©e.
   if (/storage\.supabase\.co/.test(url.hostname)) {
     event.respondWith(
       (async () => {
@@ -247,7 +247,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Bundles JS/CSS (contenus avec hash) : stale-while-revalidate. Le cache sert
-  // immÃƒÆ’Ã‚Â©diatement, le reseau rafraichit en arriere-plan. Les fichiers ont un hash,
+  // immÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©diatement, le reseau rafraichit en arriere-plan. Les fichiers ont un hash,
   // donc deux versions ne se melangent jamais.
   if (url.pathname.startsWith('/assets/')) {
     event.respondWith(assetSwr(event.request));
@@ -312,13 +312,13 @@ async function assetSwr(request) {
 }
 
 async function navSwr(request) {
-  // NAVIGATION : le RÃƒâ€°SEAU d'abord (HTML frais ÃƒÂ  chaque ouverture), le cache
-  // ne sert que HORS LIGNE. Avant v251, on servait le shell en cache immÃƒÂ©diat
-  // (stale-while-revalidate) : aprÃƒÂ¨s un dÃƒÂ©ploiement, ce shell rÃƒÂ©fÃƒÂ©renÃƒÂ§ait des
-  // chunks de l'ancien build que la route SPA servait en text/html Ã¢â€ â€™ Ã‚Â« Failed
-  // to fetch dynamically imported module Ã‚Â» Ã¢â€ â€™ splash/loader infini.
+  // NAVIGATION : le RÃƒÆ’Ã¢â‚¬Â°SEAU d'abord (HTML frais ÃƒÆ’Ã‚Â  chaque ouverture), le cache
+  // ne sert que HORS LIGNE. Avant v251, on servait le shell en cache immÃƒÆ’Ã‚Â©diat
+  // (stale-while-revalidate) : aprÃƒÆ’Ã‚Â¨s un dÃƒÆ’Ã‚Â©ploiement, ce shell rÃƒÆ’Ã‚Â©fÃƒÆ’Ã‚Â©renÃƒÆ’Ã‚Â§ait des
+  // chunks de l'ancien build que la route SPA servait en text/html ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Ãƒâ€šÃ‚Â« Failed
+  // to fetch dynamically imported module Ãƒâ€šÃ‚Â» ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ splash/loader infini.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 3000); // filet : cache si rÃƒÂ©seau lent
+  const timer = setTimeout(() => controller.abort(), 3000); // filet : cache si rÃƒÆ’Ã‚Â©seau lent
   try {
     const resp = await fetch(request, { signal: controller.signal, cache: 'no-store' });
     clearTimeout(timer);
