@@ -154,11 +154,248 @@ export const GEN_TEMPLATES = [
     coverDimDefault: 0.15,
     coverShape: "diag",
     pageDecor: "masthead", // bandeau portant le titre sur chaque page
+    style: "magazine", audience: "grand public", sector: "culture",
+  },
+
+  // ─── Bibliothèque étendue (métadonnées : style / audience / secteur) ────────
+  // Chaque modèle reste un simple objet : le moteur de rendu est inchangé.
+  // Seules des valeurs DÉJÀ supportées par les 3 rendus sont utilisées
+  // (coverShape : arc | circle | diag | bars | none ; pageDecor : les 12
+  // décors existants ; coverLayout : center | band | top | left).
+  {
+    id: "corporate", name: "Corporate", category: "Rapport",
+    bodyFont: "sans", headingFont: "sans",
+    sizes: { h1: 24, h2: 17, h3: 13.5, h4: 12, body: 10.5, small: 8.5 },
+    lineHeight: 1.55, paraSpace: 5,
+    colors: { heading: "#1f2a36", body: "#37424e", accent: "#0e7490", bg: "#ffffff" },
+    align: "left", chapterNewPage: false,
+    coverBg: "#1f2a36", coverText: "#e0f2fe", headingUpper: false,
+    headingRule: "h1h2", headingBar: "left", coverLayout: "left", coverRule: true,
+    coverShape: "bars",
+    pageDecor: "headerband",
+    style: "corporate", audience: "entreprises", sector: "entreprise",
+  },
+  {
+    id: "catalogue", name: "Catalogue", category: "Catalogue",
+    bodyFont: "sans", headingFont: "sans",
+    sizes: { h1: 28, h2: 19, h3: 14, h4: 12, body: 10.5, small: 8.5 },
+    lineHeight: 1.5, paraSpace: 6,
+    colors: { heading: "#7c2d12", body: "#292524", accent: "#ea580c", bg: "#fffaf5" },
+    align: "left", chapterNewPage: false,
+    coverBg: "#7c2d12", coverText: "#fff7ed", headingUpper: true,
+    headingRule: "none", headingBar: "none", coverLayout: "band", coverRule: false,
+    coverDimDefault: 0,
+    coverShape: "circle",
+    pageDecor: "sidestrip",
+    style: "coloré", audience: "entreprises", sector: "commerce",
+  },
+  {
+    id: "roman", name: "Roman", category: "Livre",
+    bodyFont: "serif", headingFont: "serif",
+    sizes: { h1: 26, h2: 18, h3: 14, h4: 12, body: 11.5, small: 9 },
+    lineHeight: 1.78, paraSpace: 6,
+    colors: { heading: "#1e293b", body: "#111827", accent: "#64748b", bg: "#fffefb" },
+    align: "justify", chapterNewPage: true,
+    coverBg: "#1e293b", coverText: "#f1f5f9", headingUpper: false,
+    headingRule: "none", headingBar: "none", coverLayout: "center", coverRule: true,
+    coverShape: "none",
+    pageDecor: "doublerule",
+    style: "classique", audience: "grand public", sector: "culture",
+  },
+  {
+    id: "spirituel", name: "Spirituel", category: "Livre",
+    bodyFont: "serif", headingFont: "serif",
+    sizes: { h1: 26, h2: 18, h3: 14, h4: 12, body: 11, small: 9 },
+    lineHeight: 1.7, paraSpace: 6,
+    colors: { heading: "#3b0764", body: "#1f2937", accent: "#a16207", bg: "#fffdf7" },
+    align: "justify", chapterNewPage: true,
+    coverBg: "#3b0764", coverText: "#fef3c7", headingUpper: true,
+    headingRule: "h1", headingBar: "none", coverLayout: "center", coverRule: true,
+    coverShape: "none",
+    pageDecor: "toprule",
+    style: "sobre", audience: "grand public", sector: "religion",
+  },
+  {
+    id: "sante", name: "Santé & Bien-être", category: "Ebook",
+    bodyFont: "sans", headingFont: "sans",
+    sizes: { h1: 25, h2: 18, h3: 14, h4: 12, body: 11, small: 9 },
+    lineHeight: 1.62, paraSpace: 6,
+    colors: { heading: "#134e4a", body: "#1f2937", accent: "#14b8a6", bg: "#ffffff" },
+    align: "justify", chapterNewPage: true,
+    coverBg: "#134e4a", coverText: "#ccfbf1", headingUpper: false,
+    headingRule: "none", headingBar: "left", coverLayout: "band", coverRule: false,
+    coverDimDefault: 0,
+    coverShape: "arc",
+    pageDecor: "sidestrip",
+    style: "moderne", audience: "grand public", sector: "santé",
+  },
+  {
+    id: "cuisine", name: "Cuisine", category: "Livre",
+    bodyFont: "sans", headingFont: "sans",
+    sizes: { h1: 27, h2: 18, h3: 14, h4: 12, body: 11, small: 9 },
+    lineHeight: 1.6, paraSpace: 7,
+    colors: { heading: "#9a3412", body: "#3f2e20", accent: "#d97706", bg: "#fffbf2" },
+    align: "left", chapterNewPage: true,
+    coverBg: "#9a3412", coverText: "#fff7ed", headingUpper: false,
+    headingRule: "none", headingBar: "left", coverLayout: "band", coverRule: false,
+    coverDimDefault: 0,
+    coverShape: "arc",
+    pageDecor: "topbar",
+    style: "chaleureux", audience: "grand public", sector: "restauration",
+  },
+  {
+    id: "voyage", name: "Voyage", category: "Ebook",
+    bodyFont: "sans", headingFont: "sans",
+    sizes: { h1: 27, h2: 18, h3: 14, h4: 12, body: 10.5, small: 8.5 },
+    lineHeight: 1.58, paraSpace: 6,
+    colors: { heading: "#155e75", body: "#1f2937", accent: "#0891b2", bg: "#ffffff" },
+    align: "justify", chapterNewPage: true,
+    coverBg: "#155e75", coverText: "#e0f2fe", headingUpper: false,
+    headingRule: "h1", headingBar: "none", coverLayout: "top", coverRule: true,
+    coverDimDefault: 0.15,
+    coverShape: "circle",
+    pageDecor: "sideline",
+    style: "moderne", audience: "grand public", sector: "voyage",
+  },
+  {
+    id: "academique", name: "Académique", category: "Rapport",
+    bodyFont: "serif", headingFont: "sans",
+    sizes: { h1: 24, h2: 17, h3: 13.5, h4: 12, body: 10.5, small: 8.5 },
+    lineHeight: 1.65, paraSpace: 5,
+    colors: { heading: "#1e3a8a", body: "#1f2937", accent: "#1d4ed8", bg: "#ffffff" },
+    align: "justify", chapterNewPage: true,
+    coverBg: "#1e3a8a", coverText: "#dbeafe", headingUpper: true,
+    headingRule: "h1h2", headingBar: "none", coverLayout: "left", coverRule: true,
+    coverShape: "bars",
+    pageDecor: "toprule",
+    style: "sobre", audience: "étudiants", sector: "éducation",
   },
 ];
 
 export function getTemplate(id) {
   return GEN_TEMPLATES.find((tpl) => tpl.id === id) || GEN_TEMPLATES[0];
+}
+
+// ─── Métadonnées de bibliothèque (filtres, recherche, recommandation) ────────
+// Style / audience / secteur des modèles HISTORIQUES (les modèles récents
+// portent ces champs directement). `templateMeta()` fusionne les deux sources
+// avec des valeurs par défaut — aucun modèle n'est modifié pour autant.
+const TEMPLATE_META = {
+  minimal: { style: "minimaliste", audience: "grand public", sector: "général" },
+  moderne: { style: "moderne", audience: "entrepreneurs", sector: "général" },
+  elegant: { style: "élégant", audience: "auteurs", sector: "général" },
+  professionnel: { style: "corporate", audience: "entreprises", sector: "entreprise" },
+  business: { style: "corporate", audience: "entrepreneurs", sector: "entrepreneuriat" },
+  education: { style: "sobre", audience: "étudiants", sector: "éducation" },
+  motivation: { style: "coloré", audience: "grand public", sector: "développement personnel" },
+  finance: { style: "corporate", audience: "entreprises", sector: "finance" },
+  technologie: { style: "tech", audience: "professionnels", sector: "technologie" },
+  luxe: { style: "luxe", audience: "entreprises", sector: "général" },
+  jeunesse: { style: "coloré", audience: "enfants", sector: "éducation" },
+  magazine: { style: "magazine", audience: "grand public", sector: "culture" },
+};
+
+export function templateMeta(tpl) {
+  const extra = TEMPLATE_META[tpl?.id] || {};
+  return {
+    category: tpl?.category || "Ebook",
+    style: tpl?.style || extra.style || "classique",
+    audience: tpl?.audience || extra.audience || "grand public",
+    sector: tpl?.sector || extra.sector || "général",
+  };
+}
+
+// Listes uniques dérivées de la bibliothèque (filtres de l'onglet Design).
+export function templateFacets() {
+  const cats = new Set();
+  const styles = new Set();
+  const sectors = new Set();
+  for (const tpl of GEN_TEMPLATES) {
+    const m = templateMeta(tpl);
+    cats.add(m.category);
+    styles.add(m.style);
+    sectors.add(m.sector);
+  }
+  const sortFr = (a, b) => a.localeCompare(b, "fr");
+  return {
+    categories: [...cats].sort(sortFr),
+    styles: [...styles].sort(sortFr),
+    sectors: [...sectors].sort(sortFr),
+  };
+}
+
+// ─── Générateur de variantes (« Générer une variante » de l'onglet Design) ──
+// Produit une variation HARMONIEUSE d'un modèle (rotation de teinte des
+// couleurs + pairage de polices alternatif + couverture assortie) SANS toucher
+// au contenu ni au moteur : le résultat est exprimé en `style_overrides`
+// (déjà supportés par resolveTemplate) + couleurs de couverture. Réversible :
+// le panneau Styles avancés permet de revenir aux valeurs du modèle.
+function hexToHsl(hex) {
+  const m = String(hex || "").match(/^#([0-9a-f]{6})$/i);
+  if (!m) return { h: 0, s: 0.1, l: 0.4 };
+  const v = parseInt(m[1], 16);
+  const r = ((v >> 16) & 255) / 255;
+  const g = ((v >> 8) & 255) / 255;
+  const b = (v & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return { h, s, l };
+}
+function hslToHex(h, s, l) {
+  const f = (n) => {
+    const k = (n + h * 12) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const v = l - a * Math.max(-1, Math.min(k - 3, Math.min(9 - k, 1)));
+    return Math.round(255 * v)
+      .toString(16)
+      .padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+const rotate = (hex, deg, { dl = 0, ds = 0 } = {}) => {
+  const { h, s, l } = hexToHsl(hex);
+  return hslToHex(
+    (h + deg / 360 + 1) % 1,
+    Math.min(0.85, Math.max(0.08, s + ds)),
+    Math.min(0.92, Math.max(0.06, l + dl))
+  );
+};
+
+export function templateVariant(tpl, seed = 0) {
+  const deg = [35, -40, 70, -85, 150, 210][seed % 6];
+  const pair = [
+    ["sans", "serif"],
+    ["serif", "sans"],
+    ["sans", "sans"],
+    ["serif", "serif"],
+    ["sans", "mono"],
+  ][seed % 5];
+  const heading = rotate(tpl.colors.heading, deg, { ds: 0.04 });
+  const accent = rotate(tpl.colors.accent, deg);
+  const body = rotate(tpl.colors.body, deg * 0.4, { ds: -0.02 });
+  const bgSeed = hexToHsl(tpl.colors.bg);
+  const bg =
+    tpl.colors.bg.toLowerCase() === "#ffffff"
+      ? hslToHex((bgSeed.h + deg / 360 + 1) % 1, 0.45, 0.975)
+      : rotate(tpl.colors.bg, deg * 0.5, { dl: 0.015 });
+  const coverHsl = hexToHsl(tpl.coverBg);
+  const coverBg = rotate(tpl.coverBg, deg, { dl: 0.03 });
+  const coverText =
+    coverHsl.l > 0.6 ? hslToHex((coverHsl.h + deg / 360 + 1) % 1, 0.3, 0.18) : rotate(tpl.coverText, deg);
+  return {
+    colors: { heading, body, accent, bg },
+    bodyFont: pair[0],
+    headingFont: pair[1],
+    cover: { bg: coverBg, text: coverText },
+  };
 }
 
 // Convertisseur hex → rgba() : utilisé par l'aperçu HTML et les couvertures

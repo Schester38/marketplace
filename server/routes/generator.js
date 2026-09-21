@@ -487,6 +487,9 @@ const AI_MAX_INPUT = 4000; // limite du PASSAGE sélectionné (l'appel askAI
 const AI_TEMPLATE_IDS = [
   "minimal", "moderne", "elegant", "professionnel", "business", "education",
   "motivation", "finance", "technologie", "luxe", "jeunesse", "magazine",
+  // Bibliothèque étendue (doit refléter GEN_TEMPLATES côté client).
+  "corporate", "catalogue", "roman", "spirituel",
+  "sante", "cuisine", "voyage", "academique",
 ];
 
 // Chaque action = { instruction } ; le résultat est du TEXTE BRUT (Markdown
@@ -554,6 +557,26 @@ const AI_ACTIONS = {
     instruction:
       "Traduis fidèlement le passage fourni dans la langue demandée, en conservant le formatage. " +
       "Réponds uniquement par la traduction.",
+  },
+  // Text-to-Book : plan de livre complet généré à partir d'une simple consigne
+  // (sujet, audience, longueur). Renvoie du Markdown (« # » = chapitres) que le
+  // client convertit en document structuré via le détecteur de structure.
+  book_plan: {
+    instruction:
+      "Tu es un auteur professionnel. À partir de la consigne fournie (sujet, public, longueur approximative), " +
+      "rédige le PLAN COMPLET d'un ebook : une introduction, 6 à 12 chapitres avec 2 à 4 sous-sections chacun " +
+      "(« # » pour les chapitres, « ## » pour les sous-sections) et une conclusion. " +
+      "Chaque sous-section est suivie de 2 ou 3 phrases résumant ce qu'elle contiendra. " +
+      "Public : lecteurs africains francophones. Réponds uniquement par le plan, sans commentaire.",
+  },
+  // Rédaction d'un CHAPITRE entier à partir de son titre (utilisé après un
+  // book_plan). Résultat inséré en fin de document par l'utilisateur.
+  write_chapter: {
+    instruction:
+      "Tu es un auteur professionnel. Rédige le CHAPITRE complet correspondant au titre (ou thème) fourni, " +
+      "dans le contexte du document décrit. Structure : titre du chapitre en « # », 2 à 4 sous-sections en « ## », " +
+      "paragraphes denses et concrets, un exemple pratique par sous-section. Style clair et pédagogique, " +
+      "adapté aux lecteurs africains francophones. Réponds uniquement par le chapitre, sans commentaire.",
   },
   design: {
     json: true,

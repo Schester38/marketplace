@@ -5,7 +5,7 @@
 //      protection) + aperçu paginé fidèle + export PDF réel (jsPDF).
 // Aucune table métier touchée : tout passe par api.gen* (/api/generator/*).
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { ResizableImage } from "../generator/GenImage.jsx";
@@ -28,6 +28,9 @@ import {
   coverLayoutBox,
   SIZE_KEYS,
   COLOR_KEYS,
+  templateFacets,
+  templateMeta,
+  templateVariant,
 } from "../generator/templates.js";
 import { useAuth } from "../App.jsx";
 import { DIGITAL_CATEGORIES, countrySymbol } from "../config.js";
@@ -40,6 +43,7 @@ import { exportEpub } from "../generator/epub.js";
 import { checkDocument } from "../generator/check.js";
 import { renderCoverImage, libraryThumb } from "../generator/coverImage.js";
 import { coverDecorPrims } from "../generator/coverDecor.js";
+import { parseDesignCommand, recommendTemplates } from "../generator/designCommands.js";
 import CoverDecor from "../generator/CoverDecor.jsx";
 import {
   copyrightLines,
@@ -193,6 +197,50 @@ export default function GeneratorPanel({ variant = "creator" }) {
     }
   };
 
+  // ─── Assistant guidé : « Déposez → Analysez → Choisissez → Générez » ────────
+  // Dépose d'un fichier (ou collage de texte) : le document est créé, ouvert
+  // dans l'éditeur, le contenu importé puis analysé — l'utilisateur arrive
+  // directement au rapport + au choix du design. `pendingImport` transporte
+  // le fichier/texte vers GenEditor (qui l'importera au montage).
+  const [pendingImport, setPendingImport] = useState(null); // { file } | { text }
+  const [dragOver, setDragOver] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+  const quickCreate = async (payload, title) => {
+    setError("");
+    setBusy(true);
+    try {
+      const d = await api.genCreateDocument({
+        title: title || t("Nouveau document"),
+        template_id: "moderne",
+        page_format: "A4",
+      });
+      setCreating(false);
+      setPasteText("");
+      load();
+      setPendingImport(payload);
+      setOpenDoc({ document: d.document, content: d.content || EMPTY_DOC, versions: [] });
+    } catch (err) {
+      setError(err?.message || "Création impossible");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const quickImportFile = async (file) => {
+    if (!file) return;
+    if (!/\.(docx|txt|md|markdown)$/i.test(file.name)) {
+      setError(t("Formats acceptés : DOCX (Word), TXT ou Markdown."));
+      return;
+    }
+    const title = file.name.replace(/\.[^.]+$/, "").slice(0, 120).trim();
+    await quickCreate({ file }, title);
+  };
+  const quickPaste = () => {
+    const text = pasteText.trim();
+    if (!text) return;
+    const first = (text.split(/\r?\n/).find((l) => l.trim()) || "").replace(/^#+\s*/, "");
+    quickCreate({ text }, first.slice(0, 120).trim());
+  };
+
   const duplicate = async (id) => {
     setBusy(true);
     try {
@@ -219,7 +267,17 @@ export default function GeneratorPanel({ variant = "creator" }) {
   };
 
   if (openDoc) {
-    return <GenEditor initialDoc={openDoc} onBack={() => { setOpenDoc(null); load(); }} />;
+    return (
+      <GenEditor
+        initialDoc={openDoc}
+        pendingImport={pendingImport}
+        onPendingImportDone={() => setPendingImport(null)}
+        onBack={() => {
+          setOpenDoc(null);
+          load();
+        }}
+      />
+    );
   }
 
   return (
@@ -237,6 +295,60 @@ export default function GeneratorPanel({ variant = "creator" }) {
           "Collez un texte brut, choisissez un modèle : le Générateur structure, pagine, ajoute couverture, table des matières et protection, puis exporte un PDF professionnel."
         )}
       </p>
+
+      {/* Assistant guidé « Déposez → Analysez → Choisissez → Générez » : le
+          chemin le plus court d'un Word (ou d'un texte collé) à l'ebook. */}
+      <div
+        className={`gen-dropzone ${dragOver ? "over" : ""}`}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          quickImportFile(e.dataTransfer?.files?.[0]);
+        }}
+      >
+        <div className="gen-dropzone-main">
+          <strong>📥 {t("Déposez votre fichier ici")}</strong>
+          <span className="hint">
+            {t("DOCX (Word), TXT ou Markdown — un document est créé puis analysé automatiquement.")}
+          </span>
+        </div>
+        <label className="btn btn-small btn-primary">
+          📁 {t("Choisir un fichier")}
+          <input
+            type="file"
+            accept=".docx,.txt,.md,.markdown"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              quickImportFile(f);
+            }}
+          />
+        </label>
+      </div>
+      <div className="gen-pastezone">
+        <textarea
+          className="input"
+          rows={3}
+          placeholder={t("… ou collez votre texte ici (la première ligne devient le titre)")}
+          value={pasteText}
+          onChange={(e) => setPasteText(e.target.value)}
+        />
+        <button
+          type="button"
+          className="btn btn-small btn-primary"
+          disabled={busy || !pasteText.trim()}
+          onClick={quickPaste}
+        >
+          ✨ {t("Créer depuis le texte")}
+        </button>
+      </div>
+
       {error && <p className="error" role="alert">{error}</p>}
 
       {creating && (
@@ -364,7 +476,7 @@ export default function GeneratorPanel({ variant = "creator" }) {
 // ═════════════════════════════════════════════════════════════════════════════
 // Éditeur : TipTap + autosave débouncé + design + aperçu paginé + export PDF.
 // ═════════════════════════════════════════════════════════════════════════════
-function GenEditor({ initialDoc, onBack }) {
+function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   const { t } = useLang();
   const { user } = useAuth();
   // Devise du PAYS du compte (XAF au Cameroun, XOF au Sénégal…), affichée sur
@@ -428,6 +540,9 @@ function GenEditor({ initialDoc, onBack }) {
   const [formatMsg, setFormatMsg] = useState(""); // résultat de « Détecter les titres »
   // Portée du contenu détectée → design suggéré (onglet Design).
   const [scopeInfo, setScopeInfo] = useState(null);
+  // Extrait du texte du document mémorisé à l'analyse : sert au moteur de
+  // recommandation de modèles (§16/§65) sans relire l'éditeur à chaque rendu.
+  const [scopeText, setScopeText] = useState("");
   const hasAi = typeof meta.ai_available === "undefined" ? true : meta.ai_available;
 
   const contentRef = useRef(initialDoc.content || EMPTY_DOC);
@@ -524,6 +639,268 @@ function GenEditor({ initialDoc, onBack }) {
     else scheduleSave();
   };
 
+  // ─── Bibliothèque de modèles : filtres, recherche, favoris, récents ─────────
+  // Tout est LOCAL (localStorage + analyse de chaînes) : aucun impact serveur,
+  // aucun changement au moteur — la grille existante est simplement filtrée.
+  const tplFacets = useMemo(() => templateFacets(), []);
+  const [tplCat, setTplCat] = useState(""); // "" = tous ; "__fav" = favoris
+  // Aperçu d'un modèle SANS l'appliquer : { id, paginated } du modèle candidat.
+  const [tplPreview, setTplPreview] = useState(null);
+  const [tplPreviewBusy, setTplPreviewBusy] = useState(false);
+
+  const [tplStyle, setTplStyle] = useState("");
+  const [tplSearch, setTplSearch] = useState("");
+  const [tplFavs, setTplFavs] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("gen_fav_templates") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [tplRecents, setTplRecents] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("gen_recent_templates") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [variantSeed, setVariantSeed] = useState(0);
+
+  const toggleTplFav = (id) =>
+    setTplFavs((cur) => {
+      const next = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+      try {
+        localStorage.setItem("gen_fav_templates", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  const rememberTpl = (id) =>
+    setTplRecents((cur) => {
+      const next = [id, ...cur.filter((x) => x !== id)].slice(0, 6);
+      try {
+        localStorage.setItem("gen_recent_templates", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  // « Utiliser ce modèle » : applique le template ET le mémorise en récent.
+  // ─── Aperçu RÉEL d'un modèle, SANS l'appliquer (cahier des charges §17/18/62)
+  // Le contenu du document est repaginé avec le modèle candidat (mêmes règles de
+  // mesure et de flux que l'aperçu normal) : l'utilisateur voit son propre texte
+  // dans le modèle avant de choisir. Rien n'est écrit : le document garde son
+  // modèle tant que « Utiliser ce modèle » n'est pas cliqué.
+  const previewTemplate = async (id) => {
+    const ed = editorRef.current;
+    if (!ed || tplPreviewBusy) return;
+    setTplPreviewBusy(true);
+    setError("");
+    try {
+      const html = ed.getHTML();
+      const paginated = await paginateDocument({
+        html,
+        doc: { ...metaRef.current, template_id: id },
+        toc: metaRef.current.protection?.toc !== false,
+      });
+      setTplPreview({ id, paginated });
+    } catch (e) {
+      setError(e?.message || t("Aperçu impossible"));
+    } finally {
+      setTplPreviewBusy(false);
+    }
+  };
+
+  const applyTemplate = (id) => {
+    patchMeta({ template_id: id });
+    rememberTpl(id);
+  };
+  const filteredTemplates = GEN_TEMPLATES.filter((tpl) => {
+    const m = templateMeta(tpl);
+    if (tplCat === "__fav" && !tplFavs.includes(tpl.id)) return false;
+    if (tplCat && tplCat !== "__fav" && m.category !== tplCat) return false;
+    if (tplStyle && m.style !== tplStyle) return false;
+    const q = tplSearch.trim().toLowerCase();
+    if (q && !`${tpl.name} ${m.category} ${m.style} ${m.audience} ${m.sector}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  // « Générer une variante » : variation harmonieuse (couleurs + polices +
+  // couverture) du modèle actif, via style_overrides — contenu intact.
+  const generateVariant = () => {
+    const tpl = getTemplate(metaRef.current.template_id);
+    const v = templateVariant(tpl, variantSeed);
+    setVariantSeed((s) => s + 1);
+    patchMeta(
+      {
+        style_overrides: {
+          ...(metaRef.current.style_overrides || {}),
+          colors: v.colors,
+          bodyFont: v.bodyFont,
+          headingFont: v.headingFont,
+        },
+        cover: { ...(metaRef.current.cover || {}), bg: v.cover.bg, text: v.cover.text },
+      },
+      true
+    );
+  };
+
+  // ─── Commandes de design en langage naturel (§41-56) ───────────────────────
+  // Le moteur (`designCommands.js`) ne renvoie qu'un patch de PRÉSENTATION :
+  // modèle, couleurs, polices, mise en page, couverture. Le texte, la structure
+  // et les images ne sont JAMAIS touchés (Content / Presentation séparés).
+  const [cmdText, setCmdText] = useState("");
+  const [cmdReport, setCmdReport] = useState(null);
+
+  const runDesignCommand = () => {
+    const phrase = cmdText.trim();
+    if (!phrase) return;
+    const res = parseDesignCommand(phrase, {
+      currentTemplateId: metaRef.current.template_id,
+      seed: variantSeed,
+    });
+    const cur = metaRef.current;
+    const patch = {};
+    if (res.templateId && res.templateId !== cur.template_id) {
+      patch.template_id = res.templateId;
+      rememberTpl(res.templateId);
+    }
+    const merged = { ...(cur.style_overrides || {}), ...(res.overrides || {}) };
+    if (Object.keys(merged).length) patch.style_overrides = merged;
+    if (res.cover) patch.cover = { ...(cur.cover || {}), ...res.cover };
+    if (Object.keys(patch).length) patchMeta(patch, true);
+    if (res.coverIdeas?.length) setCoverIdeas(res.coverIdeas);
+    setVariantSeed((s) => s + 1);
+    setCmdReport(res);
+  };
+
+  // Variante proposée par la commande (« fais-moi 3 variantes ») : applique
+  // couleurs + polices + couverture, contenu strictement identique.
+  const applyCmdVariant = (v) => {
+    const cur = metaRef.current;
+    patchMeta(
+      {
+        style_overrides: { ...(cur.style_overrides || {}), ...(v.overrides || {}) },
+        cover: { ...(cur.cover || {}), bg: v.cover.bg, text: v.cover.text },
+      },
+      true
+    );
+  };
+
+  // Traduction des codes compris / des notes du moteur (jamais de clé brute).
+  const cmdCodeLabel = (c) => {
+    switch (c.code) {
+      case "template": return t("Modèle appliqué : {v}", { v: c.value });
+      case "accent": return t("Couleur d'accent : {v}", { v: c.value });
+      case "theme": return c.value === "dark" ? t("Thème sombre") : t("Thème clair");
+      case "font": return t("Police : {v}", { v: c.value });
+      case "align":
+        return c.value === "center"
+          ? t("Texte centré")
+          : c.value === "left"
+            ? t("Texte aligné à gauche")
+            : t("Texte justifié");
+      case "lineHeight": return t("Interligne : {v}", { v: c.value });
+      case "paraSpace": return t("Espacement des paragraphes augmenté");
+      case "coverIdeas": return t("{n} propositions de couverture", { n: c.value });
+      case "cover": return t("Couleur de couverture appliquée");
+      case "variants": return t("{n} variantes de design proposées", { n: c.value });
+      case "contentLock": return t("Contenu verrouillé : seul le design change");
+      default: return "";
+    }
+  };
+  const cmdNote = (n) => {
+    switch (n.code) {
+      case "lineHeightRange": return t("Interligne : précisez une valeur entre 1,0 et 2,5.");
+      case "format": return t("Le format se règle dans « Format et mise en page » (A4, A5, 6×9…).");
+      case "margins": return t("Les marges se règlent dans « Format et mise en page ».");
+      case "coverStyle": return t("Le style de couverture vient du modèle choisi — essayez « Générer une variante ».");
+      case "watermark": return t("Le filigrane se règle dans la section Protection du document.");
+      case "qr": return t("Le QR code de vérification se règle dans la section Protection du document (ou avec le marqueur [QR]).");
+      case "copyright": return t("Le copyright se règle dans la section Protection du document.");
+      case "password": return t("La protection par code se fait à la vente (code de confirmation de l'acheteur), pas dans le PDF.");
+      case "quote": return t("L'alignement global n'a pas été modifié : les citations sont déjà mises en valeur par le modèle.");
+      default: return "";
+    }
+  };
+  // Exemples cliquables : le libellé est traduit, la phrase INSÉRÉE reste en
+  // français — c'est la langue comprise par le moteur de commandes.
+  const CMD_EXAMPLES = [
+    { label: t("Rends le design plus moderne et professionnel."), text: "Rends le design plus moderne et professionnel." },
+    { label: t("Ajoute des couleurs bleu et blanc."), text: "Ajoute des couleurs bleu et blanc." },
+    { label: t("Utilise un style adapté à la finance."), text: "Utilise un style adapté à la finance." },
+    { label: t("Fais-moi 3 variantes de design sans changer le contenu."), text: "Fais-moi 3 variantes de design sans changer le contenu." },
+    { label: t("Crée trois couvertures différentes."), text: "Crée trois couvertures différentes." },
+  ];
+
+  // ─── Analyse du document importé (DOCX / TXT / MD) — rapport local ──────────
+  // Comptage TipTap après import : chapitres (h1), sections (h2), images,
+  // tableaux, mots et pages estimées (~300 mots/page en A4).
+  const [importReport, setImportReport] = useState(null);
+  const analyzeImportedDoc = () => {
+    const ed = editorRef.current;
+    if (!ed) return null;
+    let h1 = 0;
+    let h2 = 0;
+    let images = 0;
+    let tables = 0;
+    ed.state.doc.descendants((node) => {
+      if (node.type.name === "heading") {
+        if (node.attrs.level === 1) h1 += 1;
+        else if (node.attrs.level === 2) h2 += 1;
+      } else if (node.type.name === "image") images += 1;
+      else if (node.type.name === "table") tables += 1;
+      return true;
+    });
+    const words = ed.getText().split(/\s+/).filter(Boolean).length;
+    return { h1, h2, images, tables, words, pages: Math.max(1, Math.round(words / 300)) };
+  };
+
+  // Assistant guidé : import automatique du fichier/texte déposé dans la
+  // bibliothèque (transmis via la prop `pendingImport`). L'éditeur TipTap est
+  // créé pendant le montage — on attend sa disponibilité avant d'importer.
+  useEffect(() => {
+    if (!pendingImport) return undefined;
+    let tries = 0;
+    let timer = null;
+    const run = async () => {
+      const ed = editorRef.current;
+      if (!ed) {
+        if (tries++ < 20) {
+          timer = setTimeout(run, 150);
+          return;
+        }
+        onPendingImportDone?.();
+        return;
+      }
+      try {
+        if (pendingImport.file) {
+          const f = pendingImport.file;
+          applyHtml(
+            /\.docx$/i.test(f.name) ? await readDocxHtml(f) : detectStructureHtml(await readTextFile(f))
+          );
+        } else if (pendingImport.text) {
+          applyHtml(detectStructureHtml(pendingImport.text));
+        }
+        setImportReport({
+          fileName: pendingImport.file?.name || "",
+          ...(analyzeImportedDoc() || {}),
+        });
+      } catch {
+        setError(t("Import impossible (fichier illisible)."));
+      }
+      onPendingImportDone?.();
+    };
+    run();
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingImport]);
+
+  // ─── AUTO COVER : trois palettes de couverture assorties au modèle actif ────
+  const [coverIdeas, setCoverIdeas] = useState(null); // [{ cover: { bg, text } }]
+  const proposeCovers = () => {
+    const tpl = getTemplate(metaRef.current.template_id);
+    setCoverIdeas([1, 3, 5].map((s) => templateVariant(tpl, (variantSeed + s) % 6)));
+  };
+
   // ─── Import : TXT/MD (détection de structure) et DOCX (mammoth) ────────────
   const applyHtml = (html) => {
     const ed = editorRef.current;
@@ -543,6 +920,11 @@ function GenEditor({ initialDoc, onBack }) {
       } else {
         applyHtml(detectStructureHtml(await readTextFile(file)));
       }
+      // Rapport « Document Analyzer » : structure détectée après import.
+      setImportReport({
+        fileName: file.name,
+        ...(analyzeImportedDoc() || {}),
+      });
     } catch {
       setError("Fichier non compatible (TXT, MD ou DOCX attendu).");
     }
@@ -592,8 +974,26 @@ function GenEditor({ initialDoc, onBack }) {
     const ed = editorRef.current;
     if (!ed) return;
     const text = typeof ed.getText === "function" ? ed.getText() : "";
+    setScopeText(String(text || "").slice(0, 6000));
     setScopeInfo(detectScope(text, { templateIds: GEN_TEMPLATES.map((tpl) => tpl.id) }));
   }, []);
+
+  // ─── SMART TEMPLATE RECOMMENDER (§16/§65) ──────────────────────────────────
+  // Classe les modèles d'après le TITRE et le TEXTE du document, avec un petit
+  // bonus aux favoris ⭐ et aux modèles récents 🕘 (préférences personnelles).
+  // Moteur pur et local : aucune requête, aucun réglage modifié tout seul — la
+  // rangée propose, l'utilisateur décide.
+  const recoRow = useMemo(
+    () =>
+      recommendTemplates({
+        title: meta.title || "",
+        text: scopeText,
+        recents: tplRecents,
+        favs: tplFavs,
+        limit: 4,
+      }),
+    [meta.title, scopeText, tplRecents, tplFavs]
+  );
 
   // ─── Aperçu paginé : invalidation + (re)construction ────────────────────────
   // L'aperçu est périmé dès qu'un paramètre de mise en page change (modèle de
@@ -731,7 +1131,9 @@ function GenEditor({ initialDoc, onBack }) {
     const ed = editorRef.current;
     const res = aiResult;
     if (!ed || !res?.text) return;
-    if (res.action === "structure" && !replaceSelection) {
+    if ((res.action === "structure" || res.action === "book_plan") && !replaceSelection) {
+      // Plan de livre = Markdown avec titres « # » : repasse par le détecteur
+      // de structure pour produire un document réellement structuré (h1/h2).
       applyHtml(detectStructureHtml(res.text));
     } else if (replaceSelection && !ed.state.selection.empty) {
       ed.chain().focus().insertContentAt(ed.state.selection.from, res.text).run();
@@ -1225,6 +1627,30 @@ function GenEditor({ initialDoc, onBack }) {
               {t("L'import détecte automatiquement titre, chapitres, listes et citations.")}
             </span>
           </div>
+          {/* Rapport « Document Analyzer » : ce que l'import a détecté, avec
+              raccourci vers le choix du design — tout est recalculé localement. */}
+          {importReport && (
+            <div className="gen-import-report">
+              <strong>🔍 {t("Analyse du document")}</strong>
+              {importReport.fileName && <span className="hint"> — {importReport.fileName}</span>}
+              <div className="gen-import-stats">
+                <span>📖 {t("Chapitres")} : <strong>{importReport.h1 ?? 0}</strong></span>
+                <span>§ {t("Sections")} : <strong>{importReport.h2 ?? 0}</strong></span>
+                <span>🖼️ {t("Images")} : <strong>{importReport.images ?? 0}</strong></span>
+                <span>📊 {t("Tableaux")} : <strong>{importReport.tables ?? 0}</strong></span>
+                <span>✍️ {t("Mots")} : <strong>{importReport.words ?? 0}</strong></span>
+                <span>📄 {t("Pages estimées")} : <strong>~{importReport.pages ?? 1}</strong></span>
+              </div>
+              <div className="gen-import-report-actions">
+                <button type="button" className="btn btn-small btn-primary" onClick={() => setView("design")}>
+                  🎨 {t("Choisir un design")}
+                </button>
+                <button type="button" className="btn btn-small btn-outline" onClick={() => setImportReport(null)}>
+                  {t("Masquer")}
+                </button>
+              </div>
+            </div>
+          )}
           <EditorContent editor={editor} className="gen-editor" />
           <p className="hint gen-edit-hint">
             {t(
@@ -1244,6 +1670,8 @@ function GenEditor({ initialDoc, onBack }) {
                   ["expand", t("Développer")],
                   ["tone", t("Changer le ton")],
                   ["translate", t("Traduire (EN)")],
+                  ["book_plan", t("📋 Plan de livre")],
+                  ["write_chapter", t("✍️ Rédiger ce chapitre")],
                   ["blurb", t("Quatrième de couverture")],
                   ["bio", t("Biographie d'auteur")],
                   ["design", t("Proposer un design")],
@@ -1253,7 +1681,23 @@ function GenEditor({ initialDoc, onBack }) {
                     type="button"
                     className="btn btn-small btn-outline"
                     disabled={aiBusy !== null}
-                    onClick={() => runAi(action)}
+                    onClick={() => {
+                      // Commandes « livre » : une consigne est demandée avant
+                      // l'appel (le reste de l'IA agit sur la sélection).
+                      if (action === "book_plan") {
+                        const inst = window.prompt(
+                          t("Décrivez le livre à planifier : sujet, audience, longueur (ex. « ebook de 40 pages sur le marketing digital pour jeunes entrepreneurs »).")
+                        );
+                        if (inst === null) return;
+                        runAi(action, { instruction: inst });
+                      } else if (action === "write_chapter") {
+                        const inst = window.prompt(t("Titre (ou thème précis) du chapitre à rédiger :"));
+                        if (inst === null) return;
+                        runAi(action, { instruction: inst });
+                      } else {
+                        runAi(action);
+                      }
+                    }}
                   >
                     {label}
                   </button>
@@ -1336,7 +1780,8 @@ function GenEditor({ initialDoc, onBack }) {
                 </div>
                 <p className="hint">
                   {t(
-                    "Suggestion indicative : les 12 modèles restent disponibles ci-dessous, et vos réglages de couleurs et de polices sont conservés."
+                    "Suggestion indicative : les {n} modèles restent disponibles ci-dessous, et vos réglages de couleurs et de polices sont conservés.",
+                    { n: GEN_TEMPLATES.length }
                   )}
                 </p>
               </>
@@ -1349,26 +1794,254 @@ function GenEditor({ initialDoc, onBack }) {
             )}
           </div>
 
-          <div className="gen-design-block">
-            <h4>🎨 {t("Modèle de design")}</h4>
-            <div className="gen-templates">
-              {GEN_TEMPLATES.map((tpl) => (
+          {/* ─── Commande de design en langage naturel (§45-§51, §54-§56) ────
+              L'utilisateur écrit ce qu'il veut (« rends le design plus sobre et
+              bleu ») : le moteur `designCommands.js` analyse la phrase puis
+              renvoie un patch de PRÉSENTATION (modèle, couleurs, polices, mise
+              en page, couverture). Le texte, la structure et les images ne sont
+              JAMAIS modifiés : contenu et présentation sont séparés. */}
+          <div className="gen-design-block gen-command">
+            <h4>💬 {t("Commande de design")}</h4>
+            <p className="hint">
+              {t(
+                "Écrivez ce que vous voulez : le Générateur change le design, jamais votre texte."
+              )}
+            </p>
+            <div className="gen-command-examples">
+              {CMD_EXAMPLES.map((ex) => (
                 <button
-                  key={tpl.id}
+                  key={ex.text}
                   type="button"
-                  className={`gen-template-card ${meta.template_id === tpl.id ? "active" : ""}`}
-                  onClick={() => patchMeta({ template_id: tpl.id })}
-                  title={tpl.name}
+                  className="gen-cmd-example"
+                  onClick={() => setCmdText(ex.text)}
                 >
-                  <span className="gen-tpl-swatch" style={{ background: tpl.coverBg, color: tpl.coverText }}>
-                    Aa
-                    {decorMarks(tpl).map((st, i) => (
-                      <span key={i} style={st} />
-                    ))}
-                  </span>
-                  <span className="gen-tpl-name">{tpl.name}</span>
+                  {ex.label}
                 </button>
               ))}
+            </div>
+            <div className="gen-command-row">
+              <textarea
+                className="gen-command-input"
+                rows={2}
+                value={cmdText}
+                onChange={(e) => setCmdText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    runDesignCommand();
+                  }
+                }}
+                placeholder={t(
+                  "Ex. : un design moderne, élégant, bleu et blanc, pour des entrepreneurs."
+                )}
+                aria-label={t("Commande de design")}
+              />
+              <button
+                type="button"
+                className="btn btn-primary btn-small"
+                onClick={runDesignCommand}
+                disabled={!cmdText.trim()}
+              >
+                ✨ {t("Appliquer la commande")}
+              </button>
+            </div>
+            {cmdReport && (
+              <div className="gen-command-out">
+                {cmdReport.empty ? (
+                  <p className="hint">
+                    {t(
+                      "Commande non comprise : essayez par exemple « rends le design plus moderne et bleu »."
+                    )}
+                  </p>
+                ) : (
+                  <>
+                    {cmdReport.codes?.length > 0 && (
+                      <>
+                        <p className="gen-ai-label">{t("Compris")} :</p>
+                        <div className="gen-cmd-chips">
+                          {cmdReport.codes.map((c, i) => (
+                            <span key={`${c.code}-${i}`} className="gen-cmd-chip">
+                              ✓ {cmdCodeLabel(c)}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                    {cmdReport.notes?.length > 0 && (
+                      <ul className="gen-cmd-notes">
+                        {cmdReport.notes.map((n, i) => (
+                          <li key={`${n.code}-${i}`}>ℹ️ {cmdNote(n)}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+                {cmdReport.variants?.length > 0 && (
+                  <div className="gen-cmd-variants">
+                    <span className="gen-ai-label">
+                      🎲{" "}
+                      {t("{n} variantes — cliquez pour appliquer :", {
+                        n: cmdReport.variants.length,
+                      })}
+                    </span>
+                    {cmdReport.variants.map((v) => (
+                      <button
+                        key={v.key}
+                        type="button"
+                        className="btn btn-small btn-outline"
+                        onClick={() => applyCmdVariant(v)}
+                        title={t("Appliquer cette variante")}
+                      >
+                        <span
+                          className="gen-tpl-swatch"
+                          style={{ background: v.cover.bg, color: v.cover.text }}
+                        >
+                          Aa
+                        </span>{" "}
+                        {v.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="gen-design-block">
+            <h4>🎨 {t("Modèle de design")}</h4>
+            {/* Filtres de bibliothèque (catégorie / style) + recherche +
+                favoris ⭐ — tout est local, la grille est simplement filtrée. */}
+            <div className="gen-tpl-filters">
+              <select className="input" value={tplCat} onChange={(e) => setTplCat(e.target.value)} title={t("Catégorie")}>
+                <option value="">{t("Toutes les catégories")}</option>
+                <option value="__fav">⭐ {t("Favoris")}{tplFavs.length ? ` (${tplFavs.length})` : ""}</option>
+                {tplFacets.categories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <select className="input" value={tplStyle} onChange={(e) => setTplStyle(e.target.value)} title={t("Style")}>
+                <option value="">{t("Tous les styles")}</option>
+                {tplFacets.styles.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <input
+                className="input"
+                placeholder={t("Rechercher un modèle…")}
+                value={tplSearch}
+                onChange={(e) => setTplSearch(e.target.value)}
+              />
+            </div>
+            {tplRecents.length > 0 && tplCat !== "__fav" && !tplSearch && !tplStyle && !tplCat && (
+              <div className="gen-tpl-recents">
+                <span className="gen-ai-label">🕘 {t("Récents")} :</span>
+                {tplRecents.map((id) => {
+                  const tpl = getTemplate(id);
+                  if (!tpl) return null;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`btn btn-small ${meta.template_id === id ? "btn-primary" : "btn-outline"}`}
+                      onClick={() => applyTemplate(id)}
+                      title={t("Appliquer ce modèle")}
+                    >
+                      <span className="gen-tpl-swatch" style={{ background: tpl.coverBg, color: tpl.coverText }}>Aa</span>{" "}
+                      {tpl.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {/* Recommandations intelligentes (§16) : modèles classés d'après le
+                contenu du document + les préférences (favoris ⭐, récents 🕘).
+                Chaque pastille applique le modèle ; 👁 l'essaie sans appliquer. */}
+            {recoRow.length > 0 && (
+              <div className="gen-tpl-recos">
+                <span className="gen-ai-label">✨ {t("Recommandé pour votre contenu")} :</span>
+                {recoRow.map((r) => (
+                  <span key={r.tpl.id} className={`gen-reco-chip ${meta.template_id === r.tpl.id ? "active" : ""}`}>
+                    <button
+                      type="button"
+                      className="gen-reco-apply"
+                      onClick={() => applyTemplate(r.tpl.id)}
+                      title={`${r.tpl.name} — ${r.m.category} · ${r.m.style} · ${r.m.sector}`}
+                    >
+                      <span className="gen-tpl-swatch" style={{ background: r.tpl.coverBg, color: r.tpl.coverText }}>
+                        Aa
+                      </span>
+                      <span className="gen-reco-text">
+                        <strong>{r.tpl.name}</strong>
+                        <em>
+                          {r.m.category} · {r.m.style}
+                        </em>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="gen-tpl-eye"
+                      onClick={() => previewTemplate(r.tpl.id)}
+                      title={t("Aperçu du modèle")}
+                      aria-label={t("Aperçu du modèle")}
+                    >
+                      👁
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="gen-templates">
+              {filteredTemplates.map((tpl) => {
+                const m = templateMeta(tpl);
+                return (
+                  <div key={tpl.id} className={`gen-template-card ${meta.template_id === tpl.id ? "active" : ""}`}>
+                    <button
+                      type="button"
+                      className="gen-tpl-apply"
+                      onClick={() => applyTemplate(tpl.id)}
+                      title={`${tpl.name} — ${m.category} · ${m.style} · ${m.sector}`}
+                    >
+                      <span className="gen-tpl-swatch" style={{ background: tpl.coverBg, color: tpl.coverText }}>
+                        Aa
+                        {decorMarks(tpl).map((st, i) => (
+                          <span key={i} style={st} />
+                        ))}
+                      </span>
+                      <span className="gen-tpl-name">{tpl.name}</span>
+                      <span className="gen-tpl-meta">{m.category} · {m.style}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`gen-tpl-eye ${tplPreviewBusy ? "busy" : ""}`}
+                      onClick={() => previewTemplate(tpl.id)}
+                      title={t("Aperçu du modèle avec votre contenu")}
+                      aria-label={t("Aperçu du modèle")}
+                    >
+                      👁
+                    </button>
+                    <button
+                      type="button"
+                      className={`gen-tpl-star ${tplFavs.includes(tpl.id) ? "on" : ""}`}
+                      onClick={() => toggleTplFav(tpl.id)}
+                      title={tplFavs.includes(tpl.id) ? t("Retirer des favoris") : t("Ajouter aux favoris")}
+                      aria-label={tplFavs.includes(tpl.id) ? t("Retirer des favoris") : t("Ajouter aux favoris")}
+                    >
+                      {tplFavs.includes(tpl.id) ? "★" : "☆"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            {filteredTemplates.length === 0 && (
+              <p className="hint">{t("Aucun modèle ne correspond à ces filtres.")}</p>
+            )}
+            <div className="gen-tpl-variant">
+              <button type="button" className="btn btn-small btn-outline" onClick={generateVariant} disabled={busy}>
+                🎲 {t("Générer une variante")}
+              </button>
+              <span className="hint">
+                {t("Varie les couleurs, les polices et la couverture du modèle actif — votre contenu reste intact (réversible via Styles avancés).")}
+              </span>
             </div>
           </div>
 
@@ -1411,6 +2084,41 @@ function GenEditor({ initialDoc, onBack }) {
 
           <div className="gen-design-block">
             <h4>📕 {t("Couverture")}</h4>
+            {/* AUTO COVER : trois palettes générées à partir du modèle actif
+                (réutilise templateVariant) — un clic applique fond + texte. */}
+            <div className="gen-tpl-variant">
+              <button type="button" className="btn btn-small btn-outline" onClick={proposeCovers}>
+                🎨 {t("3 propositions de couverture")}
+              </button>
+              <span className="hint">
+                {t("Trois palettes assorties au modèle actif — cliquez sur une pastille pour l'appliquer.")}
+              </span>
+            </div>
+            {coverIdeas && (
+              <div className="gen-cover-ideas">
+                {coverIdeas.map((v, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="gen-cover-idea"
+                    title={t("Appliquer cette couverture")}
+                    onClick={() => {
+                      patchMeta({
+                        cover: { ...(metaRef.current.cover || {}), bg: v.cover.bg, text: v.cover.text },
+                      }, true);
+                      setCoverIdeas(null);
+                    }}
+                  >
+                    <span className="gen-tpl-swatch" style={{ background: v.cover.bg, color: v.cover.text }}>
+                      Aa
+                    </span>
+                  </button>
+                ))}
+                <button type="button" className="btn btn-small btn-outline" onClick={() => setCoverIdeas(null)}>
+                  {t("Masquer")}
+                </button>
+              </div>
+            )}
             <div className="gen-form-row">
               <div>
                 <label>{t("Titre de couverture")}</label>
@@ -1831,6 +2539,63 @@ function GenEditor({ initialDoc, onBack }) {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ─── Aperçu d'un modèle SANS l'appliquer : contenu réel repaginé ────── */}
+      {tplPreview && (
+        <div className="gen-tpl-preview" role="dialog" aria-modal="true" aria-label={t("Aperçu du modèle")}>
+          <div className="gen-tpl-preview-card">
+            <div className="gen-tpl-preview-head">
+              <strong>
+                👁 {getTemplate(tplPreview.id)?.name} ·{" "}
+                {templateMeta(getTemplate(tplPreview.id)).style}
+              </strong>
+              <span className="hint">
+                {t(
+                  "Votre contenu repaginé avec ce modèle — rien n'est modifié tant que vous ne cliquez pas sur « Utiliser ce modèle »."
+                )}
+              </span>
+              <span className="gen-tpl-preview-count">
+                {tplPreview.paginated.pages.length} {t("pages")}
+              </span>
+              <button
+                type="button"
+                className="btn btn-small btn-primary"
+                onClick={() => {
+                  applyTemplate(tplPreview.id);
+                  setTplPreview(null);
+                }}
+              >
+                ✓ {t("Utiliser ce modèle")}
+              </button>
+              <button type="button" className="btn btn-small btn-outline" onClick={() => setTplPreview(null)}>
+                {t("Fermer")}
+              </button>
+            </div>
+            <div className="gen-tpl-preview-pages">
+              <div className="gen-pages">
+                {tplPreview.paginated.pages.slice(0, 8).map((page, i) => (
+                  <div key={i} className="gen-page-wrap">
+                    <GenPage
+                      page={page}
+                      paginated={tplPreview.paginated}
+                      docMeta={meta}
+                      fit={fitScale || 1}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            {tplPreview.paginated.pages.length > 8 && (
+              <p className="hint gen-tpl-preview-more">
+                {t(
+                  "Aperçu des {n} premières pages sur {total} — le document complet sera mis en page exactement de la même façon.",
+                  { n: 8, total: tplPreview.paginated.pages.length }
+                )}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
