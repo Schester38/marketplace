@@ -20,7 +20,7 @@ import {
   uid, round1, isTextType, elementLabel,
 } from "./studioModel.js";
 import {
-  ELEMENT_LIBRARY, PAGE_KINDS, buildPage, PAGE_LAYOUTS, applyLayout, smartLayouts, describePage, newElement,
+  ELEMENT_LIBRARY, PAGE_KINDS, buildPage, PAGE_LAYOUTS, applyLayout, smartLayouts, newElement,
 } from "./studioLayouts.js";
 import {
   parsePageInstruction, describeScope, distributeText, pageWordCount, pageTextForAi, AI_PAGE_EXAMPLES,
@@ -901,7 +901,9 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
                   </label>
                   <div className="studio-pagethumb">
                     <span className="studio-pagethumb-num">{p.number}</span>
-                    <span className="studio-pagethumb-label">{p.label || describePage(p)}</span>
+                    <span className="studio-pagethumb-label">
+                      {p.label || PAGE_KINDS.find((k) => k.id === p.kind)?.label || "Page"}
+                    </span>
                   </div>
                   <div className="studio-pageactions">
                     <button type="button" title={t("Dupliquer cette page")} onClick={(e) => { e.stopPropagation(); doDuplicatePage(p.id); }}>⧉</button>
