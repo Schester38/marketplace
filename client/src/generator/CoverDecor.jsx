@@ -5,7 +5,7 @@ export default function CoverDecor({ prims = [], w, h }) {
   if (!prims.length || !w || !h) return null;
   return (
     <svg
-      style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 0 }}
       viewBox={`0 0 ${w} ${h}`}
       preserveAspectRatio="none"
       aria-hidden="true"

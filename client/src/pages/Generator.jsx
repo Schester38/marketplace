@@ -45,6 +45,9 @@ import { renderCoverImage, libraryThumb } from "../generator/coverImage.js";
 import { coverDecorPrims } from "../generator/coverDecor.js";
 import { parseDesignCommand, recommendTemplates } from "../generator/designCommands.js";
 import CoverDecor from "../generator/CoverDecor.jsx";
+// Décor de PAGE du modèle (bandeau, filets, colonne, cadre…) : module partagé
+// avec le Studio, TOUJOURS dessiné derrière le texte (z-index 0).
+import PageDecor from "../generator/PageDecor.jsx";
 import DocStudio, { resolveActiveTemplate } from "../generator/DocStudio.jsx";
 import StudioCanvas from "../generator/StudioCanvas.jsx";
 import { readStudio, studioBox, buildStudioPages, serializeStudio, studioDesignKey, studioContentKey } from "../generator/studioModel.js";
@@ -577,9 +580,19 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   editorRef.current = editor;
 
   // ─── Autosave : PATCH complet débouncé (1,5 s après la dernière frappe) ────
+  // Deux pièges corrigés ici : (1) la réponse du serveur écrasait TOUT l'état
+  // local (`{ ...cur, ...d.document }`) — une réponse ANCIENNE (deux
+  // sauvegardes en vol, ex. police puis taille) remettait donc l'ancien
+  // design : les réglages « changeaient tout seuls » et ne collaient pas ;
+  // (2) `page_layout` n'est pas envoyé par cette route mais était repris de la
+  // réponse → la mise en page du Studio (resynchronisée localement) était
+  // perdue. On n'applique donc que la réponse LA PLUS RÉCENTE, et jamais
+  // `page_layout` (écrit par le Studio/la resynchronisation eux-mêmes).
+  const saveSeq = useRef(0);
   const saveNow = useCallback(async () => {
     const m = metaRef.current;
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    const seq = ++saveSeq.current;
     setSaveState("saving");
     try {
       const d = await api.genSaveDocument(m.id, {
@@ -599,9 +612,11 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
         protection: m.protection || {},
         content: contentRef.current,
       });
-      setMeta((cur) => ({ ...cur, ...d.document }));
+      if (seq !== saveSeq.current) return; // réponse périmée : état local prioritaire
+      setMeta((cur) => ({ ...cur, ...d.document, page_layout: cur.page_layout }));
       setSaveState("saved");
     } catch (e) {
+      if (seq !== saveSeq.current) return;
       setSaveState("error");
       setError(e?.message || "Sauvegarde impossible");
     }
@@ -656,7 +671,14 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
           content_key: studioContentKey(src),
         });
         setMeta((cur) => ({ ...cur, page_layout: payload }));
-        scheduleSave();
+        // Enregistrement DIRECT de la mise en page : l'autosave de contenu ne
+        // transporte pas `page_layout`, il serait donc perdu à la réponse
+        // suivante (et le Studio/PDF reviendrait à l'ancienne mise en page).
+        try {
+          await api.genSaveDocument(m.id, { page_layout: payload });
+        } catch {
+          /* l'aperçu local est déjà à jour ; la prochaine resynchronisation réessaiera */
+        }
       } catch {
         // Silencieux : au pire, l'aperçu classique reste disponible.
       }
@@ -2842,208 +2864,6 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
 // ═════════════════════════════════════════════════════════════════════════════
 const GEN_PREVIEW_SCALE = 0.75;
 
-// Décor de page du modèle de design, rendu en HTML à l'identique du PDF
-// (mêmes formes, mêmes coordonnées en millimètres — voir drawPageDecor dans
-// exportPdf.js). C'est ce qui rend le changement de modèle immédiatement
-// visible dans l'aperçu : bandeau titre, filets, colonne, cadre, marge…
-function PageDecor({ template, box, docMeta, scale }) {
-  const decor = template.pageDecor;
-  if (!decor) return null;
-  const { w, h, m } = box;
-  const mm = (v) => v * PX_PER_MM * scale;
-  const accent = template.colors.accent;
-  const title = String(docMeta?.title || "");
-  const abs = { position: "absolute" };
-  const rule = (style) => <div style={{ ...abs, background: accent, ...style }} />;
-  const lw = Math.max(1, mm(0.5));
-
-  switch (decor) {
-    case "toprule":
-      return (
-        <>
-          {rule({ left: mm(m.left), top: mm(m.top * 0.5), width: mm(w - m.right - m.left), height: mm(0.9) })}
-          <div
-            style={{
-              ...abs,
-              left: mm(m.left),
-              top: mm(m.top * 0.5 + 2.2),
-              width: mm(w - m.right - m.left),
-              height: mm(0.25),
-              background: template.colors.heading,
-            }}
-          />
-        </>
-      );
-    case "topbar":
-      return <div style={{ ...abs, left: 0, top: 0, width: "100%", height: mm(4.5), background: accent }} />;
-    case "headerband": {
-      const bh = Math.max(9, m.top * 0.62);
-      return (
-        <>
-          <div
-            style={{
-              ...abs,
-              left: 0,
-              top: 0,
-              width: "100%",
-              height: mm(bh),
-              background: accent,
-              opacity: 0.14,
-            }}
-          />
-          <div style={{ ...abs, left: 0, top: mm(bh), width: "100%", height: lw, background: accent }} />
-          {title && (
-            <div
-              style={{
-                ...abs,
-                left: mm(m.left),
-                top: mm(bh / 2 - 3),
-                fontSize: mm(3.1),
-                fontWeight: "bold",
-                color: accent,
-                fontFamily: FONT_CSS[template.headingFont],
-              }}
-            >
-              {title.length > 58 ? `${title.slice(0, 58)}…` : title}
-            </div>
-          )}
-        </>
-      );
-    }
-    case "bottomband":
-      return (
-        <div style={{ ...abs, left: 0, bottom: 0, width: "100%", height: mm(5.5), background: accent }} />
-      );
-    case "sidestrip":
-      return <div style={{ ...abs, left: 0, top: 0, width: mm(4), height: "100%", background: accent }} />;
-    case "frame": {
-      const pad = Math.max(4, m.left * 0.42);
-      return (
-        <>
-          <div
-            style={{
-              ...abs,
-              left: mm(pad),
-              top: mm(pad),
-              width: mm(w - pad * 1.5),
-              height: mm(h - pad),
-              border: `${lw}px solid ${accent}`,
-              boxSizing: "border-box",
-            }}
-          />
-          {rule({ left: mm(m.left), top: mm(m.top * 0.5), width: mm(w - m.right - m.left), height: mm(0.6) })}
-        </>
-      );
-    }
-    case "doublerule":
-      return (
-        <>
-          {rule({ left: mm(m.left), top: mm(m.top * 0.45), width: mm(w - m.right - m.left), height: mm(1) })}
-          {rule({ left: mm(m.left), top: mm(m.top * 0.45 + 2), width: mm(w - m.right - m.left), height: mm(0.3) })}
-          {rule({ left: mm(m.left), bottom: mm(m.bottom * 0.55), width: mm(w - m.right - m.left), height: mm(1) })}
-          {rule({ left: mm(m.left), bottom: mm(m.bottom * 0.55 + 2), width: mm(w - m.right - m.left), height: mm(0.3) })}
-        </>
-      );
-    case "noterule": {
-      const x = Math.max(5, m.left - 6);
-      const top = m.top * 0.6;
-      const bottom = h - m.bottom * 0.6;
-      return (
-        <>
-          <div
-            style={{
-              ...abs,
-              left: mm(x),
-              top: mm(top),
-              width: mm(0.7),
-              height: mm(bottom - top),
-              background: accent,
-            }}
-          />
-          <div style={{ ...abs, left: mm(x - 1.2), top: mm(top - 1.2), width: mm(4.8), height: mm(2.4), background: accent }} />
-          <div style={{ ...abs, left: mm(x - 1.2), top: mm(bottom - 1.2), width: mm(4.8), height: mm(2.4), background: accent }} />
-        </>
-      );
-    }
-    case "sidebartint": {
-      const bw = Math.max(12, m.left * 0.8);
-      return (
-        <>
-          <div style={{ ...abs, left: 0, top: 0, width: mm(bw), height: "100%", background: accent, opacity: 0.12 }} />
-          {rule({ left: mm(bw), top: 0, width: lw, height: "100%" })}
-        </>
-      );
-    }
-    case "doubleband":
-      return (
-        <>
-          {rule({ left: mm(m.left), top: mm(m.top * 0.45), width: mm(w - m.right - m.left), height: mm(1.1) })}
-          <div style={{ ...abs, left: 0, bottom: 0, width: "100%", height: mm(4.2), background: accent }} />
-        </>
-      );
-    case "sideline": {
-      const x = Math.min(w - 6, w - m.right + 6);
-      const top = m.top * 0.6;
-      const bottom = h - m.bottom * 0.6;
-      const ticks = [];
-      for (let y = top; y <= bottom; y += 20) {
-        ticks.push(rule({ left: mm(x - 2.4), top: mm(y), width: mm(2.4), height: mm(0.5) }));
-      }
-      return (
-        <>
-          <div
-            style={{
-              ...abs,
-              left: mm(x),
-              top: mm(top),
-              width: mm(0.6),
-              height: mm(bottom - top),
-              background: accent,
-            }}
-          />
-          {ticks}
-        </>
-      );
-    }
-    case "masthead": {
-      // Hauteur bornée SOUS la ligne d'en-tête (m.top - 7), comme le PDF.
-      const bh = Math.max(8, Math.min(m.top * 0.55, m.top - 8));
-      return (
-        <>
-          <div style={{ ...abs, left: 0, top: 0, width: "100%", height: mm(bh), background: accent }} />
-          {title && (
-            <div
-              style={{
-                ...abs,
-                left: mm(m.left),
-                top: mm(bh / 2 - 3.4),
-                fontSize: mm(4.2),
-                fontWeight: "bold",
-                color: "#ffffff",
-                fontFamily: FONT_CSS[template.headingFont],
-              }}
-            >
-              {title.length > 52 ? `${title.slice(0, 52)}…` : title}
-            </div>
-          )}
-          <div
-            style={{
-              ...abs,
-              left: 0,
-              top: mm(bh),
-              width: "100%",
-              height: mm(0.6),
-              background: template.colors.heading,
-            }}
-          />
-        </>
-      );
-    }
-    default:
-      return null;
-  }
-}
-
 // Aperçu miniature du décor d'un modèle (barre, bandeau, cadre, colonne…) :
 // rendu DANS la pastille de la grille de choix, pour que la différence entre
 // modèles soit visible AVANT d'appliquer (l'utilisateur ne découvre plus le
@@ -3255,6 +3075,7 @@ function GenPage({ page, paginated, docMeta, fit }) {
       <div
         style={{
           position: "absolute",
+          zIndex: 1, // le texte passe devant le décor du modèle
           top: mm(m.top),
           left: mm(m.left),
           width: contentWpx,

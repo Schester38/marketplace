@@ -10703,12 +10703,14 @@ a.step {
 .gen-cover-body {
   position: absolute;
   text-align: center;
+  z-index: 1; /* devant le décor géométrique du modèle (z-index: 0) */
 }
 .gen-cover-author {
   position: absolute;
   left: 15px;
   right: 15px;
   text-align: center;
+  z-index: 1;
 }
 .gen-watermark {
   position: absolute;

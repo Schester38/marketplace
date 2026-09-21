@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { PX_PER_MM, PT_TO_PX } from "./paginate.js";
 import { FONT_CSS } from "./templates.js";
 import { sortedElements, snapBox, cssAlpha, applyTokens, round1, overflowPx, isTextType, elementLabel } from "./studioModel.js";
+import PageDecor from "./PageDecor.jsx";
 import { makeQrDataUrl } from "./protection.js";
 
 const mm2px = (v, zoom = 1) => Number(v || 0) * PX_PER_MM * zoom;
@@ -591,7 +592,8 @@ export default function StudioCanvas({
   };
   const W = mm2px(box.w, zoom);
   const H = mm2px(box.h, zoom);
-  const bg = template?.colors?.page || "#ffffff";
+  // Fond de la page : celui du modèle de design (page.design.bg, sinon thème).
+  const bg = page?.design?.bg || template?.colors?.page || template?.colors?.bg || "#ffffff";
 
   return (
     <div
@@ -602,6 +604,15 @@ export default function StudioCanvas({
       }}
       onContextMenu={(e) => handleContext(e, null)}
     >
+      {/* Décor du modèle (bandeau, filets, colonne, cadre) : rendu en PREMIER,
+          donc DERRIÈRE tous les éléments — le Studio affiche exactement ce que
+          le PDF dessine, sans jamais recouvrir le texte (z-index 0). */}
+      <PageDecor
+        template={{ ...(template || {}), pageDecor: page?.design?.decor }}
+        box={box}
+        docMeta={docMeta || {}}
+        scale={zoom}
+      />
       {els.map((el) => {
         if (el.hidden && !showHidden) return null;
         const sel = selectedSet.has(el.id);

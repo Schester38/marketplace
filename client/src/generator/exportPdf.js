@@ -522,8 +522,8 @@ const TOC_LH = 1.9;
 
 function drawToc(doc, page, template, box) {
   const { w, m } = box;
-  setFill(doc, template.colors.bg);
-  doc.rect(0, 0, w, box.h, "F");
+  // NB : le fond et les décors sont peints par l'appelant AVANT cette fonction
+  // (repeindre la page ici effaçait le décor du modèle sur le sommaire).
   const s = template.sizes;
   let y = m.top + 14;
   doc.setFont(FONT_PDF[template.headingFont], "bold");
@@ -649,10 +649,17 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
     } else if (page.kind === "copyright") {
       drawCopyright(doc2, docMeta, template, box, contentHash, coverDecorPrims(template, w, h));
     } else if (page.kind === "toc") {
-      drawPageDecor(doc2, template, box, docMeta);
-      // Décor géométrique du modèle : TOUTES les pages, TOUJOURS derrière le
-      // texte (dessiné avant la table des matières).
+      // Fond du modèle D'ABORD : drawToc repeignait la page entière APRÈS les
+      // décors et les effaçait — le sommaire du PDF n'avait donc aucun décor,
+      // contrairement à l'aperçu HTML.
+      if (template.colors.bg && template.colors.bg !== "#ffffff") {
+        setFill(doc2, template.colors.bg);
+        doc2.rect(0, 0, w, h, "F");
+      }
+      // Décors du modèle (géométrique puis décor de page) : TOUJOURS derrière
+      // le texte, comme dans l'aperçu HTML (aucun dessin au-dessus du texte).
       drawCoverDecorPdf(doc2, coverDecorPrims(template, w, h));
+      drawPageDecor(doc2, template, box, docMeta);
       drawToc(doc2, page, template, box);
     } else {
       // Page de contenu : fond du modèle (thèmes crème, rosé, ambré, ivoire…)
