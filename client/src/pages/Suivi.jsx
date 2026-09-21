@@ -9,6 +9,8 @@ import { nativeShareWithImage } from "../share.js";
 import { formatMoney } from "../components/ProductCard.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 import TrackMap from "../components/TrackMap.jsx";
+import DigitalDownload from "../components/DigitalDownload.jsx";
+import { guestSales, forgetGuestSale } from "../guestSales.js";
 
 export default function Suivi() {
   const { id: idParam } = useParams();
@@ -22,6 +24,11 @@ export default function Suivi() {
   const [sale, setSale] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  // Achats digitaux effectués SANS compte sur cet appareil (mémorisés
+  // localement à la création de la vente par le tunnel digital) : ils
+  // permettent de retrouver / retélécharger son contenu après fermeture de
+  // l'onglet, sans créer de compte — la preuve reste le code de confirmation.
+  const [guestList, setGuestList] = useState(() => guestSales());
   // Numéro réellement utilisé pour les actions (annulation, GPS, rafraîchissement) :
   // celui de l'URL / du formulaire, sinon l'id renvoyé par la recherche par code seul.
   const activeId = id || (sale ? sale.id : null);
@@ -61,6 +68,24 @@ export default function Suivi() {
     try {
       const d = await api.trackSale(id, code.trim());
       setSale(d.sale);
+    } catch (err) {
+      setSale(null);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Suivi direct depuis la liste des achats sans compte de cet appareil.
+  const trackById = async (saleId, saleCode) => {
+    setError("");
+    setLoading(true);
+    try {
+      const d = await api.trackSale(String(saleId), String(saleCode || "").trim());
+      setSale(d.sale || null);
+      setOrderId(String(saleId));
+      setCode(String(saleCode || "").trim().toUpperCase());
+      if (!d.sale) setError(t("Aucune commande trouvée avec ce code."));
     } catch (err) {
       setSale(null);
       setError(err.message);
@@ -247,6 +272,12 @@ export default function Suivi() {
               </div>
             )}
 
+            {/* Produit DIGITAL : téléchargement (fichier) ou lecture (vidéo
+                protégée) — le code de confirmation fait office de preuve pour
+                un achat effectué sans compte. Le composant s'efface tout seul
+                si la vente n'est pas digitale. */}
+            <DigitalDownload sale={sale} code={code.trim()} compact />
+
             {step === -1 ? (
               <p className="error">{t("Cette commande a été annulée.")}</p>
             ) : (
@@ -382,6 +413,70 @@ export default function Suivi() {
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Achats digitaux SANS compte mémorisés sur cet appareil : un clic
+            recharge la vente (avec son code) — le bloc au-dessus affiche alors
+            le téléchargement / la vidéo protégée. */}
+        {guestList.length > 0 && (
+          <div className="guest-sales" style={{ marginTop: 18 }}>
+            <h3 style={{ fontSize: 15, margin: "0 0 4px" }}>
+              🛒 {t("Vos achats en ligne sur cet appareil")}
+            </h3>
+            <p className="hint" style={{ margin: "0 0 8px" }}>
+              {t(
+                "Achats digitaux effectués sans compte sur cet appareil — cliquez pour suivre ou récupérer votre contenu."
+              )}
+            </p>
+            {guestList.map((g) => (
+              <div
+                key={g.saleId}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 0",
+                  borderTop: "1px solid var(--border)",
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <strong
+                    style={{
+                      display: "block",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {g.kind === "youtube" ? "🎬" : "📁"} {g.name || `#${g.saleId}`}
+                  </strong>
+                  <span className="hint">
+                    {t("Code : {code}", { code: g.code })}
+                    {g.at ? ` · ${new Date(g.at).toLocaleDateString(locale)}` : ""}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  disabled={loading}
+                  onClick={() => trackById(g.saleId, g.code)}
+                >
+                  {t("Suivre")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  title={t("Retirer de la liste")}
+                  onClick={() => {
+                    forgetGuestSale(g.saleId);
+                    setGuestList(guestSales());
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>

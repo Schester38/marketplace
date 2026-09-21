@@ -56,6 +56,14 @@ export const createProductSchema = z.object({
     .optional()
     .nullable(),
   digital_download_limit: z.coerce.number().int().min(1).max(100).optional(),
+  // Contenu PROTÉGÉ — vidéo YouTube non répertoriée (au lieu d'un fichier) :
+  //  - digital_kind "youtube" : le produit est une vidéo hébergée sur YouTube,
+  //    déverrouillée après vérification du droit d'accès (aucun fichier) ;
+  //  - youtube_url : URL (watch/youtu.be/embed/shorts/live) ou ID brut (11 car.) ;
+  //  - access_days : durée d'accès en jours après confirmation (null = illimité).
+  digital_kind: z.enum(["file", "youtube"]).optional().nullable(),
+  youtube_url: z.string().max(300).optional().nullable(),
+  access_days: z.coerce.number().int().min(1).max(3650).optional().nullable(),
 });
 
 export const createSaleSchema = z.object({

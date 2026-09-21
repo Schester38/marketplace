@@ -282,6 +282,21 @@ export const api = {
       method: "POST",
       body: JSON.stringify(code ? { code } : {}),
     }),
+  // Vidéo PROTÉGÉE (YouTube non répertoriée) : le serveur vérifie le droit
+  // (acheteur / code de confirmation / propriétaire), la révocation et
+  // l'expiration avant de renvoyer l'URL d'iframe — jamais d'URL publique.
+  digitalVideo: (saleId, code) =>
+    request(`/digital/${saleId}/video${code ? `?code=${encodeURIComponent(code)}` : ""}`),
+  // Gestion des accès d'une vidéo protégée (créateur propriétaire ou admin) :
+  // liste des acheteurs + révocation/rétablissement + prolongation.
+  // `data` : true/false (raccourci révocation) ou { revoked } / { extend_days }.
+  digitalProductAccesses: (productId) =>
+    request(`/digital/product/${productId}/accesses`),
+  digitalAccessSet: (productId, saleId, data) =>
+    request(`/digital/product/${productId}/accesses/${saleId}`, {
+      method: "PATCH",
+      body: JSON.stringify(typeof data === "boolean" ? { revoked: data } : data || {}),
+    }),
   digitalMine: () => request("/digital/mine"),
   // Upload DIRECT d'un fichier digital : le serveur délivre une URL d'upload
   // signée (valide 1 h, un seul chemin d'objet) et le navigateur téléverse le

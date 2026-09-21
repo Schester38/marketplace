@@ -14,6 +14,7 @@ import { dailyBuckets } from "../utils.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 import OnlineEarningsCard from "../components/OnlineEarningsCard.jsx";
+import VideoAccessPanel from "../components/VideoAccessPanel.jsx";
 
 const EMPTY_FORM = {
   name: "",
@@ -35,8 +36,22 @@ const EMPTY_FORM = {
   // par le navigateur dans le bucket PRIVÉ (URL d'upload signée, jusqu'à 20 Mo).
   // Sans fichier, la publication est refusée (validation avant envoi).
   digital: { enabled: true, name: null, size: 0, mime: null, key: null },
+  // CONTENU PROTÉGÉ — deux natures possibles pour une création :
+  //   • "file"    : fichier téléchargeable (comportement historique) ;
+  //   • "youtube" : vidéo hébergée sur YouTube en « Non répertoriée » — son ID
+  //     n'est JAMAIS exposé publiquement : le serveur ne le remet qu'après
+  //     vérification du droit d'accès (achat + paiement confirmé + révocation
+  //     + durée d'accès). `access_days` = durée d'accès en jours après
+  //     confirmation du paiement ("" = illimité).
+  digital_kind: "file",
+  youtube_url: "",
+  access_days: "",
 };
 const MAX_PHOTOS = 1;
+
+// Durées d'accès proposées pour une VIDÉO PROTÉGÉE (jours après confirmation
+// du paiement) : "" = illimité, "custom" = saisie libre.
+const ACCESS_DAY_PRESETS = ["7", "30", "90", "365"];
 
 // Prompt ChatGPT conseillé pour améliorer les photos produits. La clé française
 // est aussi la valeur exacte copiée dans le presse-papiers (toutes langues).
@@ -59,6 +74,17 @@ export default function CreatorDashboard() {
   const [picking, setPicking] = useState(false);
   const [proofSale, setProofSale] = useState(null);
   const [proofLoading, setProofLoading] = useState(false);
+  // Création vidéo dont on gère les accès (modale) — null = modale fermée.
+  const [accessProduct, setAccessProduct] = useState(null);
+  // Valeurs de rendu du bloc « Contenu protégé » : type choisi et valeur du
+  // sélecteur de durée d'accès (preset ou « Autre durée… »).
+  const isYoutubeForm = form.digital_kind === "youtube";
+  const accessDaysText = String(form.access_days ?? "");
+  const accessPreset = ACCESS_DAY_PRESETS.includes(accessDaysText)
+    ? accessDaysText
+    : accessDaysText === ""
+      ? ""
+      : "custom";
   const symbol = countrySymbol(user?.country);
   const prefix = countryPhone(user?.country);
 
@@ -147,9 +173,25 @@ export default function CreatorDashboard() {
     // `remove: true` retire le fichier (refusé côté serveur si des clients
     // l'ont déjà acheté).
     const wantsDigital = Boolean(form.digital?.enabled);
+    const isYoutube = form.digital_kind === "youtube";
     const hasNewDigitalFile = Boolean(form.digital?.key);
-    const wasDigital = Boolean(editingDigital?.name);
-    if (wantsDigital && !hasNewDigitalFile && !wasDigital) {
+    // Type de contenu déjà enregistré pour la création en cours d'édition :
+    // « youtube » (vidéo protégée) ou « file » (fichier téléchargeable).
+    const editingKind = editingDigital?.kind || (editingDigital?.name ? "file" : null);
+    // La vidéo / le fichier existant peut être CONSERVÉ si le type ne change
+    // pas : seul un changement de type exige un nouveau contenu.
+    const keepsYoutube = isYoutube && editingKind === "youtube" && Boolean(editingDigital?.youtube);
+    const keepsFile = !isYoutube && Boolean(editingDigital?.name) && editingKind !== "youtube";
+    // Vidéo PROTÉGÉE : le contenu vit sur YouTube (non répertoriée) — un lien
+    // est exigé à la création ; en modification, l'ancienne vidéo peut être
+    // conservée (le serveur garde l'ID existant si aucun lien n'est fourni).
+    if (isYoutube && !String(form.youtube_url || "").trim() && !keepsYoutube) {
+      setError(t("Collez le lien de la vidéo YouTube (publiée en « Non répertoriée »)."));
+      return;
+    }
+    // Fichier : obligatoire à la création, et obligatoire aussi quand une
+    // ancienne vidéo YouTube est convertie en fichier téléchargeable.
+    if (!isYoutube && wantsDigital && !hasNewDigitalFile && !keepsFile) {
       setError(t("Choisissez le fichier que le client téléchargera pour ce produit digital."));
       return;
     }
@@ -185,6 +227,13 @@ export default function CreatorDashboard() {
       warranty: form.warranty.trim() || null,
       contact: form.contact ? `${prefix}${form.contact.trim()}` : "",
       digital: digitalPayload,
+      // Contenu PROTÉGÉ : « youtube » = vidéo hébergée sur YouTube (non
+      // répertoriée, ID jamais exposé au client), « file » = fichier
+      // téléchargeable téléversé dans le bucket privé.
+      digital_kind: isYoutube ? "youtube" : "file",
+      // Durée d'accès après confirmation du paiement : champ vide = accès
+      // illimité (null) — le validateur zod refuse une chaîne vide.
+      access_days: String(form.access_days || "").trim() === "" ? null : Number(form.access_days),
     };
     try {
       if (editingId) {
@@ -255,10 +304,24 @@ export default function CreatorDashboard() {
         mime: null,
         key: null,
       },
+      // Contenu PROTÉGÉ déjà enregistré : type (fichier ou vidéo YouTube) et
+      // durée d'accès ("" = illimité). Le lien complet est reconstruit depuis
+      // l'ID (le serveur ne l'expose qu'au propriétaire).
+      digital_kind: p.digital_kind === "youtube" ? "youtube" : "file",
+      youtube_url: p.youtube_id ? `https://www.youtube.com/watch?v=${p.youtube_id}` : "",
+      access_days: p.access_days !== null && p.access_days !== undefined ? String(p.access_days) : "",
     });
     setEditingDigital(
       p.is_digital === true
-        ? { name: p.digital_name || t("Fichier du produit"), size: Number(p.digital_size || 0) }
+        ? {
+            name: p.digital_name || t("Fichier du produit"),
+            size: Number(p.digital_size || 0),
+            // « youtube » = vidéo protégée : aucun fichier à téléverser, le
+            // sélecteur de fichier est masqué et l'ancienne vidéo peut être
+            // conservée si le type ne change pas.
+            kind: p.digital_kind === "youtube" ? "youtube" : "file",
+            youtube: Boolean(p.youtube_id),
+          }
         : null
     );
     setEditingId(p.id);
@@ -391,12 +454,98 @@ export default function CreatorDashboard() {
                 ))}
               </div>
             </div>
-            <DigitalProductPicker
-              required
-              value={form.digital}
-              existing={editingDigital}
-              onChange={(digital) => setForm((f) => ({ ...f, digital }))}
-            />
+            {/* 🔐 CONTENU PROTÉGÉ — deux natures possibles : fichier
+                téléchargeable (bucket PRIVÉ Supabase) ou vidéo hébergée sur
+                YouTube « Non répertoriée ». L'identifiant vidéo n'est JAMAIS
+                exposé publiquement : le serveur ne le délivre qu'aux acheteurs
+                dont le paiement est confirmé, l'accès non révoqué et non
+                expiré. */}
+            <label>{t("Contenu protégé")}</label>
+            <div className="video-kind-choice">
+              <label className="terms-check">
+                <input
+                  type="radio"
+                  name="digital-kind"
+                  checked={!isYoutubeForm}
+                  onChange={() => setForm((f) => ({ ...f, digital_kind: "file" }))}
+                />
+                <span>📁 {t("Fichier téléchargeable")}</span>
+              </label>
+              <label className="terms-check">
+                <input
+                  type="radio"
+                  name="digital-kind"
+                  checked={isYoutubeForm}
+                  onChange={() => setForm((f) => ({ ...f, digital_kind: "youtube" }))}
+                />
+                <span>▶️ {t("Vidéo YouTube protégée")}</span>
+              </label>
+            </div>
+
+            {isYoutubeForm ? (
+              <>
+                <label>{t("Lien de la vidéo YouTube *")}</label>
+                <input
+                  className="input"
+                  type="url"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={form.youtube_url}
+                  onChange={(e) => setForm((f) => ({ ...f, youtube_url: e.target.value }))}
+                />
+                <p className="hint">
+                  {t(
+                    "Publiez la vidéo en « Non répertoriée » : son identifiant reste côté serveur et n'est délivré qu'aux acheteurs dont l'accès est confirmé."
+                  )}
+                </p>
+                <label>{t("Durée d'accès après confirmation du paiement")}</label>
+                <select
+                  className="input"
+                  value={accessPreset}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setForm((f) => ({
+                      ...f,
+                      access_days:
+                        v === "custom"
+                          ? ACCESS_DAY_PRESETS.includes(String(f.access_days)) || !f.access_days
+                            ? "180"
+                            : String(f.access_days)
+                          : v,
+                    }));
+                  }}
+                >
+                  <option value="">{t("Illimité")}</option>
+                  <option value="7">7 {t("jours")}</option>
+                  <option value="30">30 {t("jours")}</option>
+                  <option value="90">90 {t("jours")}</option>
+                  <option value="365">365 {t("jours")}</option>
+                  <option value="custom">{t("Autre durée…")}</option>
+                </select>
+                {accessPreset === "custom" && (
+                  <input
+                    className="input"
+                    type="number"
+                    min="1"
+                    max="3650"
+                    placeholder={t("Nombre de jours")}
+                    value={form.access_days}
+                    onChange={(e) => setForm((f) => ({ ...f, access_days: e.target.value }))}
+                  />
+                )}
+                <p className="hint">
+                  {t(
+                    "Passé ce délai, la vidéo se bloque automatiquement : vous pouvez prolonger ou révoquer chaque acheteur dans « Accès aux vidéos protégées »."
+                  )}
+                </p>
+              </>
+            ) : (
+              <DigitalProductPicker
+                required
+                value={form.digital}
+                existing={editingDigital}
+                onChange={(digital) => setForm((f) => ({ ...f, digital }))}
+              />
+            )}
             <label>{t("Nom de la création *")}</label>
             <input
               className="input"
@@ -542,6 +691,10 @@ export default function CreatorDashboard() {
           </div>
         )}
       </section>
+
+      {/* Vidéos protégées : révocation / prolongation de l'accès de chaque
+          acheteur (le composant ne rend rien si le compte n'en publie aucune). */}
+      <VideoAccessPanel />
 
       <section className="card stats">
         <div className="stats-head">

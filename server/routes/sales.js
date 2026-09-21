@@ -1513,9 +1513,10 @@ router.get(
     const cp = hasId ? 2 : 1;
     const sale = (
       await q(
-        `SELECT s.id, s.status, s.quantity, s.buyer_name, s.buyer_code, s.confirm_code, s.buyer_city, s.created_at,
+        `SELECT s.id, s.product_id, s.status, s.quantity, s.buyer_name, s.buyer_code, s.confirm_code, s.buyer_city, s.created_at,
               s.delivered_at, s.paid_at, s.shop_confirmed_at,
-              p.name AS product_name, p.price, p.shop_id,
+              p.name AS product_name, p.price, p.shop_id, p.is_digital, p.digital_kind,
+              p.digital_name, p.digital_mime, p.digital_size,
               u.name AS seller_name, u.phone AS seller_phone,
               shop.name AS shop_name, shop.country AS shop_country, shop.location AS shop_location, p.contact AS shop_contact
        FROM sales s
@@ -1535,6 +1536,9 @@ router.get(
         quantity: Number(sale.quantity),
         price: Number(sale.price),
         total_price: Math.round(Number(sale.price) * Number(sale.quantity) * 100) / 100,
+        // Champs digitaux (téléchargement / vidéo protégée depuis /suivi, avec
+        // le code de confirmation comme preuve pour un achat sans compte).
+        digital_size: Number(sale.digital_size || 0),
       },
     });
   })

@@ -67,10 +67,21 @@ export function StoreProvider({ children }) {
   const removeFromCart = (id) => setCart((list) => list.filter((i) => i.id !== Number(id)));
   const clearCart = () => setCart([]);
   // Un panier enregistré AVANT l'ajout du champ `is_digital` ne connaît pas la
-  // nature du produit : Cart.jsx la récupère une fois puis la pose ici.
-  const setItemDigital = (id, isDigital) =>
+  // nature du produit : Cart.jsx la récupère une fois puis la pose ici —
+  // de même pour le type de contenu digital (fichier ou vidéo protégée).
+  const setItemDigital = (id, isDigital, digitalKind) =>
     setCart((list) =>
-      list.map((i) => (i.id === Number(id) ? { ...i, is_digital: isDigital === true } : i))
+      list.map((i) =>
+        i.id === Number(id)
+          ? {
+              ...i,
+              is_digital: isDigital === true,
+              ...(digitalKind !== undefined
+                ? { digital_kind: digitalKind === "youtube" ? "youtube" : "file" }
+                : {}),
+            }
+          : i
+      )
     );
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);

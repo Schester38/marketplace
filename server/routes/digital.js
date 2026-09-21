@@ -31,6 +31,7 @@ import {
   safeFileExt,
 } from "../storage.js";
 import { reconcileDigitalSale } from "../services/ikeepay.js";
+import { logAudit } from "../security.js";
 
 const router = Router();
 
@@ -162,9 +163,11 @@ const optionalAuth = (req, res, next) => {
 };
 
 const SALE_COLUMNS = `s.id AS sale_id, s.buyer_id, s.confirm_code, s.status, s.quantity,
-  s.shop_confirmed_at, s.delivered_at,
+  s.shop_confirmed_at, s.delivered_at, s.access_revoked, s.access_revoked_at,
+  COALESCE(s.access_days_extra, 0) AS access_days_extra,
   p.id AS product_id, p.shop_id, p.name AS product_name, p.is_digital,
-  p.digital_path, p.digital_name, p.digital_mime, p.digital_size, p.digital_download_limit`;
+  p.digital_path, p.digital_name, p.digital_mime, p.digital_size, p.digital_download_limit,
+  p.digital_kind, p.youtube_id, p.access_days`;
 
 async function loadSale(saleId) {
   const rows = await q(
@@ -178,9 +181,11 @@ async function loadSale(saleId) {
   return rows[0] || null;
 }
 
+// Compteur de TÉLÉCHARGEMENTS uniquement : les visionnages vidéo (action
+// 'video') sont journalisés à part et ne consomment PAS ce quota.
 async function usedDownloads(saleId) {
   const [row] = await q(
-    "SELECT COUNT(*)::int AS n FROM digital_downloads WHERE sale_id = $1",
+    "SELECT COUNT(*)::int AS n FROM digital_downloads WHERE sale_id = $1 AND action = 'download'",
     [saleId]
   );
   return Number(row?.n || 0);
@@ -226,6 +231,50 @@ async function effectiveLimitOf(sale, now = Date.now()) {
   return inGrace ? Math.max(base, 2) : 1;
 }
 
+// Le contenu PROTÉGÉ d'une vente est accessible pendant `access_days` jours
+// après la confirmation du paiement (shop_confirmed_at ou livraison). NULL =
+// illimité (comportement historique — aucune régression pour l'existant).
+// `access_days_extra` (colonne sales) ajoute une prolongation PAR ACHETEUR,
+// décidée par le créateur ou l'admin, sans toucher à la fiche du produit.
+function accessExpiryOf(sale) {
+  const base = Number(sale.access_days);
+  // Durée illimitée (ou non définie) : aucune prolongation ne doit restreindre
+  // l'accès — on ne calcule une échéance que sur une durée finie du produit.
+  if (!Number.isFinite(base) || base <= 0) return null;
+  const extra = Number(sale.access_days_extra) || 0;
+  const days = base + Math.max(0, extra);
+  const ref = sale.shop_confirmed_at || sale.delivered_at;
+  if (!ref) return null;
+  return new Date(new Date(ref).getTime() + days * 24 * 3600 * 1000);
+}
+
+// L'état d'accès du contenu protégé (vidéo) pour un appelant autorisé.
+// Révocation (bouton créateur/admin) = accès coupé définitivement ; expiration
+// = accès coupé automatiquement après `access_days` jours.
+function protectedState(sale, { owner }) {
+  if (sale.digital_kind !== "youtube") {
+    return { protected_video: false };
+  }
+  const revoked = sale.access_revoked === true;
+  const expiry = accessExpiryOf(sale);
+  const expired = Boolean(expiry && expiry.getTime() <= Date.now());
+  const confirmed = Boolean(sale.shop_confirmed_at || sale.delivered_at);
+  const waiting = DIGITAL_REQUIRE_CONFIRMATION && !confirmed && !owner;
+  return {
+    protected_video: true,
+    // L'ID de la vidéo n'est JAMAIS envoyé ici — il ne part que par la route
+    // `/video` (droit + expiration + révocation vérifiés).
+    has_video: Boolean(sale.youtube_id),
+    revoked,
+    expired,
+    expires_at: expiry ? expiry.toISOString() : null,
+    access_days: Number(sale.access_days) || null,
+    confirmed,
+    waiting_confirmation: waiting,
+    ready: !revoked && !expired && !waiting,
+  };
+}
+
 /** État du téléchargement pour l'appelant (le droit est déjà vérifié). */
 async function digitalState(sale, user) {
   const limit = await effectiveLimitOf(sale);
@@ -243,6 +292,7 @@ async function digitalState(sale, user) {
     file_name: sale.digital_name || sale.product_name,
     file_size: Number(sale.digital_size || 0),
     mime: sale.digital_mime || null,
+    digital_kind: sale.digital_kind || "file",
     cancelled,
     confirmed,
     owner,
@@ -252,6 +302,7 @@ async function digitalState(sale, user) {
     remaining: Math.max(0, limit - used),
     ready: !cancelled && !waiting && !exhausted,
     can_download: !cancelled && !waiting && !exhausted,
+    ...protectedState(sale, { owner }),
   };
 }
 
@@ -265,7 +316,7 @@ router.get(
   ah(async (req, res) => {
     const items = await q(
       `SELECT p.id, p.name, p.price, p.currency, p.digital_name, p.digital_size,
-              p.digital_mime, p.digital_download_limit, p.created_at,
+              p.digital_mime, p.digital_download_limit, p.digital_kind, p.access_days, p.created_at,
               (SELECT COUNT(*)::int FROM digital_downloads d WHERE d.product_id = p.id) AS downloads,
               (SELECT COUNT(*)::int FROM sales s2 WHERE s2.product_id = p.id AND s2.status <> 'cancelled') AS sales_count
        FROM products p
@@ -317,7 +368,7 @@ router.post(
       return res.status(400).json({ error: "Vente invalide" });
     const sale = await loadSale(saleId);
     if (!sale) return res.status(404).json({ error: "Vente introuvable" });
-    if (!sale.is_digital || !sale.digital_path)
+    if (!sale.is_digital || (!sale.digital_path && sale.digital_kind !== "youtube"))
       return res.status(400).json({ error: "Ce produit n'est pas un produit digital" });
     const code = req.body?.code;
     const owner = isOwnerCaller(sale, req.user);
@@ -342,6 +393,81 @@ router.post(
   })
 );
 
+// GET /api/digital/:saleId/video — déverrouille la vidéo protégée.
+// Même grille de droit que le téléchargement (acheteur connecté, code de
+// confirmation pour un achat invité, ou propriétaire), PLUS les garde-fous du
+// contenu protégé : révocation, expiration (access_days). La vidéo est
+// renvoyée en iframe YouTube « privacy-enhanced » — l'ID ne quitte le serveur
+// QUE pour un appelant autorisé, et chaque lecture est journalisée
+// (digital_downloads, action='video') sans consommer le quota de téléchargement.
+router.get(
+  "/:saleId/video",
+  optionalAuth,
+  ah(async (req, res) => {
+    const saleId = Number(req.params.saleId);
+    if (!Number.isInteger(saleId) || saleId < 1)
+      return res.status(400).json({ error: "Vente invalide" });
+    const sale = await loadSale(saleId);
+    if (!sale) return res.status(404).json({ error: "Vente introuvable" });
+    if (!sale.is_digital || sale.digital_kind !== "youtube" || !sale.youtube_id)
+      return res.status(400).json({ error: "Ce produit n'est pas une vidéo protégée" });
+    const code = req.query?.code;
+    const owner = isOwnerCaller(sale, req.user);
+    if (!owner && !isBuyerCaller(sale, req.user, code)) {
+      return res.status(403).json({ error: "Ce contenu ne concerne pas votre compte" });
+    }
+    // Réconciliation webhook (filet auto-réparateur) si le paiement n'est pas
+    // encore confirmé — même mécanisme que le téléchargement.
+    let state = await digitalState(sale, req.user);
+    if (state.protected_video && state.waiting_confirmation) {
+      await reconcileDigitalSale(saleId).catch(() => {});
+      const fresh = await loadSale(saleId);
+      if (fresh) {
+        sale.shop_confirmed_at = fresh.shop_confirmed_at;
+        sale.delivered_at = fresh.delivered_at;
+        state = await digitalState(sale, req.user);
+      }
+    }
+    if (state.cancelled)
+      return res.status(409).json({ error: "Cette commande a été annulée", access: state });
+    if (state.protected_video && state.waiting_confirmation) {
+      return res.status(409).json({
+        error: "La vidéo sera accessible dès que le paiement est confirmé.",
+        access: state,
+      });
+    }
+    if (state.protected_video && state.revoked)
+      return res.status(403).json({
+        error: "L'accès à cette vidéo a été révoqué. Contactez le créateur.",
+        access: state,
+      });
+    if (state.protected_video && state.expired)
+      return res.status(403).json({
+        error: "La durée d'accès à cette vidéo est écoulée. Contactez le créateur pour la prolonger.",
+        access: state,
+      });
+
+    // Journal du visionnage (action 'video' : ne consomme PAS le quota de
+    // téléchargement — usedDownloads ne compte que action='download').
+    if (!owner) {
+      try {
+        await q(
+          "INSERT INTO digital_downloads (sale_id, product_id, user_id, ip, action) VALUES ($1, $2, $3, $4, 'video')",
+          [sale.sale_id, sale.product_id, req.user?.id || null, req.ip || null]
+        );
+      } catch (err) {
+        console.error("[digital] journal de visionnage échoué :", err.message);
+      }
+    }
+    return res.json({
+      ok: true,
+      embed_src: `https://www.youtube-nocookie.com/embed/${sale.youtube_id}?rel=0&autoplay=1`,
+      expires_at: state.expires_at || null,
+      access: state,
+    });
+  })
+);
+
 // POST /api/digital/:saleId/download — délivre l'URL signée (10 min).
 // Le fichier ne transite JAMAIS par notre API : le navigateur télécharge
 // directement chez Supabase (pas de limite de 4,5 Mo de Vercel, aucun egress
@@ -357,6 +483,11 @@ router.post(
     if (!sale) return res.status(404).json({ error: "Vente introuvable" });
     if (!sale.is_digital || !sale.digital_path)
       return res.status(400).json({ error: "Ce produit n'est pas un produit digital" });
+    // Une vidéo protégée n'a pas de fichier : la lecture passe par /video.
+    if (sale.digital_kind === "youtube")
+      return res.status(400).json({
+        error: "Ce contenu est une vidéo protégée : utilisez le bouton « Regarder la vidéo ».",
+      });
 
     const code = req.body?.code;
     const owner = isOwnerCaller(sale, req.user);
@@ -388,6 +519,26 @@ router.post(
         code: "DOWNLOAD_LIMIT",
         digital: state,
       });
+    }
+    // Garde-fous du contenu protégé (les fichiers partagent la même grille) :
+    // révocation → bloquée pour tous ; expiration (access_days) → bloquée pour
+    // l'acheteur (le propriétaire garde l'aperçu pour ses contrôles).
+    if (sale.access_revoked === true) {
+      return res.status(403).json({
+        error: "L'accès à ce contenu a été révoqué. Contactez le créateur.",
+        code: "ACCESS_REVOKED",
+        digital: state,
+      });
+    }
+    if (!state.owner) {
+      const expiry = accessExpiryOf(sale);
+      if (expiry && expiry.getTime() <= Date.now()) {
+        return res.status(403).json({
+          error: "La durée d'accès à ce contenu est écoulée. Contactez le créateur pour la prolonger.",
+          code: "ACCESS_EXPIRED",
+          digital: state,
+        });
+      }
     }
 
     const signed = await signedDigitalUrl(sale.digital_path, SIGNED_TTL_SECONDS);
@@ -434,6 +585,194 @@ router.post(
 );
 
 export default router;
+
+// ─── Gestion des accès d'un produit vidéo (créateur propriétaire / admin) ───
+// Le vendeur ne touche à rien : il vend via son code, il ne modifie aucun
+// produit (règle métier — le créateur est le seul gestionnaire du contenu).
+
+/** Charge le produit et vérifie que l'appelant peut gérer ses accès. */
+async function loadManagedProduct(req, res) {
+  const productId = Number(req.params.productId);
+  if (!Number.isInteger(productId) || productId < 1) {
+    res.status(400).json({ error: "Produit invalide" });
+    return null;
+  }
+  const product = (await q("SELECT * FROM products WHERE id = $1", [productId]))[0];
+  if (!product) {
+    res.status(404).json({ error: "Produit introuvable" });
+    return null;
+  }
+  const isAdmin = req.user?.role === "admin";
+  if (!isAdmin && Number(product.shop_id) !== Number(req.user?.id)) {
+    res.status(403).json({ error: "Ce produit ne vous appartient pas" });
+    return null;
+  }
+  if (!product.is_digital || product.digital_kind !== "youtube") {
+    res.status(400).json({ error: "Ce produit n'est pas une vidéo protégée" });
+    return null;
+  }
+  return product;
+}
+
+// GET /api/digital/product/:productId/accesses — liste des acheteurs + état
+// de leur accès (révocation, expiration, visionnages, téléchargements).
+router.get(
+  "/product/:productId/accesses",
+  authRequired,
+  ah(async (req, res) => {
+    const product = await loadManagedProduct(req, res);
+    if (!product) return;
+    const sales = await q(
+      `SELECT s.id, s.buyer_id, s.buyer_name, s.buyer_phone, s.confirm_code, s.status,
+              s.quantity, s.total_price, s.created_at, s.shop_confirmed_at, s.delivered_at,
+              s.access_revoked, s.access_revoked_at, COALESCE(s.access_days_extra, 0) AS access_days_extra,
+              (SELECT COUNT(*)::int FROM digital_downloads d WHERE d.sale_id = s.id AND d.action = 'video') AS video_views,
+              (SELECT COUNT(*)::int FROM digital_downloads d WHERE d.sale_id = s.id AND d.action = 'download') AS downloads
+         FROM sales s
+        WHERE s.product_id = $1 AND s.status <> 'cancelled'
+        ORDER BY s.created_at DESC
+        LIMIT 200`,
+      [product.id]
+    );
+    res.json({
+      product: {
+        id: product.id,
+        name: product.name,
+        digital_name: product.digital_name,
+        access_days: product.access_days === null ? null : Number(product.access_days) || null,
+      },
+      sales: sales.map((s) => {
+        const expiry = accessExpiryOf({
+          access_days: product.access_days,
+          shop_confirmed_at: s.shop_confirmed_at,
+          delivered_at: s.delivered_at,
+          access_days_extra: s.access_days_extra,
+        });
+        return {
+          id: Number(s.id),
+          buyer_name: s.buyer_name,
+          buyer_phone: s.buyer_phone,
+          buyer_id: s.buyer_id === null ? null : Number(s.buyer_id),
+          confirm_code: s.confirm_code,
+          status: s.status,
+          quantity: Number(s.quantity || 1),
+          total_price: Number(s.total_price || 0),
+          created_at: s.created_at,
+          confirmed: Boolean(s.shop_confirmed_at || s.delivered_at),
+          revoked: s.access_revoked === true,
+          revoked_at: s.access_revoked_at,
+          access_days_extra: Number(s.access_days_extra) || 0,
+          expires_at: expiry ? expiry.toISOString() : null,
+          expired: Boolean(expiry && expiry.getTime() <= Date.now()),
+          video_views: Number(s.video_views || 0),
+          downloads: Number(s.downloads || 0),
+        };
+      }),
+    });
+  })
+);
+
+// PATCH /api/digital/product/:productId/accesses/:saleId — action du créateur
+// (propriétaire) ou de l'admin sur l'accès d'UN acheteur :
+//   • { revoked: true|false }  → coupe / rétablit l'accès immédiatement ;
+//   • { extend_days: n }       → prolonge l'accès de n jours (1 à 3650) ;
+//   • { extend_days: 0 }       → annule la prolongation (retour à la durée du
+//                                produit).
+// Les deux champs peuvent être envoyés ensemble. La prolongation est stockée
+// sur la VENTE (sales.access_days_extra) : elle ne modifie ni la fiche produit
+// ni l'accès des autres acheteurs.
+router.patch(
+  "/product/:productId/accesses/:saleId",
+  authRequired,
+  ah(async (req, res) => {
+    const product = await loadManagedProduct(req, res);
+    if (!product) return;
+    const saleId = Number(req.params.saleId);
+    if (!Number.isInteger(saleId) || saleId < 1)
+      return res.status(400).json({ error: "Vente invalide" });
+    const [sale] = await q(
+      `SELECT id, product_id, shop_confirmed_at, delivered_at,
+              COALESCE(access_days_extra, 0) AS access_days_extra
+         FROM sales WHERE id = $1`,
+      [saleId]
+    );
+    if (!sale || Number(sale.product_id) !== Number(product.id))
+      return res.status(404).json({ error: "Vente introuvable pour ce produit" });
+
+    let revoked = null;
+    if (req.body?.revoked !== undefined) revoked = req.body.revoked === true;
+
+    let extraAfter = Number(sale.access_days_extra) || 0;
+    let extraTouched = false;
+    if (req.body?.extend_days !== undefined) {
+      const raw = req.body.extend_days;
+      const n = Number(raw);
+      if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0 || n > 3650)
+        return res.status(400).json({
+          error: "Durée de prolongation invalide (0 à 3650 jours).",
+        });
+      // La prolongation exige une durée de départ finie : sans access_days, le
+      // contenu est illimité et rien ne justifie une prolongation.
+      const base = Number(product.access_days);
+      if (n > 0 && (!Number.isFinite(base) || base <= 0))
+        return res.status(400).json({
+          error:
+            "Ce contenu est en accès illimité : définissez d'abord une durée d'accès sur le produit.",
+        });
+      // `extend_days` s'AJOUTE à la prolongation déjà accordée (0 = annuler).
+      extraAfter = n === 0 ? 0 : extraAfter + n;
+      extraTouched = true;
+    }
+
+    const updated = await q(
+      `UPDATE sales
+          SET access_revoked = COALESCE($2, access_revoked),
+              access_revoked_at = CASE
+                WHEN $2 IS NULL THEN access_revoked_at
+                WHEN $2 THEN now()
+                ELSE NULL
+              END,
+              access_days_extra = $3
+        WHERE id = $1
+        RETURNING access_revoked, access_revoked_at, COALESCE(access_days_extra, 0) AS access_days_extra`,
+      [saleId, revoked, extraAfter]
+    );
+
+    const row = { ...sale, ...(updated[0] || {}) };
+    const expiry = accessExpiryOf({
+      access_days: product.access_days,
+      shop_confirmed_at: row.shop_confirmed_at,
+      delivered_at: row.delivered_at,
+      access_days_extra: row.access_days_extra,
+    });
+
+    if (revoked !== null || (extraTouched && extraAfter !== Number(sale.access_days_extra))) {
+      logAudit(
+        req.user?.id,
+        "digital.access.update",
+        {
+          product_id: product.id,
+          sale_id: saleId,
+          revoked,
+          access_days_extra: extraTouched ? extraAfter : undefined,
+        },
+        req.ip
+      );
+    }
+
+    res.json({
+      ok: true,
+      sale: {
+        id: saleId,
+        revoked: row.access_revoked === true,
+        revoked_at: row.access_revoked_at || null,
+        access_days_extra: Number(row.access_days_extra) || 0,
+        expires_at: expiry ? expiry.toISOString() : null,
+        expired: Boolean(expiry && expiry.getTime() <= Date.now()),
+      },
+    });
+  })
+);
 
 // Sondage du client pendant l'attente du paiement en ligne (toutes les 4 s).
 // Si le webhook a été manqué (serverless arrêté, référence non reconnue), on

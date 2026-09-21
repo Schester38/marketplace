@@ -52,19 +52,27 @@ export default function Cart() {
   // Panier enregistré avant l'ajout du champ `is_digital` : on complète la
   // nature de chaque article inconnu une seule fois (produits digitaux rares).
   useEffect(() => {
-    const unknown = cart.filter((i) => typeof i.is_digital !== "boolean");
+    const unknown = cart.filter(
+      (i) =>
+        typeof i.is_digital !== "boolean" ||
+        (i.is_digital === true && typeof i.digital_kind !== "string")
+    );
     if (!unknown.length) return;
     let alive = true;
     Promise.all(
       unknown.map((i) =>
         api
           .getProduct(i.id)
-          .then((d) => ({ id: i.id, digital: d?.product?.is_digital === true }))
+          .then((d) => ({
+            id: i.id,
+            digital: d?.product?.is_digital === true,
+            kind: d?.product?.digital_kind === "youtube" ? "youtube" : "file",
+          }))
           .catch(() => null)
       )
     ).then((res) => {
       if (!alive) return;
-      for (const r of res) if (r) setItemDigital(r.id, r.digital);
+      for (const r of res) if (r) setItemDigital(r.id, r.digital, r.kind);
     });
     return () => {
       alive = false;
@@ -180,7 +188,14 @@ export default function Cart() {
   const digitalSymbol = countrySymbol(digitalItems[0] ? digitalItems[0].country : null);
 
   const openDigitalTunnel = () =>
-    setTunnelItems(digitalItems.map((i) => ({ product_id: i.id, name: i.name })));
+    setTunnelItems(
+      digitalItems.map((i) => ({
+        product_id: i.id,
+        name: i.name,
+        digital_kind:
+          i.is_digital === true && i.digital_kind === "youtube" ? "youtube" : "file",
+      }))
+    );
 
   const finishDigitalTunnel = () => {
     // Le tunnel a lancé les téléchargements : on retire les fichiers du panier.

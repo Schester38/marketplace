@@ -5400,11 +5400,187 @@ const RICH_AR = {
     "✏️ هذا المستند قابل للتعديل بالكامل: انقر داخل النص لتغييره واستخدم شريط الأدوات أعلاه. كل تعديل يحدّث المعاينة وملف PDF وEPUB.",
 };
 
+// ── Vidéos protégées (accès contrôlé : code, expiration, révocation) ──
+const VIDEO_AR = {
+  "Vidéo protégée": "فيديو محمي",
+  "Contenu protégé": "محتوى محمي",
+  "Vidéo YouTube protégée": "فيديو يوتيوب محمي",
+  "Lien de la vidéo YouTube *": "رابط فيديو يوتيوب *",
+  "Collez le lien de la vidéo YouTube (publiée en « Non répertoriée »).":
+    "الصق رابط فيديو يوتيوب (منشور كـ«غير مدرج»).",
+  "Durée d'accès après confirmation du paiement": "مدة الوصول بعد تأكيد الدفع",
+  "Durée d'accès : illimitée.": "مدة الوصول: غير محدودة.",
+  "Durée d'accès : {n} jours après confirmation du paiement.":
+    "مدة الوصول: {n} يوماً بعد تأكيد الدفع.",
+  Illimité: "غير محدود",
+  "Nombre de jours": "عدد الأيام",
+  "Autre durée…": "مدة أخرى…",
+  "Accès aux vidéos protégées": "الوصول إلى الفيديوهات المحمية",
+  "Chaque acheteur d'une vidéo protégée apparaît ici : vous pouvez couper son accès (révocation immédiate) ou le prolonger de quelques jours.":
+    "يظهر هنا كل مشترٍ لفيديو محمي: يمكنك قطع وصوله (إلغاء فوري) أو تمديده بضعة أيام.",
+  "Aucun acheteur pour cette vidéo pour le moment.": "لا يوجد مشترٍ لهذا الفيديو بعد.",
+  "achat sans compte": "شراء بدون حساب",
+  "En attente de confirmation du paiement": "بانتظار تأكيد الدفع",
+  Actif: "نشط",
+  "Accès révoqué": "تم إلغاء الوصول",
+  "Accès expiré": "انتهى الوصول",
+  "jusqu'au {date}": "حتى {date}",
+  Révoquer: "إلغاء",
+  Rétablir: "استعادة",
+  Acheteur: "المشتري",
+  jours: "أيام",
+  "Accès révoqué.": "تم إلغاء الوصول.",
+  "Accès rétabli.": "تمت استعادة الوصول.",
+  "Accès prolongé de {n} jours.": "تم تمديد الوصول {n} يوماً.",
+  "Accès illimité : définissez d'abord une durée d'accès sur le produit.":
+    "وصول غير محدود: حدّد أولاً مدة وصول في المنتج.",
+  "Accès valable jusqu'au {date}.": "الوصول صالح حتى {date}.",
+  "Vérification de l'accès…": "جارٍ التحقق من الوصول…",
+  "Regarder la vidéo": "مشاهدة الفيديو",
+  "La vidéo sera accessible dès que le paiement est confirmé.":
+    "سيتوفر الفيديو بمجرد تأكيد الدفع.",
+  "L'accès à cette vidéo a été révoqué. Contactez le créateur.":
+    "تم إلغاء الوصول إلى هذا الفيديو. تواصل مع المبدع.",
+  "La durée d'accès à cette vidéo est écoulée. Contactez le créateur pour la prolonger.":
+    "انتهت مدة الوصول إلى هذا الفيديو. تواصل مع المبدع لتمديدها.",
+  "Déverrouillage de la vidéo…": "جارٍ فتح الفيديو…",
+  "Votre vidéo est déverrouillée — elle s'affiche ci-dessus.":
+    "تم فتح الفيديو — يظهر أعلاه.",
+  "Votre vidéo est déverrouillée : cliquez sur « Regarder la vidéo » pour la visionner.":
+    "تم فتح الفيديو: اضغط «مشاهدة الفيديو» لمشاهدته.",
+};
+
+const VIDEO_EN = {
+  "Vidéo protégée": "Protected video",
+  "Contenu protégé": "Protected content",
+  "Vidéo YouTube protégée": "Protected YouTube video",
+  "Lien de la vidéo YouTube *": "YouTube video link *",
+  "Collez le lien de la vidéo YouTube (publiée en « Non répertoriée »).":
+    "Paste the YouTube video link (published as “Unlisted”).",
+  "Durée d'accès après confirmation du paiement": "Access duration after payment confirmation",
+  "Durée d'accès : illimitée.": "Access duration: unlimited.",
+  "Durée d'accès : {n} jours après confirmation du paiement.":
+    "Access duration: {n} days after payment confirmation.",
+  Illimité: "Unlimited",
+  "Nombre de jours": "Number of days",
+  "Autre durée…": "Other duration…",
+  "Accès aux vidéos protégées": "Protected video access",
+  "Chaque acheteur d'une vidéo protégée apparaît ici : vous pouvez couper son accès (révocation immédiate) ou le prolonger de quelques jours.":
+    "Every buyer of a protected video appears here: you can cut their access (immediate revocation) or extend it by a few days.",
+  "Aucun acheteur pour cette vidéo pour le moment.": "No buyer for this video yet.",
+  "achat sans compte": "guest purchase",
+  "En attente de confirmation du paiement": "Awaiting payment confirmation",
+  Actif: "Active",
+  "Accès révoqué": "Access revoked",
+  "Accès expiré": "Access expired",
+  "jusqu'au {date}": "until {date}",
+  Révoquer: "Revoke",
+  Rétablir: "Restore",
+  Acheteur: "Buyer",
+  jours: "days",
+  "Accès révoqué.": "Access revoked.",
+  "Accès rétabli.": "Access restored.",
+  "Accès prolongé de {n} jours.": "Access extended by {n} days.",
+  "Accès illimité : définissez d'abord une durée d'accès sur le produit.":
+    "Unlimited access: first set an access duration on the product.",
+  "Accès valable jusqu'au {date}.": "Access valid until {date}.",
+  "Vérification de l'accès…": "Checking access…",
+  "Regarder la vidéo": "Watch the video",
+  "La vidéo sera accessible dès que le paiement est confirmé.":
+    "The video will be available as soon as the payment is confirmed.",
+  "L'accès à cette vidéo a été révoqué. Contactez le créateur.":
+    "Access to this video has been revoked. Contact the creator.",
+  "La durée d'accès à cette vidéo est écoulée. Contactez le créateur pour la prolonger.":
+    "The access period for this video has ended. Contact the creator to extend it.",
+  "Déverrouillage de la vidéo…": "Unlocking the video…",
+  "Votre vidéo est déverrouillée — elle s'affiche ci-dessus.":
+    "Your video is unlocked — it plays above.",
+  "Votre vidéo est déverrouillée : cliquez sur « Regarder la vidéo » pour la visionner.":
+    "Your video is unlocked: click “Watch the video” to view it.",
+};
+
+const VIDEO_ES = {
+  "Vidéo protégée": "Video protegido",
+  "Contenu protégé": "Contenido protegido",
+  "Vidéo YouTube protégée": "Video de YouTube protegido",
+  "Lien de la vidéo YouTube *": "Enlace del video de YouTube *",
+  "Collez le lien de la vidéo YouTube (publiée en « Non répertoriée »).":
+    "Pega el enlace del video de YouTube (publicado como «No listado»).",
+  "Durée d'accès après confirmation du paiement": "Duración del acceso tras confirmar el pago",
+  "Durée d'accès : illimitée.": "Duración del acceso: ilimitada.",
+  "Durée d'accès : {n} jours après confirmation du paiement.":
+    "Duración del acceso: {n} días tras confirmar el pago.",
+  Illimité: "Ilimitado",
+  "Nombre de jours": "Número de días",
+  "Autre durée…": "Otra duración…",
+  "Accès aux vidéos protégées": "Acceso a los videos protegidos",
+  "Chaque acheteur d'une vidéo protégée apparaît ici : vous pouvez couper son accès (révocation immédiate) ou le prolonger de quelques jours.":
+    "Cada comprador de un video protegido aparece aquí: puedes cortar su acceso (revocación inmediata) o prolongarlo unos días.",
+  "Aucun acheteur pour cette vidéo pour le moment.": "Aún no hay compradores de este video.",
+  "achat sans compte": "compra sin cuenta",
+  "En attente de confirmation du paiement": "Esperando confirmación del pago",
+  Actif: "Activo",
+  "Accès révoqué": "Acceso revocado",
+  "Accès expiré": "Acceso caducado",
+  "jusqu'au {date}": "hasta el {date}",
+  Révoquer: "Revocar",
+  Rétablir: "Restablecer",
+  Acheteur: "Comprador",
+  jours: "días",
+  "Accès révoqué.": "Acceso revocado.",
+  "Accès rétabli.": "Acceso restablecido.",
+  "Accès prolongé de {n} jours.": "Acceso prolongado {n} días.",
+  "Accès illimité : définissez d'abord une durée d'accès sur le produit.":
+    "Acceso ilimitado: define primero una duración de acceso en el producto.",
+  "Accès valable jusqu'au {date}.": "Acceso válido hasta el {date}.",
+  "Vérification de l'accès…": "Verificando el acceso…",
+  "Regarder la vidéo": "Ver el video",
+  "La vidéo sera accessible dès que le paiement est confirmé.":
+    "El video estará disponible en cuanto se confirme el pago.",
+  "L'accès à cette vidéo a été révoqué. Contactez le créateur.":
+    "El acceso a este video ha sido revocado. Contacta con el creador.",
+  "La durée d'accès à cette vidéo est écoulée. Contactez le créateur pour la prolonger.":
+    "El plazo de acceso a este video ha finalizado. Contacta con el creador para prolongarlo.",
+  "Déverrouillage de la vidéo…": "Desbloqueando el video…",
+  "Votre vidéo est déverrouillée — elle s'affiche ci-dessus.":
+    "Tu video está desbloqueado — se muestra arriba.",
+  "Votre vidéo est déverrouillée : cliquez sur « Regarder la vidéo » pour la visionner.":
+    "Tu video está desbloqueado: haz clic en «Ver el video» para verlo.",
+};
+
+// --- Achats digitaux sans compte (page /suivi) -------------------------------
+const GUEST_EN = {
+  "Vos achats en ligne sur cet appareil": "Your online purchases on this device",
+  "Achats digitaux effectués sans compte sur cet appareil — cliquez pour suivre ou récupérer votre contenu.":
+    "Digital purchases made without an account on this device — tap to track or retrieve your content.",
+  "Code : {code}": "Code: {code}",
+  Suivre: "Track",
+  "Retirer de la liste": "Remove from list",
+};
+
+const GUEST_AR = {
+  "Vos achats en ligne sur cet appareil": "مشترياتك عبر الإنترنت على هذا الجهاز",
+  "Achats digitaux effectués sans compte sur cet appareil — cliquez pour suivre ou récupérer votre contenu.":
+    "مشتريات رقمية أُجريت بدون حساب على هذا الجهاز — انقر لمتابعة أو استرجاع المحتوى.",
+  "Code : {code}": "الرمز: {code}",
+  Suivre: "متابعة",
+  "Retirer de la liste": "إزالة من القائمة",
+};
+
+const GUEST_ES = {
+  "Vos achats en ligne sur cet appareil": "Tus compras en línea en este dispositivo",
+  "Achats digitaux effectués sans compte sur cet appareil — cliquez pour suivre ou récupérer votre contenu.":
+    "Compras digitales realizadas sin cuenta en este dispositivo — toca para seguir o recuperar tu contenido.",
+  "Code : {code}": "Código: {code}",
+  Suivre: "Seguir",
+  "Retirer de la liste": "Quitar de la lista",
+};
+
 export const I18N = {
   fr: {},
-  en: { ...EN, ...RICH_EN },
-  ar: { ...AR, ...RICH_AR },
-  es: { ...ES, ...RICH_ES },
+  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN },
+  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR },
+  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES },
 };
 
 function tr(str, vars, lang) {

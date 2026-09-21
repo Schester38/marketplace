@@ -16,6 +16,47 @@ import { validate, validateQuery } from "../middlewares/validate.js";
 
 const router = Router();
 
+// ─── Contenus PROTÉGÉS (vidéos YouTube non répertoriées) ────────────────────
+// Un produit digital de type "youtube" n'a AUCUN fichier : la vidéo est
+// hébergée sur YouTube (non répertoriée) et son identifiant n'est remis qu'au
+// détenteur du droit d'accès (GET /api/digital/:saleId/video). L'ID n'est
+// JAMAIS exposé publiquement — productRow le retire comme digital_path.
+const YOUTUBE_ID_RE = /^[A-Za-z0-9_-]{11}$/;
+const YOUTUBE_URL_RE =
+  /(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/;
+
+/** Extrait l'ID YouTube (11 caractères) d'une URL ou d'un ID brut, sinon null. */
+export function parseYoutubeId(input) {
+  const s = String(input || "").trim();
+  if (!s) return null;
+  if (YOUTUBE_ID_RE.test(s)) return s;
+  const m = YOUTUBE_URL_RE.exec(s);
+  return m ? m[1] : null;
+}
+
+/**
+ * Valide la demande « contenu protégé » du client.
+ * Retourne `{ error }` (message), `{ clear: true }` (retour au mode fichier /
+ * produit physique), ou `{ kind, youtubeId, accessDays }` sinon.
+ */
+function parseProtectedPayload(digital_kind, youtube_url, access_days) {
+  const kind = digital_kind === "youtube" ? "youtube" : digital_kind === "file" ? "file" : null;
+  if (!kind) return { clear: true };
+  const days = access_days === "" || access_days === null || access_days === undefined
+    ? null
+    : Number(access_days);
+  if (days !== null && (!Number.isFinite(days) || days < 1 || days > 3650)) {
+    return { error: "Durée d'accès invalide (1 à 3650 jours)." };
+  }
+  if (kind === "file") return { kind, youtubeId: null, accessDays: days };
+  // kind === "youtube" : l'ID est obligatoire (nouveau ou déjà enregistré).
+  const id = parseYoutubeId(youtube_url);
+  if (!id) {
+    return { error: "Lien YouTube invalide. Collez l'adresse de la vidéo (youtube.com/watch…, youtu.be/…) ou son identifiant à 11 caractères." };
+  }
+  return { kind, youtubeId: id, accessDays: days };
+}
+
 const OWNER_ROLES = ["shop", "creator"];
 
 async function preparePhotos(photos, folder) {
@@ -204,7 +245,7 @@ function cachePublic(res, sMaxAge = 60) {
   );
 }
 
-function productRow(p, mode = "list") {
+function productRow(p, mode = "list", { ownerView = false } = {}) {
   const thumbs = listPhotos(p.photos);
   const mediums = mediumPhotos(p.photos);
   const larges = fullPhotos(p.photos);
@@ -227,11 +268,17 @@ function productRow(p, mode = "list") {
     // le bucket est privé et l'accès passe par une URL signée délivrée après
     // vérification du droit d'accès (POST /api/digital/:saleId/download).
     digital_path,
+    // L'ID de la vidéo YouTube (contenu protégé) n'est exposé qu'au
+    // PROPRIÉTAIRE du produit (GET /api/products/mine) — jamais sur une route
+    // publique ou en cache CDN : la vidéo n'est déverrouillée qu'après
+    // vérification du droit d'accès (GET /api/digital/:saleId/video).
+    youtube_id,
     ...rest
   } = p;
   const price = Number(p.price);
   return {
     ...rest,
+    ...(ownerView && youtube_id ? { youtube_id } : {}),
     photos,
     image,
     ...(mode === "detail" ? { photos_thumb: thumbs, photos_large: larges } : {}),
@@ -493,7 +540,7 @@ router.get("/mine", authRequired, roleRequired(...OWNER_ROLES), async (req, res)
           ORDER BY p.created_at DESC`,
       [req.user.id]
     )
-  ).map(productRow);
+  ).map((p) => productRow(p, "list", { ownerView: true }));
   res.json({ products });
 });
 
@@ -565,9 +612,19 @@ router.post(
 
     // Produit digital : le fichier est rattaché AVANT l'insertion, de sorte
     // qu'un produit « digital » ne puisse jamais exister sans son fichier.
+    // EXCEPTION — contenu PROTÉGÉ « youtube » : la vidéo vit sur YouTube
+    // (non répertoriée) ; aucun fichier, l'ID n'est remis qu'après vérification
+    // du droit d'accès (GET /api/digital/:saleId/video).
     const parsedDigital = parseDigitalPayload(digital, req.user.id);
     if (parsedDigital?.error) return res.status(400).json({ error: parsedDigital.error });
-    const wantsDigital = Boolean(parsedDigital);
+    const protectedPayload = parseProtectedPayload(
+      req.body.digital_kind,
+      req.body.youtube_url,
+      req.body.access_days
+    );
+    if (protectedPayload?.error) return res.status(400).json({ error: protectedPayload.error });
+    const isYoutubeKind = protectedPayload?.kind === "youtube";
+    const wantsDigital = Boolean(parsedDigital) || isYoutubeKind;
     // RÈGLE MÉTIER Mboppi — qui publie quoi :
     //   • CRÉATEUR → uniquement des produits DIGITAUX (fichier téléchargeable) ;
     //   • BOUTIQUE → uniquement des produits PHYSIQUES ;
@@ -631,8 +688,9 @@ router.post(
       : defaultCurrencyFor(req.user.country);
     const created = await q(
       `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency,
-        is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id`,
+        is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit,
+        digital_kind, youtube_id, access_days)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING id`,
       [
         req.user.id,
         String(name).trim(),
@@ -651,10 +709,21 @@ router.post(
         currencyCode,
         wantsDigital,
         digitalPath,
-        wantsDigital ? parsedDigital.name : null,
-        wantsDigital ? parsedDigital.mime : null,
-        wantsDigital ? digitalSize : null,
+        wantsDigital
+          ? isYoutubeKind
+            ? String(digital?.name || "").trim().slice(0, 160) || "Vidéo YouTube"
+            : parsedDigital.name
+          : null,
+        wantsDigital ? (isYoutubeKind ? "video/youtube" : parsedDigital.mime) : null,
+        wantsDigital ? (isYoutubeKind ? 0 : digitalSize) : null,
         downloadLimit,
+        // Contenu protégé : type, ID de la vidéo YouTube (jamais exposé
+        // publiquement) et durée d'accès (NULL = illimité).
+        wantsDigital ? (isYoutubeKind ? "youtube" : "file") : null,
+        isYoutubeKind ? protectedPayload.youtubeId : null,
+        wantsDigital && protectedPayload && protectedPayload.accessDays !== null
+          ? protectedPayload.accessDays
+          : null,
       ]
     );
     const product = productRow((await q(SELECT_PRODUCT + " WHERE p.id = $1", [created[0].id]))[0]);
@@ -758,8 +827,9 @@ router.post("/:id/duplicate", authRequired, roleRequired(...OWNER_ROLES), async 
   }
   const created = await q(
     `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency,
-       is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING id`,
+       is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit,
+       digital_kind, youtube_id, access_days)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING id`,
     [
       product.shop_id,
       `${String(product.name).trim()} (copie)`,
@@ -775,13 +845,19 @@ router.post("/:id/duplicate", authRequired, roleRequired(...OWNER_ROLES), async 
       product.contact,
       Number(product.quantity || 1),
       product.currency || "XAF",
-      // La copie partage le même fichier (dédupliqué par contenu côté Storage).
+      // La copie partage le même fichier (dédupliqué par contenu côté Storage)
+      // ou la même vidéo YouTube — jamais d'URL publique dans les deux cas.
       product.is_digital === true,
       product.digital_path || null,
       product.digital_name || null,
       product.digital_mime || null,
       product.digital_size || null,
       Number(product.digital_download_limit) || 5,
+      product.digital_kind || null,
+      product.youtube_id || null,
+      product.access_days === null || product.access_days === undefined
+        ? null
+        : Number(product.access_days) || null,
     ]
   );
   const newProduct = productRow((await q(SELECT_PRODUCT + " WHERE p.id = $1", [created[0].id]))[0]);
@@ -821,6 +897,71 @@ router.put(
     const parsedDigital = parseDigitalPayload(digital, req.user.id);
     if (parsedDigital?.error) return res.status(400).json({ error: parsedDigital.error });
     const removeDigital = digital?.remove === true;
+
+    // --- Contenu PROTÉGÉ (vidéo YouTube / durée d'accès) ---------------------
+    // Le TYPE de contenu est figé à la création : basculer fichier ↔ YouTube
+    // couperait l'accès des acheteurs déjà servis → refusé (supprimez et
+    // recréez le produit tant qu'aucune vente n'existe). L'édition permet :
+    //   • remplacer la vidéo YouTube (comme remplacer un fichier) ;
+    //   • régler la durée d'accès (access_days, NULL = illimité).
+    const currentKind =
+      product.is_digital === true
+        ? product.digital_kind === "youtube"
+          ? "youtube"
+          : "file"
+        : null;
+    const wasYoutube = currentKind === "youtube";
+    let kindAfter = parsedDigital ? "file" : removeDigital ? "file" : undefined;
+    if (req.body.digital_kind === "youtube") kindAfter = "youtube";
+    else if (req.body.digital_kind === "file") kindAfter = "file";
+    else if (kindAfter === undefined) kindAfter = currentKind;
+    // Conversion fichier ↔ vidéo YouTube : autorisée tant qu'AUCUN client n'a
+    // acheté (sinon l'accès déjà ouvert serait coupé). L'ancien contenu est
+    // alors effacé (fichier Storage nettoyé plus bas).
+    const kindChanged = Boolean(kindAfter && currentKind && kindAfter !== currentKind);
+    if (kindChanged) {
+      const [sold] = await q(
+        "SELECT COUNT(*)::int AS n FROM sales WHERE product_id = $1 AND status <> 'cancelled'",
+        [product.id]
+      );
+      if (Number(sold?.n || 0) > 0) {
+        return res.status(409).json({
+          error:
+            currentKind === "youtube"
+              ? "Impossible de convertir cette vidéo en produit fichier : des clients l'ont déjà achetée. Supprimez le produit et recréez-le si nécessaire."
+              : "Impossible de convertir ce fichier en vidéo YouTube : des clients l'ont déjà acheté. Supprimez le produit et recréez-le si nécessaire.",
+        });
+      }
+    }
+    // Remplacement de la vidéo YouTube (repli : vidéo actuelle conservée).
+    let youtubeIdAfter = wasYoutube ? product.youtube_id : null;
+    if (kindAfter === "youtube" && req.body.youtube_url) {
+      const id = parseYoutubeId(req.body.youtube_url);
+      if (!id) {
+        return res.status(400).json({
+          error:
+            "Lien YouTube invalide. Collez l'adresse de la vidéo (youtube.com/watch…, youtu.be/…) ou son identifiant à 11 caractères.",
+        });
+      }
+      youtubeIdAfter = id;
+    }
+    if (kindAfter === "youtube" && !youtubeIdAfter) {
+      return res.status(400).json({ error: "Lien de la vidéo YouTube requis." });
+    }
+    // Durée d'accès : non fournie → conservée ; null/"" → illimité ; sinon 1-3650 j.
+    let accessDaysAfter = product.access_days === null ? null : Number(product.access_days) || null;
+    if (req.body.access_days !== undefined) {
+      const v = req.body.access_days;
+      if (v === null || v === "") {
+        accessDaysAfter = null;
+      } else {
+        const n = Number(v);
+        if (!Number.isInteger(n) || n < 1 || n > 3650) {
+          return res.status(400).json({ error: "Durée d'accès invalide (1 à 3650 jours)." });
+        }
+        accessDaysAfter = n;
+      }
+    }
     let newDigitalPath = null;
     let newDigitalSize = null;
     if (parsedDigital) {
@@ -873,26 +1014,43 @@ router.put(
         code: "CREATOR_DIGITAL_ONLY",
       });
     }
+    // Contenu protégé : lors d'une conversion de type, l'ancien contenu
+    // (fichier ou vidéo) est abandonné — seules les valeurs du NOUVEAU type
+    // subsistent. Sinon le contenu existant est CONSERVÉ.
+    const keepOldContent = isDigitalAfter && !kindChanged;
     const digitalPathAfter = hasNewFile
       ? newDigitalPath
-      : isDigitalAfter
+      : keepOldContent
         ? product.digital_path
         : null;
     const digitalNameAfter = hasNewFile
       ? parsedDigital.name
-      : isDigitalAfter
+      : keepOldContent
         ? product.digital_name
-        : null;
+        : kindAfter === "youtube"
+          ? String(name).trim().slice(0, 160) || "Vidéo YouTube"
+          : null;
     const digitalMimeAfter = hasNewFile
       ? parsedDigital.mime
-      : isDigitalAfter
+      : keepOldContent
         ? product.digital_mime
-        : null;
+        : kindAfter === "youtube"
+          ? "video/youtube"
+          : null;
     const digitalSizeAfter = hasNewFile
       ? newDigitalSize
-      : isDigitalAfter
+      : keepOldContent
         ? product.digital_size
-        : null;
+        : isDigitalAfter
+          ? 0
+          : null;
+    // Garde-fou : un produit digital doit TOUJOURS avoir une source de contenu
+    // (fichier Storage pour « file », identifiant pour « youtube »).
+    if (isDigitalAfter && kindAfter === "file" && !digitalPathAfter) {
+      return res.status(400).json({
+        error: "Choisissez le fichier que le client téléchargera pour ce produit digital.",
+      });
+    }
     const downloadLimit =
       Number(digital_download_limit) > 0
         ? Math.min(Number(digital_download_limit), 100)
@@ -921,8 +1079,9 @@ router.put(
        image = $6, photos = $7, category = $8, warranty = $9, delivery_fee = $10,
        contact = $11, quantity = $12, currency = $13,
        is_digital = $14, digital_path = $15, digital_name = $16, digital_mime = $17,
-       digital_size = $18, digital_download_limit = $19
-     WHERE id = $20 RETURNING id`,
+       digital_size = $18, digital_download_limit = $19,
+       digital_kind = $20, youtube_id = $21, access_days = $22
+     WHERE id = $23 RETURNING id`,
       [
         String(name).trim(),
         description ? String(description).trim() : null,
@@ -943,6 +1102,9 @@ router.put(
         digitalMimeAfter,
         digitalSizeAfter,
         downloadLimit,
+        isDigitalAfter ? kindAfter : null,
+        isDigitalAfter && kindAfter === "youtube" ? youtubeIdAfter : null,
+        isDigitalAfter ? accessDaysAfter : null,
         product.id,
       ]
     );
@@ -951,7 +1113,10 @@ router.put(
     );
     // Ancien fichier digital remplacé : supprimé seulement s'il n'est plus
     // référencé par un autre produit (déduplication par contenu).
-    if (hasNewFile && product.digital_path && product.digital_path !== newDigitalPath) {
+    if (
+      product.digital_path &&
+      (hasNewFile ? product.digital_path !== newDigitalPath : kindChanged)
+    ) {
       try {
         const [still] = await q(
           "SELECT 1 FROM products WHERE id <> $1 AND digital_path = $2 LIMIT 1",

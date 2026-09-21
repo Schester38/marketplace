@@ -283,7 +283,10 @@ router.post(
       return res.status(400).json({ error: "Produit invalide" });
     const product = (await q("SELECT * FROM products WHERE id = $1", [productId]))[0];
     if (!product) return res.status(404).json({ error: "Produit introuvable" });
-    if (!product.is_digital || !product.digital_path)
+    // Produit digital = fichier téléchargeable (digital_path) OU vidéo protégée
+    // (digital_kind='youtube' + youtube_id, aucun fichier dans le Storage).
+    const isProtectedVideo = product.digital_kind === "youtube" && Boolean(product.youtube_id);
+    if (!product.is_digital || (!product.digital_path && !isProtectedVideo))
       return res.status(400).json({ error: "Ce produit n'est pas un produit digital" });
 
     const { publicKey } = await getIkeepayKeys();
@@ -385,7 +388,7 @@ router.post(
       // AUCUNE notification ici : un simple clic sur « Télécharger » (paiement
       // jamais effectué, vente abandonnée) ne doit pas faire sonner de cloche
       // « nouvelle vente ». Le créateur et le vendeur sont notifiés dans
-      // settleDigitalSale(), uniquement quand iKeePay confirme le paiement.
+      // reconcileDigitalSale(), uniquement quand iKeePay confirme le paiement.
       return { id: sale.id, confirmCode };
     });
 

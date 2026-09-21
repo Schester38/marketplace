@@ -450,6 +450,27 @@ export async function initDb() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_size BIGINT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_version INTEGER NOT NULL DEFAULT 1;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_download_limit INTEGER NOT NULL DEFAULT 5;
+    -- Contenus PROTÉGÉS (vidéos YouTube non répertoriées, expiration, révocation).
+    -- digital_kind : NULL/'file' = fichier téléchargeable (comportement historique),
+    -- 'youtube'    = vidéo hébergée sur YouTube (non répertoriée) — l'ID n'est
+    -- JAMAIS exposé publiquement (retiré par productRow) : il n'est remis qu'au
+    -- détenteur du droit, par GET /api/digital/:saleId/video.
+    -- access_days  : durée d'accès en jours après confirmation du paiement
+    --                (NULL = illimité, comportement historique).
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_kind TEXT;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS youtube_id TEXT;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS access_days INTEGER;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS access_revoked BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS access_revoked_at TIMESTAMPTZ;
+    -- Prolongation d'accès PAR ACHETEUR : jours ajoutés à la durée du produit
+    -- (access_days) sans modifier la fiche produit ni les autres acheteurs.
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS access_days_extra INTEGER NOT NULL DEFAULT 0;
+    -- Journal enrichi : action = 'download' (historique, défaut) ou 'video'
+    -- (visionnage d'une vidéo protégée). Les visionnages ne consomment PAS le
+    -- quota de téléchargements (usedDownloads ne compte que 'download').
+    ALTER TABLE digital_downloads ADD COLUMN IF NOT EXISTS action TEXT NOT NULL DEFAULT 'download';
+
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_download_limit INTEGER NOT NULL DEFAULT 5;
 
     CREATE TABLE IF NOT EXISTS digital_downloads (
       id SERIAL PRIMARY KEY,

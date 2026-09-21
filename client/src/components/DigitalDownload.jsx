@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { api } from "../api.js";
 import { formatBytes } from "../imageKit.js";
 import { useLang } from "../i18n.jsx";
+import ProtectedVideo from "./ProtectedVideo.jsx";
 import {
   isPdfFile,
   stampPdf,
@@ -97,6 +98,11 @@ export default function DigitalDownload({ sale, code, compact = false, label }) 
   };
 
   if (!sale?.is_digital) return null;
+  // Vidéo PROTÉGÉE (YouTube non répertoriée) : lecture après validation
+  // serveur — pas de fichier à télécharger (composant dédié).
+  if (sale.digital_kind === "youtube") {
+    return <ProtectedVideo sale={sale} code={code} compact={compact} />;
+  }
 
   return (
     <div className="digital-download" style={{ marginTop: 8 }}>

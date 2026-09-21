@@ -293,7 +293,7 @@ router.post(
 
     const full = (
       await q(
-        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.is_digital, p.digital_name, p.digital_size,
+        `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.is_digital, p.digital_name, p.digital_size, p.digital_kind,
                 u.name AS seller_name, shop.name AS shop_name, shop.country AS shop_country, shop.phone AS shop_phone, p.contact AS shop_contact
        FROM sales s
        JOIN products p ON p.id = s.product_id
@@ -318,7 +318,7 @@ router.get(
     const purchases = (
       await q(
         `SELECT ${SALES_LIST_COLUMNS}, p.name AS product_name, p.commission_percent, p.photos, p.contact AS shop_contact,
-                p.is_digital, p.digital_name, p.digital_size, p.digital_mime, p.digital_download_limit,
+                p.is_digital, p.digital_name, p.digital_size, p.digital_mime, p.digital_download_limit, p.digital_kind,
                 COALESCE(u.name, '—') AS seller_name, u.phone AS seller_phone, shop.name AS shop_name, shop.country AS shop_country
        FROM sales s
        JOIN products p ON p.id = s.product_id

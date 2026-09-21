@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
+import { rememberGuestSale } from "../guestSales.js";
 import { useLang } from "../i18n.jsx";
 import IkeepayCheckout from "./IkeepayCheckout.jsx";
 
@@ -47,6 +48,8 @@ export default function DigitalBuyTunnel({
   const [confirmed, setConfirmed] = useState([]); // [{ saleId, code, name }]
   const [err, setErr] = useState("");
   const [dlBusy, setDlBusy] = useState({}); // venteId → true pendant le clic manuel
+  const [videoSrc, setVideoSrc] = useState(null); // iframe vidéo protégée déverrouillée
+  const videoSaleRef = useRef(null);
   const pollRef = useRef(null);
   const mountedRef = useRef(true);
   const confirmedRef = useRef([]);
@@ -88,10 +91,20 @@ export default function DigitalBuyTunnel({
           buyer_phone: b && b.phone ? b.phone : undefined,
         });
         if (!mountedRef.current) return;
+        // Mémorisation locale (achat SANS compte) : l'acheteur retrouvera son
+        // contenu sur /suivi même après fermeture de l'onglet — la preuve
+        // reste le code de confirmation (aucune donnée envoyée au serveur).
+        rememberGuestSale({
+          saleId: d.sale_id,
+          code: d.confirm_code,
+          name: it.name || "",
+          kind: it.digital_kind || "file",
+        });
         setCur({
           saleId: d.sale_id,
           code: d.confirm_code,
           checkoutUrl: d.checkout_url,
+          digitalKind: it.digital_kind || "file",
         });
         setStage("checkout");
       } catch (e) {
@@ -116,7 +129,8 @@ export default function DigitalBuyTunnel({
         if (d && d.confirmed && mountedRef.current) {
           stopPoll();
           const name = (propsRef.current.items || [])[idx]?.name || "";
-          const all = [...confirmedRef.current, { ...sale, name }];
+          const kind = (propsRef.current.items || [])[idx]?.digital_kind || "file";
+          const all = [...confirmedRef.current, { ...sale, name, digitalKind: kind }];
           confirmedRef.current = all;
           setConfirmed(all);
           if (idx + 1 < total) {
@@ -135,6 +149,14 @@ export default function DigitalBuyTunnel({
   };
 
   const downloadOne = async (sale) => {
+    // Vidéo protégée : PAS de téléchargement — l'iframe est affichée dans la
+    // modale (l'URL de la vidéo n'est jamais exposée comme lien de fichier).
+    if (sale.digitalKind === "youtube") {
+      const d = await api.digitalVideo(sale.saleId, sale.code);
+      videoSaleRef.current = sale;
+      setVideoSrc(d.embed_src);
+      return sale.name || "";
+    }
     const d = await api.digitalDownload(sale.saleId, sale.code);
     const a = document.createElement("a");
     a.href = d.url;
@@ -232,12 +254,13 @@ export default function DigitalBuyTunnel({
       dlBusy={dlBusy}
       onManual={manualDownload}
       onClose={handleClose}
+      videoSrc={videoSrc}
     />
   );
 }
 
 /** Modale de progression / téléchargement / félicitations. */
-function TunnelBody({ t, stage, idx, total, multiple, confirmed, err, dlBusy, onManual, onClose }) {
+function TunnelBody({ t, stage, idx, total, multiple, confirmed, err, dlBusy, onManual, onClose, videoSrc }) {
   return (
     <div
       className="ikeepay-overlay"
@@ -249,6 +272,17 @@ function TunnelBody({ t, stage, idx, total, multiple, confirmed, err, dlBusy, on
         <button type="button" className="ikeepay-close" aria-label={t("Fermer")} onClick={onClose}>
           ✕
         </button>
+        {videoSrc && (
+          <div className="protected-video-frame" style={{ marginBottom: 10 }}>
+            <iframe
+              src={videoSrc}
+              title={t("Vidéo protégée")}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+        )}
         {stage === "creating" && (
           <div className="digital-buy-center">
             <span className="ikepay-spinner" role="status" aria-live="polite" />
@@ -284,25 +318,39 @@ function TunnelBody({ t, stage, idx, total, multiple, confirmed, err, dlBusy, on
                 onClick={() => onManual(s)}
                 disabled={stage === "downloading" || dlBusy[s.saleId]}
               >
-                {stage === "downloading" || dlBusy[s.saleId]
-                  ? `⏳ ${t("Téléchargement en cours…")}`
-                  : `⬇️ ${t("Télécharger mon fichier")}${s.name ? ` — ${s.name}` : ""}`}
+                {s.digitalKind === "youtube"
+                  ? dlBusy[s.saleId]
+                    ? `⏳ ${t("Déverrouillage de la vidéo…")}`
+                    : `▶ ${t("Regarder la vidéo")}${s.name ? ` — ${s.name}` : ""}`
+                  : stage === "downloading" || dlBusy[s.saleId]
+                    ? `⏳ ${t("Téléchargement en cours…")}`
+                    : `⬇️ ${t("Télécharger mon fichier")}${s.name ? ` — ${s.name}` : ""}`}
               </button>
             ))}
-            <p className="hint">{t("Un seul téléchargement est autorisé pour cet achat.")}</p>
+            {confirmed.some((s) => s.digitalKind !== "youtube") && (
+              <p className="hint">{t("Un seul téléchargement est autorisé pour cet achat.")}</p>
+            )}
             {err && <p className="error">{err}</p>}
           </div>
         )}
         {stage === "done" && (
           <div className="digital-buy-center">
             <p className="digital-buy-congrats">🎉 {t("Félicitations !")}</p>
-            <p>
-              {t("Votre fichier a été téléchargé sur votre appareil.")}
-              {confirmed.length === 1 ? <br /> : null}
-              {confirmed.length === 1 && confirmed[0].name && (
-                <span className="hint">📁 {confirmed[0].name}</span>
-              )}
-            </p>
+            {confirmed.every((s) => s.digitalKind === "youtube") ? (
+              <p>
+                {videoSrc
+                  ? t("Votre vidéo est déverrouillée — elle s'affiche ci-dessus.")
+                  : t("Votre vidéo est déverrouillée : cliquez sur « Regarder la vidéo » pour la visionner.")}
+              </p>
+            ) : (
+              <p>
+                {t("Votre fichier a été téléchargé sur votre appareil.")}
+                {confirmed.length === 1 ? <br /> : null}
+                {confirmed.length === 1 && confirmed[0].name && (
+                  <span className="hint">📁 {confirmed[0].name}</span>
+                )}
+              </p>
+            )}
             {confirmed.length > 1 && (
               <p className="hint">
                 📁{" "}

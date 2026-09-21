@@ -575,7 +575,13 @@ export default function PurchasePage() {
           commission éventuelle du vendeur. */}
       {product && product.is_digital && tunnelOpen && (
         <DigitalBuyTunnel
-          items={[{ product_id: product.id, name: product.name }]}
+          items={[
+            {
+              product_id: product.id,
+              name: product.name,
+              digital_kind: product.digital_kind === "youtube" ? "youtube" : "file",
+            },
+          ]}
           sellerCode={(form.seller_code || linkCode || "").trim().toUpperCase() || undefined}
           buyer={{
             name: user?.name || form.buyer_name,
