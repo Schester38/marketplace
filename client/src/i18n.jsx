@@ -5070,8 +5070,8 @@ const RICH_EN = {
   "Montant supérieur au prix : la commission est limitée au prix de vente.":
     "Amount higher than the price: the commission is capped at the sale price.",
   "Paiements acceptés — sécurisés par iKeepay": "Accepted payments — secured by iKeepay",
-  "Carte bancaire (Visa / Mastercard), USDT et Mobile Money des pays couverts par iKeepay — transaction chiffrée et vérifiée.":
-    "Bank card (Visa / Mastercard), USDT and Mobile Money in countries covered by iKeepay — encrypted and verified transaction.",
+  "Carte bancaire (Visa / Mastercard), USDT et Mobile Money — transaction chiffrée et vérifiée.":
+    "Bank card (Visa / Mastercard), USDT and Mobile Money — encrypted and verified transaction.",
   "Type de produits": "Product type",
   "Produits physiques": "Physical products",
   "Produits digitaux": "Digital products",
@@ -5216,8 +5216,8 @@ const RICH_ES = {
   "Montant supérieur au prix : la commission est limitée au prix de vente.":
     "Importe superior al precio: la comisión se limita al precio de venta.",
   "Paiements acceptés — sécurisés par iKeepay": "Pagos aceptados — asegurados por iKeepay",
-  "Carte bancaire (Visa / Mastercard), USDT et Mobile Money des pays couverts par iKeepay — transaction chiffrée et vérifiée.":
-    "Tarjeta bancaria (Visa / Mastercard), USDT y Mobile Money de los países cubiertos por iKeepay — transacción cifrada y verificada.",
+  "Carte bancaire (Visa / Mastercard), USDT et Mobile Money — transaction chiffrée et vérifiée.":
+    "Tarjeta bancaria (Visa / Mastercard), USDT y Mobile Money — transacción cifrada y verificada.",
   "Type de produits": "Tipo de productos",
   "Produits physiques": "Productos físicos",
   "Produits digitaux": "Productos digitales",
@@ -5328,8 +5328,8 @@ const RICH_AR = {
   "Montant supérieur au prix : la commission est limitée au prix de vente.":
     "المبلغ أعلى من السعر: تُحَدّ العمولة بسعر البيع.",
   "Paiements acceptés — sécurisés par iKeepay": "طرق الدفع المقبولة — مؤمَّنة عبر iKeepay",
-  "Carte bancaire (Visa / Mastercard), USDT et Mobile Money des pays couverts par iKeepay — transaction chiffrée et vérifiée.":
-    "بطاقة بنكية (فيزا / ماستركارد) وUSDT والموبايل موني في الدول التي يغطيها iKeepay — معاملة مشفّرة وموثّقة.",
+  "Carte bancaire (Visa / Mastercard), USDT et Mobile Money — transaction chiffrée et vérifiée.":
+    "بطاقة بنكية (فيزا / ماستركارد) وUSDT والموبايل موني — معاملة مشفّرة وموثّقة.",
   "Type de produits": "نوع المنتجات",
   "Produits physiques": "منتجات مادية",
   "Produits digitaux": "منتجات رقمية",

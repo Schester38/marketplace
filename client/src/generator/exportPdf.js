@@ -382,25 +382,8 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl, hasQrMark
     }
   }
 
-  // Mise en page « bande » : tiers inférieur aux couleurs d'accent du modèle.
-  // Bande DÉGRADÉE (et non aplat opaque) pour que la photo de couverture
-  // reste perceptible : c'est ce qui distingue une vraie couverture de livre
-  // d'un simple rectangle coloré. jsPDF n'a pas de dégradé natif → la bande est
-  // peinte en fines tranches d'opacité croissante (rendu identique à l'aperçu).
-  if (geo.band) {
-    const steps = 14;
-    const top = h * 0.62;
-    const bh = h * 0.38;
-    for (let i = 0; i < steps; i++) {
-      const a = 0.55 + (0.4 * i) / (steps - 1);
-      doc.saveGraphicsState();
-      doc.setGState(new doc.GState({ opacity: a }));
-      setFill(doc, cover.accent);
-      doc.rect(0, top + (bh * i) / steps, w, bh / steps + 0.4, "F");
-      doc.restoreGraphicsState();
-    }
-  }
-
+  // Mise en page « bande » : AUCUNE couche de couleur sur la photo — le titre
+  // (blanc) se pose directement sur l'image, dans le tiers inférieur.
   const fg = geo.band ? "#ffffff" : cover.fg;
   const align = geo.leftish ? "left" : geo.align;
   const titleSize = geo.band ? template.sizes.h1 + 4 : template.sizes.h1 + 8;

@@ -6,7 +6,7 @@
 // Le rendu reprend exactement les codes du modèle (fond, texte, titre,
 // sous-titre, auteur, image de fond, cadrage) : l'aperçu de l'éditeur, le PDF
 // et la miniature du catalogue montrent donc la même couverture.
-import { FONT_CSS, resolveTemplate, resolveCover, coverLayoutBox, withAlpha } from "./templates.js";
+import { FONT_CSS, resolveTemplate, resolveCover, coverLayoutBox } from "./templates.js";
 import { makeQrDataUrl, verificationPayload } from "./protection.js";
 
 const RATIO = 1.5; // hauteur / largeur (format livre portrait)
@@ -78,18 +78,9 @@ export async function renderCoverImage(docMeta, { width = 480 } = {}) {
     }
   }
 
-  // Mise en page « bande » : tiers inférieur aux couleurs d'accent du modèle.
-  // Bande DÉGRADÉE : la photo de couverture reste perceptible sous la couleur
+  // Mise en page « bande » : AUCUNE couche de couleur sur la photo — le titre
+  // (blanc) se pose directement sur l'image, dans le tiers inférieur
   // (rendu identique au PDF et à l'aperçu HTML).
-  if (geo.band) {
-    const top = h * 0.62;
-    const bh = h * 0.38;
-    const grad = ctx.createLinearGradient(0, top, 0, top + bh);
-    grad.addColorStop(0, withAlpha(cover.accent, 0.55));
-    grad.addColorStop(1, withAlpha(cover.accent, 0.95));
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, top, w, bh);
-  }
 
   const fg = geo.band ? "#ffffff" : cover.fg;
   const align = geo.leftish ? "left" : cover.align;

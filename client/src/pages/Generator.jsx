@@ -26,7 +26,6 @@ import {
   resolveTemplate,
   resolveCover,
   coverLayoutBox,
-  withAlpha,
   SIZE_KEYS,
   COLOR_KEYS,
 } from "../generator/templates.js";
@@ -2201,20 +2200,6 @@ function GenPage({ page, paginated, docMeta }) {
             alt=""
             className="gen-cover-img"
             style={{ opacity: 1 - cover.dim, objectPosition: `50% ${cover.imageY ?? 30}%` }}
-          />
-        )}
-        {geo.band && (
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              top: "62%",
-              height: "38%",
-              // Dégradé (et non aplat) : la photo de couverture reste visible
-              // sous la bande, comme dans le PDF (drawCover → tranches).
-              background: `linear-gradient(to bottom, ${withAlpha(cover.accent, 0.55)}, ${withAlpha(cover.accent, 0.95)})`,
-            }}
           />
         )}
         {cover.showTitle && (

@@ -132,7 +132,7 @@ export default function PaymentMethodsStrip() {
       </div>
       <p className="pay-strip-hint">
         {t(
-          "Carte bancaire (Visa / Mastercard), USDT et Mobile Money des pays couverts par iKeepay — transaction chiffrée et vérifiée."
+          "Carte bancaire (Visa / Mastercard), USDT et Mobile Money — transaction chiffrée et vérifiée."
         )}
       </p>
     </div>
