@@ -196,7 +196,9 @@ Restent en dur **volontairement** : `client/src/components/Footer.jsx` (lien Tru
 
 ## Historique récent des modifications
 
-(Changelog partiel — version courante **1.57.69** / cache PWA **mboppi-v300**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+(Changelog partiel — version courante **1.57.70** / cache PWA **mboppi-v301**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+
+- **1.57.70** : **décor géométrique sur TOUTES les pages du Générateur, derrière le texte** — les primitives du modèle (`coverShapeSpec`) sont désormais dessinées sur chaque page (couverture, copyright, table des matières, contenu) dans les 2 rendus : aperçu HTML (`Generator.jsx`, `CoverDecor` en premier enfant de chaque `.gen-page`) et PDF (`exportPdf.js` : copyright reçoit `decorPrims` dessinées après le fond, toc et contenu les dessinent après le fond/avant le texte — jamais par-dessus le texte) ; cache PWA v301.
 
 - **1.57.69** : **décor géométrique des couvertures du Générateur (3 rendus) + badge « X en attente » retiré des cartes produit** — nouveau moteur de décor partagé `client/src/generator/coverDecor.js` (convertit `coverShapeSpec` de `templates.js` en primitives `poly`/`rect`/`circle`/`ring`) dessiné par **`CoverDecor.jsx`** (SVG, aperçu HTML), `drawCoverDecorCanvas` (miniature + couverture produit, `coverImage.js`) et `drawCoverDecorPdf` (jsPDF, `exportPdf.js`) — aperçu = PDF = miniature à l'identique ; formes : secteur+anneaux (arc : Moderne, Motivation), disque débordant (circle : Technologie, Jeunesse), coin biseauté (diag : Business, Finance, Magazine), barres d'accent (bars : Professionnel, Éducation — `coverShape: "half"` n'avait **aucun case** et retombait sur aucun décor, renommé `bars`) ; formes dessinées APRÈS l'image de fond et AVANT le texte (titre toujours lisible, aucune couche de couleur pleine page) ; cartes produit (`ProductCard.jsx`) : la pastille « X en attente » est supprimée, seul « X vendus » s'affiche ; cache PWA v300.
 

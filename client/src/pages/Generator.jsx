@@ -2184,13 +2184,15 @@ function GenPage({ page, paginated, docMeta }) {
   const mm = (v) => v * PX_PER_MM * s;
   const pt = (v) => v * PT_TO_PX * s;
   const pageStyle = { width: mm(w), height: mm(h) };
+  // Décor géométrique du modèle : mêmes primitives sur TOUTES les pages
+  // (couverture, copyright, table des matières, contenu), derrière le texte.
+  const decorPrims = coverDecorPrims(template, w, h);
 
   if (page.kind === "cover") {
     // Mêmes règles que le PDF et la miniature produit : resolveCover +
     // coverLayoutBox (géométrie en mm convertie en % de la page).
     const cover = resolveCover(docMeta, template);
     const geo = coverLayoutBox(cover, w);
-    const decorPrims = coverDecorPrims(template, w, h);
     const fg = geo.band ? "#ffffff" : cover.fg;
     const align = geo.leftish ? "left" : cover.align;
     const leftPct = (geo.x / w) * 100;
@@ -2262,6 +2264,7 @@ function GenPage({ page, paginated, docMeta }) {
   if (page.kind === "copyright") {
     return (
       <div className="gen-page" style={{ ...pageStyle, background: template.colors.bg, color: template.colors.body }}>
+        <CoverDecor prims={decorPrims} w={w} h={h} />
         <div className="gen-cover-body" style={{ top: "40%", left: mm(m.left), right: mm(m.right), fontSize: pt(template.sizes.small), lineHeight: 1.6, whiteSpace: "pre-line" }}>
           {copyrightLines(docMeta).join("\n")}
           <div style={{ marginTop: mm(4), color: template.colors.accent }}>Référence : {docMeta.doc_ref}</div>
@@ -2273,6 +2276,7 @@ function GenPage({ page, paginated, docMeta }) {
   if (page.kind === "toc") {
     return (
       <div className="gen-page" style={{ ...pageStyle, background: template.colors.bg, color: template.colors.body, fontFamily: FONT_CSS[template.bodyFont] }}>
+        <CoverDecor prims={decorPrims} w={w} h={h} />
         <PageDecor template={template} box={box} docMeta={docMeta} scale={s} />
         <div style={{ padding: `${mm(m.top)}px ${mm(m.right)}px 0 ${mm(m.left)}px` }}>
           <div style={{ fontWeight: "bold", fontSize: pt(template.sizes.h2), color: template.colors.heading }}>
@@ -2295,6 +2299,7 @@ function GenPage({ page, paginated, docMeta }) {
   // Page de contenu.
   return (
     <div className="gen-page" style={{ ...pageStyle, background: template.colors.bg }}>
+      <CoverDecor prims={decorPrims} w={w} h={h} />
       <PageDecor template={template} box={box} docMeta={docMeta} scale={s} />
       {docMeta.protection?.watermark?.enabled && (
         <div

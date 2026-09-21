@@ -466,10 +466,12 @@ function drawHeadingDecor(doc, item, template, box) {
   }
 }
 
-function drawCopyright(doc, docMeta, template, box, contentHash) {
+function drawCopyright(doc, docMeta, template, box, contentHash, decorPrims) {
   const { w, h } = box;
   setFill(doc, template.colors.bg);
   doc.rect(0, 0, w, h, "F");
+  // Décor géométrique du modèle : derrière le texte (dessiné juste après le fond).
+  if (decorPrims && decorPrims.length) drawCoverDecorPdf(doc, decorPrims);
   const lines = copyrightLines(docMeta);
   // Anti-débordement : le bloc complet (copyright + référence + empreinte +
   // signature Mboppi) doit tenir au-dessus du bas de page, même quand la liste
@@ -642,9 +644,12 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
     if (page.kind === "cover") {
       await drawCover(doc2, page, docMeta, template, box, qrDataUrl, hasQrMarker);
     } else if (page.kind === "copyright") {
-      drawCopyright(doc2, docMeta, template, box, contentHash);
+      drawCopyright(doc2, docMeta, template, box, contentHash, coverDecorPrims(template, w, h));
     } else if (page.kind === "toc") {
       drawPageDecor(doc2, template, box, docMeta);
+      // Décor géométrique du modèle : TOUTES les pages, TOUJOURS derrière le
+      // texte (dessiné avant la table des matières).
+      drawCoverDecorPdf(doc2, coverDecorPrims(template, w, h));
       drawToc(doc2, page, template, box);
     } else {
       // Page de contenu : fond du modèle (thèmes crème, rosé, ambré, ivoire…)
@@ -655,6 +660,9 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
         setFill(doc2, template.colors.bg);
         doc2.rect(0, 0, w, h, "F");
       }
+      // Décor géométrique du modèle : TOUTES les pages, TOUJOURS derrière le
+      // texte (dessiné après le fond, avant le décor et les atomes mesurés).
+      drawCoverDecorPdf(doc2, coverDecorPrims(template, w, h));
       // Décor propre au modèle (bandeau titre, filets, colonne, cadre…).
       drawPageDecor(doc2, template, box, docMeta);
       for (const item of page.items) {
