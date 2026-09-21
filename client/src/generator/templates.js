@@ -13,6 +13,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#111111", coverText: "#ffffff", headingUpper: true,
     headingRule: "h1", headingBar: "none", coverLayout: "center", coverRule: false,
+    coverShape: "none",
     pageDecor: "toprule", // double filet éditorial en tête de page
   },
   {
@@ -25,6 +26,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#1d4ed8", coverText: "#ffffff", headingUpper: false,
     headingRule: "h1", headingBar: "left", coverLayout: "band", coverRule: false,
     coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
+    coverShape: "arc", // quart de cercle d'accent en haut à gauche (style « pro »)
     pageDecor: "topbar", // fin barre d'accent en haut de chaque page de contenu
   },
   {
@@ -36,6 +38,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#4a3728", coverText: "#f5ead9", headingUpper: false,
     headingRule: "none", headingBar: "none", coverLayout: "center", coverRule: true,
+    coverShape: "none",
     pageDecor: "doublerule", // double filet en tête et en pied (édition classique)
   },
   {
@@ -47,6 +50,7 @@ export const GEN_TEMPLATES = [
     align: "left", chapterNewPage: false,
     coverBg: "#0f172a", coverText: "#e2e8f0", headingUpper: false,
     headingRule: "h1", headingBar: "none", coverLayout: "left", coverRule: true,
+    coverShape: "bars",
     pageDecor: "sidebartint", // colonne latérale teintée « classeur »
   },
   {
@@ -59,6 +63,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#1e3a5f", coverText: "#ffffff", headingUpper: true,
     headingRule: "h1h2", headingBar: "none", coverLayout: "band", coverRule: false,
     coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
+    coverShape: "diag", // coin biseauté doré en bas à droite
     pageDecor: "headerband", // bandeau titre du document en tête de page (style rapport)
   },
   {
@@ -70,6 +75,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#14532d", coverText: "#dcfce7", headingUpper: true,
     headingRule: "h1", headingBar: "left", coverLayout: "top", coverRule: true,
+    coverShape: "bars",
     pageDecor: "noterule", // marge de cahier : filet vertical gauche
   },
   {
@@ -82,6 +88,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#c2410c", coverText: "#fff7ed", headingUpper: true,
     headingRule: "none", headingBar: "left", coverLayout: "band", coverRule: false,
     coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
+    coverShape: "arc", // quart de cercle d'accent en haut à gauche
     pageDecor: "bottomband", // bande d'accent ambrée au pied de chaque page
   },
   {
@@ -93,6 +100,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#064e3b", coverText: "#d1fae5", headingUpper: false,
     headingRule: "h1h2", headingBar: "none", coverLayout: "left", coverRule: false,
+    coverShape: "diag",
     pageDecor: "doubleband", // filet haut + bande pleine au pied (rapport)
   },
   {
@@ -105,6 +113,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#312e81", coverText: "#e0e7ff", headingUpper: false,
     headingRule: "none", headingBar: "left", coverLayout: "top", coverRule: true,
     coverDimDefault: 0.15,
+    coverShape: "circle", // disque + anneau indigo débordant du coin haut-droit
     pageDecor: "sideline", // filet vertical gradué (fiche technique)
   },
   {
@@ -117,6 +126,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#1c1917", coverText: "#d4af37", headingUpper: false,
     headingRule: "h1", headingBar: "none", coverLayout: "center", coverRule: true,
     coverDimDefault: 0.15,
+    coverShape: "none",
     pageDecor: "frame", // cadre doré du livre de luxe
   },
   {
@@ -129,6 +139,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#be185d", coverText: "#fce7f3", headingUpper: false,
     headingRule: "none", headingBar: "none", coverLayout: "band", coverRule: false,
     coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
+    coverShape: "circle", // gros disque rose débordant du coin haut-droit
     pageDecor: "sidestrip", // colonne d'accent rose sur le bord gauche
   },
   {
@@ -141,6 +152,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#111827", coverText: "#ffffff", headingUpper: true,
     headingRule: "h1", headingBar: "none", coverLayout: "top", coverRule: true,
     coverDimDefault: 0.15,
+    coverShape: "diag",
     pageDecor: "masthead", // bandeau portant le titre sur chaque page
   },
 ];
@@ -275,6 +287,74 @@ export function coverLayoutBox(cover, pageW) {
   if (band) yPct = cover.customY ? Math.min(92, Math.max(64, yPct)) : 68;
   else if (layout === "top" && !cover.customY) yPct = 14;
   return { layout, band, leftish: layout === "left" || band, pad, maxW, x, yPct, align: cover.align };
+}
+
+// ── Forme géométrique de couverture (style « modèle PDF pro ») ──────────────
+// Décor d'accent du modèle, dessiné PAR-DESSUS la photo/le fond et SOUS le
+// texte — géométrie exprimée dans l'unité de la page (mm pour l'aperçu et le
+// PDF, px pour la canvas produit) : les trois rendus sont identiques.
+//   "arc"    : disque plein partant du coin haut-GAUCHE (quart visible) ;
+//   "circle" : grand disque + anneau débordant du coin haut-DROIT ;
+//   "diag"   : coin biseauté (triangle) dans le coin bas-DROIT ;
+//   "half"   : demi-bas pleine largeur en aplat.
+// Décor de couverture : formes géométriques neutres (rectangles, disques,
+// anneaux, polygones) dessinées à l'identique par l'aperçu HTML (SVG), la
+// miniature (canvas) et le PDF (jsPDF) — voir `generator/coverDecor.js`.
+// Les formes restent dans les coins hauts / bords : le tiers inférieur des
+// modèles « bande » garde son titre posé directement sur la photo, sans
+// aucune couche de couleur par-dessus.
+export function coverShapeSpec(template, w, h) {
+  const accent = template.colors.accent;
+  const heading = template.colors.heading;
+  // Quart de disque (secteur) échantillonné en polygone : un seul type de
+  // primitive est ainsi à dessiner dans les 3 rendus.
+  const pie = (cx, cy, r, color, steps = 48) => {
+    const pts = [[cx, cy]];
+    for (let i = 0; i <= steps; i += 1) {
+      const a = (Math.PI / 2) * (i / steps);
+      pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+    }
+    return { kind: "poly", color, pts };
+  };
+  const rect = (x, y, rw, rh, color) => ({ kind: "rect", color, x, y, w: rw, h: rh });
+  const disc = (cx, cy, r, color) => ({ kind: "circle", color, cx, cy, r });
+  const ring = (cx, cy, r, color, lw) => ({ kind: "ring", color, cx, cy, r, lw });
+
+  switch (template.coverShape) {
+    case "arc":
+      // Quart de disque d'accent en haut à gauche + deux anneaux concentriques.
+      return [
+        pie(0, 0, 0.55 * w, accent),
+        ring(0.2 * w, 0.21 * w, 0.34 * w, heading, 0.012 * w),
+        ring(0.2 * w, 0.21 * w, 0.44 * w, accent, 0.007 * w),
+      ];
+    case "circle":
+      // Disque débordant du coin haut-droit + anneau + rappel en haut à gauche.
+      return [
+        disc(1.04 * w, 0.08 * h, 0.4 * w, accent),
+        ring(1.04 * w, 0.08 * h, 0.5 * w, heading, 0.014 * w),
+        disc(0.07 * w, 0.16 * h, 0.05 * w, accent),
+      ];
+    case "diag":
+      // Coin biseauté en bas à droite (deux triangles emboîtés) + anneau.
+      return [
+        { kind: "poly", color: accent, pts: [[0.72 * w, h], [w, 0.5 * h], [w, h]] },
+        { kind: "poly", color: heading, pts: [[0.86 * w, h], [w, 0.76 * h], [w, h]] },
+        ring(0.9 * w, 0.4 * h, 0.075 * w, accent, 0.012 * w),
+      ];
+    case "bars":
+      // Signature graphique minimale (modèles « bande ») : trois barres
+      // d'accent en haut à gauche + un anneau en haut à droite — jamais sur
+      // le titre, jamais de bloc de couleur sur la photo.
+      return [
+        rect(0, 0.05 * h, 0.36 * w, 0.016 * h, accent),
+        rect(0, 0.084 * h, 0.26 * w, 0.016 * h, accent),
+        rect(0, 0.118 * h, 0.16 * w, 0.016 * h, heading),
+        ring(w - 0.14 * w, 0.1 * h, 0.07 * w, accent, 0.014 * w),
+      ];
+    default:
+      return [];
+  }
 }
 
 // Formats de page (mm). « ebook » ≈ format liseuse 6"×9" réduit.

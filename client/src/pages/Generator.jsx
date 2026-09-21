@@ -39,6 +39,8 @@ import { exportDocumentPdf, saveBlob } from "../generator/exportPdf.js";
 import { exportEpub } from "../generator/epub.js";
 import { checkDocument } from "../generator/check.js";
 import { renderCoverImage, libraryThumb } from "../generator/coverImage.js";
+import { coverDecorPrims } from "../generator/coverDecor.js";
+import CoverDecor from "../generator/CoverDecor.jsx";
 import {
   copyrightLines,
   sha256Hex,
@@ -2188,6 +2190,7 @@ function GenPage({ page, paginated, docMeta }) {
     // coverLayoutBox (géométrie en mm convertie en % de la page).
     const cover = resolveCover(docMeta, template);
     const geo = coverLayoutBox(cover, w);
+    const decorPrims = coverDecorPrims(template, w, h);
     const fg = geo.band ? "#ffffff" : cover.fg;
     const align = geo.leftish ? "left" : cover.align;
     const leftPct = (geo.x / w) * 100;
@@ -2202,6 +2205,8 @@ function GenPage({ page, paginated, docMeta }) {
             style={{ opacity: 1 - cover.dim, objectPosition: `50% ${cover.imageY ?? 30}%` }}
           />
         )}
+        {/* Décor géométrique du modèle : mêmes primitives que PDF/miniature. */}
+        <CoverDecor prims={decorPrims} w={w} h={h} />
         {cover.showTitle && (
           <div
             style={{

@@ -10,7 +10,6 @@ import {
   IconHeartFilled,
   IconWhatsApp,
   IconPackage,
-  IconClock,
   IconFire,
   IconCart,
   IconStar,
@@ -61,7 +60,6 @@ export default function ProductCard({
   const symbol = countrySymbol(product?.shop_country);
   const fav = isFav(product.id);
   const sold = Number(product.sold || 0);
-  const pendingCount = Number(product.pending_count || 0);
   const flash = product.flash_promo || null;
   const commission = Number(flash ? flash.commission : product.commission || 0);
   const flashOld = flash ? Number(product.price) : null;
@@ -125,11 +123,8 @@ export default function ProductCard({
       </a>
       {flash && <span className="badge badge-promo">-{flash.discount_percent}%</span>}
       {hasPromo && !flash && <span className="badge badge-promo">-{promoPct}%</span>}
-      {pendingCount > 0 && (
-        <span className="badge badge-pending">
-          <IconClock size={12} /> {pendingCount} {t("en attente")}
-        </span>
-      )}
+      {/* Ventes : seul le compteur « X vendus » est affiché (les ventes en
+          attente de confirmation ne sont plus montrées sur les cartes). */}
       {sold > 0 && (
         <span className="badge badge-sold">
           <IconFire size={12} /> {sold} {t("vendus")}

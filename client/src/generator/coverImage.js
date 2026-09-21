@@ -7,6 +7,7 @@
 // sous-titre, auteur, image de fond, cadrage) : l'aperçu de l'éditeur, le PDF
 // et la miniature du catalogue montrent donc la même couverture.
 import { FONT_CSS, resolveTemplate, resolveCover, coverLayoutBox } from "./templates.js";
+import { coverDecorPrims, drawCoverDecorCanvas } from "./coverDecor.js";
 import { makeQrDataUrl, verificationPayload } from "./protection.js";
 
 const RATIO = 1.5; // hauteur / largeur (format livre portrait)
@@ -77,6 +78,11 @@ export async function renderCoverImage(docMeta, { width = 480 } = {}) {
       }
     }
   }
+
+  // Décor géométrique du modèle (formes d'accent : secteurs, anneaux,
+  // triangles, disques — comme les couvertures des galeries de modèles).
+  // Dessiné APRÈS l'image de fond et AVANT le texte : le titre reste lisible.
+  drawCoverDecorCanvas(ctx, coverDecorPrims(template, w, h));
 
   // Mise en page « bande » : AUCUNE couche de couleur sur la photo — le titre
   // (blanc) se pose directement sur l'image, dans le tiers inférieur

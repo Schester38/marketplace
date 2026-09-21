@@ -8,6 +8,7 @@
 // watermark optionnel, QR code de vérification, en-têtes/pieds paramétrables.
 import { jsPDF } from "jspdf";
 import { FONT_PDF, resolveCover, coverLayoutBox } from "./templates.js";
+import { coverDecorPrims, drawCoverDecorPdf } from "./coverDecor.js";
 import { PX_PER_MM } from "./paginate.js";
 import { copyrightLines, makeQrDataUrl, verificationPayload } from "./protection.js";
 import { BASE_URL } from "../config.js";
@@ -381,6 +382,10 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl, hasQrMark
       }
     }
   }
+
+  // Décor géométrique du modèle (formes d'accent) : mêmes primitives que
+  // l'aperçu HTML et la miniature — dessinées après l'image, avant le texte.
+  drawCoverDecorPdf(doc, coverDecorPrims(template, w, h));
 
   // Mise en page « bande » : AUCUNE couche de couleur sur la photo — le titre
   // (blanc) se pose directement sur l'image, dans le tiers inférieur.
