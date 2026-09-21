@@ -130,6 +130,8 @@ function docRow(row) {
     protection: row.protection || {},
     content_hash: row.content_hash,
     published_product_id: row.published_product_id || null,
+    // Modèle du Studio (page par page) — null si le document n'y a jamais été ouvert.
+    page_layout: row.page_layout || null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
@@ -350,6 +352,28 @@ router.patch(
     if (body.back_cover !== undefined) push("back_cover", JSON.stringify(parseContent(body.back_cover) || {}), "::jsonb");
     if (body.protection !== undefined) push("protection", JSON.stringify(parseContent(body.protection) || {}), "::jsonb");
 
+    // Modèle du Studio (page par page) : enveloppe { version, pages:[…] }.
+    // Garde-fou de taille (le modèle reste un JSON structuré, jamais une image
+    // aplatie) : 2 Mo ≈ un document de plusieurs centaines de pages.
+    if (body.page_layout !== undefined) {
+      const layout = body.page_layout;
+      if (layout === null) {
+        push("page_layout", null);
+      } else if (layout && typeof layout === "object" && Array.isArray(layout.pages)) {
+        const raw = JSON.stringify(layout);
+        if (raw.length > 2 * 1024 * 1024) {
+          const err = new Error("Modèle du Studio trop volumineux (2 Mo maximum)");
+          err.statusCode = 413;
+          throw err;
+        }
+        push("page_layout", raw, "::jsonb");
+      } else {
+        const err = new Error("Modèle du Studio invalide");
+        err.statusCode = 422;
+        throw err;
+      }
+    }
+
     // Contenu : mis à jour dans gen_documents_data + recalcul de l'empreinte.
     if (body.content !== undefined) {
       const content = parseContent(body.content);
@@ -383,7 +407,8 @@ router.post(
                                   style_overrides, cover, back_cover, protection, content_hash)
        SELECT $1, $2, title || ' (copie)', subtitle, author, 'draft', page_format,
               page_width, page_height, orientation, margins, template_id,
-              style_overrides, cover, back_cover, protection, content_hash
+              style_overrides, cover, back_cover, protection, content_hash,
+              page_layout
        FROM gen_documents WHERE id = $3 RETURNING *`,
       [Number(req.user.id) || 0, newDocRef(), row.id]
     );
@@ -578,6 +603,31 @@ const AI_ACTIONS = {
       "paragraphes denses et concrets, un exemple pratique par sous-section. Style clair et pédagogique, " +
       "adapté aux lecteurs africains francophones. Réponds uniquement par le chapitre, sans commentaire.",
   },
+  // Studio — citation inspirante en rapport avec le passage fourni (§9).
+  quote: {
+    instruction:
+      "Propose UNE citation courte (15 à 25 mots maximum) en rapport direct avec le thème du passage fourni. " +
+      "Elle peut être une citation célèbre (avec son auteur après un tiret) ou une phrase originale percutante. " +
+      "Réponds uniquement par la citation, sans guillemets ni commentaire.",
+  },
+  // Studio — réduction du texte pour qu'il tienne sur la page (§9/§20).
+  shorten: {
+    instruction:
+      "Condense le passage fourni en conservant TOUTES les idées essentielles mais avec environ 40 % de mots en moins : " +
+      "supprime les répétitions, les formules de politesse et les digressions, garde les faits et exemples clés. " +
+      "Réponds uniquement par le texte condensé.",
+  },
+  // Studio — modification d'UNE page (ou de tout le document) sur consigne libre
+  // (§9/§10 du cahier des charges). Le design est appliqué côté client : l'IA ne
+  // renvoie ici que le texte éventuellement réécrit, « OK » = aucune réécriture.
+  page_edit: {
+    instruction:
+      "Tu es un éditeur professionnel qui retravaille une page d'un livre déjà mis en page. " +
+      "Applique la consigne de l'auteur au passage fourni. IMPORTANT : si la consigne ne demande " +
+      "aucune réécriture du texte (mise en page, couleurs, typographie, image, citation à ajouter), " +
+      "réponds exactement « OK ». Sinon, réponds uniquement par le texte final de la page, " +
+      "sans titre d'exemple, sans commentaire et sans bloc de code.",
+  },
   design: {
     json: true,
     instruction:
@@ -622,12 +672,17 @@ router.post(
         code: "AI_NOT_CONFIGURED",
       });
     }
-    const text = String(body.text || "").slice(0, AI_MAX_INPUT).trim();
+    // Studio (§9/§10) : le client envoie le texte de la page dans `page_text`.
+    const studioMode = action === "page_edit" ? String(body.mode || "design").trim() : "";
+    const text = String(body.text || body.page_text || "").slice(0, AI_MAX_INPUT).trim();
     const docContext = [
       body.title ? `Titre du document : ${String(body.title).slice(0, 200)}` : "",
       body.subtitle ? `Sous-titre : ${String(body.subtitle).slice(0, 300)}` : "",
       body.author ? `Auteur : ${String(body.author).slice(0, 200)}` : "",
-      body.instruction ? `Consigne complémentaire de l'utilisateur : ${String(body.instruction).slice(0, 400)}` : "",
+      body.instruction ? `Consigne de l'utilisateur : ${String(body.instruction).slice(0, 600)}` : "",
+      studioMode === "design" ? "Mode demandé : design uniquement — NE RÉÉCRIS PAS le texte (l'auteur applique lui-même la mise en page)." : "",
+      studioMode && studioMode !== "design" ? "Mode demandé : contenu + design — la réécriture du texte de la page est autorisée." : "",
+      action === "page_edit" && body.page_count ? `Pages concernées : ${Math.max(1, Number(body.page_count) || 1)}.` : "",
     ]
       .filter(Boolean)
       .join("\n");
@@ -635,6 +690,12 @@ router.post(
     const needsText = ["structure", "improve", "correct", "rephrase", "summarize", "expand", "tone", "translate"].includes(action);
     if (needsText && !text) {
       const err = new Error("Sélectionnez d'abord un passage dans le document.");
+      err.statusCode = 422;
+      throw err;
+    }
+    // Studio « Contenu + design » : sans le texte de la page, l'IA n'a rien à réécrire.
+    if (studioMode && studioMode !== "design" && !text) {
+      const err = new Error("Le texte de la page n'a pas pu être transmis à l'assistant.");
       err.statusCode = 422;
       throw err;
     }

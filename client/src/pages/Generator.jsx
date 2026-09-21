@@ -45,6 +45,7 @@ import { renderCoverImage, libraryThumb } from "../generator/coverImage.js";
 import { coverDecorPrims } from "../generator/coverDecor.js";
 import { parseDesignCommand, recommendTemplates } from "../generator/designCommands.js";
 import CoverDecor from "../generator/CoverDecor.jsx";
+import DocStudio from "../generator/DocStudio.jsx";
 import {
   copyrightLines,
   sha256Hex,
@@ -1401,6 +1402,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
           {[
             ["edit", t("Contenu")],
             ["design", t("Design")],
+            ["studio", t("Studio")],
             ["preview", t("Aperçu")],
           ].map(([id, label]) => (
             <button
@@ -1515,6 +1517,18 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
             {t("OK")}
           </button>
         </p>
+      )}
+
+      {/* ─── Vue STUDIO : édition page par page (Digital Publishing Studio) ── */}
+      {view === "studio" && (
+        <DocStudio
+          doc={meta}
+          docMeta={meta}
+          html={editor?.getHTML() || ""}
+          onClose={() => setView("edit")}
+          onSaved={() => setSaveState("saved")}
+          t={t}
+        />
       )}
 
       {/* ─── Vue CONTENU : éditeur TipTap + import + mise en forme ────────── */}

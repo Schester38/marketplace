@@ -22,7 +22,9 @@ function fontName(style) {
   return "normal";
 }
 
-async function toDataUrl(src) {
+// Récupère une image en dataURL (dataURL direct, ou téléchargement http(s)).
+// Exportée : le Studio (studioExport.js) dessine les mêmes images dans le PDF.
+export async function toDataUrl(src) {
   if (!src) return null;
   if (src.startsWith("data:")) return src;
   try {

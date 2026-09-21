@@ -1,0 +1,1336 @@
+// ─── DocStudio — Digital Publishing Studio (§2 à §28) ────────────────────────
+// Studio d'édition page par page ouvert sur le document paginé du Générateur :
+// colonne de pages (miniatures, réorganisation, duplication), canvas éditable
+// (StudioCanvas), inspecteur (texte riche, calques, alignements, données),
+// IA page par page avec confirmation de portée, historique annuler/rétablir,
+// aperçu multi-modes, export PDF/EPUB depuis le modèle structuré.
+// Le document source (docModel TipTap) n'est JAMAIS détruit : le modèle du
+// Studio vit dans `gen_documents.page_layout` (JSONB) et le PDF/EPUB ne sont
+// que des exports (§24 « édition sans destruction »).
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { paginateDocument } from "./paginate.js";
+import { GEN_TEMPLATES, resolveTemplate } from "./templates.js";
+import { api } from "../api.js";
+import {
+  buildStudioPages, readStudio, studioBox, serializeStudio,
+  insertPage, deletePages, duplicatePage, movePage, updatePage, patchPages, patchElements,
+  cloneElement, addElement, addElements, removeElements, reorderElement, sortedElements, mergeElement,
+  overflowPx, studioCheck, alignOffsets, distributeOffsets, ALIGN_MODES,
+  buildCoverPage, buildTocPage,
+  uid, round1, isTextType, elementLabel,
+} from "./studioModel.js";
+import {
+  ELEMENT_LIBRARY, PAGE_KINDS, buildPage, PAGE_LAYOUTS, applyLayout, smartLayouts, describePage, newElement,
+} from "./studioLayouts.js";
+import {
+  parsePageInstruction, describeScope, distributeText, pageWordCount, pageTextForAi, AI_PAGE_EXAMPLES,
+} from "./studioAi.js";
+import { parseDesignCommand } from "./designCommands.js";
+import { exportStudioPdf, exportStudioEpub } from "./studioExport.js";
+import StudioCanvas from "./StudioCanvas.jsx";
+
+// ─── Helpers module ──────────────────────────────────────────────────────────
+const mm = (v) => `${round1(Number(v || 0))} mm`;
+const stripHtml = (h) => String(h || "").replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, "").replace(/&[a-z]+;/gi, " ").replace(/\s+/g, " ").trim();
+
+/** Modèle actif du document (template + style_overrides) — même règle que le PDF. */
+export function resolveActiveTemplate(docMeta = {}) {
+  const base = GEN_TEMPLATES.find((x) => x.id === (docMeta.template_id || "moderne")) || GEN_TEMPLATES[0];
+  try {
+    return resolveTemplate(base, docMeta.style_overrides);
+  } catch {
+    return base;
+  }
+}
+
+/** Patchs multiples sur une page (protocole des gestes du canvas). */
+function applyPatchesToPage(pages, pageId, patches) {
+  return pages.map((p) => {
+    if (p.id !== pageId) return p;
+    let els = p.elements;
+    for (const { id, patch } of patches) els = els.map((el) => (el.id === id ? mergeElement(el, patch) : el));
+    return { ...p, elements: els };
+  });
+}
+/** Entrées de sommaire dérivées des titres du document (page « Sommaire » §7). */
+function tocEntries(pgs) {
+  return (pgs || []).flatMap((p, i) =>
+    sortedElements(p)
+      .filter((e) => e.type === "heading" || e.type === "chapter")
+      .map((e) => ({ text: stripHtml(e.html).slice(0, 120), page: i + 1, level: e.type === "chapter" ? 1 : 2 })),
+  );
+}
+
+/** Y de fin de contenu : les nouveaux éléments s'empilent sous les existants. */
+function stackY(page, box) {
+  let y = box.m.top;
+  for (const el of sortedElements(page)) {
+    if (!el.hidden && el.type !== "header" && el.type !== "footer" && el.type !== "pageNumber") {
+      y = Math.max(y, el.box.y + el.box.h);
+    }
+  }
+  return round1(Math.min(y + 4, box.h - box.m.bottom - 6));
+}
+
+// ─── Import d'images dans le Studio (§3 « cliquer sur une image → remplacer »,
+// §6 « image, galerie ») : le fichier choisi est redimensionné dans le
+// navigateur (max 1400 px, JPEG 82 %) pour rester compatible avec la limite de
+// 2 Mo du modèle serveur (`gen_documents.page_layout`).
+const STUDIO_IMG_MAX_BYTES = 1_600_000;
+const MEDIA_TYPES = ["image", "logo", "gallery"];
+async function fileToStudioImage(file) {
+  if (!file) throw new Error("Fichier image illisible.");
+  if (!/^image\//.test(file.type || "")) throw new Error("Seules les images sont acceptées (JPG, PNG, WebP, GIF).");
+  if (file.size > 12 * 1024 * 1024) throw new Error("Image trop lourde (12 Mo maximum).");
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const im = new window.Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error("Fichier image illisible."));
+      im.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    for (const [maxPx, quality] of [[1400, 0.82], [1000, 0.72], [760, 0.62]]) {
+      const scale = Math.min(1, maxPx / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+      const w = Math.max(1, Math.round((img.naturalWidth || 1) * scale));
+      const h = Math.max(1, Math.round((img.naturalHeight || 1) * scale));
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      const data = canvas.toDataURL("image/jpeg", quality);
+      if (data.length <= STUDIO_IMG_MAX_BYTES) return data;
+    }
+    throw new Error("Image trop lourde — choisissez une image plus petite.");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tProp }) {
+  const t = tProp || ((s) => s);
+  // ─── État ──────────────────────────────────────────────────────────────────
+  const [pages, setPages] = useState(null); // null = conversion en cours
+  const [box, setBox] = useState(() => studioBox(docMeta));
+  const [template, setTemplate] = useState(() => resolveActiveTemplate(docMeta));
+  const [activeId, setActiveId] = useState(null);
+  const [selIds, setSelIds] = useState([]); // éléments sélectionnés (canvas)
+  const [past, setPast] = useState([]); // historique : { id, label, at, pages }
+  const [future, setFuture] = useState([]);
+  const [zoom, setZoom] = useState(0.85);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedAt, setSavedAt] = useState(null);
+  const [busy, setBusy] = useState("load"); // load | pdf | epub | ai
+  const [error, setError] = useState("");
+  const [toast, setToast] = useState("");
+  const [panel, setPanel] = useState("add"); // add | text | element | layers | history | ai | multi | layout | check
+  const [mode, setMode] = useState("edit"); // edit | preview
+  const [previewMode, setPreviewMode] = useState("single"); // single | spread | mobile
+  const [selPageIds, setSelPageIds] = useState([]); // multi-pages (§11)
+  const [pageSearch, setPageSearch] = useState("");
+  const [pageView, setPageView] = useState("grid"); // grid | list
+  const [aiText, setAiText] = useState("");
+  const [aiMode, setAiMode] = useState("design"); // design | content (§10)
+  const [aiResult, setAiResult] = useState(null);
+  const [pendingPlan, setPendingPlan] = useState(null); // confirmation de portée (§12/§26)
+  const [check, setCheck] = useState(null);
+  const [menu, setMenu] = useState(null); // menu contextuel { x, y, elId }
+  const [addOpen, setAddOpen] = useState(false); // « + Ajouter une page »
+  const [designChoices, setDesignChoices] = useState(null); // { pageId, options } (§8)
+  const [dragIdx, setDragIdx] = useState(null);
+  const gestureSnap = useRef(null);
+  const clipboardEl = useRef(null);
+  const fileRef = useRef(null); // <input type="file"> caché — images (§3/§6)
+  const fileIntent = useRef(null); // { intent: "add" | "replace", typeId }
+  const previewRef = useRef(null); // conteneur de l'aperçu — plein écran (§19)
+  const saveTimer = useRef(null);
+  const pagesRef = useRef(null);
+  pagesRef.current = pages;
+  const activeIdRef = useRef(null);
+  activeIdRef.current = activeId;
+  const activePage = useMemo(() => (pages || []).find((p) => p.id === activeId) || null, [pages, activeId]);
+  const totalPages = (pages || []).length;
+  // ─── Toast / erreur ─────────────────────────────────────────────────────────
+  const flash = useCallback((msg) => {
+    setToast(msg);
+    setTimeout(() => setToast((cur) => (cur === msg ? "" : cur)), 2600);
+  }, []);
+
+  // ─── Chargement : modèle Studio existant, sinon conversion du document ──────
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const stored = readStudio(doc?.page_layout);
+      if (stored && stored.length) {
+        if (!alive) return;
+        setPages(stored);
+        setActiveId(stored[0].id);
+        setBusy("");
+        return;
+      }
+      try {
+        const paginated = await paginateDocument({
+          html: html || "",
+          doc: docMeta || {},
+          toc: docMeta?.protection?.toc !== false,
+        });
+        const built = buildStudioPages({ paginated, docMeta: docMeta || {} });
+        if (!alive) return;
+        setBox(paginated.box);
+        setTemplate(paginated.template);
+        setPages(built);
+        setActiveId(built[0]?.id || null);
+        setBusy("");
+      } catch (e) {
+        if (!alive) return;
+        setError(e?.message || t("Conversion du document impossible"));
+        setPages([]);
+        setBusy("");
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─── Sauvegarde + automatique (§2) ─────────────────────────────────────────
+  const markDirty = useCallback(() => {
+    setDirty(true);
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => saveRef.current(true), 2500); // autosave 2,5 s
+  }, []);
+  const save = useCallback(
+    async (silent = false) => {
+      if (!doc?.id) return;
+      setSaving(true);
+      setError("");
+      try {
+        await api.genSaveDocument(doc.id, {
+          page_layout: serializeStudio(pagesRef.current || [], { template_id: docMeta?.template_id || "" }),
+        });
+        setDirty(false);
+        setSavedAt(new Date());
+        onSaved?.();
+        if (!silent) flash(t("Document enregistré."));
+      } catch (e) {
+        setError(e?.message || t("Enregistrement impossible"));
+      } finally {
+        setSaving(false);
+      }
+    },
+    [doc?.id, docMeta?.template_id, onSaved, t, flash],
+  );
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  useEffect(() => () => clearTimeout(saveTimer.current), []);
+
+  // ─── Historique (§17) : annuler / rétablir + journal lisible ────────────────
+  const commit = useCallback(
+    (label, nextPages) => {
+      setPast((p) => [...p.slice(-79), { id: uid("h"), label, at: new Date().toISOString(), pages: pagesRef.current }]);
+      setFuture([]);
+      setPages(nextPages);
+      markDirty();
+    },
+    [markDirty],
+  );
+  const undo = useCallback(() => {
+    setPast((p) => {
+      if (!p.length) return p;
+      const entry = p[p.length - 1];
+      setFuture((f) => [...f, { id: uid("h"), label: entry.label, at: entry.at, pages: pagesRef.current }]);
+      setPages(entry.pages);
+      markDirty();
+      return p.slice(0, -1);
+    });
+  }, [markDirty]);
+  const redo = useCallback(() => {
+    setFuture((f) => {
+      if (!f.length) return f;
+      const entry = f[f.length - 1];
+      setPast((p) => [...p, { id: uid("h"), label: entry.label, at: entry.at, pages: pagesRef.current }]);
+      setPages(entry.pages);
+      markDirty();
+      return f.slice(0, -1);
+    });
+  }, [markDirty]);
+
+  // ─── Protocole des gestes du canvas (sélection → patchs vifs → validation) ──
+  const beginGesture = useCallback((label) => {
+    gestureSnap.current = { label, pages: pagesRef.current };
+  }, []);
+  const applyLive = useCallback(
+    (patches) => {
+      setPages((cur) => applyPatchesToPage(cur || [], activeIdRef.current, patches));
+      markDirty();
+    },
+    [markDirty],
+  );
+  const endGesture = useCallback((cancel) => {
+    const snap = gestureSnap.current;
+    gestureSnap.current = null;
+    if (!snap) return;
+    if (cancel) {
+      setPages(snap.pages);
+      return;
+    }
+    setPast((p) => [...p.slice(-79), { id: uid("h"), label: snap.label, at: new Date().toISOString(), pages: snap.pages }]);
+    setFuture([]);
+  }, []);
+  const onSelectEls = useCallback((ids, additive) => {
+    setSelIds((cur) => (additive ? [...new Set([...cur, ...ids])] : ids));
+  }, []);
+  // ─── Opérations sur les PAGES (§2, §7, §15, §16) ────────────────────────────
+  const helpers = useMemo(
+    () => ({
+      buildCoverPage: (dm, tpl, bx) => buildCoverPage(dm || docMeta || {}, tpl, bx),
+      buildTocPage: (data, tpl, bx) => buildTocPage(data, tpl, bx),
+      entries: () => tocEntries(pagesRef.current),
+    }),
+    [docMeta],
+  );
+  const addPage = useCallback(
+    (kindId) => {
+      const cur = pagesRef.current || [];
+      const at = cur.findIndex((p) => p.id === activeIdRef.current);
+      const page = buildPage(kindId, template, box, docMeta || {}, { ...helpers, entries: tocEntries(cur) });
+      commit(`Nouvelle page ajoutée (${PAGE_KINDS.find((k) => k.id === kindId)?.label || kindId})`, insertPage(cur, page, at + 1));
+      setActiveId(page.id);
+      setSelIds([]);
+      setAddOpen(false);
+      flash(t("Page ajoutée."));
+    },
+    [template, box, docMeta, helpers, commit, t, flash],
+  );
+  const doDuplicatePage = useCallback(
+    (pageId) => {
+      commit("Page dupliquée", duplicatePage(pagesRef.current || [], pageId, { toEnd: true }));
+      flash(t("Page dupliquée — textes, images et styles conservés."));
+    },
+    [commit, t, flash],
+  );
+  const doDeletePages = useCallback(
+    (ids) => {
+      const cur = pagesRef.current || [];
+      if (cur.length <= (Array.isArray(ids) ? ids.length : 1)) {
+        flash(t("Le document doit garder au moins une page."));
+        return;
+      }
+      const next = deletePages(cur, ids);
+      commit("Page supprimée", next);
+      if (ids.includes(activeIdRef.current)) setActiveId(next[0]?.id || null);
+      setSelPageIds([]);
+      flash(t("Page supprimée."));
+    },
+    [commit, t, flash],
+  );
+  const doMovePage = useCallback((from, to) => commit("Page déplacée", movePage(pagesRef.current || [], from, to)), [commit]);
+  const goPage = useCallback((id) => {
+    setActiveId(id);
+    setSelIds([]);
+    setMode("edit");
+  }, []);
+  const filteredPages = useMemo(() => {
+    const q = pageSearch.trim().toLowerCase();
+    if (!q) return pages || [];
+    return (pages || []).filter(
+      (p) =>
+        String(p.number).includes(q) ||
+        (p.label || "").toLowerCase().includes(q) ||
+        (p.kind || "").toLowerCase().includes(q) ||
+        (p.elements || []).some((e) => stripHtml(e.html).toLowerCase().includes(q)),
+    );
+  }, [pages, pageSearch]);
+  const toggleSelPage = useCallback((id) => {
+    setSelPageIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  }, []);
+
+  // ─── Changement de design d'une page (§8) + Smart Layout (§21) ─────────────
+  function applyLayoutOn(pgs, pageId, layoutId) {
+    return pgs.map((p) => (p.id === pageId ? applyLayout(p, layoutId, box) : p));
+  }
+  const openDesignChoices = useCallback(() => {
+    if (!activePage) return;
+    setDesignChoices({ pageId: activePage.id, options: smartLayouts(activePage).slice(0, 6) });
+    setPanel("layout");
+  }, [activePage, box]);
+  const applyPageLayout = useCallback(
+    (pageId, layoutId) => {
+      const cur = pagesRef.current || [];
+      const page = cur.find((p) => p.id === pageId);
+      if (page?.locked?.design) {
+        flash(t("Design verrouillé : la mise en page ne peut pas être modifiée."));
+        return;
+      }
+      // Multi-pages (§11) : un layout choisi s'applique à toute la sélection.
+      const ids = selPageIds.length > 1 && selPageIds.includes(pageId) ? selPageIds : [pageId];
+      let next = cur;
+      for (const id of ids) next = applyLayoutOn(next, id, layoutId);
+      const label = PAGE_LAYOUTS.find((l) => l.id === layoutId)?.label || layoutId;
+      commit(`Design de la page modifié (${label})${ids.length > 1 ? ` — ${ids.length} pages` : ""}`, next);
+      setDesignChoices(null);
+      flash(t("Mise en page appliquée — contenu conservé."));
+    },
+    [selPageIds, commit, t, flash],
+  );
+  // ─── Opérations sur les ÉLÉMENTS (§3-§6, §13, §14, §16) ────────────────────
+  const curPage = () => (pagesRef.current || []).find((p) => p.id === activeIdRef.current) || null;
+  const addElementOf = useCallback(
+    (typeId) => {
+      const page = curPage();
+      if (!page) return;
+      const el = newElement(template, typeId, box, { docMeta: docMeta || {}, y: stackY(page, box), autoH: true });
+      commit(`Élément ajouté (${elementLabel(el)})`, addElement(pagesRef.current || [], page.id, el));
+      setSelIds([el.id]);
+      setPanel("text");
+      setMenu(null);
+    },
+    [template, box, docMeta, commit],
+  );
+  // ─── Images (§3 « remplacer l'image », §6 « image / galerie ») ─────────────
+  const askImage = useCallback((intent, typeId) => {
+    fileIntent.current = { intent, typeId: typeId || "image" };
+    const input = fileRef.current;
+    if (!input) return;
+    input.value = "";
+    input.click();
+  }, []);
+  const onImagePicked = useCallback(
+    async (file) => {
+      const intent = fileIntent.current || { intent: "add", typeId: "image" };
+      fileIntent.current = null;
+      if (!file) return;
+      const page = curPage();
+      if (!page) return;
+      try {
+        const src = await fileToStudioImage(file);
+        if (intent.intent === "replace") {
+          const targets = page.elements.filter((e) => selIds.includes(e.id) && MEDIA_TYPES.includes(e.type));
+          if (!targets.length) return;
+          patchEls(
+            targets.map((e) =>
+              e.type === "gallery"
+                ? { id: e.id, patch: { data: { ...(e.data || {}), items: [...((e.data || {}).items || []), src] } } }
+                : { id: e.id, patch: { src } },
+            ),
+            "Image remplacée",
+          );
+          flash(t("Image mise à jour."));
+          return;
+        }
+        const el = newElement(template, intent.typeId, box, { docMeta: docMeta || {}, y: stackY(page, box) });
+        el.src = src;
+        if (el.type === "gallery") el.data = { ...(el.data || {}), items: [src] };
+        commit("Image importée", addElement(pagesRef.current || [], page.id, el));
+        setSelIds([el.id]);
+        setPanel("text");
+        flash(t("Image ajoutée."));
+      } catch (e) {
+        setError(e?.message || t("Fichier image illisible."));
+      }
+    },
+    [selIds, patchEls, template, box, docMeta, commit, t, flash],
+  );
+  const doDuplicateEls = useCallback(() => {
+    const page = curPage();
+    if (!page || !selIds.length) return;
+    const clones = page.elements.filter((e) => selIds.includes(e.id)).map((e) => {
+      const c = cloneElement(e);
+      c.box = { ...c.box, x: round1(c.box.x + 4), y: round1(c.box.y + 4) };
+      return c;
+    });
+    commit("Élément dupliqué", addElements(pagesRef.current || [], page.id, clones));
+    setSelIds(clones.map((c) => c.id));
+    setMenu(null);
+  }, [selIds, commit]);
+  const doDeleteEls = useCallback(() => {
+    const page = curPage();
+    if (!page || !selIds.length) return;
+    commit("Élément supprimé", removeElements(pagesRef.current || [], page.id, selIds));
+    setSelIds([]);
+    setMenu(null);
+  }, [selIds, commit]);
+  const copyEls = useCallback(() => {
+    const page = curPage();
+    const els = (page?.elements || []).filter((e) => selIds.includes(e.id));
+    if (els.length) {
+      clipboardEl.current = els.map(cloneElement);
+      flash(t(`${els.length} élément(s) copié(s) — collez-les sur une autre page.`));
+      setMenu(null);
+    }
+  }, [selIds, t, flash]);
+  const cutEls = useCallback(() => {
+    copyEls();
+    doDeleteEls();
+  }, [copyEls, doDeleteEls]);
+  const pasteEls = useCallback(() => {
+    const page = curPage();
+    if (!page || !clipboardEl.current?.length) return;
+    const clones = clipboardEl.current.map((e) => {
+      const c = cloneElement(e);
+      c.box = { ...c.box, x: round1(Math.min(c.box.x + 4, box.w - c.box.w - 2)), y: round1(Math.min(c.box.y + 4, box.h - c.box.h - 2)) };
+      return c;
+    });
+    commit("Élément collé", addElements(pagesRef.current || [], page.id, clones));
+    setSelIds(clones.map((c) => c.id));
+    setMenu(null);
+    flash(t("Collé sur cette page."));
+  }, [box, commit, t, flash]);
+  const patchEls = useCallback(
+    (patches, label) => {
+      const page = curPage();
+      if (!page) return;
+      // Verrous de page (§22) : le contenu et le design se protègent séparément.
+      const lock = page.locked || {};
+      const touchesContent = patches.some((p) => p.patch && ("html" in p.patch || "src" in p.patch || "data" in p.patch));
+      const touchesDesign = patches.some((p) => p.patch && ("box" in p.patch || "rot" in p.patch || "style" in p.patch || "z" in p.patch || "hidden" in p.patch || "opacity" in p.patch));
+      if (lock.content && touchesContent && !touchesDesign) {
+        flash(t("Contenu verrouillé : le texte ne peut pas être modifié."));
+        return;
+      }
+      if (lock.design && touchesDesign) {
+        flash(t("Design verrouillé : la mise en page ne peut pas être modifiée."));
+        return;
+      }
+      commit(label, applyPatchesToPage(pagesRef.current || [], page.id, patches));
+    },
+    [commit, t, flash],
+  );
+  const toggleLockEls = useCallback(
+    (lock) => patchEls(selIds.map((id) => ({ id, patch: { locked: lock } })), lock ? "Éléments verrouillés" : "Éléments déverrouillés"),
+    [selIds, patchEls],
+  );
+  const toggleHideEls = useCallback(
+    (hidden) => patchEls(selIds.map((id) => ({ id, patch: { hidden } })), hidden ? "Calque masqué" : "Calque affiché"),
+    [selIds, patchEls],
+  );
+  const reorderSel = useCallback(
+    (dir) => {
+      const page = curPage();
+      if (!page || !selIds.length) return;
+      let next = pagesRef.current || [];
+      for (const id of selIds) next = reorderElement(next, page.id, id, dir);
+      commit("Ordre des calques modifié", next);
+    },
+    [selIds, commit],
+  );
+  const alignSel = useCallback(
+    (modeId) => {
+      const page = curPage();
+      if (!page || !selIds.length) return;
+      const chosen = selIds.map((id) => page.elements.find((e) => e.id === id)).filter(Boolean);
+      const boxes = chosen.map((e) => e.box);
+      const ref = chosen[chosen.length - 1]?.box;
+      const offs = boxes.length > 1 ? alignOffsets(boxes, modeId, ref) : alignOffsets(boxes, modeId, null, box);
+      commit(
+        "Éléments alignés",
+        applyPatchesToPage(
+          pagesRef.current || [],
+          page.id,
+          chosen.map((e, i) => ({ id: e.id, patch: { box: { x: round1(e.box.x + offs[i].dx), y: round1(e.box.y + offs[i].dy) } } })),
+        ),
+      );
+    },
+    [selIds, box, commit],
+  );
+  const distributeSel = useCallback(
+    (axis) => {
+      const page = curPage();
+      if (!page || selIds.length < 3) {
+        flash(t("Sélectionnez au moins 3 éléments pour distribuer."));
+        return;
+      }
+      const chosen = selIds.map((id) => page.elements.find((e) => e.id === id)).filter(Boolean);
+      const offs = distributeOffsets(chosen.map((e) => e.box), axis);
+      commit(
+        "Éléments distribués",
+        applyPatchesToPage(
+          pagesRef.current || [],
+          page.id,
+          chosen.map((e, i) => ({ id: e.id, patch: { box: { x: round1(e.box.x + offs[i].dx), y: round1(e.box.y + offs[i].dy) } } })),
+        ),
+      );
+    },
+    [selIds, commit, t, flash],
+  );
+  const selEls = useMemo(() => (activePage ? sortedElements(activePage).filter((e) => selIds.includes(e.id)) : []), [activePage, selIds]);
+  const overflow = useMemo(() => (activePage ? overflowPx(activePage, box) : null), [activePage, box]);
+  // ─── IA page par page (§9, §10, §26) ───────────────────────────────────────
+  // Portée affichée AVANT application (§26 « Pages concernées : … ») ; le mode
+  // « design » ne touche jamais au texte (§10).
+  const buildAiPlan = useCallback(() => {
+    const instruction = aiText.trim();
+    if (!instruction) {
+      flash(t("Décrivez la modification souhaitée."));
+      return null;
+    }
+    const plan = parsePageInstruction(instruction, { page: activePage, pageIndex: (pages || []).findIndex((p) => p.id === activeId), totalPages });
+    return { ...plan, mode: aiMode, kind: "ai" };
+  }, [aiText, activePage, pages, activeId, totalPages, aiMode, t, flash]);
+  const previewAi = useCallback(() => {
+    const plan = buildAiPlan();
+    if (plan) setPendingPlan(plan);
+  }, [buildAiPlan]);
+  const pageTextForAiSafe = useCallback((page) => (page ? pageTextForAi(page, { target: "text" }) : ""), []);
+  const runAi = useCallback(
+    async (plan) => {
+      setPendingPlan(null);
+      const lock = activePage?.locked || {};
+      if (plan.mode === "design" && lock.design) {
+        flash(t("Design verrouillé : la mise en page ne peut pas être modifiée."));
+        return;
+      }
+      if (plan.mode !== "design" && lock.content) {
+        flash(t("Contenu verrouillé : le texte ne peut pas être modifié."));
+        return;
+      }
+      setBusy("ai");
+      setError("");
+      try {
+        const res = await api.genAi({
+          action: "page_edit",
+          instruction: plan.instruction,
+          mode: plan.mode,
+          page_count: plan.scope === "page" ? 1 : totalPages,
+          page_text: plan.scope === "page" ? pageTextForAiSafe(activePage) : "",
+        });
+        const raw = res?.text || res?.result || "";
+        let nextPages = pages || [];
+        let applied = 0;
+        const targets = plan.scope === "page" ? [activeId] : (pages || []).map((p) => p.id);
+        if (plan.mode === "design") {
+          // Design uniquement : couleurs/polices/disposition, le texte reste identique (§10).
+          const cmd = parseDesignCommand(plan.instruction);
+          if (cmd?.style_overrides && Object.keys(cmd.style_overrides).length) {
+            nextPages = nextPages.map((p) => (targets.includes(p.id) ? { ...p, style_overrides: { ...(p.style_overrides || {}), ...cmd.style_overrides } } : p));
+            applied++;
+          }
+          if (cmd?.layout) {
+            for (const id of targets) nextPages = applyLayoutOn(nextPages, id, cmd.layout);
+            applied++;
+          }
+        } else if (raw) {
+          // Contenu + design : le texte renvoyé est réparti sur la/les page(s).
+          for (const id of targets) {
+            const page = (nextPages || []).find((p) => p.id === id);
+            const pag = page ? distributeText(page, raw, { target: plan.target || "text" }) : null;
+            if (pag) {
+              nextPages = nextPages.map((p) => (p.id === id ? pag : p));
+              applied++;
+            }
+          }
+        }
+        if (!applied) {
+          flash(t("L'IA n'a pas proposé de modification exploitable pour cette portée."));
+          return;
+        }
+        commit(plan.scope === "page" ? `IA — page unique (${describeScope(plan)})` : `IA — toutes les pages (${describeScope(plan)})`, nextPages);
+        setAiResult({ scope: describeScope(plan), ok: true });
+        flash(t("Modification IA appliquée."));
+      } catch (e) {
+        setError(e?.message || t("IA indisponible"));
+      } finally {
+        setBusy("");
+      }
+    },
+    [pages, activeId, activePage, totalPages, commit, t, flash, pageTextForAiSafe],
+  );
+  // ─── Multi-pages (§11) et global (§12) ─────────────────────────────────────
+  const applyMultiPatch = useCallback(
+    (label, overrides) => {
+      const all = pages || [];
+      const wanted = selPageIds.length ? selPageIds : all.map((p) => p.id);
+      const ids = wanted.filter((id) => !all.find((p) => p.id === id)?.locked?.design);
+      if (!ids.length) {
+        flash(t("Design verrouillé : la mise en page ne peut pas être modifiée."));
+        return;
+      }
+      setPendingPlan({ kind: "multi", label: `${label} — ${ids.length} page(s)`, ids, patch: { style_overrides: overrides || {} } });
+    },
+    [selPageIds, pages, t, flash],
+  );
+  const applyMultiFont = useCallback((fontFamily) => applyMultiPatch(`Police ${fontFamily}`, { bodyFont: fontFamily }), [applyMultiPatch]);
+  // ─── Verrouillage de page (§22 : contenu / design, séparément) ─────────────
+  const setPageLock = useCallback(
+    (key, value) => {
+      const ids = selPageIds.length ? selPageIds : [activeIdRef.current];
+      const next = patchPages(pagesRef.current || [], ids, (p) => ({ ...p, locked: { ...(p.locked || {}), [key]: !!value } }));
+      commit(`Verrouillage ${key === "design" ? "design" : "contenu"} — ${ids.length} page(s)`, next);
+      flash(t("Verrouillage mis à jour."));
+    },
+    [selPageIds, commit, t, flash],
+  );
+  // ─── Éléments éditoriaux sur la sélection (§11) ───────────────────────────
+  const addEditorialToPages = useCallback(
+    (ids, typeId) => {
+      const cur = pagesRef.current || [];
+      let next = cur;
+      let added = 0;
+      for (const id of ids) {
+        const page = next.find((p) => p.id === id);
+        if (!page || page.elements.some((e) => e.type === typeId)) continue;
+        next = addElement(next, id, newElement(template, typeId, box, { docMeta: docMeta || {} }));
+        added++;
+      }
+      if (!added) {
+        flash(t("Déjà présent sur les pages concernées."));
+        return;
+      }
+      commit(`Éléments éditoriaux (${typeId}) — ${added} page(s)`, next);
+      flash(t("Ajouté aux pages concernées."));
+    },
+    [template, box, docMeta, commit, t, flash],
+  );
+  // ─── Débordement (§20) : solutions en un clic ─────────────────────────────
+  const reduceFontsActive = useCallback(() => {
+    const page = curPage();
+    if (!page) return;
+    const next = patchPages(pagesRef.current || [], [page.id], (p) => ({
+      ...p,
+      elements: p.elements.map((el) => (isTextType(el) && el.style?.size ? { ...el, style: { ...el.style, size: Math.max(7, round1(el.style.size - 0.5)) } } : el)),
+    }));
+    commit("Police réduite (débordement)", next);
+    flash(t("Police réduite — vérifiez le résultat."));
+  }, [commit, t, flash]);
+  const nudgeOverflow = useCallback(() => {
+    const page = curPage();
+    if (!page) return;
+    const bottom = round1(box.h - box.m.bottom);
+    const target = sortedElements(page)
+      .filter((e) => !e.hidden && round1(e.box.y + e.box.h) > bottom)
+      .sort((a, b) => b.box.y + b.box.h - (a.box.y + a.box.h))[0];
+    if (!target) {
+      flash(t("Aucun élément ne dépasse de la page."));
+      return;
+    }
+    const delta = Math.max(1, round1(target.box.y + target.box.h - bottom));
+    const next = patchPages(pagesRef.current || [], [page.id], (p) => ({
+      ...p,
+      elements: p.elements.map((e) => (e.id === target.id ? { ...e, box: { ...e.box, y: Math.max(box.m.top, round1(e.box.y - delta)) } } : e)),
+    }));
+    commit("Élément remonté (débordement)", next);
+    flash(t("Élément remonté dans la page."));
+  }, [box, commit, t, flash]);
+  // ─── Aperçu plein écran (§19) ─────────────────────────────────────────────
+  const toggleFullscreen = useCallback(() => {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen?.();
+      else previewRef.current?.requestFullscreen?.();
+    } catch { /* plein écran indisponible : l'aperçu reste utilisable */ }
+  }, []);
+  const confirmPending = useCallback(() => {
+    const plan = pendingPlan;
+    if (!plan) return;
+    setPendingPlan(null);
+    if (plan.kind === "multi") {
+      const ids = new Set(plan.ids);
+      const ovr = plan.patch.style_overrides || {};
+      commit(plan.label, (pages || []).map((p) => (ids.has(p.id) && Object.keys(ovr).length ? { ...p, style_overrides: { ...(p.style_overrides || {}), ...ovr } } : p)));
+      flash(t("Modification appliquée."));
+    } else if (plan.kind === "ai") {
+      runAi(plan);
+    }
+  }, [pendingPlan, pages, commit, t, flash, runAi]);
+
+  // ─── Contrôle qualité (§20) ────────────────────────────────────────────────
+  const runCheck = useCallback(() => {
+    setCheck(studioCheck(pagesRef.current || [], box, docMeta || {}));
+    setPanel("check");
+  }, [box, docMeta]);
+
+  // ─── Exports (§19 : PDF/EPUB ne sont que des exports du modèle) ────────────
+  const doExport = useCallback(
+    async (kind) => {
+      setBusy(kind);
+      setError("");
+      try {
+        const opts = { pages: pagesRef.current || [], docMeta: docMeta || {} };
+        if (kind === "pdf") await exportStudioPdf({ ...opts, filename: `${doc?.ref || "document"}-studio.pdf` });
+        else await exportStudioEpub(opts);
+        flash(t(kind === "pdf" ? "PDF exporté." : "EPUB exporté."));
+      } catch (e) {
+        setError(e?.message || t("Export impossible"));
+      } finally {
+        setBusy("");
+      }
+    },
+    [doc?.ref, docMeta, t, flash],
+  );
+  // ─── Raccourcis clavier (§27) ──────────────────────────────────────────────
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!activeId || mode !== "edit") return;
+      const tag = (e.target?.tagName || "").toLowerCase();
+      const typing = tag === "input" || tag === "textarea" || e.target?.isContentEditable;
+      const mod = e.ctrlKey || e.metaKey;
+      const k = (e.key || "").toLowerCase();
+      if (mod && k === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if ((mod && k === "y") || (mod && e.shiftKey && k === "z")) {
+        e.preventDefault();
+        redo();
+      } else if (mod && k === "s") {
+        e.preventDefault();
+        saveRef.current(false);
+      } else if (mod && k === "c" && !typing && selIds.length) {
+        copyEls();
+      } else if (mod && k === "v" && !typing) {
+        pasteEls();
+      } else if (mod && k === "x" && !typing && selIds.length) {
+        cutEls();
+      } else if ((e.key === "Delete" || e.key === "Backspace") && !typing && selIds.length) {
+        e.preventDefault();
+        doDeleteEls();
+      } else if (e.key === "Escape") {
+        setMenu(null);
+        setSelIds([]);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [activeId, mode, selIds, undo, redo, copyEls, pasteEls, cutEls, doDeleteEls]);
+  // ─── Rendu ──────────────────────────────────────────────────────────────────
+  if (busy === "load") {
+    return (
+      <div className="studio-root">
+        <div className="studio-loading">⏳ {t("Préparation de l'éditeur page par page…")}</div>
+      </div>
+    );
+  }
+  const timeShort = (iso) => (iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "");
+  return (
+    <div className="studio-root">
+      {/* Sélecteur de fichier caché — import/remplacement d'image (§3/§6) */}
+      <input
+        ref={fileRef}
+        type="file"
+        className="studio-fileinput"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        onChange={(e) => onImagePicked(e.target.files?.[0])}
+      />
+      {/* Barre supérieure (§2) */}
+      <div className="studio-topbar">
+        <button type="button" className="btn btn-outline btn-small" onClick={onClose} title={t("Retour au document")}>
+          ←
+        </button>
+        <div className="studio-docname" title={doc?.ref}>
+          📗 {doc?.title || doc?.ref || t("Document")}
+        </div>
+        <button type="button" className="btn btn-small" onClick={() => saveRef.current(false)} disabled={saving}>
+          {saving ? "…" : `💾 ${t("Enregistrer")}`}
+        </button>
+        <span className="studio-autosave">
+          {dirty ? `● ${t("modifications en cours")}` : savedAt ? `✓ ${t("enregistré")} ${timeShort(savedAt.toISOString())}` : t("sauvegarde automatique activée")}
+        </span>
+        <span className="studio-sep" />
+        <button type="button" className="btn btn-outline btn-small" onClick={undo} disabled={!past.length} title="Annuler (Ctrl+Z)">↩</button>
+        <button type="button" className="btn btn-outline btn-small" onClick={redo} disabled={!future.length} title="Rétablir (Ctrl+Y)">↪</button>
+        <span className="studio-sep" />
+        <button type="button" className="btn btn-outline btn-small" onClick={() => setZoom((z) => Math.max(0.3, Math.round((z - 0.1) * 10) / 10))} title="Zoom −">−</button>
+        <span className="studio-zoomval">{Math.round(zoom * 100)} %</span>
+        <button type="button" className="btn btn-outline btn-small" onClick={() => setZoom((z) => Math.min(2, Math.round((z + 0.1) * 10) / 10))} title="Zoom +">+</button>
+        <span className="studio-sep" />
+        <button type="button" className={`btn btn-small ${mode === "preview" ? "" : "btn-outline"}`} onClick={() => setMode(mode === "preview" ? "edit" : "preview")}>
+          👁 {t("Aperçu")}
+        </button>
+        <button type="button" className="btn btn-outline btn-small" onClick={runCheck}>🔍 {t("Vérifier le document")}</button>
+        <button type="button" className="btn btn-outline btn-small" onClick={() => setPanel("ai")} title={t("Générer avec l'IA")}>
+          ✨ {t("IA")}
+        </button>
+        <span className="studio-spacer" />
+        <button type="button" className="btn btn-outline btn-small" onClick={() => doExport("epub")} disabled={busy === "epub"}>📘 EPUB</button>
+        <button type="button" className="btn btn-outline btn-small" onClick={() => doExport("pdf")} disabled={busy === "pdf"}>📄 PDF</button>
+        <button
+          type="button"
+          className="btn btn-outline btn-small"
+          onClick={() => {
+            navigator.clipboard?.writeText(`${window.location.origin}/generateur?ref=${encodeURIComponent(doc?.ref || "")}`);
+            flash(t("Lien de partage copié."));
+          }}
+        >
+          🔗 {t("Partager")}
+        </button>
+      </div>
+      <div className="studio-body">
+        {/* Colonne gauche : pages (§2, §11, §15) */}
+        <aside className="studio-pages">
+          <div className="studio-pages-head">
+            <strong>PAGES</strong>
+            <span>
+              {pageView === "grid" ? (
+                <button type="button" className="studio-iconbtn" onClick={() => setPageView("list")} title={t("Vue liste")}>☰</button>
+              ) : (
+                <button type="button" className="studio-iconbtn" onClick={() => setPageView("grid")} title={t("Vue grille")}>▦</button>
+              )}
+            </span>
+          </div>
+          <input
+            className="studio-pages-search"
+            placeholder={t("Rechercher une page…")}
+            value={pageSearch}
+            onChange={(e) => setPageSearch(e.target.value)}
+          />
+          <div className={`studio-pages-list ${pageView === "grid" ? "is-grid" : "is-list"}`}>
+            {filteredPages.map((p) => {
+              const idx = (pages || []).indexOf(p);
+              return (
+                <div
+                  key={p.id}
+                  className={`studio-pagecard ${p.id === activeId ? "active" : ""} ${selPageIds.includes(p.id) ? "checked" : ""}`}
+                  draggable
+                  onDragStart={() => setDragIdx(idx)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => {
+                    if (dragIdx != null && dragIdx !== idx) doMovePage(dragIdx, idx);
+                    setDragIdx(null);
+                  }}
+                  onClick={() => goPage(p.id)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === "Enter" && goPage(p.id)}
+                >
+                  <label className="studio-pagecheck" onClick={(e) => e.stopPropagation()}>
+                    <input type="checkbox" checked={selPageIds.includes(p.id)} onChange={() => toggleSelPage(p.id)} />
+                  </label>
+                  <div className="studio-pagethumb">
+                    <span className="studio-pagethumb-num">{p.number}</span>
+                    <span className="studio-pagethumb-label">{p.label || describePage(p)}</span>
+                  </div>
+                  <div className="studio-pageactions">
+                    <button type="button" title={t("Dupliquer cette page")} onClick={(e) => { e.stopPropagation(); doDuplicatePage(p.id); }}>⧉</button>
+                    <button type="button" title={t("Supprimer")} onClick={(e) => { e.stopPropagation(); doDeletePages([p.id]); }}>🗑</button>
+                    <button type="button" title={t("Modifier cette page")} onClick={(e) => { e.stopPropagation(); goPage(p.id); }}>✏️</button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <button type="button" className="btn btn-outline btn-small studio-addpage" onClick={() => setAddOpen(true)}>
+            + {t("Ajouter une page")}
+          </button>
+          {selPageIds.length > 0 && (
+            <div className="studio-multipages">
+              <strong>{selPageIds.length} {t("page(s) sélectionnée(s)")}</strong>
+              <button type="button" className="btn btn-outline btn-small" onClick={() => applyMultiPatch("Police serif", { bodyFont: "serif" })}>Aa serif</button>
+              <button type="button" className="btn btn-outline btn-small" onClick={() => applyMultiPatch("Police sans", { bodyFont: "sans" })}>Aa sans</button>
+              <button type="button" className="btn btn-outline btn-small" onClick={() => applyMultiPatch("Couleur d'accent", { accent: template.colors.accent })}>🎨 {t("Couleur")}</button>
+              <button type="button" className="btn btn-outline btn-small studio-danger" onClick={() => doDeletePages(selPageIds)}>🗑 {t("Supprimer la sélection")}</button>
+              <button type="button" className="btn btn-outline btn-small" onClick={() => setSelPageIds([])}>{t("Désélectionner")}</button>
+            </div>
+          )}
+        </aside>
+        {/* Centre : canvas éditable (§3-§5) ou aperçu (§19) */}
+        <main className="studio-center">
+          {error && <div className="studio-error">⚠️ {error}</div>}
+          {mode === "edit" ? (
+            <>
+              {overflow && (
+                <div className="studio-overflowwarn">
+                  ⚠️ {t(`Ce contenu dépasse de ${overflow.px} px de la page.`)}{" "}
+                  <button type="button" className="studio-linkbtn" onClick={() => setPanel("check")}>{t("Voir les solutions")}</button>
+                </div>
+              )}
+              <StudioCanvas
+                page={activePage}
+                box={box}
+                template={template}
+                docMeta={docMeta || {}}
+                totalPages={totalPages}
+                zoom={zoom}
+                selectedIds={selIds}
+                readOnly={false}
+                lockContent={!!activePage?.locked?.content}
+                lockDesign={!!activePage?.locked?.design}
+                onSelect={onSelectEls}
+                onBeginGesture={beginGesture}
+                onPatch={applyLive}
+                onEndGesture={endGesture}
+                onElementMenu={(pos, elId) => setMenu({ ...pos, elId })}
+              />
+            </>
+          ) : (
+            <div className={`studio-preview ${previewMode === "spread" ? "is-spread" : ""} ${previewMode === "mobile" ? "is-mobile" : ""}`}>
+              <div className="studio-preview-tools">
+                {[
+                  { id: "single", label: "1 page" },
+                  { id: "spread", label: t("Deux pages") },
+                  { id: "mobile", label: "📱 " + t("Mobile") },
+                ].map((m) => (
+                  <button key={m.id} type="button" className={`btn btn-outline btn-small ${previewMode === m.id ? "active" : ""}`} onClick={() => setPreviewMode(m.id)}>
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <div className={`studio-preview-pages ${previewMode === "spread" ? "is-spread" : ""}`}>
+                {(pages || []).map((p, i) => (
+                  <div key={p.id} className="studio-preview-page" style={{ width: box.w * PX_PER_MM * zoom, height: box.h * PX_PER_MM * zoom }}>
+                    <StudioCanvas
+                      page={p}
+                      box={box}
+                      template={template}
+                      docMeta={docMeta || {}}
+                      totalPages={totalPages}
+                      zoom={zoom}
+                      selectedIds={[]}
+                      readOnly
+                    />
+                    <button type="button" className="studio-preview-edit" onClick={() => { goPage(p.id); setMode("edit"); }}>
+                      ✏️ {t("Modifier cette page")}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </main>
+        {/* Droite : inspecteur (§4, §6, §9-§14, §17, §20) */}
+        <aside className="studio-inspector">
+          <div className="studio-tabs">
+            {[
+              { id: "add", label: "➕" },
+              { id: "text", label: "🅰" },
+              { id: "layers", label: "🧱" },
+              { id: "ai", label: "✨" },
+              { id: "layout", label: "📐" },
+              { id: "history", label: "🕘" },
+              { id: "check", label: "🔍" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={`studio-tab ${panel === tab.id ? "active" : ""}`}
+                onClick={() => setPanel(tab.id)}
+                title={t(
+                  {
+                    add: "Ajouter des éléments",
+                    text: "Texte et styles",
+                    layers: "Calques",
+                    ai: "Modifier avec l'IA",
+                    layout: "Mise en page",
+                    history: "Historique",
+                    check: "Contrôle du document",
+                  }[tab.id],
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="studio-panel">
+            {panel === "add" && (
+              <div className="studio-panel-sec">
+                <strong>➕ {t("Ajouter des éléments")}</strong>
+                {ELEMENT_LIBRARY.map((g) => (
+                  <div key={g.id} className="studio-lib">
+                    <span className="studio-lib-title">{g.label}</span>
+                    <div className="studio-lib-items">
+                      {g.items.map((it) => (
+                        <button key={it.id} type="button" className="studio-chip" onClick={() => addElementOf(it.id)}>
+                          {it.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <div className="studio-imagebar">
+                  <button type="button" className="btn btn-outline btn-small" onClick={() => askImage("add", "image")}>
+                    🖼️ {t("Importer une image")}
+                  </button>
+                  <button type="button" className="btn btn-outline btn-small" onClick={() => askImage("add", "gallery")}>
+                    🖼️ {t("Galerie : ajouter des images")}
+                  </button>
+                  {selEls.some((e) => MEDIA_TYPES.includes(e.type)) && (
+                    <button type="button" className="btn btn-small" onClick={() => askImage("replace")}>
+                      🔁 {t("Remplacer l'image")}
+                    </button>
+                  )}
+                </div>
+                <button type="button" className="btn btn-outline btn-small" onClick={openDesignChoices}>📐 {t("Changer le design de cette page")}</button>
+              </div>
+            )}
+            {panel === "text" && (
+              <div className="studio-panel-sec">
+                <strong>🅰 {t("Texte et styles")}</strong>
+                {!selEls.filter((e) => isTextType(e)).length && <span className="studio-hint">{t("Sélectionnez un texte sur la page.")}</span>}
+                {selEls.filter((e) => isTextType(e)).map((el) => (
+                  <div key={el.id} className="studio-texteditor">
+                    <span className="studio-mini-label">{elementLabel(el)}</span>
+                    <textarea
+                      className="studio-html-input"
+                      value={el.html || ""}
+                      rows={4}
+                      onChange={(e) => patchEls([{ id: el.id, patch: { html: e.target.value } }], "Texte modifié")}
+                    />
+                    <div className="studio-stylegrid">
+                      <label>
+                        {t("Police")}
+                        <select value={el.style?.font || "body"} onChange={(e) => patchEls([{ id: el.id, patch: { style: { ...el.style, font: e.target.value } } }], "Police modifiée")}>
+                          {Object.entries(template.fonts || {}).map(([k, v]) => (
+                            <option key={k} value={k}>{k}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        {t("Taille")}
+                        <input type="number" min="6" max="72" value={el.style?.size || 11} onChange={(e) => patchEls([{ id: el.id, patch: { style: { ...el.style, size: Number(e.target.value) || 11 } } }], "Taille modifiée")} />
+                      </label>
+                      <label>
+                        {t("Couleur")}
+                        <input type="color" value={el.style?.color || template.colors.text} onChange={(e) => patchEls([{ id: el.id, patch: { style: { ...el.style, color: e.target.value } } }], "Couleur modifiée")} />
+                      </label>
+                      <label>
+                        {t("Interligne")}
+                        <input type="number" step="0.05" min="0.8" max="3" value={el.style?.lineHeight || 1.35} onChange={(e) => patchEls([{ id: el.id, patch: { style: { ...el.style, lineHeight: Number(e.target.value) || 1.35 } } }], "Interligne modifié")} />
+                      </label>
+                    </div>
+                    <div className="studio-rowbtns">
+                      {[
+                        { k: "bold", label: "G" },
+                        { k: "italic", label: "I" },
+                        { k: "underline", label: "S" },
+                      ].map((s) => (
+                        <button key={s.k} type="button" className={`studio-tglbtn ${el.style?.[s.k] ? "active" : ""}`} onClick={() => patchEls([{ id: el.id, patch: { style: { ...el.style, [s.k]: !el.style?.[s.k] } } }], "Style modifié")}>
+                          {s.label}
+                        </button>
+                      ))}
+                      {[
+                        { k: "left", label: "⯇" },
+                        { k: "center", label: "≡" },
+                        { k: "right", label: "⯈" },
+                        { k: "justify", label: "▤" },
+                      ].map((a) => (
+                        <button key={a.k} type="button" className={`studio-tglbtn ${el.style?.align === a.k ? "active" : ""}`} onClick={() => patchEls([{ id: el.id, patch: { style: { ...el.style, align: a.k } } }], "Alignement modifié")}>
+                          {a.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {panel === "layers" && activePage && (
+              <div className="studio-panel-sec">
+                <strong>🧱 {t("Calques")}</strong>
+                <div className="studio-alignrow">
+                  {ALIGN_MODES.map((m) => (
+                    <button key={m.id} type="button" className="studio-chip" disabled={!selIds.length} onClick={() => alignSel(m.id)} title={m.label}>
+                      {m.label.replace("Aligner ", "")}
+                    </button>
+                  ))}
+                  <button type="button" className="studio-chip" disabled={selIds.length < 3} onClick={() => distributeSel("h")}>{t("Distribuer ↔")}</button>
+                  <button type="button" className="studio-chip" disabled={selIds.length < 3} onClick={() => distributeSel("v")}>{t("Distribuer ↕")}</button>
+                </div>
+                <ul className="studio-layers">
+                  {sortedElements(activePage).slice().reverse().map((el) => (
+                    <li key={el.id} className={`${selIds.includes(el.id) ? "active" : ""} ${el.hidden ? "is-hidden" : ""}`}>
+                      <button type="button" className="studio-layername" onClick={() => onSelectEls([el.id])}>
+                        {elementLabel(el)}
+                        {el.locked ? " 🔒" : ""}
+                        {el.hidden ? " 👁‍🗨" : ""}
+                      </button>
+                      <span className="studio-layerbtns">
+                        <button type="button" title={t("Monter")} onClick={() => { setSelIds([el.id]); reorderSel("up"); }}>↑</button>
+                        <button type="button" title={t("Descendre")} onClick={() => { setSelIds([el.id]); reorderSel("down"); }}>↓</button>
+                        <button type="button" title={el.hidden ? t("Afficher") : t("Masquer")} onClick={() => toggleHideEls(!el.hidden) || setSelIds([el.id])}>{el.hidden ? "👁" : "👁‍🗨"}</button>
+                        <button type="button" title={el.locked ? t("Déverrouiller") : t("Verrouiller")} onClick={() => toggleLockEls(!el.locked) || setSelIds([el.id])}>{el.locked ? "🔓" : "🔒"}</button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {panel === "ai" && (
+              <div className="studio-panel-sec">
+                <strong>✨ {t("Modifier avec l'IA")}</strong>
+                <div className="studio-aimode">
+                  <button type="button" className={`studio-chip ${aiMode === "design" ? "active" : ""}`} onClick={() => setAiMode("design")} title={t("L'IA modifie la disposition, les couleurs, la typographie — jamais le texte.")}>
+                    🎨 {t("Design uniquement")}
+                  </button>
+                  <button type="button" className={`studio-chip ${aiMode === "content" ? "active" : ""}`} onClick={() => setAiMode("content")} title={t("L'IA peut aussi réécrire, corriger, résumer le contenu.")}>
+                    ✍️ {t("Contenu + design")}
+                  </button>
+                </div>
+                <textarea
+                  className="studio-html-input"
+                  rows={3}
+                  placeholder={t("Ex : Rends cette page plus moderne. / Corrige uniquement les fautes.")}
+                  value={aiText}
+                  onChange={(e) => setAiText(e.target.value)}
+                />
+                <div className="studio-aiexamples">
+                  {AI_PAGE_EXAMPLES.slice(0, 4).map((ex) => (
+                    <button key={ex} type="button" className="studio-chip studio-chip-sm" onClick={() => setAiText(ex)}>
+                      {ex.length > 34 ? `${ex.slice(0, 34)}…` : ex}
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className="btn btn-small" onClick={previewAi} disabled={busy === "ai"}>
+                  {busy === "ai" ? "…" : `✨ ${t("Aperçu de la modification")}`}
+                </button>
+                {activePage && (
+                  <span className="studio-hint">
+                    {t("Page")} {activePage.number} · {pageWordCount(activePage)} {t("mots")} — {t("l'IA respecte strictement la portée annoncée.")}
+                  </span>
+                )}
+                {aiResult && <span className="studio-okmsg">✓ {aiResult.scope}</span>}
+              </div>
+            )}
+            {panel === "layout" && (
+              <div className="studio-panel-sec">
+                <strong>📐 {t("Mise en page de la page active")}</strong>
+                {designChoices && (
+                  <div className="studio-smart">
+                    <span className="studio-lib-title">{t("Suggestions intelligentes (contenu conservé)")}</span>
+                    <div className="studio-lib-items">
+                      {designChoices.options.map((o) => (
+                        <button key={o.id} type="button" className="studio-chip studio-chip-sm" title={o.reason} onClick={() => applyPageLayout(designChoices.pageId, o.id)}>
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {PAGE_LAYOUTS.map((l) => (
+                  <button key={l.id} type="button" className={`studio-layoutbtn ${activePage?.layout === l.id ? "active" : ""}`} onClick={() => activePage && applyPageLayout(activePage.id, l.id)} title={l.desc}>
+                    <strong>{l.label}</strong>
+                    <span>{l.desc}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {panel === "history" && (
+              <div className="studio-panel-sec">
+                <strong>🕘 {t("Historique")}</strong>
+                <div className="studio-rowbtns">
+                  <button type="button" className="btn btn-outline btn-small" onClick={undo} disabled={!past.length}>↩ {t("Annuler")}</button>
+                  <button type="button" className="btn btn-outline btn-small" onClick={redo} disabled={!future.length}>↪ {t("Rétablir")}</button>
+                </div>
+                <ul className="studio-history">
+                  {past.slice().reverse().slice(0, 40).map((h) => (
+                    <li key={h.id}>
+                      <span className="studio-histtime">{timeShort(h.at)}</span>
+                      <span className="studio-histlabel">{h.label}</span>
+                      <button type="button" className="studio-linkbtn" onClick={() => {
+                        setPast((p) => p.slice(0, p.indexOf(h) + 1));
+                        setFuture((f) => [...f, { id: uid("h"), label: h.label, at: h.at, pages: pagesRef.current }]);
+                        setPages(h.pages);
+                        markDirty();
+                      }}>
+                        {t("Restaurer")}
+                      </button>
+                    </li>
+                  ))}
+                  {!past.length && <li className="studio-hint">{t("Aucune modification enregistrée.")}</li>}
+                </ul>
+              </div>
+            )}
+            {panel === "check" && (
+              <div className="studio-panel-sec">
+                <strong>🔍 {t("Contrôle du document")}</strong>
+                {!check && <button type="button" className="btn btn-small" onClick={runCheck}>{t("Lancer la vérification")}</button>}
+                {check && (
+                  <>
+                    <span className={`studio-score ${check.score >= 80 ? "good" : check.score >= 55 ? "mid" : "bad"}`}>
+                      {t("Score")} : {check.score}/100
+                    </span>
+                    {check.errors.map((e, i) => (
+                      <div key={`e${i}`} className="studio-checkline is-error">⛔ {e.label} — <em>{e.detail}</em></div>
+                    ))}
+                    {check.warnings.map((w, i) => (
+                      <div key={`w${i}`} className="studio-checkline is-warn">⚠️ {w.label} — <em>{w.detail}</em></div>
+                    ))}
+                    {check.suggestions.map((s, i) => (
+                      <div key={`s${i}`} className="studio-checkline">💡 {s.label} — <em>{s.detail}</em></div>
+                    ))}
+                    {overflow && (
+                      <div className="studio-checkline is-warn">
+                        ⚠️ {t(`Débordement : ${overflow.px} px.`)}{" "}
+                        <button type="button" className="studio-linkbtn" onClick={() => {
+                          const page = curPage();
+                          if (!page) return;
+                          commit("Texte resserré (débordement)", updatePage(pagesRef.current || [], page.id, { style_overrides: { lineStep: Math.max(1.05, (docMeta?.style_overrides?.lineStep || 1.4) - 0.15) } }));
+                          flash(t("Espacement réduit — vérifiez le résultat."));
+                        }}>
+                          {t("Réduire l'espacement")}
+                        </button>
+                      </div>
+                    )}
+                    {!check.errors.length && !check.warnings.length && <span className="studio-okmsg">✓ {t("Aucun problème détecté.")}</span>}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </aside>
+        {/* Overlays */}
+        {menu && (
+          <div className="studio-ctxmenu" style={{ position: "fixed", left: menu.x, top: menu.y }} onMouseLeave={() => setMenu(null)}>
+            {[
+              { label: `⧉ ${t("Dupliquer")}`, fn: doDuplicateEls, disabled: !selIds.length },
+              { label: `📋 ${t("Copier")}`, fn: copyEls, disabled: !selIds.length },
+              { label: `✂️ ${t("Couper")}`, fn: cutEls, disabled: !selIds.length },
+              { label: `📥 ${t("Coller")}`, fn: pasteEls, disabled: !clipboardEl.current?.length },
+              { label: `🖼️ ${t("Remplacer l'image")}`, fn: () => askImage("replace"), disabled: !selEls.some((e) => MEDIA_TYPES.includes(e.type)) },
+              { label: `🔒 ${t("Verrouiller")}`, fn: () => toggleLockEls(true), disabled: !selIds.length },
+              { label: `🗑 ${t("Supprimer")}`, fn: doDeleteEls, disabled: !selIds.length, danger: true },
+            ].map((it) => (
+              <button key={it.label} type="button" className={`${it.danger ? "studio-danger" : ""}`} disabled={it.disabled} onClick={it.fn}>
+                {it.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {addOpen && (
+          <div className="studio-modal" onClick={() => setAddOpen(false)}>
+            <div className="studio-modal-box" onClick={(e) => e.stopPropagation()}>
+              <strong>➕ {t("Ajouter une page")}</strong>
+              <div className="studio-pagekinds">
+                {PAGE_KINDS.map((k) => (
+                  <button key={k.id} type="button" className="studio-pagekind" title={k.desc || k.label} onClick={() => addPage(k.id)}>
+                    <span className="studio-pagekind-icon">{k.icon || "📄"}</span>
+                    <span>{k.label}</span>
+                  </button>
+                ))}
+              </div>
+              <button type="button" className="btn btn-outline btn-small" onClick={() => setAddOpen(false)}>{t("Annuler")}</button>
+            </div>
+          </div>
+        )}
+        {pendingPlan && (
+          <div className="studio-modal" onClick={() => setPendingPlan(null)}>
+            <div className="studio-modal-box" onClick={(e) => e.stopPropagation()}>
+              <strong>🛰️ {t("Confirmation requise")}</strong>
+              <p className="studio-planscope">
+                <strong>{pendingPlan.scope || pendingPlan.label}</strong>
+              </p>
+              <p className="studio-hint">{t("Vérifiez la portée : l'IA n'appliquera la modification qu'aux pages annoncées.")}</p>
+              <div className="studio-rowbtns">
+                <button type="button" className="btn btn-small" onClick={confirmPending}>✓ {t("Appliquer")}</button>
+                <button type="button" className="btn btn-outline btn-small" onClick={() => setPendingPlan(null)}>{t("Annuler")}</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {toast && <div className="studio-toast">{toast}</div>}
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -804,6 +804,17 @@ export async function initDb() {
     console.warn("[db] migration gen_documents.published_product_id :", err.message);
   }
 
+  // Migration additive (Studio d'édition page par page) : modèle structuré
+  // Page → éléments typés (JSONB). null = document jamais ouvert dans le
+  // Studio → le moteur historique (paginé) reste la seule source de vérité.
+  try {
+    await pool.query(
+      `ALTER TABLE gen_documents ADD COLUMN IF NOT EXISTS page_layout JSONB`
+    );
+  } catch (err) {
+    console.warn("[db] migration gen_documents.page_layout :", err.message);
+  }
+
   try {
     await purgeOldTransactions();
   } catch {
