@@ -45,7 +45,10 @@ import { renderCoverImage, libraryThumb } from "../generator/coverImage.js";
 import { coverDecorPrims } from "../generator/coverDecor.js";
 import { parseDesignCommand, recommendTemplates } from "../generator/designCommands.js";
 import CoverDecor from "../generator/CoverDecor.jsx";
-import DocStudio from "../generator/DocStudio.jsx";
+import DocStudio, { resolveActiveTemplate } from "../generator/DocStudio.jsx";
+import StudioCanvas from "../generator/StudioCanvas.jsx";
+import { readStudio, studioBox, buildStudioPages, serializeStudio, studioDesignKey, studioContentKey } from "../generator/studioModel.js";
+import { exportStudioPdf } from "../generator/studioExport.js";
 import {
   copyrightLines,
   sha256Hex,
@@ -150,7 +153,6 @@ export default function GeneratorPanel({ variant = "creator" }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [openDoc, setOpenDoc] = useState(null); // { document, content, versions }
-  const [creating, setCreating] = useState(false);
   const [newDoc, setNewDoc] = useState({
     title: "",
     author: "",
@@ -187,7 +189,6 @@ export default function GeneratorPanel({ variant = "creator" }) {
     setBusy(true);
     try {
       const d = await api.genCreateDocument(newDoc);
-      setCreating(false);
       setNewDoc({ title: "", author: "", template_id: "moderne", page_format: "A4" });
       load();
       setOpenDoc({ document: d.document, content: d.content || EMPTY_DOC, versions: [] });
@@ -215,7 +216,6 @@ export default function GeneratorPanel({ variant = "creator" }) {
         template_id: "moderne",
         page_format: "A4",
       });
-      setCreating(false);
       setPasteText("");
       load();
       setPendingImport(payload);
@@ -287,9 +287,6 @@ export default function GeneratorPanel({ variant = "creator" }) {
         <h3 className="section-title" style={{ marginTop: 0 }}>
           📚 {t("Générateur de documents")} — {t("Bibliothèque")}
         </h3>
-        <button type="button" className="btn btn-primary btn-small" onClick={() => setCreating((v) => !v)}>
-          ➕ {t("Nouveau document")}
-        </button>
       </div>
       <p className="hint">
         {t(
@@ -352,8 +349,9 @@ export default function GeneratorPanel({ variant = "creator" }) {
 
       {error && <p className="error" role="alert">{error}</p>}
 
-      {creating && (
-        <form className="gen-form" onSubmit={create}>
+      {/* Création directe : titre, auteur, modèle et format (toujours visible —
+          l'ancien bouton « Nouveau document » ne servait qu'à l'ouvrir). */}
+      <form className="gen-form" onSubmit={create}>
           <div className="gen-form-row">
             <div>
               <label>{t("Titre du document")}</label>
@@ -410,7 +408,6 @@ export default function GeneratorPanel({ variant = "creator" }) {
             {busy ? t("Création…") : t("Créer et ouvrir l'éditeur")}
           </button>
         </form>
-      )}
 
       {list === null ? (
         <p className="hint">{t("Chargement…")}</p>
@@ -624,7 +621,63 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   const previewStaleTimer = useRef(null);
   const markContentDirty = useCallback(() => {
     if (previewStaleTimer.current) clearTimeout(previewStaleTimer.current);
-    previewStaleTimer.current = setTimeout(() => setPreview(null), 800);
+    previewStaleTimer.current = setTimeout(() => {
+      setPreview(null);
+      resyncStudio();
+    }, 800);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─── Synchronisation Contenu / Design → Studio ─────────────────────────────
+  // Une mise en page du Studio dérive du TEXTE et du DESIGN du document. Dès que
+  // l'un des deux change, elle est régénérée ici avec les mêmes fonctions que le
+  // Studio : Aperçu, PDF exporté et Studio affichent donc toujours la même
+  // chose. Aucune page Studio n'est créée si le Studio n'a jamais été utilisé —
+  // la pagination automatique reste alors la référence.
+  const studioResyncTimer = useRef(null);
+  const resyncStudio = useCallback(() => {
+    if (studioResyncTimer.current) clearTimeout(studioResyncTimer.current);
+    studioResyncTimer.current = setTimeout(async () => {
+      const m = metaRef.current;
+      const stored = readStudio(m?.page_layout);
+      const ed = editorRef.current;
+      if (!stored || !stored.length || !ed) return;
+      try {
+        const src = ed.getHTML();
+        const paginated = await paginateDocument({
+          html: src,
+          doc: m,
+          toc: m?.protection?.toc !== false,
+        });
+        const pages = buildStudioPages({ paginated, docMeta: m || {} });
+        const payload = serializeStudio(pages, {
+          template_id: m?.template_id || "",
+          design_key: studioDesignKey(m || {}),
+          content_key: studioContentKey(src),
+        });
+        setMeta((cur) => ({ ...cur, page_layout: payload }));
+        scheduleSave();
+      } catch {
+        // Silencieux : au pire, l'aperçu classique reste disponible.
+      }
+    }, 700);
+  }, []);
+
+  // À l'ouverture d'un document : une mise en page Studio enregistrée mais
+  // périmée (texte ou design modifiés entre-temps) est régénérée tout de suite.
+  useEffect(() => {
+    const m = metaRef.current;
+    const stored = readStudio(m?.page_layout);
+    if (!stored || !stored.length) return;
+    const ed = editorRef.current;
+    const src = ed ? ed.getHTML() : "";
+    if (
+      m?.page_layout?.design_key !== studioDesignKey(m || {}) ||
+      m?.page_layout?.content_key !== studioContentKey(src)
+    ) {
+      resyncStudio();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Le rapport « 🔍 DOCUMENT CHECK » reste cohérent : dès qu'un nouvel aperçu
@@ -1017,7 +1070,19 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     if (layoutKeyRef.current === layoutKey) return;
     layoutKeyRef.current = layoutKey;
     setPreview(null);
-  }, [layoutKey]);
+    // Un réglage du design a changé : la mise en page Studio enregistrée est
+    // régénérée avec le nouveau modèle (elle est la référence de l'aperçu/PDF).
+    resyncStudio();
+  }, [layoutKey, resyncStudio]);
+
+  // ─── Synchronisation Studio → Aperçu ────────────────────────────────────────
+  // Dès qu'une mise en page du Studio est enregistrée, l'aperçu (et donc le PDF
+  // exporté) montre CES pages : ce que l'on voit est exactement ce qui sort.
+  const studioPages = readStudio(meta.page_layout);
+  const studioTpl = useMemo(
+    () => (studioPages && studioPages.length ? { box: studioBox(meta), template: resolveActiveTemplate(meta) } : null),
+    [studioPages, meta]
+  );
   useEffect(() => {
     if (view === "preview" && !preview && !previewBusy) buildPreview();
   }, [view, preview, previewBusy, buildPreview]);
@@ -1032,6 +1097,20 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     setError("");
     setExportPct(0);
     try {
+      // ─── Synchronisation Studio → export PDF ─────────────────────────────
+      // Dès qu'une mise en page du Studio existe, c'est ELLE la référence :
+      // le PDF exporté correspond exactement aux pages éditées (décors,
+      // positions, textes), sans repasser par la pagination automatique.
+      const studioPages = readStudio(metaRef.current?.page_layout);
+      if (studioPages && studioPages.length) {
+        await exportStudioPdf({
+          pages: studioPages,
+          docMeta: metaRef.current,
+          onProgress: (p) => setExportPct(p),
+          filename: `${metaRef.current?.doc_ref || metaRef.current?.title || "document"}.pdf`,
+        });
+        return;
+      }
       const paginated = preview || (await buildPreview());
       if (!paginated) throw new Error("Aperçu indisponible");
       await exportDocumentPdf({
@@ -1526,7 +1605,12 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
           docMeta={meta}
           html={editor?.getHTML() || ""}
           onClose={() => setView("edit")}
-          onSaved={() => setSaveState("saved")}
+          onSaved={(env) => {
+            setSaveState("saved");
+            // Synchronisation Studio → Aperçu / Export : les pages éditées
+            // sont conservées en mémoire pour que l'export PDF les applique.
+            if (env) setMeta((cur) => ({ ...cur, page_layout: env }));
+          }}
           t={t}
         />
       )}
@@ -2544,7 +2628,41 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
               <button type="button" className="btn btn-small btn-outline" onClick={() => setCheck(null)}>{t("Fermer")}</button>
             </div>
           )}
-          {preview && (
+          {studioTpl && studioPages.length ? (
+            <>
+              <p className="hint">
+                🧩 {t("Mise en page du Studio active : l'aperçu et le PDF exporté suivent les pages éditées page par page.")}{" "}
+                <button type="button" className="btn btn-outline btn-small" onClick={() => setView("studio")}>
+                  {t("Ouvrir le Studio")}
+                </button>
+              </p>
+              <div className="studio-preview">
+                <div className="studio-preview-pages">
+                  {studioPages.map((p) => (
+                    <div
+                      key={p.id}
+                      className="studio-preview-page"
+                      style={{
+                        width: studioTpl.box.w * PX_PER_MM * GEN_PREVIEW_SCALE * (fitScale || 1),
+                        height: studioTpl.box.h * PX_PER_MM * GEN_PREVIEW_SCALE * (fitScale || 1),
+                      }}
+                    >
+                      <StudioCanvas
+                        page={p}
+                        box={studioTpl.box}
+                        template={studioTpl.template}
+                        docMeta={meta}
+                        totalPages={studioPages.length}
+                        zoom={GEN_PREVIEW_SCALE * (fitScale || 1)}
+                        selectedIds={[]}
+                        readOnly
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : preview && (
             <div className="gen-pages">
               {preview.pages.map((page, i) => (
                 <div key={i} className="gen-page-wrap">
@@ -3098,7 +3216,7 @@ function GenPage({ page, paginated, docMeta, fit }) {
       <div className="gen-page" style={{ ...pageStyle, background: template.colors.bg, color: template.colors.body, fontFamily: FONT_CSS[template.bodyFont] }}>
         <CoverDecor prims={decorPrims} w={w} h={h} />
         <PageDecor template={template} box={box} docMeta={docMeta} scale={s} />
-        <div style={{ padding: `${mm(m.top)}px ${mm(m.right)}px 0 ${mm(m.left)}px` }}>
+        <div style={{ position: "relative", zIndex: 2, padding: `${mm(m.top)}px ${mm(m.right)}px 0 ${mm(m.left)}px` }}>
           <div style={{ fontWeight: "bold", fontSize: pt(template.sizes.h2), color: template.colors.heading }}>
             Table des matières
           </div>

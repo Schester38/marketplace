@@ -5770,6 +5770,9 @@ const GEN4_EN = {
 // Studio d'édition page par page — Digital Publishing Studio (§1-§28).
 const GEN5_EN = {
   Studio: "Studio",
+  "Studio synchronisé avec le contenu et le design du document.": "Studio synced with the document's content and design.",
+  "Mise en page du Studio active : l'aperçu et le PDF exporté suivent les pages éditées page par page.": "Studio layout active: the preview and the exported PDF follow the pages you edited page by page.",
+  "Ouvrir le Studio": "Open the Studio",
   "Préparation de l'éditeur page par page…": "Preparing the page-by-page editor…",
   "Retour au document": "Back to document",
   Document: "Document",
@@ -5926,6 +5929,9 @@ const GEN4_AR = {
 
 // Studio d'édition page par page — Digital Publishing Studio (§1-§28).
 const GEN5_AR = {
+  "Studio synchronisé avec le contenu et le design du document.": "تمت مزامنة الاستوديو مع محتوى المستند وتصميمه.",
+  "Mise en page du Studio active : l'aperçu et le PDF exporté suivent les pages éditées page par page.": "تخطيط الاستوديو مُفعَّل: المعاينة وملف PDF المُصدَّر يتبعان الصفحات التي حرّرتها صفحة بصفحة.",
+  "Ouvrir le Studio": "افتح الاستوديو",
   Studio: "الاستوديو",
   "Préparation de l'éditeur page par page…": "جارٍ تحضير المحرر صفحة بصفحة…",
   "Retour au document": "العودة إلى المستند",
@@ -6084,6 +6090,9 @@ const GEN4_ES = {
 // Studio d'édition page par page — Digital Publishing Studio (§1-§28).
 const GEN5_ES = {
   Studio: "Estudio",
+  "Studio synchronisé avec le contenu et le design du document.": "Estudio sincronizado con el contenido y el diseño del documento.",
+  "Mise en page du Studio active : l'aperçu et le PDF exporté suivent les pages éditées page par page.": "Diseño del Estudio activo: la vista previa y el PDF exportado siguen las páginas que editaste página por página.",
+  "Ouvrir le Studio": "Abrir el Estudio",
   "Préparation de l'éditeur page par page…": "Preparando el editor página por página…",
   "Retour au document": "Volver al documento",
   Document: "Documento",

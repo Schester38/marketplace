@@ -12,7 +12,7 @@ import { paginateDocument } from "./paginate.js";
 import { GEN_TEMPLATES, resolveTemplate } from "./templates.js";
 import { api } from "../api.js";
 import {
-  buildStudioPages, readStudio, studioBox, serializeStudio,
+  buildStudioPages, readStudio, studioBox, serializeStudio, studioDesignKey, studioContentKey,
   insertPage, deletePages, duplicatePage, movePage, updatePage, patchPages, patchElements,
   cloneElement, addElement, addElements, removeElements, reorderElement, sortedElements, mergeElement,
   overflowPx, studioCheck, alignOffsets, distributeOffsets, ALIGN_MODES,
@@ -159,18 +159,41 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
     setTimeout(() => setToast((cur) => (cur === msg ? "" : cur)), 2600);
   }, []);
 
+  // ─── Empreintes TEXTE / DESIGN : base de la synchronisation des onglets ─────
+  // Le Studio dérive du document (texte du Contenu + modèle de l'onglet Design).
+  // On enregistre l'empreinte des deux avec les pages : si l'une change ensuite,
+  // les pages sont reconstruites à l'ouverture du Studio. Sans cela, les pages
+  // enregistrées restaient figées sur l'ancien texte / l'ancien modèle et les
+  // modifications des autres onglets semblaient « ne pas coller ».
+  const studioKeys = useMemo(
+    () => ({
+      designKey: studioDesignKey(docMeta || {}),
+      contentKey: studioContentKey(html),
+    }),
+    [docMeta, html]
+  );
+  const keysRef = useRef(studioKeys);
+  keysRef.current = studioKeys;
+
   // ─── Chargement : modèle Studio existant, sinon conversion du document ──────
   useEffect(() => {
     let alive = true;
     (async () => {
       const stored = readStudio(doc?.page_layout);
-      if (stored && stored.length) {
+      const keys = keysRef.current;
+      // Les pages enregistrées ne sont réutilisées QUE si ni le contenu ni le
+      // design n'ont changé depuis : sinon on reconstruit (synchronisation).
+      const upToDate =
+        doc?.page_layout?.design_key === keys.designKey &&
+        doc?.page_layout?.content_key === keys.contentKey;
+      if (stored && stored.length && upToDate) {
         if (!alive) return;
         setPages(stored);
         setActiveId(stored[0].id);
         setBusy("");
         return;
       }
+      const rebuilding = !!(stored && stored.length);
       try {
         const paginated = await paginateDocument({
           html: html || "",
@@ -184,6 +207,12 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
         setPages(built);
         setActiveId(built[0]?.id || null);
         setBusy("");
+        if (rebuilding) {
+          // Les modifications faites ailleurs (contenu ou design) viennent
+          // d'être appliquées : on réenregistre les nouvelles empreintes.
+          flash(t("Studio synchronisé avec le contenu et le design du document."));
+          markDirty();
+        }
       } catch (e) {
         if (!alive) return;
         setError(e?.message || t("Conversion du document impossible"));
@@ -209,12 +238,18 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
       setSaving(true);
       setError("");
       try {
-        await api.genSaveDocument(doc.id, {
-          page_layout: serializeStudio(pagesRef.current || [], { template_id: docMeta?.template_id || "" }),
+        // Enveloppe enregistrée : pages + empreintes contenu/design. Les
+        // empreintes servent à savoir, à la réouverture, si les autres onglets
+        // ont changé et si le Studio doit se resynchroniser.
+        const payload = serializeStudio(pagesRef.current || [], {
+          template_id: docMeta?.template_id || "",
+          design_key: keysRef.current.designKey,
+          content_key: keysRef.current.contentKey,
         });
+        await api.genSaveDocument(doc.id, { page_layout: payload });
         setDirty(false);
         setSavedAt(new Date());
-        onSaved?.();
+        onSaved?.(payload);
         if (!silent) flash(t("Document enregistré."));
       } catch (e) {
         setError(e?.message || t("Enregistrement impossible"));

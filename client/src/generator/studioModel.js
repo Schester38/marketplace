@@ -690,6 +690,35 @@ export function readStudio(pageLayout) {
   return pageLayout.pages;
 }
 
+/**
+ * Empreinte du DESIGN (modèle, styles avancés, format, marges, sommaire).
+ * Elle change dès qu'un réglage de l'onglet Design est modifié : sert à savoir
+ * si une mise en page enregistrée est encore d'actualité (synchronisation).
+ */
+export function studioDesignKey(docMeta = {}) {
+  return JSON.stringify([
+    docMeta.template_id,
+    docMeta.style_overrides || {},
+    docMeta.page_format,
+    docMeta.page_width,
+    docMeta.page_height,
+    docMeta.orientation,
+    docMeta.margins || {},
+    docMeta.protection?.toc !== false,
+  ]);
+}
+
+/** Empreinte courte et stable du TEXTE (contenu TipTap converti en HTML). */
+export function studioContentKey(html) {
+  const src = String(html || "");
+  let h = 2166136261; // FNV-1a : rapide, stable, sans dépendance
+  for (let i = 0; i < src.length; i++) {
+    h ^= src.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return `${src.length}:${(h >>> 0).toString(36)}`;
+}
+
 /** Boîte de page (mm) du document — repère commun au Studio et au PDF. */
 export function studioBox(docMeta) {
   return resolvePageBox(docMeta || {});
