@@ -399,6 +399,28 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
     input.value = "";
     input.click();
   }, []);
+  // patchEls est déclaré AVANT onImagePicked : ce dernier le référence dans son
+  // tableau de dépendances, évalué pendant le rendu (sinon TDZ « Lt » au clic Studio).
+  const patchEls = useCallback(
+    (patches, label) => {
+      const page = curPage();
+      if (!page) return;
+      // Verrous de page (§22) : le contenu et le design se protègent séparément.
+      const lock = page.locked || {};
+      const touchesContent = patches.some((p) => p.patch && ("html" in p.patch || "src" in p.patch || "data" in p.patch));
+      const touchesDesign = patches.some((p) => p.patch && ("box" in p.patch || "rot" in p.patch || "style" in p.patch || "z" in p.patch || "hidden" in p.patch || "opacity" in p.patch));
+      if (lock.content && touchesContent && !touchesDesign) {
+        flash(t("Contenu verrouillé : le texte ne peut pas être modifié."));
+        return;
+      }
+      if (lock.design && touchesDesign) {
+        flash(t("Design verrouillé : la mise en page ne peut pas être modifiée."));
+        return;
+      }
+      commit(label, applyPatchesToPage(pagesRef.current || [], page.id, patches));
+    },
+    [commit, t, flash],
+  );
   const onImagePicked = useCallback(
     async (file) => {
       const intent = fileIntent.current || { intent: "add", typeId: "image" };
@@ -480,26 +502,6 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
     setMenu(null);
     flash(t("Collé sur cette page."));
   }, [box, commit, t, flash]);
-  const patchEls = useCallback(
-    (patches, label) => {
-      const page = curPage();
-      if (!page) return;
-      // Verrous de page (§22) : le contenu et le design se protègent séparément.
-      const lock = page.locked || {};
-      const touchesContent = patches.some((p) => p.patch && ("html" in p.patch || "src" in p.patch || "data" in p.patch));
-      const touchesDesign = patches.some((p) => p.patch && ("box" in p.patch || "rot" in p.patch || "style" in p.patch || "z" in p.patch || "hidden" in p.patch || "opacity" in p.patch));
-      if (lock.content && touchesContent && !touchesDesign) {
-        flash(t("Contenu verrouillé : le texte ne peut pas être modifié."));
-        return;
-      }
-      if (lock.design && touchesDesign) {
-        flash(t("Design verrouillé : la mise en page ne peut pas être modifiée."));
-        return;
-      }
-      commit(label, applyPatchesToPage(pagesRef.current || [], page.id, patches));
-    },
-    [commit, t, flash],
-  );
   const toggleLockEls = useCallback(
     (lock) => patchEls(selIds.map((id) => ({ id, patch: { locked: lock } })), lock ? "Éléments verrouillés" : "Éléments déverrouillés"),
     [selIds, patchEls],
