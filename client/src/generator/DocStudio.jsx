@@ -8,7 +8,9 @@
 // Studio vit dans `gen_documents.page_layout` (JSONB) et le PDF/EPUB ne sont
 // que des exports (§24 « édition sans destruction »).
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { paginateDocument } from "./paginate.js";
+import {
+  paginateDocument, PX_PER_MM,
+} from "./paginate.js";
 import { GEN_TEMPLATES, resolveTemplate } from "./templates.js";
 import { api } from "../api.js";
 import {
