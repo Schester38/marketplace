@@ -59,6 +59,10 @@ export async function renderCoverImage(docMeta, { width = 480 } = {}) {
   ctx.fillStyle = cover.bg;
   ctx.fillRect(0, 0, w, h);
 
+  // Décor géométrique du modèle (formes d'accent) : DERRIÈRE l'image de fond
+  // (l'image reste entièrement visible devant les formes) et derrière le texte.
+  drawCoverDecorCanvas(ctx, coverDecorPrims(template, w, h));
+
   // Image de fond éventuelle + voile RÉGLABLE (« Opacité de l'image »).
   if (cover.image) {
     const img = await loadImage(cover.image);
@@ -78,11 +82,6 @@ export async function renderCoverImage(docMeta, { width = 480 } = {}) {
       }
     }
   }
-
-  // Décor géométrique du modèle (formes d'accent : secteurs, anneaux,
-  // triangles, disques — comme les couvertures des galeries de modèles).
-  // Dessiné APRÈS l'image de fond et AVANT le texte : le titre reste lisible.
-  drawCoverDecorCanvas(ctx, coverDecorPrims(template, w, h));
 
   // Mise en page « bande » : AUCUNE couche de couleur sur la photo — le titre
   // (blanc) se pose directement sur l'image, dans le tiers inférieur

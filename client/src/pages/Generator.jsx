@@ -374,6 +374,42 @@ function GenEditor({ initialDoc, onBack }) {
   const [versions, setVersions] = useState(initialDoc.versions || []);
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
   const [view, setView] = useState("edit"); // edit | design | preview
+  // Ajustement automatique de l'aperçu à la largeur disponible (téléphone :
+  // la page entière est visible, plus besoin de faire défiler horizontalement).
+  const previewZoneRef = useRef(null);
+  const [fitScale, setFitScale] = useState(1);
+  // La page d'aperçu fait : largeur mm × PX_PER_MM × 0.75. Si elle dépasse la
+  // largeur de la zone (téléphone), on réduit tout le rendu (polices comprises
+  // — le PDF reste au format exact, seul l'affichage est rétréci).
+  const computeFit = useCallback(() => {
+    const el = previewZoneRef.current;
+    if (!el) return;
+    // Largeur réelle de la page (orientation paysage/gauche incluse) sinon
+    // le format par défaut.
+    const pageMmW =
+      (preview && preview.box && Number(preview.box.w)) ||
+      resolvePageBox(meta.page_format || "A4")[0];
+    const pagePx = pageMmW * PX_PER_MM * GEN_PREVIEW_SCALE;
+    const avail = el.clientWidth || window.innerWidth;
+    const k = avail / pagePx;
+    setFitScale(k < 1 ? Math.max(0.3, k - 0.02) : 1);
+  }, [meta.page_format, preview]);
+  useEffect(() => {
+    // Recalcul quand on entre dans l'aperçu, au redimensionnement et à la
+    // rotation du téléphone.
+    if (view !== "preview") return undefined;
+    computeFit();
+    window.addEventListener("resize", computeFit);
+    return () => window.removeEventListener("resize", computeFit);
+  }, [view, computeFit]);
+  useEffect(() => {
+    // La zone n'existe pas encore au premier paint : on refait le calcul après.
+    if (view === "preview") {
+      const id = requestAnimationFrame(computeFit);
+      return () => cancelAnimationFrame(id);
+    }
+    return undefined;
+  }, [view, preview, computeFit]);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState(null);
   const [previewBusy, setPreviewBusy] = useState(false);
@@ -1713,7 +1749,7 @@ function GenEditor({ initialDoc, onBack }) {
 
       {/* ─── Vue APERÇU : pages paginées (même sortie que le PDF) ─────────── */}
       {view === "preview" && (
-        <div className="gen-preview-zone">
+        <div className="gen-preview-zone" ref={previewZoneRef}>
           <div className="dash-actions" style={{ marginBottom: 12 }}>
             <button type="button" className="btn btn-primary btn-small" onClick={() => setView("edit")}>
               ✏️ {t("Modifier le contenu")}
@@ -1789,7 +1825,7 @@ function GenEditor({ initialDoc, onBack }) {
             <div className="gen-pages">
               {preview.pages.map((page, i) => (
                 <div key={i} className="gen-page-wrap">
-                  <GenPage page={page} paginated={preview} docMeta={meta} />
+                  <GenPage page={page} paginated={preview} docMeta={meta} fit={fitScale} />
                 </div>
               ))}
             </div>
@@ -2173,10 +2209,13 @@ function decorMarks(tpl) {
   }
 }
 
-function GenPage({ page, paginated, docMeta }) {
+function GenPage({ page, paginated, docMeta, fit }) {
   const { box, template, contentWpx, contentHpx } = paginated;
   const { w, h, m } = box;
-  const s = GEN_PREVIEW_SCALE; // zoom : 0.75 = 75 % d'une page au 96 dpi
+  // Zoom : 0.75 = 75 % d'une page au 96 dpi, multiplié par le facteur
+  // d'ajustement (fitScale ≤ 1 sur petit écran → la page ENTière tient dans
+  // la largeur, plus de défilement horizontal sur téléphone).
+  const s = GEN_PREVIEW_SCALE * (fit && fit > 0 ? fit : 1);
   // Toutes les valeurs du modèle sont en mm (page, marges) ou en pt (polices) :
   // on les convertit en px CSS (96 dpi) AVANT le zoom, comme la boîte de
   // contenu mesurée. Sans cette conversion, la boîte de contenu (px réels) était
@@ -2199,6 +2238,9 @@ function GenPage({ page, paginated, docMeta }) {
     const widthPct = (geo.maxW / w) * 100;
     return (
       <div className="gen-page" style={{ ...pageStyle, background: cover.bg, color: fg }}>
+        {/* Décor géométrique du modèle : DERRIÈRE l'image de fond (l'image est
+            devant), et derrière le texte. Mêmes primitives que PDF/miniature. */}
+        <CoverDecor prims={decorPrims} w={w} h={h} />
         {cover.image && (
           <img
             src={cover.image}
@@ -2207,8 +2249,6 @@ function GenPage({ page, paginated, docMeta }) {
             style={{ opacity: 1 - cover.dim, objectPosition: `50% ${cover.imageY ?? 30}%` }}
           />
         )}
-        {/* Décor géométrique du modèle : mêmes primitives que PDF/miniature. */}
-        <CoverDecor prims={decorPrims} w={w} h={h} />
         {cover.showTitle && (
           <div
             style={{

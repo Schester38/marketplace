@@ -356,6 +356,11 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl, hasQrMark
   setFill(doc, cover.bg);
   doc.rect(0, 0, w, h, "F");
 
+  // Décor géométrique du modèle (formes d'accent) : mêmes primitives que
+  // l'aperçu HTML et la miniature — DERRIÈRE l'image de fond (l'image reste
+  // entièrement visible devant les formes).
+  drawCoverDecorPdf(doc, coverDecorPrims(template, w, h));
+
   // Image de fond (cover-fit) + voile RÉGLABLE (« Opacité de l'image » :
   // 100 % = photo nette sans voile, 0 % = fond uni du modèle).
   if (cover.image) {
@@ -382,10 +387,6 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl, hasQrMark
       }
     }
   }
-
-  // Décor géométrique du modèle (formes d'accent) : mêmes primitives que
-  // l'aperçu HTML et la miniature — dessinées après l'image, avant le texte.
-  drawCoverDecorPdf(doc, coverDecorPrims(template, w, h));
 
   // Mise en page « bande » : AUCUNE couche de couleur sur la photo — le titre
   // (blanc) se pose directement sur l'image, dans le tiers inférieur.
