@@ -965,24 +965,47 @@ const previewZoom = zoom * previewFit;
 // exacts. L'export, lui, garde la taille réelle (le facteur est local à l'UI).
 const [canvasFit, setCanvasFit] = useState(1);
 useEffect(() => {
-  const el = centerRef.current;
+  if (mode !== "edit" || busy === "load") return undefined;
   const raw1 = box.w * PX_PER_MM; // largeur de page à zoom 1
-  if (mode !== "edit" || !el || !raw1) return undefined;
+  if (!raw1) return undefined;
+  let ro = null;
+  let raf = 0;
+  let tries = 0;
   const measure = () => {
-    // `clientWidth` inclut le padding (14 px desktop, 8 px mobile) : on retire
-    // une marge légèrement supérieure pour que la page ne déborde jamais.
-    const avail = Math.max(0, (el.clientWidth || 360) - 36);
+    const el = centerRef.current;
+    if (!el) return;
+    // Padding lu sur l'élément (14 px desktop, 8 px mobile) : aucune constante
+    // magique à maintenir, + 4 px de sécurité pour ne jamais déborder.
+    const cs = window.getComputedStyle(el);
+    const pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    const avail = Math.max(0, el.getBoundingClientRect().width - pad - 4);
     setCanvasFit(Math.max(0.2, Math.min(1, avail / raw1)));
   };
-  measure();
-  const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
-  ro?.observe(el);
+  // Le <main> n'est PAS monté au premier passage (écran « Préparation de
+  // l'éditeur… ») : sans réessai, le facteur restait à 1 et la page débordait
+  // — exactement le « il faut glisser le document de droite à gauche ».
+  const attach = () => {
+    if (!centerRef.current) {
+      if (tries < 30) {
+        tries += 1;
+        raf = requestAnimationFrame(attach);
+      }
+      return;
+    }
+    measure();
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(measure);
+      ro.observe(centerRef.current);
+    }
+  };
+  attach();
   window.addEventListener("resize", measure);
   return () => {
+    cancelAnimationFrame(raf);
     ro?.disconnect();
     window.removeEventListener("resize", measure);
   };
-}, [mode, box.w]);
+}, [mode, box.w, busy, pages.length]);
 const editZoom = zoom * canvasFit;
 
   // ─── Aperçu plein écran (§19) ─────────────────────────────────────────────
@@ -1128,6 +1151,16 @@ const editZoom = zoom * canvasFit;
           {Math.round(editZoom * 100)} %{canvasFit < 0.999 ? " ⤢" : ""}
         </span>
         <button type="button" className="btn btn-outline btn-small" onClick={() => setZoom((z) => Math.min(2, Math.round((z + 0.1) * 10) / 10))} title="Zoom +">+</button>
+        {canvasFit < 0.999 && (
+          <button
+            type="button"
+            className="btn btn-outline btn-small"
+            onClick={() => setZoom(1)}
+            title={t("Ajuster à la largeur de l'écran")}
+          >
+            ⤢
+          </button>
+        )}
         <span className="studio-sep" />
         <button type="button" className={`btn btn-small ${mode === "preview" ? "" : "btn-outline"}`} onClick={() => setMode(mode === "preview" ? "edit" : "preview")}>
           👁 {t("Aperçu")}

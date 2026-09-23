@@ -10911,7 +10911,13 @@ a.step {
   border-radius: 14px;
   overflow: hidden;
   background: var(--card);
+  max-width: 100%;
 }
+/* Le Studio ne doit JAMAIS être plus large que son conteneur (téléphone) :
+   sans `min-width: 0`, un enfant large (page A4) élargit la colonne de grille
+   et tout le document devient glissable de droite à gauche. */
+.studio-body > * { min-width: 0; }
+.studio-center { min-width: 0; max-width: 100%; }
 .studio-loading { padding: 40px 16px; text-align: center; color: var(--text-secondary); }
 
 /* ─── Barre supérieure (§2) ─── */
