@@ -15,6 +15,21 @@ const SITE_URL = String(process.env.SITE_URL || "https://mboppi-mboppi.vercel.ap
   ""
 );
 
+// Adresse d'invitation unique Trustpilot (celle du profil revendiqué). Placée
+// en BCC (copie cachée) de l'e-mail « commande livrée » au client : Trustpilot
+// envoie alors lui-même son invitation à laisser un avis. Pour DÉSACTIVER :
+// variable d'environnement TRUSTPILOT_INVITE_EMAIL vide, ou valeur "off".
+const TRUSTPILOT_INVITE_EMAIL = (() => {
+  const raw = process.env.TRUSTPILOT_INVITE_EMAIL;
+  const value = String(raw === undefined ? "mboppishop.com+8f839a5b1c@invite.trustpilot.com" : raw).trim();
+  if (!value || ["off", "none", "false", "0"].includes(value.toLowerCase())) return null;
+  return value.includes("@") ? value : null;
+})();
+
+export function trustpilotInviteEmail() {
+  return TRUSTPILOT_INVITE_EMAIL;
+}
+
 let transporter = null;
 
 export function mailConfigured() {
@@ -33,14 +48,21 @@ function getTransporter() {
   return transporter;
 }
 
-export async function sendMail({ to, subject, text, html }) {
+export async function sendMail({ to, subject, text, html, bcc }) {
   const tr = getTransporter();
   if (!tr) {
     console.warn(`[mailer:simulé] → ${to}\nSujet: ${subject}\n${text}`);
     return { simulated: true };
   }
   try {
-    const info = await tr.sendMail({ from: EMAIL_FROM, to, subject, text, html });
+    const info = await tr.sendMail({
+      from: EMAIL_FROM,
+      to,
+      bcc: bcc || undefined,
+      subject,
+      text,
+      html,
+    });
     return info;
   } catch (err) {
     console.error("[mailer] Erreur d'envoi:", err.message);
@@ -116,6 +138,94 @@ export async function sendSaleEmails({
       /* jamais bloquant pour la requête métier */
     }
   }
+}
+
+/**
+ * E-mail « commande livrée » envoyé à l'ACHETEUR (uniquement si une adresse
+ * e-mail a été fournie à la commande — champ facultatif). L'adresse
+ * d'invitation unique Trustpilot est placée en BCC : Trustpilot adresse alors
+ * lui-même au client son invitation officielle à laisser un avis, sans widget
+ * ni compte supplémentaire. Non bloquant : l'appelant ignore les erreurs.
+ */
+export async function sendOrderDeliveredEmail({
+  to,
+  buyerName,
+  productName,
+  quantity = 1,
+  total,
+  currency = "F",
+  saleId,
+  code,
+}) {
+  const dest = String(to || "").trim();
+  if (!mailConfigured() || !dest.includes("@")) return;
+  const safeBuyer = String(buyerName || "cher client").replace(/[<>&]/g, "");
+  const safeItem = esc(productName || "votre article");
+  const safeQty = Number(quantity) || 1;
+  const trackUrl = `${SITE_URL}/suivi/${Number(saleId)}?code=${encodeURIComponent(code || "")}`;
+  const reviewUrl = "https://fr.trustpilot.com/evaluate/mboppishop.com";
+  const subject = "Votre commande est livrée 🎉 — merci pour votre confiance";
+  const text = [
+    `Bonjour ${buyerName || "cher client"},`,
+    "",
+    `Votre commande « ${productName} » × ${safeQty} vient d'être livrée. Merci d'avoir choisi Mboppi !`,
+    total ? `Montant : ${total} ${currency}` : "",
+    "",
+    "Suivre ma commande :",
+    trackUrl,
+    "",
+    "Votre avis nous aide énormément 🙏",
+    "⭐ Laisser un avis sur Trustpilot :",
+    reviewUrl,
+    "",
+    "L'équipe Mboppi",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:26px 28px;text-align:center;">
+              <img src="${SITE_URL}/navbar-logo.png" alt="Mboppi" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
+              <div style="color:#fff;font-size:22px;font-weight:800;">Mboppi</div>
+              <div style="color:#e0e7ff;font-size:13px;">Le marché de votre quartier en ligne</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 28px;">
+              <h1 style="margin:0 0 12px;font-size:19px;color:#0f172a;">Votre commande est livrée 🎉</h1>
+              <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#334155;">
+                Bonjour ${safeBuyer}, votre commande <strong>${safeItem}</strong> × ${safeQty} vient d'être livrée.
+                Merci d'avoir choisi Mboppi !
+              </p>
+              <p style="text-align:center;margin:22px 0;">
+                <a href="${trackUrl}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:10px;">Suivre ma commande</a>
+              </p>
+              <p style="margin:0 0 10px;font-size:14px;line-height:1.6;color:#334155;">
+                Votre avis nous aide énormément 🙏 Prenez 30 secondes pour partager votre expérience :
+              </p>
+              <p style="text-align:center;margin:0 0 6px;">
+                <a href="${reviewUrl}" style="display:inline-block;background:#00b67a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:12px 28px;border-radius:10px;">⭐ Laisser un avis sur Trustpilot</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 28px;background:#f8fafc;font-size:11px;color:#94a3b8;text-align:center;">
+              © ${new Date().getFullYear()} Mboppi · ${SITE_URL.replace(/^https?:\/\//, "")}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+  await sendMail({ to: dest, bcc: TRUSTPILOT_INVITE_EMAIL || undefined, subject, text, html });
 }
 
 export function verificationEmailHtml({ name, link }) {

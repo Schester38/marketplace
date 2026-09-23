@@ -279,6 +279,10 @@ export async function initDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_code TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_city TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_address TEXT;
+    -- E-mail de l'acheteur (facultatif, saisi à la commande) : reçu, suivi, et
+    -- invitation à laisser un avis Trustpilot après la livraison (BCC).
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_email TEXT;
+    ALTER TABLE orders ADD COLUMN IF NOT EXISTS buyer_email TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivery_fee REAL NOT NULL DEFAULT 0;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS confirm_code TEXT;

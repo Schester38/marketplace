@@ -89,6 +89,7 @@ export default function DigitalBuyTunnel({
           seller_code: sc || undefined,
           buyer_name: b && b.name ? b.name : undefined,
           buyer_phone: b && b.phone ? b.phone : undefined,
+          buyer_email: b && b.email ? b.email : undefined,
         });
         if (!mountedRef.current) return;
         // Mémorisation locale (achat SANS compte) : l'acheteur retrouvera son

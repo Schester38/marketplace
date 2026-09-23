@@ -338,6 +338,10 @@ router.post(
     const name =
       String(req.body?.buyer_name || "").trim() || (buyer ? buyer.name : "Client digital");
     const phone = String(req.body?.buyer_phone || "").trim();
+    // E-mail (facultatif) : compte connecté ou saisi à l'achat — reçu + avis.
+    const rawEmail =
+      String(req.body?.buyer_email || "").trim() || (buyer ? String(buyer.email || "").trim() : "");
+    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail) ? rawEmail : "";
     const externalRef = genExternalRef("MBP-DIG");
 
     const created = await withTransaction(async (tx) => {
@@ -360,9 +364,9 @@ router.post(
       const sale = (
         await tx.query(
           `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status,
-             purchase_price, currency, buyer_id, buyer_code, buyer_name, buyer_phone,
+             purchase_price, currency, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_email,
              confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
-           VALUES ($1, $2, 1, $3, $4, 'pending', $3, $5, $6, $7, $8, $9, $10, $11, $12, 'automatic', FALSE)
+           VALUES ($1, $2, 1, $3, $4, 'pending', $3, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'automatic', FALSE)
            RETURNING id`,
           [
             product.id,
@@ -374,6 +378,7 @@ router.post(
             sellerCode,
             name,
             phone,
+            email,
             confirmCode,
             referralCommission,
             referredBy,

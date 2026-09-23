@@ -57,6 +57,7 @@ router.post(
       buyer_phone,
       buyer_city,
       buyer_address,
+      buyer_email,
       payment_method,
     } = req.body || {};
     if (!product_id) {
@@ -127,6 +128,15 @@ router.post(
     }
     const city = buyer_city ? String(buyer_city).trim() : "";
     const address = buyer_address ? String(buyer_address).trim() : "";
+    // E-mail (facultatif) : saisi au formulaire, sinon celui du compte connecté.
+    // Sert au reçu et à l'invitation à laisser un avis après la livraison.
+    let email =
+      String(buyer_email || "").trim() || (buyer ? String(buyer.email || "").trim() : "");
+    if (!email && buyer && buyer.id) {
+      const row = (await q("SELECT email FROM users WHERE id = $1", [buyer.id]))[0];
+      email = String(row?.email || "").trim();
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) email = "";
     if (!name) {
       return res.status(400).json({ error: "Le nom du client est requis" });
     }
@@ -198,8 +208,8 @@ router.post(
       }
 
       const created = await tx.query(
-        `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, currency, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
-       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18) RETURNING id`,
+        `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, currency, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_city, buyer_address, buyer_email, confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
+       VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) RETURNING id`,
         [
           product.id,
           seller ? seller.id : null,
@@ -214,6 +224,7 @@ router.post(
           phone,
           city,
           address,
+          email,
           confirmCode,
           referralCommission,
           referredBy,

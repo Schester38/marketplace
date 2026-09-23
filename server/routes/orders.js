@@ -49,7 +49,7 @@ async function uniqueConfirmCode() {
 
 router.post("/", optionalAuth, async (req, res, next) => {
   try {
-    const { items, buyer_name, buyer_phone, buyer_address, buyer_city, payment_method } =
+    const { items, buyer_name, buyer_phone, buyer_address, buyer_city, buyer_email, payment_method } =
       req.body || {};
     if (!Array.isArray(items) || items.length === 0)
       return res.status(400).json({ error: "Le panier est vide" });
@@ -61,6 +61,12 @@ router.post("/", optionalAuth, async (req, res, next) => {
       return res.status(400).json({ error: "La ville est requise" });
     if (!buyer_address || !String(buyer_address).trim())
       return res.status(400).json({ error: "L'adresse de livraison est requise" });
+
+    // E-mail (facultatif) : saisi à la commande, sinon celui du compte connecté.
+    // Sert au reçu et à l'invitation à laisser un avis après la livraison.
+    const rawEmail =
+      String(buyer_email || "").trim() || String(req.user?.email || "").trim();
+    const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail) ? rawEmail : "";
 
     const rawMethod = String(payment_method || "")
       .trim()
@@ -137,8 +143,8 @@ router.post("/", optionalAuth, async (req, res, next) => {
         const code = await uniqueConfirmCodeTx(tx);
         const created = (
           await tx.query(
-            `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, currency, buyer_id, buyer_name, buyer_phone, buyer_city, buyer_address, confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
-           VALUES ($1, NULL, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id`,
+            `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status, purchase_price, currency, buyer_id, buyer_name, buyer_phone, buyer_city, buyer_address, buyer_email, confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
+           VALUES ($1, NULL, $2, $3, $4, 'pending', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id`,
             [
               pid,
               qty,
@@ -151,6 +157,7 @@ router.post("/", optionalAuth, async (req, res, next) => {
               String(buyer_phone).trim(),
               String(buyer_city).trim(),
               String(buyer_address).trim(),
+              email,
               code,
               referralCommission,
               referredBy,
@@ -177,12 +184,13 @@ router.post("/", optionalAuth, async (req, res, next) => {
       if (req.user) {
         orderId = (
           await tx.query(
-            `INSERT INTO orders (user_id, buyer_name, buyer_phone, buyer_address, items, total, status)
-           VALUES ($1, $2, $3, $4, $5::jsonb, $6, 'new') RETURNING id`,
+            `INSERT INTO orders (user_id, buyer_name, buyer_phone, buyer_email, buyer_address, items, total, status)
+           VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, 'new') RETURNING id`,
             [
               req.user.id,
               String(buyer_name).trim(),
               String(buyer_phone).trim(),
+              email,
               String(buyer_address).trim(),
               JSON.stringify(
                 createdSales.map((s) => ({

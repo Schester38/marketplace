@@ -4,7 +4,7 @@ import { authRequired, roleRequired, authOptional } from "../auth.js";
 import { sendPush } from "../push.js";
 import { notifyAdmins } from "../services/adminNotify.js";
 import { notifyUsers } from "../services/notifications.js";
-import { sendSaleEmails } from "../mailer.js";
+import { sendSaleEmails, sendOrderDeliveredEmail } from "../mailer.js";
 import { uploadPaymentProof, signedProofUrl } from "../storage.js";
 import {
   paySaleAutomatically,
@@ -1005,6 +1005,24 @@ router.post(
         title: "Commande livrée 🎉",
         body: `${deliveredName} vous a été livré. Merci d\'avoir commandé sur Mboppi !`,
         url: `/suivi/${sale.id}?code=${encodeURIComponent(sale.confirm_code || sale.buyer_code || "")}`,
+      });
+    }
+
+    // Invitation à laisser un avis : e-mail de remerciement à l'acheteur (si une
+    // adresse a été fournie à la commande) avec l'adresse Trustpilot en BCC —
+    // Trustpilot envoie alors lui-même son invitation officielle. Non bloquant.
+    if (sale.buyer_email) {
+      sendOrderDeliveredEmail({
+        to: sale.buyer_email,
+        buyerName: sale.buyer_name,
+        productName: deliveredName,
+        quantity: sale.quantity,
+        total: sale.total_price,
+        currency: String(sale.currency || "XAF").toUpperCase() === "XAF" ? "F" : sale.currency,
+        saleId: sale.id,
+        code: sale.confirm_code || sale.buyer_code || "",
+      }).catch(() => {
+        /* jamais bloquant pour la livraison */
       });
     }
     notifyAdmins({

@@ -36,6 +36,12 @@ export default function Cart() {
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
+  // E-mail (facultatif) : reçu + invitation à laisser un avis après livraison.
+  const [email, setEmail] = useState(user ? user.email : "");
+  // Idem que pour le nom : la session arrive après le montage.
+  useEffect(() => {
+    if (user && user.email && !String(email).trim()) setEmail(user.email);
+  }, [user, email]);
   const [error, setError] = useState("");
   const [placing, setPlacing] = useState(false);
   const [sales, setSales] = useState(null);
@@ -106,6 +112,7 @@ export default function Cart() {
         buyer_phone: phone.trim(),
         buyer_city: city.trim(),
         buyer_address: address.trim(),
+        buyer_email: email.trim() || undefined,
         // Le paiement se règle à la livraison auprès du livreur :
         // le livreur choisit le mode (espèces / mobile) sur son formulaire.
         payment_method: "espece",
@@ -490,6 +497,14 @@ export default function Cart() {
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+237 6XX XX XX XX"
                 />
+                <label>{t("Votre email (optionnel)")}</label>
+                <input
+                  className="input"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t("Reçu et invitation à laisser un avis")}
+                />
                 <label>{t("Votre ville *")}</label>
                 <input
                   className="input"
@@ -524,6 +539,7 @@ export default function Cart() {
           buyer={{
             name: buyerName || (user && user.name) || "",
             phone: phone || (user && user.phone) || "",
+            email: email || (user && user.email) || "",
           }}
           autoCloseMs={6000}
           onClose={() => setTunnelItems(null)}

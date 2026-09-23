@@ -37,6 +37,7 @@ export default function PurchasePage() {
     buyer_city: "",
     buyer_address: "",
     buyer_phone: "",
+    buyer_email: "",
     quantity: 1,
   });
   const [paymentMethod, setPaymentMethod] = useState("mobile");
@@ -76,6 +77,7 @@ export default function PurchasePage() {
       ...f,
       buyer_name: f.buyer_name || String(user.name || ""),
       buyer_phone: f.buyer_phone || String(user.phone || ""),
+      buyer_email: f.buyer_email || String(user.email || ""),
     }));
   }, [user]);
 
@@ -183,6 +185,7 @@ export default function PurchasePage() {
       buyer_city: form.buyer_city,
       buyer_address: form.buyer_address,
       buyer_phone: form.buyer_phone,
+      buyer_email: (form.buyer_email || "").trim() || undefined,
       quantity: Number(form.quantity) || 1,
       payment_method: paymentMethod,
     });
@@ -481,6 +484,14 @@ export default function PurchasePage() {
               value={form.buyer_phone}
               onChange={(e) => setForm({ ...form, buyer_phone: e.target.value })}
             />
+            <label>{t("Votre email (optionnel)")}</label>
+            <input
+              className="input"
+              type="email"
+              value={form.buyer_email}
+              onChange={(e) => setForm({ ...form, buyer_email: e.target.value })}
+              placeholder={t("Reçu et invitation à laisser un avis")}
+            />
             {!product.is_digital && (
               <>
                 <label>{t("Ville *")}</label>
@@ -586,6 +597,7 @@ export default function PurchasePage() {
           buyer={{
             name: user?.name || form.buyer_name,
             phone: user?.phone || form.buyer_phone,
+            email: user?.email || form.buyer_email,
           }}
           autoCloseMs={4000}
           onDone={() => setTunnelDone(true)}
