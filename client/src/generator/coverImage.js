@@ -2,7 +2,7 @@
 // Deux usages réels :
 //   1. miniature de la bibliothèque du Générateur (gen-thumb) ;
 //   2. image de couverture du produit digital lors de la publication
-//      « Vendre sur Mboppi » (bucket `photos` via POST /generator/.../publish).
+//      « Vendre sur MboppiShop » (bucket `photos` via POST /generator/.../publish).
 // Le rendu reprend exactement les codes du modèle (fond, texte, titre,
 // sous-titre, auteur, image de fond, cadrage) : l'aperçu de l'éditeur, le PDF
 // et la miniature du catalogue montrent donc la même couverture.

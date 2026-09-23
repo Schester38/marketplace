@@ -1253,7 +1253,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     }
   };
 
-  // ─── Publication : PDF → produit digital Mboppi (chaîne réelle) ────────────
+  // ─── Publication : PDF → produit digital MboppiShop (chaîne réelle) ────────────
   // 1) export jsPDF en mémoire → 2) hash SHA-256 → 3) URL signée → PUT Supabase
   // direct → 4) le serveur vérifie l'objet puis crée/met à jour le produit.
   async function sha256Buffer(buf) {
@@ -1492,9 +1492,9 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
             className={`btn btn-small ${meta.published_product_id ? "btn-outline" : "btn-primary"}`}
             onClick={openPublish}
             disabled={pubBusy !== null}
-            title={t("Exporter le PDF puis le publier comme produit digital téléchargeable dans votre boutique Mboppi")}
+            title={t("Exporter le PDF puis le publier comme produit digital téléchargeable dans votre boutique MboppiShop")}
           >
-            {meta.published_product_id ? `🛒 ${t("Produit publié")}` : `🛒 ${t("Vendre sur Mboppi")}`}
+            {meta.published_product_id ? `🛒 ${t("Produit publié")}` : `🛒 ${t("Vendre sur MboppiShop")}`}
           </button>
         </div>
       </div>
@@ -2684,7 +2684,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
           <div className="gen-publish-card">
             <h4>🛒 {meta.published_product_id ? t("Mettre à jour le produit digital") : t("Publier comme produit digital")}</h4>
             <p className="hint">
-              {t("Le PDF est généré puis téléversé dans le stockage privé de Mboppi. Le produit apparaît dans votre catalogue et le fichier devient téléchargeable par l'acheteur après confirmation du paiement.")}
+              {t("Le PDF est généré puis téléversé dans le stockage privé de MboppiShop. Le produit apparaît dans votre catalogue et le fichier devient téléchargeable par l'acheteur après confirmation du paiement.")}
             </p>
             <label>
               {t("Prix")} ({priceCurrency})

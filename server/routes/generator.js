@@ -1,5 +1,5 @@
 // Générateur de documents (ebooks, guides, rapports, brochures…) — module
-// isolé du reste du marketplace Mboppi. Accessible à l'administration (token
+// isolé du reste du marketplace MboppiShop. Accessible à l'administration (token
 // admin) ET aux CRÉATEURS (jeton utilisateur) : chacun ne voit alors QUE ses
 // propres documents (portée par owner_id), et la publication crée le produit
 // digital sous SON compte (resolveOwnerId). Toutes les tables sont ADDITIVES
@@ -217,7 +217,7 @@ router.get("/verify/:ref", ah(async (req, res) => {
     return res.status(404).json({
       verified: false,
       doc_ref: ref,
-      error: "Aucun document Mboppi ne correspond à cette référence. Un document d'origine incertaine ne doit pas être considéré comme authentique.",
+      error: "Aucun document MboppiShop ne correspond à cette référence. Un document d'origine incertaine ne doit pas être considéré comme authentique.",
     });
   }
   res.set("Cache-Control", "public, max-age=60");
@@ -754,7 +754,7 @@ router.post(
   })
 );
 
-// ─── Publication : export PDF → produit digital Mboppi ───────────────────────
+// ─── Publication : export PDF → produit digital MboppiShop ───────────────────────
 // Chaîne complète (aucune simulation) :
 //   1. POST /documents/:id/upload-url  → le navigateur téléverse le PDF
 //      DIRECTEMENT vers Supabase (bucket PRIVÉ `digital-products`) ;

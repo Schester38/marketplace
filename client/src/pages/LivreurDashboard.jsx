@@ -276,7 +276,7 @@ export default function LivreurDashboard() {
   return (
     <main className="container">
       <Seo
-        title={t("Livraison") + " — Mboppi"}
+        title={t("Livraison") + " — MboppiShop"}
         description={t("Livrez les articles commandés et confirmez l'achat.")}
         noindex
       />

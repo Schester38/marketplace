@@ -1,6 +1,6 @@
-# Mboppi
+# MboppiShop
 
-Mboppi est une marketplace pour le Cameroun et l'Afrique. Elle met en relation des boutiques, des vendeurs indépendants, des clients, des créateurs et des livreurs.
+MboppiShop est une marketplace pour le Cameroun et l'Afrique. Elle met en relation des boutiques, des vendeurs indépendants, des clients, des créateurs et des livreurs.
 
 ## Fonctionnalités
 

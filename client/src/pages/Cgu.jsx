@@ -7,7 +7,7 @@ export default function Cgu() {
   return (
     <main className="container">
       <Seo
-        title={t("Conditions générales d'utilisation") + " — Mboppi"}
+        title={t("Conditions générales d'utilisation") + " — MboppiShop"}
         description={t("Conditions générales d'utilisation")}
       />
       <section className="hero vitrine-hero">
@@ -15,7 +15,7 @@ export default function Cgu() {
         <h1>{t("Conditions générales d'utilisation")}</h1>
         <p>
           {t(
-            "Les règles pour utiliser Mboppi en tant que boutique, vendeur, client, livreur ou créateur."
+            "Les règles pour utiliser MboppiShop en tant que boutique, vendeur, client, livreur ou créateur."
           )}
         </p>
       </section>
@@ -25,7 +25,7 @@ export default function Cgu() {
           <h2>{t("1. Objet et acceptation")}</h2>
           <p>
             {t(
-              "Les présentes Conditions générales d'utilisation (CGU) régissent votre accès et votre utilisation de la plateforme Mboppi. En créant votre compte, vous acceptez pleinement et sans réserve ces conditions."
+              "Les présentes Conditions générales d'utilisation (CGU) régissent votre accès et votre utilisation de la plateforme MboppiShop. En créant votre compte, vous acceptez pleinement et sans réserve ces conditions."
             )}
           </p>
         </div>
@@ -46,10 +46,10 @@ export default function Cgu() {
           </p>
         </div>
         <div className="card">
-          <h2>{t("3. Les rôles sur Mboppi")}</h2>
+          <h2>{t("3. Les rôles sur MboppiShop")}</h2>
           <p>
             {t(
-              "Mboppi met en relation des boutiques, des vendeurs, des clients, des livreurs et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander, livrer ou créer."
+              "MboppiShop met en relation des boutiques, des vendeurs, des clients, des livreurs et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander, livrer ou créer."
             )}
           </p>
         </div>
@@ -57,7 +57,7 @@ export default function Cgu() {
           <h2>{t("4. Commandes et paiement")}</h2>
           <p>
             {t(
-              "Le paiement peut être effectué directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne collecte pas les paiements et ne prélève aucun frais de plateforme. Les frais de livraison sont indiqués sur chaque produit."
+              "Le paiement peut être effectué directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. MboppiShop ne collecte pas les paiements et ne prélève aucun frais de plateforme. Les frais de livraison sont indiqués sur chaque produit."
             )}
           </p>
         </div>
@@ -65,7 +65,7 @@ export default function Cgu() {
           <h2>{t("5. Paiements directs et commissions")}</h2>
           <p>
             {t(
-              "Les paiements directs sont convenus entre le client et la boutique, le vendeur ou le livreur. Les commissions sont enregistrées sur la plateforme et réglées manuellement par la boutique, sans frais de plateforme. Mboppi ne prélève aucun frais sur les transactions directes."
+              "Les paiements directs sont convenus entre le client et la boutique, le vendeur ou le livreur. Les commissions sont enregistrées sur la plateforme et réglées manuellement par la boutique, sans frais de plateforme. MboppiShop ne prélève aucun frais sur les transactions directes."
             )}
           </p>
         </div>
@@ -81,7 +81,7 @@ export default function Cgu() {
           <h2>{t("7. Contenu publié")}</h2>
           <p>
             {t(
-              "Les boutiques, vendeurs et créateurs publient leurs propres produits, offres et créations. Ils sont seuls responsables de l'exactitude et de la légalité de leur contenu. Mboppi peut retirer tout contenu illicite ou inapproprié."
+              "Les boutiques, vendeurs et créateurs publient leurs propres produits, offres et créations. Ils sont seuls responsables de l'exactitude et de la légalité de leur contenu. MboppiShop peut retirer tout contenu illicite ou inapproprié."
             )}
           </p>
         </div>
@@ -89,7 +89,7 @@ export default function Cgu() {
           <h2>{t("8. Livraison")}</h2>
           <p>
             {t(
-              "La livraison est assurée par la boutique ou par un livreur Mboppi. Les délais et les frais sont indiqués sur chaque produit et convenus lors de la commande. Le client paie directement à la livraison ou par transfert convenu avec le bénéficiaire."
+              "La livraison est assurée par la boutique ou par un livreur MboppiShop. Les délais et les frais sont indiqués sur chaque produit et convenus lors de la commande. Le client paie directement à la livraison ou par transfert convenu avec le bénéficiaire."
             )}
           </p>
         </div>
@@ -105,7 +105,7 @@ export default function Cgu() {
           <h2>{t("9. Dons et soutien")}</h2>
           <p>
             {t(
-              "La page « Soutenir Mboppi » permet, lorsque cette option est disponible, de contribuer volontairement au projet. Les modalités indiquées sur la page de soutien s’appliquent au don. Aucun don n’est obligatoire pour utiliser Mboppi."
+              "La page « Soutenir MboppiShop » permet, lorsque cette option est disponible, de contribuer volontairement au projet. Les modalités indiquées sur la page de soutien s’appliquent au don. Aucun don n’est obligatoire pour utiliser MboppiShop."
             )}
           </p>
         </div>
@@ -121,7 +121,7 @@ export default function Cgu() {
           <h2>{t("11. Suspension et résiliation")}</h2>
           <p>
             {t(
-              "Mboppi peut suspendre ou supprimer un compte en cas de non-respect des présentes conditions. Vous pouvez supprimer votre compte à tout moment depuis votre espace « Mon compte »."
+              "MboppiShop peut suspendre ou supprimer un compte en cas de non-respect des présentes conditions. Vous pouvez supprimer votre compte à tout moment depuis votre espace « Mon compte »."
             )}
           </p>
         </div>

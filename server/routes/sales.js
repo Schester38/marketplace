@@ -1003,7 +1003,7 @@ router.post(
     if (sale.buyer_id) {
       await sendPush(sale.buyer_id, {
         title: "Commande livrée 🎉",
-        body: `${deliveredName} vous a été livré. Merci d\'avoir commandé sur Mboppi !`,
+        body: `${deliveredName} vous a été livré. Merci d\'avoir commandé sur MboppiShop !`,
         url: `/suivi/${sale.id}?code=${encodeURIComponent(sale.confirm_code || sale.buyer_code || "")}`,
       });
     }

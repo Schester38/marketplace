@@ -152,12 +152,12 @@ export default function SellerDashboard() {
       // Ordinateur : copie du lien D'ABORD (activation utilisateur fraîche),
       // puis partage sans pièce jointe (la feuille Windows ne copierait que la photo).
       await copy(kind, url);
-      await nativeShareWithImage({ title: "Mboppi", text, url });
+      await nativeShareWithImage({ title: "MboppiShop", text, url });
       return;
     }
     // Mobile : partage d'abord (image acceptée), copie du lien juste après.
     await nativeShareWithImage({
-      title: "Mboppi",
+      title: "MboppiShop",
       text,
       url,
       imageUrl,
@@ -170,7 +170,7 @@ export default function SellerDashboard() {
     shareOrCopy(
       "product-" + p.id,
       productLink(p),
-      t("Découvrez cet article sur Mboppi : {name}", { name: p.name }),
+      t("Découvrez cet article sur MboppiShop : {name}", { name: p.name }),
       firstProductImage(p)
     );
 
@@ -182,7 +182,7 @@ export default function SellerDashboard() {
     shareOrCopy(
       "sale-" + p.id,
       saleLink(p),
-      t("Commandez « {name} » sur Mboppi avec le code vendeur {code}", {
+      t("Commandez « {name} » sur MboppiShop avec le code vendeur {code}", {
         name: p.name,
         code: sellerCode,
       }),
@@ -384,7 +384,7 @@ export default function SellerDashboard() {
           /* moyens de paiement indisponibles : on les omet, sans bloquer l'ouverture */
         }
         const msg =
-          `🔔 Mboppi — Demande de retrait d'activation\n` +
+          `🔔 MboppiShop — Demande de retrait d'activation\n` +
           `👤 Parrain : ${user?.name || "—"} (${user?.reference_number || "—"})\n` +
           `💰 Montant : ${formatMoney(amount)} F\n` +
           `👥 Parrainés : ${paid.length}\n` +
@@ -420,7 +420,7 @@ export default function SellerDashboard() {
   const shareReferralWhatsApp = () => {
     if (!referralLink) return;
     const msg = t(
-      "Rejoins Mboppi et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}",
+      "Rejoins MboppiShop et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}",
       { link: referralLink }
     );
     // Sans numéro : l'utilisateur choisit lui-même le destinataire du partage.
@@ -430,7 +430,7 @@ export default function SellerDashboard() {
   const shareSellerReferralWhatsApp = () => {
     if (!sellerReferralLink) return;
     const msg = t(
-      "Deviens vendeur sur Mboppi et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}",
+      "Deviens vendeur sur MboppiShop et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}",
       { link: sellerReferralLink }
     );
     // Sans numéro : l'utilisateur choisit lui-même le destinataire du partage.
@@ -467,7 +467,7 @@ export default function SellerDashboard() {
   return (
     <main className="container">
       <Seo
-        title={t("Mon espace vendeur") + " — Mboppi"}
+        title={t("Mon espace vendeur") + " — MboppiShop"}
         description={t("Vendez les produits des boutiques et gagnez des commissions.")}
         noindex
       />
@@ -1291,7 +1291,7 @@ export default function SellerDashboard() {
             </div>
             <p style={{ lineHeight: 1.6 }}>
               {t(
-                "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Votre paiement vous parviendra dans un délai maximum de 72 h.",
+                "Votre demande de retrait de {amount} F a bien été reçue par l'équipe MboppiShop. Votre paiement vous parviendra dans un délai maximum de 72 h.",
                 { amount: formatMoney(withdrawDone.amount) }
               )}
             </p>

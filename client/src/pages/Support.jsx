@@ -211,15 +211,15 @@ export default function Support() {
   return (
     <main className="container">
       <Seo
-        title={t("Je soutiens Mboppi") + " — Mboppi"}
+        title={t("Je soutiens MboppiShop") + " — MboppiShop"}
         description={t(
-          "Soutenez Mboppi : Orange Money, MTN Mobile Money, transfert international ou virement bancaire UBA."
+          "Soutenez MboppiShop : Orange Money, MTN Mobile Money, transfert international ou virement bancaire UBA."
         )}
         noindex
       />
       <section className="hero vitrine-hero">
-        <span className="hero-badge">💛 {t("Je soutiens Mboppi")}</span>
-        <h1>{t("Chaque geste compte pour faire grandir Mboppi")}</h1>
+        <span className="hero-badge">💛 {t("Je soutiens MboppiShop")}</span>
+        <h1>{t("Chaque geste compte pour faire grandir MboppiShop")}</h1>
         <p>
           {t(
             "Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet."
@@ -351,7 +351,7 @@ export default function Support() {
         <h2>{t("Merci pour votre soutien !")} 💛</h2>
         <p>
           {t(
-            "Avec votre aide, Mboppi continue de connecter les boutiques, les vendeurs et les clients de toute la communauté."
+            "Avec votre aide, MboppiShop continue de connecter les boutiques, les vendeurs et les clients de toute la communauté."
           )}
         </p>
       </section>

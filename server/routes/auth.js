@@ -19,7 +19,7 @@ const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MIN_PASSWORD = 8;
-const SITE_URL = process.env.SITE_URL || "https://mboppi-mboppi.vercel.app";
+const SITE_URL = process.env.SITE_URL || "https://www.mboppishop.com";
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 
 function verifyToken() {
@@ -39,8 +39,8 @@ async function sendVerification(user) {
   const link = verifyLink(token, user.email);
   await sendMail({
     to: user.email,
-    subject: "Confirmez votre inscription — Mboppi",
-    text: `Bonjour ${user.name},\n\nBienvenue sur Mboppi ! Confirmez votre adresse email pour valider votre inscription :\n\n${link}\n\nCe lien est valable 24 heures.`,
+    subject: "Confirmez votre inscription — MboppiShop",
+    text: `Bonjour ${user.name},\n\nBienvenue sur MboppiShop ! Confirmez votre adresse email pour valider votre inscription :\n\n${link}\n\nCe lien est valable 24 heures.`,
     html: verificationEmailHtml({ name: user.name, link }),
   });
   return link;
@@ -170,7 +170,7 @@ router.post(
     const emailNorm = String(email).trim().toLowerCase();
     // Partage d'email : AUTORISÉ uniquement entre un compte boutique (shop)
     // et un compte livreur. Toute autre combinaison avec le même email est
-    // refusée — c'est la règle métier pilier du modèle de livraison Mboppi.
+    // refusée — c'est la règle métier pilier du modèle de livraison MboppiShop.
     const existing = await q("SELECT id, role FROM users WHERE email = $1", [emailNorm]);
     if (existing.length) {
       const roles = existing.map((r) => r.role);
@@ -180,7 +180,7 @@ router.post(
       if (!allowed) {
         return res.status(409).json({
           error:
-            "Cet email est déjà utilisé par un autre compte Mboppi. Le partage d'email n'est autorisé qu'entre un compte boutique (shop) et un compte livreur.",
+            "Cet email est déjà utilisé par un autre compte MboppiShop. Le partage d'email n'est autorisé qu'entre un compte boutique (shop) et un compte livreur.",
         });
       }
     }
@@ -469,7 +469,7 @@ router.get(
           // une inscription (l'utilisateur a peut-être un compte créé avec un
           // autre email/mot de passe). Message clair au lieu du verdict CGU.
           const msg = encodeURIComponent(
-            "Aucun compte Mboppi n'est associé à cette adresse Google. Si vous avez déjà un compte (email + mot de passe), connectez-vous avec vos identifiants. Sinon, créez votre compte en acceptant les conditions."
+            "Aucun compte MboppiShop n'est associé à cette adresse Google. Si vous avez déjà un compte (email + mot de passe), connectez-vous avec vos identifiants. Sinon, créez votre compte en acceptant les conditions."
           );
           return res.redirect(`/auth-google?error=${msg}`);
         }
@@ -482,7 +482,7 @@ router.get(
             (cleanRole === "shop" && roles.length === 1 && roles[0] === "livreur");
           if (!allowed) {
             const msg = encodeURIComponent(
-              "Cet email est déjà utilisé par un autre espace Mboppi. Le partage d'email n'est autorisé qu'entre boutique et livreur. Créez votre espace livreur depuis votre boutique (« Devenir livreur »)."
+              "Cet email est déjà utilisé par un autre espace MboppiShop. Le partage d'email n'est autorisé qu'entre boutique et livreur. Créez votre espace livreur depuis votre boutique (« Devenir livreur »)."
             );
             return res.redirect(`/auth-google?error=${msg}`);
           }

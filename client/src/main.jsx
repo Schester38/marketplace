@@ -77,11 +77,11 @@ if (pathname.startsWith("/verone")) {
 } else if (pathname.startsWith("/livreur")) {
   const link = document.querySelector('link[rel="manifest"]');
   if (link) link.href = "/manifest-livreur.webmanifest";
-  document.title = "Mboppi Livreur";
+  document.title = "MboppiShop Livreur";
 } else if (pathname.startsWith("/admin")) {
   const link = document.querySelector('link[rel="manifest"]');
   if (link) link.href = "/manifest-admin.webmanifest";
-  document.title = "Mboppi Admin";
+  document.title = "MboppiShop Admin";
 }
 
 if ("serviceWorker" in navigator) {

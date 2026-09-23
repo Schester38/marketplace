@@ -67,7 +67,7 @@ router.post(
         .json({ error: "Aucun appareil abonné sur ce compte.", code: "NO_SUB" });
     }
     const sent = await sendPush(req.user.id, {
-      title: "🔔 Test de notification Mboppi",
+      title: "🔔 Test de notification MboppiShop",
       body: "Si vous la voyez, les notifications push fonctionnent sur cet appareil, même écran fermé.",
       url: "/compte",
       tag: `push-test-${Date.now()}`,

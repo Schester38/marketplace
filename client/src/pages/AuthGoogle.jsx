@@ -89,7 +89,7 @@ export default function AuthGoogle() {
   return (
     <main className="container narrow">
       <Seo
-        title={t("Connexion en cours…") + " — Mboppi"}
+        title={t("Connexion en cours…") + " — MboppiShop"}
         description={t("Connexion en cours…")}
         noindex
       />
@@ -101,7 +101,7 @@ export default function AuthGoogle() {
           <>
             <h2 style={{ marginBottom: 6 }}>Quel espace voulez-vous ouvrir ?</h2>
             <p className="hint" style={{ marginTop: 0 }}>
-              Votre compte Google est connecté à plusieurs espaces Mboppi.
+              Votre compte Google est connecté à plusieurs espaces MboppiShop.
             </p>
             <div className="row2" style={{ flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
               {chooseRoles

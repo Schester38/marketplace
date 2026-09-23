@@ -72,7 +72,7 @@ const ALLOWED_ORIGINS = [
   // domaine sans modification du code.
   process.env.SITE_URL,
   process.env.PUBLIC_URL,
-  "https://mboppi-mboppi.vercel.app",
+  "https://www.mboppishop.com",
   "https://ikeepay.com",
   "https://www.ikeepay.com",
 ].filter(Boolean);
@@ -146,7 +146,7 @@ app.get("/", (req, res, next) => {
   const ua = req.headers["user-agent"] || "";
   const isCrawler = /WhatsApp|facebookexternalhit|FacebookBot|Twitterbot|TelegramBot|Slackbot|Discordbot|LinkedInBot|Googlebot|bingbot|embedly|quora link preview/i.test(ua);
   if (wantsHtml || isCrawler) return next();
-  res.json({ name: "Mboppi API", version: "1.0.0" });
+  res.json({ name: "MboppiShop API", version: "1.0.0" });
 });
 
 app.get("/api/health", async (req, res) => {

@@ -58,7 +58,7 @@ export default function SuggestionButton({ onOpened }) {
                 </button>
               </div>
               <p className="hint">
-                {t("Aidez-nous à améliorer Mboppi : votre message s'ouvrira dans WhatsApp.")}
+                {t("Aidez-nous à améliorer MboppiShop : votre message s'ouvrira dans WhatsApp.")}
               </p>
               <form onSubmit={send}>
                 <textarea

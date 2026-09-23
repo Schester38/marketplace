@@ -1,4 +1,4 @@
-// Frais d'adhésion Mboppi — module partagé sans effet de bord, utilisé par :
+// Frais d'adhésion MboppiShop — module partagé sans effet de bord, utilisé par :
 //   — server/auth.js (rôles, roleRequired, inscription) ;
 //   — server/services/ikeepay.js (payin d'adhésion en ligne).
 //

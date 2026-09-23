@@ -1264,7 +1264,7 @@ export default function Admin() {
   if (gate) {
     return (
       <main className="container narrow">
-        <Seo title={t("Administration") + " — Mboppi"} description={t("Administration")} noindex />
+        <Seo title={t("Administration") + " — MboppiShop"} description={t("Administration")} noindex />
         <section className="dash-header">
           <div>
             <h1>🛡️ {t("Administration")}</h1>
@@ -1295,7 +1295,7 @@ export default function Admin() {
 
   return (
     <main className="container">
-      <Seo title={t("Administration") + " — Mboppi"} description={t("Administration")} noindex />
+      <Seo title={t("Administration") + " — MboppiShop"} description={t("Administration")} noindex />
       <section className="dash-header">
         <div>
           <h1>🛡️ {t("Administration")}</h1>
@@ -1813,7 +1813,7 @@ export default function Admin() {
           <p className="hint">
             ⚠️{" "}
             {t(
-              "{n} abonné(s) ont désactivé « Messages de Mboppi » (Mon compte) : ils ne recevront PAS cette campagne push.",
+              "{n} abonné(s) ont désactivé « Messages de MboppiShop » (Mon compte) : ils ne recevront PAS cette campagne push.",
               { n: campRecipients.push_blocked }
             )}
           </p>
@@ -1939,7 +1939,7 @@ export default function Admin() {
           <p className="hint">
             ⚠️{" "}
             {t(
-              "{n} abonné(s) ont désactivé « Messages de Mboppi » (Mon compte) : ils ne recevront PAS cette campagne push.",
+              "{n} abonné(s) ont désactivé « Messages de MboppiShop » (Mon compte) : ils ne recevront PAS cette campagne push.",
               { n: schedRecipients.push_blocked }
             )}
           </p>
@@ -2504,7 +2504,7 @@ export default function Admin() {
                 </div>
                 <p className="hint" style={{ marginTop: 0, marginBottom: 4 }}>
                   {t(
-                    "Template conseillé : catégorie « Utilitaire », langue fr, avec 9 variables (type « Nom »/texte) : {{1}} parrain (nom + réf), {{2}} montant, {{3}} nb parrainés, {{4}} email, {{5}} commentaire, {{6}} titulaire, {{7}} wallet 1, {{8}} wallet 2, {{9}} wallet 3. Ex. de corps : « 🔔 Mboppi — Demande de retrait / 👤 Parrain : {{1}} / 💰 Montant : {{2}} / 👥 Parrainés payés : {{3}} / 📧 Email : {{4}} / 💬 Commentaire : {{5}} / Moyens de paiement : Titulaire {{6}} / 1. {{7}} / 2. {{8}} / 3. {{9}} »."
+                    "Template conseillé : catégorie « Utilitaire », langue fr, avec 9 variables (type « Nom »/texte) : {{1}} parrain (nom + réf), {{2}} montant, {{3}} nb parrainés, {{4}} email, {{5}} commentaire, {{6}} titulaire, {{7}} wallet 1, {{8}} wallet 2, {{9}} wallet 3. Ex. de corps : « 🔔 MboppiShop — Demande de retrait / 👤 Parrain : {{1}} / 💰 Montant : {{2}} / 👥 Parrainés payés : {{3}} / 📧 Email : {{4}} / 💬 Commentaire : {{5}} / Moyens de paiement : Titulaire {{6}} / 1. {{7}} / 2. {{8}} / 3. {{9}} »."
                   )}
                 </p>
               </>
@@ -2615,7 +2615,7 @@ export default function Admin() {
         </h2>
         <p className="hint" style={{ marginBottom: 12 }}>
           {t(
-            "Connecte l'assistant IA du site (même moteur que le chat 💬) à votre numéro WhatsApp Cloud API : il répond automatiquement à toute personne qui écrit au numéro Mboppi (produits, prix, livraison, devenir vendeur). Nécessite le fournisseur « WhatsApp Cloud API (Meta) » ci-dessus, un webhook configuré chez Meta et la variable d'environnement WHATSAPP_VERIFY_TOKEN."
+            "Connecte l'assistant IA du site (même moteur que le chat 💬) à votre numéro WhatsApp Cloud API : il répond automatiquement à toute personne qui écrit au numéro MboppiShop (produits, prix, livraison, devenir vendeur). Nécessite le fournisseur « WhatsApp Cloud API (Meta) » ci-dessus, un webhook configuré chez Meta et la variable d'environnement WHATSAPP_VERIFY_TOKEN."
           )}
         </p>
         <p className="hint" style={{ marginBottom: 12 }}>
@@ -2638,7 +2638,7 @@ export default function Admin() {
               {t("Message d'accueil (bonjour, salut…)")}
               <textarea
                 rows={2}
-                placeholder="Bonjour 👋 Je suis l'assistant Mboppi. Posez votre question : produits, prix, livraison, devenir vendeur…"
+                placeholder="Bonjour 👋 Je suis l'assistant MboppiShop. Posez votre question : produits, prix, livraison, devenir vendeur…"
                 value={waBotForm.greeting}
                 onChange={(e) => setWaBotForm((f) => ({ ...f, greeting: e.target.value }))}
               />

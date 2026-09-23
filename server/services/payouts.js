@@ -1,4 +1,4 @@
-﻿// Helpers de paiements Mboppi.
+// Helpers de paiements MboppiShop.
 // Historique : ce fichier contenait le moteur de reversement automatique iKeePay
 // (providerPayout, markSalePaid, payoutPlatformShare…), supprimé avec la
 // dépendance iKeePay. Ne restent que les utilitaires utilisés par le paiement

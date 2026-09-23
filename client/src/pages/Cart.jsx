@@ -141,7 +141,7 @@ export default function Cart() {
         const digits = waDigits(g.phone, g.country);
         if (!digits) return { ...g, waUrl: null };
         const lines = [
-          "🛒 *Nouvelle commande Mboppi*",
+          "🛒 *Nouvelle commande MboppiShop*",
           "",
           "📦 Articles :",
           ...g.items.map((s) =>
@@ -213,7 +213,7 @@ export default function Cart() {
   if (sales && sales.length > 0) {
     return (
       <main className="container narrow">
-        <Seo title={t("Commande enregistrée") + " — Mboppi"} noindex />
+        <Seo title={t("Commande enregistrée") + " — MboppiShop"} noindex />
         <div className="card form-card success-card">
           <div className="auth-brand">✅</div>
           <h2>{t("Commande enregistrée !")}</h2>
@@ -315,7 +315,7 @@ export default function Cart() {
 
   return (
     <main className="container narrow">
-      <Seo title={t("Mon panier") + " — Mboppi"} noindex />
+      <Seo title={t("Mon panier") + " — MboppiShop"} noindex />
       <h1 className="section-title">{t("🛒 Mon panier")}</h1>
 
       {/* Achat digital terminé : les fichiers ont été téléchargés et retirés du
@@ -461,7 +461,7 @@ export default function Cart() {
                   }}
                 >
                   <strong style={{ display: "block", fontSize: 15, color: "#7c2d12" }}>
-                    🛡️ {t("CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.")}
+                    🛡️ {t("CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPISHOP.")}
                   </strong>
                   <p
                     style={{ margin: "6px 0 2px", fontSize: 13, lineHeight: 1.5, color: "#78350f" }}
@@ -478,7 +478,7 @@ export default function Cart() {
                       color: "#7c2d12",
                     }}
                   >
-                    — {t("L'Administration Mboppi")}
+                    — {t("L'Administration MboppiShop")}
                   </small>
                 </div>
                 <label>{t("Votre nom *")}</label>

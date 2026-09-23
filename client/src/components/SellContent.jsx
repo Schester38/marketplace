@@ -5,7 +5,7 @@ import { whatsappLink } from "../config.js";
 
 /**
  * Contenu de la page de recrutement VENDEURS (utilisé par /vendre et par la
- * page d'adhésion via le bouton « AVANTAGE D'ÊTRE VENDEUR SUR MBOPPI »).
+ * page d'adhésion via le bouton « AVANTAGE D'ÊTRE VENDEUR SUR MBOPPISHOP »).
  * `showRegisterCta` : masque le bouton « Devenir vendeur » (adhésion = déjà inscrit).
  */
 export default function SellContent({ showRegisterCta = true }) {
@@ -54,7 +54,7 @@ export default function SellContent({ showRegisterCta = true }) {
       emoji: "🛵",
       title: t("Livraison intégrée"),
       text: t(
-        "Vos clients suivent leur colis en temps réel avec un livreur Mboppi."
+        "Vos clients suivent leur colis en temps réel avec un livreur MboppiShop."
       ),
     },
     {
@@ -69,7 +69,7 @@ export default function SellContent({ showRegisterCta = true }) {
   return (
     <>
       <section className="hero sell-hero">
-        <span className="hero-badge">🧑🏾‍💼 {t("POURQUOI DEVENIR VENDEUR SUR MBOPPI")}</span>
+        <span className="hero-badge">🧑🏾‍💼 {t("POURQUOI DEVENIR VENDEUR SUR MBOPPISHOP")}</span>
         <h1>{t("Vendez partout où vous voulez, gardez 100 % de vos ventes.")}</h1>
         <p>
           {t(
@@ -116,7 +116,7 @@ export default function SellContent({ showRegisterCta = true }) {
       </section>
 
       <section className="hero sell-footer">
-        <span className="hero-badge">🎉 {t("Prêt à vendre sur Mboppi ?")}</span>
+        <span className="hero-badge">🎉 {t("Prêt à vendre sur MboppiShop ?")}</span>
         <p>
           {t(
             "Créez votre compte en moins d'une minute. Besoin d'aide ? L'équipe vous accompagne sur WhatsApp."
@@ -130,7 +130,7 @@ export default function SellContent({ showRegisterCta = true }) {
           )}
           <a
             href={whatsappLink(
-              t("Bonjour, je veux devenir vendeur sur Mboppi.")
+              t("Bonjour, je veux devenir vendeur sur MboppiShop.")
             )}
             target="_blank"
             rel="noopener noreferrer"

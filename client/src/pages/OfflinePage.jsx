@@ -22,7 +22,7 @@ export default function OfflinePage() {
   return (
     <main className="container">
       <Seo
-        title={t("Pas de connexion internet") + " — Mboppi"}
+        title={t("Pas de connexion internet") + " — MboppiShop"}
         description={t("Pas de connexion internet")}
         noindex
       />

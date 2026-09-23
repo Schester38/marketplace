@@ -123,8 +123,8 @@ export default function MembershipPage() {
     return (
       <main className="container narrow">
         <Seo
-          title={t("Adhésion Mboppi") + " — Mboppi"}
-          description={t("Payez votre adhésion Mboppi et accédez à votre espace professionnel.")}
+          title={t("Adhésion MboppiShop") + " — MboppiShop"}
+          description={t("Payez votre adhésion MboppiShop et accédez à votre espace professionnel.")}
           noindex
         />
         <div className="card form-card">
@@ -149,13 +149,13 @@ export default function MembershipPage() {
   return (
     <main className="container narrow">
       <Seo
-        title={t("Adhésion Mboppi") + " — Mboppi"}
-        description={t("Payez votre adhésion Mboppi et accédez à votre espace professionnel.")}
+        title={t("Adhésion MboppiShop") + " — MboppiShop"}
+        description={t("Payez votre adhésion MboppiShop et accédez à votre espace professionnel.")}
         noindex
       />
       <div className="card form-card">
         <div className="auth-brand">💳</div>
-        <h1>{t("Adhésion Mboppi")}</h1>
+        <h1>{t("Adhésion MboppiShop")}</h1>
         <p className="hint">
           {t(
             "Après votre inscription, l'accès à votre tableau de bord professionnel est accordé dès paiement de votre adhésion. Suivez les instructions ci-dessous pour effectuer votre paiement."
@@ -211,7 +211,7 @@ export default function MembershipPage() {
             >
               {showAdvantages
                 ? `✕ ${t("Masquer les avantages")}`
-                : `🏆 ${t("AVANTAGE D'ÊTRE VENDEUR SUR MBOPPI")}`}
+                : `🏆 ${t("AVANTAGE D'ÊTRE VENDEUR SUR MBOPPISHOP")}`}
             </button>
             {showAdvantages && (
               <div className="sell-landing" style={{ marginBottom: 24 }}>

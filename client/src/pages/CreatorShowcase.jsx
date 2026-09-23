@@ -57,8 +57,8 @@ export default function CreatorShowcase() {
   return (
     <main className="container">
       <Seo
-        title={`${creator.name} — ${t("Créations sur Mboppi")}`}
-        description={`${creator.name}${creator.location ? " — " + creator.location : ""} | ${t("Vitrine de créations sur Mboppi.")}`}
+        title={`${creator.name} — ${t("Créations sur MboppiShop")}`}
+        description={`${creator.name}${creator.location ? " — " + creator.location : ""} | ${t("Vitrine de créations sur MboppiShop.")}`}
       />
       <Link to="/createurs" className="btn btn-outline" style={{ marginBottom: 16 }}>
         ← {t("Créateurs")}
@@ -99,7 +99,7 @@ export default function CreatorShowcase() {
               className="btn btn-primary shop-wa"
               href={waLink(
                 phone,
-                t("Bonjour {shop}, je vous contacte depuis Mboppi.", { shop: creator.name })
+                t("Bonjour {shop}, je vous contacte depuis MboppiShop.", { shop: creator.name })
               )}
               target="_blank"
               rel="noopener noreferrer"

@@ -1,4 +1,4 @@
-// ─── Robot WhatsApp Mboppi ────────────────────────────────────────────────
+// ─── Robot WhatsApp MboppiShop ────────────────────────────────────────────────
 // Assistant conversationnel WhatsApp (Meta Cloud API) branché sur le même
 // moteur IA que le chat du site (routes/chat.js) : mêmes prompts, mêmes
 // données produits en stock, historique court par numéro.
@@ -44,7 +44,7 @@ export async function getBotSettings() {
     greeting: greeting || "",
     fallback:
       fallback ||
-      "Je n'ai pas bien compris 🤔 — reformulez, ou contactez l'équipe Mboppi sur ce même numéro.",
+      "Je n'ai pas bien compris 🤔 — reformulez, ou contactez l'équipe MboppiShop sur ce même numéro.",
     system_prompt: systemPrompt || "",
   };
 }
@@ -138,7 +138,7 @@ export async function handleBotWebhook(payload) {
             await sendText(
               from,
               g ||
-                "Bonjour 👋 Je suis l'assistant Mboppi. Posez votre question : produits, prix, livraison, devenir vendeur…"
+                "Bonjour 👋 Je suis l'assistant MboppiShop. Posez votre question : produits, prix, livraison, devenir vendeur…"
             );
             continue;
           }

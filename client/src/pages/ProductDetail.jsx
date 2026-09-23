@@ -370,8 +370,8 @@ export default function ProductDetail() {
   return (
     <main className="container pd-page">
       <Seo
-        title={`${product.name} — Mboppi`}
-        description={t("Découvrez « {name} » à {price} {symbol} chez {shop} sur Mboppi.", {
+        title={`${product.name} — MboppiShop`}
+        description={t("Découvrez « {name} » à {price} {symbol} chez {shop} sur MboppiShop.", {
           name: product.name,
           price: formatMoney(flash ? flash.price : product.price),
           symbol,
@@ -387,7 +387,7 @@ export default function ProductDetail() {
           <div>
             <strong>
               <Logo className="logo-inline" />{" "}
-              {t("Ce produit vous est proposé par un vendeur Mboppi.")}
+              {t("Ce produit vous est proposé par un vendeur MboppiShop.")}
             </strong>
             <p className="hint" style={{ marginTop: 4 }}>
               {t(
@@ -563,7 +563,7 @@ export default function ProductDetail() {
                   className="meta-chip"
                   href={waLink(
                     product.shop_phone,
-                    t("Bonjour, je suis intéressé par « {name} » sur Mboppi.", {
+                    t("Bonjour, je suis intéressé par « {name} » sur MboppiShop.", {
                       name: product.name,
                     })
                   )}
@@ -734,7 +734,7 @@ export default function ProductDetail() {
                 className="btn btn-outline"
                 onClick={async () => {
                   const url = `${BASE_URL}/produit/${product.id}`;
-                  const text = t("Découvrez « {name} » à {price} {symbol} sur Mboppi.", {
+                  const text = t("Découvrez « {name} » à {price} {symbol} sur MboppiShop.", {
                     name: product.name,
                     price: formatMoney(displayPrice),
                     symbol,

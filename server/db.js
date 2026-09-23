@@ -776,7 +776,7 @@ export async function initDb() {
       back_cover JSONB NOT NULL DEFAULT '{}'::jsonb,
       protection JSONB NOT NULL DEFAULT '{}'::jsonb,
       content_hash TEXT NOT NULL DEFAULT '',
-      -- Produit digital publié depuis le Générateur (« Vendre sur Mboppi ») :
+      -- Produit digital publié depuis le Générateur (« Vendre sur MboppiShop ») :
       -- une republication met à jour CE produit au lieu d'en créer un doublon.
       published_product_id INTEGER,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

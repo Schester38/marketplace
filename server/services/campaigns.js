@@ -133,13 +133,13 @@ export async function dispatchCampaign({ title, message, url = "/", audience = "
       }
       const { sendMail, mailConfigured, newsletterEmailHtml } = await import("../mailer.js");
       result.email_simulated = !mailConfigured();
-      const unsubscribeUrl = `${process.env.SITE_URL || "https://mboppi-mboppi.vercel.app"}/`;
+      const unsubscribeUrl = `${process.env.SITE_URL || "https://www.mboppishop.com"}/`;
       for (const r of recipients) {
         try {
           await sendMail({
             to: r.email,
-            subject: `${title} — Mboppi`,
-            text: `${message}\n\n— Mboppi`,
+            subject: `${title} — MboppiShop`,
+            text: `${message}\n\n— MboppiShop`,
             html: newsletterEmailHtml({ title, body: message, unsubscribeUrl }),
           });
           result.email_sent += 1;

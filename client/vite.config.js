@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 // Domaine public du site, utilisé pour index.html (canonical, og:url, og:image).
 // Piloté par VITE_SITE_URL (défini sur Vercel) avec repli sur le domaine actuel :
 // un build sans la variable reste strictement identique à aujourd'hui.
-const FALLBACK_SITE_URL = 'https://mboppi-mboppi.vercel.app';
+const FALLBACK_SITE_URL = 'https://www.mboppishop.com';
 const SITE_URL = String(process.env.VITE_SITE_URL || FALLBACK_SITE_URL).replace(/\/+$/, '');
 
 function htmlSiteUrlPlugin() {

@@ -31,8 +31,8 @@ export default function Creators() {
   return (
     <main className="container">
       <Seo
-        title={t("Créateurs de Mboppi")}
-        description={t("Découvrez les créateurs de Mboppi et leurs créations artisanales.")}
+        title={t("Créateurs de MboppiShop")}
+        description={t("Découvrez les créateurs de MboppiShop et leurs créations artisanales.")}
       />
       <h2 className="section-title">🎨 {t("Les créateurs")}</h2>
       {error ? (
@@ -99,7 +99,7 @@ export default function Creators() {
                   <a
                     href={waLink(
                       c.phone,
-                      t("Bonjour {name}, je vous contacte depuis Mboppi au sujet de vos créations.", {
+                      t("Bonjour {name}, je vous contacte depuis MboppiShop au sujet de vos créations.", {
                         name: c.name,
                       })
                     )}

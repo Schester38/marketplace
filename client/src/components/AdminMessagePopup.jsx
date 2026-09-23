@@ -45,7 +45,7 @@ export default function AdminMessagePopup() {
     >
       <div className="modal admin-msg-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>💬 {t("Message de l'équipe Mboppi")}</h3>
+          <h3>💬 {t("Message de l'équipe MboppiShop")}</h3>
           <button type="button" className="drawer-close" aria-label={t("Fermer")} onClick={close}>
             ✕
           </button>

@@ -6,7 +6,7 @@ export const OFFERS_WHATSAPP_NUMBER = "237679475343";
 // vers un domaine personnalisé se fait donc SANS modification de code.
 const ENV_SITE_URL = import.meta.env?.VITE_SITE_URL || "";
 
-export const BASE_URL = (ENV_SITE_URL || "https://mboppi-mboppi.vercel.app").replace(
+export const BASE_URL = (ENV_SITE_URL || "https://www.mboppishop.com").replace(
   /\/+$/,
   ""
 );

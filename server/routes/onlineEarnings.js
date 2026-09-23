@@ -102,7 +102,7 @@ router.post(
       amount: value,
     });
     sendWhatsAppSafe(
-      `🔔 Mboppi — Nouvelle demande de retrait (gains en ligne)\n` +
+      `🔔 MboppiShop — Nouvelle demande de retrait (gains en ligne)\n` +
         `👤 ${whoLabel} : ${user?.name || "?"}\n` +
         `💰 Montant : ${value.toLocaleString("fr-FR")} F (${who})\n` +
         (payment_method ? `💳 Moyen : ${payment_method}\n` : "") +
@@ -118,7 +118,7 @@ router.post(
         return import("../mailer.js").then(({ sendMail }) =>
           sendMail({
             to: notifyEmail,
-            subject: `Mboppi — Demande de retrait en ligne : ${value.toLocaleString("fr-FR")} F`,
+            subject: `MboppiShop — Demande de retrait en ligne : ${value.toLocaleString("fr-FR")} F`,
             text:
               `Nouvelle demande de retrait (gains en ligne)\n\n` +
               `${whoLabel} : ${user?.name || "?"}\n` +

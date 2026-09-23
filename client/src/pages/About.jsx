@@ -8,19 +8,19 @@ export default function About() {
   return (
     <main className="container">
       <Seo
-        title={t("À propos de Mboppi") + " — Mboppi"}
+        title={t("À propos de MboppiShop") + " — MboppiShop"}
         description={t(
-          "Mboppi est un marché en ligne conçu pour connecter boutiques, vendeurs, clients et créateurs."
+          "MboppiShop est un marché en ligne conçu pour connecter boutiques, vendeurs, clients et créateurs."
         )}
       />
       <section className="hero vitrine-hero">
         <span className="hero-badge">
           <Logo className="logo-inline" /> {t("À propos")}
         </span>
-        <h1>{t("Mboppi, le marché de votre quartier, en ligne")}</h1>
+        <h1>{t("MboppiShop, le marché de votre quartier, en ligne")}</h1>
         <p>
           {t(
-            "Mboppi est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans commission écrasante et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les vendeurs gagnent des commissions, les créateurs exposent leurs talents et les clients trouvent tout au même endroit."
+            "MboppiShop est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans commission écrasante et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les vendeurs gagnent des commissions, les créateurs exposent leurs talents et les clients trouvent tout au même endroit."
           )}
         </p>
         <div className="hero-actions">
@@ -68,7 +68,7 @@ export default function About() {
       <section className="section">
         <div className="section-head">
           <h2>{t("Une marketplace pensée pour le terrain")}</h2>
-          <p>{t("Mboppi rapproche la découverte en ligne de la relation commerciale locale.")}</p>
+          <p>{t("MboppiShop rapproche la découverte en ligne de la relation commerciale locale.")}</p>
         </div>
         <div className="privacy-list">
           <div className="card">
@@ -124,7 +124,7 @@ export default function About() {
             <h3>{t("L'argent, en toute transparence")}</h3>
             <p>
               {t(
-                "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne collecte pas les paiements et ne prélève aucun frais de plateforme."
+                "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money direct ou virement bancaire. MboppiShop ne collecte pas les paiements et ne prélève aucun frais de plateforme."
               )}
             </p>
           </div>

@@ -5,7 +5,7 @@
   --primary-200: #fed7aa;
   --primary-300: #fdba74;
   --primary-400: #fb923c;
-  --primary-500: #ee7d00; /* Brand orange Mboppi */
+  --primary-500: #ee7d00; /* Brand orange MboppiShop */
   --primary-600: #d16e00;
   --primary-700: #b85f00;
   --primary-800: #9a3412;
@@ -1083,7 +1083,7 @@ main {
   gap: 8px;
 }
 .auth-brand::after {
-  content: "Mboppi";
+  content: "MboppiShop";
   background: var(--grad);
   -webkit-background-clip: text;
   background-clip: text;
@@ -6365,7 +6365,7 @@ a.step {
   }
 }
 
-/* Assistant Mboppi (chat widget) */
+/* Assistant MboppiShop (chat widget) */
 .chat-bubble {
   position: fixed;
   inset-inline-end: 16px;

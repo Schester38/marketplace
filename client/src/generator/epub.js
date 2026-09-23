@@ -176,7 +176,7 @@ export async function exportEpub({ doc, docMeta, onProgress }) {
   const title = docMeta.title || "Document";
   const author = docMeta.author || "";
   const lang = (navigator.language || "fr").slice(0, 2);
-  // Identifiant unique EPUB : la référence Mboppi quand elle existe (cohérence
+  // Identifiant unique EPUB : la référence MboppiShop quand elle existe (cohérence
   // avec le QR code du PDF), sinon un UUID v4.
   const identifier = docMeta.doc_ref
     ? `urn:mboppi:${docMeta.doc_ref}`

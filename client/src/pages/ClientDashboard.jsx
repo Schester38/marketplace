@@ -90,7 +90,7 @@ export default function ClientDashboard() {
   return (
     <main className="container">
       <Seo
-        title={t("Mon espace client") + " — Mboppi"}
+        title={t("Mon espace client") + " — MboppiShop"}
         description={t("Découvrez les produits et offres des boutiques.")}
         noindex
       />

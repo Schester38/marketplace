@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v324';
+const CACHE_NAME = 'mboppi-v325';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/assistant-avatar.webp', '/og-image.svg', '/og-image.png', '/robots.txt', '/splash.js', '/diapo/MboppiShop_Developpez_votre_boutique.webp', '/diapo/MboppiShop_Gagner_telephone_connexion.webp', '/diapo/MboppiShop_Paiement_a_la_livraison_1x1.webp', '/diapo/MboppiShop_Shopify_optimise.webp'];
 
 // Endpoints GET publics : servis depuis le cache quand le reseau est lent ou coupe,
@@ -77,7 +77,7 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch (e) {}
-  const title = data.title || 'Mboppi';
+  const title = data.title || 'MboppiShop';
   // CRITIQUE : `renotify: true` exige un tag NON vide, sinon showNotification()
   // jette une TypeError et la notification n'est jamais affichÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©e. Le serveur
   // envoie toujours un tag, mais on se protÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¨ge si jamais il manque.

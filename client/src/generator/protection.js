@@ -13,7 +13,7 @@ import { BASE_URL } from "../config.js";
 
 // Payload encodé dans le QR code : référence + auteur + date + empreinte +
 // lien PUBLIC de vérification (/verifier/<référence>) : le scan ouvre la page
-// d'authenticité Mboppi. Sert à prouver l'origine du document (identifiant
+// d'authenticité MboppiShop. Sert à prouver l'origine du document (identifiant
 // vérifiable), il ne rend pas la copie techniquement impossible.
 export function verificationPayload(doc, contentHash) {
   const created = doc.created_at ? new Date(doc.created_at).toISOString().slice(0, 10) : "";

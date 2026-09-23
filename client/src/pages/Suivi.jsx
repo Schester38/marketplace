@@ -199,8 +199,8 @@ export default function Suivi() {
   return (
     <main className="container narrow">
       <Seo
-        title={t("Suivi de commande") + " — Mboppi"}
-        description={t("Suivez l'état de votre commande Mboppi en temps réel.")}
+        title={t("Suivi de commande") + " — MboppiShop"}
+        description={t("Suivez l'état de votre commande MboppiShop en temps réel.")}
         noindex
       />
       <Link to="/" className="btn btn-outline" style={{ marginBottom: 16 }}>
@@ -362,7 +362,7 @@ export default function Suivi() {
                   href={waLink(
                     sale.shop_contact || sale.shop_phone || sale.seller_phone,
                     t(
-                      "Bonjour {shop}, je suis {buyer}, je vous contacte à propos de ma commande « {product} » sur Mboppi.",
+                      "Bonjour {shop}, je suis {buyer}, je vous contacte à propos de ma commande « {product} » sur MboppiShop.",
                       {
                         shop: sale.shop_name || sale.seller_name || t("la boutique"),
                         buyer: sale.buyer_name || t("un client"),
@@ -381,7 +381,7 @@ export default function Suivi() {
                 className="btn btn-outline"
                 onClick={async () => {
                   const url = `${BASE_URL}/suivi/${sale.id}?code=${sale.confirm_code || sale.buyer_code || ""}`;
-                  const text = t("Suivez ma commande « {product} » sur Mboppi : {url}", {
+                  const text = t("Suivez ma commande « {product} » sur MboppiShop : {url}", {
                     product: sale.product_name,
                     url,
                   });
@@ -389,7 +389,7 @@ export default function Suivi() {
                     title: t("Suivi de commande"),
                     text,
                     url,
-                    useLogo: true, // lien de suivi -> logo Mboppi
+                    useLogo: true, // lien de suivi -> logo MboppiShop
                   });
                   try {
                     if (!sharedNative) {

@@ -20,7 +20,7 @@ export default function NotFound() {
   return (
     <main className="container">
       <Seo
-        title={t("Page introuvable") + " — Mboppi"}
+        title={t("Page introuvable") + " — MboppiShop"}
         description={t("Page introuvable")}
         noindex
       />

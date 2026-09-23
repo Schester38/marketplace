@@ -586,10 +586,10 @@ function WelcomeBanner() {
   const isRegister = kind === "register";
   const text = isRegister
     ? t(
-        "Merci {name} ! Mboppi est ravi de vous accueillir. Découvrez ci-dessous les produits et créations.",
+        "Merci {name} ! MboppiShop est ravi de vous accueillir. Découvrez ci-dessous les produits et créations.",
         { name: user.name }
       )
-    : t("{name}, Mboppi est heureux de vous revoir !", { name: user.name });
+    : t("{name}, MboppiShop est heureux de vous revoir !", { name: user.name });
   return (
     <div
       className={`welcome-banner ${isRegister ? "welcome-register" : "welcome-login"}${leaving ? " leaving" : ""}`}

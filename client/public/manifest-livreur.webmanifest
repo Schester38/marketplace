@@ -1,8 +1,8 @@
 {
   "id": "/livreur",
-  "name": "Mboppi Livreur",
-  "short_name": "Mboppi Livreur",
-  "description": "Livraison Mboppi : confirmez les achats des clients, gérez les frais de livraison et téléchargez les factures.",
+  "name": "MboppiShop Livreur",
+  "short_name": "MboppiShop Livreur",
+  "description": "Livraison MboppiShop : confirmez les achats des clients, gérez les frais de livraison et téléchargez les factures.",
   "start_url": "/livreur",
   "scope": "/livreur",
   "display": "standalone",

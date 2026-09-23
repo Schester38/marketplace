@@ -22,15 +22,15 @@ export default function HeroCarousel({ onExplore }) {
     {
       id: "welcome",
       cls: "hc-orange",
-      kicker: t("BIENVENUE SUR MBOPPI"),
+      kicker: t("BIENVENUE SUR MBOPPISHOP"),
       title: t("Le marché de votre quartier, en ligne"),
       text: t(
-        "Commandez dans les boutiques Mboppi et payez à la livraison, en espèces ou par Mobile Money."
+        "Commandez dans les boutiques MboppiShop et payez à la livraison, en espèces ou par Mobile Money."
       ),
       cta: t("Découvrir les produits"),
       to: "#produits",
       img: "/diapo/MboppiShop_Paiement_a_la_livraison_1x1.webp",
-      alt: t("Paiement à la livraison Mboppi"),
+      alt: t("Paiement à la livraison MboppiShop"),
     },
     {
       id: "seller",
@@ -115,7 +115,7 @@ export default function HeroCarousel({ onExplore }) {
       className={`hero-carousel hc-${slides[index]?.cls || ""}`}
       role="region"
       aria-roledescription="carrousel"
-      aria-label={t("À la une sur Mboppi")}
+      aria-label={t("À la une sur MboppiShop")}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}

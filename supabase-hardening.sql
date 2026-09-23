@@ -1,9 +1,9 @@
 -- ============================================================================
--- Mboppi — Durcissement Supabase (RLS + Storage) — à exécuter UNE FOIS dans le
+-- MboppiShop — Durcissement Supabase (RLS + Storage) — à exécuter UNE FOIS dans le
 -- SQL Editor de Supabase (Dashboard → SQL Editor).
 --
 -- IMPORTANT / SÛR pour l'application :
---   Le serveur Mboppi se connecte avec DATABASE_URL (rôle postgres, propriétaire
+--   Le serveur MboppiShop se connecte avec DATABASE_URL (rôle postgres, propriétaire
 --   des tables) et SUPABASE_SERVICE_KEY (service_role = BYPASSRLS). Ces deux
 --   rôles CONTOURNENT la RLS : l'application continue de fonctionner à
 --   l'identique. Ce script bloque uniquement les accès "externes" (clé anon /

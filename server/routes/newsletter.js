@@ -9,7 +9,7 @@ const router = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
-const SITE_URL = process.env.SITE_URL || "https://mboppi-mboppi.vercel.app";
+const SITE_URL = process.env.SITE_URL || "https://www.mboppishop.com";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_LENGTH = 60;
@@ -51,16 +51,16 @@ router.get(
   <meta charset="utf-8"/>
   <meta name="robots" content="noindex"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Newsletter Mboppi</title>
+  <title>Newsletter MboppiShop</title>
 </head>
 <body style="margin:0;padding:40px 16px;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;text-align:center;">
   <div style="max-width:420px;margin:0 auto;background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:32px 24px;">
     <p style="font-size:34px;margin:0 0 12px;">${ok ? "👋" : "⚠️"}</p>
     <h1 style="font-size:18px;color:#0f172a;margin:0 0 10px;">${ok ? "Vous êtes bien désabonné(e)" : "Lien invalide ou déjà utilisé"}</h1>
     <p style="font-size:14px;color:#64748b;line-height:1.6;margin:0 0 20px;">
-      ${ok ? "Vous ne recevrez plus la newsletter Mboppi. Merci de nous avoir suivis." : "Ce lien de désabonnement ne fonctionne plus."}
+      ${ok ? "Vous ne recevrez plus la newsletter MboppiShop. Merci de nous avoir suivis." : "Ce lien de désabonnement ne fonctionne plus."}
     </p>
-    <a href="${SITE_URL}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 26px;border-radius:10px;">Retour à Mboppi</a>
+    <a href="${SITE_URL}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 26px;border-radius:10px;">Retour à MboppiShop</a>
   </div>
 </body>
 </html>`);

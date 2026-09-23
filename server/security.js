@@ -8,7 +8,7 @@ const ALLOWED_ORIGINS = [
   // un domaine personnalisé ne demande donc aucune modification du code.
   process.env.SITE_URL,
   process.env.PUBLIC_URL,
-  "https://mboppi-mboppi.vercel.app",
+  "https://www.mboppishop.com",
   // iKeePay (webhook de confirmation de paiement, origine du tunnel en iframe)
   "https://ikeepay.com",
   "https://www.ikeepay.com",

@@ -35,8 +35,8 @@ export default function Footer() {
     <footer className="footer">
       <div className="footer-inner">
         <div className="footer-brand">
-          <img src="/navbar-logo.png" alt="Mboppi" className="brand-logo" />
-          <span>Mboppi</span>
+          <img src="/navbar-logo.png" alt="MboppiShop" className="brand-logo" />
+          <span>MboppiShop</span>
         </div>
         <nav className="footer-nav">
           <Link to="/a-propos">{t("À propos")}</Link>
@@ -100,7 +100,7 @@ export default function Footer() {
           </p>
         </form>
         <p className="footer-copy">
-          © {new Date().getFullYear()} Mboppi. {t("Tous droits réservés.")}
+          © {new Date().getFullYear()} MboppiShop. {t("Tous droits réservés.")}
         </p>
         <p className="footer-copy">v{pkg.version}</p>
       </div>

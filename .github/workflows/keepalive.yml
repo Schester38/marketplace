@@ -10,4 +10,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping API health
-        run: curl -fsS -o /dev/null --max-time 20 https://mboppi-mboppi.vercel.app/api/health
+        run: curl -fsS -o /dev/null --max-time 20 https://www.mboppishop.com/api/health

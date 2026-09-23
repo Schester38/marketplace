@@ -110,7 +110,7 @@ export default function InstallAppPrompt() {
       </span>
       {mode === "bip" && (
         <>
-          <p className="notif-prompt-text">{t("Installez Mboppi sur votre écran d'accueil")}</p>
+          <p className="notif-prompt-text">{t("Installez MboppiShop sur votre écran d'accueil")}</p>
           <div className="notif-prompt-actions">
             <button type="button" className="btn btn-primary" onClick={install}>
               📲 {t("Installer")}
@@ -124,7 +124,7 @@ export default function InstallAppPrompt() {
       {mode === "ios" && (
         <>
           <p className="notif-prompt-text">
-            {t("Sur iPhone : touchez Partager ⬆️ puis « Sur l'écran d'accueil » pour installer Mboppi.")}
+            {t("Sur iPhone : touchez Partager ⬆️ puis « Sur l'écran d'accueil » pour installer MboppiShop.")}
           </p>
           <div className="notif-prompt-actions">
             <button type="button" className="btn btn-outline" onClick={dismiss}>
@@ -137,7 +137,7 @@ export default function InstallAppPrompt() {
         <>
           <p className="notif-prompt-text">
             {t(
-              "Cette application (Facebook, Instagram…) bloque l'installation. Ouvrez Mboppi dans Chrome pour installer :"
+              "Cette application (Facebook, Instagram…) bloque l'installation. Ouvrez MboppiShop dans Chrome pour installer :"
             )}
           </p>
           <div className="notif-prompt-actions">
@@ -153,7 +153,7 @@ export default function InstallAppPrompt() {
           </div>
           {copied && (
             <p className="notif-prompt-text">
-              {t("Lien copié ! Ouvrez Chrome, collez-le et installez Mboppi.")}
+              {t("Lien copié ! Ouvrez Chrome, collez-le et installez MboppiShop.")}
             </p>
           )}
         </>

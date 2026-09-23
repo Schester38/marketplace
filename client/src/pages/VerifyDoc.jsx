@@ -34,7 +34,7 @@ export default function VerifyDoc() {
       <h1 className="section-title">🛡️ {t("Vérifier l'authenticité d'un document")}</h1>
       <p className="hint">
         {t(
-          "Chaque document créé avec le Générateur Mboppi porte une référence unique (DOC-2026-XXXXXXXX). Saisissez-la ou scannez le QR code imprimé sur le document."
+          "Chaque document créé avec le Générateur MboppiShop porte une référence unique (DOC-2026-XXXXXXXX). Saisissez-la ou scannez le QR code imprimé sur le document."
         )}
       </p>
 
@@ -79,7 +79,7 @@ export default function VerifyDoc() {
         <div className="verify-result verify-ok">
           <strong>✅ {t("Document authentique")}</strong>
           <p>
-            {t("Ce document provient bien du Générateur Mboppi.")}{" "}
+            {t("Ce document provient bien du Générateur MboppiShop.")}{" "}
             {d.status === "ready" ? t("Il est marqué « prêt » par son auteur.") : t("Il est encore au statut brouillon.")}
           </p>
           <dl className="verify-details">

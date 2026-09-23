@@ -61,7 +61,7 @@ export default function ConfirmEmail() {
 
   return (
     <main className="container narrow">
-      <Seo title={t("Confirmation de l'email") + " — Mboppi"} noindex />
+      <Seo title={t("Confirmation de l'email") + " — MboppiShop"} noindex />
       <div className="card form-card" style={{ textAlign: "center" }}>
         <div className="auth-brand">📬</div>
         {state === "loading" && (

@@ -1,4 +1,4 @@
-# Robot WhatsApp Mboppi — Meta : ce qui est vraiment obligatoire
+# Robot WhatsApp MboppiShop — Meta : ce qui est vraiment obligatoire
 
 Guide pratique (état du dépôt : `1.52.2`). Objectif : faire répondre l'assistant IA
 WhatsApp (`server/services/whatsappBot.js`) **sans attendre** la vérification
@@ -52,7 +52,7 @@ un « App Review »**. Le bouton « Publier » du dashboard ne fait que constate
      `whatsapp_business_messaging`, `whatsapp_business_management` → jeton **permanent**.
      Cette étape **ne demande pas** la vérification de l'entreprise.
 5. **Webhook** (obligatoire pour que le robot *reçoive* les messages) :
-   - URL : `https://mboppi-mboppi.vercel.app/api/whatsapp/webhook`
+   - URL : `https://www.mboppishop.com/api/whatsapp/webhook`
    - **Verify token** : la valeur exacte de la variable d'environnement Vercel
      `WHATSAPP_VERIFY_TOKEN` (sinon le repli en base :
      `platform_settings.wa_bot_verify_token`) ;
@@ -62,7 +62,7 @@ un « App Review »**. Le bouton « Publier » du dashboard ne fait que constate
 > temps constant (`server/routes/whatsappBot.js`) ; un token différent ⇒
 > `403 verification failed` (visible dans les logs Vercel).
 
-### 2.2 Côté Mboppi (panneau Admin)
+### 2.2 Côté MboppiShop (panneau Admin)
 
 Deux cartes, dans **deux onglets différents** :
 
@@ -130,7 +130,7 @@ Meta compare ce que vous déclarez (nom légal, adresse, téléphone, site web) 
 | **Pièce d'identité du dirigeant** | CNI / passeport | Contrôle du représentant |
 
 > 🚩 **Point bloquant identifié dans le projet** : la production est servie sur
-> `mboppi-mboppi.vercel.app`, un **sous-domaine Vercel** qui n'appartient pas à
+> `www.mboppishop.com`, un **sous-domaine Vercel** qui n'appartient pas à
 > l'entreprise. Meta demande souvent un **domaine possédé** (et peut exiger une preuve
 > de propriété : WHOIS / enregistrement DNS `TXT`). **Créer/acheter un domaine**
 > (`mboppi.cm`, `mboppi.com`…) et le brancher sur Vercel est donc une étape à faire
@@ -139,9 +139,9 @@ Meta compare ce que vous déclarez (nom légal, adresse, téléphone, site web) 
 
 ### 3.3 Erreurs classiques qui font échouer la vérification
 
-- nom commercial (« Mboppi ») déclaré au lieu du **nom légal** du RCCM
-  (« MBOPPI SARL », « Établissements … ») ;
-- adresse approximative (« Marché Mboppi, Douala ») au lieu de l'adresse complète du
+- nom commercial (« MboppiShop ») déclaré au lieu du **nom légal** du RCCM
+  (« MBOPPISHOP SARL », « Établissements … ») ;
+- adresse approximative (« Marché MboppiShop, Douala ») au lieu de l'adresse complète du
   siège ;
 - orthographe/abréviations différentes d'un document à l'autre ;
 - documents scannés illisibles, recadrés, ou photos d'écran ;
@@ -176,7 +176,7 @@ Meta compare ce que vous déclarez (nom légal, adresse, téléphone, site web) 
 
 > 💡 Les fournisseurs « QR » fonctionnent techniquement (webhook entrant + API
 > d'envoi, donc compatible avec Vercel), mais ils violent les conditions d'utilisation
-> de WhatsApp et mettent en danger **le numéro commercial de Mboppi**. À ne considérer
+> de WhatsApp et mettent en danger **le numéro commercial de MboppiShop**. À ne considérer
 > que comme test jetable sur un numéro sacrifiable.
 
 ---
@@ -188,7 +188,7 @@ Meta compare ce que vous déclarez (nom légal, adresse, téléphone, site web) 
 - Si le numéro a déjà un compte WhatsApp, il faut **supprimer ce compte** avant de
   l'enregistrer (opération **irréversible** : historique perdu).
 - ⇒ Prévoir une **ligne dédiée** au robot (ex. une carte SIM supplémentaire) plutôt que
-  de réutiliser le numéro Mboppi actuel, et publier ce nouveau numéro sur le site
+  de réutiliser le numéro MboppiShop actuel, et publier ce nouveau numéro sur le site
   (menu, footer, bouton WhatsApp flottant).
 - Ajouter aussi un **moyen de paiement** dans la WABA si vous voulez envoyer en dehors
   du quota gratuit, et faire approuver le **nom d'affichage** (display name) du numéro.

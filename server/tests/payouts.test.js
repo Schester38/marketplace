@@ -1,4 +1,4 @@
-// Tests de la logique de reversement Mboppi.
+// Tests de la logique de reversement MboppiShop.
 //  - computeRedistribution : répartition comptable d'une vente
 //    (boutique / vendeur / parrain / livreur).
 //  - normalizeWalletPrimary : gestion du moyen de paiement principal des

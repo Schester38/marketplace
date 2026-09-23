@@ -15,7 +15,7 @@ async function main() {
   runStorageMaintenanceStep().catch(() => {});
   setInterval(() => runStorageMaintenanceStep().catch(() => {}), 30000);
   app.listen(PORT, () => {
-    console.warn(`API Mboppi démarrée sur http://localhost:${PORT}`);
+    console.warn(`API MboppiShop démarrée sur http://localhost:${PORT}`);
   });
   setInterval(
     async () => {

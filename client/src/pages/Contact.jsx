@@ -15,7 +15,7 @@ export default function Contact() {
     e.preventDefault();
     const text = [
       subject ? `*${subject}*` : "",
-      t("Bonjour Mboppi, je suis {name}.", { name: name || t("un visiteur") }),
+      t("Bonjour MboppiShop, je suis {name}.", { name: name || t("un visiteur") }),
       message,
     ]
       .filter(Boolean)
@@ -26,7 +26,7 @@ export default function Contact() {
   return (
     <main className="container">
       <Seo
-        title={t("Contact") + " — Mboppi"}
+        title={t("Contact") + " — MboppiShop"}
         description={t(
           "Une question, un problème ou une suggestion ? Écrivez-nous, nous répondons rapidement."
         )}
@@ -47,7 +47,7 @@ export default function Contact() {
               <p>{t("Le moyen le plus rapide de nous joindre.")}</p>
               <a
                 className="btn btn-whatsapp"
-                href={whatsappLink("Bonjour Mboppi !")}
+                href={whatsappLink("Bonjour MboppiShop !")}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -97,7 +97,7 @@ export default function Contact() {
               <select value={subject} onChange={(e) => setSubject(e.target.value)}>
                 <option value="">{t("Choisir un sujet…")}</option>
                 <option>{t("Question sur une offre")}</option>
-                <option>{t("Je veux vendre sur Mboppi")}</option>
+                <option>{t("Je veux vendre sur MboppiShop")}</option>
                 <option>{t("Problème de compte")}</option>
                 <option>{t("Autre")}</option>
               </select>

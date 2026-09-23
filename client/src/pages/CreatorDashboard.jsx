@@ -341,7 +341,7 @@ export default function CreatorDashboard() {
   return (
     <main className="container">
       <Seo
-        title={t("Mon espace créateur") + " — Mboppi"}
+        title={t("Mon espace créateur") + " — MboppiShop"}
         description={t("Publiez et gérez vos créations.")}
         noindex
       />

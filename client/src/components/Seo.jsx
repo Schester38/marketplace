@@ -49,7 +49,7 @@ export default function Seo({ title, description, noindex, ogImage }) {
     }
     link.setAttribute("href", canonical);
 
-    const ogTitle = title || document.title || "Mboppi";
+    const ogTitle = title || document.title || "MboppiShop";
     const ogDesc = description || "";
     const img = ogImage && !String(ogImage).startsWith("data:") ? ogImage : OG_DEFAULT;
 

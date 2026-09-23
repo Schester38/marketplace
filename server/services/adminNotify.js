@@ -91,7 +91,7 @@ export async function notifyAdmins({
         try {
           await sendMail({
             to,
-            subject: `Mboppi — ${title}`,
+            subject: `MboppiShop — ${title}`,
             text: `${body}\n\n${url ? `Détail : ${url}` : ""}`.trim(),
             html: `<p>${String(title)}</p><p>${String(body)}</p>${
               amount != null ? `<p><strong>Montant : ${Number(amount)}</strong></p>` : ""

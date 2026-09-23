@@ -477,7 +477,7 @@ function drawCopyright(doc, docMeta, template, box, contentHash, decorPrims) {
   if (decorPrims && decorPrims.length) drawCoverDecorPdf(doc, decorPrims);
   const lines = copyrightLines(docMeta);
   // Anti-débordement : le bloc complet (copyright + référence + empreinte +
-  // signature Mboppi) doit tenir au-dessus du bas de page, même quand la liste
+  // signature MboppiShop) doit tenir au-dessus du bas de page, même quand la liste
   // est longue — le départ remonte au besoin (plafonné à 42 % de la hauteur).
   const lineH = (template.sizes.small * 1.6) / 2.83;
   const blockH = lines.length * lineH + 12 + 5 + 12 + (contentHash ? 5 : 0);
@@ -504,13 +504,13 @@ function drawCopyright(doc, docMeta, template, box, contentHash, decorPrims) {
     const hashLine = `Empreinte SHA-256 : ${contentHash.slice(0, 32)}…`;
     doc.text(hashLine, (w - doc.getTextWidth(hashLine)) / 2, y);
   }
-  // Signature Mboppi (anti-contrefaçon) : chaque téléchargement porte la
+  // Signature MboppiShop (anti-contrefaçon) : chaque téléchargement porte la
   // mention d'authenticité + le lien public de vérification de la référence.
   if (docMeta.doc_ref) {
     doc.setFontSize(template.sizes.small - 1);
     setText(doc, template.colors.accent);
     y += 7;
-    const sign1 = "Authentifié sur Mboppi";
+    const sign1 = "Authentifié sur MboppiShop";
     doc.text(sign1, (w - doc.getTextWidth(sign1)) / 2, y);
     y += 4.5;
     const sign2 = `${BASE_URL}/verifier/${docMeta.doc_ref}`;
@@ -605,7 +605,7 @@ function drawWatermark(doc, docMeta, template, box) {
 // docMeta = document complet (générateur.js) + doc.content (docModel TipTap)
 // + html (HTML sérialisé de l'éditeur, déjà paginé par paginateDocument).
 // Options : filename (nom imposé), download:false → renvoie l'instance jsPDF
-// sans télécharger (utilisé par la publication « Vendre sur Mboppi »).
+// sans télécharger (utilisé par la publication « Vendre sur MboppiShop »).
 export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, filename, download = true }) {
   const { pages, box, contentWpx } = paginated;
   const { w, h, m } = box;
@@ -621,8 +621,8 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
     title: docMeta.title || "Document",
     subject: docMeta.subtitle || "",
     author: docMeta.author || "",
-    keywords: `Mboppi, ${docMeta.doc_ref || ""}`,
-    creator: "Mboppi — Générateur de documents",
+    keywords: `MboppiShop, ${docMeta.doc_ref || ""}`,
+    creator: "MboppiShop — Générateur de documents",
   });
 
   const template = paginated.template;

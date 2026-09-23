@@ -395,7 +395,7 @@ export default function ShopDashboard() {
   const shareFlashPromo = async (pr) => {
     const url = `${window.location.origin}/produit/${pr.product_id}`;
     const text = t(
-      "⚡ Offre éclair chez {shop} : {name} à {price} {symbol} au lieu de {old} {symbol} (-{pct}%) sur Mboppi.",
+      "⚡ Offre éclair chez {shop} : {name} à {price} {symbol} au lieu de {old} {symbol} (-{pct}%) sur MboppiShop.",
       {
         shop: pr.shop_name,
         name: pr.product_name,
@@ -557,7 +557,7 @@ export default function ShopDashboard() {
   return (
     <main className="container">
       <Seo
-        title={t("Ma boutique") + " — Mboppi"}
+        title={t("Ma boutique") + " — MboppiShop"}
         description={t("Gérez vos produits et suivez vos ventes.")}
         noindex
       />

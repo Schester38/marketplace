@@ -864,8 +864,8 @@ export async function exportStudioPdf({ pages, docMeta, onProgress, filename, do
     title: docMeta?.title || "Document",
     subject: docMeta?.subtitle || "",
     author: docMeta?.author || "",
-    keywords: `Mboppi, ${docMeta?.doc_ref || ""}, Studio page par page`,
-    creator: "Mboppi — Générateur de documents (Studio)",
+    keywords: `MboppiShop, ${docMeta?.doc_ref || ""}, Studio page par page`,
+    creator: "MboppiShop — Générateur de documents (Studio)",
   });
   const total = pages.length || 1;
   for (let i = 0; i < pages.length; i++) {

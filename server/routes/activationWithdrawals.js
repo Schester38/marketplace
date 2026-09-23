@@ -313,7 +313,7 @@ async function ensureUniqueMemberIndex() {
       walletLines[2] || "—",
     ];
     sendWhatsAppSafe(
-      `🔔 Mboppi — Nouvelle demande de retrait d'activation\n` +
+      `🔔 MboppiShop — Nouvelle demande de retrait d'activation\n` +
         `👤 Parrain : ${parrainName} (${parrainRef})\n` +
         `💰 Montant : ${value.toLocaleString("fr-FR")} F\n` +
         `👥 Parrainés : ${count}\n` +
@@ -337,7 +337,7 @@ async function ensureUniqueMemberIndex() {
         return import("../mailer.js").then(({ sendMail }) =>
           sendMail({
             to: notifyEmail,
-            subject: `Mboppi — Demande de retrait d'activation : ${value.toLocaleString("fr-FR")} F`,
+            subject: `MboppiShop — Demande de retrait d'activation : ${value.toLocaleString("fr-FR")} F`,
             text:
               `Nouvelle demande de retrait d'activation\n\n` +
               `Parrain : ${parrainName} (${parrainRef})\n` +

@@ -111,7 +111,7 @@ export default function ProductCard({
         className="share-btn"
         href={waLink(
           "",
-          `${product.name} — ${displayPrice} ${symbol} sur Mboppi → https://${window.location.host}/produit/${product.id}`
+          `${product.name} — ${displayPrice} ${symbol} sur MboppiShop → https://${window.location.host}/produit/${product.id}`
         )}
         target="_blank"
         rel="noopener noreferrer"
@@ -224,7 +224,7 @@ export default function ProductCard({
               <a
                 href={waLink(
                   product.shop_phone,
-                  t("Bonjour, je suis intéressé par « {name} » sur Mboppi.", { name: product.name })
+                  t("Bonjour, je suis intéressé par « {name} » sur MboppiShop.", { name: product.name })
                 )}
                 target="_blank"
                 rel="noopener noreferrer"

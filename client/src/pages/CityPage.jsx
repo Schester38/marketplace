@@ -38,14 +38,14 @@ export default function CityPage() {
   return (
     <main className="container">
       <Seo
-        title={t("Acheter à {city} — Boutiques et produits | Mboppi", { city })}
+        title={t("Acheter à {city} — Boutiques et produits | MboppiShop", { city })}
         description={t(
-          "Commandez des produits des boutiques de {city} en ligne : téléphones, mode, alimentation, artisanat. Livraison rapide avec Mboppi.",
+          "Commandez des produits des boutiques de {city} en ligne : téléphones, mode, alimentation, artisanat. Livraison rapide avec MboppiShop.",
           { city }
         )}
       />
       <section className="hero city-hero">
-        <span className="hero-badge">📍 {t("MBOPPI À {city}", { city: city.toUpperCase() })}</span>
+        <span className="hero-badge">📍 {t("MBOPPISHOP À {city}", { city: city.toUpperCase() })}</span>
         <h1>{t("Acheter à {city}", { city })}</h1>
         <p>
           {t(

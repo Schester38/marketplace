@@ -227,7 +227,7 @@ async function maybeSendProductsDigest() {
   const sent = await sendPushToAll(
     {
       title: "🛍️ Nouveautés du jour",
-      body: `${n} nouveau${n > 1 ? "x" : ""} produit${n > 1 ? "s" : ""} publié${n > 1 ? "s" : ""} aujourd'hui sur Mboppi — viens découvrir !`,
+      body: `${n} nouveau${n > 1 ? "x" : ""} produit${n > 1 ? "s" : ""} publié${n > 1 ? "s" : ""} aujourd'hui sur MboppiShop — viens découvrir !`,
       url: "/",
       tag: `digest-${today}`,
     },
@@ -625,7 +625,7 @@ router.post(
     if (protectedPayload?.error) return res.status(400).json({ error: protectedPayload.error });
     const isYoutubeKind = protectedPayload?.kind === "youtube";
     const wantsDigital = Boolean(parsedDigital) || isYoutubeKind;
-    // RÈGLE MÉTIER Mboppi — qui publie quoi :
+    // RÈGLE MÉTIER MboppiShop — qui publie quoi :
     //   • CRÉATEUR → uniquement des produits DIGITAUX (fichier téléchargeable) ;
     //   • BOUTIQUE → uniquement des produits PHYSIQUES ;
     //   • VENDEUR  → ne publie rien, mais VEND les deux (code vendeur).
@@ -745,7 +745,7 @@ router.post(
           body: String(req.user.name || "").slice(0, 120) || null,
         },
         payload: {
-          title: "🆕 Nouveau produit sur Mboppi",
+          title: "🆕 Nouveau produit sur MboppiShop",
           body: `« ${product.name} » vient d'être publié${req.user.name ? ` par ${req.user.name}` : ""} — venez le découvrir !`,
           url: `/produit/${product.id}`,
           tag: `product-${product.id}`,

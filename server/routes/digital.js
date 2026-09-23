@@ -55,7 +55,7 @@ const DIGITAL_USER_QUOTA_BYTES =
 // Le téléchargement est ouvert dès que la BOUTIQUE a confirmé le paiement
 // (bouton « Confirmer » de son espace, qui pose `shop_confirmed_at`) ou que la
 // commande est livrée. C'est le garde-fou qui empêche un acheteur de récupérer
-// le fichier sans payer — le paiement Mboppi étant manuel (Mobile Money /
+// le fichier sans payer — le paiement MboppiShop étant manuel (Mobile Money /
 // espèces). Pour livrer immédiatement à l'achat, passer cette constante à
 // `false` : c'est le seul réglage à changer.
 const DIGITAL_REQUIRE_CONFIRMATION = true;

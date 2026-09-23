@@ -41,7 +41,7 @@ const EXTERNAL_RE = /^https?:\/\//i;
 
 /**
  * Transforme le texte d'un message en nœuds React où les liens sont cliquables :
- * - URL complètes (https://chat.whatsapp.com/… , https://mboppi-mboppi.vercel.app/…)
+ * - URL complètes (https://chat.whatsapp.com/… , https://www.mboppishop.com/…)
  * - chemins internes du site (/soutien, /contact, /faq…) via React Router
  * Un éventuel markdown [libellé](lien) produit par l'IA est d'abord aplati en
  * « libellé lien » pour rester lisible et cliquable.
@@ -97,7 +97,7 @@ export default function ChatWidget() {
   const langKey = lang === "en" ? "en" : lang === "ar" ? "ar" : "fr";
 
   const greeting = t(
-    "Bonjour 👋 Je suis Vérone, l'assistante Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !"
+    "Bonjour 👋 Je suis Vérone, l'assistante MboppiShop. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !"
   );
 
   useEffect(() => {
@@ -160,14 +160,14 @@ export default function ChatWidget() {
   return (
     <>
       {open && (
-        <div className="chat-panel" role="dialog" aria-label={t("Vérone · Assistante Mboppi")}>
+        <div className="chat-panel" role="dialog" aria-label={t("Vérone · Assistante MboppiShop")}>
           <div className="chat-header">
             <div className="chat-header-title">
               <span className="chat-avatar">
-                <img src="/assistant-avatar.webp" alt={t("Vérone · Assistante Mboppi")} className="chat-avatar-logo" />
+                <img src="/assistant-avatar.webp" alt={t("Vérone · Assistante MboppiShop")} className="chat-avatar-logo" />
               </span>
               <div>
-                <strong>{t("Vérone · Assistante Mboppi")}</strong>
+                <strong>{t("Vérone · Assistante MboppiShop")}</strong>
                 <span className="chat-status">● {t("En ligne")}</span>
               </div>
             </div>
@@ -239,9 +239,9 @@ export default function ChatWidget() {
         type="button"
         className={`chat-bubble ${open ? "chat-bubble-open" : ""}`}
         onClick={toggle}
-        aria-label={t("Vérone · Assistante Mboppi")}
+        aria-label={t("Vérone · Assistante MboppiShop")}
       >
-        {open ? "✕" : <img src="/assistant-avatar.webp" alt={t("Vérone · Assistante Mboppi")} className="chat-bubble-logo" />}
+        {open ? "✕" : <img src="/assistant-avatar.webp" alt={t("Vérone · Assistante MboppiShop")} className="chat-bubble-logo" />}
         {!open && unread > 0 && <span className="chat-badge">{unread}</span>}
       </button>
     </>

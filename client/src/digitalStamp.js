@@ -1,15 +1,15 @@
-// Signature Mboppi appliquée aux produits digitaux TÉLÉCHARGÉS (anti-contrefaçon).
+// Signature MboppiShop appliquée aux produits digitaux TÉLÉCHARGÉS (anti-contrefaçon).
 //
 // Le fichier d'un produit digital vit dans un bucket PRIVÉ et ne transite
 // jamais par l'API : la signature ne peut donc être posée qu'au moment du
 // téléchargement, dans le navigateur de l'acheteur. Deux stratégies :
 //   — PDF : tamponné avec pdf-lib (chargé à la demande) — pied de page
-//     « Vérifié sur Mboppi » sur CHAQUE page + bloc d'authenticité complet
+//     « Vérifié sur MboppiShop » sur CHAQUE page + bloc d'authenticité complet
 //     (vente, produit, créateur, acheteur, date, lien de vérification) en
 //     dernière page. La copie non signée reste dans le bucket ; chaque
 //     exemplaire téléchargé porte la trace de SA vente.
 //   — autres formats (EPUB, MP3, ZIP…) : non modifiables de façon fiable →
-//     un CERTIFICAT D'AUTHENTICITÉ Mboppi (PDF, jsPDF) est généré et
+//     un CERTIFICAT D'AUTHENTICITÉ MboppiShop (PDF, jsPDF) est généré et
 //     téléchargeable avec le fichier : produit, créateur, acheteur, vente,
 //     date, QR pointant vers la fiche publique du produit.
 // Les documents issus du Générateur portent en plus leur propre signature
@@ -61,7 +61,7 @@ export async function stampPdf(arrayBuffer, meta) {
   const gray = rgb(0.42, 0.45, 0.5);
   const dark = rgb(0.12, 0.15, 0.2);
 
-  const footer = `Vérifié sur Mboppi — ${meta.verifyUrl} — vente #${meta.saleId}`;
+  const footer = `Vérifié sur MboppiShop — ${meta.verifyUrl} — vente #${meta.saleId}`;
   for (const page of pages) {
     const { width } = page.getSize();
     const fs = Math.min(7.5, Math.max(6, width / 90));
@@ -80,7 +80,7 @@ export async function stampPdf(arrayBuffer, meta) {
   const { width: lw } = last.getSize();
   const boxW = Math.min(190, lw * 0.55);
   const lines = [
-    { text: "DOCUMENT DÉLIVRÉ PAR MBOPPI", bold: true, size: 9 },
+    { text: "DOCUMENT DÉLIVRÉ PAR MBOPPISHOP", bold: true, size: 9 },
     { text: `Vente #${meta.saleId} — ${meta.date}`, size: 7.5 },
     { text: `Produit : ${meta.productName}`.slice(0, 70), size: 7.5 },
     meta.creatorName ? { text: `Créateur : ${meta.creatorName}`.slice(0, 70), size: 7.5 } : null,
@@ -116,7 +116,7 @@ export async function stampPdf(arrayBuffer, meta) {
   return doc.save();
 }
 
-/** Certificat d'authenticité Mboppi (PDF une page) pour les fichiers non modifiables. */
+/** Certificat d'authenticité MboppiShop (PDF une page) pour les fichiers non modifiables. */
 export async function authenticityCertificate(meta) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = 210;
@@ -126,14 +126,14 @@ export async function authenticityCertificate(meta) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(17);
   doc.setTextColor(17, 24, 39);
-  doc.text("CERTIFICAT D'AUTHENTICITÉ MBOPPI", W / 2, 34, { align: "center" });
+  doc.text("CERTIFICAT D'AUTHENTICITÉ MBOPPISHOP", W / 2, 34, { align: "center" });
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(80, 90, 105);
   doc.text("Ce certificat atteste que le fichier joint à la vente ci-dessous", W / 2, 43, {
     align: "center",
   });
-  doc.text("a été délivré via la plateforme Mboppi.", W / 2, 49, { align: "center" });
+  doc.text("a été délivré via la plateforme MboppiShop.", W / 2, 49, { align: "center" });
 
   const rows = [
     ["Produit", meta.productName],
@@ -163,7 +163,7 @@ export async function authenticityCertificate(meta) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8.5);
       doc.setTextColor(80, 90, 105);
-      doc.text("Scannez pour vérifier le produit sur Mboppi", W / 2, y + 58, { align: "center" });
+      doc.text("Scannez pour vérifier le produit sur MboppiShop", W / 2, y + 58, { align: "center" });
     }
   } catch {
     /* QR indisponible : certificat sans QR */
@@ -174,6 +174,6 @@ export async function authenticityCertificate(meta) {
   doc.text(`Vérification : ${meta.verifyUrl}`, W / 2, 262, { align: "center" });
   doc.setFont("helvetica", "bold");
   doc.setTextColor(37, 99, 235);
-  doc.text("Authentifié sur Mboppi", W / 2, 272, { align: "center" });
+  doc.text("Authentifié sur MboppiShop", W / 2, 272, { align: "center" });
   return new Blob([doc.output("arraybuffer")], { type: "application/pdf" });
 }

@@ -97,7 +97,7 @@ export async function downloadInvoice(sale, t, symbol = "XAF") {
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(19);
-  doc.text("Mboppi", 27, 17);
+  doc.text("MboppiShop", 27, 17);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(190, 205, 235);
@@ -248,8 +248,8 @@ export async function downloadInvoice(sale, t, symbol = "XAF") {
   doc.text(
     t(
       sale.delivered_at
-        ? "Facture générée par Mboppi — marchandise livrée."
-        : "Facture générée par Mboppi."
+        ? "Facture générée par MboppiShop — marchandise livrée."
+        : "Facture générée par MboppiShop."
     ),
     16,
     y + 2

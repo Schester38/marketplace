@@ -70,7 +70,7 @@ console.log("\n=== 4. Clé VAPID : env local vs production ===");
 const localKey = process.env.VAPID_PUBLIC_KEY || "";
 console.log("clé locale (.env.prod.local) :", localKey ? localKey.slice(0, 12) + "…" + ` (${localKey.length} car.)` : "ABSENTE");
 try {
-  const res = await fetch("https://mboppi-mboppi.vercel.app/api/push/key");
+  const res = await fetch("https://www.mboppishop.com/api/push/key");
   const { public_key } = await res.json();
   console.log("clé servie en production    :", public_key ? public_key.slice(0, 12) + "…" + ` (${public_key.length} car.)` : "ABSENTE");
   console.log(localKey && public_key

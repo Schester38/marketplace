@@ -395,7 +395,7 @@ router.get(
     if (audience === "newsletter") {
       email_count = (await q("SELECT COUNT(*)::int AS n FROM newsletter_subscribers"))[0].n;
       // Même filtre que l'envoi réel (sendPushToAll, canal « messages ») :
-      // seuls les abonnés qui n'ont PAS désactivé « Messages de Mboppi »
+      // seuls les abonnés qui n'ont PAS désactivé « Messages de MboppiShop »
       // recevront la campagne.
       push_count = (
         await q(
@@ -509,7 +509,7 @@ router.get(
     let cron_url = "";
     try {
       const secret = await getCronSecret();
-      const base = process.env.SITE_URL || "https://mboppi-mboppi.vercel.app";
+      const base = process.env.SITE_URL || "https://www.mboppishop.com";
       cron_url = `${base}/api/cron/campaigns?k=${secret}`;
     } catch (err) {
       console.error("[campaigns] secret cron indisponible :", err.message);
@@ -979,7 +979,7 @@ router.post(
     //    court pour ne pas bloquer la route, et le canal « messages » respecte
     //    les préférences push de chaque utilisateur (Mon compte → Messages).
     const payload = {
-      title: "📢 Administration-Mboppi",
+      title: "📢 Administration-MboppiShop",
       body: text.slice(0, 140),
       url: "/",
       tag: `admin-msg-${created[0].id}`,
@@ -1446,12 +1446,12 @@ router.post(
         const { sendMail } = await import("../mailer.js");
         await sendMail({
           to: mailTo,
-          subject: "Votre retrait a été payé — Mboppi",
+          subject: "Votre retrait a été payé — MboppiShop",
           text:
             `Bonjour ${w.seller_name},\n\n` +
-            `Votre demande de retrait de ${amount} F a été traitée et payée par l'équipe Mboppi.\n` +
+            `Votre demande de retrait de ${amount} F a été traitée et payée par l'équipe MboppiShop.\n` +
             `Le montant a été retiré de vos statistiques et la transaction a été enregistrée.\n\n` +
-            `Merci de votre confiance,\nL'équipe Mboppi`,
+            `Merci de votre confiance,\nL'équipe MboppiShop`,
         });
       } catch (err) {
         console.error("[admin] email activation_withdrawal_paid impossible :", err.message);
@@ -1657,13 +1657,13 @@ router.post(
         const { sendMail } = await import("../mailer.js");
         await sendMail({
           to: mailTo,
-          subject: "Votre retrait a été payé — Mboppi",
+          subject: "Votre retrait a été payé — MboppiShop",
           text:
             `Bonjour ${w.user_name},\n\n` +
             (w.user_role === "creator"
-              ? `Votre demande de retrait de ${amount} F (ventes de fichiers digitaux) a été payée par l'équipe Mboppi.`
-              : `Votre demande de retrait de ${amount} F (commissions sur ventes digitales) a été payée par l'équipe Mboppi.`) +
-            `\n\nMerci de votre confiance,\nL'équipe Mboppi`,
+              ? `Votre demande de retrait de ${amount} F (ventes de fichiers digitaux) a été payée par l'équipe MboppiShop.`
+              : `Votre demande de retrait de ${amount} F (commissions sur ventes digitales) a été payée par l'équipe MboppiShop.`) +
+            `\n\nMerci de votre confiance,\nL'équipe MboppiShop`,
         });
       } catch (err) {
         console.error("[admin] email online_withdrawal_paid impossible :", err.message);
@@ -1698,7 +1698,7 @@ router.get(
     const base =
       process.env.PUBLIC_URL ||
       process.env.SITE_URL ||
-      "https://mboppi-mboppi.vercel.app";
+      "https://www.mboppishop.com";
     res.json({
       mode,
       currency: publicSettings.currency,
@@ -1816,7 +1816,7 @@ router.post(
     const out = { ok: false, whatsapp: null, email: null };
     try {
       out.whatsapp = { ok: true, provider: await sendWhatsApp(
-        "Test de notification Mboppi : si vous lisez ce message, les demandes de retrait d'activation vous arriveront ici.",
+        "Test de notification MboppiShop : si vous lisez ce message, les demandes de retrait d'activation vous arriveront ici.",
         // Si un template Cloud est configuré, le test utilise ses 9 variables.
         [
           "Test (MBP-000000)",
@@ -1824,7 +1824,7 @@ router.post(
           "1",
           "admin@mboppi.com",
           "—",
-          "Mboppi",
+          "MboppiShop",
           "Orange Money : 690000000 (principal)",
           "—",
           "—",
@@ -1841,9 +1841,9 @@ router.post(
         const { sendMail } = await import("../mailer.js");
         await sendMail({
           to: notifyEmail,
-          subject: "Mboppi — Test de notification (retraits d'activation)",
+          subject: "MboppiShop — Test de notification (retraits d'activation)",
           text:
-            "Test de notification Mboppi : si vous lisez cet email, les demandes de retrait d'activation vous arriveront ici.",
+            "Test de notification MboppiShop : si vous lisez cet email, les demandes de retrait d'activation vous arriveront ici.",
         });
         out.email = { ok: true, to: notifyEmail };
         out.ok = true;

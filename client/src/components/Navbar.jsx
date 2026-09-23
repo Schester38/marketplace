@@ -274,7 +274,7 @@ function NotifBell() {
       ) {
         news.forEach((n) => {
           try {
-            new Notification("Mboppi", {
+            new Notification("MboppiShop", {
               body: message(n),
               icon: "/icon-192.png",
               tag: "mboppi-" + n.id,
@@ -406,7 +406,7 @@ function NotifBell() {
       });
     }
     if (n.type === "admin_message") {
-      return n.body || t("Message de l'équipe Mboppi.");
+      return n.body || t("Message de l'équipe MboppiShop.");
     }
     if (n.type === "sale_order") {
       if (user.id === n.seller_id) {
@@ -612,7 +612,7 @@ function NotifBell() {
     }
     if (n.type === "activation_withdrawal_paid") {
       return t(
-        "Votre demande de retrait de {amount} F a été payée par l'équipe Mboppi.",
+        "Votre demande de retrait de {amount} F a été payée par l'équipe MboppiShop.",
         { amount: formatMoney(n.amount) }
       );
     }
@@ -1121,7 +1121,7 @@ export default function Navbar({ onLogout }) {
         <span className="dl-icon">
           <IconHelp size={15} />
         </span>
-        <span className="dl-label">{t("Tutoriel Mboppi")}</span>
+        <span className="dl-label">{t("Tutoriel MboppiShop")}</span>
       </a>
       <a
         href="https://chat.whatsapp.com/IkP0cv2vjybDwOgmYYUmJv?s=cl&p=a&mlu=4&ilr=4"
@@ -1248,9 +1248,9 @@ export default function Navbar({ onLogout }) {
     <header className="navbar" role="banner">
       {/* Top bar - Line 1 */}
       <div className="navbar-top">
-        <Link to="/" className="brand" onClick={close} aria-label="Mboppi - Accueil">
-          <img src="/navbar-logo.png" alt="Mboppi" className="brand-logo" />
-          <span>Mboppi</span>
+        <Link to="/" className="brand" onClick={close} aria-label="MboppiShop - Accueil">
+          <img src="/navbar-logo.png" alt="MboppiShop" className="brand-logo" />
+          <span>MboppiShop</span>
         </Link>
 
         <div className="nav-search-wrapper">{searchBox}</div>
@@ -1303,7 +1303,7 @@ export default function Navbar({ onLogout }) {
           <div className="cat-quick" aria-label={t("Liens rapides")}>
             <Link to="/vendre" onClick={close} className="quick-link quick-accent">
               <IconStore size={14} />
-              <span>{t("Vendre sur Mboppi")}</span>
+              <span>{t("Vendre sur MboppiShop")}</span>
             </Link>
             <Link to="/suivi" onClick={close} className="quick-link">
               <IconPackage size={14} />
@@ -1357,14 +1357,14 @@ export default function Navbar({ onLogout }) {
                 {showIosHint && (
                   <p className="install-ios-hint">
                     {t(
-                      "Pour installer Mboppi : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil »."
+                      "Pour installer MboppiShop : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil »."
                     )}
                   </p>
                 )}
                 {showGenericHint && (
                   <p className="install-ios-hint">
                     {t(
-                      "Pour installer Mboppi : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application »."
+                      "Pour installer MboppiShop : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application »."
                     )}
                   </p>
                 )}

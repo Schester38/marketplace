@@ -58,8 +58,8 @@ export default function ShopPage() {
   return (
     <main className="container">
       <Seo
-        title={`${shop.name} — Mboppi`}
-        description={`${shop.name}${shop.location ? " — " + shop.location : ""} sur Mboppi.`}
+        title={`${shop.name} — MboppiShop`}
+        description={`${shop.name}${shop.location ? " — " + shop.location : ""} sur MboppiShop.`}
       />
       <Link to="/" className="btn btn-outline" style={{ marginBottom: 16 }}>
         ← {t("Retour aux produits")}
@@ -88,7 +88,7 @@ export default function ShopPage() {
               className="btn btn-primary shop-wa"
               href={waLink(
                 phone,
-                t("Bonjour {shop}, je vous contacte depuis Mboppi.", { shop: shop.name })
+                t("Bonjour {shop}, je vous contacte depuis MboppiShop.", { shop: shop.name })
               )}
               target="_blank"
               rel="noopener noreferrer"

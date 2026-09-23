@@ -2,7 +2,7 @@ const LOGO_URL = "/share-logo.png";
 
 let logoFilePromise = null;
 
-/** File du logo Mboppi (mise en cache après le premier chargement). */
+/** File du logo MboppiShop (mise en cache après le premier chargement). */
 export function getLogoFile() {
   if (!logoFilePromise) {
     logoFilePromise = (async () => {
@@ -53,7 +53,7 @@ export function isTouchDevice() {
 /**
  * Partage natif avec pièce jointe image :
  *  - imageUrl fourni (produit) -> attache la photo du produit ;
- *  - sinon useLogo -> attache le logo Mboppi ;
+ *  - sinon useLogo -> attache le logo MboppiShop ;
  *  - si la plateforme refuse les fichiers, partage texte sans image.
  * Sur ordinateur, AUCUNE pièce jointe : la feuille de partage Windows
  * ne propose alors que de copier la photo, jamais le lien.

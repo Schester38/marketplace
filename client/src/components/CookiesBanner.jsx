@@ -23,7 +23,7 @@ export default function CookiesBanner() {
       <p>
         🍪{" "}
         {t(
-          "Mboppi utilise des cookies pour améliorer votre expérience (thème, langue, panier). Nous ne vendons aucune donnée."
+          "MboppiShop utilise des cookies pour améliorer votre expérience (thème, langue, panier). Nous ne vendons aucune donnée."
         )}{" "}
         <Link to="/donnees" onClick={accept}>
           {t("En savoir plus")}

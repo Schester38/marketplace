@@ -1,8 +1,8 @@
 {
   "id": "/admin",
-  "name": "Mboppi Admin",
-  "short_name": "Mboppi Admin",
-  "description": "Administration Mboppi : statistiques, utilisateurs, produits et modération de la plateforme.",
+  "name": "MboppiShop Admin",
+  "short_name": "MboppiShop Admin",
+  "description": "Administration MboppiShop : statistiques, utilisateurs, produits et modération de la plateforme.",
   "start_url": "/admin",
   "scope": "/admin",
   "display": "standalone",

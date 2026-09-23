@@ -114,7 +114,7 @@ export default function VitrineOffre() {
   return (
     <main className="container">
       <Seo
-        title={t("Vitrine d'offre") + " — Mboppi"}
+        title={t("Vitrine d'offre") + " — MboppiShop"}
         description={t("Découvrez les meilleures offres du moment.")}
       />
       <section className="hero vitrine-hero">

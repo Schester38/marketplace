@@ -3,7 +3,7 @@ import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
 
 /**
- * Preuve sociale : bandeau de compteurs publics « Mboppi en chiffres ».
+ * Preuve sociale : bandeau de compteurs publics « MboppiShop en chiffres ».
  * Alimenté par GET /api/metrics/public (cache 5 min côté serveur).
  * Affiche uniquement quand les données sont chargées (jamais de blocage).
  */

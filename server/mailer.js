@@ -7,10 +7,10 @@ const SMTP_USER = process.env.SMTP_USER || "";
 const SMTP_PASS = process.env.SMTP_PASS || "";
 const EMAIL_FROM =
   process.env.EMAIL_FROM ||
-  (SMTP_USER ? `Mboppi <${SMTP_USER}>` : "Mboppi <noreply@mboppi.vercel.app>");
+  (SMTP_USER ? `MboppiShop <${SMTP_USER}>` : "MboppiShop <noreply@mboppi.vercel.app>");
 
 // Domaine public du site (logo et liens des e-mails) — SITE_URL sur Vercel.
-const SITE_URL = String(process.env.SITE_URL || "https://mboppi-mboppi.vercel.app").replace(
+const SITE_URL = String(process.env.SITE_URL || "https://www.mboppishop.com").replace(
   /\/+$/,
   ""
 );
@@ -107,7 +107,7 @@ export async function sendSaleEmails({
   if (!mailConfigured()) return;
   const to = [shopEmail, sellerEmail].filter((e) => e && String(e).includes("@"));
   if (!to.length) return;
-  const subject = "Nouvelle vente sur Mboppi 🛍️";
+  const subject = "Nouvelle vente sur MboppiShop 🛍️";
   const name = esc(productName);
   const client = esc(buyerName);
   const text = [
@@ -122,7 +122,7 @@ export async function sendSaleEmails({
   ]
     .filter(Boolean)
     .join("\n");
-  const html = `<p>Nouvelle vente sur Mboppi 🛍️</p><ul><li><strong>Produit :</strong> ${name} × ${quantity}</li><li><strong>Total :</strong> ${total} ${esc(
+  const html = `<p>Nouvelle vente sur MboppiShop 🛍️</p><ul><li><strong>Produit :</strong> ${name} × ${quantity}</li><li><strong>Total :</strong> ${total} ${esc(
     currency
   )}</li>${buyerName ? `<li><strong>Client :</strong> ${client}</li>` : ""}${
     confirmCode ? `<li><strong>Code de confirmation :</strong> ${esc(confirmCode)}</li>` : ""
@@ -168,7 +168,7 @@ export async function sendOrderDeliveredEmail({
   const text = [
     `Bonjour ${buyerName || "cher client"},`,
     "",
-    `Votre commande « ${productName} » × ${safeQty} vient d'être livrée. Merci d'avoir choisi Mboppi !`,
+    `Votre commande « ${productName} » × ${safeQty} vient d'être livrée. Merci d'avoir choisi MboppiShop !`,
     total ? `Montant : ${total} ${currency}` : "",
     "",
     "Suivre ma commande :",
@@ -178,7 +178,7 @@ export async function sendOrderDeliveredEmail({
     "⭐ Laisser un avis sur Trustpilot :",
     reviewUrl,
     "",
-    "L'équipe Mboppi",
+    "L'équipe MboppiShop",
   ]
     .filter(Boolean)
     .join("\n");
@@ -191,8 +191,8 @@ export async function sendOrderDeliveredEmail({
         <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
           <tr>
             <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:26px 28px;text-align:center;">
-              <img src="${SITE_URL}/navbar-logo.png" alt="Mboppi" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
-              <div style="color:#fff;font-size:22px;font-weight:800;">Mboppi</div>
+              <img src="${SITE_URL}/navbar-logo.png" alt="MboppiShop" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
+              <div style="color:#fff;font-size:22px;font-weight:800;">MboppiShop</div>
               <div style="color:#e0e7ff;font-size:13px;">Le marché de votre quartier en ligne</div>
             </td>
           </tr>
@@ -201,7 +201,7 @@ export async function sendOrderDeliveredEmail({
               <h1 style="margin:0 0 12px;font-size:19px;color:#0f172a;">Votre commande est livrée 🎉</h1>
               <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#334155;">
                 Bonjour ${safeBuyer}, votre commande <strong>${safeItem}</strong> × ${safeQty} vient d'être livrée.
-                Merci d'avoir choisi Mboppi !
+                Merci d'avoir choisi MboppiShop !
               </p>
               <p style="text-align:center;margin:22px 0;">
                 <a href="${trackUrl}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:10px;">Suivre ma commande</a>
@@ -216,7 +216,7 @@ export async function sendOrderDeliveredEmail({
           </tr>
           <tr>
             <td style="padding:16px 28px;background:#f8fafc;font-size:11px;color:#94a3b8;text-align:center;">
-              © ${new Date().getFullYear()} Mboppi · ${SITE_URL.replace(/^https?:\/\//, "")}
+              © ${new Date().getFullYear()} MboppiShop · ${SITE_URL.replace(/^https?:\/\//, "")}
             </td>
           </tr>
         </table>
@@ -239,8 +239,8 @@ export function verificationEmailHtml({ name, link }) {
         <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
           <tr>
             <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:26px 28px;text-align:center;">
-              <img src="${SITE_URL}/navbar-logo.png" alt="Mboppi" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
-              <div style="color:#fff;font-size:22px;font-weight:800;">Mboppi</div>
+              <img src="${SITE_URL}/navbar-logo.png" alt="MboppiShop" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
+              <div style="color:#fff;font-size:22px;font-weight:800;">MboppiShop</div>
               <div style="color:#e0e7ff;font-size:13px;">Le marché de votre quartier en ligne</div>
             </td>
           </tr>
@@ -248,7 +248,7 @@ export function verificationEmailHtml({ name, link }) {
             <td style="padding:30px 28px;">
               <h1 style="margin:0 0 12px;font-size:19px;color:#0f172a;">Bonjour ${safeName} 👋</h1>
               <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#334155;">
-                Bienvenue sur <strong>Mboppi</strong> ! Pour valider votre inscription et activer votre compte,
+                Bienvenue sur <strong>MboppiShop</strong> ! Pour valider votre inscription et activer votre compte,
                 confirmez votre adresse email en cliquant sur le bouton ci-dessous.
               </p>
               <p style="text-align:center;margin:24px 0;">
@@ -263,7 +263,7 @@ export function verificationEmailHtml({ name, link }) {
           </tr>
           <tr>
             <td style="padding:16px 28px;background:#f8fafc;font-size:11px;color:#94a3b8;text-align:center;">
-              © ${new Date().getFullYear()} Mboppi · ${SITE_URL.replace(/^https?:\/\//, "")}
+              © ${new Date().getFullYear()} MboppiShop · ${SITE_URL.replace(/^https?:\/\//, "")}
             </td>
           </tr>
         </table>
@@ -286,8 +286,8 @@ export function newsletterEmailHtml({ title, body, unsubscribeUrl }) {
         <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
           <tr>
             <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:26px 28px;text-align:center;">
-              <img src="${SITE_URL}/navbar-logo.png" alt="Mboppi" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
-              <div style="color:#fff;font-size:22px;font-weight:800;">Mboppi</div>
+              <img src="${SITE_URL}/navbar-logo.png" alt="MboppiShop" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
+              <div style="color:#fff;font-size:22px;font-weight:800;">MboppiShop</div>
               <div style="color:#e0e7ff;font-size:13px;">Le marché de votre quartier en ligne</div>
             </td>
           </tr>
@@ -299,7 +299,7 @@ export function newsletterEmailHtml({ title, body, unsubscribeUrl }) {
           </tr>
           <tr>
             <td style="padding:16px 28px;background:#f8fafc;font-size:11px;color:#94a3b8;text-align:center;">
-              Vous recevez cet email car vous êtes inscrit(e) à la newsletter Mboppi.<br/>
+              Vous recevez cet email car vous êtes inscrit(e) à la newsletter MboppiShop.<br/>
               <a href="${unsubscribeUrl}" style="color:#6366f1;text-decoration:underline;">Se désabonner</a>
             </td>
           </tr>

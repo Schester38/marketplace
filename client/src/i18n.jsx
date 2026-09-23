@@ -1,4 +1,4 @@
-﻿import { storage, sessionStore } from "./storage";
+import { storage, sessionStore } from "./storage";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export const LANGS = [
@@ -72,10 +72,10 @@ const EN = {
   // Support / menu
   "Je soutiens": "Support us",
   "Formations et Digital": "Training & Digital",
-  "Tutoriel Mboppi": "Mboppi Tutorial",
+  "Tutoriel MboppiShop": "MboppiShop Tutorial",
   "Rejoindre le Groupe": "Join the group",
-  "Je soutiens Mboppi": "Support Mboppi",
-  "Chaque geste compte pour faire grandir Mboppi": "Every gesture counts to grow Mboppi",
+  "Je soutiens MboppiShop": "Support MboppiShop",
+  "Chaque geste compte pour faire grandir MboppiShop": "Every gesture counts to grow MboppiShop",
   "Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.":
     "Your support helps us pay for the site, improve the platform and support our shops and sellers. Every contribution, however small, moves the project forward.",
   "Comment pouvez-vous soutenir le projet ?": "How can you support the project?",
@@ -85,10 +85,10 @@ const EN = {
   PayPal: "PayPal",
   "Virement bancaire (UBA)": "Bank transfer (UBA)",
   "Merci pour votre soutien !": "Thank you for your support!",
-  "Avec votre aide, Mboppi continue de connecter les boutiques, les vendeurs et les clients de toute la communauté.":
-    "With your help, Mboppi keeps connecting shops, sellers and customers across the community.",
-  "Soutenez Mboppi : Orange Money, MTN Mobile Money, PayPal ou virement bancaire UBA.":
-    "Support Mboppi: Orange Money, MTN Mobile Money, PayPal or UBA bank transfer.",
+  "Avec votre aide, MboppiShop continue de connecter les boutiques, les vendeurs et les clients de toute la communauté.":
+    "With your help, MboppiShop keeps connecting shops, sellers and customers across the community.",
+  "Soutenez MboppiShop : Orange Money, MTN Mobile Money, PayPal ou virement bancaire UBA.":
+    "Support MboppiShop: Orange Money, MTN Mobile Money, PayPal or UBA bank transfer.",
 
   // ProductCard
   "Boutique : {shop}": "Shop: {shop}",
@@ -105,13 +105,13 @@ const EN = {
   "Économisez {n} {symbol}": "Save {n} {symbol}",
 
   // Seo
-  "Mboppi - {title}": "Mboppi - {title}",
-  "Mboppi : boutique en ligne, vendeurs, créateurs.":
-    "Mboppi: online marketplace, sellers, creators.",
-  "Marché en ligne Mboppi.": "Mboppi online marketplace.",
+  "MboppiShop - {title}": "MboppiShop - {title}",
+  "MboppiShop : boutique en ligne, vendeurs, créateurs.":
+    "MboppiShop: online marketplace, sellers, creators.",
+  "Marché en ligne MboppiShop.": "MboppiShop online marketplace.",
 
   // Home
-  "Bienvenue sur Mboppi": "Welcome to Mboppi",
+  "Bienvenue sur MboppiShop": "Welcome to MboppiShop",
   "Le marché où boutiques, vendeurs et créateurs se rencontrent. Commandez directement sur WhatsApp !":
     "The marketplace where shops, sellers and creators meet. Order directly on WhatsApp!",
   "Voir les offres": "View offers",
@@ -119,8 +119,8 @@ const EN = {
   "Produits récents": "Recent products",
   "Offres du moment": "Current offers",
   "Aucun produit disponible pour le moment.": "No products available right now.",
-  "Bienvenue chez Mboppi": "Welcome to Mboppi",
-  "BIENVENUE SUR MBOPPI": "WELCOME TO MBOPPI",
+  "Bienvenue chez MboppiShop": "Welcome to MboppiShop",
+  "BIENVENUE SUR MBOPPISHOP": "WELCOME TO MBOPPISHOP",
   "Rechercher un produit, une boutique…": "Search for a product, a shop…",
   "Rechercher un produit": "Search a product",
   "Rechercher une boutique": "Search a shop",
@@ -139,7 +139,7 @@ const EN = {
   "ex : 3500 (s'affiche en vert)": "ex: 3500 (shown in green)",
   "Garantie (chiffres ou lettres)": "Warranty (digits or words)",
   "Renseignez au moins un prix (normal ou de vente).": "Enter at least one price (normal or sale).",
-  "Rejoignez Mboppi": "Join Mboppi",
+  "Rejoignez MboppiShop": "Join MboppiShop",
   "Boutiques en ligne": "Online shops",
   "Créez votre vitrine et publiez vos produits.": "Create your showcase and publish your products.",
   Vendeurs: "Sellers",
@@ -150,12 +150,12 @@ const EN = {
   Créateurs: "Creators",
   "Faites rayonner vos créations.": "Showcase your creations.",
   "Les créateurs": "The creators",
-  "Créateurs de Mboppi": "Creators of Mboppi",
-  "Découvrez les créateurs de Mboppi et leurs créations artisanales.":
-    "Discover the creators of Mboppi and their handcrafted creations.",
+  "Créateurs de MboppiShop": "Creators of MboppiShop",
+  "Découvrez les créateurs de MboppiShop et leurs créations artisanales.":
+    "Discover the creators of MboppiShop and their handcrafted creations.",
   "Créations de {name}": "Creations by {name}",
-  "Créations sur Mboppi": "Creations on Mboppi",
-  "Vitrine de créations sur Mboppi.": "Creator showcase on Mboppi.",
+  "Créations sur MboppiShop": "Creations on MboppiShop",
+  "Vitrine de créations sur MboppiShop.": "Creator showcase on MboppiShop.",
   "Voir ma vitrine": "View my showcase",
   "Voir les créations": "View the creations",
   "Aucun créateur pour le moment.": "No creators yet.",
@@ -187,7 +187,7 @@ const EN = {
   "Une erreur est survenue, réessayez.": "An error occurred, try again.",
 
   // Login
-  "Connexion à Mboppi": "Sign in to Mboppi",
+  "Connexion à MboppiShop": "Sign in to MboppiShop",
   "Ravi de vous revoir !": "Glad to see you again!",
   "Se connecter à mon compte": "Sign in to my account",
   "Mot de passe": "Password",
@@ -336,8 +336,8 @@ const EN = {
   "Mes informations": "My information",
 
   // CreatorDashboard
-  "Bienvenue {name} ! Faites rayonner vos créations sur le marché Mboppi.":
-    "Welcome {name}! Showcase your creations on the Mboppi marketplace.",
+  "Bienvenue {name} ! Faites rayonner vos créations sur le marché MboppiShop.":
+    "Welcome {name}! Showcase your creations on the MboppiShop marketplace.",
   "Bientôt disponible : une vitrine dédiée à vos créations.":
     "Coming soon: a dedicated showcase for your creations.",
   "Bientôt disponible": "Coming soon",
@@ -393,9 +393,9 @@ const EN = {
   "Prix promotionnel : {price} {symbol}": "Promo price: {price} {symbol}",
 
   // About
-  "À propos de Mboppi": "About Mboppi",
-  "Mboppi est un marché en ligne conçu pour connecter boutiques, vendeurs, clients et créateurs.":
-    "Mboppi is an online marketplace designed to connect shops, sellers, clients and creators.",
+  "À propos de MboppiShop": "About MboppiShop",
+  "MboppiShop est un marché en ligne conçu pour connecter boutiques, vendeurs, clients et créateurs.":
+    "MboppiShop is an online marketplace designed to connect shops, sellers, clients and creators.",
   "Notre mission": "Our mission",
   "Faciliter le commerce local en donnant à chacun une vitrine simple et accessible, avec commande directe via WhatsApp.":
     "Facilitate local commerce by giving everyone a simple and accessible storefront, with direct ordering via WhatsApp.",
@@ -461,8 +461,8 @@ const EN = {
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "You are currently offline. Check your connection and try again.",
   Réessayer: "Retry",
-  "Désolé, Mboppi ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
-    "Sorry, Mboppi cannot connect to the internet right now. Check your network (Wi-Fi or mobile data) and try again.",
+  "Désolé, MboppiShop ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
+    "Sorry, MboppiShop cannot connect to the internet right now. Check your network (Wi-Fi or mobile data) and try again.",
   "Toujours pas de connexion. Vérifiez votre réseau puis réessayez.":
     "Still no connection. Check your network and try again.",
   "Vos informations sont en sécurité sur votre appareil : rien n'est perdu.":
@@ -485,8 +485,8 @@ const EN = {
     "I sell shop products and earn commissions",
   "Je consulte les offres et les produits, je commande facilement":
     "I browse offers and products, and order easily",
-  "Je présente et vends mes créations au marché Mboppi":
-    "I showcase and sell my creations on the Mboppi marketplace",
+  "Je présente et vends mes créations au marché MboppiShop":
+    "I showcase and sell my creations on the MboppiShop marketplace",
   "Nom complet / Nom de la boutique": "Full name / Shop name",
   Email: "Email",
   "Mot de passe (6 caractères minimum)": "Password (at least 6 characters)",
@@ -559,8 +559,8 @@ const EN = {
   "Envoyer la campagne": "Send campaign",
   "Campagne envoyée : {push} push, {email}/{total} emails.":
     "Campaign sent: {push} push, {email}/{total} emails.",
-  "{n} abonné(s) ont désactivé « Messages de Mboppi » (Mon compte) : ils ne recevront PAS cette campagne push.":
-    "{n} subscriber(s) turned off “Mboppi Messages” (My account): they will NOT receive this push campaign.",
+  "{n} abonné(s) ont désactivé « Messages de MboppiShop » (Mon compte) : ils ne recevront PAS cette campagne push.":
+    "{n} subscriber(s) turned off “MboppiShop Messages” (My account): they will NOT receive this push campaign.",
   "Campagnes programmées (1 par jour, automatique)": "Scheduled campaigns (1 per day, automatic)",
   "Préparez vos campagnes à l'avance avec une date d'envoi : la campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun), sans que vous ayez à intervenir. Maximum une campagne par jour.":
     "Prepare your campaigns in advance with a send date: the day's campaign goes out automatically every morning at 8am (Cameroon time), with no action needed from you. Maximum one campaign per day.",
@@ -595,7 +595,7 @@ const EN = {
   "Commandes livrées": "Delivered orders",
   "Produits en stock": "Products in stock",
   "Vendez partout où vous voulez, gardez 100 % de vos ventes.": "Sell anywhere you want, keep 100% of your sales.",
-  "POURQUOI DEVENIR VENDEUR SUR MBOPPI": "WHY BECOME A SELLER ON MBOPPI",
+  "POURQUOI DEVENIR VENDEUR SUR MBOPPISHOP": "WHY BECOME A SELLER ON MBOPPISHOP",
   "VENDEURS & BOUTIQUES": "SELLERS & SHOPS",
   "0 % de frais de service. Recevez votre code vendeur, partagez-le sur WhatsApp et encaissez vos commissions sur chaque vente.": "0% service fees. Get your seller code, share it on WhatsApp and collect your commissions on every sale.",
   "0 % de frais de service. Générez votre code vendeur, partagez les liens à vos contacts et encaissez vos commissions sur chaque vente — par téléphone ou WhatsApp.": "0% service fees. Generate your seller code, share the links with your contacts and collect your commissions on every sale — by phone or WhatsApp.",
@@ -607,18 +607,18 @@ const EN = {
   "Vendez et touchez vos commissions": "Sell and get your commissions",
   "Commandes par téléphone ou WhatsApp, livraison suivie GPS, commissions affichées avant la vente.": "Orders by phone or WhatsApp, GPS-tracked delivery, commissions shown before the sale.",
   "Vos avantages": "Your advantages",
-  "AVANTAGE D'ÊTRE VENDEUR SUR MBOPPI": "BENEFITS OF BEING A SELLER ON MBOPPI",
+  "AVANTAGE D'ÊTRE VENDEUR SUR MBOPPISHOP": "BENEFITS OF BEING A SELLER ON MBOPPISHOP",
   "Masquer les avantages": "Hide the benefits",
   "0 % de frais de service": "0% service fees",
   "Vous gardez 100 % de vos ventes. Seule l'adhésion est payante : 1 500 F pour 30 jours.": "You keep 100% of your sales. Only the membership is paid: 1,500 F for 30 days.",
   "Parrainage = revenus complémentaires": "Referrals = extra income",
   "1 000 F par vendeur que vous parrainez + 2 % sur les achats de vos clients affiliés.": "1,000 F for each seller you refer + 2% on your affiliated clients' purchases.",
   "Livraison intégrée": "Integrated delivery",
-  "Vos clients suivent leur colis en temps réel avec un livreur Mboppi.": "Your clients track their parcel in real time with a Mboppi delivery driver.",
+  "Vos clients suivent leur colis en temps réel avec un livreur MboppiShop.": "Your clients track their parcel in real time with a MboppiShop delivery driver.",
   "Commandes téléphone & WhatsApp": "Phone & WhatsApp orders",
   "Vos clients commandent en quelques clics et contactent directement la boutique sur WhatsApp.": "Your clients order in a few clicks and contact the shop directly on WhatsApp.",
   "Nous contacter sur WhatsApp": "Contact us on WhatsApp",
-  "Bonjour, je veux devenir vendeur sur Mboppi.": "Hello, I want to become a seller on Mboppi.",
+  "Bonjour, je veux devenir vendeur sur MboppiShop.": "Hello, I want to become a seller on MboppiShop.",
   "Robot WhatsApp (assistant IA)": "WhatsApp robot (AI assistant)",
   "Activer le robot WhatsApp": "Enable the WhatsApp robot",
   "Message d'accueil (bonjour, salut…)": "Greeting message (hello, hi…)",
@@ -627,8 +627,8 @@ const EN = {
   "Robot WhatsApp activé ✅ — écrivez-lui depuis un autre numéro pour tester.": "WhatsApp robot enabled ✅ — text it from another number to test.",
   "Robot WhatsApp désactivé.": "WhatsApp robot disabled.",
   "URL du webhook à configurer chez Meta :": "Webhook URL to set up in Meta:",
-  "Connecte l'assistant IA du site (même moteur que le chat 💬) à votre numéro WhatsApp Cloud API : il répond automatiquement à toute personne qui écrit au numéro Mboppi (produits, prix, livraison, devenir vendeur). Nécessite le fournisseur « WhatsApp Cloud API (Meta) » ci-dessus, un webhook configuré chez Meta et la variable d'environnement WHATSAPP_VERIFY_TOKEN.": "Connects the site's AI assistant (same engine as the 💬 chat) to your WhatsApp Cloud API number: it automatically replies to anyone who writes to the Mboppi number (products, prices, delivery, becoming a seller). Requires the “WhatsApp Cloud API (Meta)” provider above, a webhook configured in Meta and the WHATSAPP_VERIFY_TOKEN environment variable.",
-  "Prêt à vendre sur Mboppi ?": "Ready to sell on Mboppi?",
+  "Connecte l'assistant IA du site (même moteur que le chat 💬) à votre numéro WhatsApp Cloud API : il répond automatiquement à toute personne qui écrit au numéro MboppiShop (produits, prix, livraison, devenir vendeur). Nécessite le fournisseur « WhatsApp Cloud API (Meta) » ci-dessus, un webhook configuré chez Meta et la variable d'environnement WHATSAPP_VERIFY_TOKEN.": "Connects the site's AI assistant (same engine as the 💬 chat) to your WhatsApp Cloud API number: it automatically replies to anyone who writes to the MboppiShop number (products, prices, delivery, becoming a seller). Requires the “WhatsApp Cloud API (Meta)” provider above, a webhook configured in Meta and the WHATSAPP_VERIFY_TOKEN environment variable.",
+  "Prêt à vendre sur MboppiShop ?": "Ready to sell on MboppiShop?",
   "Créez votre compte en moins d'une minute. Besoin d'aide ? L'équipe vous accompagne sur WhatsApp.": "Create your account in under a minute. Need help? Our team supports you on WhatsApp.",
   "Campagnes par jour": "Campaigns per day",
   "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "Quota updated: {n} campaigns per day (8am and 1pm).",
@@ -734,19 +734,19 @@ const EN = {
   "Continuer mes achats": "Continue shopping",
   "Mes achats": "My purchases",
   "Aucun achat pour le moment.": "No purchases yet.",
-  "Ce produit vous est proposé par un vendeur Mboppi.":
-    "This product is offered by a Mboppi seller.",
+  "Ce produit vous est proposé par un vendeur MboppiShop.":
+    "This product is offered by a MboppiShop seller.",
   "Code du vendeur : {code} — Confirmez votre achat pour le notifier, lui et la boutique.":
     "Seller code: {code} — Confirm your purchase to notify them and the shop.",
   "Confirmez votre achat : la boutique et le vendeur seront notifiés.":
     "Confirm your purchase: the shop and the seller will be notified.",
-  "Ce produit vous est proposé par un vendeur Mboppi. Entrez son code et le prix convenu pour confirmer l'achat.":
-    "This product is offered by a Mboppi seller. Enter their code and the agreed price to confirm the purchase.",
+  "Ce produit vous est proposé par un vendeur MboppiShop. Entrez son code et le prix convenu pour confirmer l'achat.":
+    "This product is offered by a MboppiShop seller. Enter their code and the agreed price to confirm the purchase.",
   "Vendeur : {seller}": "Seller: {seller}",
   Notifications: "Notifications",
   "Promotions éclair": "Flash sales",
   "Nouveautés du jour": "Today's new products",
-  "Messages de Mboppi": "Mboppi messages",
+  "Messages de MboppiShop": "MboppiShop messages",
   "Activées": "Enabled",
   "Désactivées": "Disabled",
   "Choisissez les notifications push que vous souhaitez recevoir sur votre appareil.":
@@ -759,20 +759,20 @@ const EN = {
   "Aucune notification": "No notifications",
   "Supprimer la notification": "Delete notification",
   "Installer l'application": "Install the app",
-  "Installez Mboppi sur votre écran d'accueil": "Install Mboppi on your home screen",
-  "Sur iPhone : touchez Partager ⬆️ puis « Sur l'écran d'accueil » pour installer Mboppi.":
-    'On iPhone: tap Share ⬆️ then "Add to Home Screen" to install Mboppi.',
-  "Cette application (Facebook, Instagram…) bloque l'installation. Ouvrez Mboppi dans Chrome pour installer :":
-    "This app (Facebook, Instagram…) blocks installation. Open Mboppi in Chrome to install:",
+  "Installez MboppiShop sur votre écran d'accueil": "Install MboppiShop on your home screen",
+  "Sur iPhone : touchez Partager ⬆️ puis « Sur l'écran d'accueil » pour installer MboppiShop.":
+    'On iPhone: tap Share ⬆️ then "Add to Home Screen" to install MboppiShop.',
+  "Cette application (Facebook, Instagram…) bloque l'installation. Ouvrez MboppiShop dans Chrome pour installer :":
+    "This app (Facebook, Instagram…) blocks installation. Open MboppiShop in Chrome to install:",
   "Ouvrir dans Chrome": "Open in Chrome",
   "Copier le lien": "Copy the link",
   "Lien copié": "Link copied",
-  "Lien copié ! Ouvrez Chrome, collez-le et installez Mboppi.":
-    "Link copied! Open Chrome, paste it and install Mboppi.",
-  "Pour installer Mboppi : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil ».":
-    'To install Mboppi: open your browser (Safari) Share menu, then choose "Add to Home Screen".',
-  "Pour installer Mboppi : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application ».":
-    'To install Mboppi: open your browser menu (⋮ or ⋯) and choose "Add to Home Screen" or "Install app".',
+  "Lien copié ! Ouvrez Chrome, collez-le et installez MboppiShop.":
+    "Link copied! Open Chrome, paste it and install MboppiShop.",
+  "Pour installer MboppiShop : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil ».":
+    'To install MboppiShop: open your browser (Safari) Share menu, then choose "Add to Home Screen".',
+  "Pour installer MboppiShop : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application ».":
+    'To install MboppiShop: open your browser menu (⋮ or ⋯) and choose "Add to Home Screen" or "Install app".',
   "Votre vente de « {product} » a été achetée par {buyer}.":
     'Your sale of "{product}" was bought by {buyer}.',
   "Votre vente de « {product} » a été confirmée par la boutique pour {buyer}.":
@@ -849,19 +849,19 @@ const EN = {
   "Produits des boutiques": "Shop products",
   "Parcourez les produits disponibles chez les boutiques partenaires.":
     "Browse products available at partner shops.",
-  "Contactez directement la centrale Mboppi pour commander.":
-    "Contact Mboppi directly to place an order.",
+  "Contactez directement la centrale MboppiShop pour commander.":
+    "Contact MboppiShop directly to place an order.",
   Rôle: "Role",
   "Inscrit le": "Registered on",
   "Suivez les promotions en cours et repérez les bonnes affaires.":
     "Follow current promotions and spot the best deals.",
   "Présenter mes créations": "Showcase my creations",
-  "Contactez la centrale Mboppi pour exposer vos créations au marché.":
-    "Contact Mboppi to exhibit your creations on the market.",
-  "Bonjour, je suis un client de Mboppi ({email}) et j'aimerais passer une commande.":
-    "Hello, I am a Mboppi client ({email}) and I would like to place an order.",
-  "Bonjour, je suis un créateur sur Mboppi ({email}) et j'aimerais présenter mes créations.":
-    "Hello, I am a creator on Mboppi ({email}) and I would like to showcase my creations.",
+  "Contactez la centrale MboppiShop pour exposer vos créations au marché.":
+    "Contact MboppiShop to exhibit your creations on the market.",
+  "Bonjour, je suis un client de MboppiShop ({email}) et j'aimerais passer une commande.":
+    "Hello, I am a MboppiShop client ({email}) and I would like to place an order.",
+  "Bonjour, je suis un créateur sur MboppiShop ({email}) et j'aimerais présenter mes créations.":
+    "Hello, I am a creator on MboppiShop ({email}) and I would like to showcase my creations.",
   "Le marché du quartier, en un clic": "Your neighbourhood market, one click away",
   "Découvrez les offres du moment, commandez les produits des boutiques partenaires, ou devenez vendeur et gagnez une commission sur chaque vente.":
     "Discover current offers, order products from partner shops, or become a seller and earn a commission on every sale.",
@@ -929,9 +929,9 @@ const EN = {
   "Retirer l'offre": "Remove offer",
   "Confirmez le retrait de « {name} » de la vitrine.":
     'Confirm the removal of "{name}" from the showcase.',
-  "Mboppi, le marché de votre quartier, en ligne": "Mboppi, your neighbourhood market, online",
-  "Mboppi est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans prix écrasant et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les créateurs exposent leurs talents, juste avec un téléphone et une connexion internet, les vendeurs vendent et gagnent des commissions, et les clients trouvent tout au même endroit avec satisfaction, sans se déplacer.":
-    "Mboppi was born from a simple idea: allow everyone to buy and sell close to home, without crushing prices and without depending on big platforms. Here, shops publish their products, creators showcase their talents, just with a phone and an internet connection, sellers sell and earn commissions, and clients find everything in one place with satisfaction, without moving.",
+  "MboppiShop, le marché de votre quartier, en ligne": "MboppiShop, your neighbourhood market, online",
+  "MboppiShop est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans prix écrasant et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les créateurs exposent leurs talents, juste avec un téléphone et une connexion internet, les vendeurs vendent et gagnent des commissions, et les clients trouvent tout au même endroit avec satisfaction, sans se déplacer.":
+    "MboppiShop was born from a simple idea: allow everyone to buy and sell close to home, without crushing prices and without depending on big platforms. Here, shops publish their products, creators showcase their talents, just with a phone and an internet connection, sellers sell and earn commissions, and clients find everything in one place with satisfaction, without moving.",
   "Comment ça marche ?": "How does it work?",
   "Un rôle pour chacun, une plateforme pour tous.": "A role for everyone, one platform for all.",
   "Publiez vos produits et recevez les commandes.": "Publish your products and receive orders.",
@@ -976,18 +976,18 @@ const EN = {
   Sujet: "Subject",
   "Choisir un sujet…": "Choose a subject…",
   "Question sur une offre": "Question about an offer",
-  "Je veux vendre sur Mboppi": "I want to sell on Mboppi",
+  "Je veux vendre sur MboppiShop": "I want to sell on MboppiShop",
   "Problème de compte": "Account problem",
   Autre: "Other",
   "Écrivez votre message ici…": "Write your message here…",
-  "Bonjour Mboppi, je suis {name}.": "Hello Mboppi, I am {name}.",
+  "Bonjour MboppiShop, je suis {name}.": "Hello MboppiShop, I am {name}.",
   "un visiteur": "a visitor",
   "📦 Quelles données sont collectées ?": "📦 What data is collected?",
   "Lors de votre inscription : votre nom, votre e-mail et votre rôle (boutique, vendeur, client ou créateur). Si vous vous connectez avec Google, seul votre e-mail Google est utilisé. Selon votre rôle, vous pouvez publier des produits, des offres avec photos, et vos ventes sont enregistrées dans votre espace.":
     "When you register: your name, your email and your role (shop, seller, client or creator). If you sign in with Google, only your Google email is used. Depending on your role, you can publish products, offers with photos, and your sales are recorded in your space.",
   "🔐 Comment sont-elles stockées ?": "🔐 How are they stored?",
-  "Toutes les données sont enregistrées dans une base de données PostgreSQL hébergée et sécurisée. Les mots de passe sont hachés (chiffrés de façon irréversible) : personne, même l'équipe Mboppi, ne peut lire votre mot de passe. Toutes les connexions passent par un protocole sécurisé (HTTPS).":
-    "All data is stored in a hosted and secured PostgreSQL database. Passwords are hashed (irreversibly encrypted): no one, even the Mboppi team, can read your password. All connections use a secure protocol (HTTPS).",
+  "Toutes les données sont enregistrées dans une base de données PostgreSQL hébergée et sécurisée. Les mots de passe sont hachés (chiffrés de façon irréversible) : personne, même l'équipe MboppiShop, ne peut lire votre mot de passe. Toutes les connexions passent par un protocole sécurisé (HTTPS).":
+    "All data is stored in a hosted and secured PostgreSQL database. Passwords are hashed (irreversibly encrypted): no one, even the MboppiShop team, can read your password. All connections use a secure protocol (HTTPS).",
   "⏳ Combien de temps sont-elles conservées ?": "⏳ How long are they kept?",
   "Vos données restent enregistrées aussi longtemps que votre compte existe. Les offres et produits que vous retirez sont supprimés définitivement, avec leurs photos. Aucune donnée n'est vendue ni transmise à des tiers.":
     "Your data stays stored as long as your account exists. Offers and products you remove are permanently deleted, with their photos. No data is sold or shared with third parties.",
@@ -995,8 +995,8 @@ const EN = {
   "Seule la personne concernée accède à son espace : une boutique voit ses produits, un vendeur ses ventes et commissions. Les offres de la vitrine sont publiquement visibles par les visiteurs, mais sans vos informations de compte.":
     "Only the person concerned accesses their space: a shop sees its products, a seller their sales and commissions. Showcase offers are publicly visible to visitors, but without your account information.",
   "💳 Aucun paiement en ligne": "💳 No online payment",
-  "Mboppi ne demande jamais de numéro de carte bancaire. Les commandes passent par téléphone ou WhatsApp, et le paiement se fait directement avec le vendeur.":
-    "Mboppi never asks for a bank card number. Orders go through phone or WhatsApp, and payment is made directly with the seller.",
+  "MboppiShop ne demande jamais de numéro de carte bancaire. Les commandes passent par téléphone ou WhatsApp, et le paiement se fait directement avec le vendeur.":
+    "MboppiShop never asks for a bank card number. Orders go through phone or WhatsApp, and payment is made directly with the seller.",
   "🗑️ Supprimer vos données": "🗑️ Delete your data",
   "Vous pouvez retirer vos offres et produits à tout moment depuis votre espace.":
     "You can remove your offers and products at any time from your space.",
@@ -1005,8 +1005,8 @@ const EN = {
   "et nous le supprimerons rapidement.": "page and we will delete it quickly.",
   "Partager ma vitrine": "Share my showcase",
   "📲 Partager via l'appareil": "📲 Share via device",
-  "Ma vitrine Mboppi": "My Mboppi showcase",
-  "Découvre ma vitrine Mboppi": "Discover my Mboppi showcase",
+  "Ma vitrine MboppiShop": "My MboppiShop showcase",
+  "Découvre ma vitrine MboppiShop": "Discover my MboppiShop showcase",
   "Copier le lien": "Copy link",
   "✨ **Une offre pour presque chaque besoin !**\n🔥 Découvrez ma vitrine et explorez une sélection d'offres et de solutions dans plusieurs domaines.\n\nQue tu recherches une opportunité, un service, un produit ou simplement quelque chose d'intéressant à découvrir, **tu pourrais bien trouver ton bonheur.** 👀\n\n👉 **Découvre la vitrine ici :**\n🔗 {url}\n\n🚀 *Un clic, plusieurs possibilités !*":
     "✨ **An offer for almost every need!**\n🔥 Discover my showcase and explore a selection of offers and solutions in several fields.\n\nWhether you are looking for an opportunity, a service, a product or simply something interesting to discover, **you might just find what you need.** 👀\n\n👉 **Discover the showcase here:**\n🔗 {url}\n\n🚀 *One click, many possibilities!*",
@@ -1081,10 +1081,10 @@ const EN = {
   "En attente": "Pending",
   Expédiée: "Shipped",
   "Suivre sur WhatsApp": "Track on WhatsApp",
-  "Bonjour Mboppi, je souhaite suivre ma commande #{id}.":
-    "Hello Mboppi, I would like to track my order #{id}.",
-  "Bonjour Mboppi, je souhaite confirmer ma commande #{id} :":
-    "Hello Mboppi, I would like to confirm my order #{id}:",
+  "Bonjour MboppiShop, je souhaite suivre ma commande #{id}.":
+    "Hello MboppiShop, I would like to track my order #{id}.",
+  "Bonjour MboppiShop, je souhaite confirmer ma commande #{id} :":
+    "Hello MboppiShop, I would like to confirm my order #{id}:",
   "Total : {total} F": "Total: {total} F",
   "Nom : {name}": "Name: {name}",
   "Téléphone : {phone}": "Phone: {phone}",
@@ -1093,7 +1093,7 @@ const EN = {
   "Plus récents": "Newest",
   "🔥 Plus populaires": "🔥 Most popular",
   "Nouveautés": "New arrivals",
-  "Les derniers produits publiés sur Mboppi.": "The latest products published on Mboppi.",
+  "Les derniers produits publiés sur MboppiShop.": "The latest products published on MboppiShop.",
   "Glissez pour découvrir la sélection du moment.": "Swipe to browse the current selection.",
   "Prix croissant": "Price: low to high",
   "Prix décroissant": "Price: high to low",
@@ -1106,9 +1106,9 @@ const EN = {
   "Retrouvez les produits que vous avez aimés.": "Find again the products you liked.",
   "En attente de vente": "Awaiting sale",
   "Générez votre code vendeur pour vendre.": "Generate your seller code to sell.",
-  "Commandez « {name} » sur Mboppi avec le code vendeur {code}":
-    "Order « {name} » on Mboppi with seller code {code}",
-  "Découvrez cet article sur Mboppi : {name}": "Discover this item on Mboppi: {name}",
+  "Commandez « {name} » sur MboppiShop avec le code vendeur {code}":
+    "Order « {name} » on MboppiShop with seller code {code}",
+  "Découvrez cet article sur MboppiShop : {name}": "Discover this item on MboppiShop: {name}",
   Localisation: "Location",
   "Mes moyens de paiement": "My payment methods",
   "Ces informations seront visibles par les boutiques pour vous payer vos commissions.":
@@ -1139,7 +1139,7 @@ const EN = {
     "The shop has not set up its payment wallets yet. Cash on delivery recommended.",
   "Moyens de paiement": "Payment methods",
   "La boutique n'a pas configuré de portefeuille.": "The shop has not set up a wallet.",
-  "Assistant Mboppi": "Mboppi Assistant",
+  "Assistant MboppiShop": "MboppiShop Assistant",
   "Code du vendeur (facultatif)": "Seller code (optional)",
   "Remplissez vos informations pour confirmer votre commande. Aucun compte requis. Le code du vendeur est utile seulement si un vendeur vous a proposé ce produit.":
     "Fill in your details to confirm your order. No account required. The seller code is only useful if a seller offered you this product.",
@@ -1151,8 +1151,8 @@ const EN = {
   "Changement d'espace impossible. Réessayez.": "Could not switch spaces. Please try again.",
   "AFIN DE FINALISER VOTRE COMMANDE, VEILLEZ VOUS CONNECTER À VOTRE COMPTE LIVREUR.":
     "TO FINALIZE YOUR ORDER, PLEASE LOG IN TO YOUR DELIVERY DRIVER ACCOUNT.",
-  "Les livraisons Mboppi passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
-    "Mboppi deliveries must go through a delivery driver's space: the driver records your order, has you enter your confirmation code, sign, and validate the payment securely.",
+  "Les livraisons MboppiShop passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
+    "MboppiShop deliveries must go through a delivery driver's space: the driver records your order, has you enter your confirmation code, sign, and validate the payment securely.",
   "Votre compte boutique est connecté": "Your shop account is logged in",
   "Créez votre espace livreur associé — même email, aucune information à ressaisir. Vous pourrez ainsi finaliser vous-même les livraisons de vos commandes.":
     "Create your linked delivery driver space — same email, no information to re-enter. You will then be able to finalize your orders' deliveries yourself.",
@@ -1169,11 +1169,11 @@ const EN = {
     "I deliver items and finalize orders (customer code, signature, payment)",
   "Plusieurs espaces détectés sur cet email. Quel espace voulez-vous ouvrir ?":
     "Multiple spaces detected on this email. Which space do you want to open?",
-  "CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.":
-    "DEAR CUSTOMERS, THANK YOU FOR TRUSTING MBOPPI.",
+  "CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPISHOP.":
+    "DEAR CUSTOMERS, THANK YOU FOR TRUSTING MBOPPISHOP.",
   "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat.":
     "To avoid any fraud when your parcel is delivered, require the payment form from the delivery driver, where you will enter your confirmation code and sign, before validating your purchase.",
-  "L'Administration Mboppi": "The Mboppi Administration",
+  "L'Administration MboppiShop": "The MboppiShop Administration",
   "Signature du client": "Client's signature",
   "Rechercher un produit (nom ou boutique)…": "Search for a product (name or shop)…",
   "Aucun produit ne correspond à cette recherche.": "No product matches this search.",
@@ -1185,8 +1185,8 @@ const EN = {
   "affinez la recherche": "refine your search",
   "En ligne": "Online",
   "Écrivez votre question…": "Type your question…",
-  "Bonjour 👋 Je suis l'assistant Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
-    "Hello 👋 I am the Mboppi assistant. Ask me anything about the shop, orders, payments or delivery!",
+  "Bonjour 👋 Je suis l'assistant MboppiShop. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
+    "Hello 👋 I am the MboppiShop assistant. Ask me anything about the shop, orders, payments or delivery!",
   "Une erreur est survenue. Réessayez ou contactez-nous via la page Contact.":
     "An error occurred. Try again or contact us via the Contact page.",
   "Le chatbot n'est pas encore configuré (clé IA manquante côté serveur).":
@@ -1203,12 +1203,12 @@ const EN = {
     "Your item is awaiting sale. The shop and the seller have been notified and will contact you for delivery. Find this order in your client space.",
   "Vous devez être connecté pour confirmer la commande.":
     "You must be logged in to confirm the order.",
-  "Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande. Aucun compte requis.":
-    "This product is offered by a Mboppi seller. Fill in your details to confirm your order. No account required.",
+  "Ce produit vous est proposé par un vendeur MboppiShop. Remplissez vos informations pour confirmer votre commande. Aucun compte requis.":
+    "This product is offered by a MboppiShop seller. Fill in your details to confirm your order. No account required.",
   "Confirmez votre commande : la boutique et le vendeur seront notifiés.":
     "Confirm your order: the shop and the seller will be notified.",
-  "Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande.":
-    "This product is offered by a Mboppi seller. Fill in your details to confirm your order.",
+  "Ce produit vous est proposé par un vendeur MboppiShop. Remplissez vos informations pour confirmer votre commande.":
+    "This product is offered by a MboppiShop seller. Fill in your details to confirm your order.",
   "Nouvelle commande pour « {product} » — {buyer}.": "New order for « {product} » — {buyer}.",
   "Nouvelle commande pour « {product} » — vendeur : {seller} ({code}).":
     "New order for « {product} » — seller: {seller} ({code}).",
@@ -1270,9 +1270,9 @@ const EN = {
   "Code vendeur": "Seller code",
   "Prix unitaire": "Unit price",
   "Total à payer": "Total to pay",
-  "Facture générée par Mboppi — marchandise livrée.":
-    "Invoice generated by Mboppi — merchandise delivered.",
-  "Facture générée par Mboppi.": "Invoice generated by Mboppi.",
+  "Facture générée par MboppiShop — marchandise livrée.":
+    "Invoice generated by MboppiShop — merchandise delivered.",
+  "Facture générée par MboppiShop.": "Invoice generated by MboppiShop.",
   "Payer le Vendeur": "Pay the Seller",
   "Payer le vendeur": "Pay the seller",
   "Vendeur payé": "Seller paid",
@@ -1327,8 +1327,8 @@ const EN = {
   Adresse: "Address",
   "Frais de livraison": "Delivery fee",
   Paiement: "Payment",
-  "Mboppi est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans commission écrasante et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les vendeurs gagnent des commissions, les créateurs exposent leurs talents et les clients trouvent tout au même endroit.":
-    "Mboppi was born from a simple idea: letting everyone sell and buy close to home, without crushing commissions and without relying on the big platforms. Here, shops publish their products, sellers earn commissions, creators showcase their talents and clients find everything in one place.",
+  "MboppiShop est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans commission écrasante et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les vendeurs gagnent des commissions, les créateurs exposent leurs talents et les clients trouvent tout au même endroit.":
+    "MboppiShop was born from a simple idea: letting everyone sell and buy close to home, without crushing commissions and without relying on the big platforms. Here, shops publish their products, sellers earn commissions, creators showcase their talents and clients find everything in one place.",
   "Publiez vos produits et recevez les commandes de vos clients.":
     "Publish your products and receive orders from your clients.",
   Créateur: "Creator",
@@ -1342,13 +1342,13 @@ const EN = {
   "Livrez les articles commandés et confirmez l'achat.":
     "Deliver ordered items and confirm the purchase.",
   "Livrer : {name}": "Deliver: {name}",
-  "Découvrez « {name} » à {price} {symbol} sur Mboppi.":
-    "Discover « {name} » at {price} {symbol} on Mboppi.",
+  "Découvrez « {name} » à {price} {symbol} sur MboppiShop.":
+    "Discover « {name} » at {price} {symbol} on MboppiShop.",
   "Comment vos données sont conservées": "How your data is kept",
-  "La transparence est importante pour nous. Voici comment Mboppi collecte, stocke et protège vos données.":
-    "Transparency matters to us. Here is how Mboppi collects, stores and protects your data.",
-  "Découvrez « {name} » à {price} {symbol} chez {shop} sur Mboppi.":
-    "Discover « {name} » at {price} {symbol} at {shop} on Mboppi.",
+  "La transparence est importante pour nous. Voici comment MboppiShop collecte, stocke et protège vos données.":
+    "Transparency matters to us. Here is how MboppiShop collects, stores and protects your data.",
+  "Découvrez « {name} » à {price} {symbol} chez {shop} sur MboppiShop.":
+    "Discover « {name} » at {price} {symbol} at {shop} on MboppiShop.",
   "Confirmez votre commande avec le code du vendeur.": "Confirm your order with the seller code.",
   "Prix invalide": "Invalid price",
   "Livré le": "Delivered on",
@@ -1417,12 +1417,12 @@ const EN = {
   "Partager le suivi": "Share tracking",
   "Votre code client : {code}": "Your customer code: {code}",
   "Votre code client": "Your customer code",
-  "Bonjour {seller}, je suis {buyer}, je vous contacte à propos de ma commande « {product} » sur Mboppi.":
-    'Hello {seller}, I am {buyer}, I am contacting you about my order "{product}" on Mboppi.',
-  "Bonjour {shop}, je vous contacte depuis Mboppi.":
-    "Hello {shop}, I am contacting you from Mboppi.",
-  "Suivez ma commande « {product} » sur Mboppi : {url}":
-    'Track my order "{product}" on Mboppi: {url}',
+  "Bonjour {seller}, je suis {buyer}, je vous contacte à propos de ma commande « {product} » sur MboppiShop.":
+    'Hello {seller}, I am {buyer}, I am contacting you about my order "{product}" on MboppiShop.',
+  "Bonjour {shop}, je vous contacte depuis MboppiShop.":
+    "Hello {shop}, I am contacting you from MboppiShop.",
+  "Suivez ma commande « {product} » sur MboppiShop : {url}":
+    'Track my order "{product}" on MboppiShop: {url}',
   "La page que vous cherchez n'existe pas ou a été déplacée.":
     "The page you are looking for does not exist or has been moved.",
   Suggestions: "Suggestions",
@@ -1459,21 +1459,21 @@ const EN = {
   "Rechercher un utilisateur (nom ou email)…": "Search for a user (name or email)…",
   "Rechercher un paiement (nom, email ou référence)…": "Search for a payment (name, email or reference)…",
   "Aucun paiement ne correspond à cette recherche.": "No payment matches this search.",
-  "Message de l'équipe Mboppi": "Message from the Mboppi team",
+  "Message de l'équipe MboppiShop": "Message from the MboppiShop team",
   Suggestion: "Suggestion",
   "Faire une suggestion": "Make a suggestion",
-  "Aidez-nous à améliorer Mboppi : votre message s'ouvrira dans WhatsApp.":
-    "Help us improve Mboppi: your message will open in WhatsApp.",
+  "Aidez-nous à améliorer MboppiShop : votre message s'ouvrira dans WhatsApp.":
+    "Help us improve MboppiShop: your message will open in WhatsApp.",
   "Votre suggestion…": "Your suggestion…",
   "Envoyer sur WhatsApp": "Send on WhatsApp",
-  "Partager Mboppi": "Share Mboppi",
-  "Découvre Mboppi": "Discover Mboppi",
-  "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
-    "Discover Mboppi: the online marketplace of Cameroon and Africa. Shops, sellers, creators and riders — order easily, sell more and earn!",
-  "Rejoins Mboppi et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}":
-    "Join Mboppi and find all the best deals — cash on delivery. Click here to sign up: {link}",
-  "Deviens vendeur sur Mboppi et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}":
-    "Become a seller on Mboppi and earn commissions on every sale and 1000 F for every seller you refer. Sign up here: {link}",
+  "Partager MboppiShop": "Share MboppiShop",
+  "Découvre MboppiShop": "Discover MboppiShop",
+  "Découvrez MboppiShop : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
+    "Discover MboppiShop: the online marketplace of Cameroon and Africa. Shops, sellers, creators and riders — order easily, sell more and earn!",
+  "Rejoins MboppiShop et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}":
+    "Join MboppiShop and find all the best deals — cash on delivery. Click here to sign up: {link}",
+  "Deviens vendeur sur MboppiShop et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}":
+    "Become a seller on MboppiShop and earn commissions on every sale and 1000 F for every seller you refer. Sign up here: {link}",
   "Messages aux utilisateurs": "Messages to users",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "Send a message that will show as a popup on the users' next log-in (once only).",
@@ -1518,30 +1518,30 @@ const EN = {
   CGU: "Terms of Use",
   "Mentions légales": "Legal notice",
   "Conditions générales d'utilisation": "Terms of Use",
-  "Les règles pour utiliser Mboppi en tant que boutique, vendeur, client ou créateur.":
-    "The rules for using Mboppi as a shop, seller, client or creator.",
+  "Les règles pour utiliser MboppiShop en tant que boutique, vendeur, client ou créateur.":
+    "The rules for using MboppiShop as a shop, seller, client or creator.",
   "J'ai lu et j'accepte les": "I have read and I accept the",
   "Vous devez accepter les Conditions Générales d'Utilisation pour vous inscrire.":
     "You must accept the Terms of Use to sign up.",
   "Mot de passe (8 caractères minimum)": "Password (8 characters minimum)",
   "1. Objet et acceptation": "1. Purpose and acceptance",
-  "Les présentes Conditions générales d'utilisation (CGU) régissent votre accès et votre utilisation de la plateforme Mboppi. En créant votre compte, vous acceptez pleinement et sans réserve ces conditions.":
-    "These Terms of Use govern your access to and use of the Mboppi platform. By creating your account, you fully and unconditionally accept these terms.",
+  "Les présentes Conditions générales d'utilisation (CGU) régissent votre accès et votre utilisation de la plateforme MboppiShop. En créant votre compte, vous acceptez pleinement et sans réserve ces conditions.":
+    "These Terms of Use govern your access to and use of the MboppiShop platform. By creating your account, you fully and unconditionally accept these terms.",
   "2. Création d'un compte": "2. Account creation",
   "Vous vous engagez à fournir des informations exactes et à jour lors de votre inscription. Vous êtes responsable de la confidentialité de votre mot de passe et de toutes les actions réalisées avec votre compte.":
     "You agree to provide accurate and up-to-date information when registering. You are responsible for the confidentiality of your password and for all actions carried out with your account.",
-  "3. Les rôles sur Mboppi": "3. Roles on Mboppi",
-  "Mboppi met en relation des boutiques, des vendeurs, des clients et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander ou créer.":
-    "Mboppi connects shops, sellers, clients and creators. Each account is linked to a role that determines the available features: publishing products, selling, ordering or creating.",
+  "3. Les rôles sur MboppiShop": "3. Roles on MboppiShop",
+  "MboppiShop met en relation des boutiques, des vendeurs, des clients et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander ou créer.":
+    "MboppiShop connects shops, sellers, clients and creators. Each account is linked to a role that determines the available features: publishing products, selling, ordering or creating.",
   "4. Commandes et paiement": "4. Orders and payment",
-  "Les commandes sont passées directement avec la boutique ou le vendeur. Aucun paiement n'est effectué en ligne sur Mboppi : le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money.":
-    "Orders are placed directly with the shop or seller. No payment is made online on Mboppi: payment is done directly with the seller or delivery driver, on delivery or by mobile money.",
+  "Les commandes sont passées directement avec la boutique ou le vendeur. Aucun paiement n'est effectué en ligne sur MboppiShop : le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money.":
+    "Orders are placed directly with the shop or seller. No payment is made online on MboppiShop: payment is done directly with the seller or delivery driver, on delivery or by mobile money.",
   "5. Commissions et parrainage": "5. Commissions and referrals",
   "Les boutiques rémunèrent les vendeurs et les parrains par des commissions enregistrées sur la plateforme. Les montants et les modalités de réclamation et de paiement sont affichés dans les espaces vendeur, boutique et client.":
     "Shops pay sellers and referrers commissions recorded on the platform. Amounts and the claiming and payment terms are shown in the seller, shop and client spaces.",
   "6. Contenu publié": "6. Posted content",
-  "Les boutiques, vendeurs et créateurs publient leurs propres produits, offres et créations. Ils sont seuls responsables de l'exactitude et de la légalité de leur contenu. Mboppi peut retirer tout contenu illicite ou inapproprié.":
-    "Shops, sellers and creators post their own products, offers and creations. They are solely responsible for the accuracy and legality of their content. Mboppi may remove any unlawful or inappropriate content.",
+  "Les boutiques, vendeurs et créateurs publient leurs propres produits, offres et créations. Ils sont seuls responsables de l'exactitude et de la légalité de leur contenu. MboppiShop peut retirer tout contenu illicite ou inapproprié.":
+    "Shops, sellers and creators post their own products, offers and creations. They are solely responsible for the accuracy and legality of their content. MboppiShop may remove any unlawful or inappropriate content.",
   "7. Livraison": "7. Delivery",
   "La livraison est assurée par les boutiques ou des livreurs partenaires. Les délais et les frais sont indiqués sur chaque produit et convenus avec le vendeur ou la boutique lors de la commande.":
     "Delivery is handled by the shops or partner delivery drivers. Delivery times and fees are shown on each product and agreed with the seller or shop when ordering.",
@@ -1549,8 +1549,8 @@ const EN = {
   "Il est interdit d'utiliser la plateforme de manière frauduleuse : créer de fausses commandes, usurper une identité, publier des informations fausses ou trompeuses, ou tenter de contourner les règles de la plateforme.":
     "It is forbidden to use the platform fraudulently: creating fake orders, impersonating someone, posting false or misleading information, or trying to bypass the platform's rules.",
   "9. Suspension et résiliation": "9. Suspension and termination",
-  "Mboppi peut suspendre ou supprimer un compte en cas de non-respect des présentes conditions. Vous pouvez supprimer votre compte à tout moment depuis votre espace « Mon compte ».":
-    'Mboppi may suspend or delete an account when these terms are not respected. You can delete your account at any time from your "My Account" space.',
+  "MboppiShop peut suspendre ou supprimer un compte en cas de non-respect des présentes conditions. Vous pouvez supprimer votre compte à tout moment depuis votre espace « Mon compte ».":
+    'MboppiShop may suspend or delete an account when these terms are not respected. You can delete your account at any time from your "My Account" space.',
   "10. Données personnelles": "10. Personal data",
   "Vos données personnelles sont traitées conformément à notre politique de confidentialité, consultable sur la page Données personnelles.":
     "Your personal data is processed in accordance with our privacy policy, available on the Personal Data page.",
@@ -1558,29 +1558,29 @@ const EN = {
   "En cochant la case lors de votre inscription, vous confirmez avoir lu et accepté ces Conditions générales d'utilisation. Pour toute question, contactez-nous via la page Contact.":
     "By ticking the box when you sign up, you confirm that you have read and accepted these Terms of Use. For any question, please contact us via the Contact page.",
   "Conditions générales de vente": "Terms and conditions of sale",
-  "Les règles qui régissent les ventes sur Mboppi.": "The rules governing sales on Mboppi.",
+  "Les règles qui régissent les ventes sur MboppiShop.": "The rules governing sales on MboppiShop.",
   "Conditions générales": "Terms and conditions",
   "1. Rôle de la plateforme": "1. Role of the platform",
-  "Mboppi met en relation des boutiques, des créateurs, des vendeurs et des clients. Les ventes sont conclues directement entre l'acheteur et le vendeur ou la boutique. Mboppi ne perçoit aucun paiement en ligne.":
-    "Mboppi connects shops, creators, sellers and clients. Sales are concluded directly between the buyer and the seller or the shop. Mboppi never collects any online payment.",
+  "MboppiShop met en relation des boutiques, des créateurs, des vendeurs et des clients. Les ventes sont conclues directement entre l'acheteur et le vendeur ou la boutique. MboppiShop ne perçoit aucun paiement en ligne.":
+    "MboppiShop connects shops, creators, sellers and clients. Sales are concluded directly between the buyer and the seller or the shop. MboppiShop never collects any online payment.",
   "2. Commandes": "2. Orders",
   "Une commande est enregistrée avec le nom et le code de l'acheteur. L'état de la commande (en attente, confirmée, livrée) peut être suivi sur la page de suivi. Une commande annulée ne donne lieu à aucun paiement.":
     "An order is recorded with the buyer's name and code. The order status (pending, confirmed, delivered) can be tracked on the tracking page. A cancelled order gives rise to no payment.",
   "3. Paiement et livraison": "3. Payment and delivery",
-  "Le paiement s'effectue directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Les frais de livraison sont indiqués sur chaque produit. Mboppi ne stocke aucun moyen de paiement.":
-    "Payment is made directly with the seller or delivery driver, on delivery or by mobile money. Delivery fees are shown on each product. Mboppi stores no payment details.",
+  "Le paiement s'effectue directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Les frais de livraison sont indiqués sur chaque produit. MboppiShop ne stocke aucun moyen de paiement.":
+    "Payment is made directly with the seller or delivery driver, on delivery or by mobile money. Delivery fees are shown on each product. MboppiShop stores no payment details.",
   "4. Garanties et retours": "4. Warranties and returns",
-  "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, Mboppi peut servir d'intermédiaire de médiation.":
-    "Any warranties are stated on each product. Returns are handled directly with the shop or seller. In case of a dispute, Mboppi may act as a mediator.",
+  "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, MboppiShop peut servir d'intermédiaire de médiation.":
+    "Any warranties are stated on each product. Returns are handled directly with the shop or seller. In case of a dispute, MboppiShop may act as a mediator.",
   "5. Responsabilité": "5. Liability",
-  "Mboppi ne peut être tenu responsable des produits vendus par les boutiques et vendeurs, ni des retards de livraison imputables aux livreurs. Les informations publiées le sont par les vendeurs eux-mêmes.":
-    "Mboppi cannot be held responsible for products sold by shops and sellers, nor for delivery delays caused by delivery drivers. Published information is provided by the sellers themselves.",
+  "MboppiShop ne peut être tenu responsable des produits vendus par les boutiques et vendeurs, ni des retards de livraison imputables aux livreurs. Les informations publiées le sont par les vendeurs eux-mêmes.":
+    "MboppiShop cannot be held responsible for products sold by shops and sellers, nor for delivery delays caused by delivery drivers. Published information is provided by the sellers themselves.",
   "6. Contact": "6. Contact",
   "Pour toute question sur ces conditions, contactez-nous via la page Contact.":
     "For any question about these terms, contact us via the Contact page.",
   FAQ: "FAQ",
   "Questions fréquentes": "Frequently asked questions",
-  "Tout ce que vous devez savoir sur Mboppi.": "Everything you need to know about Mboppi.",
+  "Tout ce que vous devez savoir sur MboppiShop.": "Everything you need to know about MboppiShop.",
   "Comment créer un compte ?": "How do I create an account?",
   "Créez un compte gratuitement en moins d'une minute : choisissez votre rôle (boutique, vendeur, client ou créateur), renseignez votre nom et votre e-mail. Vous pouvez aussi vous connecter avec Google.":
     "Create a free account in less than a minute: choose your role (shop, seller, client or creator), enter your name and email. You can also sign in with Google.",
@@ -1588,8 +1588,8 @@ const EN = {
   "Ajoutez un produit à votre panier puis validez la commande avec vos coordonnées. Vous recevez un code client pour suivre votre commande sur la page de suivi. Vous pouvez aussi contacter directement la boutique sur WhatsApp.":
     "Add a product to your cart then confirm the order with your details. You receive a customer code to track your order on the tracking page. You can also contact the shop directly on WhatsApp.",
   "Comment payer ?": "How do I pay?",
-  "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Mboppi ne demande jamais de paiement en ligne.":
-    "No bank card is needed. Payment is made directly with the seller or delivery driver, on delivery or by mobile money. Mboppi never asks for online payment.",
+  "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money. MboppiShop ne demande jamais de paiement en ligne.":
+    "No bank card is needed. Payment is made directly with the seller or delivery driver, on delivery or by mobile money. MboppiShop never asks for online payment.",
   "Comment devenir vendeur ?": "How do I become a seller?",
   "Créez un compte avec le rôle « vendeur ». Vous recevrez un code vendeur à partager avec vos clients. L'accès à votre espace vendeur est soumis à l'adhésion de 30 jours (1 500 XAF), comme pour les boutiques et les créateurs (2 500 XAF). Pour chaque vente, vous gagnez la commission affichée sur le produit.":
     'Create an account with the "seller" role. You will receive a seller code to share with your clients. Access to your seller space requires the 30-day membership (1,500 XAF), as for shops and creators (2,500 XAF). For each sale, you earn the commission shown on the product.',
@@ -1602,14 +1602,14 @@ const EN = {
   "Comment télécharger un produit digital ?": "How do I download a digital product?",
   "Un produit digital ne se livre pas : dès que la boutique confirme le paiement, vous le téléchargez depuis la page de confirmation d'achat ou votre espace client, via un lien sécurisé. Les téléchargements sont limités par acheteur (5 par défaut) et la livraison est toujours offerte.":
     "A digital product is not delivered: as soon as the shop confirms the payment, you download it from the purchase confirmation page or your client space, through a secure link. Downloads are limited per buyer (5 by default) and delivery is always free.",
-  "L'accès aux espaces professionnels (boutique, vendeur, créateur) est soumis à une adhésion de 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur. Les clients et les livreurs n'ont rien à payer. Cette adhésion ne concerne pas les ventes : Mboppi ne prélève aucun frais sur les transactions entre les parties.":
-    "Access to the professional spaces (shop, seller, creator) requires a 30-day membership — 1,500 XAF for sellers, 2,500 XAF for shops and creators. Clients and delivery drivers have nothing to pay. This membership does not concern sales: Mboppi charges no fee on transactions between the parties.",
+  "L'accès aux espaces professionnels (boutique, vendeur, créateur) est soumis à une adhésion de 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur. Les clients et les livreurs n'ont rien à payer. Cette adhésion ne concerne pas les ventes : MboppiShop ne prélève aucun frais sur les transactions entre les parties.":
+    "Access to the professional spaces (shop, seller, creator) requires a 30-day membership — 1,500 XAF for sellers, 2,500 XAF for shops and creators. Clients and delivery drivers have nothing to pay. This membership does not concern sales: MboppiShop charges no fee on transactions between the parties.",
   "Un produit digital (ebook, musique, vidéo, document…) n'est pas livré : il est téléchargé par l'acheteur depuis la page de confirmation d'achat ou son espace client, dès que la boutique confirme le paiement. Aucun frais de livraison ne s'applique.":
     "A digital product (ebook, music, video, document…) is not delivered: the buyer downloads it from the purchase confirmation page or their client space, as soon as the shop confirms the payment. No delivery fee applies.",
   "Votre paiement vous parviendra dans un délai maximum de 72 h après validation de votre demande.":
     "Your payment will reach you within a maximum of 72 hours after your request is validated.",
-  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Votre paiement vous parviendra dans un délai maximum de 72 h.":
-    "Your withdrawal request for {amount} F has been received by the Mboppi team. Your payment will reach you within a maximum of 72 hours.",
+  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe MboppiShop. Votre paiement vous parviendra dans un délai maximum de 72 h.":
+    "Your withdrawal request for {amount} F has been received by the MboppiShop team. Your payment will reach you within a maximum of 72 hours.",
   "Demande envoyée ✓ L'administration vous paiera sur vos moyens de paiement configurés, dans un délai maximum de 72 h.":
     "Request sent ✓ The administration will pay you on your configured payment methods, within a maximum of 72 hours.",
   "Votre paiement vous parvient sous 72 h maximum après validation de votre demande.":
@@ -1638,16 +1638,16 @@ const EN = {
   "Oui, depuis votre espace « Mon compte ». Vos données sont alors supprimées définitivement de notre base.":
     'Yes, from your "My account" space. Your data is then permanently deleted from our database.',
   "Éditeur du site": "Site publisher",
-  "Le site Mboppi est édité par l'équipe Mboppi. Pour toute question, utilisez la page Contact.":
-    "The Mboppi website is published by the Mboppi team. For any question, use the Contact page.",
+  "Le site MboppiShop est édité par l'équipe MboppiShop. Pour toute question, utilisez la page Contact.":
+    "The MboppiShop website is published by the MboppiShop team. For any question, use the Contact page.",
   Hébergement: "Hosting",
   "Le site est hébergé par Vercel Inc., 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis. Les données sont stockées dans une base PostgreSQL hébergée par Neon.":
     "The website is hosted by Vercel Inc., 340 S Lemon Ave #4133, Walnut, CA 91789, USA. Data is stored in a PostgreSQL database hosted by Neon.",
   "Propriété intellectuelle": "Intellectual property",
-  "Les contenus publiés par les boutiques et vendeurs (produits, photos, descriptions) leur appartiennent. La marque et le nom Mboppi appartiennent à leurs propriétaires.":
-    "Content published by shops and sellers (products, photos, descriptions) belongs to them. The Mboppi brand and name belong to their owners.",
-  "Mboppi utilise des cookies pour améliorer votre expérience (thème, langue, panier). Nous ne vendons aucune donnée.":
-    "Mboppi uses cookies to improve your experience (theme, language, cart). We sell no data.",
+  "Les contenus publiés par les boutiques et vendeurs (produits, photos, descriptions) leur appartiennent. La marque et le nom MboppiShop appartiennent à leurs propriétaires.":
+    "Content published by shops and sellers (products, photos, descriptions) belongs to them. The MboppiShop brand and name belong to their owners.",
+  "MboppiShop utilise des cookies pour améliorer votre expérience (thème, langue, panier). Nous ne vendons aucune donnée.":
+    "MboppiShop uses cookies to improve your experience (theme, language, cart). We sell no data.",
   Accepter: "Accept",
   "En savoir plus": "Learn more",
   Cookies: "Cookies",
@@ -1693,8 +1693,8 @@ const EN = {
   parrainage: "referral",
   "Commission produit": "Product commission",
   "Commission parrainage (2%)": "Referral commission (2%)",
-  "Vous vous inscrivez via le lien d'un vendeur Mboppi : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.":
-    'You are signing up through a Mboppi seller link: it is free, and the "Client" role is preselected for you.',
+  "Vous vous inscrivez via le lien d'un vendeur MboppiShop : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.":
+    'You are signing up through a MboppiShop seller link: it is free, and the "Client" role is preselected for you.',
   "Code du vendeur (parrainage)": "Seller code (referral)",
   "Le vendeur {seller} réclame le paiement de sa commission pour « {product} ».":
     "Seller {seller} is claiming payment of their commission for « {product} ».",
@@ -1718,9 +1718,9 @@ const EN = {
     "Your name, email, phone number and country.",
   
   // Adhésion
-  "Adhésion Mboppi": "Mboppi Membership",
-  "Payez votre adhésion Mboppi et accédez à votre espace professionnel.":
-    "Pay your Mboppi membership and access your professional space.",
+  "Adhésion MboppiShop": "MboppiShop Membership",
+  "Payez votre adhésion MboppiShop et accédez à votre espace professionnel.":
+    "Pay your MboppiShop membership and access your professional space.",
   "Après votre inscription, l'accès à votre tableau de bord professionnel est accordé dès paiement de votre adhésion. Suivez les instructions ci-dessous pour effectuer votre paiement.":
     "After registration, access to your professional dashboard is granted once your membership payment is made. Follow the instructions below to make your payment.",
   "Rôle": "Role",
@@ -1816,10 +1816,10 @@ const AR = {
   // Support / menu
   "Je soutiens": "أدعم",
   "Formations et Digital": "تدريب ورقمنة",
-  "Tutoriel Mboppi": "درس Mboppi",
+  "Tutoriel MboppiShop": "درس MboppiShop",
   "Rejoindre le Groupe": "انضم إلى المجموعة",
-  "Je soutiens Mboppi": "أدعم مبوّي",
-  "Chaque geste compte pour faire grandir Mboppi": "كل مساهمة تصنع الفرق لتنمية مبوّي",
+  "Je soutiens MboppiShop": "أدعم مبوّي",
+  "Chaque geste compte pour faire grandir MboppiShop": "كل مساهمة تصنع الفرق لتنمية مبوّي",
   "Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.":
     "دعمكم يساعدنا في دفع تكاليف الموقع، وتحسين المنصة، ومرافقة متاجرنا وبائعينا. كل مساهمة، مهما صغرت، تدفع المشروع إلى الأمام.",
   "Comment pouvez-vous soutenir le projet ?": "كيف يمكنك دعم المشروع؟",
@@ -1829,9 +1829,9 @@ const AR = {
   PayPal: "PayPal",
   "Virement bancaire (UBA)": "تحويل بنكي (UBA)",
   "Merci pour votre soutien !": "شكراً لدعمكم!",
-  "Avec votre aide, Mboppi continue de connecter les boutiques, les vendeurs et les clients de toute la communauté.":
+  "Avec votre aide, MboppiShop continue de connecter les boutiques, les vendeurs et les clients de toute la communauté.":
     "بمساعدتكم، تواصل مبوّي ربط المتاجر والبائعين والعملاء في كل المجتمع.",
-  "Soutenez Mboppi : Orange Money, MTN Mobile Money, PayPal ou virement bancaire UBA.":
+  "Soutenez MboppiShop : Orange Money, MTN Mobile Money, PayPal ou virement bancaire UBA.":
     "ادعم مبوّي: أورنج موني، إم تي إن موبايل موني، باي بال أو تحويل بنكي UBA.",
 
   // ProductCard
@@ -1849,12 +1849,12 @@ const AR = {
   "Économisez {n} {symbol}": "وفّر {n} {symbol}",
 
   // Seo
-  "Mboppi - {title}": "مبوبي - {title}",
-  "Mboppi : boutique en ligne, vendeurs, créateurs.": "مبوبي: متجر إلكتروني، بائعون، مبدعون.",
-  "Marché en ligne Mboppi.": "سوق مبوبي الإلكتروني.",
+  "MboppiShop - {title}": "مبوبي - {title}",
+  "MboppiShop : boutique en ligne, vendeurs, créateurs.": "مبوبي: متجر إلكتروني، بائعون، مبدعون.",
+  "Marché en ligne MboppiShop.": "سوق مبوبي الإلكتروني.",
 
   // Home
-  "Bienvenue sur Mboppi": "مرحباً بكم في مبوبي",
+  "Bienvenue sur MboppiShop": "مرحباً بكم في مبوبي",
   "Le marché où boutiques, vendeurs et créateurs se rencontrent. Commandez directement sur WhatsApp !":
     "السوق حيث يلتقي المتاجر والبائعون والمبدعون. اطلب مباشرة عبر واتساب!",
   "Voir les offres": "عرض العروض",
@@ -1862,8 +1862,8 @@ const AR = {
   "Produits récents": "أحدث المنتجات",
   "Offres du moment": "عروض اللحظة",
   "Aucun produit disponible pour le moment.": "لا توجد منتجات متاحة حالياً.",
-  "Bienvenue chez Mboppi": "مرحباً بكم في مبوبي",
-  "BIENVENUE SUR MBOPPI": "مرحباً بكم في مبوبي",
+  "Bienvenue chez MboppiShop": "مرحباً بكم في مبوبي",
+  "BIENVENUE SUR MBOPPISHOP": "مرحباً بكم في مبوبي",
   "Rechercher un produit, une boutique…": "ابحث عن منتج أو متجر…",
   "Rechercher un produit": "ابحث عن منتج",
   "Rechercher une boutique": "ابحث عن متجر",
@@ -1882,7 +1882,7 @@ const AR = {
   "Garantie (chiffres ou lettres)": "الضمان (أرقام أو حروف)",
   "Renseignez au moins un prix (normal ou de vente).":
     "أدخل سعراً واحداً على الأقل (عادي أو ترويجي).",
-  "Rejoignez Mboppi": "انضم إلى مبوبي",
+  "Rejoignez MboppiShop": "انضم إلى مبوبي",
   "Boutiques en ligne": "المتاجر الإلكترونية",
   "Créez votre vitrine et publiez vos produits.": "أنشئ واجهة متجرك وانشر منتجاتك.",
   Vendeurs: "البائعون",
@@ -1893,12 +1893,12 @@ const AR = {
   Créateurs: "المبدعون",
   "Faites rayonner vos créations.": "أبرز إبداعاتك.",
   "Les créateurs": "المبدعون",
-  "Créateurs de Mboppi": "مبدعو Mboppi",
-  "Découvrez les créateurs de Mboppi et leurs créations artisanales.":
-    "اكتشف مبدعي Mboppi وإبداعاتهم الحرفية.",
+  "Créateurs de MboppiShop": "مبدعو MboppiShop",
+  "Découvrez les créateurs de MboppiShop et leurs créations artisanales.":
+    "اكتشف مبدعي MboppiShop وإبداعاتهم الحرفية.",
   "Créations de {name}": "إبداعات {name}",
-  "Créations sur Mboppi": "إبداعات على Mboppi",
-  "Vitrine de créations sur Mboppi.": "واجهة عرض إبداعات على Mboppi.",
+  "Créations sur MboppiShop": "إبداعات على MboppiShop",
+  "Vitrine de créations sur MboppiShop.": "واجهة عرض إبداعات على MboppiShop.",
   "Voir ma vitrine": "عرض واجهتي",
   "Voir les créations": "عرض الإبداعات",
   "Aucun créateur pour le moment.": "لا يوجد مبدعون في الوقت الحالي.",
@@ -1930,7 +1930,7 @@ const AR = {
   "Une erreur est survenue, réessayez.": "حدث خطأ، حاول مرة أخرى.",
 
   // Login
-  "Connexion à Mboppi": "تسجيل الدخول إلى مبوبي",
+  "Connexion à MboppiShop": "تسجيل الدخول إلى مبوبي",
   "Ravi de vous revoir !": "سعدنا بعودتك!",
   "Se connecter à mon compte": "تسجيل الدخول إلى حسابي",
   "Mot de passe": "كلمة المرور",
@@ -2049,7 +2049,7 @@ const AR = {
   "Mes informations": "معلوماتي",
 
   // CreatorDashboard
-  "Bienvenue {name} ! Faites rayonner vos créations sur le marché Mboppi.":
+  "Bienvenue {name} ! Faites rayonner vos créations sur le marché MboppiShop.":
     "مرحباً {name}! أبرز إبداعاتك في سوق مبوبي.",
   "Bientôt disponible : une vitrine dédiée à vos créations.": "قريباً: واجهة مخصصة لإبداعاتك.",
   "Bientôt disponible": "قريباً",
@@ -2103,8 +2103,8 @@ const AR = {
   "Prix promotionnel : {price} {symbol}": "السعر الترويجي: {price} {symbol}",
 
   // About
-  "À propos de Mboppi": "من نحن - مبوبي",
-  "Mboppi est un marché en ligne conçu pour connecter boutiques, vendeurs, clients et créateurs.":
+  "À propos de MboppiShop": "من نحن - مبوبي",
+  "MboppiShop est un marché en ligne conçu pour connecter boutiques, vendeurs, clients et créateurs.":
     "مبوبي هو سوق إلكتروني يربط المتاجر والبائعين والعملاء والمبدعين.",
   "Notre mission": "مهمتنا",
   "Faciliter le commerce local en donnant à chacun une vitrine simple et accessible, avec commande directe via WhatsApp.":
@@ -2168,8 +2168,8 @@ const AR = {
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "أنت غير متصل حالياً. تحقق من اتصالك ثم أعد المحاولة.",
   Réessayer: "إعادة المحاولة",
-  "Désolé, Mboppi ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
-    "عذراً، لا يستطيع Mboppi الاتصال بالإنترنت حالياً. تحقق من شبكتك (Wi-Fi أو بيانات الجوال) ثم أعد المحاولة.",
+  "Désolé, MboppiShop ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
+    "عذراً، لا يستطيع MboppiShop الاتصال بالإنترنت حالياً. تحقق من شبكتك (Wi-Fi أو بيانات الجوال) ثم أعد المحاولة.",
   "Toujours pas de connexion. Vérifiez votre réseau puis réessayez.":
     "لا يوجد اتصال بعد. تحقق من شبكتك ثم أعد المحاولة.",
   "Vos informations sont en sécurité sur votre appareil : rien n'est perdu.":
@@ -2192,7 +2192,7 @@ const AR = {
     "أبيع منتجات المتاجر وأربح عمولات",
   "Je consulte les offres et les produits, je commande facilement":
     "أتصفح العروض والمنتجات وأطلب بسهولة",
-  "Je présente et vends mes créations au marché Mboppi": "أقدّم وأبيع إبداعاتي في سوق مبوبي",
+  "Je présente et vends mes créations au marché MboppiShop": "أقدّم وأبيع إبداعاتي في سوق مبوبي",
   "Nom complet / Nom de la boutique": "الاسم الكامل / اسم المتجر",
   Email: "البريد الإلكتروني",
   "Mot de passe (6 caractères minimum)": "كلمة المرور (6 أحرف على الأقل)",
@@ -2264,8 +2264,8 @@ const AR = {
   "Envoyer la campagne": "إرسال الحملة",
   "Campagne envoyée : {push} push, {email}/{total} emails.":
     "تم إرسال الحملة: {push} إشعار، {email}/{total} بريد إلكتروني.",
-  "{n} abonné(s) ont désactivé « Messages de Mboppi » (Mon compte) : ils ne recevront PAS cette campagne push.":
-    "{n} مشترك(ين) عطّلوا «رسائل Mboppi» (حسابي): لن يتلقّوا هذه الحملة.",
+  "{n} abonné(s) ont désactivé « Messages de MboppiShop » (Mon compte) : ils ne recevront PAS cette campagne push.":
+    "{n} مشترك(ين) عطّلوا «رسائل MboppiShop» (حسابي): لن يتلقّوا هذه الحملة.",
   "Campagnes programmées (1 par jour, automatique)": "حملات مجدولة (واحدة يومياً، تلقائي)",
   "Préparez vos campagnes à l'avance avec une date d'envoi : la campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun), sans que vous ayez à intervenir. Maximum une campagne par jour.":
     "جهّز حملاتك مسبقاً مع تاريخ إرسال: حملة اليوم تُرسل تلقائياً كل صباح في الثامنة (توقيت الكاميرون)، دون أي تدخل منك. حد أقصى حملة واحدة يومياً.",
@@ -2300,7 +2300,7 @@ const AR = {
   "Commandes livrées": "طلبات مُسلّمة",
   "Produits en stock": "منتجات في المخزون",
   "Vendez partout où vous voulez, gardez 100 % de vos ventes.": "بِع في أي مكان تريد واحتفظ بـ100% من مبيعاتك.",
-  "POURQUOI DEVENIR VENDEUR SUR MBOPPI": "لماذا تصبح بائعاً على Mboppi",
+  "POURQUOI DEVENIR VENDEUR SUR MBOPPISHOP": "لماذا تصبح بائعاً على MboppiShop",
   "VENDEURS & BOUTIQUES": "بائعون ومتاجر",
   "0 % de frais de service. Recevez votre code vendeur, partagez-le sur WhatsApp et encaissez vos commissions sur chaque vente.": "0% رسوم خدمة. احصل على رمز البائع الخاص بك، شاركه على واتساب واحصل على عمولاتك عن كل عملية بيع.",
   "0 % de frais de service. Générez votre code vendeur, partagez les liens à vos contacts et encaissez vos commissions sur chaque vente — par téléphone ou WhatsApp.": "0% رسوم خدمة. أنشئ رمز البائع الخاص بك، شارك الروابط مع معارفك واحصل على عمولاتك عن كل عملية بيع — هاتفياً أو عبر واتساب.",
@@ -2312,18 +2312,18 @@ const AR = {
   "Vendez et touchez vos commissions": "بِع واحصل على عمولاتك",
   "Commandes par téléphone ou WhatsApp, livraison suivie GPS, commissions affichées avant la vente.": "طلبات بالهاتف أو واتساب، توصيل متتبَّع عبر GPS، عمولات ظاهرة قبل البيع.",
   "Vos avantages": "مزاياك",
-  "AVANTAGE D'ÊTRE VENDEUR SUR MBOPPI": "مزايا أن تكون بائعاً على Mboppi",
+  "AVANTAGE D'ÊTRE VENDEUR SUR MBOPPISHOP": "مزايا أن تكون بائعاً على MboppiShop",
   "Masquer les avantages": "إخفاء المزايا",
   "0 % de frais de service": "0% رسوم خدمة",
   "Vous gardez 100 % de vos ventes. Seule l'adhésion est payante : 1 500 F pour 30 jours.": "تحتفظ بـ100% من مبيعاتك. العضوية وحدها مدفوعة: 1500 ف. لمدة 30 يوماً.",
   "Parrainage = revenus complémentaires": "الإحالة = دخل إضافي",
   "1 000 F par vendeur que vous parrainez + 2 % sur les achats de vos clients affiliés.": "1000 ف. عن كل بائع ترعاه + 2% على مشتريات عملائك المنتسبين.",
   "Livraison intégrée": "توصيل مدمج",
-  "Vos clients suivent leur colis en temps réel avec un livreur Mboppi.": "يتابع عملاؤك طردهم لحظياً مع موصّل Mboppi.",
+  "Vos clients suivent leur colis en temps réel avec un livreur MboppiShop.": "يتابع عملاؤك طردهم لحظياً مع موصّل MboppiShop.",
   "Commandes téléphone & WhatsApp": "طلبات بالهاتف أو واتساب",
   "Vos clients commandent en quelques clics et contactent directement la boutique sur WhatsApp.": "يطلب عملاؤك ببضع نقرات ويتواصلون مع المتجر مباشرة على واتساب.",
   "Nous contacter sur WhatsApp": "تواصل معنا عبر واتساب",
-  "Bonjour, je veux devenir vendeur sur Mboppi.": "مرحباً، أريد أن أصبح بائعاً على Mboppi.",
+  "Bonjour, je veux devenir vendeur sur MboppiShop.": "مرحباً، أريد أن أصبح بائعاً على MboppiShop.",
   "Robot WhatsApp (assistant IA)": "روبوت واتساب (مساعد ذكي)",
   "Activer le robot WhatsApp": "تشغيل روبوت واتساب",
   "Message d'accueil (bonjour, salut…)": "رسالة الترحيب (مرحباً، سلام…)",
@@ -2332,8 +2332,8 @@ const AR = {
   "Robot WhatsApp activé ✅ — écrivez-lui depuis un autre numéro pour tester.": "تم تشغيل روبوت واتساب ✅ — اكتب له من رقم آخر للتجربة.",
   "Robot WhatsApp désactivé.": "تم إيقاف روبوت واتساب.",
   "URL du webhook à configurer chez Meta :": "رابط الويب هوك لإعداده في Meta:",
-  "Connecte l'assistant IA du site (même moteur que le chat 💬) à votre numéro WhatsApp Cloud API : il répond automatiquement à toute personne qui écrit au numéro Mboppi (produits, prix, livraison, devenir vendeur). Nécessite le fournisseur « WhatsApp Cloud API (Meta) » ci-dessus, un webhook configuré chez Meta et la variable d'environnement WHATSAPP_VERIFY_TOKEN.": "يربط المساعد الذكي للموقع (نفس محرك الدردشة 💬) برقم واتساب Cloud API الخاص بك: يرد تلقائياً على كل من يكتب إلى رقم Mboppi (منتجات، أسعار، توصيل، كيف تصبح بائعاً). يتطلب مزوّد « WhatsApp Cloud API (Meta) » أعلاه، وويب هوك معدّاً في Meta، ومتغير البيئة WHATSAPP_VERIFY_TOKEN.",
-  "Prêt à vendre sur Mboppi ?": "مستعد للبيع على Mboppi؟",
+  "Connecte l'assistant IA du site (même moteur que le chat 💬) à votre numéro WhatsApp Cloud API : il répond automatiquement à toute personne qui écrit au numéro MboppiShop (produits, prix, livraison, devenir vendeur). Nécessite le fournisseur « WhatsApp Cloud API (Meta) » ci-dessus, un webhook configuré chez Meta et la variable d'environnement WHATSAPP_VERIFY_TOKEN.": "يربط المساعد الذكي للموقع (نفس محرك الدردشة 💬) برقم واتساب Cloud API الخاص بك: يرد تلقائياً على كل من يكتب إلى رقم MboppiShop (منتجات، أسعار، توصيل، كيف تصبح بائعاً). يتطلب مزوّد « WhatsApp Cloud API (Meta) » أعلاه، وويب هوك معدّاً في Meta، ومتغير البيئة WHATSAPP_VERIFY_TOKEN.",
+  "Prêt à vendre sur MboppiShop ?": "مستعد للبيع على MboppiShop؟",
   "Créez votre compte en moins d'une minute. Besoin d'aide ? L'équipe vous accompagne sur WhatsApp.": "أنشئ حسابك في أقل من دقيقة. بحاجة إلى مساعدة؟ الفريق يرافقك عبر واتساب.",
   "Campagnes par jour": "حملات في اليوم",
   "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "تم تحديث الحصة: {n} حملات يومياً (08h00 و13h00).",
@@ -2437,18 +2437,18 @@ const AR = {
   "Continuer mes achats": "متابعة التسوق",
   "Mes achats": "مشترياتي",
   "Aucun achat pour le moment.": "لا توجد مشتريات بعد.",
-  "Ce produit vous est proposé par un vendeur Mboppi.": "هذا المنتج مقدَّم من بائع مبوبي.",
+  "Ce produit vous est proposé par un vendeur MboppiShop.": "هذا المنتج مقدَّم من بائع مبوبي.",
   "Code du vendeur : {code} — Confirmez votre achat pour le notifier, lui et la boutique.":
     "رمز البائع: {code} — أكد شراءك لإشعاره وإشعار المتجر.",
   "Confirmez votre achat : la boutique et le vendeur seront notifiés.":
     "أكد شراءك: سيتم إشعار المتجر والبائع.",
-  "Ce produit vous est proposé par un vendeur Mboppi. Entrez son code et le prix convenu pour confirmer l'achat.":
+  "Ce produit vous est proposé par un vendeur MboppiShop. Entrez son code et le prix convenu pour confirmer l'achat.":
     "هذا المنتج مقدَّم من بائع مبوبي. أدخل رمزه والسعر المتفق عليه لتأكيد الشراء.",
   "Vendeur : {seller}": "البائع: {seller}",
   Notifications: "الإشعارات",
   "Promotions éclair": "العروض السريعة",
   "Nouveautés du jour": "جديد اليوم",
-  "Messages de Mboppi": "رسائل مبوّبي",
+  "Messages de MboppiShop": "رسائل مبوّبي",
   "Activées": "مُفعّلة",
   "Désactivées": "معطّلة",
   "Choisissez les notifications push que vous souhaitez recevoir sur votre appareil.":
@@ -2461,20 +2461,20 @@ const AR = {
   "Aucune notification": "لا توجد إشعارات",
   "Supprimer la notification": "حذف الإشعار",
   "Installer l'application": "تثبيت التطبيق",
-  "Installez Mboppi sur votre écran d'accueil": "ثبّت Mboppi على شاشتك الرئيسية",
-  "Sur iPhone : touchez Partager ⬆️ puis « Sur l'écran d'accueil » pour installer Mboppi.":
-    "على آيفون: اضغط مشاركة ⬆️ ثم «إضافة إلى الشاشة الرئيسية» لتثبيت Mboppi.",
-  "Cette application (Facebook, Instagram…) bloque l'installation. Ouvrez Mboppi dans Chrome pour installer :":
-    "هذا التطبيق (فيسبوك، إنستغرام…) يمنع التثبيت. افتح Mboppi في كروم للتثبيت:",
+  "Installez MboppiShop sur votre écran d'accueil": "ثبّت MboppiShop على شاشتك الرئيسية",
+  "Sur iPhone : touchez Partager ⬆️ puis « Sur l'écran d'accueil » pour installer MboppiShop.":
+    "على آيفون: اضغط مشاركة ⬆️ ثم «إضافة إلى الشاشة الرئيسية» لتثبيت MboppiShop.",
+  "Cette application (Facebook, Instagram…) bloque l'installation. Ouvrez MboppiShop dans Chrome pour installer :":
+    "هذا التطبيق (فيسبوك، إنستغرام…) يمنع التثبيت. افتح MboppiShop في كروم للتثبيت:",
   "Ouvrir dans Chrome": "افتح في كروم",
   "Copier le lien": "انسخ الرابط",
   "Lien copié": "تم نسخ الرابط",
-  "Lien copié ! Ouvrez Chrome, collez-le et installez Mboppi.":
-    "تم نسخ الرابط! افتح كروم والصقه ثم ثبّت Mboppi.",
-  "Pour installer Mboppi : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil ».":
-    "لتثبيت Mboppi: افتح قائمة المشاركة في متصفحك (Safari) ثم اختر «إضافة إلى الشاشة الرئيسية».",
-  "Pour installer Mboppi : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application ».":
-    "لتثبيت Mboppi: افتح قائمة متصفحك (⋮ أو ⋯) واختر «إضافة إلى الشاشة الرئيسية» أو «تثبيت التطبيق».",
+  "Lien copié ! Ouvrez Chrome, collez-le et installez MboppiShop.":
+    "تم نسخ الرابط! افتح كروم والصقه ثم ثبّت MboppiShop.",
+  "Pour installer MboppiShop : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil ».":
+    "لتثبيت MboppiShop: افتح قائمة المشاركة في متصفحك (Safari) ثم اختر «إضافة إلى الشاشة الرئيسية».",
+  "Pour installer MboppiShop : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application ».":
+    "لتثبيت MboppiShop: افتح قائمة متصفحك (⋮ أو ⋯) واختر «إضافة إلى الشاشة الرئيسية» أو «تثبيت التطبيق».",
   "Votre vente de « {product} » a été achetée par {buyer}.":
     "تم شراء بيعك لـ« {product} » من طرف {buyer}.",
   "Votre vente de « {product} » a été confirmée par la boutique pour {buyer}.":
@@ -2549,17 +2549,17 @@ const AR = {
   "Produits des boutiques": "منتجات المتاجر",
   "Parcourez les produits disponibles chez les boutiques partenaires.":
     "تصفح المنتجات المتاحة لدى المتاجر الشريكة.",
-  "Contactez directement la centrale Mboppi pour commander.": "تواصل مباشرة مع مركز مبوبي للطلب.",
+  "Contactez directement la centrale MboppiShop pour commander.": "تواصل مباشرة مع مركز مبوبي للطلب.",
   Rôle: "الدور",
   "Inscrit le": "تاريخ التسجيل",
   "Suivez les promotions en cours et repérez les bonnes affaires.":
     "تابع الترويجات الحالية واكتشف أفضل الصفقات.",
   "Présenter mes créations": "عرض إبداعاتي",
-  "Contactez la centrale Mboppi pour exposer vos créations au marché.":
+  "Contactez la centrale MboppiShop pour exposer vos créations au marché.":
     "تواصل مع مركز مبوبي لعرض إبداعاتك في السوق.",
-  "Bonjour, je suis un client de Mboppi ({email}) et j'aimerais passer une commande.":
+  "Bonjour, je suis un client de MboppiShop ({email}) et j'aimerais passer une commande.":
     "مرحباً، أنا عميل في مبوبي ({email}) وأود تقديم طلب.",
-  "Bonjour, je suis un créateur sur Mboppi ({email}) et j'aimerais présenter mes créations.":
+  "Bonjour, je suis un créateur sur MboppiShop ({email}) et j'aimerais présenter mes créations.":
     "مرحباً، أنا مبدع في مبوبي ({email}) وأود عرض إبداعاتي.",
   "Le marché du quartier, en un clic": "سوق الحي بنقرة واحدة",
   "Découvrez les offres du moment, commandez les produits des boutiques partenaires, ou devenez vendeur et gagnez une commission sur chaque vente.":
@@ -2627,8 +2627,8 @@ const AR = {
   "Ajouter l'Offre": "إضافة العرض",
   "Retirer l'offre": "إزالة العرض",
   "Confirmez le retrait de « {name} » de la vitrine.": "تأكيد إزالة «{name}» من الواجهة.",
-  "Mboppi, le marché de votre quartier, en ligne": "مبوبي، سوق حيّك على الإنترنت",
-  "Mboppi est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans prix écrasant et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les créateurs exposent leurs talents, juste avec un téléphone et une connexion internet, les vendeurs vendent et gagnent des commissions, et les clients trouvent tout au même endroit avec satisfaction, sans se déplacer.":
+  "MboppiShop, le marché de votre quartier, en ligne": "مبوبي، سوق حيّك على الإنترنت",
+  "MboppiShop est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans prix écrasant et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les créateurs exposent leurs talents, juste avec un téléphone et une connexion internet, les vendeurs vendent et gagnent des commissions, et les clients trouvent tout au même endroit avec satisfaction, sans se déplacer.":
     "وُلدت مبوبي من فكرة بسيطة: تمكين الجميع من البيع والشراء بالقرب من منازلهم، دون أسعار مرهقة ودون الاعتماد على المنصات الكبرى. هنا، تنشر المتاجر منتجاتها، ويُظهر المبدعون مواهبهم، فقط بهاتف واتصال بالإنترنت، يبيع البائعون ويربحون العمولات، ويجد العملاء كل شيء في مكان واحد برضا، دون تنقل.",
   "Comment ça marche ?": "كيف يعمل؟",
   "Un rôle pour chacun, une plateforme pour tous.": "دور للجميع، ومنصة واحدة للكل.",
@@ -2671,17 +2671,17 @@ const AR = {
   Sujet: "الموضوع",
   "Choisir un sujet…": "اختر موضوعاً…",
   "Question sur une offre": "سؤال عن عرض",
-  "Je veux vendre sur Mboppi": "أريد البيع على مبوبي",
+  "Je veux vendre sur MboppiShop": "أريد البيع على مبوبي",
   "Problème de compte": "مشكلة في الحساب",
   Autre: "أخرى",
   "Écrivez votre message ici…": "اكتب رسالتك هنا…",
-  "Bonjour Mboppi, je suis {name}.": "مرحباً مبوبي، أنا {name}.",
+  "Bonjour MboppiShop, je suis {name}.": "مرحباً مبوبي، أنا {name}.",
   "un visiteur": "زائر",
   "📦 Quelles données sont collectées ?": "📦 ما البيانات التي تُجمع؟",
   "Lors de votre inscription : votre nom, votre e-mail et votre rôle (boutique, vendeur, client ou créateur). Si vous vous connectez avec Google, seul votre e-mail Google est utilisé. Selon votre rôle, vous pouvez publier des produits, des offres avec photos, et vos ventes sont enregistrées dans votre espace.":
     "عند تسجيلك: اسمك وبريدك الإلكتروني ودورك (متجر، بائع، عميل أو مبدع). إذا سجلت الدخول عبر جوجل، يُستخدم بريدك الإلكتروني في جوجل فقط. حسب دورك، يمكنك نشر منتجات وعروض مع صور، وتُسجل مبيعاتك في مساحتك.",
   "🔐 Comment sont-elles stockées ?": "🔐 كيف تُخزَّن؟",
-  "Toutes les données sont enregistrées dans une base de données PostgreSQL hébergée et sécurisée. Les mots de passe sont hachés (chiffrés de façon irréversible) : personne, même l'équipe Mboppi, ne peut lire votre mot de passe. Toutes les connexions passent par un protocole sécurisé (HTTPS).":
+  "Toutes les données sont enregistrées dans une base de données PostgreSQL hébergée et sécurisée. Les mots de passe sont hachés (chiffrés de façon irréversible) : personne, même l'équipe MboppiShop, ne peut lire votre mot de passe. Toutes les connexions passent par un protocole sécurisé (HTTPS).":
     "تُخزَّن جميع البيانات في قاعدة بيانات PostgreSQL مستضافة وآمنة. كلمات المرور مُشفرة بطريقة لا رجعة فيها: لا يمكن لأحد، حتى فريق مبوبي، قراءة كلمة مرورك. جميع الاتصالات تمر عبر بروتوكول آمن (HTTPS).",
   "⏳ Combien de temps sont-elles conservées ?": "⏳ كم تبقى محفوظة؟",
   "Vos données restent enregistrées aussi longtemps que votre compte existe. Les offres et produits que vous retirez sont supprimés définitivement, avec leurs photos. Aucune donnée n'est vendue ni transmise à des tiers.":
@@ -2690,7 +2690,7 @@ const AR = {
   "Seule la personne concernée accède à son espace : une boutique voit ses produits, un vendeur ses ventes et commissions. Les offres de la vitrine sont publiquement visibles par les visiteurs, mais sans vos informations de compte.":
     "يصل الشخص المعني فقط إلى مساحته: يرى المتجر منتجاته، ويرى البائع مبيعاته وعمولاته. عروض الواجهة مرئية للزوار، لكن دون معلومات حسابك.",
   "💳 Aucun paiement en ligne": "💳 لا دفع إلكتروني",
-  "Mboppi ne demande jamais de numéro de carte bancaire. Les commandes passent par téléphone ou WhatsApp, et le paiement se fait directement avec le vendeur.":
+  "MboppiShop ne demande jamais de numéro de carte bancaire. Les commandes passent par téléphone ou WhatsApp, et le paiement se fait directement avec le vendeur.":
     "لا تطلب مبوبي أبداً رقم بطاقة بنكية. تتم الطلبات عبر الهاتف أو واتساب، ويتم الدفع مباشرة مع البائع.",
   "🗑️ Supprimer vos données": "🗑️ حذف بياناتك",
   "Vous pouvez retirer vos offres et produits à tout moment depuis votre espace.":
@@ -2699,8 +2699,8 @@ const AR = {
   "et nous le supprimerons rapidement.": "وسنحذفه بسرعة.",
   "Partager ma vitrine": "مشاركة واجهتي",
   "📲 Partager via l'appareil": "📲 مشاركة عبر الجهاز",
-  "Ma vitrine Mboppi": "واجهتي على مبوبي",
-  "Découvre ma vitrine Mboppi": "اكتشف واجهتي على مبوبي",
+  "Ma vitrine MboppiShop": "واجهتي على مبوبي",
+  "Découvre ma vitrine MboppiShop": "اكتشف واجهتي على مبوبي",
   "Copier le lien": "نسخ الرابط",
   "✨ **Une offre pour presque chaque besoin !**\n🔥 Découvrez ma vitrine et explorez une sélection d'offres et de solutions dans plusieurs domaines.\n\nQue tu recherches une opportunité, un service, un produit ou simplement quelque chose d'intéressant à découvrir, **tu pourrais bien trouver ton bonheur.** 👀\n\n👉 **Découvre la vitrine ici :**\n🔗 {url}\n\n🚀 *Un clic, plusieurs possibilités !*":
     "✨ **عرض لكل احتياج تقريباً!**\n🔥 اكتشف واجهتي واستكشف مجموعة مختارة من العروض والحلول في عدة مجالات.\n\nسواء كنت تبحث عن فرصة أو خدمة أو منتج أو شيء مثير للاكتشاف، **قد تجد ضالتك تماماً.** 👀\n\n👉 **اكتشف الواجهة هنا:**\n🔗 {url}\n\n🚀 *نقرة واحدة، إمكانيات لا حصر لها!*",
@@ -2775,9 +2775,9 @@ const AR = {
   Expédiée: "تم الشحن",
   Annulée: "ملغي",
   "Suivre sur WhatsApp": "المتابعة عبر واتساب",
-  "Bonjour Mboppi, je souhaite suivre ma commande #{id}.":
+  "Bonjour MboppiShop, je souhaite suivre ma commande #{id}.":
     "مرحباً مبوبي، أريد متابعة طلبي رقم #{id}.",
-  "Bonjour Mboppi, je souhaite confirmer ma commande #{id} :":
+  "Bonjour MboppiShop, je souhaite confirmer ma commande #{id} :":
     "مرحباً مبوبي، أريد تأكيد طلبي رقم #{id}:",
   "Total : {total} F": "الإجمالي: {total} F",
   "Nom : {name}": "الاسم: {name}",
@@ -2787,7 +2787,7 @@ const AR = {
   "Plus récents": "الأحدث",
   "🔥 Plus populaires": "🔥 الأكثر رواجاً",
   "Nouveautés": "وصل حديثاً",
-  "Les derniers produits publiés sur Mboppi.": "أحدث المنتجات المنشورة على مبوّبي.",
+  "Les derniers produits publiés sur MboppiShop.": "أحدث المنتجات المنشورة على مبوّبي.",
   "Glissez pour découvrir la sélection du moment.": "اسحب لاستكشاف مختارات الآن.",
   "Prix croissant": "السعر: من الأقل",
   "Prix décroissant": "السعر: من الأعلى",
@@ -2800,9 +2800,9 @@ const AR = {
   "Retrouvez les produits que vous avez aimés.": "جد مجدداً المنتجات التي أعجبتك.",
   "En attente de vente": "بانتظار البيع",
   "Générez votre code vendeur pour vendre.": "قم بإنشاء رمز البائع للبيع.",
-  "Commandez « {name} » sur Mboppi avec le code vendeur {code}":
+  "Commandez « {name} » sur MboppiShop avec le code vendeur {code}":
     "اطلب « {name} » على مبوبي مع رمز البائع {code}",
-  "Découvrez cet article sur Mboppi : {name}": "اكتشف هذا المنتج على مبوبي: {name}",
+  "Découvrez cet article sur MboppiShop : {name}": "اكتشف هذا المنتج على مبوبي: {name}",
   Localisation: "الموقع",
   "Mes moyens de paiement": "وسائل الدفع الخاصة بي",
   "Ces informations seront visibles par les boutiques pour vous payer vos commissions.":
@@ -2832,7 +2832,7 @@ const AR = {
     "لم يقم المتجر بعد بإعداد محافظ الدفع الخاصة به. يُنصح بالدفع عند التوصيل.",
   "Moyens de paiement": "وسائل الدفع",
   "La boutique n'a pas configuré de portefeuille.": "لم يقم المتجر بإعداد أي محفظة.",
-  "Assistant Mboppi": "مساعد مبوّي",
+  "Assistant MboppiShop": "مساعد مبوّي",
   "Code du vendeur (facultatif)": "رمز البائع (اختياري)",
   "Remplissez vos informations pour confirmer votre commande. Aucun compte requis. Le code du vendeur est utile seulement si un vendeur vous a proposé ce produit.":
     "أدخل معلوماتك لتأكيد طلبك. لا حاجة إلى حساب. رمز البائع مفيد فقط إذا عرض عليك بائع هذا المنتج.",
@@ -2844,8 +2844,8 @@ const AR = {
   "Changement d'espace impossible. Réessayez.": "تعذّر تبديل المساحة. أعد المحاولة.",
   "AFIN DE FINALISER VOTRE COMMANDE, VEILLEZ VOUS CONNECTER À VOTRE COMPTE LIVREUR.":
     "لإتمام طلبك، يرجى تسجيل الدخول إلى حساب الموزّع الخاص بك.",
-  "Les livraisons Mboppi passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
-    "تمرّ توصيلات Mboppi إجبارياً عبر مساحة الموزّع: هو من يسجّل طلبك، ويطلب منك إدخال رمز التأكيد والتوقيع والتحقق من الدفع بأمان.",
+  "Les livraisons MboppiShop passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
+    "تمرّ توصيلات MboppiShop إجبارياً عبر مساحة الموزّع: هو من يسجّل طلبك، ويطلب منك إدخال رمز التأكيد والتوقيع والتحقق من الدفع بأمان.",
   "Votre compte boutique est connecté": "تم تسجيل الدخول إلى حساب المتجر الخاص بك",
   "Créez votre espace livreur associé — même email, aucune information à ressaisir. Vous pourrez ainsi finaliser vous-même les livraisons de vos commandes.":
     "أنشئ مساحة الموزّع المرتبطة — نفس البريد الإلكتروني، دون الحاجة لإعادة إدخال أي معلومة. وبهذا يمكنك إنهاء توصيلات طلباتك بنفسك.",
@@ -2862,11 +2862,11 @@ const AR = {
     "أُوصّل المقالات وأنهي الطلبات (رمز العميل، التوقيع، الدفع)",
   "Plusieurs espaces détectés sur cet email. Quel espace voulez-vous ouvrir ?":
     "تم رصد عدة مساحات على هذا البريد الإلكتروني. أي مساحة تريد فتحها؟",
-  "CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.":
-    "أيها العملاء الأعزاء، شكراً لثقتكم في Mboppi.",
+  "CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPISHOP.":
+    "أيها العملاء الأعزاء، شكراً لثقتكم في MboppiShop.",
   "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat.":
     "لتجنّب أي احتيال عند تسليم طردكم، اطلبوا من الموزّع نموذج الدفع حيث تدخلون رمز التأكيد وتوقّعون، قبل التحقق من صحة عملية الشراء.",
-  "L'Administration Mboppi": "إدارة Mboppi",
+  "L'Administration MboppiShop": "إدارة MboppiShop",
   "Signature du client": "توقيع العميل",
   "Rechercher un produit (nom ou boutique)…": "ابحث عن منتج (اسم أو متجر)…",
   "Aucun produit ne correspond à cette recherche.": "لا يوجد منتج مطابق لهذا البحث.",
@@ -2878,7 +2878,7 @@ const AR = {
   "affinez la recherche": "حسّن البحث",
   "En ligne": "متصل",
   "Écrivez votre question…": "اكتب سؤالك…",
-  "Bonjour 👋 Je suis l'assistant Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
+  "Bonjour 👋 Je suis l'assistant MboppiShop. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
     "مرحباً 👋 أنا مساعد مبوّي. اسألني عن المتجر أو الطلبات أو الدفع أو التوصيل!",
   "Une erreur est survenue. Réessayez ou contactez-nous via la page Contact.":
     "حدث خطأ. حاول مجدداً أو تواصل معنا عبر صفحة الاتصال.",
@@ -2897,7 +2897,7 @@ const AR = {
   "Vous devez être connecté pour confirmer la commande.": "يجب تسجيل الدخول لتأكيد الطلب.",
   "Confirmez votre commande : la boutique et le vendeur seront notifiés.":
     "أكد طلبك: سيتم إشعار المتجر والبائع.",
-  "Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande.":
+  "Ce produit vous est proposé par un vendeur MboppiShop. Remplissez vos informations pour confirmer votre commande.":
     "يقدم هذا المنتج بائع مبوبي. املأ معلوماتك لتأكيد طلبك.",
   "Nouvelle commande pour « {product} » — {buyer}.": "طلب جديد لـ « {product} » — {buyer}.",
   "Nouvelle commande pour « {product} » — vendeur : {seller} ({code}).":
@@ -2959,8 +2959,8 @@ const AR = {
   "Code vendeur": "رمز البائع",
   "Prix unitaire": "سعر الوحدة",
   "Total à payer": "الإجمالي للدفع",
-  "Facture générée par Mboppi — marchandise livrée.": "فاتورة من إنشاء مبوبي — تم تسليم البضاعة.",
-  "Facture générée par Mboppi.": "فاتورة من إنشاء مبوبي.",
+  "Facture générée par MboppiShop — marchandise livrée.": "فاتورة من إنشاء مبوبي — تم تسليم البضاعة.",
+  "Facture générée par MboppiShop.": "فاتورة من إنشاء مبوبي.",
   "Payer le Vendeur": "ادفع للبائع",
   "Payer le vendeur": "ادفع للبائع",
   "Vendeur payé": "تم دفع البائع",
@@ -3014,8 +3014,8 @@ const AR = {
   Adresse: "العنوان",
   "Frais de livraison": "رسوم التوصيل",
   Paiement: "الدفع",
-  "Mboppi est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans commission écrasante et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les vendeurs gagnent des commissions, les créateurs exposent leurs talents et les clients trouvent tout au même endroit.":
-    "وُلدت Mboppi من فكرة بسيطة: تمكين الجميع من البيع والشراء قرب منازلهم، دون عمولات مرتفعة ودون الاعتماد على المواقع الكبرى. هنا، تعرض المتاجر منتجاتها، ويكسب الباعة عمولات، ويقدّم المبدعون مواهبهم، ويجد العملاء كل شيء في مكان واحد.",
+  "MboppiShop est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans commission écrasante et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les vendeurs gagnent des commissions, les créateurs exposent leurs talents et les clients trouvent tout au même endroit.":
+    "وُلدت MboppiShop من فكرة بسيطة: تمكين الجميع من البيع والشراء قرب منازلهم، دون عمولات مرتفعة ودون الاعتماد على المواقع الكبرى. هنا، تعرض المتاجر منتجاتها، ويكسب الباعة عمولات، ويقدّم المبدعون مواهبهم، ويجد العملاء كل شيء في مكان واحد.",
   "Publiez vos produits et recevez les commandes de vos clients.":
     "انشروا منتجاتكم واستقبلوا طلبات عملائكم.",
   Créateur: "مبدع",
@@ -3028,13 +3028,13 @@ const AR = {
   "Aucune vente enregistrée pour le moment.": "لا توجد أي عملية بيع مسجلة حالياً.",
   "Livrez les articles commandés et confirmez l'achat.": "سلّموا المقالات المطلوبة وأكّدوا الشراء.",
   "Livrer : {name}": "تسليم: {name}",
-  "Découvrez « {name} » à {price} {symbol} sur Mboppi.":
-    "اكتشف « {name} » بسعر {price} {symbol} على Mboppi.",
+  "Découvrez « {name} » à {price} {symbol} sur MboppiShop.":
+    "اكتشف « {name} » بسعر {price} {symbol} على MboppiShop.",
   "Comment vos données sont conservées": "كيف تُحفظ بياناتكم",
-  "La transparence est importante pour nous. Voici comment Mboppi collecte, stocke et protège vos données.":
-    "الشفافية مهمة بالنسبة لنا. إليكم كيف تجمع Mboppi بياناتكم وتخزنها وتحميها.",
-  "Découvrez « {name} » à {price} {symbol} chez {shop} sur Mboppi.":
-    "اكتشف « {name} » بسعر {price} {symbol} لدى {shop} على Mboppi.",
+  "La transparence est importante pour nous. Voici comment MboppiShop collecte, stocke et protège vos données.":
+    "الشفافية مهمة بالنسبة لنا. إليكم كيف تجمع MboppiShop بياناتكم وتخزنها وتحميها.",
+  "Découvrez « {name} » à {price} {symbol} chez {shop} sur MboppiShop.":
+    "اكتشف « {name} » بسعر {price} {symbol} لدى {shop} على MboppiShop.",
   "Confirmez votre commande avec le code du vendeur.": "أكّدوا طلبكم باستخدام رمز البائع.",
   "Prix invalide": "سعر غير صالح",
   "Livré le": "تم التسليم في",
@@ -3102,11 +3102,11 @@ const AR = {
   "Partager le suivi": "مشاركة التتبع",
   "Votre code client : {code}": "رمز العميل الخاص بك: {code}",
   "Votre code client": "رمز العميل الخاص بك",
-  "Bonjour {seller}, je suis {buyer}, je vous contacte à propos de ma commande « {product} » sur Mboppi.":
-    "مرحباً {seller}، أنا {buyer}، أتواصل معك بخصوص طلبي « {product} » على Mboppi.",
-  "Bonjour {shop}, je vous contacte depuis Mboppi.": "مرحباً {shop}، أتواصل معك من Mboppi.",
-  "Suivez ma commande « {product} » sur Mboppi : {url}":
-    "تابع طلبي « {product} » على Mboppi: {url}",
+  "Bonjour {seller}, je suis {buyer}, je vous contacte à propos de ma commande « {product} » sur MboppiShop.":
+    "مرحباً {seller}، أنا {buyer}، أتواصل معك بخصوص طلبي « {product} » على MboppiShop.",
+  "Bonjour {shop}, je vous contacte depuis MboppiShop.": "مرحباً {shop}، أتواصل معك من MboppiShop.",
+  "Suivez ma commande « {product} » sur MboppiShop : {url}":
+    "تابع طلبي « {product} » على MboppiShop: {url}",
   "La page que vous cherchez n'existe pas ou a été déplacée.":
     "الصفحة التي تبحث عنها غير موجودة أو تم نقلها.",
   Suggestions: "اقتراحات",
@@ -3143,21 +3143,21 @@ const AR = {
   "Rechercher un utilisateur (nom ou email)…": "ابحث عن مستخدم (الاسم أو البريد)…",
   "Rechercher un paiement (nom, email ou référence)…": "ابحث عن عملية دفع (الاسم أو البريد أو المرجع)…",
   "Aucun paiement ne correspond à cette recherche.": "لا توجد عملية دفع مطابقة لهذا البحث.",
-  "Message de l'équipe Mboppi": "رسالة من فريق Mboppi",
+  "Message de l'équipe MboppiShop": "رسالة من فريق MboppiShop",
   Suggestion: "اقتراح",
   "Faire une suggestion": "قدّم اقتراحاً",
-  "Aidez-nous à améliorer Mboppi : votre message s'ouvrira dans WhatsApp.":
-    "ساعدنا في تحسين Mboppi: ستُفتح رسالتك في WhatsApp.",
+  "Aidez-nous à améliorer MboppiShop : votre message s'ouvrira dans WhatsApp.":
+    "ساعدنا في تحسين MboppiShop: ستُفتح رسالتك في WhatsApp.",
   "Votre suggestion…": "اقتراحك…",
   "Envoyer sur WhatsApp": "إرسال عبر WhatsApp",
-  "Partager Mboppi": "مشاركة Mboppi",
-  "Découvre Mboppi": "اكتشف Mboppi",
-  "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
-    "اكتشف Mboppi: السوق الإلكتروني للكاميرون وأفريقيا. متاجر وبائعون ومبدعون وموصّلون — اطلب بسهولة، بيع أكثر واربح!",
-  "Rejoins Mboppi et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}":
-    "انضم إلى Mboppi واكتشف كل العروض بأفضل سعر — الدفع عند التسليم. اضغط هنا للتسجيل: {link}",
-  "Deviens vendeur sur Mboppi et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}":
-    "كن بائعًا على Mboppi واكسب عمولات على كل عملية بيع و1000 فرنك على كل بائع تحيله. سجّل هنا: {link}",
+  "Partager MboppiShop": "مشاركة MboppiShop",
+  "Découvre MboppiShop": "اكتشف MboppiShop",
+  "Découvrez MboppiShop : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
+    "اكتشف MboppiShop: السوق الإلكتروني للكاميرون وأفريقيا. متاجر وبائعون ومبدعون وموصّلون — اطلب بسهولة، بيع أكثر واربح!",
+  "Rejoins MboppiShop et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}":
+    "انضم إلى MboppiShop واكتشف كل العروض بأفضل سعر — الدفع عند التسليم. اضغط هنا للتسجيل: {link}",
+  "Deviens vendeur sur MboppiShop et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}":
+    "كن بائعًا على MboppiShop واكسب عمولات على كل عملية بيع و1000 فرنك على كل بائع تحيله. سجّل هنا: {link}",
   "Messages aux utilisateurs": "رسائل إلى المستخدمين",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "أرسل رسالة ستظهر كنافذة منبثقة عند تسجيل المستخدمين دخولهم التالي (مرة واحدة فقط).",
@@ -3202,30 +3202,30 @@ const AR = {
   CGU: "شروط الاستخدام",
   "Mentions légales": "إشعار قانوني",
   "Conditions générales d'utilisation": "شروط الاستخدام",
-  "Les règles pour utiliser Mboppi en tant que boutique, vendeur, client ou créateur.":
-    "القواعد لاستخدام Mboppi كمتجر أو بائع أو عميل أو مبدع.",
+  "Les règles pour utiliser MboppiShop en tant que boutique, vendeur, client ou créateur.":
+    "القواعد لاستخدام MboppiShop كمتجر أو بائع أو عميل أو مبدع.",
   "J'ai lu et j'accepte les": "قرأت وأوافق على",
   "Vous devez accepter les Conditions Générales d'Utilisation pour vous inscrire.":
     "يجب عليك الموافقة على شروط الاستخدام للتسجيل.",
   "Mot de passe (8 caractères minimum)": "كلمة المرور (8 أحرف على الأقل)",
   "1. Objet et acceptation": "1. الغرض والقبول",
-  "Les présentes Conditions générales d'utilisation (CGU) régissent votre accès et votre utilisation de la plateforme Mboppi. En créant votre compte, vous acceptez pleinement et sans réserve ces conditions.":
-    "تنظم شروط الاستخدام هذه وصولك واستخدامك لمنصة Mboppi. بإنشاء حسابك، فإنك تقبل هذه الشروط كلياً ودون قيد أو شرط.",
+  "Les présentes Conditions générales d'utilisation (CGU) régissent votre accès et votre utilisation de la plateforme MboppiShop. En créant votre compte, vous acceptez pleinement et sans réserve ces conditions.":
+    "تنظم شروط الاستخدام هذه وصولك واستخدامك لمنصة MboppiShop. بإنشاء حسابك، فإنك تقبل هذه الشروط كلياً ودون قيد أو شرط.",
   "2. Création d'un compte": "2. إنشاء الحساب",
   "Vous vous engagez à fournir des informations exactes et à jour lors de votre inscription. Vous êtes responsable de la confidentialité de votre mot de passe et de toutes les actions réalisées avec votre compte.":
     "تتعهد بتقديم معلومات دقيقة ومحدثة عند التسجيل. أنت مسؤول عن سرية كلمة مرورك وعن جميع الإجراءات التي تتم من حسابك.",
-  "3. Les rôles sur Mboppi": "3. الأدوار على Mboppi",
-  "Mboppi met en relation des boutiques, des vendeurs, des clients et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander ou créer.":
-    "تربط Mboppi المتاجر والبائعين والعملاء والمبدعين. يرتبط كل حساب بدور يحدد الميزات المتاحة: نشر المنتجات أو البيع أو الطلب أو الإبداع.",
+  "3. Les rôles sur MboppiShop": "3. الأدوار على MboppiShop",
+  "MboppiShop met en relation des boutiques, des vendeurs, des clients et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander ou créer.":
+    "تربط MboppiShop المتاجر والبائعين والعملاء والمبدعين. يرتبط كل حساب بدور يحدد الميزات المتاحة: نشر المنتجات أو البيع أو الطلب أو الإبداع.",
   "4. Commandes et paiement": "4. الطلبات والدفع",
-  "Les commandes sont passées directement avec la boutique ou le vendeur. Aucun paiement n'est effectué en ligne sur Mboppi : le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money.":
-    "تُقدّم الطلبات مباشرة مع المتجر أو البائع. لا يتم أي دفع عبر الإنترنت على Mboppi: يتم الدفع مباشرة مع البائع أو الموصّل، عند التسليم أو عبر المال المحمول.",
+  "Les commandes sont passées directement avec la boutique ou le vendeur. Aucun paiement n'est effectué en ligne sur MboppiShop : le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money.":
+    "تُقدّم الطلبات مباشرة مع المتجر أو البائع. لا يتم أي دفع عبر الإنترنت على MboppiShop: يتم الدفع مباشرة مع البائع أو الموصّل، عند التسليم أو عبر المال المحمول.",
   "5. Commissions et parrainage": "5. العمولات والإحالة",
   "Les boutiques rémunèrent les vendeurs et les parrains par des commissions enregistrées sur la plateforme. Les montants et les modalités de réclamation et de paiement sont affichés dans les espaces vendeur, boutique et client.":
     "تكافئ المتاجر البائعين والكفلاء بعمولات مسجلة على المنصة. تظهر المبالغ وشروط المطالبة والدفع في مساحات البائع والمتجر والعميل.",
   "6. Contenu publié": "6. المحتوى المنشور",
-  "Les boutiques, vendeurs et créateurs publient leurs propres produits, offres et créations. Ils sont seuls responsables de l'exactitude et de la légalité de leur contenu. Mboppi peut retirer tout contenu illicite ou inapproprié.":
-    "تنشر المتاجر والبائعون والمبدعون منتجاتهم وعروضهم وإبداعاتهم بأنفسهم. هم وحدهم المسؤولون عن دقة وشرعية محتواهم. يمكن لـ Mboppi إزالة أي محتوى غير قانوني أو غير مناسب.",
+  "Les boutiques, vendeurs et créateurs publient leurs propres produits, offres et créations. Ils sont seuls responsables de l'exactitude et de la légalité de leur contenu. MboppiShop peut retirer tout contenu illicite ou inapproprié.":
+    "تنشر المتاجر والبائعون والمبدعون منتجاتهم وعروضهم وإبداعاتهم بأنفسهم. هم وحدهم المسؤولون عن دقة وشرعية محتواهم. يمكن لـ MboppiShop إزالة أي محتوى غير قانوني أو غير مناسب.",
   "7. Livraison": "7. التوصيل",
   "La livraison est assurée par les boutiques ou des livreurs partenaires. Les délais et les frais sont indiqués sur chaque produit et convenus avec le vendeur ou la boutique lors de la commande.":
     "يتولى التوصيل المتاجر أو الموصّلون الشركاء. تُذكر المواعيد والرسوم على كل منتج وتُتفق مع البائع أو المتجر عند الطلب.",
@@ -3233,8 +3233,8 @@ const AR = {
   "Il est interdit d'utiliser la plateforme de manière frauduleuse : créer de fausses commandes, usurper une identité, publier des informations fausses ou trompeuses, ou tenter de contourner les règles de la plateforme.":
     "يُمنع استخدام المنصة بطريقة احتيالية: إنشاء طلبات وهمية، انتحال هوية، نشر معلومات كاذبة أو مضللة، أو محاولة التحايل على قواعد المنصة.",
   "9. Suspension et résiliation": "9. التعليق والإلغاء",
-  "Mboppi peut suspendre ou supprimer un compte en cas de non-respect des présentes conditions. Vous pouvez supprimer votre compte à tout moment depuis votre espace « Mon compte ».":
-    "يمكن لـ Mboppi تعليق أو حذف حساب إذا لم يُحترم هذه الشروط. يمكنك حذف حسابك في أي وقت من مساحة «حسابي».",
+  "MboppiShop peut suspendre ou supprimer un compte en cas de non-respect des présentes conditions. Vous pouvez supprimer votre compte à tout moment depuis votre espace « Mon compte ».":
+    "يمكن لـ MboppiShop تعليق أو حذف حساب إذا لم يُحترم هذه الشروط. يمكنك حذف حسابك في أي وقت من مساحة «حسابي».",
   "10. Données personnelles": "10. البيانات الشخصية",
   "Vos données personnelles sont traitées conformément à notre politique de confidentialité, consultable sur la page Données personnelles.":
     "تُعالج بياناتك الشخصية وفق سياسة الخصوصية الخاصة بنا، المتاحة في صفحة البيانات الشخصية.",
@@ -3242,29 +3242,29 @@ const AR = {
   "En cochant la case lors de votre inscription, vous confirmez avoir lu et accepté ces Conditions générales d'utilisation. Pour toute question, contactez-nous via la page Contact.":
     "بالتأشير عند تسجيلك، تؤكد أنك قرأت وقبلت شروط الاستخدام هذه. لأي سؤال، تواصل معنا عبر صفحة الاتصال.",
   "Conditions générales de vente": "الشروط العامة للبيع",
-  "Les règles qui régissent les ventes sur Mboppi.": "القواعد التي تحكم المبيعات على Mboppi.",
+  "Les règles qui régissent les ventes sur MboppiShop.": "القواعد التي تحكم المبيعات على MboppiShop.",
   "Conditions générales": "الشروط العامة",
   "1. Rôle de la plateforme": "1. دور المنصة",
-  "Mboppi met en relation des boutiques, des créateurs, des vendeurs et des clients. Les ventes sont conclues directement entre l'acheteur et le vendeur ou la boutique. Mboppi ne perçoit aucun paiement en ligne.":
-    "Mboppi تربط المتاجر والمبدعين والبائعين والعملاء. تُبرم المبيعات مباشرة بين المشتري والبائع أو المتجر. لا تحصّل Mboppi أي دفعات عبر الإنترنت.",
+  "MboppiShop met en relation des boutiques, des créateurs, des vendeurs et des clients. Les ventes sont conclues directement entre l'acheteur et le vendeur ou la boutique. MboppiShop ne perçoit aucun paiement en ligne.":
+    "MboppiShop تربط المتاجر والمبدعين والبائعين والعملاء. تُبرم المبيعات مباشرة بين المشتري والبائع أو المتجر. لا تحصّل MboppiShop أي دفعات عبر الإنترنت.",
   "2. Commandes": "2. الطلبات",
   "Une commande est enregistrée avec le nom et le code de l'acheteur. L'état de la commande (en attente, confirmée, livrée) peut être suivi sur la page de suivi. Une commande annulée ne donne lieu à aucun paiement.":
     "يُسجل الطلب باسم المشتري ورمزه. يمكن تتبع حالة الطلب (قيد الانتظار، مؤكد، تم تسليمه) في صفحة التتبع. لا يترتب على الطلب الملغى أي دفع.",
   "3. Paiement et livraison": "3. الدفع والتوصيل",
-  "Le paiement s'effectue directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Les frais de livraison sont indiqués sur chaque produit. Mboppi ne stocke aucun moyen de paiement.":
-    "يتم الدفع مباشرة مع البائع أو الموصّل، عند التسليم أو عبر المال المحمول. تُعرض رسوم التوصيل على كل منتج. لا تخزن Mboppi أي وسيلة دفع.",
+  "Le paiement s'effectue directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Les frais de livraison sont indiqués sur chaque produit. MboppiShop ne stocke aucun moyen de paiement.":
+    "يتم الدفع مباشرة مع البائع أو الموصّل، عند التسليم أو عبر المال المحمول. تُعرض رسوم التوصيل على كل منتج. لا تخزن MboppiShop أي وسيلة دفع.",
   "4. Garanties et retours": "4. الضمانات والإرجاعات",
-  "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, Mboppi peut servir d'intermédiaire de médiation.":
-    "تُذكر أي ضمانات على كل منتج. تُعالج الإرجاعات مباشرة مع المتجر أو البائع. في حال حدوث نزاع، يمكن لـ Mboppi التوسط.",
+  "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, MboppiShop peut servir d'intermédiaire de médiation.":
+    "تُذكر أي ضمانات على كل منتج. تُعالج الإرجاعات مباشرة مع المتجر أو البائع. في حال حدوث نزاع، يمكن لـ MboppiShop التوسط.",
   "5. Responsabilité": "5. المسؤولية",
-  "Mboppi ne peut être tenu responsable des produits vendus par les boutiques et vendeurs, ni des retards de livraison imputables aux livreurs. Les informations publiées le sont par les vendeurs eux-mêmes.":
-    "لا يمكن تحميل Mboppi مسؤولية المنتجات المباعة من المتاجر والبائعين، ولا تأخيرات التسليم الناتجة عن الموصّلين. المعلومات المنشورة مقدمة من البائعين أنفسهم.",
+  "MboppiShop ne peut être tenu responsable des produits vendus par les boutiques et vendeurs, ni des retards de livraison imputables aux livreurs. Les informations publiées le sont par les vendeurs eux-mêmes.":
+    "لا يمكن تحميل MboppiShop مسؤولية المنتجات المباعة من المتاجر والبائعين، ولا تأخيرات التسليم الناتجة عن الموصّلين. المعلومات المنشورة مقدمة من البائعين أنفسهم.",
   "6. Contact": "6. التواصل",
   "Pour toute question sur ces conditions, contactez-nous via la page Contact.":
     "لأي سؤال حول هذه الشروط، تواصل معنا عبر صفحة الاتصال.",
   FAQ: "الأسئلة الشائعة",
   "Questions fréquentes": "الأسئلة المتكررة",
-  "Tout ce que vous devez savoir sur Mboppi.": "كل ما تحتاج معرفته عن Mboppi.",
+  "Tout ce que vous devez savoir sur MboppiShop.": "كل ما تحتاج معرفته عن MboppiShop.",
   "Comment créer un compte ?": "كيف أنشئ حساباً؟",
   "Créez un compte gratuitement en moins d'une minute : choisissez votre rôle (boutique, vendeur, client ou créateur), renseignez votre nom et votre e-mail. Vous pouvez aussi vous connecter avec Google.":
     "أنشئ حساباً مجانياً في أقل من دقيقة: اختر دورك (متجر، بائع، عميل أو مبدع)، أدخل اسمك وبريدك. يمكنك أيضاً الدخول عبر Google.",
@@ -3272,8 +3272,8 @@ const AR = {
   "Ajoutez un produit à votre panier puis validez la commande avec vos coordonnées. Vous recevez un code client pour suivre votre commande sur la page de suivi. Vous pouvez aussi contacter directement la boutique sur WhatsApp.":
     "أضف منتجاً إلى سلتك ثم أكّد الطلب ببياناتك. تستلم رمز عميل لتتبع طلبك في صفحة التتبع. يمكنك أيضاً التواصل مباشرة مع المتجر عبر واتساب.",
   "Comment payer ?": "كيف أدفع؟",
-  "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Mboppi ne demande jamais de paiement en ligne.":
-    "لا حاجة لأي بطاقة مصرفية. يتم الدفع مباشرة مع البائع أو الموصّل، عند التسليم أو عبر المال المحمول. لا تطلب Mboppi أي دفع عبر الإنترنت.",
+  "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money. MboppiShop ne demande jamais de paiement en ligne.":
+    "لا حاجة لأي بطاقة مصرفية. يتم الدفع مباشرة مع البائع أو الموصّل، عند التسليم أو عبر المال المحمول. لا تطلب MboppiShop أي دفع عبر الإنترنت.",
   "Comment devenir vendeur ?": "كيف أصبح بائعاً؟",
   "Créez un compte avec le rôle « vendeur ». Vous recevrez un code vendeur à partager avec vos clients. L'accès à votre espace vendeur est soumis à l'adhésion de 30 jours (1 500 XAF), comme pour les boutiques et les créateurs (2 500 XAF). Pour chaque vente, vous gagnez la commission affichée sur le produit.":
     "أنشئ حساباً بدور «بائع». ستستلم رمز بائع لمشاركته مع عملائك. الوصول إلى مساحة البائع يخضع لاشتراك مدته 30 يوماً (1500 فرنك)، كما هو الحال للمتاجر والمنشئين (2500 فرنك). عن كل عملية بيع تربح العمولة المعروضة على المنتج.",
@@ -3286,14 +3286,14 @@ const AR = {
   "Comment télécharger un produit digital ?": "كيف أُنزّل منتجاً رقمياً؟",
   "Un produit digital ne se livre pas : dès que la boutique confirme le paiement, vous le téléchargez depuis la page de confirmation d'achat ou votre espace client, via un lien sécurisé. Les téléchargements sont limités par acheteur (5 par défaut) et la livraison est toujours offerte.":
     "المنتج الرقمي لا يُسلَّم: بمجرد أن يؤكد المتجر الدفع، تُنزّله من صفحة تأكيد الشراء أو من مساحة العميل، عبر رابط آمن. عدد التنزيلات محدود لكل مشترٍ (5 افتراضياً) والتوصيل مجاني دائماً.",
-  "L'accès aux espaces professionnels (boutique, vendeur, créateur) est soumis à une adhésion de 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur. Les clients et les livreurs n'ont rien à payer. Cette adhésion ne concerne pas les ventes : Mboppi ne prélève aucun frais sur les transactions entre les parties.":
-    "الوصول إلى المساحات الاحترافية (متجر، بائع، منشئ) يخضع لاشتراك مدته 30 يوماً — 1500 فرنك للبائع، و2500 فرنك للمتجر والمنشئ. العملاء والموصّلون لا يدفعون شيئاً. هذا الاشتراك لا يخص المبيعات: لا تتقاضى Mboppi أي رسوم على المعاملات بين الأطراف.",
+  "L'accès aux espaces professionnels (boutique, vendeur, créateur) est soumis à une adhésion de 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur. Les clients et les livreurs n'ont rien à payer. Cette adhésion ne concerne pas les ventes : MboppiShop ne prélève aucun frais sur les transactions entre les parties.":
+    "الوصول إلى المساحات الاحترافية (متجر، بائع، منشئ) يخضع لاشتراك مدته 30 يوماً — 1500 فرنك للبائع، و2500 فرنك للمتجر والمنشئ. العملاء والموصّلون لا يدفعون شيئاً. هذا الاشتراك لا يخص المبيعات: لا تتقاضى MboppiShop أي رسوم على المعاملات بين الأطراف.",
   "Un produit digital (ebook, musique, vidéo, document…) n'est pas livré : il est téléchargé par l'acheteur depuis la page de confirmation d'achat ou son espace client, dès que la boutique confirme le paiement. Aucun frais de livraison ne s'applique.":
     "المنتج الرقمي (كتاب إلكتروني، موسيقى، فيديو، مستند…) لا يتم توصيله: يُنزّله المشتري من صفحة تأكيد الشراء أو من مساحته كعميل، بمجرد أن يؤكد المتجر الدفع. لا تُطبَّق أي رسوم توصيل.",
   "Votre paiement vous parviendra dans un délai maximum de 72 h après validation de votre demande.":
     "سيصل إليك المبلغ في غضون 72 ساعة كحد أقصى بعد التحقق من طلبك.",
-  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Votre paiement vous parviendra dans un délai maximum de 72 h.":
-    "تم استلام طلب السحب بمبلغ {amount} فرنك من فريق Mboppi. سيصل إليك المبلغ في غضون 72 ساعة كحد أقصى.",
+  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe MboppiShop. Votre paiement vous parviendra dans un délai maximum de 72 h.":
+    "تم استلام طلب السحب بمبلغ {amount} فرنك من فريق MboppiShop. سيصل إليك المبلغ في غضون 72 ساعة كحد أقصى.",
   "Demande envoyée ✓ L'administration vous paiera sur vos moyens de paiement configurés, dans un délai maximum de 72 h.":
     "تم إرسال الطلب ✓ ستدفع لك الإدارة عبر وسائل الدفع التي أعددتها، في غضون 72 ساعة كحد أقصى.",
   "Votre paiement vous parvient sous 72 h maximum après validation de votre demande.":
@@ -3322,16 +3322,16 @@ const AR = {
   "Oui, depuis votre espace « Mon compte ». Vos données sont alors supprimées définitivement de notre base.":
     "نعم، من مساحة «حسابي». تُحذف بياناتك نهائياً من قاعدة بياناتنا.",
   "Éditeur du site": "ناشر الموقع",
-  "Le site Mboppi est édité par l'équipe Mboppi. Pour toute question, utilisez la page Contact.":
-    "موقع Mboppi منشور من فريق Mboppi. لأي سؤال، استخدم صفحة الاتصال.",
+  "Le site MboppiShop est édité par l'équipe MboppiShop. Pour toute question, utilisez la page Contact.":
+    "موقع MboppiShop منشور من فريق MboppiShop. لأي سؤال، استخدم صفحة الاتصال.",
   Hébergement: "الاستضافة",
   "Le site est hébergé par Vercel Inc., 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis. Les données sont stockées dans une base PostgreSQL hébergée par Neon.":
     "الموقع مستضاف لدى Vercel Inc. البيانات مخزنة في قاعدة PostgreSQL مستضافة لدى Neon.",
   "Propriété intellectuelle": "الملكية الفكرية",
-  "Les contenus publiés par les boutiques et vendeurs (produits, photos, descriptions) leur appartiennent. La marque et le nom Mboppi appartiennent à leurs propriétaires.":
-    "المحتويات المنشورة من المتاجر والبائعين (منتجات، صور، أوصاف) ملك لهم. العلامة والاسم Mboppi ملك لأصحابهما.",
-  "Mboppi utilise des cookies pour améliorer votre expérience (thème, langue, panier). Nous ne vendons aucune donnée.":
-    "تستخدم Mboppi ملفات تعريف الارتباط لتحسين تجربتك (المظهر، اللغة، السلة). لا نبيع أي بيانات.",
+  "Les contenus publiés par les boutiques et vendeurs (produits, photos, descriptions) leur appartiennent. La marque et le nom MboppiShop appartiennent à leurs propriétaires.":
+    "المحتويات المنشورة من المتاجر والبائعين (منتجات، صور، أوصاف) ملك لهم. العلامة والاسم MboppiShop ملك لأصحابهما.",
+  "MboppiShop utilise des cookies pour améliorer votre expérience (thème, langue, panier). Nous ne vendons aucune donnée.":
+    "تستخدم MboppiShop ملفات تعريف الارتباط لتحسين تجربتك (المظهر، اللغة، السلة). لا نبيع أي بيانات.",
   Accepter: "قبول",
   "En savoir plus": "معرفة المزيد",
   Cookies: "ملفات تعريف الارتباط",
@@ -3377,8 +3377,8 @@ const AR = {
   parrainage: "إحالة",
   "Commission produit": "عمولة المنتج",
   "Commission parrainage (2%)": "عمولة الإحالة (2%)",
-  "Vous vous inscrivez via le lien d'un vendeur Mboppi : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.":
-    "أنت تسجل عبر رابط بائع Mboppi: التسجيل مجاني ودور «عميل» محدد تلقائياً.",
+  "Vous vous inscrivez via le lien d'un vendeur MboppiShop : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.":
+    "أنت تسجل عبر رابط بائع MboppiShop: التسجيل مجاني ودور «عميل» محدد تلقائياً.",
   "Code du vendeur (parrainage)": "رمز البائع (إحالة)",
   "Le vendeur {seller} réclame le paiement de sa commission pour « {product} ».":
     "البائع {seller} يطالب بدفع عمولته عن « {product} ».",
@@ -3457,10 +3457,10 @@ const ES = {
     "Puedes darte de baja en cualquier momento mediante el enlace de cada correo.",
   "Je soutiens": "Apoyo",
   "Formations et Digital": "Formación y Digital",
-  "Tutoriel Mboppi": "Tutorial de Mboppi",
+  "Tutoriel MboppiShop": "Tutorial de MboppiShop",
   "Rejoindre le Groupe": "Únete al grupo",
-  "Je soutiens Mboppi": "Apoyo a Mboppi",
-  "Chaque geste compte pour faire grandir Mboppi": "Cada gesto cuenta para hacer crecer a Mboppi",
+  "Je soutiens MboppiShop": "Apoyo a MboppiShop",
+  "Chaque geste compte pour faire grandir MboppiShop": "Cada gesto cuenta para hacer crecer a MboppiShop",
   "Votre soutien nous aide à payer les frais du site, à améliorer la plateforme et à accompagner nos boutiques et vendeurs. Chaque contribution, même petite, fait avancer le projet.":
     "Tu apoyo nos ayuda a pagar los gastos del sitio, a mejorar la plataforma y a acompañar a nuestras tiendas y vendedores. Cada aporte, por pequeño que sea, hace avanzar el proyecto.",
   "Comment pouvez-vous soutenir le projet ?": "¿Cómo puedes apoyar el proyecto?",
@@ -3470,10 +3470,10 @@ const ES = {
   PayPal: "PayPal",
   "Virement bancaire (UBA)": "Transferencia bancaria (UBA)",
   "Merci pour votre soutien !": "¡Gracias por tu apoyo!",
-  "Avec votre aide, Mboppi continue de connecter les boutiques, les vendeurs et les clients de toute la communauté.":
-    "Con tu ayuda, Mboppi sigue conectando tiendas, vendedores y clientes de toda la comunidad.",
-  "Soutenez Mboppi : Orange Money, MTN Mobile Money, PayPal ou virement bancaire UBA.":
-    "Apoya a Mboppi: Orange Money, MTN Mobile Money, PayPal o transferencia bancaria UBA.",
+  "Avec votre aide, MboppiShop continue de connecter les boutiques, les vendeurs et les clients de toute la communauté.":
+    "Con tu ayuda, MboppiShop sigue conectando tiendas, vendedores y clientes de toda la comunidad.",
+  "Soutenez MboppiShop : Orange Money, MTN Mobile Money, PayPal ou virement bancaire UBA.":
+    "Apoya a MboppiShop: Orange Money, MTN Mobile Money, PayPal o transferencia bancaria UBA.",
   "Boutique : {shop}": "Tienda: {shop}",
   "Garantie {n} mois": "Garantía de {n} meses",
   "Livraison {price} {symbol}": "Entrega {price} {symbol}",
@@ -3484,11 +3484,11 @@ const ES = {
   "Rupture de stock": "Sin stock",
   Vendre: "Vender",
   "Économisez {n} {symbol}": "Ahorra {n} {symbol}",
-  "Mboppi - {title}": "Mboppi - {title}",
-  "Mboppi : boutique en ligne, vendeurs, créateurs.":
-    "Mboppi: tienda en línea, vendedores, creadores.",
-  "Marché en ligne Mboppi.": "Mercado en línea Mboppi.",
-  "Bienvenue sur Mboppi": "Bienvenido a Mboppi",
+  "MboppiShop - {title}": "MboppiShop - {title}",
+  "MboppiShop : boutique en ligne, vendeurs, créateurs.":
+    "MboppiShop: tienda en línea, vendedores, creadores.",
+  "Marché en ligne MboppiShop.": "Mercado en línea MboppiShop.",
+  "Bienvenue sur MboppiShop": "Bienvenido a MboppiShop",
   "Le marché où boutiques, vendeurs et créateurs se rencontrent. Commandez directement sur WhatsApp !":
     "El mercado donde tiendas, vendedores y creadores se encuentran. ¡Pide directamente por WhatsApp!",
   "Voir les offres": "Ver las ofertas",
@@ -3496,8 +3496,8 @@ const ES = {
   "Produits récents": "Productos recientes",
   "Offres du moment": "Ofertas del momento",
   "Aucun produit disponible pour le moment.": "No hay productos disponibles por el momento.",
-  "Bienvenue chez Mboppi": "Bienvenido a Mboppi",
-  "BIENVENUE SUR MBOPPI": "BIENVENIDO A MBOPPI",
+  "Bienvenue chez MboppiShop": "Bienvenido a MboppiShop",
+  "BIENVENUE SUR MBOPPISHOP": "BIENVENIDO A MBOPPISHOP",
   "Rechercher un produit, une boutique…": "Buscar un producto, una tienda…",
   "Rechercher un produit": "Buscar un producto",
   "Rechercher une boutique": "Buscar una tienda",
@@ -3517,7 +3517,7 @@ const ES = {
   "Garantie (chiffres ou lettres)": "Garantía (números o letras)",
   "Renseignez au moins un prix (normal ou de vente).":
     "Indica al menos un precio (normal o de venta).",
-  "Rejoignez Mboppi": "Únete a Mboppi",
+  "Rejoignez MboppiShop": "Únete a MboppiShop",
   "Boutiques en ligne": "Tiendas en línea",
   "Créez votre vitrine et publiez vos produits.": "Crea tu escaparate y publica tus productos.",
   Vendeurs: "Vendedores",
@@ -3528,12 +3528,12 @@ const ES = {
   Créateurs: "Creadores",
   "Faites rayonner vos créations.": "Haz brillar tus creaciones.",
   "Les créateurs": "Los creadores",
-  "Créateurs de Mboppi": "Creadores de Mboppi",
-  "Découvrez les créateurs de Mboppi et leurs créations artisanales.":
-    "Descubre los creadores de Mboppi y sus creaciones artesanales.",
+  "Créateurs de MboppiShop": "Creadores de MboppiShop",
+  "Découvrez les créateurs de MboppiShop et leurs créations artisanales.":
+    "Descubre los creadores de MboppiShop y sus creaciones artesanales.",
   "Créations de {name}": "Creaciones de {name}",
-  "Créations sur Mboppi": "Creaciones en Mboppi",
-  "Vitrine de créations sur Mboppi.": "Vitrina de creaciones en Mboppi.",
+  "Créations sur MboppiShop": "Creaciones en MboppiShop",
+  "Vitrine de créations sur MboppiShop.": "Vitrina de creaciones en MboppiShop.",
   "Voir ma vitrine": "Ver mi vitrina",
   "Voir les créations": "Ver las creaciones",
   "Aucun créateur pour le moment.": "No hay creadores por el momento.",
@@ -3561,7 +3561,7 @@ const ES = {
   "ou s'inscrire avec Google": "o regístrate con Google",
   "Veuillez remplir tous les champs.": "Por favor, completa todos los campos.",
   "Une erreur est survenue, réessayez.": "Se produjo un error, inténtalo de nuevo.",
-  "Connexion à Mboppi": "Conexión a Mboppi",
+  "Connexion à MboppiShop": "Conexión a MboppiShop",
   "Ravi de vous revoir !": "¡Nos alegra verte de nuevo!",
   "Se connecter à mon compte": "Iniciar sesión en mi cuenta",
   "Mot de passe": "Contraseña",
@@ -3671,8 +3671,8 @@ const ES = {
   "Compte créé le {date}": "Cuenta creada el {date}",
   "Derniers produits": "Últimos productos",
   "Mes informations": "Mi información",
-  "Bienvenue {name} ! Faites rayonner vos créations sur le marché Mboppi.":
-    "¡Bienvenido {name}! Haz brillar tus creaciones en el mercado Mboppi.",
+  "Bienvenue {name} ! Faites rayonner vos créations sur le marché MboppiShop.":
+    "¡Bienvenido {name}! Haz brillar tus creaciones en el mercado MboppiShop.",
   "Bientôt disponible : une vitrine dédiée à vos créations.":
     "Próximamente: un escaparate dedicado a tus creaciones.",
   "Bientôt disponible": "Próximamente",
@@ -3718,9 +3718,9 @@ const ES = {
   "Photo :": "Foto:",
   "Prix original : {price} {symbol}": "Precio original: {price} {symbol}",
   "Prix promotionnel : {price} {symbol}": "Precio promocional: {price} {symbol}",
-  "À propos de Mboppi": "Acerca de Mboppi",
-  "Mboppi est un marché en ligne conçu pour connecter boutiques, vendeurs, clients et créateurs.":
-    "Mboppi es un mercado en línea diseñado para conectar tiendas, vendedores, clientes y creadores.",
+  "À propos de MboppiShop": "Acerca de MboppiShop",
+  "MboppiShop est un marché en ligne conçu pour connecter boutiques, vendeurs, clients et créateurs.":
+    "MboppiShop es un mercado en línea diseñado para conectar tiendas, vendedores, clientes y creadores.",
   "Notre mission": "Nuestra misión",
   "Faciliter le commerce local en donnant à chacun une vitrine simple et accessible, avec commande directe via WhatsApp.":
     "Facilitar el comercio local dando a cada uno un escaparate simple y accesible, con pedido directo por WhatsApp.",
@@ -3780,8 +3780,8 @@ const ES = {
   "Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.":
     "Estás sin conexión. Verifica tu conexión y vuelve a intentarlo.",
   Réessayer: "Reintentar",
-  "Désolé, Mboppi ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
-    "Lo sentimos, Mboppi no puede conectarse a internet en este momento. Verifica tu red (Wi-Fi o datos móviles) y vuelve a intentarlo.",
+  "Désolé, MboppiShop ne peut pas se connecter à internet en ce moment. Vérifiez votre réseau (Wi-Fi ou données mobiles) puis réessayez.":
+    "Lo sentimos, MboppiShop no puede conectarse a internet en este momento. Verifica tu red (Wi-Fi o datos móviles) y vuelve a intentarlo.",
   "Toujours pas de connexion. Vérifiez votre réseau puis réessayez.":
     "Sigue sin conexión. Verifica tu red y vuelve a intentarlo.",
   "Vos informations sont en sécurité sur votre appareil : rien n'est perdu.":
@@ -3806,8 +3806,8 @@ const ES = {
     "Vendo los productos de las tiendas y gano comisiones",
   "Je consulte les offres et les produits, je commande facilement":
     "Consulto ofertas y productos, hago pedidos fácilmente",
-  "Je présente et vends mes créations au marché Mboppi":
-    "Presento y vendo mis creaciones en el mercado Mboppi",
+  "Je présente et vends mes créations au marché MboppiShop":
+    "Presento y vendo mis creaciones en el mercado MboppiShop",
   "Nom complet / Nom de la boutique": "Nombre completo / Nombre de la tienda",
   Email: "Correo electrónico",
   "Mot de passe (6 caractères minimum)": "Contraseña (mínimo 6 caracteres)",
@@ -3880,8 +3880,8 @@ const ES = {
   "Envoyer la campagne": "Enviar la campaña",
   "Campagne envoyée : {push} push, {email}/{total} emails.":
     "Campaña enviada: {push} push, {email}/{total} emails.",
-  "{n} abonné(s) ont désactivé « Messages de Mboppi » (Mon compte) : ils ne recevront PAS cette campagne push.":
-    "{n} suscriptor(es) desactivaron «Mensajes de Mboppi» (Mi cuenta): NO recibirán esta campaña push.",
+  "{n} abonné(s) ont désactivé « Messages de MboppiShop » (Mon compte) : ils ne recevront PAS cette campagne push.":
+    "{n} suscriptor(es) desactivaron «Mensajes de MboppiShop» (Mi cuenta): NO recibirán esta campaña push.",
   "Campagnes programmées (1 par jour, automatique)": "Campañas programadas (1 al día, automático)",
   "Préparez vos campagnes à l'avance avec une date d'envoi : la campagne du jour part automatiquement chaque matin à 08h00 (heure du Cameroun), sans que vous ayez à intervenir. Maximum une campagne par jour.":
     "Prepara tus campañas por adelantado con una fecha de envío: la campaña del día sale automáticamente cada mañana a las 08h00 (hora de Camerún), sin que tengas que intervenir. Máximo una campaña por día.",
@@ -3916,7 +3916,7 @@ const ES = {
   "Commandes livrées": "Pedidos entregados",
   "Produits en stock": "Productos en stock",
   "Vendez partout où vous voulez, gardez 100 % de vos ventes.": "Vende donde quieras y quédate con el 100% de tus ventas.",
-  "POURQUOI DEVENIR VENDEUR SUR MBOPPI": "POR QUÉ VENDER EN MBOPPI",
+  "POURQUOI DEVENIR VENDEUR SUR MBOPPISHOP": "POR QUÉ VENDER EN MBOPPISHOP",
   "VENDEURS & BOUTIQUES": "VENDEDORES Y TIENDAS",
   "0 % de frais de service. Recevez votre code vendeur, partagez-le sur WhatsApp et encaissez vos commissions sur chaque vente.": "0% de comisión. Recibe tu código de vendedor, compártelo por WhatsApp y cobra tus comisiones en cada venta.",
   "0 % de frais de service. Générez votre code vendeur, partagez les liens à vos contacts et encaissez vos commissions sur chaque vente — par téléphone ou WhatsApp.": "0% de comisión. Genera tu código de vendedor, comparte los enlaces con tus contactos y cobra tus comisiones en cada venta — por teléfono o WhatsApp.",
@@ -3928,18 +3928,18 @@ const ES = {
   "Vendez et touchez vos commissions": "Vende y cobra tus comisiones",
   "Commandes par téléphone ou WhatsApp, livraison suivie GPS, commissions affichées avant la vente.": "Pedidos por teléfono o WhatsApp, entrega con seguimiento GPS, comisiones visibles antes de la venta.",
   "Vos avantages": "Tus ventajas",
-  "AVANTAGE D'ÊTRE VENDEUR SUR MBOPPI": "VENTAJAS DE SER VENDEDOR EN MBOPPI",
+  "AVANTAGE D'ÊTRE VENDEUR SUR MBOPPISHOP": "VENTAJAS DE SER VENDEDOR EN MBOPPISHOP",
   "Masquer les avantages": "Ocultar las ventajas",
   "0 % de frais de service": "0% de comisión",
   "Vous gardez 100 % de vos ventes. Seule l'adhésion est payante : 1 500 F pour 30 jours.": "Conservas el 100% de tus ventas. Solo la membresía se paga: 1500 F por 30 días.",
   "Parrainage = revenus complémentaires": "Referidos = ingresos extra",
   "1 000 F par vendeur que vous parrainez + 2 % sur les achats de vos clients affiliés.": "1000 F por cada vendedor que refieres + 2% en las compras de tus clientes afiliados.",
   "Livraison intégrée": "Entrega integrada",
-  "Vos clients suivent leur colis en temps réel avec un livreur Mboppi.": "Tus clientes siguen su paquete en tiempo real con un repartidor de Mboppi.",
+  "Vos clients suivent leur colis en temps réel avec un livreur MboppiShop.": "Tus clientes siguen su paquete en tiempo real con un repartidor de MboppiShop.",
   "Commandes téléphone & WhatsApp": "Pedidos por teléfono o WhatsApp",
   "Vos clients commandent en quelques clics et contactent directement la boutique sur WhatsApp.": "Tus clientes piden en unos clics y contactan directamente con la tienda por WhatsApp.",
   "Nous contacter sur WhatsApp": "Contáctanos por WhatsApp",
-  "Bonjour, je veux devenir vendeur sur Mboppi.": "Hola, quiero ser vendedor en Mboppi.",
+  "Bonjour, je veux devenir vendeur sur MboppiShop.": "Hola, quiero ser vendedor en MboppiShop.",
   "Robot WhatsApp (assistant IA)": "Robot de WhatsApp (asistente IA)",
   "Activer le robot WhatsApp": "Activar el robot de WhatsApp",
   "Message d'accueil (bonjour, salut…)": "Mensaje de bienvenida (hola…)",
@@ -3948,8 +3948,8 @@ const ES = {
   "Robot WhatsApp activé ✅ — écrivez-lui depuis un autre numéro pour tester.": "Robot de WhatsApp activado ✅ — escríbele desde otro número para probar.",
   "Robot WhatsApp désactivé.": "Robot de WhatsApp desactivado.",
   "URL du webhook à configurer chez Meta :": "URL del webhook para configurar en Meta:",
-  "Connecte l'assistant IA du site (même moteur que le chat 💬) à votre numéro WhatsApp Cloud API : il répond automatiquement à toute personne qui écrit au numéro Mboppi (produits, prix, livraison, devenir vendeur). Nécessite le fournisseur « WhatsApp Cloud API (Meta) » ci-dessus, un webhook configuré chez Meta et la variable d'environnement WHATSAPP_VERIFY_TOKEN.": "Conecta el asistente IA del sitio (el mismo motor del chat 💬) a tu número de WhatsApp Cloud API: responde automáticamente a quien escriba al número de Mboppi (productos, precios, entrega, cómo ser vendedor). Requiere el proveedor « WhatsApp Cloud API (Meta) » de arriba, un webhook configurado en Meta y la variable de entorno WHATSAPP_VERIFY_TOKEN.",
-  "Prêt à vendre sur Mboppi ?": "¿Listo para vender en Mboppi?",
+  "Connecte l'assistant IA du site (même moteur que le chat 💬) à votre numéro WhatsApp Cloud API : il répond automatiquement à toute personne qui écrit au numéro MboppiShop (produits, prix, livraison, devenir vendeur). Nécessite le fournisseur « WhatsApp Cloud API (Meta) » ci-dessus, un webhook configuré chez Meta et la variable d'environnement WHATSAPP_VERIFY_TOKEN.": "Conecta el asistente IA del sitio (el mismo motor del chat 💬) a tu número de WhatsApp Cloud API: responde automáticamente a quien escriba al número de MboppiShop (productos, precios, entrega, cómo ser vendedor). Requiere el proveedor « WhatsApp Cloud API (Meta) » de arriba, un webhook configurado en Meta y la variable de entorno WHATSAPP_VERIFY_TOKEN.",
+  "Prêt à vendre sur MboppiShop ?": "¿Listo para vender en MboppiShop?",
   "Créez votre compte en moins d'une minute. Besoin d'aide ? L'équipe vous accompagne sur WhatsApp.": "Crea tu cuenta en menos de un minuto. ¿Necesitas ayuda? El equipo te acompaña por WhatsApp.",
   "Campagnes par jour": "Campañas por día",
   "Quota mis à jour : {n} campagnes par jour (08h00 et 13h00).": "Cuota actualizada: {n} campañas al día (08h00 y 13h00).",
@@ -4056,19 +4056,19 @@ const ES = {
   "Continuer mes achats": "Continuar mis compras",
   "Mes achats": "Mis compras",
   "Aucun achat pour le moment.": "No hay compras por el momento.",
-  "Ce produit vous est proposé par un vendeur Mboppi.":
-    "Este producto te lo ofrece un vendedor de Mboppi.",
+  "Ce produit vous est proposé par un vendeur MboppiShop.":
+    "Este producto te lo ofrece un vendedor de MboppiShop.",
   "Code du vendeur : {code} — Confirmez votre achat pour le notifier, lui et la boutique.":
     "Código del vendedor: {code} — Confirma tu compra para notificarle a él y a la tienda.",
   "Confirmez votre achat : la boutique et le vendeur seront notifiés.":
     "Confirma tu compra: la tienda y el vendedor serán notificados.",
-  "Ce produit vous est proposé par un vendeur Mboppi. Entrez son code et le prix convenu pour confirmer l'achat.":
-    "Este producto te lo ofrece un vendedor de Mboppi. Introduce su código y el precio acordado para confirmar la compra.",
+  "Ce produit vous est proposé par un vendeur MboppiShop. Entrez son code et le prix convenu pour confirmer l'achat.":
+    "Este producto te lo ofrece un vendedor de MboppiShop. Introduce su código y el precio acordado para confirmar la compra.",
   "Vendeur : {seller}": "Vendedor: {seller}",
   Notifications: "Notificaciones",
   "Promotions éclair": "Ventas flash",
   "Nouveautés du jour": "Novedades del día",
-  "Messages de Mboppi": "Mensajes de Mboppi",
+  "Messages de MboppiShop": "Mensajes de MboppiShop",
   "Activées": "Activadas",
   "Désactivées": "Desactivadas",
   "Choisissez les notifications push que vous souhaitez recevoir sur votre appareil.":
@@ -4081,20 +4081,20 @@ const ES = {
   "Aucune notification": "Sin notificaciones",
   "Supprimer la notification": "Eliminar la notificación",
   "Installer l'application": "Instalar la aplicación",
-  "Installez Mboppi sur votre écran d'accueil": "Instala Mboppi en tu pantalla de inicio",
-  "Sur iPhone : touchez Partager ⬆️ puis « Sur l'écran d'accueil » pour installer Mboppi.":
-    "En iPhone: toca Compartir ⬆️ y luego «En la pantalla de inicio» para instalar Mboppi.",
-  "Cette application (Facebook, Instagram…) bloque l'installation. Ouvrez Mboppi dans Chrome pour installer :":
-    "Esta aplicación (Facebook, Instagram…) bloquea la instalación. Abre Mboppi en Chrome para instalar:",
+  "Installez MboppiShop sur votre écran d'accueil": "Instala MboppiShop en tu pantalla de inicio",
+  "Sur iPhone : touchez Partager ⬆️ puis « Sur l'écran d'accueil » pour installer MboppiShop.":
+    "En iPhone: toca Compartir ⬆️ y luego «En la pantalla de inicio» para instalar MboppiShop.",
+  "Cette application (Facebook, Instagram…) bloque l'installation. Ouvrez MboppiShop dans Chrome pour installer :":
+    "Esta aplicación (Facebook, Instagram…) bloquea la instalación. Abre MboppiShop en Chrome para instalar:",
   "Ouvrir dans Chrome": "Abrir en Chrome",
   "Copier le lien": "Copiar el enlace",
   "Lien copié": "Enlace copiado",
-  "Lien copié ! Ouvrez Chrome, collez-le et installez Mboppi.":
-    "¡Enlace copiado! Abre Chrome, pégalo e instala Mboppi.",
-  "Pour installer Mboppi : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil ».":
-    "Para instalar Mboppi: abre el menú Compartir de tu navegador (Safari) y elige «En la pantalla de inicio».",
-  "Pour installer Mboppi : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application ».":
-    "Para instalar Mboppi: abre el menú de tu navegador (⋮ o ⋯) y elige «Agregar a la pantalla de inicio» o «Instalar la aplicación».",
+  "Lien copié ! Ouvrez Chrome, collez-le et installez MboppiShop.":
+    "¡Enlace copiado! Abre Chrome, pégalo e instala MboppiShop.",
+  "Pour installer MboppiShop : ouvrez le menu Partager de votre navigateur (Safari) puis choisissez « Sur l'écran d'accueil ».":
+    "Para instalar MboppiShop: abre el menú Compartir de tu navegador (Safari) y elige «En la pantalla de inicio».",
+  "Pour installer MboppiShop : ouvrez le menu de votre navigateur (⋮ ou ⋯) puis choisissez « Ajouter à l'écran d'accueil » ou « Installer l'application ».":
+    "Para instalar MboppiShop: abre el menú de tu navegador (⋮ o ⋯) y elige «Agregar a la pantalla de inicio» o «Instalar la aplicación».",
   "Votre vente de « {product} » a été achetée par {buyer}.":
     "Tu venta de « {product} » ha sido comprada por {buyer}.",
   "Votre vente de « {product} » a été confirmée par la boutique pour {buyer}.":
@@ -4170,19 +4170,19 @@ const ES = {
   "Produits des boutiques": "Productos de las tiendas",
   "Parcourez les produits disponibles chez les boutiques partenaires.":
     "Explora los productos disponibles en las tiendas asociadas.",
-  "Contactez directement la centrale Mboppi pour commander.":
-    "Contacta directamente con el centro de Mboppi para hacer tu pedido.",
+  "Contactez directement la centrale MboppiShop pour commander.":
+    "Contacta directamente con el centro de MboppiShop para hacer tu pedido.",
   Rôle: "Rol",
   "Inscrit le": "Registrado el",
   "Suivez les promotions en cours et repérez les bonnes affaires.":
     "Sigue las promociones en curso y encuentra buenas ofertas.",
   "Présenter mes créations": "Presentar mis creaciones",
-  "Contactez la centrale Mboppi pour exposer vos créations au marché.":
-    "Contacta con el centro de Mboppi para exponer tus creaciones en el mercado.",
-  "Bonjour, je suis un client de Mboppi ({email}) et j'aimerais passer une commande.":
-    "Hola, soy un cliente de Mboppi ({email}) y me gustaría hacer un pedido.",
-  "Bonjour, je suis un créateur sur Mboppi ({email}) et j'aimerais présenter mes créations.":
-    "Hola, soy un creador en Mboppi ({email}) y me gustaría presentar mis creaciones.",
+  "Contactez la centrale MboppiShop pour exposer vos créations au marché.":
+    "Contacta con el centro de MboppiShop para exponer tus creaciones en el mercado.",
+  "Bonjour, je suis un client de MboppiShop ({email}) et j'aimerais passer une commande.":
+    "Hola, soy un cliente de MboppiShop ({email}) y me gustaría hacer un pedido.",
+  "Bonjour, je suis un créateur sur MboppiShop ({email}) et j'aimerais présenter mes créations.":
+    "Hola, soy un creador en MboppiShop ({email}) y me gustaría presentar mis creaciones.",
   "Le marché du quartier, en un clic": "El mercado de tu barrio, con un clic",
   "Découvrez les offres du moment, commandez les produits des boutiques partenaires, ou devenez vendeur et gagnez une commission sur chaque vente.":
     "Descubre las ofertas del momento, pide los productos de las tiendas asociadas, o hazte vendedor y gana una comisión en cada venta.",
@@ -4250,9 +4250,9 @@ const ES = {
   "Retirer l'offre": "Quitar la oferta",
   "Confirmez le retrait de « {name} » de la vitrine.":
     "Confirma la retirada de « {name} » del escaparate.",
-  "Mboppi, le marché de votre quartier, en ligne": "Mboppi, el mercado de tu barrio, en línea",
-  "Mboppi est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans prix écrasant et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les créateurs exposent leurs talents, juste avec un téléphone et une connexion internet, les vendeurs vendent et gagnent des commissions, et les clients trouvent tout au même endroit avec satisfaction, sans se déplacer.":
-    "Mboppi nació de una idea simple: permitir a cada uno vender y comprar cerca de casa, sin precios aplastantes y sin depender de los grandes sitios. Aquí, las tiendas publican sus productos, los creadores exponen sus talentos, solo con un teléfono y conexión a internet. Los vendedores venden y ganan comisiones, y los clientes encuentran todo en un mismo lugar, con satisfacción y sin desplazarse.",
+  "MboppiShop, le marché de votre quartier, en ligne": "MboppiShop, el mercado de tu barrio, en línea",
+  "MboppiShop est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans prix écrasant et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les créateurs exposent leurs talents, juste avec un téléphone et une connexion internet, les vendeurs vendent et gagnent des commissions, et les clients trouvent tout au même endroit avec satisfaction, sans se déplacer.":
+    "MboppiShop nació de una idea simple: permitir a cada uno vender y comprar cerca de casa, sin precios aplastantes y sin depender de los grandes sitios. Aquí, las tiendas publican sus productos, los creadores exponen sus talentos, solo con un teléfono y conexión a internet. Los vendedores venden y ganan comisiones, y los clientes encuentran todo en un mismo lugar, con satisfacción y sin desplazarse.",
   "Comment ça marche ?": "¿Cómo funciona?",
   "Un rôle pour chacun, une plateforme pour tous.":
     "Un rol para cada uno, una plataforma para todos.",
@@ -4298,18 +4298,18 @@ const ES = {
   Sujet: "Asunto",
   "Choisir un sujet…": "Elige un asunto…",
   "Question sur une offre": "Pregunta sobre una oferta",
-  "Je veux vendre sur Mboppi": "Quiero vender en Mboppi",
+  "Je veux vendre sur MboppiShop": "Quiero vender en MboppiShop",
   "Problème de compte": "Problema de cuenta",
   Autre: "Otro",
   "Écrivez votre message ici…": "Escribe tu mensaje aquí…",
-  "Bonjour Mboppi, je suis {name}.": "Hola Mboppi, soy {name}.",
+  "Bonjour MboppiShop, je suis {name}.": "Hola MboppiShop, soy {name}.",
   "un visiteur": "un visitante",
   "📦 Quelles données sont collectées ?": "📦 ¿Qué datos se recopilan?",
   "Lors de votre inscription : votre nom, votre e-mail et votre rôle (boutique, vendeur, client ou créateur). Si vous vous connectez avec Google, seul votre e-mail Google est utilisé. Selon votre rôle, vous pouvez publier des produits, des offres avec photos, et vos ventes sont enregistrées dans votre espace.":
     "Al registrarte: tu nombre, tu correo electrónico y tu rol (tienda, vendedor, cliente o creador). Si inicias sesión con Google, solo se usa tu correo de Google. Según tu rol, puedes publicar productos, ofertas con fotos, y tus ventas se registran en tu espacio.",
   "🔐 Comment sont-elles stockées ?": "🔐 ¿Cómo se almacenan?",
-  "Toutes les données sont enregistrées dans une base de données PostgreSQL hébergée et sécurisée. Les mots de passe sont hachés (chiffrés de façon irréversible) : personne, même l'équipe Mboppi, ne peut lire votre mot de passe. Toutes les connexions passent par un protocole sécurisé (HTTPS).":
-    "Todos los datos se guardan en una base de datos PostgreSQL alojada y segura. Las contraseñas se almacenan con hash (cifradas de forma irreversible): nadie, ni siquiera el equipo de Mboppi, puede leer tu contraseña. Todas las conexiones usan un protocolo seguro (HTTPS).",
+  "Toutes les données sont enregistrées dans une base de données PostgreSQL hébergée et sécurisée. Les mots de passe sont hachés (chiffrés de façon irréversible) : personne, même l'équipe MboppiShop, ne peut lire votre mot de passe. Toutes les connexions passent par un protocole sécurisé (HTTPS).":
+    "Todos los datos se guardan en una base de datos PostgreSQL alojada y segura. Las contraseñas se almacenan con hash (cifradas de forma irreversible): nadie, ni siquiera el equipo de MboppiShop, puede leer tu contraseña. Todas las conexiones usan un protocolo seguro (HTTPS).",
   "⏳ Combien de temps sont-elles conservées ?": "⏳ ¿Cuánto tiempo se conservan?",
   "Vos données restent enregistrées aussi longtemps que votre compte existe. Les offres et produits que vous retirez sont supprimés définitivement, avec leurs photos. Aucune donnée n'est vendue ni transmise à des tiers.":
     "Tus datos permanecen guardados mientras tu cuenta exista. Las ofertas y productos que retiras se eliminan definitivamente, junto con sus fotos. Ningún dato se vende ni se transmite a terceros.",
@@ -4317,8 +4317,8 @@ const ES = {
   "Seule la personne concernée accède à son espace : une boutique voit ses produits, un vendeur ses ventes et commissions. Les offres de la vitrine sont publiquement visibles par les visiteurs, mais sans vos informations de compte.":
     "Solo la persona interesada accede a su espacio: una tienda ve sus productos, un vendedor sus ventas y comisiones. Las ofertas del escaparate son visibles públicamente para los visitantes, pero sin tus datos de cuenta.",
   "💳 Aucun paiement en ligne": "💳 Sin pagos en línea",
-  "Mboppi ne demande jamais de numéro de carte bancaire. Les commandes passent par téléphone ou WhatsApp, et le paiement se fait directement avec le vendeur.":
-    "Mboppi nunca pide el número de tu tarjeta bancaria. Los pedidos se hacen por teléfono o WhatsApp, y el pago se hace directamente con el vendedor.",
+  "MboppiShop ne demande jamais de numéro de carte bancaire. Les commandes passent par téléphone ou WhatsApp, et le paiement se fait directement avec le vendeur.":
+    "MboppiShop nunca pide el número de tu tarjeta bancaria. Los pedidos se hacen por teléfono o WhatsApp, y el pago se hace directamente con el vendedor.",
   "🗑️ Supprimer vos données": "🗑️ Eliminar tus datos",
   "Vous pouvez retirer vos offres et produits à tout moment depuis votre espace.":
     "Puedes retirar tus ofertas y productos en cualquier momento desde tu espacio.",
@@ -4327,8 +4327,8 @@ const ES = {
   "et nous le supprimerons rapidement.": "y la eliminaremos rápidamente.",
   "Partager ma vitrine": "Compartir mi escaparate",
   "📲 Partager via l'appareil": "📲 Compartir a través del dispositivo",
-  "Ma vitrine Mboppi": "Mi escaparate Mboppi",
-  "Découvre ma vitrine Mboppi": "Descubre mi escaparate Mboppi",
+  "Ma vitrine MboppiShop": "Mi escaparate MboppiShop",
+  "Découvre ma vitrine MboppiShop": "Descubre mi escaparate MboppiShop",
   "Copier le lien": "Copiar el enlace",
   "✨ **Une offre pour presque chaque besoin !**\n🔥 Découvrez ma vitrine et explorez une sélection d'offres et de solutions dans plusieurs domaines.\n\nQue tu recherches une opportunité, un service, un produit ou simplement quelque chose d'intéressant à découvrir, **tu pourrais bien trouver ton bonheur.** 👀\n\n👉 **Découvre la vitrine ici :**\n🔗 {url}\n\n🚀 *Un clic, plusieurs possibilités !*":
     "✨ **¡Una oferta para casi cada necesidad!**\n🔥 Descubre mi escaparate y explora una selección de ofertas y soluciones en varios ámbitos.\n\nYa busques una oportunidad, un servicio, un producto o simplemente algo interesante por descubrir, **tal vez encuentres lo que buscas.** 👀\n\n👉 **Descubre el escaparate aquí:**\n🔗 {url}\n\n🚀 *¡Un clic, varias posibilidades!*",
@@ -4399,10 +4399,10 @@ const ES = {
   "En attente": "Pendiente",
   Expédiée: "Enviado",
   "Suivre sur WhatsApp": "Seguir por WhatsApp",
-  "Bonjour Mboppi, je souhaite suivre ma commande #{id}.":
-    "Hola Mboppi, quiero seguir mi pedido #{id}.",
-  "Bonjour Mboppi, je souhaite confirmer ma commande #{id} :":
-    "Hola Mboppi, quiero confirmar mi pedido #{id}:",
+  "Bonjour MboppiShop, je souhaite suivre ma commande #{id}.":
+    "Hola MboppiShop, quiero seguir mi pedido #{id}.",
+  "Bonjour MboppiShop, je souhaite confirmer ma commande #{id} :":
+    "Hola MboppiShop, quiero confirmar mi pedido #{id}:",
   "Total : {total} F": "Total: {total} F",
   "Nom : {name}": "Nombre: {name}",
   "Téléphone : {phone}": "Teléfono: {phone}",
@@ -4411,7 +4411,7 @@ const ES = {
   "Plus récents": "Más recientes",
   "🔥 Plus populaires": "🔥 Más populares",
   "Nouveautés": "Novedades",
-  "Les derniers produits publiés sur Mboppi.": "Los últimos productos publicados en Mboppi.",
+  "Les derniers produits publiés sur MboppiShop.": "Los últimos productos publicados en MboppiShop.",
   "Glissez pour découvrir la sélection du moment.": "Desliza para descubrir la selección del momento.",
   "Prix croissant": "Precio de menor a mayor",
   "Prix décroissant": "Precio de mayor a menor",
@@ -4424,9 +4424,9 @@ const ES = {
   "Retrouvez les produits que vous avez aimés.": "Encuentra los productos que te gustaron.",
   "En attente de vente": "Pendiente de venta",
   "Générez votre code vendeur pour vendre.": "Genera tu código de vendedor para vender.",
-  "Commandez « {name} » sur Mboppi avec le code vendeur {code}":
-    "Pide « {name} » en Mboppi con el código de vendedor {code}",
-  "Découvrez cet article sur Mboppi : {name}": "Descubre este artículo en Mboppi: {name}",
+  "Commandez « {name} » sur MboppiShop avec le code vendeur {code}":
+    "Pide « {name} » en MboppiShop con el código de vendedor {code}",
+  "Découvrez cet article sur MboppiShop : {name}": "Descubre este artículo en MboppiShop: {name}",
   Localisation: "Ubicación",
   "Mes moyens de paiement": "Mis medios de pago",
   "Ces informations seront visibles par les boutiques pour vous payer vos commissions.":
@@ -4459,7 +4459,7 @@ const ES = {
     "La tienda aún no ha configurado sus billeteras de pago. Se recomienda el pago a la entrega.",
   "Moyens de paiement": "Medios de pago",
   "La boutique n'a pas configuré de portefeuille.": "La tienda no ha configurado una billetera.",
-  "Assistant Mboppi": "Asistente Mboppi",
+  "Assistant MboppiShop": "Asistente MboppiShop",
   "Code du vendeur (facultatif)": "Código del vendedor (opcional)",
   "Remplissez vos informations pour confirmer votre commande. Aucun compte requis. Le code du vendeur est utile seulement si un vendeur vous a proposé ce produit.":
     "Completa tus datos para confirmar tu pedido. No se requiere cuenta. El código del vendedor solo es útil si un vendedor te ofreció este producto.",
@@ -4471,8 +4471,8 @@ const ES = {
   "Changement d'espace impossible. Réessayez.": "No se pudo cambiar de espacio. Inténtalo de nuevo.",
   "AFIN DE FINALISER VOTRE COMMANDE, VEILLEZ VOUS CONNECTER À VOTRE COMPTE LIVREUR.":
     "PARA FINALIZAR SU PEDIDO, CONÉCTESE A SU CUENTA DE REPARTIDOR.",
-  "Les livraisons Mboppi passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
-    "Los envíos de Mboppi pasan obligatoriamente por el espacio de un repartidor: es él quien registra su pedido, le hace ingresar su código de confirmación, firmar y validar el pago con total seguridad.",
+  "Les livraisons MboppiShop passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité.":
+    "Los envíos de MboppiShop pasan obligatoriamente por el espacio de un repartidor: es él quien registra su pedido, le hace ingresar su código de confirmación, firmar y validar el pago con total seguridad.",
   "Votre compte boutique est connecté": "Su cuenta de tienda está conectada",
   "Créez votre espace livreur associé — même email, aucune information à ressaisir. Vous pourrez ainsi finaliser vous-même les livraisons de vos commandes.":
     "Cree su espacio de repartidor asociado — mismo email, sin necesidad de volver a ingresar nada. Así podrá finalizar usted mismo los envíos de sus pedidos.",
@@ -4489,11 +4489,11 @@ const ES = {
     "Reparto los artículos y finalizo los pedidos (código del cliente, firma, pago)",
   "Plusieurs espaces détectés sur cet email. Quel espace voulez-vous ouvrir ?":
     "Se detectaron varios espacios en este email. ¿Qué espacio desea abrir?",
-  "CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.":
-    "QUERIDOS CLIENTES, GRACIAS POR CONFIAR EN MBOPPI.",
+  "CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPISHOP.":
+    "QUERIDOS CLIENTES, GRACIAS POR CONFIAR EN MBOPPISHOP.",
   "Pour éviter toute fraude lors de la livraison de votre colis, exigez auprès du livreur le formulaire de paiement où vous saisirez votre code de confirmation et signerez, avant de valider votre achat.":
     "Para evitar cualquier fraude en la entrega de su paquete, exija al repartidor el formulario de pago donde ingresará su código de confirmación y firmará, antes de validar su compra.",
-  "L'Administration Mboppi": "La Administración Mboppi",
+  "L'Administration MboppiShop": "La Administración MboppiShop",
   "Signature du client": "Firma del cliente",
   "Rechercher un produit (nom ou boutique)…": "Buscar un producto (nombre o tienda)…",
   "Aucun produit ne correspond à cette recherche.": "Ningún producto coincide con esta búsqueda.",
@@ -4505,8 +4505,8 @@ const ES = {
   "affinez la recherche": "afina la búsqueda",
   "En ligne": "En línea",
   "Écrivez votre question…": "Escribe tu pregunta…",
-  "Bonjour 👋 Je suis l'assistant Mboppi. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
-    "¡Hola 👋 Soy el asistente de Mboppi. Pregúntame sobre la tienda, los pedidos, los pagos o la entrega!",
+  "Bonjour 👋 Je suis l'assistant MboppiShop. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !":
+    "¡Hola 👋 Soy el asistente de MboppiShop. Pregúntame sobre la tienda, los pedidos, los pagos o la entrega!",
   "Une erreur est survenue. Réessayez ou contactez-nous via la page Contact.":
     "Se produjo un error. Inténtalo de nuevo o contáctanos a través de la página de Contacto.",
   "Le chatbot n'est pas encore configuré (clé IA manquante côté serveur).":
@@ -4523,12 +4523,12 @@ const ES = {
     "Tu artículo está pendiente de venta. La tienda y el vendedor han sido notificados y te contactarán para la entrega. Encuentra este pedido en tu espacio cliente.",
   "Vous devez être connecté pour confirmer la commande.":
     "Debes iniciar sesión para confirmar el pedido.",
-  "Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande. Aucun compte requis.":
-    "Este producto te lo ofrece un vendedor de Mboppi. Completa tus datos para confirmar tu pedido. No se requiere cuenta.",
+  "Ce produit vous est proposé par un vendeur MboppiShop. Remplissez vos informations pour confirmer votre commande. Aucun compte requis.":
+    "Este producto te lo ofrece un vendedor de MboppiShop. Completa tus datos para confirmar tu pedido. No se requiere cuenta.",
   "Confirmez votre commande : la boutique et le vendeur seront notifiés.":
     "Confirma tu pedido: la tienda y el vendedor serán notificados.",
-  "Ce produit vous est proposé par un vendeur Mboppi. Remplissez vos informations pour confirmer votre commande.":
-    "Este producto te lo ofrece un vendedor de Mboppi. Completa tus datos para confirmar tu pedido.",
+  "Ce produit vous est proposé par un vendeur MboppiShop. Remplissez vos informations pour confirmer votre commande.":
+    "Este producto te lo ofrece un vendedor de MboppiShop. Completa tus datos para confirmar tu pedido.",
   "Nouvelle commande pour « {product} » — {buyer}.": "Nuevo pedido de « {product} » — {buyer}.",
   "Nouvelle commande pour « {product} » — vendeur : {seller} ({code}).":
     "Nuevo pedido de « {product} » — vendedor: {seller} ({code}).",
@@ -4590,9 +4590,9 @@ const ES = {
   "Code vendeur": "Código de vendedor",
   "Prix unitaire": "Precio unitario",
   "Total à payer": "Total a pagar",
-  "Facture générée par Mboppi — marchandise livrée.":
-    "Factura generada por Mboppi — mercancía entregada.",
-  "Facture générée par Mboppi.": "Factura generada por Mboppi.",
+  "Facture générée par MboppiShop — marchandise livrée.":
+    "Factura generada por MboppiShop — mercancía entregada.",
+  "Facture générée par MboppiShop.": "Factura generada por MboppiShop.",
   "Payer le Vendeur": "Pagar al Vendedor",
   "Payer le vendeur": "Pagar al vendedor",
   "Vendeur payé": "Vendedor pagado",
@@ -4646,8 +4646,8 @@ const ES = {
   Adresse: "Dirección",
   "Frais de livraison": "Gastos de envío",
   Paiement: "Pago",
-  "Mboppi est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans commission écrasante et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les vendeurs gagnent des commissions, les créateurs exposent leurs talents et les clients trouvent tout au même endroit.":
-    "Mboppi nació de una idea simple: permitir a cada uno vender y comprar cerca de casa, sin comisiones aplastantes y sin depender de los grandes sitios. Aquí, las tiendas publican sus productos, los vendedores ganan comisiones, los creadores exponen sus talentos y los clientes encuentran todo en un mismo lugar.",
+  "MboppiShop est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans commission écrasante et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les vendeurs gagnent des commissions, les créateurs exposent leurs talents et les clients trouvent tout au même endroit.":
+    "MboppiShop nació de una idea simple: permitir a cada uno vender y comprar cerca de casa, sin comisiones aplastantes y sin depender de los grandes sitios. Aquí, las tiendas publican sus productos, los vendedores ganan comisiones, los creadores exponen sus talentos y los clientes encuentran todo en un mismo lugar.",
   "Publiez vos produits et recevez les commandes de vos clients.":
     "Publica tus productos y recibe los pedidos de tus clientes.",
   Créateur: "Creador",
@@ -4661,13 +4661,13 @@ const ES = {
   "Livrez les articles commandés et confirmez l'achat.":
     "Entrega los artículos pedidos y confirma la compra.",
   "Livrer : {name}": "Entregar: {name}",
-  "Découvrez « {name} » à {price} {symbol} sur Mboppi.":
-    "Descubre « {name} » a {price} {symbol} en Mboppi.",
+  "Découvrez « {name} » à {price} {symbol} sur MboppiShop.":
+    "Descubre « {name} » a {price} {symbol} en MboppiShop.",
   "Comment vos données sont conservées": "Cómo se conservan tus datos",
-  "La transparence est importante pour nous. Voici comment Mboppi collecte, stocke et protège vos données.":
-    "La transparencia es importante para nosotros. Así recopila, almacena y protege Mboppi tus datos.",
-  "Découvrez « {name} » à {price} {symbol} chez {shop} sur Mboppi.":
-    "Descubre « {name} » a {price} {symbol} en {shop} en Mboppi.",
+  "La transparence est importante pour nous. Voici comment MboppiShop collecte, stocke et protège vos données.":
+    "La transparencia es importante para nosotros. Así recopila, almacena y protege MboppiShop tus datos.",
+  "Découvrez « {name} » à {price} {symbol} chez {shop} sur MboppiShop.":
+    "Descubre « {name} » a {price} {symbol} en {shop} en MboppiShop.",
   "Confirmez votre commande avec le code du vendeur.":
     "Confirma tu pedido con el código del vendedor.",
   "Prix invalide": "Precio inválido",
@@ -4737,11 +4737,11 @@ const ES = {
   "Partager le suivi": "Compartir el seguimiento",
   "Votre code client : {code}": "Tu código de cliente: {code}",
   "Votre code client": "Tu código de cliente",
-  "Bonjour {seller}, je suis {buyer}, je vous contacte à propos de ma commande « {product} » sur Mboppi.":
-    "Hola {seller}, soy {buyer}, te contacto por mi pedido « {product} » en Mboppi.",
-  "Bonjour {shop}, je vous contacte depuis Mboppi.": "Hola {shop}, te contacto desde Mboppi.",
-  "Suivez ma commande « {product} » sur Mboppi : {url}":
-    "Sigue mi pedido « {product} » en Mboppi: {url}",
+  "Bonjour {seller}, je suis {buyer}, je vous contacte à propos de ma commande « {product} » sur MboppiShop.":
+    "Hola {seller}, soy {buyer}, te contacto por mi pedido « {product} » en MboppiShop.",
+  "Bonjour {shop}, je vous contacte depuis MboppiShop.": "Hola {shop}, te contacto desde MboppiShop.",
+  "Suivez ma commande « {product} » sur MboppiShop : {url}":
+    "Sigue mi pedido « {product} » en MboppiShop: {url}",
   "La page que vous cherchez n'existe pas ou a été déplacée.":
     "La página que buscas no existe o ha sido movida.",
   Suggestions: "Sugerencias",
@@ -4778,21 +4778,21 @@ const ES = {
   "Rechercher un utilisateur (nom ou email)…": "Buscar un usuario (nombre o correo)…",
   "Rechercher un paiement (nom, email ou référence)…": "Buscar un pago (nombre, correo o referencia)…",
   "Aucun paiement ne correspond à cette recherche.": "Ningún pago coincide con esta búsqueda.",
-  "Message de l'équipe Mboppi": "Mensaje del equipo de Mboppi",
+  "Message de l'équipe MboppiShop": "Mensaje del equipo de MboppiShop",
   Suggestion: "Sugerencia",
   "Faire une suggestion": "Hacer una sugerencia",
-  "Aidez-nous à améliorer Mboppi : votre message s'ouvrira dans WhatsApp.":
-    "Ayúdanos a mejorar Mboppi: tu mensaje se abrirá en WhatsApp.",
+  "Aidez-nous à améliorer MboppiShop : votre message s'ouvrira dans WhatsApp.":
+    "Ayúdanos a mejorar MboppiShop: tu mensaje se abrirá en WhatsApp.",
   "Votre suggestion…": "Tu sugerencia…",
   "Envoyer sur WhatsApp": "Enviar por WhatsApp",
-  "Partager Mboppi": "Compartir Mboppi",
-  "Découvre Mboppi": "Descubre Mboppi",
-  "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
-    "Descubre Mboppi: el mercado en línea de Camerún y África. Tiendas, vendedores, creadores y repartidores — pide fácilmente, vende más y gana!",
-  "Rejoins Mboppi et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}":
-    "Únete a Mboppi y encuentra todas las ofertas al mejor precio — pago contra entrega. Haz clic aquí para registrarte: {link}",
-  "Deviens vendeur sur Mboppi et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}":
-    "Conviértete en vendedor en Mboppi y gana comisiones en cada venta y 1000 F por cada vendedor que refieras. Regístrate aquí: {link}",
+  "Partager MboppiShop": "Compartir MboppiShop",
+  "Découvre MboppiShop": "Descubre MboppiShop",
+  "Découvrez MboppiShop : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !":
+    "Descubre MboppiShop: el mercado en línea de Camerún y África. Tiendas, vendedores, creadores y repartidores — pide fácilmente, vende más y gana!",
+  "Rejoins MboppiShop et trouve toutes les offres au meilleur prix — paiement à la livraison. Clique ici pour t'inscrire : {link}":
+    "Únete a MboppiShop y encuentra todas las ofertas al mejor precio — pago contra entrega. Haz clic aquí para registrarte: {link}",
+  "Deviens vendeur sur MboppiShop et gagne des commissions à chaque vente et 1000 F à chaque parrainage vendeur. Inscris-toi ici : {link}":
+    "Conviértete en vendedor en MboppiShop y gana comisiones en cada venta y 1000 F por cada vendedor que refieras. Regístrate aquí: {link}",
   "Messages aux utilisateurs": "Mensajes a los usuarios",
   "Envoyez un message qui s'affichera en popup à la prochaine connexion des utilisateurs (une seule fois).":
     "Envía un mensaje que se mostrará en una ventana emergente en el próximo inicio de sesión de los usuarios (una sola vez).",
@@ -4837,30 +4837,30 @@ const ES = {
   CGU: "CGU",
   "Mentions légales": "Aviso legal",
   "Conditions générales d'utilisation": "Condiciones generales de uso",
-  "Les règles pour utiliser Mboppi en tant que boutique, vendeur, client ou créateur.":
-    "Las reglas para usar Mboppi como tienda, vendedor, cliente o creador.",
+  "Les règles pour utiliser MboppiShop en tant que boutique, vendeur, client ou créateur.":
+    "Las reglas para usar MboppiShop como tienda, vendedor, cliente o creador.",
   "J'ai lu et j'accepte les": "He leído y acepto las",
   "Vous devez accepter les Conditions Générales d'Utilisation pour vous inscrire.":
     "Debes aceptar las Condiciones Generales de Uso para registrarte.",
   "Mot de passe (8 caractères minimum)": "Contraseña (mínimo 8 caracteres)",
   "1. Objet et acceptation": "1. Objeto y aceptación",
-  "Les présentes Conditions générales d'utilisation (CGU) régissent votre accès et votre utilisation de la plateforme Mboppi. En créant votre compte, vous acceptez pleinement et sans réserve ces conditions.":
-    "Las presentes Condiciones generales de uso (CGU) rigen tu acceso y uso de la plataforma Mboppi. Al crear tu cuenta, aceptas plenamente y sin reservas estas condiciones.",
+  "Les présentes Conditions générales d'utilisation (CGU) régissent votre accès et votre utilisation de la plateforme MboppiShop. En créant votre compte, vous acceptez pleinement et sans réserve ces conditions.":
+    "Las presentes Condiciones generales de uso (CGU) rigen tu acceso y uso de la plataforma MboppiShop. Al crear tu cuenta, aceptas plenamente y sin reservas estas condiciones.",
   "2. Création d'un compte": "2. Creación de una cuenta",
   "Vous vous engagez à fournir des informations exactes et à jour lors de votre inscription. Vous êtes responsable de la confidentialité de votre mot de passe et de toutes les actions réalisées avec votre compte.":
     "Te comprometes a proporcionar información exacta y actualizada al registrarte. Eres responsable de la confidencialidad de tu contraseña y de todas las acciones realizadas con tu cuenta.",
-  "3. Les rôles sur Mboppi": "3. Los roles en Mboppi",
-  "Mboppi met en relation des boutiques, des vendeurs, des clients et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander ou créer.":
-    "Mboppi pone en contacto tiendas, vendedores, clientes y creadores. Cada cuenta está asociada a un rol que determina las funciones disponibles: publicar productos, vender, pedir o crear.",
+  "3. Les rôles sur MboppiShop": "3. Los roles en MboppiShop",
+  "MboppiShop met en relation des boutiques, des vendeurs, des clients et des créateurs. Chaque compte est associé à un rôle qui détermine les fonctionnalités disponibles : publier des produits, vendre, commander ou créer.":
+    "MboppiShop pone en contacto tiendas, vendedores, clientes y creadores. Cada cuenta está asociada a un rol que determina las funciones disponibles: publicar productos, vender, pedir o crear.",
   "4. Commandes et paiement": "4. Pedidos y pago",
-  "Les commandes sont passées directement avec la boutique ou le vendeur. Aucun paiement n'est effectué en ligne sur Mboppi : le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money.":
-    "Los pedidos se hacen directamente con la tienda o el vendedor. No se realiza ningún pago en línea en Mboppi: el pago se hace directamente con el vendedor o el repartidor, a la entrega o por dinero móvil.",
+  "Les commandes sont passées directement avec la boutique ou le vendeur. Aucun paiement n'est effectué en ligne sur MboppiShop : le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money.":
+    "Los pedidos se hacen directamente con la tienda o el vendedor. No se realiza ningún pago en línea en MboppiShop: el pago se hace directamente con el vendedor o el repartidor, a la entrega o por dinero móvil.",
   "5. Commissions et parrainage": "5. Comisiones y referidos",
   "Les boutiques rémunèrent les vendeurs et les parrains par des commissions enregistrées sur la plateforme. Les montants et les modalités de réclamation et de paiement sont affichés dans les espaces vendeur, boutique et client.":
     "Las tiendas remuneran a los vendedores y padrinos con comisiones registradas en la plataforma. Los importes y las modalidades de reclamación y pago se muestran en los espacios vendedor, tienda y cliente.",
   "6. Contenu publié": "6. Contenido publicado",
-  "Les boutiques, vendeurs et créateurs publient leurs propres produits, offres et créations. Ils sont seuls responsables de l'exactitude et de la légalité de leur contenu. Mboppi peut retirer tout contenu illicite ou inapproprié.":
-    "Las tiendas, vendedores y creadores publican sus propios productos, ofertas y creaciones. Son los únicos responsables de la exactitud y legalidad de su contenido. Mboppi puede retirar cualquier contenido ilícito o inapropiado.",
+  "Les boutiques, vendeurs et créateurs publient leurs propres produits, offres et créations. Ils sont seuls responsables de l'exactitude et de la légalité de leur contenu. MboppiShop peut retirer tout contenu illicite ou inapproprié.":
+    "Las tiendas, vendedores y creadores publican sus propios productos, ofertas y creaciones. Son los únicos responsables de la exactitud y legalidad de su contenido. MboppiShop puede retirar cualquier contenido ilícito o inapropiado.",
   "7. Livraison": "7. Entrega",
   "La livraison est assurée par les boutiques ou des livreurs partenaires. Les délais et les frais sont indiqués sur chaque produit et convenus avec le vendeur ou la boutique lors de la commande.":
     "La entrega la realizan las tiendas o repartidores asociados. Los plazos y gastos se indican en cada producto y se acuerdan con el vendedor o la tienda al hacer el pedido.",
@@ -4868,8 +4868,8 @@ const ES = {
   "Il est interdit d'utiliser la plateforme de manière frauduleuse : créer de fausses commandes, usurper une identité, publier des informations fausses ou trompeuses, ou tenter de contourner les règles de la plateforme.":
     "Está prohibido usar la plataforma de manera fraudulenta: crear pedidos falsos, suplantar una identidad, publicar información falsa o engañosa, o intentar eludir las reglas de la plataforma.",
   "9. Suspension et résiliation": "9. Suspensión y rescisión",
-  "Mboppi peut suspendre ou supprimer un compte en cas de non-respect des présentes conditions. Vous pouvez supprimer votre compte à tout moment depuis votre espace « Mon compte ».":
-    "Mboppi puede suspender o eliminar una cuenta en caso de incumplimiento de estas condiciones. Puedes eliminar tu cuenta en cualquier momento desde tu espacio «Mi cuenta».",
+  "MboppiShop peut suspendre ou supprimer un compte en cas de non-respect des présentes conditions. Vous pouvez supprimer votre compte à tout moment depuis votre espace « Mon compte ».":
+    "MboppiShop puede suspender o eliminar una cuenta en caso de incumplimiento de estas condiciones. Puedes eliminar tu cuenta en cualquier momento desde tu espacio «Mi cuenta».",
   "10. Données personnelles": "10. Datos personales",
   "Vos données personnelles sont traitées conformément à notre politique de confidentialité, consultable sur la page Données personnelles.":
     "Tus datos personales se tratan conforme a nuestra política de privacidad, consultable en la página Datos personales.",
@@ -4877,29 +4877,29 @@ const ES = {
   "En cochant la case lors de votre inscription, vous confirmez avoir lu et accepté ces Conditions générales d'utilisation. Pour toute question, contactez-nous via la page Contact.":
     "Al marcar la casilla al registrarte, confirmas que has leído y aceptado estas Condiciones generales de uso. Para cualquier pregunta, contáctanos a través de la página Contacto.",
   "Conditions générales de vente": "Condiciones generales de venta",
-  "Les règles qui régissent les ventes sur Mboppi.": "Las reglas que rigen las ventas en Mboppi.",
+  "Les règles qui régissent les ventes sur MboppiShop.": "Las reglas que rigen las ventas en MboppiShop.",
   "Conditions générales": "Condiciones generales",
   "1. Rôle de la plateforme": "1. Rol de la plataforma",
-  "Mboppi met en relation des boutiques, des créateurs, des vendeurs et des clients. Les ventes sont conclues directement entre l'acheteur et le vendeur ou la boutique. Mboppi ne perçoit aucun paiement en ligne.":
-    "Mboppi pone en contacto tiendas, creadores, vendedores y clientes. Las ventas se cierran directamente entre el comprador y el vendedor o la tienda. Mboppi no recibe ningún pago en línea.",
+  "MboppiShop met en relation des boutiques, des créateurs, des vendeurs et des clients. Les ventes sont conclues directement entre l'acheteur et le vendeur ou la boutique. MboppiShop ne perçoit aucun paiement en ligne.":
+    "MboppiShop pone en contacto tiendas, creadores, vendedores y clientes. Las ventas se cierran directamente entre el comprador y el vendedor o la tienda. MboppiShop no recibe ningún pago en línea.",
   "2. Commandes": "2. Pedidos",
   "Une commande est enregistrée avec le nom et le code de l'acheteur. L'état de la commande (en attente, confirmée, livrée) peut être suivi sur la page de suivi. Une commande annulée ne donne lieu à aucun paiement.":
     "Un pedido se registra con el nombre y el código del comprador. El estado del pedido (pendiente, confirmado, entregado) puede seguirse en la página de seguimiento. Un pedido cancelado no da lugar a ningún pago.",
   "3. Paiement et livraison": "3. Pago y entrega",
-  "Le paiement s'effectue directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Les frais de livraison sont indiqués sur chaque produit. Mboppi ne stocke aucun moyen de paiement.":
-    "El pago se realiza directamente con el vendedor o el repartidor, a la entrega o por dinero móvil. Los gastos de envío se indican en cada producto. Mboppi no almacena ningún medio de pago.",
+  "Le paiement s'effectue directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Les frais de livraison sont indiqués sur chaque produit. MboppiShop ne stocke aucun moyen de paiement.":
+    "El pago se realiza directamente con el vendedor o el repartidor, a la entrega o por dinero móvil. Los gastos de envío se indican en cada producto. MboppiShop no almacena ningún medio de pago.",
   "4. Garanties et retours": "4. Garantías y devoluciones",
-  "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, Mboppi peut servir d'intermédiaire de médiation.":
-    "Las posibles garantías se indican en cada producto. Las devoluciones se gestionan directamente con la tienda o el vendedor. En caso de disputa, Mboppi puede actuar como intermediario de mediación.",
+  "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, MboppiShop peut servir d'intermédiaire de médiation.":
+    "Las posibles garantías se indican en cada producto. Las devoluciones se gestionan directamente con la tienda o el vendedor. En caso de disputa, MboppiShop puede actuar como intermediario de mediación.",
   "5. Responsabilité": "5. Responsabilidad",
-  "Mboppi ne peut être tenu responsable des produits vendus par les boutiques et vendeurs, ni des retards de livraison imputables aux livreurs. Les informations publiées le sont par les vendeurs eux-mêmes.":
-    "Mboppi no puede ser considerado responsable de los productos vendidos por tiendas y vendedores, ni de los retrasos de entrega imputables a los repartidores. La información publicada la aportan los propios vendedores.",
+  "MboppiShop ne peut être tenu responsable des produits vendus par les boutiques et vendeurs, ni des retards de livraison imputables aux livreurs. Les informations publiées le sont par les vendeurs eux-mêmes.":
+    "MboppiShop no puede ser considerado responsable de los productos vendidos por tiendas y vendedores, ni de los retrasos de entrega imputables a los repartidores. La información publicada la aportan los propios vendedores.",
   "6. Contact": "6. Contacto",
   "Pour toute question sur ces conditions, contactez-nous via la page Contact.":
     "Para cualquier pregunta sobre estas condiciones, contáctanos a través de la página Contacto.",
   FAQ: "FAQ",
   "Questions fréquentes": "Preguntas frecuentes",
-  "Tout ce que vous devez savoir sur Mboppi.": "Todo lo que necesitas saber sobre Mboppi.",
+  "Tout ce que vous devez savoir sur MboppiShop.": "Todo lo que necesitas saber sobre MboppiShop.",
   "Comment créer un compte ?": "¿Cómo crear una cuenta?",
   "Créez un compte gratuitement en moins d'une minute : choisissez votre rôle (boutique, vendeur, client ou créateur), renseignez votre nom et votre e-mail. Vous pouvez aussi vous connecter avec Google.":
     "Crea una cuenta gratis en menos de un minuto: elige tu rol (tienda, vendedor, cliente o creador), introduce tu nombre y tu correo. También puedes iniciar sesión con Google.",
@@ -4907,8 +4907,8 @@ const ES = {
   "Ajoutez un produit à votre panier puis validez la commande avec vos coordonnées. Vous recevez un code client pour suivre votre commande sur la page de suivi. Vous pouvez aussi contacter directement la boutique sur WhatsApp.":
     "Agrega un producto a tu carrito y luego valida el pedido con tus datos. Recibes un código de cliente para seguir tu pedido en la página de seguimiento. También puedes contactar directamente con la tienda por WhatsApp.",
   "Comment payer ?": "¿Cómo pagar?",
-  "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money. Mboppi ne demande jamais de paiement en ligne.":
-    "No se necesita ninguna tarjeta bancaria. El pago se hace directamente con el vendedor o el repartidor, a la entrega o por dinero móvil. Mboppi nunca pide un pago en línea.",
+  "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le vendeur ou le livreur, à la livraison ou par mobile money. MboppiShop ne demande jamais de paiement en ligne.":
+    "No se necesita ninguna tarjeta bancaria. El pago se hace directamente con el vendedor o el repartidor, a la entrega o por dinero móvil. MboppiShop nunca pide un pago en línea.",
   "Comment devenir vendeur ?": "¿Cómo hacerse vendedor?",
   "Créez un compte avec le rôle « vendeur ». Vous recevrez un code vendeur à partager avec vos clients. L'accès à votre espace vendeur est soumis à l'adhésion de 30 jours (1 500 XAF), comme pour les boutiques et les créateurs (2 500 XAF). Pour chaque vente, vous gagnez la commission affichée sur le produit.":
     "Crea una cuenta con el rol «vendedor». Recibirás un código de vendedor para compartir con tus clientes. El acceso a tu espacio de vendedor requiere la membresía de 30 días (1 500 XAF), igual que para las tiendas y los creadores (2 500 XAF). Por cada venta, ganas la comisión mostrada en el producto.",
@@ -4921,14 +4921,14 @@ const ES = {
   "Comment télécharger un produit digital ?": "¿Cómo descargar un producto digital?",
   "Un produit digital ne se livre pas : dès que la boutique confirme le paiement, vous le téléchargez depuis la page de confirmation d'achat ou votre espace client, via un lien sécurisé. Les téléchargements sont limités par acheteur (5 par défaut) et la livraison est toujours offerte.":
     "Un producto digital no se entrega: en cuanto la tienda confirma el pago, lo descargas desde la página de confirmación de compra o tu espacio de cliente, mediante un enlace seguro. Las descargas están limitadas por comprador (5 por defecto) y la entrega es siempre gratuita.",
-  "L'accès aux espaces professionnels (boutique, vendeur, créateur) est soumis à une adhésion de 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur. Les clients et les livreurs n'ont rien à payer. Cette adhésion ne concerne pas les ventes : Mboppi ne prélève aucun frais sur les transactions entre les parties.":
-    "El acceso a los espacios profesionales (tienda, vendedor, creador) requiere una membresía de 30 días — 1 500 XAF para el vendedor, 2 500 XAF para la tienda y el creador. Los clientes y los repartidores no pagan nada. Esta membresía no afecta a las ventas: Mboppi no cobra ninguna comisión sobre las transacciones entre las partes.",
+  "L'accès aux espaces professionnels (boutique, vendeur, créateur) est soumis à une adhésion de 30 jours — 1 500 XAF pour le vendeur, 2 500 XAF pour la boutique et le créateur. Les clients et les livreurs n'ont rien à payer. Cette adhésion ne concerne pas les ventes : MboppiShop ne prélève aucun frais sur les transactions entre les parties.":
+    "El acceso a los espacios profesionales (tienda, vendedor, creador) requiere una membresía de 30 días — 1 500 XAF para el vendedor, 2 500 XAF para la tienda y el creador. Los clientes y los repartidores no pagan nada. Esta membresía no afecta a las ventas: MboppiShop no cobra ninguna comisión sobre las transacciones entre las partes.",
   "Un produit digital (ebook, musique, vidéo, document…) n'est pas livré : il est téléchargé par l'acheteur depuis la page de confirmation d'achat ou son espace client, dès que la boutique confirme le paiement. Aucun frais de livraison ne s'applique.":
     "Un producto digital (ebook, música, vídeo, documento…) no se entrega: el comprador lo descarga desde la página de confirmación de compra o su espacio de cliente, en cuanto la tienda confirma el pago. No se aplica ningún gasto de envío.",
   "Votre paiement vous parviendra dans un délai maximum de 72 h après validation de votre demande.":
     "Tu pago te llegará en un plazo máximo de 72 h tras la validación de tu solicitud.",
-  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe Mboppi. Votre paiement vous parviendra dans un délai maximum de 72 h.":
-    "Tu solicitud de retiro de {amount} F ha sido recibida por el equipo Mboppi. Tu pago te llegará en un plazo máximo de 72 h.",
+  "Votre demande de retrait de {amount} F a bien été reçue par l'équipe MboppiShop. Votre paiement vous parviendra dans un délai maximum de 72 h.":
+    "Tu solicitud de retiro de {amount} F ha sido recibida por el equipo MboppiShop. Tu pago te llegará en un plazo máximo de 72 h.",
   "Demande envoyée ✓ L'administration vous paiera sur vos moyens de paiement configurés, dans un délai maximum de 72 h.":
     "Solicitud enviada ✓ La administración te pagará en tus medios de pago configurados, en un plazo máximo de 72 h.",
   "Votre paiement vous parvient sous 72 h maximum après validation de votre demande.":
@@ -4957,16 +4957,16 @@ const ES = {
   "Oui, depuis votre espace « Mon compte ». Vos données sont alors supprimées définitivement de notre base.":
     "Sí, desde tu espacio «Mi cuenta». Entonces tus datos se eliminan definitivamente de nuestra base.",
   "Éditeur du site": "Editor del sitio",
-  "Le site Mboppi est édité par l'équipe Mboppi. Pour toute question, utilisez la page Contact.":
-    "El sitio Mboppi es editado por el equipo de Mboppi. Para cualquier pregunta, usa la página Contacto.",
+  "Le site MboppiShop est édité par l'équipe MboppiShop. Pour toute question, utilisez la page Contact.":
+    "El sitio MboppiShop es editado por el equipo de MboppiShop. Para cualquier pregunta, usa la página Contacto.",
   Hébergement: "Alojamiento",
   "Le site est hébergé par Vercel Inc., 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis. Les données sont stockées dans une base PostgreSQL hébergée par Neon.":
     "El sitio está alojado por Vercel Inc., 340 S Lemon Ave #4133, Walnut, CA 91789, Estados Unidos. Los datos se almacenan en una base PostgreSQL alojada por Neon.",
   "Propriété intellectuelle": "Propiedad intelectual",
-  "Les contenus publiés par les boutiques et vendeurs (produits, photos, descriptions) leur appartiennent. La marque et le nom Mboppi appartiennent à leurs propriétaires.":
-    "Los contenidos publicados por tiendas y vendedores (productos, fotos, descripciones) les pertenecen. La marca y el nombre Mboppi pertenecen a sus propietarios.",
-  "Mboppi utilise des cookies pour améliorer votre expérience (thème, langue, panier). Nous ne vendons aucune donnée.":
-    "Mboppi usa cookies para mejorar tu experiencia (tema, idioma, carrito). No vendemos ningún dato.",
+  "Les contenus publiés par les boutiques et vendeurs (produits, photos, descriptions) leur appartiennent. La marque et le nom MboppiShop appartiennent à leurs propriétaires.":
+    "Los contenidos publicados por tiendas y vendedores (productos, fotos, descripciones) les pertenecen. La marca y el nombre MboppiShop pertenecen a sus propietarios.",
+  "MboppiShop utilise des cookies pour améliorer votre expérience (thème, langue, panier). Nous ne vendons aucune donnée.":
+    "MboppiShop usa cookies para mejorar tu experiencia (tema, idioma, carrito). No vendemos ningún dato.",
   Accepter: "Aceptar",
   "En savoir plus": "Saber más",
   Cookies: "Cookies",
@@ -5013,8 +5013,8 @@ const ES = {
   parrainage: "referidos",
   "Commission produit": "Comisión de producto",
   "Commission parrainage (2%)": "Comisión de referidos (2%)",
-  "Vous vous inscrivez via le lien d'un vendeur Mboppi : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.":
-    "Te registras a través del enlace de un vendedor de Mboppi: tu registro es gratis y el rol «Cliente» se selecciona automáticamente para ti.",
+  "Vous vous inscrivez via le lien d'un vendeur MboppiShop : votre inscription est gratuite, le rôle « Client » est sélectionné pour vous.":
+    "Te registras a través del enlace de un vendedor de MboppiShop: tu registro es gratis y el rol «Cliente» se selecciona automáticamente para ti.",
   "Code du vendeur (parrainage)": "Código del vendedor (referidos)",
   "Le vendeur {seller} réclame le paiement de sa commission pour « {product} ».":
     "El vendedor {seller} reclama el pago de su comisión por « {product} ».",
@@ -5059,12 +5059,12 @@ const RICH_EN = {
   "Roman & fiction": "Novel & fiction",
   "Magazine & actualité": "Magazine & news",
   "Document général": "General document",
-  "Signature Mboppi en cours…": "Applying Mboppi signature…",
-  "Téléchargement lancé — signature Mboppi appliquée.":
-    "Download started — Mboppi signature applied.",
+  "Signature MboppiShop en cours…": "Applying MboppiShop signature…",
+  "Téléchargement lancé — signature MboppiShop appliquée.":
+    "Download started — MboppiShop signature applied.",
   "Téléchargement lancé.": "Download started.",
   "({n} restant(s)).": "({n} remaining).",
-  "Certificat Mboppi": "Mboppi certificate",
+  "Certificat MboppiShop": "MboppiShop certificate",
   "Certificat indisponible pour le moment.": "Certificate unavailable right now.",
   "IA & Technologies": "AI & Technology",
   "Éducation & Formation": "Education & Training",
@@ -5091,8 +5091,8 @@ const RICH_EN = {
   "Aucune création pour le moment.": "No creation yet.",
   "{n} créations en ligne": "{n} creations online",
   "Voir ses créations": "View their creations",
-  "Bonjour {name}, je vous contacte depuis Mboppi au sujet de vos créations.":
-    "Hello {name}, I am contacting you from Mboppi about your creations.",
+  "Bonjour {name}, je vous contacte depuis MboppiShop au sujet de vos créations.":
+    "Hello {name}, I am contacting you from MboppiShop about your creations.",
   "Photo de profil": "Profile picture",
   "Changer la photo": "Change photo",
   "Photo de profil mise à jour.": "Profile picture updated.",
@@ -5123,13 +5123,13 @@ const RICH_EN = {
     "Pay now with the creator: the order is pre-filled.",
   "Produit digital : le bouton ci-dessous devient actif dès que le créateur a confirmé votre paiement. Conservez votre code : il vous permet de retélécharger à tout moment.":
     "Digital product: the button below becomes active as soon as the creator confirms your payment. Keep your code: it lets you download again at any time.",
-  "Merci de faire confiance à Mboppi ! 🙏 Chaque création est publiée par un créateur vérifié : payez en toute sécurité, et votre fichier se débloque dès la confirmation du paiement. Notre équipe suit chaque vente pour vous protéger.":
-    "Thank you for trusting Mboppi! 🙏 Every creation is published by a verified creator: pay safely, and your file unlocks as soon as the payment is confirmed. Our team follows every sale to protect you.",
-  "Merci de faire confiance à Mboppi ! 🙏 Votre commande est transmise immédiatement à la boutique, au créateur et au vendeur, qui vous contactent pour la livraison. Vous recevez un code de confirmation : gardez-le précieusement, c'est votre preuve d'achat le jour de la remise. Notre équipe suit chaque vente du début à la fin.":
-    "Thank you for trusting Mboppi! 🙏 Your order is sent immediately to the shop, the creator and the seller, who will contact you for delivery. You receive a confirmation code: keep it safe, it is your proof of purchase on handover day. Our team follows every sale from start to finish.",
+  "Merci de faire confiance à MboppiShop ! 🙏 Chaque création est publiée par un créateur vérifié : payez en toute sécurité, et votre fichier se débloque dès la confirmation du paiement. Notre équipe suit chaque vente pour vous protéger.":
+    "Thank you for trusting MboppiShop! 🙏 Every creation is published by a verified creator: pay safely, and your file unlocks as soon as the payment is confirmed. Our team follows every sale to protect you.",
+  "Merci de faire confiance à MboppiShop ! 🙏 Votre commande est transmise immédiatement à la boutique, au créateur et au vendeur, qui vous contactent pour la livraison. Vous recevez un code de confirmation : gardez-le précieusement, c'est votre preuve d'achat le jour de la remise. Notre équipe suit chaque vente du début à la fin.":
+    "Thank you for trusting MboppiShop! 🙏 Your order is sent immediately to the shop, the creator and the seller, who will contact you for delivery. You receive a confirmation code: keep it safe, it is your proof of purchase on handover day. Our team follows every sale from start to finish.",
   "Une marketplace pensée pour le terrain": "A marketplace designed for real local commerce",
-  "Mboppi rapproche la découverte en ligne de la relation commerciale locale.":
-    "Mboppi brings online discovery closer to local business relationships.",
+  "MboppiShop rapproche la découverte en ligne de la relation commerciale locale.":
+    "MboppiShop brings online discovery closer to local business relationships.",
   "Des vitrines simples à partager": "Showcases that are easy to share",
   "Chaque produit dispose d’une fiche publique avec son prix, sa disponibilité, ses photos, sa catégorie, sa garantie éventuelle et les informations de la boutique. Les liens peuvent être partagés par WhatsApp ou sur les réseaux sociaux.":
     "Each product has a public page with its price, availability, photos, category, any warranty and shop information. Links can be shared on WhatsApp or social networks.",
@@ -5139,8 +5139,8 @@ const RICH_EN = {
   "Une rémunération lisible": "Clear remuneration",
   "La commission vendeur est affichée avant la vente. Le parrainage client représente 2 % pour le vendeur référent, et les frais de livraison sont saisis au moment de la livraison. Aucun frais de plateforme n’est ajouté aux montants reversés.":
     "The seller commission is displayed before the sale. Customer referrals represent 2% for the referring seller, and delivery fees are entered at delivery. No platform fee is added to amounts paid out.",
-  "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire. Mboppi ne prélève aucun frais de plateforme.":
-    "Payments are manual and direct: cash on delivery, Mobile Money or bank transfer. Mboppi charges no platform fees.",
+  "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire. MboppiShop ne prélève aucun frais de plateforme.":
+    "Payments are manual and direct: cash on delivery, Mobile Money or bank transfer. MboppiShop charges no platform fees.",
   "Qu’est-ce qu’une promotion éclair ?": "What is a flash promotion?",
   "Une boutique peut proposer un produit à prix réduit pendant une durée limitée, au maximum 24 heures et une fois par semaine. Le produit est alors retiré des catalogues publics, mais reste accessible par son lien direct. La commission vendeur est de 0 % pendant la promotion.":
     "A shop can offer a product at a reduced price for a limited time, up to 24 hours and once per week. The product is removed from public catalogs but remains accessible through its direct link. The seller commission is 0% during the promotion.",
@@ -5157,8 +5157,8 @@ const RICH_EN = {
   "Oui pour un achat direct. Vous devez fournir votre nom, téléphone, ville et adresse, puis conserver le code de confirmation reçu. Un compte est nécessaire pour retrouver automatiquement l’historique de ses achats.":
     "Yes, for a direct purchase. You must provide your name, phone number, city and address, then keep the confirmation code. An account is needed to automatically find your purchase history.",
   "Quels moyens de paiement sont acceptés ?": "Which payment methods are accepted?",
-  "Les paiements sont directs et manuels : espèces à la livraison, transfert Mobile Money direct ou virement bancaire, selon ce qui est convenu avec le bénéficiaire. Mboppi ne demande jamais de carte bancaire et ne collecte pas les paiements.":
-    "Payments are direct and manual: cash on delivery, direct Mobile Money transfer or bank transfer, as agreed with the beneficiary. Mboppi never asks for a bank card or collects payments.",
+  "Les paiements sont directs et manuels : espèces à la livraison, transfert Mobile Money direct ou virement bancaire, selon ce qui est convenu avec le bénéficiaire. MboppiShop ne demande jamais de carte bancaire et ne collecte pas les paiements.":
+    "Payments are direct and manual: cash on delivery, direct Mobile Money transfer or bank transfer, as agreed with the beneficiary. MboppiShop never asks for a bank card or collects payments.",
   "Lors de votre inscription, nous collectons votre nom, e-mail, rôle, pays et, selon les cas, téléphone, ville et quartier. Les commandes ajoutent les informations nécessaires à la livraison. Les boutiques, vendeurs et créateurs fournissent aussi les données de leurs produits, offres, photos et coordonnées professionnelles.":
     "When you register, we collect your name, email, role, country and, where applicable, phone number, city and neighborhood. Orders add the information needed for delivery. Shops, sellers and creators also provide product, offer, photo and business contact data.",
   "Les données sont stockées dans PostgreSQL, avec des contrôles d’accès côté serveur. Les mots de passe sont hachés avec bcrypt et ne sont jamais lisibles. Les sessions utilisent des jetons temporaires et les échanges avec le site sont protégés par HTTPS.":
@@ -5166,8 +5166,8 @@ const RICH_EN = {
   "Les données de compte sont conservées pendant la durée d’utilisation du compte et aussi longtemps que nécessaire pour l’historique des commandes, la sécurité et les obligations applicables. Les produits, offres et photos retirés sont supprimés lorsque le traitement le permet. Les données ne sont ni vendues ni utilisées pour de la publicité ciblée.":
     "Account data is kept while the account is used and as long as necessary for order history, security and applicable obligations. Removed products, offers and photos are deleted where processing allows. Data is neither sold nor used for targeted advertising.",
   "📊 Mesures d’audience": "📊 Audience measurement",
-  "Mboppi mesure les visites de pages et les consultations de produits ou d’offres afin de comprendre l’utilisation du site et d’améliorer le service. Un identifiant technique peut être conservé dans votre navigateur ; il ne constitue pas un profil public et n’est pas vendu.":
-    "Mboppi measures page visits and product or offer views to understand site usage and improve the service. A technical identifier may be stored in your browser; it is not a public profile and is not sold.",
+  "MboppiShop mesure les visites de pages et les consultations de produits ou d’offres afin de comprendre l’utilisation du site et d’améliorer le service. Un identifiant technique peut être conservé dans votre navigateur ; il ne constitue pas un profil public et n’est pas vendu.":
+    "MboppiShop measures page visits and product or offer views to understand site usage and improve the service. A technical identifier may be stored in your browser; it is not a public profile and is not sold.",
   "🍪 Cookies et stockage local": "🍪 Cookies and local storage",
   "Le site utilise le stockage local du navigateur pour conserver votre session, votre panier, vos favoris, vos préférences de langue et certains choix d’affichage. Vous pouvez effacer ces données dans les réglages de votre navigateur ; cela peut supprimer votre panier ou vous déconnecter.":
     "The site uses browser local storage for your session, cart, favorites, language preferences and display choices. You can clear this data in your browser settings; this may remove your cart or sign you out.",
@@ -5205,12 +5205,12 @@ const RICH_ES = {
   "Roman & fiction": "Novela y ficción",
   "Magazine & actualité": "Revista y actualidad",
   "Document général": "Documento general",
-  "Signature Mboppi en cours…": "Aplicando la firma Mboppi…",
-  "Téléchargement lancé — signature Mboppi appliquée.":
-    "Descarga iniciada — firma Mboppi aplicada.",
+  "Signature MboppiShop en cours…": "Aplicando la firma MboppiShop…",
+  "Téléchargement lancé — signature MboppiShop appliquée.":
+    "Descarga iniciada — firma MboppiShop aplicada.",
   "Téléchargement lancé.": "Descarga iniciada.",
   "({n} restant(s)).": "({n} restante(s)).",
-  "Certificat Mboppi": "Certificado Mboppi",
+  "Certificat MboppiShop": "Certificado MboppiShop",
   "Certificat indisponible pour le moment.": "Certificado no disponible por el momento.",
   "IA & Technologies": "IA y Tecnología",
   "Éducation & Formation": "Educación y Formación",
@@ -5237,8 +5237,8 @@ const RICH_ES = {
   "Aucune création pour le moment.": "Ninguna creación por el momento.",
   "{n} créations en ligne": "{n} creaciones en línea",
   "Voir ses créations": "Ver sus creaciones",
-  "Bonjour {name}, je vous contacte depuis Mboppi au sujet de vos créations.":
-    "Hola {name}, le contacto desde Mboppi acerca de sus creaciones.",
+  "Bonjour {name}, je vous contacte depuis MboppiShop au sujet de vos créations.":
+    "Hola {name}, le contacto desde MboppiShop acerca de sus creaciones.",
   "Photo de profil": "Foto de perfil",
   "Changer la photo": "Cambiar la foto",
   "Photo de profil mise à jour.": "Foto de perfil actualizada.",
@@ -5246,8 +5246,8 @@ const RICH_ES = {
   "JPG, PNG ou WebP — convertie automatiquement en WebP (fichier léger).":
     "JPG, PNG o WebP — convertida automáticamente a WebP (archivo ligero).",
   "Une marketplace pensée pour le terrain": "Un marketplace pensado para el comercio local",
-  "Mboppi rapproche la découverte en ligne de la relation commerciale locale.":
-    "Mboppi acerca el descubrimiento en línea a las relaciones comerciales locales.",
+  "MboppiShop rapproche la découverte en ligne de la relation commerciale locale.":
+    "MboppiShop acerca el descubrimiento en línea a las relaciones comerciales locales.",
   "Des vitrines simples à partager": "Escaparates fáciles de compartir",
   "Une vente suivie de bout en bout": "Ventas seguidas de principio a fin",
   "Une rémunération lisible": "Una remuneración clara",
@@ -5278,14 +5278,14 @@ const RICH_ES = {
     "Los datos se almacenan en PostgreSQL con controles de acceso del servidor. Las contraseñas se cifran con bcrypt y nunca son legibles. Las sesiones usan tokens temporales y las comunicaciones están protegidas por HTTPS.",
   "La création d’un compte et l’espace vendeur sont gratuits. Vous devez protéger vos identifiants, ne pas partager votre session et signaler rapidement toute utilisation non autorisée. Un compte peut être limité ou suspendu en cas de risque pour les utilisateurs ou la plateforme.":
     "Crear una cuenta y usar el espacio de vendedor es gratis. Debes proteger tus credenciales y avisar de cualquier uso no autorizado. Una cuenta puede limitarse o suspenderse si supone un riesgo.",
-  "Le paiement est manuel et direct : espèces à la livraison, virement Mobile Money ou virement bancaire. Mboppi ne collecte aucun paiement et ne prélève aucun frais de plateforme.":
-    "El pago es manual y directo: efectivo a la entrega, transferencia Mobile Money o transferencia bancaria. Mboppi no cobra pagos ni comisiones de plataforma.",
+  "Le paiement est manuel et direct : espèces à la livraison, virement Mobile Money ou virement bancaire. MboppiShop ne collecte aucun paiement et ne prélève aucun frais de plateforme.":
+    "El pago es manual y directo: efectivo a la entrega, transferencia Mobile Money o transferencia bancaria. MboppiShop no cobra pagos ni comisiones de plataforma.",
   "La boutique définit la commission affichée sur chaque produit. Le vendeur reçoit la commission liée à une vente réalisée avec son code. Le parrainage concerne un client affilié et représente 2 % du montant de ses achats livrés ; le cumul est versé à partir de 5 000 XAF. Les paiements aux bénéficiaires sont effectués manuellement par la boutique, sans frais de plateforme.":
     "La tienda define la comisión mostrada en cada producto. El vendedor recibe la comisión de una venta realizada con su código. Un cliente afiliado genera un 2 % sobre sus compras entregadas, pagado desde 5.000 XAF. La tienda paga manualmente, sin comisiones de plataforma.",
-  "Le paiement se fait directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. Mboppi ne collecte pas les paiements et ne prélève aucun frais de plateforme. Les frais de livraison sont indiqués sur chaque produit.":
-    "El pago se realiza directamente con la tienda, el vendedor o el repartidor: efectivo, Mobile Money directo o transferencia bancaria. Mboppi no cobra pagos ni comisiones de plataforma.",
-  "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, Mboppi peut servir d’intermédiaire de médiation.":
-    "Las garantías aparecen en cada producto. Las devoluciones se gestionan directamente con la tienda o el vendedor. En caso de conflicto, Mboppi puede actuar como mediador.",
+  "Le paiement se fait directement avec la boutique, le vendeur ou le livreur : espèces à la livraison, Mobile Money direct ou virement bancaire. MboppiShop ne collecte pas les paiements et ne prélève aucun frais de plateforme. Les frais de livraison sont indiqués sur chaque produit.":
+    "El pago se realiza directamente con la tienda, el vendedor o el repartidor: efectivo, Mobile Money directo o transferencia bancaria. MboppiShop no cobra pagos ni comisiones de plataforma.",
+  "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, MboppiShop peut servir d’intermédiaire de médiation.":
+    "Las garantías aparecen en cada producto. Las devoluciones se gestionan directamente con la tienda o el vendedor. En caso de conflicto, MboppiShop puede actuar como mediador.",
   "Modifier le contenu": "Editar el contenido",
   "Tout effacer": "Borrar todo",
   "Insérer du texte": "Insertar texto",
@@ -5317,12 +5317,12 @@ const RICH_AR = {
   "Roman & fiction": "الروايات والخيال",
   "Magazine & actualité": "المجلات والأخبار",
   "Document général": "مستند عام",
-  "Signature Mboppi en cours…": "جاري تطبيق توقيع مبوبي…",
-  "Téléchargement lancé — signature Mboppi appliquée.":
+  "Signature MboppiShop en cours…": "جاري تطبيق توقيع مبوبي…",
+  "Téléchargement lancé — signature MboppiShop appliquée.":
     "بدأ التنزيل — تم تطبيق توقيع مبوبي.",
   "Téléchargement lancé.": "بدأ التنزيل.",
   "({n} restant(s)).": "({n} متبقٍ).",
-  "Certificat Mboppi": "شهادة مبوبي",
+  "Certificat MboppiShop": "شهادة مبوبي",
   "Certificat indisponible pour le moment.": "الشهادة غير متوفرة حالياً.",
   "IA & Technologies": "الذكاء الاصطناعي والتقنية",
   "Éducation & Formation": "التعليم والتدريب",
@@ -5349,8 +5349,8 @@ const RICH_AR = {
   "Aucune création pour le moment.": "لا يوجد إبداع حتى الآن.",
   "{n} créations en ligne": "{n} إبداعات متاحة",
   "Voir ses créations": "عرض إبداعاته",
-  "Bonjour {name}, je vous contacte depuis Mboppi au sujet de vos créations.":
-    "مرحبًا {name}، أتواصل معك من Mboppi بخصوص إبداعاتك.",
+  "Bonjour {name}, je vous contacte depuis MboppiShop au sujet de vos créations.":
+    "مرحبًا {name}، أتواصل معك من MboppiShop بخصوص إبداعاتك.",
   "Photo de profil": "الصورة الشخصية",
   "Changer la photo": "تغيير الصورة",
   "Photo de profil mise à jour.": "تم تحديث الصورة الشخصية.",
@@ -5358,8 +5358,8 @@ const RICH_AR = {
   "JPG, PNG ou WebP — convertie automatiquement en WebP (fichier léger).":
     "JPG أو PNG أو WebP — تُحوَّل تلقائيًا إلى WebP (ملف خفيف).",
   "Une marketplace pensée pour le terrain": "سوق إلكترونية مصممة للتجارة المحلية",
-  "Mboppi rapproche la découverte en ligne de la relation commerciale locale.":
-    "تقرّب Mboppi الاكتشاف عبر الإنترنت من العلاقات التجارية المحلية.",
+  "MboppiShop rapproche la découverte en ligne de la relation commerciale locale.":
+    "تقرّب MboppiShop الاكتشاف عبر الإنترنت من العلاقات التجارية المحلية.",
   "Des vitrines simples à partager": "واجهات سهلة المشاركة",
   "Une vente suivie de bout en bout": "متابعة البيع من البداية إلى النهاية",
   "Une rémunération lisible": "مكافآت واضحة",
@@ -5379,23 +5379,23 @@ const RICH_AR = {
     "يحصل الطلب على رمز تأكيد. تعالجه المتجر، ويتحقق الموصّل من رمز المتجر، ويؤكد العميل الاستلام برمزه الخاص.",
   "La commission vendeur est affichée avant la vente. Le parrainage client représente 2 % pour le vendeur référent, et les frais de livraison sont saisis au moment de la livraison. Aucun frais de plateforme n’est ajouté aux montants reversés.":
     "تظهر عمولة البائع قبل البيع. تمنح إحالة العميل 2٪ للبائع المُحيل، وتُسجل رسوم التوصيل عند التسليم. لا تُضاف أي رسوم للمنصة.",
-  "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire. Mboppi ne prélève aucun frais de plateforme.":
-    "المدفوعات يدوية ومباشرة: نقداً عند التسليم أو عبر Mobile Money أو التحويل البنكي. لا تفرض Mboppi أي رسوم منصة.",
+  "Les paiements sont manuels et directs : espèces à la livraison, Mobile Money ou virement bancaire. MboppiShop ne prélève aucun frais de plateforme.":
+    "المدفوعات يدوية ومباشرة: نقداً عند التسليم أو عبر Mobile Money أو التحويل البنكي. لا تفرض MboppiShop أي رسوم منصة.",
   "Le stock est vérifié et réservé au moment de la commande. Si la quantité disponible est insuffisante, la commande est refusée afin d’éviter de vendre un article indisponible.":
     "يتم التحقق من المخزون وحجزه عند الطلب. إذا لم تكن الكمية كافية، يُرفض الطلب لتجنب بيع منتج غير متوفر.",
   "Quels moyens de paiement sont acceptés ?": "ما طرق الدفع المقبولة؟",
-  "Les paiements sont directs et manuels : espèces à la livraison, transfert Mobile Money direct ou virement bancaire, selon ce qui est convenu avec le bénéficiaire. Mboppi ne demande jamais de carte bancaire et ne collecte pas les paiements.":
-    "المدفوعات مباشرة ويدوية: نقداً عند التسليم أو تحويل Mobile Money مباشر أو تحويل بنكي، حسب الاتفاق مع المستفيد. لا تطلب Mboppi بطاقة مصرفية ولا تحصّل المدفوعات.",
+  "Les paiements sont directs et manuels : espèces à la livraison, transfert Mobile Money direct ou virement bancaire, selon ce qui est convenu avec le bénéficiaire. MboppiShop ne demande jamais de carte bancaire et ne collecte pas les paiements.":
+    "المدفوعات مباشرة ويدوية: نقداً عند التسليم أو تحويل Mobile Money مباشر أو تحويل بنكي، حسب الاتفاق مع المستفيد. لا تطلب MboppiShop بطاقة مصرفية ولا تحصّل المدفوعات.",
   "Lors de votre inscription, nous collectons votre nom, e-mail, rôle, pays et, selon les cas, téléphone, ville et quartier. Les commandes ajoutent les informations nécessaires à la livraison. Les boutiques, vendeurs et créateurs fournissent aussi les données de leurs produits, offres, photos et coordonnées professionnelles.":
     "عند التسجيل نجمع الاسم والبريد والدور والبلد، وعند الحاجة الهاتف والمدينة والحي. تضيف الطلبات المعلومات اللازمة للتوصيل. كما يقدم المتجر والبائع والمبدع بيانات المنتجات والعروض والصور وبيانات الاتصال المهنية.",
   "Les données sont stockées dans PostgreSQL, avec des contrôles d’accès côté serveur. Les mots de passe sont hachés avec bcrypt et ne sont jamais lisibles. Les sessions utilisent des jetons temporaires et les échanges avec le site sont protégés par HTTPS.":
     "تُخزن البيانات في PostgreSQL مع ضوابط وصول على الخادم. تُجزأ كلمات المرور بواسطة bcrypt ولا يمكن قراءتها. تستخدم الجلسات رموزاً مؤقتة وتحمي HTTPS الاتصالات.",
   "La création d’un compte et l’espace vendeur sont gratuits. Vous devez protéger vos identifiants, ne pas partager votre session et signaler rapidement toute utilisation non autorisée. Un compte peut être limité ou suspendu en cas de risque pour les utilisateurs ou la plateforme.":
     "إنشاء الحساب ومساحة البائع مجانيان. يجب حماية بيانات الدخول والإبلاغ عن أي استخدام غير مصرح به. قد يُقيّد الحساب أو يُعلّق عند وجود خطر.",
-  "Le paiement est manuel et direct : espèces à la livraison, virement Mobile Money ou virement bancaire. Mboppi ne collecte aucun paiement et ne prélève aucun frais de plateforme.":
-    "الدفع يدوي ومباشر: نقداً عند التسليم أو تحويل Mobile Money أو تحويل بنكي. لا تحصّل Mboppi أي مدفوعات ولا تفرض رسوم منصة.",
-  "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, Mboppi peut servir d’intermédiaire de médiation.":
-    "تُذكر الضمانات المحتملة في صفحة كل منتج. تُعالج المرتجعات مباشرة مع المتجر أو البائع. عند النزاع يمكن لـ Mboppi التوسط.",
+  "Le paiement est manuel et direct : espèces à la livraison, virement Mobile Money ou virement bancaire. MboppiShop ne collecte aucun paiement et ne prélève aucun frais de plateforme.":
+    "الدفع يدوي ومباشر: نقداً عند التسليم أو تحويل Mobile Money أو تحويل بنكي. لا تحصّل MboppiShop أي مدفوعات ولا تفرض رسوم منصة.",
+  "Les garanties éventuelles sont indiquées sur chaque produit. Les retours se traitent directement avec la boutique ou le vendeur. En cas de litige, MboppiShop peut servir d’intermédiaire de médiation.":
+    "تُذكر الضمانات المحتملة في صفحة كل منتج. تُعالج المرتجعات مباشرة مع المتجر أو البائع. عند النزاع يمكن لـ MboppiShop التوسط.",
   "Modifier le contenu": "تعديل المحتوى",
   "Tout effacer": "حذف الكل",
   "Insérer du texte": "إدراج نص",

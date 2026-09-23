@@ -6,7 +6,7 @@ import { isTouchDevice } from "../share.js";
 
 function shareMessage(t) {
   return t(
-    "Découvrez Mboppi : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !"
+    "Découvrez MboppiShop : le marché en ligne du Cameroun et de l'Afrique. Boutiques, vendeurs, créateurs et livreur — commandez facilement, vendez plus et Gagnez !"
   );
 }
 
@@ -33,7 +33,7 @@ export default function ShareMboppiButton({ onOpened }) {
       // Présentation native d'origine : texte + lien, SANS pièce jointe.
       // (Un fichier joint fait apparaître un second « Copier » sur Android.)
       try {
-        await navigator.share({ title: t("Partager Mboppi"), text: msg, url: BASE_URL });
+        await navigator.share({ title: t("Partager MboppiShop"), text: msg, url: BASE_URL });
       } catch {
         /* partage annulé par l'utilisateur */
       }
@@ -54,14 +54,14 @@ export default function ShareMboppiButton({ onOpened }) {
     <button
       type="button"
       className="suggest-toggle share-mboppi-toggle"
-      aria-label={t("Partager Mboppi")}
-      title={t("Partager Mboppi")}
+      aria-label={t("Partager MboppiShop")}
+      title={t("Partager MboppiShop")}
       onClick={handleShare}
     >
       <span className="share-mboppi-icon">
         <IconShare size={16} />
       </span>
-      <span>{copied ? t("Lien copié !") : t("Partager Mboppi")}</span>
+      <span>{copied ? t("Lien copié !") : t("Partager MboppiShop")}</span>
     </button>
   );
 }

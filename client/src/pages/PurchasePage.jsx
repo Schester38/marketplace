@@ -108,7 +108,7 @@ export default function PurchasePage() {
       src.payLabel ||
       (paymentMethod === "espece" ? "En espèces (à la livraison)" : "Mobile Money direct");
     const lines = [
-      "🛒 *Nouvelle commande Mboppi*",
+      "🛒 *Nouvelle commande MboppiShop*",
       "",
       `📦 Produit : ${product.name}`,
       isDigital ? null : `🔢 Quantité : ${qty}`,
@@ -235,7 +235,7 @@ export default function PurchasePage() {
   return (
     <main className="container narrow">
       <Seo
-        title={`${t("Acheter")} — ${product.name} — Mboppi`}
+        title={`${t("Acheter")} — ${product.name} — MboppiShop`}
         description={t("Confirmez votre commande avec le code du vendeur.")}
         noindex
       />
@@ -247,10 +247,10 @@ export default function PurchasePage() {
           <p>
             {product?.is_digital
               ? t(
-                  "Merci de faire confiance à Mboppi ! 🙏 Chaque création est publiée par un créateur vérifié : payez en toute sécurité, et votre fichier se débloque dès la confirmation du paiement. Notre équipe suit chaque vente pour vous protéger."
+                  "Merci de faire confiance à MboppiShop ! 🙏 Chaque création est publiée par un créateur vérifié : payez en toute sécurité, et votre fichier se débloque dès la confirmation du paiement. Notre équipe suit chaque vente pour vous protéger."
                 )
               : t(
-                  "Merci de faire confiance à Mboppi ! 🙏 Votre commande est transmise immédiatement à la boutique, au créateur et au vendeur, qui vous contactent pour la livraison. Vous recevez un code de confirmation : gardez-le précieusement, c'est votre preuve d'achat le jour de la remise. Notre équipe suit chaque vente du début à la fin."
+                  "Merci de faire confiance à MboppiShop ! 🙏 Votre commande est transmise immédiatement à la boutique, au créateur et au vendeur, qui vous contactent pour la livraison. Vous recevez un code de confirmation : gardez-le précieusement, c'est votre preuve d'achat le jour de la remise. Notre équipe suit chaque vente du début à la fin."
                 )}
           </p>
         </div>
@@ -443,7 +443,7 @@ export default function PurchasePage() {
               }}
             >
               <strong style={{ display: "block", fontSize: 15, color: "#7c2d12" }}>
-                🛡️ {t("CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPI.")}
+                🛡️ {t("CHERS CLIENTS, MERCI DE FAIRE CONFIANCE À MBOPPISHOP.")}
               </strong>
               <p style={{ margin: "6px 0 2px", fontSize: 13, lineHeight: 1.5, color: "#78350f" }}>
                 {t(
@@ -453,7 +453,7 @@ export default function PurchasePage() {
               <small
                 style={{ display: "block", textAlign: "right", fontWeight: 600, color: "#7c2d12" }}
               >
-                — {t("L'Administration Mboppi")}
+                — {t("L'Administration MboppiShop")}
               </small>
             </div>
           )}

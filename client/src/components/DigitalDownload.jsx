@@ -20,9 +20,9 @@ import {
  * Pour un achat effectué sans compte, le code de confirmation de la commande
  * (prop `code`) fait office de preuve d'achat.
  *
- * SIGNATURE MBOPPI (anti-contrefaçon) : le PDF est tamponné dans le navigateur
+ * SIGNATURE MBOPPISHOP (anti-contrefaçon) : le PDF est tamponné dans le navigateur
  * avant l'enregistrement (pied de page + bloc d'authenticité) ; pour les
- * autres formats, un certificat d'authenticité Mboppi (PDF) accompagne le
+ * autres formats, un certificat d'authenticité MboppiShop (PDF) accompagne le
  * fichier. Repli automatique sur le lien direct si le tampon échoue.
  */
 export default function DigitalDownload({ sale, code, compact = false, label }) {
@@ -44,7 +44,7 @@ export default function DigitalDownload({ sale, code, compact = false, label }) 
       let stamped = false;
       if (isPdfFile(d.file_name, d.mime)) {
         try {
-          setMsg(t("Signature Mboppi en cours…"));
+          setMsg(t("Signature MboppiShop en cours…"));
           const res = await fetch(d.url, { mode: "cors" });
           if (res.ok) {
             const buf = await res.arrayBuffer();
@@ -73,7 +73,7 @@ export default function DigitalDownload({ sale, code, compact = false, label }) 
       }
       setCanCert(true);
       const okMsg = stamped
-        ? t("Téléchargement lancé — signature Mboppi appliquée.")
+        ? t("Téléchargement lancé — signature MboppiShop appliquée.")
         : t("Téléchargement lancé.");
       setMsg(
         d.remaining > 0
@@ -121,7 +121,7 @@ export default function DigitalDownload({ sale, code, compact = false, label }) 
           style={{ marginLeft: 8 }}
           onClick={downloadCert}
         >
-          📄 {t("Certificat Mboppi")}
+          📄 {t("Certificat MboppiShop")}
         </button>
       )}
       {sale.digital_name && (

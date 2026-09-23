@@ -445,7 +445,7 @@ export default function Home() {
   return (
     <main className="container home-page">
       <Seo
-        title="Mboppi — Boutiques, vendeurs et offres du moment"
+        title="MboppiShop — Boutiques, vendeurs et offres du moment"
         description="Le marché de votre quartier en ligne : produits des boutiques, créations des créateurs, vente avec commissions, commande avec livraison."
       />
 
@@ -483,12 +483,12 @@ export default function Home() {
               <span>🎊</span>
             </div>
             <span className="hero-badge">
-              <Logo className="logo-inline" /> {t("BIENVENUE SUR MBOPPI")}
+              <Logo className="logo-inline" /> {t("BIENVENUE SUR MBOPPISHOP")}
             </span>
-            <h1>{t("Mboppi, le marché de votre quartier, en ligne")}</h1>
+            <h1>{t("MboppiShop, le marché de votre quartier, en ligne")}</h1>
             <p>
               {t(
-                "Mboppi est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans prix écrasant et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les créateurs exposent leurs talents, juste avec un téléphone et une connexion internet, les vendeurs vendent et gagnent des commissions, et les clients trouvent tout au même endroit avec satisfaction, sans se déplacer."
+                "MboppiShop est née d'une idée simple : permettre à chacun de vendre et d'acheter près de chez soi, sans prix écrasant et sans dépendre des grands sites. Ici, les boutiques publient leurs produits, les créateurs exposent leurs talents, juste avec un téléphone et une connexion internet, les vendeurs vendent et gagnent des commissions, et les clients trouvent tout au même endroit avec satisfaction, sans se déplacer."
               )}
             </p>
             <div className="hero-actions">
@@ -727,7 +727,7 @@ export default function Home() {
               {fNewArrivals.length > 0 && (
                 <ProductRail
                   title={t("Nouveautés")}
-                  hint={t("Les derniers produits publiés sur Mboppi.")}
+                  hint={t("Les derniers produits publiés sur MboppiShop.")}
                   emoji="✨"
                   products={fNewArrivals}
                 />

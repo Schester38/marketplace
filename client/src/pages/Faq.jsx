@@ -13,7 +13,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment payer ?",
-    a: "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le bénéficiaire : en espèces à la livraison, par virement Mobile Money direct. Mboppi ne collecte pas les paiements et ne prélève aucun frais de plateforme.",
+    a: "Aucune carte bancaire n'est nécessaire. Le paiement se fait directement avec le bénéficiaire : en espèces à la livraison, par virement Mobile Money direct. MboppiShop ne collecte pas les paiements et ne prélève aucun frais de plateforme.",
   },
   {
     q: "Comment devenir vendeur ?",
@@ -37,7 +37,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment recevoir mes gains ?",
-    a: "Enregistrez vos coordonnées de réception dans votre espace « Paiements ». Les paiements des commissions sont réalisés manuellement par la boutique, avec une preuve enregistrée sur la vente. Pour les vendeurs et les créateurs, une demande de retrait est payée sur les moyens de paiement configurés dans un délai maximum de 72 h après validation. Mboppi ne prélève aucun frais de plateforme.",
+    a: "Enregistrez vos coordonnées de réception dans votre espace « Paiements ». Les paiements des commissions sont réalisés manuellement par la boutique, avec une preuve enregistrée sur la vente. Pour les vendeurs et les créateurs, une demande de retrait est payée sur les moyens de paiement configurés dans un délai maximum de 72 h après validation. MboppiShop ne prélève aucun frais de plateforme.",
   },
   {
     q: "Comment suivre ma commande ?",
@@ -72,12 +72,12 @@ const FAQ_ITEMS = [
     a: "Une commande peut être annulée depuis le suivi ou l’espace client tant qu’elle n’est pas livrée. Après livraison, contactez la boutique ou le vendeur pour toute question de retour ou de garantie.",
   },
   {
-    q: "Les produits sont-ils vérifiés par Mboppi ?",
-    a: "Les boutiques et créateurs restent responsables de leurs produits, photos, prix et descriptions. Mboppi peut retirer un contenu contraire aux règles et vérifier certains comptes, mais ne remplace pas la boutique dans la relation commerciale.",
+    q: "Les produits sont-ils vérifiés par MboppiShop ?",
+    a: "Les boutiques et créateurs restent responsables de leurs produits, photos, prix et descriptions. MboppiShop peut retirer un contenu contraire aux règles et vérifier certains comptes, mais ne remplace pas la boutique dans la relation commerciale.",
   },
   {
     q: "Quels moyens de paiement sont acceptés ?",
-    a: "Les paiements sont directs et manuels : espèces à la livraison, transfert Mobile Money direct ou virement bancaire, selon ce qui est convenu avec le bénéficiaire. Mboppi ne demande jamais de carte bancaire et ne collecte pas les paiements.",
+    a: "Les paiements sont directs et manuels : espèces à la livraison, transfert Mobile Money direct ou virement bancaire, selon ce qui est convenu avec le bénéficiaire. MboppiShop ne demande jamais de carte bancaire et ne collecte pas les paiements.",
   },
   {
     q: "Comment contacter un livreur ?",
@@ -85,7 +85,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Comment supprimer mes données ?",
-    a: "Vous pouvez retirer vos produits et offres depuis votre espace. Pour supprimer votre compte et demander le traitement de vos données, contactez Mboppi depuis la page Contact.",
+    a: "Vous pouvez retirer vos produits et offres depuis votre espace. Pour supprimer votre compte et demander le traitement de vos données, contactez MboppiShop depuis la page Contact.",
   },
   {
     q: "Puis-je supprimer mon compte ?",
@@ -98,11 +98,11 @@ export default function Faq() {
   const [open, setOpen] = useState(0);
   return (
     <main className="container">
-      <Seo title={t("FAQ") + " — Mboppi"} description={t("Questions fréquentes")} />
+      <Seo title={t("FAQ") + " — MboppiShop"} description={t("Questions fréquentes")} />
       <section className="hero vitrine-hero">
         <span className="hero-badge">❓ {t("FAQ")}</span>
         <h1>{t("Questions fréquentes")}</h1>
-        <p>{t("Tout ce que vous devez savoir sur Mboppi.")}</p>
+        <p>{t("Tout ce que vous devez savoir sur MboppiShop.")}</p>
       </section>
       <section className="faq-list">
         {FAQ_ITEMS.map((item, i) => (

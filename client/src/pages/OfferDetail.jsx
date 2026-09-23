@@ -92,10 +92,10 @@ export default function OfferDetail() {
   return (
     <main className="container narrow">
       <Seo
-        title={offer ? `${offer.name} — Mboppi` : `${t("Offre")} — Mboppi`}
+        title={offer ? `${offer.name} — MboppiShop` : `${t("Offre")} — MboppiShop`}
         description={
           offer
-            ? `${t("Découvrez « {name} » à {price} {symbol} sur Mboppi.", { name: offer.name, price: formatMoney(offer.price), symbol })}`
+            ? `${t("Découvrez « {name} » à {price} {symbol} sur MboppiShop.", { name: offer.name, price: formatMoney(offer.price), symbol })}`
             : undefined
         }
       />

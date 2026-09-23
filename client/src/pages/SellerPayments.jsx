@@ -132,7 +132,7 @@ export default function SellerPayments() {
   return (
     <main className="container narrow">
       <Seo
-        title={t("Mes moyens de paiement") + " — Mboppi"}
+        title={t("Mes moyens de paiement") + " — MboppiShop"}
         description={t(
           "Enregistrez vos portefeuilles électroniques pour recevoir vos commissions."
         )}

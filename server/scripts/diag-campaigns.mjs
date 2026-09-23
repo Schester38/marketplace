@@ -44,7 +44,7 @@ try {
   );
   console.log(`  ${push.rows[0].users} utilisateur(s) / ${push.rows[0].endpoints} appareil(s) recevront le push`);
   const prefsOff = await q(`SELECT COUNT(*)::int AS n FROM push_prefs WHERE messages_ok = FALSE`);
-  console.log(`  ${prefsOff.rows[0].n} utilisateur(s) ont DÉSACTIVÉ « Messages de Mboppi »`);
+  console.log(`  ${prefsOff.rows[0].n} utilisateur(s) ont DÉSACTIVÉ « Messages de MboppiShop »`);
 } catch (e) {
   console.log("  (push_prefs indisponible :", e.message, ")");
 }

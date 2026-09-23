@@ -13,7 +13,7 @@ function googleLivreurUrl() {
 
 /**
  * Portail « Espace livreur » — il est OBLIGATOIRE de passer par le compte
- * d'un livreur pour finaliser une commande Mboppi (le livreur enregistre la
+ * d'un livreur pour finaliser une commande MboppiShop (le livreur enregistre la
  * livraison : code de confirmation client, signature, paiement). Cette page :
  *  - redirige un livreur déjà connecté vers son espace ;
  *  - propose à une boutique de créer son espace livreur associé (même email) ;
@@ -32,7 +32,7 @@ export default function LivreurInscription() {
 
   return (
     <main className="container narrow">
-      <Seo title={t("Espace livreur") + " — Mboppi"} noindex />
+      <Seo title={t("Espace livreur") + " — MboppiShop"} noindex />
       <div className="card form-card" style={{ padding: 20 }}>
         {/* Bandeau d'obligation : message frappant demandé. */}
         <div
@@ -61,7 +61,7 @@ export default function LivreurInscription() {
           </strong>
           <p className="hint" style={{ color: "#7a5c00", margin: "8px 0 0" }}>
             {t(
-              "Les livraisons Mboppi passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité."
+              "Les livraisons MboppiShop passent obligatoirement par l'espace d'un livreur : c'est lui qui enregistre votre commande, vous fait saisir votre code de confirmation, signer et valider le paiement en toute sécurité."
             )}
           </p>
         </div>

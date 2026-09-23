@@ -47,14 +47,14 @@ router.post(
       donation_id: created.id,
       reference: `DON:${created.id}`,
       manual: true,
-      instructions: `Effectuez un virement de ${amt} XAF sur le compte ${operator} du projet Mboppi, puis envoyez la capture d'écran à l'équipe Mboppi pour validation.`,
+      instructions: `Effectuez un virement de ${amt} XAF sur le compte ${operator} du projet MboppiShop, puis envoyez la capture d'écran à l'équipe MboppiShop pour validation.`,
     });
   })
 );
 
 // NOTE : la route iKeePay des dons (POST /ikeepay) a été supprimée avec le
 // système iKeePay. Le don manuel ci-dessus (virement direct hors système,
-// validation par l'équipe Mboppi) reste le seul chemin de don.
+// validation par l'équipe MboppiShop) reste le seul chemin de don.
 
 function normalizePhone(phone, countryName) {
   let p = String(phone || "").replace(/[^\d]/g, "");

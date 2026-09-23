@@ -1,5 +1,5 @@
 // Diagnostic CDN : le proxy /api/photo est-il caché par l'edge Vercel ?
-const base = "https://mboppi-mboppi.vercel.app";
+const base = "https://www.mboppishop.com";
 const u = base + "/api/photo?p=products/285/48b8e9040b86/thumb.webp";
 for (const i of [1, 2, 3]) {
   const r = await fetch(u, { cache: "reload" });

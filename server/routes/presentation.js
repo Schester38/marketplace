@@ -101,8 +101,8 @@ router.get("/:id", async (req, res) => {
   const old = Number(p.old_price || 0).toLocaleString("fr-FR", { maximumFractionDigits: 0 });
   const symbol = p.shop_country === "Kenya" ? "KSh" : p.shop_country === "Nigeria" ? "₦" : "F";
   const origin = `${req.get("x-forwarded-proto") || req.protocol}://${req.get("host")}`;
-  const title = `${p.name} — Mboppi`;
-  const desc = String(p.description || "Découvrez cet article sur Mboppi.").slice(0, 200);
+  const title = `${p.name} — MboppiShop`;
+  const desc = String(p.description || "Découvrez cet article sur MboppiShop.").slice(0, 200);
   const imgUrl = photo && photo.startsWith("http") ? photo : `${origin}/api/img/${p.id}`;
   const appUrl = `${origin}/produit/${p.id}`;
   const buyUrl = `${origin}/acheter/${p.id}`;
@@ -111,7 +111,7 @@ router.get("/:id", async (req, res) => {
   <div class="card">
     ${photo ? `<img class="photo" src="${photo}" alt="${esc(p.name)}"/>` : ""}
     <div class="body">
-      <div class="brand"><span>M</span>Mboppi</div>
+      <div class="brand"><span>M</span>MboppiShop</div>
       <h1>${esc(p.name)}</h1>
       <div class="shop">${esc(p.shop_name)}${p.shop_location ? " &middot; " + esc(p.shop_location) : ""}</div>
       <div class="price">${price} ${symbol}</div>
@@ -120,7 +120,7 @@ router.get("/:id", async (req, res) => {
       <a class="btn outline" href="${appUrl}">Voir la fiche complète</a>
     </div>
   </div>
-  <div class="foot">Mboppi &mdash; boutiques, créateurs, vendeurs et clients</div>`;
+  <div class="foot">MboppiShop &mdash; boutiques, créateurs, vendeurs et clients</div>`;
 
   res.send(page(title, desc, imgUrl, appUrl, buyUrl, body));
 });

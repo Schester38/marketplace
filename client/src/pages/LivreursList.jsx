@@ -51,9 +51,9 @@ export default function LivreursList() {
   return (
     <main className="container">
       <Seo
-        title={t("Contacter un livreur") + " — Mboppi"}
+        title={t("Contacter un livreur") + " — MboppiShop"}
         description={t(
-          "Trouvez les livreurs Mboppi disponibles pour vos livraisons et contactez-les directement."
+          "Trouvez les livreurs MboppiShop disponibles pour vos livraisons et contactez-les directement."
         )}
         noindex
       />
@@ -62,7 +62,7 @@ export default function LivreursList() {
           <h1>🛵 {t("Contacter un livreur")}</h1>
           <p>
             {t(
-              "Trouvez les livreurs Mboppi disponibles pour vos livraisons et contactez-les directement."
+              "Trouvez les livreurs MboppiShop disponibles pour vos livraisons et contactez-les directement."
             )}
           </p>
         </div>
@@ -188,7 +188,7 @@ export default function LivreursList() {
                       className="btn btn-whatsapp btn-sm"
                       href={waLink(
                         r.phone,
-                        t("Bonjour {name}, je vous contacte depuis Mboppi.", { name: r.name })
+                        t("Bonjour {name}, je vous contacte depuis MboppiShop.", { name: r.name })
                       )}
                       target="_blank"
                       rel="noopener noreferrer"

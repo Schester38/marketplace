@@ -468,7 +468,7 @@ export default function MyAccount() {
   return (
     <main className="container">
       <Seo
-        title={t("Mon compte") + " — Mboppi"}
+        title={t("Mon compte") + " — MboppiShop"}
         description={
           t("Profil") + ", " + t("Mot de passe") + ", " + t("Supprimer mon compte") + "."
         }
@@ -793,7 +793,7 @@ export default function MyAccount() {
             </button>
           </div>
           <div className="info-row">
-            <span>📢 {t("Messages de Mboppi")}</span>
+            <span>📢 {t("Messages de MboppiShop")}</span>
             <button
               type="button"
               className={`btn btn-small ${pushPrefs.messages ? "btn-primary" : "btn-outline"}`}

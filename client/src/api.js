@@ -526,7 +526,7 @@ export const api = {
   // Assistant IA (Gemini) : renvoie du texte relu/inséré par l'utilisateur.
   genAi: (payload) =>
     generatorRequest("/generator/ai", { method: "POST", body: JSON.stringify(payload) }),
-  // Publication « Vendre sur Mboppi » : URL d'upload signée (envoi direct du
+  // Publication « Vendre sur MboppiShop » : URL d'upload signée (envoi direct du
   // PDF vers Supabase) puis création/mise à jour du produit digital.
   genUploadUrl: (id, payload) =>
     generatorRequest(`/generator/documents/${id}/upload-url`, {

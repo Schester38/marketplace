@@ -157,7 +157,7 @@ export default function Verone() {
 
   return (
     <main className="container narrow">
-      <Seo title="Verone — Mboppi" description={t("Gestion des offres")} />
+      <Seo title="Verone — MboppiShop" description={t("Gestion des offres")} />
       <section className="dash-header">
         <div>
           <div className="hero-badge" style={{ marginBottom: 10 }}>

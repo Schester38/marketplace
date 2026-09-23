@@ -25,9 +25,9 @@ export default function ShareVitrine({ onClose }) {
     // L'URL est déjà dans le texte du message -> pas de champ `url` séparé,
     // sinon l'URL apparaîtrait en double dans la boîte de partage.
     const shared = await nativeShareWithImage({
-      title: t("Ma vitrine Mboppi"),
+      title: t("Ma vitrine MboppiShop"),
       text: msg,
-      useLogo: true, // vitrine -> logo Mboppi
+      useLogo: true, // vitrine -> logo MboppiShop
     });
     if (shared) onClose();
   };
@@ -77,7 +77,7 @@ export default function ShareVitrine({ onClose }) {
       icon: "📧",
       onClick: () =>
         openUrl(
-          `mailto:?subject=${encodeURIComponent(t("Découvre ma vitrine Mboppi"))}&body=${encoded}`
+          `mailto:?subject=${encodeURIComponent(t("Découvre ma vitrine MboppiShop"))}&body=${encoded}`
         ),
     },
     {
