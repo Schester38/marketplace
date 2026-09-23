@@ -1038,17 +1038,11 @@ const previewZoom = zoom * previewFit;
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [activeId, mode, selIds, undo, redo, copyEls, pasteEls, cutEls, doDeleteEls]);
-  // ─── Rendu ──────────────────────────────────────────────────────────────────
-  if (busy === "load") {
-    return (
-      <div className="studio-root">
-        <div className="studio-loading">⏳ {t("Préparation de l'éditeur page par page…")}</div>
-      </div>
-    );
-  }
-  const timeShort = (iso) => (iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "");
   // Taille moyenne affichée dans « Texte et styles » pour la portée active :
   // sélection de textes si elle existe, sinon tous les textes de la page.
+  // Déclaré AVANT le retour anticipé de chargement : un hook placé après
+  // `if (busy === "load") return …` serait sauté au premier rendu puis appelé
+  // au suivant → React #310 « Rendered more hooks than during the previous render ».
   const sizeLabel = useMemo(() => {
     const scopeEls =
       sizeScope === "selection" && selEls.some((e) => isTextType(e))
@@ -1059,6 +1053,15 @@ const previewZoom = zoom * previewFit;
     const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
     return `${Math.round(avg * 10) / 10} pt`;
   }, [sizeScope, selEls, activePage, template]);
+  // ─── Rendu ──────────────────────────────────────────────────────────────────
+  if (busy === "load") {
+    return (
+      <div className="studio-root">
+        <div className="studio-loading">⏳ {t("Préparation de l'éditeur page par page…")}</div>
+      </div>
+    );
+  }
+  const timeShort = (iso) => (iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "");
   return (
     <div className="studio-root">
       {/* Sélecteur de fichier caché — import/remplacement d'image (§3/§6) */}
