@@ -11,6 +11,8 @@ import { PX_PER_MM, PT_TO_PX } from "./paginate.js";
 import { FONT_CSS } from "./templates.js";
 import { sortedElements, snapBox, cssAlpha, applyTokens, round1, overflowPx, isTextType, elementLabel } from "./studioModel.js";
 import PageDecor from "./PageDecor.jsx";
+import CoverDecor from "./CoverDecor.jsx";
+import { coverDecorPrims } from "./coverDecor.js";
 import { makeQrDataUrl } from "./protection.js";
 
 const mm2px = (v, zoom = 1) => Number(v || 0) * PX_PER_MM * zoom;
@@ -594,6 +596,16 @@ export default function StudioCanvas({
   const H = mm2px(box.h, zoom);
   // Fond de la page : celui du modèle de design (page.design.bg, sinon thème).
   const bg = page?.design?.bg || template?.colors?.page || template?.colors?.bg || "#ffffff";
+  // Décor géométrique du modèle (coverShape : arc, bars, circle, diag…) :
+  // les MÊMES primitives que l'aperçu classique et le PDF classique (depuis
+  // 1.57.70) — sans cela, « Moderne / Motivation / Santé / Cuisine » perdent
+  // leur arc dans l'onglet Aperçu devenu Studio depuis 1.57.80.
+  const coverPrims = coverDecorPrims(template, box.w, box.h);
+  // Décor de page du modèle : `page.design.decor` (null explicite = pas de
+  // décor, ex. couverture) ; repli sur le modèle quand la page n'en porte pas
+  // (anciens documents) pour que le décor s'affiche sur TOUTES les pages.
+  const pageDecor =
+    page?.design && "decor" in page.design ? page.design.decor : template?.pageDecor ?? null;
 
   return (
     <div
@@ -604,11 +616,14 @@ export default function StudioCanvas({
       }}
       onContextMenu={(e) => handleContext(e, null)}
     >
+      {/* Décor géométrique du modèle (primitives coverShape) : dessiné en
+          premier, derrière tout — identique à l'aperçu et au PDF classiques. */}
+      <CoverDecor prims={coverPrims} w={box.w} h={box.h} />
       {/* Décor du modèle (bandeau, filets, colonne, cadre) : rendu en PREMIER,
           donc DERRIÈRE tous les éléments — le Studio affiche exactement ce que
           le PDF dessine, sans jamais recouvrir le texte (z-index 0). */}
       <PageDecor
-        template={{ ...(template || {}), pageDecor: page?.design?.decor }}
+        template={{ ...(template || {}), pageDecor }}
         box={box}
         docMeta={docMeta || {}}
         scale={zoom}

@@ -12,6 +12,7 @@
 import { jsPDF } from "jspdf";
 import { FONT_PDF, resolvePageBox, resolveTemplate, getTemplate } from "./templates.js";
 import { drawPageDecor, toDataUrl, saveBlob } from "./exportPdf.js";
+import { coverDecorPrims, drawCoverDecorPdf } from "./coverDecor.js";
 import { makeQrDataUrl } from "./protection.js";
 import { applyTokens, elementType, sortedElements, mixHex } from "./studioModel.js";
 
@@ -804,8 +805,16 @@ async function drawStudioPage(doc, page, ctx) {
     setFill(doc, bg);
     doc.rect(0, 0, w, h, "F");
   }
-  if (page.design?.decor) {
-    drawPageDecor(doc, { ...template, pageDecor: page.design.decor }, box, docMeta);
+  // Décor géométrique du modèle (coverShape : arc, bars, circle, diag…) —
+  // même primitives que l'aperçu (CoverDecor) et le PDF classique : dessiné
+  // APRÈS le fond et AVANT le décor de page / le texte (jamais par-dessus).
+  const coverPrims = coverDecorPrims(template, w, h);
+  if (coverPrims.length) drawCoverDecorPdf(doc, coverPrims);
+  // Décor de page : `page.design.decor` (null explicite = couverture sans
+  // décor) ; repli sur le modèle si la page n'en porte pas (anciens documents).
+  const pageDecor = page.design && "decor" in page.design ? page.design.decor : template.pageDecor;
+  if (pageDecor) {
+    drawPageDecor(doc, { ...template, pageDecor }, box, docMeta);
   }
   const tokens = {
     page: index + 1,
