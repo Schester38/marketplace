@@ -681,12 +681,6 @@ export default function StudioCanvas({
         />
       ))}
 
-      {overflow ? (
-        <div className="studio-overflow-warn" title={overflow.items.map((o) => o.label).join(", ")}>
-          ⚠️ Ce contenu dépasse de {overflow.px} px de la page.
-        </div>
-      ) : null}
-
       {totalPages > 1 ? <div className="studio-page-marker">{page.number || ""}</div> : null}
     </div>
   );

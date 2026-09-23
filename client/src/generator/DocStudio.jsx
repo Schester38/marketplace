@@ -54,6 +54,66 @@ function applyPatchesToPage(pages, pageId, patches) {
     return { ...p, elements: els };
   });
 }
+
+/**
+ * Traduit des surcharges de DESIGN (mêmes clés que `style_overrides` du
+ * document : bodyFont, headingFont, colors{}, align, lineHeight, paraSpace)
+ * en styles SUR LES ÉLÉMENTS de la page. C'est indispensable : l'aperçu du
+ * Studio et les exports ne lisent que les styles d'éléments — un réglage
+ * stocké « à côté » n'aurait aucun effet visible (§24 : aperçu = export).
+ */
+function applyDesignToElements(page, overrides = {}) {
+  const ov = overrides || {};
+  const colors = ov.colors || {};
+  const lh = Number(ov.lineHeight);
+  const ps = Number(ov.paraSpace);
+  return {
+    ...page,
+    elements: (page.elements || []).map((el) => {
+      const isHeading = el.type === "heading" || el.type === "chapter" || el.type === "subtitle";
+      const hasText = !!el.html;
+      const style = { ...el.style };
+      if (ov.bodyFont && hasText && !isHeading) style.font = ov.bodyFont;
+      if (ov.headingFont && isHeading) style.font = ov.headingFont;
+      if (colors.body && hasText && !isHeading) style.color = colors.body;
+      if (colors.heading && isHeading) style.color = colors.heading;
+      if (colors.accent) {
+        if (el.type === "line" || el.type === "divider") style.stroke = colors.accent;
+        else if (["rect", "block", "shape", "circle"].includes(el.type)) style.fill = colors.accent;
+        else if (el.type === "pageNumber" || el.type === "header" || el.type === "footer") style.color = colors.accent;
+        else if (el.type === "quote" || el.type === "note" || el.type === "box") style.borderColor = colors.accent;
+      }
+      if (colors.bg) style.bg = "transparent"; // le fond de page se règle dans « Mise en page »
+      if (ov.align && hasText && (el.type === "paragraph" || el.type === "textzone")) style.align = ov.align;
+      if (Number.isFinite(lh) && hasText) style.lineHeight = lh;
+      if (Number.isFinite(ps) && hasText) style.paraSpace = ps;
+      if (ov.sizes && typeof ov.sizes === "object") {
+        const key = el.type === "chapter" || el.type === "heading" ? "h1" : el.type === "subtitle" ? "h2" : "body";
+        const size = Number(ov.sizes[key]);
+        if (Number.isFinite(size)) style.size = size;
+      }
+      return { ...el, style };
+    }),
+  };
+}
+
+/**
+ * Typographie et couleurs d'un MODÈLE traduites en surcharges d'éléments —
+ * permet à « Transforme cette page en style magazine » de changer la seule
+ * page (le modèle du document reste intact).
+ */
+function templateAsOverrides(tpl) {
+  if (!tpl) return {};
+  return {
+    bodyFont: tpl.bodyFont,
+    headingFont: tpl.headingFont,
+    align: tpl.align,
+    lineHeight: tpl.lineHeight,
+    paraSpace: tpl.paraSpace,
+    sizes: { ...tpl.sizes },
+    colors: { ...tpl.colors },
+  };
+}
 /** Entrées de sommaire dérivées des titres du document (page « Sommaire » §7). */
 function tocEntries(pgs) {
   return (pgs || []).flatMap((p, i) =>
@@ -607,9 +667,17 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
       flash(t("Décrivez la modification souhaitée."));
       return null;
     }
-    const plan = parsePageInstruction(instruction, { page: activePage, pageIndex: (pages || []).findIndex((p) => p.id === activeId), totalPages });
+    // designParser : SANS lui, « Rends cette page moderne » ne produirait
+    // aucun plan de design (parsePageInstruction → design = null).
+    const plan = parsePageInstruction(instruction, {
+      page: activePage,
+      pageIndex: (pages || []).findIndex((p) => p.id === activeId),
+      totalPages,
+      designParser: parseDesignCommand,
+      designCtx: { templates: GEN_TEMPLATES, currentTemplateId: docMeta?.template_id || "moderne" },
+    });
     return { ...plan, mode: aiMode, kind: "ai" };
-  }, [aiText, activePage, pages, activeId, totalPages, aiMode, t, flash]);
+  }, [aiText, activePage, pages, activeId, totalPages, aiMode, docMeta, t, flash]);
   const previewAi = useCallback(() => {
     const plan = buildAiPlan();
     if (plan) setPendingPlan(plan);
@@ -630,44 +698,88 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
       setBusy("ai");
       setError("");
       try {
-        const res = await api.genAi({
-          action: "page_edit",
-          instruction: plan.instruction,
-          mode: plan.mode,
-          page_count: plan.scope === "page" ? 1 : totalPages,
-          page_text: plan.scope === "page" ? pageTextForAiSafe(activePage) : "",
-        });
-        const raw = res?.text || res?.result || "";
-        let nextPages = pages || [];
+        let nextPages = pagesRef.current || [];
+        const targets = plan.pageNumbers
+          .map((n) => nextPages.find((p) => p.number === n))
+          .filter(Boolean);
         let applied = 0;
-        const targets = plan.scope === "page" ? [activeId] : (pages || []).map((p) => p.id);
-        if (plan.mode === "design") {
-          // Design uniquement : couleurs/polices/disposition, le texte reste identique (§10).
-          const cmd = parseDesignCommand(plan.instruction);
-          if (cmd?.style_overrides && Object.keys(cmd.style_overrides).length) {
-            nextPages = nextPages.map((p) => (targets.includes(p.id) ? { ...p, style_overrides: { ...(p.style_overrides || {}), ...cmd.style_overrides } } : p));
-            applied++;
+
+        // (a) MISE EN PAGE (§8/§21) : repositionnement pur, contenu intact.
+        if (plan.layout) {
+          for (const p of targets) nextPages = applyLayoutOn(nextPages, p.id, plan.layout);
+          applied += plan.layout ? 1 : 0;
+        }
+
+        // (b) DESIGN (§10, mode « design uniquement ») : polices/couleurs/
+        //     espacements écrits sur les éléments (aperçu = export).
+        if (plan.mode === "design" && plan.design) {
+          let ov = { ...(plan.design.overrides || {}) };
+          // Un modèle demandé (« style magazine ») devient des styles
+          // d'éléments : la SEULE page ciblée change, le modèle du document
+          // reste intact — et l'aperçu = export lit les styles d'éléments.
+          if (plan.design.templateId) {
+            const tpl = GEN_TEMPLATES.find((x) => x.id === plan.design.templateId);
+            if (tpl) ov = { ...templateAsOverrides(tpl), ...ov };
           }
-          if (cmd?.layout) {
-            for (const id of targets) nextPages = applyLayoutOn(nextPages, id, cmd.layout);
-            applied++;
-          }
-        } else if (raw) {
-          // Contenu + design : le texte renvoyé est réparti sur la/les page(s).
-          for (const id of targets) {
-            const page = (nextPages || []).find((p) => p.id === id);
-            const pag = page ? distributeText(page, raw, { target: plan.target || "text" }) : null;
-            if (pag) {
-              nextPages = nextPages.map((p) => (p.id === id ? pag : p));
-              applied++;
-            }
+          if (Object.keys(ov).length) {
+            const ids = targets.map((p) => p.id);
+            nextPages = nextPages.map((p) => (ids.includes(p.id) ? applyDesignToElements(p, ov) : p));
+            applied += 1;
           }
         }
+
+        // (c) CONTENU (§10, mode « Contenu + design ») : l'assistant réécrit
+        //     page par page, puis le texte est redistribué sur les éléments.
+        if (plan.mode === "content" && plan.action) {
+          for (const p of targets) {
+            const src = pageTextForAiSafe(p);
+            if (!src) continue;
+            const d = await api.genAi({
+              action: plan.action === "shorten" ? "shorten" : plan.action,
+              text: src.slice(0, 4000),
+              title: docMeta?.title,
+              subtitle: docMeta?.subtitle,
+              author: docMeta?.author,
+              instruction: plan.instruction,
+            });
+            const out = String(d?.text || "").trim();
+            if (!out) continue;
+            const { patches } = distributeText(p, out, { target: plan.action === "quote" ? "text" : "text" });
+            const ids = Object.keys(patches || {});
+            if (!ids.length) continue;
+            nextPages = nextPages.map((q) =>
+              q.id !== p.id
+                ? q
+                : {
+                    ...q,
+                    elements: q.elements.map((e) =>
+                      patches[e.id] != null && !e.locked ? { ...e, html: patches[e.id] } : e,
+                    ),
+                  },
+            );
+            applied += 1;
+          }
+        } else if (plan.shorten) {
+          // « Réduis ce texte » en mode design : le texte EXISTANT est
+          // simplement redistribué dans la page (aucun mot modifié).
+          for (const p of targets) {
+            const text = pageTextForAiSafe(p);
+            if (!text) continue;
+            const { patches } = distributeText(p, text);
+            const ids = Object.keys(patches || {});
+            if (!ids.length) continue;
+            nextPages = nextPages.map((q) =>
+              q.id !== p.id ? q : { ...q, elements: q.elements.map((e) => (patches[e.id] != null && !e.locked ? { ...e, html: patches[e.id] } : e)) },
+            );
+            applied += 1;
+          }
+        }
+
         if (!applied) {
           flash(t("L'IA n'a pas proposé de modification exploitable pour cette portée."));
           return;
         }
-        commit(plan.scope === "page" ? `IA — page unique (${describeScope(plan)})` : `IA — toutes les pages (${describeScope(plan)})`, nextPages);
+        commit(`IA — ${plan.summary} (${describeScope(plan)})`, nextPages);
         setAiResult({ scope: describeScope(plan), ok: true });
         flash(t("Modification IA appliquée."));
       } catch (e) {
@@ -676,7 +788,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
         setBusy("");
       }
     },
-    [pages, activeId, activePage, totalPages, commit, t, flash, pageTextForAiSafe],
+    [activePage, pages, commit, t, flash, pageTextForAiSafe],
   );
   // ─── Multi-pages (§11) et global (§12) ─────────────────────────────────────
   const applyMultiPatch = useCallback(
@@ -688,7 +800,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
         flash(t("Design verrouillé : la mise en page ne peut pas être modifiée."));
         return;
       }
-      setPendingPlan({ kind: "multi", label: `${label} — ${ids.length} page(s)`, ids, patch: { style_overrides: overrides || {} } });
+      setPendingPlan({ kind: "multi", label: `${label} — ${ids.length} page(s)`, ids, patch: { overrides: overrides || {} } });
     },
     [selPageIds, pages, t, flash],
   );
@@ -767,9 +879,13 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
     setPendingPlan(null);
     if (plan.kind === "multi") {
       const ids = new Set(plan.ids);
-      const ovr = plan.patch.style_overrides || {};
-      commit(plan.label, (pages || []).map((p) => (ids.has(p.id) && Object.keys(ovr).length ? { ...p, style_overrides: { ...(p.style_overrides || {}), ...ovr } } : p)));
-      flash(t("Modification appliquée."));
+      const ovr = plan.patch.overrides || {};
+      if (Object.keys(ovr).length) {
+        // Écrit sur les STYLES D'ÉLÉMENTS (seuls lus par l'aperçu et l'export) —
+        // un `page.style_overrides` ne serait jamais consommé nulle part.
+        commit(plan.label, (pages || []).map((p) => (ids.has(p.id) ? applyDesignToElements(p, ovr) : p)));
+        flash(t("Modification appliquée."));
+      }
     } else if (plan.kind === "ai") {
       runAi(plan);
     }
@@ -970,12 +1086,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
           {error && <div className="studio-error">⚠️ {error}</div>}
           {mode === "edit" ? (
             <>
-              {overflow && (
-                <div className="studio-overflowwarn">
-                  ⚠️ {t(`Ce contenu dépasse de ${overflow.px} px de la page.`)}{" "}
-                  <button type="button" className="studio-linkbtn" onClick={() => setPanel("check")}>{t("Voir les solutions")}</button>
-                </div>
-              )}
+              
               <StudioCanvas
                 page={activePage}
                 box={box}
@@ -1294,7 +1405,18 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
                         <button type="button" className="studio-linkbtn" onClick={() => {
                           const page = curPage();
                           if (!page) return;
-                          commit("Texte resserré (débordement)", updatePage(pagesRef.current || [], page.id, { style_overrides: { lineStep: Math.max(1.05, (docMeta?.style_overrides?.lineStep || 1.4) - 0.15) } }));
+                          // Resserre l'interligne des ÉLÉMENTS texte de la page
+                          // (style.lineHeight est lu par l'aperçu et l'export) —
+                          // l'ancien `page.style_overrides.lineStep` n'était lu nulle part.
+                          const tighten = (pg) => ({
+                            ...pg,
+                            elements: (pg.elements || []).map((el) =>
+                              el.html && !el.locked
+                                ? { ...el, style: { ...el.style, lineHeight: Math.max(0.9, (Number(el.style?.lineHeight) || 1.5) - 0.15) } }
+                                : el,
+                            ),
+                          });
+                          commit("Texte resserré (débordement)", updatePage(pagesRef.current || [], page.id, tighten(page)));
                           flash(t("Espacement réduit — vérifiez le résultat."));
                         }}>
                           {t("Réduire l'espacement")}

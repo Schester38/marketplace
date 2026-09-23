@@ -156,12 +156,6 @@ export default function GeneratorPanel({ variant = "creator" }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [openDoc, setOpenDoc] = useState(null); // { document, content, versions }
-  const [newDoc, setNewDoc] = useState({
-    title: "",
-    author: "",
-    template_id: "moderne",
-    page_format: "A4",
-  });
 
   const load = useCallback(() => {
     api
@@ -181,22 +175,6 @@ export default function GeneratorPanel({ variant = "creator" }) {
       setOpenDoc({ document: d.document, content: d.content || EMPTY_DOC, versions: d.versions || [] });
     } catch (e) {
       setError(e?.message || "Ouverture impossible");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const create = async (e) => {
-    e.preventDefault();
-    setError("");
-    setBusy(true);
-    try {
-      const d = await api.genCreateDocument(newDoc);
-      setNewDoc({ title: "", author: "", template_id: "moderne", page_format: "A4" });
-      load();
-      setOpenDoc({ document: d.document, content: d.content || EMPTY_DOC, versions: [] });
-    } catch (err) {
-      setError(err?.message || "Création impossible");
     } finally {
       setBusy(false);
     }
@@ -352,70 +330,14 @@ export default function GeneratorPanel({ variant = "creator" }) {
 
       {error && <p className="error" role="alert">{error}</p>}
 
-      {/* Création directe : titre, auteur, modèle et format (toujours visible —
-          l'ancien bouton « Nouveau document » ne servait qu'à l'ouvrir). */}
-      <form className="gen-form" onSubmit={create}>
-          <div className="gen-form-row">
-            <div>
-              <label>{t("Titre du document")}</label>
-              <input
-                className="input"
-                required
-                maxLength={200}
-                placeholder="Comment devenir entrepreneur"
-                value={newDoc.title}
-                onChange={(e) => setNewDoc({ ...newDoc, title: e.target.value })}
-              />
-            </div>
-            <div>
-              <label>{t("Auteur")}</label>
-              <input
-                className="input"
-                maxLength={200}
-                value={newDoc.author}
-                onChange={(e) => setNewDoc({ ...newDoc, author: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="gen-form-row">
-            <div>
-              <label>{t("Modèle de design")}</label>
-              <select
-                className="input"
-                value={newDoc.template_id}
-                onChange={(e) => setNewDoc({ ...newDoc, template_id: e.target.value })}
-              >
-                {GEN_TEMPLATES.map((tpl) => (
-                  <option key={tpl.id} value={tpl.id}>
-                    {tpl.name} — {tpl.category}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label>{t("Format de page")}</label>
-              <select
-                className="input"
-                value={newDoc.page_format}
-                onChange={(e) => setNewDoc({ ...newDoc, page_format: e.target.value })}
-              >
-                {Object.keys(PAGE_FORMATS).map((f) => (
-                  <option key={f} value={f}>
-                    {f}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <button type="submit" className="btn btn-primary btn-small" disabled={busy}>
-            {busy ? t("Création…") : t("Créer et ouvrir l'éditeur")}
-          </button>
-        </form>
-
       {list === null ? (
         <p className="hint">{t("Chargement…")}</p>
       ) : list.length === 0 ? (
-        <p className="hint">{t("Aucun document pour l'instant. Créez votre premier ebook !")}</p>
+        <p className="hint">
+          {t(
+            "Aucun document pour l'instant. Déposez un fichier Word/TXT ci-dessus ou collez votre texte pour créer le premier."
+          )}
+        </p>
       ) : (
         <div className="table-wrap gen-list">
           <table>
