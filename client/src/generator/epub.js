@@ -12,6 +12,7 @@ import JSZip from "jszip";
 import { FONT_CSS, getTemplate, resolveTemplate } from "./templates.js";
 import { renderCoverImage } from "./coverImage.js";
 import { copyrightLines, makeQrDataUrl, verificationPayload } from "./protection.js";
+import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL } from "./footerPromo.js";
 
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ESC[c]);
@@ -146,6 +147,8 @@ function epubCss(template) {
     `th{background:${c.accent}22;}`,
     `hr{border:0;border-top:1px solid ${c.accent};margin:1.5em 0;}`,
     `a{color:${c.accent};}`,
+    `.mboppi-footer{margin-top:2em;padding-top:.6em;border-top:1px solid ${c.accent}55;font-size:.82em;font-style:italic;text-align:left;color:${c.accent};}`,
+    `.mboppi-footer a{color:inherit;text-decoration:underline;}`,
     `mark{background:${c.accent}33;}`,
     `.u{text-decoration:underline;}`,
     `.ta-center{text-align:center;}.ta-right{text-align:right;}.ta-justify{text-align:justify;}`,
@@ -297,12 +300,13 @@ export async function exportEpub({ doc, docMeta, onProgress }) {
     const ch = chapters[i];
     const body = withImages(withQr(ch.nodes)).map((n) => blockToXhtml(n)).join("\n");
     const heading = ch.title ? `<header><h1>${esc(ch.title)}</h1></header>` : "";
+    const footer = `<footer class="mboppi-footer"><em>visitez <a href="${esc(MBOPPI_CONTENT_URL)}">${esc(MBOPPI_CONTENT_LABEL)}</a> pour plus de contenu</em></footer>`;
     const chTitle = ch.title || `Chapitre ${i + 1}`;
     documents.push({
       id: `ch${i + 1}`,
       file: `chapitre-${i + 1}.xhtml`,
       title: chTitle,
-      xhtml: simpleXhtml(chTitle, `${heading}${body}`),
+      xhtml: simpleXhtml(chTitle, `${heading}${body}${footer}`),
     });
   }
   for (const d of documents) oebps.file(d.file, d.xhtml);

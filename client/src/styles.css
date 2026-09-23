@@ -10732,7 +10732,6 @@ a.step {
   position: absolute;
   left: 0;
   right: 0;
-  text-align: center;
 }
 @media (max-width: 640px) {
   .gen-editor .tiptap {

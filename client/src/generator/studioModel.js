@@ -18,6 +18,7 @@ import { PX_PER_MM, lineText } from "./paginate.js";
 import { resolvePageBox, resolveCover, coverLayoutBox, FONT_CSS } from "./templates.js";
 import { coverDecorPrims } from "./coverDecor.js";
 import { copyrightLines, verificationPayload } from "./protection.js";
+import { MBOPPI_PROMO_HTML, hasMboppiPromo } from "./footerPromo.js";
 import { BASE_URL } from "../config.js";
 
 /** Lien public de vérification encodé dans le QR code d'une page. */
@@ -366,6 +367,46 @@ export function renumber(pages) {
   return pages.map((p, i) => ({ ...p, number: i + 1 }));
 }
 
+/**
+ * Ajoute la promotion MboppiShop à gauche du pied de chaque page éditable.
+ * La couverture reste sans pied de page. Les pieds déjà présents ne sont ni
+ * supprimés ni réécrits : la promotion est un élément distinct, ce qui évite
+ * d'écraser une personnalisation. La fonction est pure et idempotente.
+ */
+export function ensureStudioFooters(pages, box, template) {
+  if (!box?.m || !template?.sizes) return pages || [];
+  return (pages || []).map((page) => {
+    if (page?.kind === "cover") return page;
+    const elements = page?.elements || [];
+    if (elements.some((el) => el?.type === "footer" && hasMboppiPromo(el.html))) return page;
+    const contentW = Math.max(20, box.w - box.m.left - box.m.right);
+    const y = Math.max(box.m.top, box.h - Math.max(6, box.m.bottom * 0.5));
+    const promo = makeElement(template, "footer", {
+      x: box.m.left,
+      y: round1(y),
+      w: round1(Math.min(contentW * 0.72, 115)),
+      h: 6,
+    }, {
+      name: "Promotion MboppiShop",
+      z: 29,
+      autoH: false,
+      locked: true,
+      html: MBOPPI_PROMO_HTML,
+      data: { promotion: "mboppi-content" },
+      style: {
+        ...defaultStyle(template, "footer"),
+        size: Math.max(7, Math.min(8.5, Number(template.sizes.small) || 8.5)),
+        color: template.colors.accent,
+        align: "left",
+        italic: true,
+        lineHeight: 1,
+        paraSpace: 0,
+      },
+    });
+    return { ...page, elements: [...elements, promo] };
+  });
+}
+
 /** Nom affiché d'une page dans la colonne de gauche (§2). */
 export function pageLabel(page, index) {
   if (page.label) return page.label;
@@ -670,7 +711,7 @@ export function buildStudioPages({ paginated, docMeta }) {
     else if (p.kind === "toc") out.push(tocPage(p, template, box));
     else out.push(contentPage(p, docMeta, template, box));
   }
-  return renumber(out);
+  return ensureStudioFooters(renumber(out), box, template);
 }
 
 /** Enveloppe persistée dans `gen_documents.page_layout` (JSONB additif). */
@@ -1038,6 +1079,30 @@ export function stepTextSizes(pages, { delta, scope = "page", pageId = null, sel
       changed = true;
       count += 1;
       return { ...el, style: { ...el.style, size: to } };
+    });
+    return changed ? { ...p, elements } : p;
+  });
+  return { pages: out, count };
+}
+
+/**
+ * Met tous les textes courants du document en gras.
+ * Les titres (chapitres, titres et sous-titres) et les citations gardent
+ * exactement leur style : cette commande uniformise le CORPS du livre sans
+ * écraser sa hiérarchie éditoriale. Les pages au design verrouillé et les
+ * éléments 🔒 ne sont jamais modifiés. La fonction est pure et idempotente.
+ */
+export function boldDocumentText(pages) {
+  const excluded = new Set(["chapter", "heading", "subtitle", "quote"]);
+  let count = 0;
+  const out = (pages || []).map((p) => {
+    if (p?.locked?.design) return p;
+    let changed = false;
+    const elements = (p.elements || []).map((el) => {
+      if (el.locked || !isTextType(el) || excluded.has(el.type) || el.style?.bold) return el;
+      changed = true;
+      count += 1;
+      return { ...el, style: { ...el.style, bold: true } };
     });
     return changed ? { ...p, elements } : p;
   });

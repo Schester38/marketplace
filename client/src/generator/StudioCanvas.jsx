@@ -610,7 +610,7 @@ export default function StudioCanvas({
             className={`studio-el ${sel ? "selected" : ""} ${el.hidden ? "hidden-el" : ""} ${el.locked ? "locked-el" : ""}`}
             style={style}
             onPointerDown={(e) => {
-              if (editing) return;
+              if (editing || e.target?.closest?.("a[href]")) return;
               handleClick(e, el);
               startGesture(e, "move", null, el);
             }}

@@ -19,7 +19,7 @@ import {
   cloneElement, addElement, addElements, removeElements, reorderElement, sortedElements, mergeElement,
   overflowPx, studioCheck, alignOffsets, distributeOffsets, ALIGN_MODES,
   buildCoverPage, buildTocPage,
-  uid, round1, isTextType, elementLabel, defaultStyle, stepTextSizes,
+  uid, round1, isTextType, elementLabel, defaultStyle, stepTextSizes, boldDocumentText, ensureStudioFooters,
 } from "./studioModel.js";
 import {
   ELEMENT_LIBRARY, PAGE_KINDS, buildPage, PAGE_LAYOUTS, applyLayout, smartLayouts, newElement,
@@ -271,9 +271,12 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMeta
         doc?.page_layout?.content_key === keys.contentKey;
       if (stored && stored.length && upToDate) {
         if (!alive) return;
-        setPages(stored);
-        setActiveId(stored[0].id);
+        const withFooters = ensureStudioFooters(stored, studioBox(docMeta), resolveActiveTemplate(docMeta));
+        const footerAdded = JSON.stringify(withFooters) !== JSON.stringify(stored);
+        setPages(withFooters);
+        setActiveId(withFooters[0].id);
         setBusy("");
+        if (footerAdded) markDirty();
         return;
       }
       const rebuilding = !!(stored && stored.length);
@@ -415,7 +418,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMeta
     (kindId) => {
       const cur = pagesRef.current || [];
       const at = cur.findIndex((p) => p.id === activeIdRef.current);
-      const page = buildPage(kindId, template, box, docMeta || {}, { ...helpers, entries: tocEntries(cur) });
+      const page = ensureStudioFooters([buildPage(kindId, template, box, docMeta || {}, { ...helpers, entries: tocEntries(cur) })], box, template)[0];
       commit(`Nouvelle page ajoutée (${PAGE_KINDS.find((k) => k.id === kindId)?.label || kindId})`, insertPage(cur, page, at + 1));
       setActiveId(page.id);
       setSelIds([]);
@@ -1034,6 +1037,16 @@ const editZoom = zoom * canvasFit;
     } else if (plan.kind === "size") {
       // Taille du texte sur tout le document — déjà confirmée par l'utilisateur.
       sizeStep(plan.delta, plan.sizeScope || "document", true);
+    } else if (plan.kind === "bold") {
+      // Gras global : le moteur exclut les titres et citations et respecte les
+      // verrous de design/élément. Un seul point d'historique via commit().
+      const { pages: next, count } = boldDocumentText(pagesRef.current || []);
+      if (!count) {
+        flash(t("Document déjà en gras (hors titres et citations)."));
+        return;
+      }
+      commit(plan.label, next);
+      flash(`${t("Gras appliqué au document")} — ${count} ${t("élément(s)")}`);
     } else if (plan.kind === "ai") {
       runAi(plan);
     }
@@ -1508,7 +1521,20 @@ const editZoom = zoom * canvasFit;
                 <span className="studio-hint">
                   {t("La taille s'applique à tous les textes de la portée choisie — pas seulement à l'élément sélectionné.")}
                 </span>
-                {!selEls.filter((e) => isTextType(e)).length && <span className="studio-hint">{t("Sélectionnez un texte sur la page.")}</span>}
+                <div className="studio-rowbtns">
+                  <button
+                    type="button"
+                    className="studio-chip studio-chip-sm"
+                    onClick={() => setPendingPlan({ kind: "bold", label: t("Tout le document en gras") })}
+                    title={t("Met en gras tous les textes du document, sauf les titres et les citations.")}
+                  >
+                    <strong>G</strong> {t("Tout le document en gras")}
+                  </button>
+                </div>
+                <span className="studio-hint">
+                  {t("Met en gras tous les textes du document, sauf les titres et les citations.")}
+                </span>
+                {!selEls.filter((e) => isTextType(e)).length && <span className="studio-hint">{t("Pour modifier un élément précis, sélectionnez-le sur la page.")}</span>}
                 {selEls.filter((e) => isTextType(e)).map((el) => (
                   <div key={el.id} className="studio-texteditor">
                     <span className="studio-mini-label">{elementLabel(el)}</span>

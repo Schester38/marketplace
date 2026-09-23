@@ -34,6 +34,7 @@ import {
 } from "../generator/templates.js";
 import { useAuth } from "../App.jsx";
 import { DIGITAL_CATEGORIES, countrySymbol } from "../config.js";
+import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL } from "../generator/footerPromo.js";
 import { detectStructureHtml } from "../generator/structure.js";
 import { detectScope } from "../generator/scope.js";
 import { HeadingAutoDetect, formatHeadings } from "../generator/headings.js";
@@ -50,7 +51,7 @@ import CoverDecor from "../generator/CoverDecor.jsx";
 import PageDecor from "../generator/PageDecor.jsx";
 import DocStudio, { resolveActiveTemplate } from "../generator/DocStudio.jsx";
 import StudioCanvas from "../generator/StudioCanvas.jsx";
-import { readStudio, studioBox, buildStudioPages, serializeStudio, studioDesignKey, studioContentKey } from "../generator/studioModel.js";
+import { readStudio, studioBox, buildStudioPages, serializeStudio, studioDesignKey, studioContentKey, ensureStudioFooters } from "../generator/studioModel.js";
 import { exportStudioPdf } from "../generator/studioExport.js";
 import {
   copyrightLines,
@@ -1025,7 +1026,10 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   // ─── Synchronisation Studio → Aperçu ────────────────────────────────────────
   // Dès qu'une mise en page du Studio est enregistrée, l'aperçu (et donc le PDF
   // exporté) montre CES pages : ce que l'on voit est exactement ce qui sort.
-  const studioPages = readStudio(meta.page_layout);
+  const studioPages = useMemo(
+    () => ensureStudioFooters(readStudio(meta.page_layout), studioBox(meta), resolveActiveTemplate(meta)),
+    [meta]
+  );
   const studioTpl = useMemo(
     () => (studioPages && studioPages.length ? { box: studioBox(meta), template: resolveActiveTemplate(meta) } : null),
     [studioPages, meta]
@@ -1048,7 +1052,8 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
       // Dès qu'une mise en page du Studio existe, c'est ELLE la référence :
       // le PDF exporté correspond exactement aux pages éditées (décors,
       // positions, textes), sans repasser par la pagination automatique.
-      const studioPages = readStudio(metaRef.current?.page_layout);
+      const m = metaRef.current || {};
+      const studioPages = ensureStudioFooters(readStudio(m.page_layout), studioBox(m), resolveActiveTemplate(m));
       if (studioPages && studioPages.length) {
         await exportStudioPdf({
           pages: studioPages,
@@ -2884,6 +2889,32 @@ function GenPage({ page, paginated, docMeta, fit }) {
   // Décor géométrique du modèle : mêmes primitives sur TOUTES les pages
   // (couverture, copyright, table des matières, contenu), derrière le texte.
   const decorPrims = coverDecorPrims(template, w, h);
+  const promoFooter = (
+    <div
+      className="gen-page-footer"
+      style={{
+        bottom: mm(1.5),
+        display: "grid",
+        gridTemplateColumns: "1fr auto 1fr",
+        alignItems: "center",
+        gap: mm(1),
+        padding: `0 ${mm(m.left)}`,
+        fontSize: pt(template.sizes.small),
+        color: template.colors.accent,
+      }}
+    >
+      <em style={{ fontStyle: "italic" }}>visitez{" "}
+        <a
+          href={MBOPPI_CONTENT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "inherit", textDecoration: "underline" }}
+        >{MBOPPI_CONTENT_LABEL}</a> pour plus de contenu
+      </em>
+      <span>{page.number}</span>
+      <span />
+    </div>
+  );
 
   if (page.kind === "cover") {
     // Mêmes règles que le PDF et la miniature produit : resolveCover +
@@ -2967,6 +2998,7 @@ function GenPage({ page, paginated, docMeta, fit }) {
           {copyrightLines(docMeta).join("\n")}
           <div style={{ marginTop: mm(4), color: template.colors.accent }}>Référence : {docMeta.doc_ref}</div>
         </div>
+        {promoFooter}
       </div>
     );
   }
@@ -2990,6 +3022,7 @@ function GenPage({ page, paginated, docMeta, fit }) {
             </div>
           ))}
         </div>
+        {promoFooter}
       </div>
     );
   }
@@ -3028,9 +3061,7 @@ function GenPage({ page, paginated, docMeta, fit }) {
           <GenItem key={i} item={item} template={template} />
         ))}
       </div>
-      <div className="gen-page-footer" style={{ bottom: mm(1.5), fontSize: pt(template.sizes.small), color: template.colors.accent }}>
-        {page.number}
-      </div>
+      {promoFooter}
     </div>
   );
 }

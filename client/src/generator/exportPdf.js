@@ -11,6 +11,7 @@ import { FONT_PDF, resolveCover, coverLayoutBox } from "./templates.js";
 import { coverDecorPrims, drawCoverDecorPdf } from "./coverDecor.js";
 import { PX_PER_MM } from "./paginate.js";
 import { copyrightLines, makeQrDataUrl, verificationPayload } from "./protection.js";
+import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL } from "./footerPromo.js";
 import { BASE_URL } from "../config.js";
 
 const pxToMm = (v) => v / PX_PER_MM;
@@ -562,19 +563,21 @@ function drawHeaderFooter(doc, page, docMeta, template, box) {
   const { w, h, m } = box;
   const cfg = docMeta.protection || {};
   const s = template.sizes.small;
-  const fill = (text, slot, slotY) => {
+  const resolveText = (text) => String(text || "")
+    .replaceAll("{title}", docMeta.title || "")
+    .replaceAll("{author}", docMeta.author || "")
+    .replaceAll("{page}", String(page.number ?? ""));
+  const fill = (text, slot, slotY, xOverride = null) => {
     if (!text) return;
-    const str = String(text)
-      .replaceAll("{title}", docMeta.title || "")
-      .replaceAll("{author}", docMeta.author || "")
-      .replaceAll("{page}", String(page.number ?? ""));
+    const str = resolveText(text);
     if (!str.trim()) return;
     doc.setFont(FONT_PDF[template.bodyFont], "normal");
     doc.setFontSize(s);
     setText(doc, template.colors.accent);
     const tw = doc.getTextWidth(str);
-    const x = slot === "left" ? m.left : slot === "right" ? w - m.right - tw : (w - tw) / 2;
+    const x = Number.isFinite(xOverride) ? xOverride : slot === "left" ? m.left : slot === "right" ? w - m.right - tw : (w - tw) / 2;
     doc.text(str, x, slotY);
+    return { text: str, width: tw, end: x + tw };
   };
   const hasHeader = cfg.header !== false && (cfg.headerLeft || cfg.headerCenter || cfg.headerRight);
   if (hasHeader) {
@@ -585,7 +588,39 @@ function drawHeaderFooter(doc, page, docMeta, template, box) {
   }
   if (cfg.footer !== false) {
     const slotY = h - m.bottom + 8;
-    fill(cfg.footerLeft || "", "left", slotY);
+    // Promotion MboppiShop : à gauche, en italique, avec une annotation PDF
+    // réelle sur le domaine. Le numéro reste centré et les champs existantes
+    // gardent leurs emplacements centre/droite.
+    const size = template.sizes.small;
+    doc.setFont(FONT_PDF[template.bodyFont], "italic");
+    doc.setFontSize(size);
+    setText(doc, template.colors.accent);
+    const prefix = "visitez ";
+    const suffix = " pour plus de contenu";
+    const x = m.left;
+    const prefixW = doc.getTextWidth(prefix);
+    const linkW = doc.getTextWidth(MBOPPI_CONTENT_LABEL);
+    doc.text(prefix, x, slotY);
+    doc.text(MBOPPI_CONTENT_LABEL, x + prefixW, slotY);
+    doc.text(suffix, x + prefixW + linkW, slotY);
+    const suffixW = doc.getTextWidth(suffix);
+    const promoEnd = x + prefixW + linkW + suffixW;
+    // Un pied gauche personnalisé n'est jamais écrasé : il commence après la
+    // promotion, sur la même ligne, tant qu'il reste de la place.
+    const customLeft = cfg.footerLeft ? resolveText(cfg.footerLeft).trim() : "";
+    if (customLeft) {
+      doc.setFont(FONT_PDF[template.bodyFont], "normal");
+      const maxRight = w - m.right - doc.getTextWidth(customLeft);
+      fill(cfg.footerLeft, "left", slotY, Math.min(promoEnd + 2, maxRight));
+    }
+    setStroke(doc, template.colors.accent);
+    doc.setLineWidth(0.12);
+    doc.line(x + prefixW, slotY + 0.55, x + prefixW + linkW, slotY + 0.55);
+    try {
+      doc.link(x + prefixW, slotY - size * 0.35, linkW, size * 0.5, { url: MBOPPI_CONTENT_URL });
+    } catch {
+      /* Si un build jsPDF refuse l’annotation, le texte reste dessiné. */
+    }
     fill(cfg.footerCenter || "{page}", "center", slotY);
     fill(cfg.footerRight || "", "right", slotY);
   }
@@ -723,8 +758,8 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
         }
       }
       drawWatermark(doc2, docMeta, template, box);
-      drawHeaderFooter(doc2, page, docMeta, template, box);
     }
+    if (page.kind !== "cover") drawHeaderFooter(doc2, page, docMeta, template, box);
   }
 
   const name = String(

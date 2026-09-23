@@ -14,6 +14,7 @@ import { FONT_PDF, resolvePageBox, resolveTemplate, getTemplate } from "./templa
 import { drawPageDecor, toDataUrl, saveBlob } from "./exportPdf.js";
 import { coverDecorPrims, drawCoverDecorPdf } from "./coverDecor.js";
 import { makeQrDataUrl } from "./protection.js";
+import { safeWebUrl } from "./footerPromo.js";
 import { applyTokens, elementType, sortedElements, mixHex } from "./studioModel.js";
 
 const PT2MM = 0.3527777;
@@ -199,6 +200,16 @@ function drawRunsLine(doc, line, x, y, { align = "left", maxW = 0, color } = {})
       setStroke(doc, r.href ? "#0B5FFF" : r.color || color || "#111111");
       doc.setLineWidth(0.13);
       doc.line(cursor, base + 0.55, cursor + w, base + 0.55);
+    }
+    if (r.href) {
+      const url = safeWebUrl(r.href);
+      if (url) {
+        try {
+          doc.link(cursor, base - r.size * PT2MM * 0.82, Math.max(0.5, w), r.size * PT2MM * 1.1, { url });
+        } catch {
+          /* annotation refusée : le texte reste visible et cliquable dans l'aperçu */
+        }
+      }
     }
     if (r.strike) {
       setStroke(doc, r.color || color || "#111111");
@@ -951,6 +962,8 @@ figure img { max-width: 100%; height: auto; }
 .gallery { display: flex; flex-wrap: wrap; gap: 6px; }
 .gallery img { width: 30%; }
 table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.92em; }
+.mboppi-footer { margin-top: 1.5em; padding-top: .5em; border-top: 1px solid ${template.colors.accent}55; font-size: .82em; font-style: italic; text-align: left; }
+a { color: ${template.colors.accent}; }
 th, td { border: 1px solid ${template.colors.accent}66; padding: 4px 6px; text-align: left; }
 th { background: ${template.colors.accent}22; color: ${template.colors.heading}; }
 .stats { display: flex; flex-wrap: wrap; gap: 1em; margin: 1em 0; }
@@ -1001,9 +1014,10 @@ async function pageXhtmlBody(page, ctx) {
       const tag = el.type === "heading" || el.type === "chapter" ? "h2"
         : el.type === "subtitle" ? "h3"
           : el.type === "paragraph" || el.type === "textzone" || el.type === "footnote" ? "p" : "div";
-      const cls = el.type === "note" ? "note" : el.type === "box" ? "box"
+      const cls = el.data?.promotion === "mboppi-content" ? "mboppi-footer" : el.type === "note" ? "note" : el.type === "box" ? "box"
         : el.type === "reference" ? "reference" : el.type === "footnote" ? "footnote" : "";
-      body.push(`<${tag}${cls ? ` class="${cls}"` : ""}>${html}</${tag}>`);
+      const boldStyle = el.style?.bold ? ' style="font-weight:700"' : "";
+      body.push(`<${tag}${cls ? ` class="${cls}"` : ""}${boldStyle}>${html}</${tag}>`);
       continue;
     }
     if (el.type === "image" || el.type === "logo") {
