@@ -11516,7 +11516,7 @@ a.step {
 @media (max-width: 760px) {
   .studio-body { grid-template-columns: minmax(0, 1fr); }
   .studio-pages {
-    max-height: 30vh;
+    max-height: 24vh;
     border-right: 0;
     border-bottom: 1px solid var(--border);
   }

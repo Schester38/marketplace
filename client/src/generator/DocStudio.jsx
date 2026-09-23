@@ -225,6 +225,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
   const fileRef = useRef(null); // <input type="file"> caché — images (§3/§6)
   const fileIntent = useRef(null); // { intent: "add" | "replace", typeId }
   const previewRef = useRef(null); // conteneur de l'aperçu — plein écran (§19)
+  const centerRef = useRef(null); // zone centrale — ajustement du canvas (§18)
   const saveTimer = useRef(null);
   const pagesRef = useRef(null);
   pagesRef.current = pages;
@@ -951,6 +952,38 @@ useEffect(() => {
   };
 }, [mode, previewMode, box.w, zoom]);
 const previewZoom = zoom * previewFit;
+// ─── Ajustement du canvas d'ÉDITION à l'écran (§18 : téléphone) ─────────────
+// Même logique que `previewFit`, appliquée au mode ÉDITION : sur téléphone une
+// page A4 (~794 px à zoom 1) ne tenait pas dans la largeur visible → les
+// éléments hors écran semblaient « disparus » et il fallait scroller dans tous
+// les sens. `canvasFit` est le rapport LARGEUR DISPONIBLE / LARGEUR DE PAGE À
+// ZOOM 1 (borné à 1) : il ne dépend donc PAS du zoom courant, ce qui permet aux
+// boutons +/− de continuer à agrandir la page (au-delà de la largeur écran, on
+// scrolle — comportement attendu). Il est appliqué AU ZOOM passé au canvas (et
+// non par un `transform: scale` CSS) : tous les gestes étant calculés à partir
+// de ce zoom (`/ (PX_PER_MM * zoom)`), déplacement et redimensionnement restent
+// exacts. L'export, lui, garde la taille réelle (le facteur est local à l'UI).
+const [canvasFit, setCanvasFit] = useState(1);
+useEffect(() => {
+  const el = centerRef.current;
+  const raw1 = box.w * PX_PER_MM; // largeur de page à zoom 1
+  if (mode !== "edit" || !el || !raw1) return undefined;
+  const measure = () => {
+    // `clientWidth` inclut le padding (14 px desktop, 8 px mobile) : on retire
+    // une marge légèrement supérieure pour que la page ne déborde jamais.
+    const avail = Math.max(0, (el.clientWidth || 360) - 36);
+    setCanvasFit(Math.max(0.2, Math.min(1, avail / raw1)));
+  };
+  measure();
+  const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+  ro?.observe(el);
+  window.addEventListener("resize", measure);
+  return () => {
+    ro?.disconnect();
+    window.removeEventListener("resize", measure);
+  };
+}, [mode, box.w]);
+const editZoom = zoom * canvasFit;
 
   // ─── Aperçu plein écran (§19) ─────────────────────────────────────────────
   const toggleFullscreen = useCallback(() => {
@@ -1091,7 +1124,9 @@ const previewZoom = zoom * previewFit;
         <button type="button" className="btn btn-outline btn-small" onClick={redo} disabled={!future.length} title="Rétablir (Ctrl+Y)">↪</button>
         <span className="studio-sep" />
         <button type="button" className="btn btn-outline btn-small" onClick={() => setZoom((z) => Math.max(0.3, Math.round((z - 0.1) * 10) / 10))} title="Zoom −">−</button>
-        <span className="studio-zoomval">{Math.round(zoom * 100)} %</span>
+        <span className="studio-zoomval" title={canvasFit < 0.999 ? t("Ajusté à l'écran — l'export garde la taille réelle.") : ""}>
+          {Math.round(editZoom * 100)} %{canvasFit < 0.999 ? " ⤢" : ""}
+        </span>
         <button type="button" className="btn btn-outline btn-small" onClick={() => setZoom((z) => Math.min(2, Math.round((z + 0.1) * 10) / 10))} title="Zoom +">+</button>
         <span className="studio-sep" />
         <button type="button" className={`btn btn-small ${mode === "preview" ? "" : "btn-outline"}`} onClick={() => setMode(mode === "preview" ? "edit" : "preview")}>
@@ -1186,7 +1221,7 @@ const previewZoom = zoom * previewFit;
           )}
         </aside>
         {/* Centre : canvas éditable (§3-§5) ou aperçu (§19) */}
-        <main className="studio-center">
+        <main className="studio-center" ref={centerRef}>
           {error && <div className="studio-error">⚠️ {error}</div>}
           {mode === "edit" ? (
             <>
@@ -1197,7 +1232,7 @@ const previewZoom = zoom * previewFit;
                 template={template}
                 docMeta={docMeta || {}}
                 totalPages={totalPages}
-                zoom={zoom}
+                zoom={editZoom}
                 selectedIds={selIds}
                 readOnly={false}
                 lockContent={!!activePage?.locked?.content}
