@@ -489,11 +489,10 @@ function copyrightPage(docMeta, template, box) {
   });
   els.push(makeElement(template, "paragraph", { x: m.left, y: round1(h * 0.4), w: contentW, h: round1(height) }, {
     name: "Mentions de copyright", z: 5, html: lines.join("<br>"),
-    style: { ...defaultStyle(template, "paragraph"), size, align: "left", lineHeight: 1.6, paraSpace: 0 },
-  }));
-  els.push(makeElement(template, "paragraph", { x: m.left, y: round1(h * 0.4 + height + 4), w: contentW, h: 8 }, {
-    name: "Auteur (copyright)", z: 5, html: escapeHtml(docMeta.author || ""),
-    style: { ...defaultStyle(template, "paragraph"), size, color: template.colors.heading, align: "center", paraSpace: 0 },
+    // Centré comme l'aperçu et le PDF ; la première ligne porte l'auteur
+    // (« © année l'auteur: … », protection.js) — pas d'élément « Auteur »
+    // séparé, qui ferait doublon sur la page.
+    style: { ...defaultStyle(template, "paragraph"), size, align: "center", lineHeight: 1.6, paraSpace: 0 },
   }));
   els.push(makeElement(template, "reference", { x: m.left, y: round1(h * 0.4 + height + 12), w: contentW, h: 8 }, {
     name: "Référence du document", z: 5, html: `Référence : ${escapeHtml(docMeta.doc_ref || "")}`,
@@ -691,12 +690,27 @@ export function readStudio(pageLayout) {
 }
 
 /**
- * Empreinte du DESIGN (modèle, styles avancés, format, marges, sommaire).
+ * Version du MOTEUR de mise en page (`paginate.js`). Une mise en page du Studio
+ * dérive des positions calculées par ce moteur : quand celui-ci corrige sa
+ * géométrie, les mises en page enregistrées par l'ancien moteur deviennent
+ * périmées et sont reconstruites automatiquement à l'ouverture du document
+ * (même mécanisme qu'un changement de modèle) — sans quoi l'aperçu et le PDF
+ * continueraient d'afficher les anciennes positions (texte superposé).
+ *   v1 → avant correction de l'avance de ligne (hauteur d'encre seule).
+ *   v2 → avance de ligne réelle mesurée + espacements appliqués aux bords du
+ *        bloc (plus aucun chevauchement de texte).
+ */
+export const LAYOUT_ENGINE_VERSION = 2;
+
+/**
+ * Empreinte du DESIGN (modèle, styles avancés, format, marges, sommaire,
+ * version du moteur de mise en page).
  * Elle change dès qu'un réglage de l'onglet Design est modifié : sert à savoir
  * si une mise en page enregistrée est encore d'actualité (synchronisation).
  */
 export function studioDesignKey(docMeta = {}) {
   return JSON.stringify([
+    LAYOUT_ENGINE_VERSION,
     docMeta.template_id,
     docMeta.style_overrides || {},
     docMeta.page_format,

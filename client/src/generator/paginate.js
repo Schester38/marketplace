@@ -179,18 +179,64 @@ function blockInlineStyle(kind, template) {
 // zéro, la 3ᵉ ligne d'un paragraphe serait peinte à 3 interlignes du HAUT DE LA
 // PAGE : tous les blocs se superposaient (aperçu comme PDF). Les `x` des mots
 // restent relatifs à la largeur de contenu (aucun décalage horizontal).
+//
+// ⚠️ VERTICAL (anti « des écrits sur des écrits ») — deux règles, désormais
+// cohérentes avec ce que le navigateur a réellement mesuré :
+//  1. l'avance verticale d'une ligne est l'AVANCE RÉELLE mesurée jusqu'à la
+//     suivante (`h`, interligne compris), jamais la seule hauteur d'encre
+//     `bottom - top` (≈ 1,12 × taille de police) : sinon chaque ligne du bloc
+//     se rapprochait de ~7 px et les lignes finissaient par se superposer ;
+//  2. les positions restituées à l'aperçu/au PDF (`top` relatif à la première
+//     ligne du bloc) sont RECONSTRUITES à partir de ces mêmes avances : la
+//     ligne est donc peinte exactement là où le flux l'a placée (aucun écart
+//     possible entre la décision de saut de page et l'encre dessinée).
+// Les espacements du bloc (`sp.before` / `sp.after`) s'appliquent désormais aux
+// BORDS du bloc uniquement : appliquer `after` après la première ligne
+// ajoutait l'espacement de paragraphe AU MILIEU du bloc (les lignes d'un
+// paragraphe se retrouvaient espacées de « encre + espacement », masquant le
+// premier défaut au prix d'un interlignage faux et irrégulier).
 function pushLineAtoms(atoms, lines, kind, sp, groupId, marker) {
   if (!lines.length) return;
+  const n = lines.length;
+  const ink = lines.map((ln) => Math.max(1, ln.bottom - ln.top));
+  // Avances et décalages cumulés (le max protège d'une mesure d'encre
+  // supérieure à l'avance réelle : jamais de ligne écrasée).
+  const offsets = [0];
+  for (let i = 1; i < n; i++) {
+    const adv = Math.max(ink[i - 1], lines[i].top - lines[i - 1].top);
+    offsets.push(offsets[i - 1] + adv);
+  }
+  // Hauteur d'encre du bloc complet : sert au décor de titre (barre latérale
+  // des h1, règle sous le titre) pour couvrir TOUTES les lignes du titre.
+  const groupH = Math.max(1, offsets[n - 1] + ink[n - 1]);
+  const heading = /^h[1-4]$/.test(kind);
+  const lastBottom = groupH;
   lines.forEach((ln, i) => {
+    const isFirst = i === 0;
+    const isLast = i === n - 1;
+    // Avance : distance jusqu'à la ligne suivante ; la dernière ligne du bloc
+    // conserve sa hauteur d'encre (l'espacement qui suit reste `sp.after`).
+    const advance = isLast ? ink[i] : offsets[i + 1] - offsets[i];
     atoms.push({
       kind,
-      lines: [{ ...ln, top: 0, bottom: ln.bottom - ln.top }],
+      // CONVENTION : la ligne est peinte à `item.top + ln.top` par l'aperçu et
+      // à `item.top + ln.bottom` par le PDF — comme chaque atome est UNE ligne
+      // placée par le flux à sa position exacte, la boîte de la ligne repart de
+      // 0 dans l'atome (les avances cumulées ci-dessus servent uniquement à
+      // `h`, `groupH` et `restH`, jamais au rendu).
+      lines: [{ ...ln, top: 0, bottom: ink[i] }],
+      h: advance,
+      groupH,
+      // Hauteur restante du bloc depuis cette ligne (titres insécables).
+      restH: lastBottom - offsets[i],
+      heading,
       marker: i === 0 ? marker : null,
-      sp: i === 0 ? sp : { before: 0, after: 0 },
+      // Bords du bloc seulement (voir l'en-tête de la fonction).
+      sp: { before: isFirst ? sp.before : 0, after: isLast ? sp.after : 0 },
       groupId,
-      groupLines: lines.length,
+      groupLines: n,
       lineIndex: i,
-      keepNext: /^h[1-4]$/.test(kind),
+      keepNext: heading && isLast,
       // Seul un h1 (chapitre) ouvre une nouvelle page : les h2 sont des
       // sections, qui restent dans le flux (titre jamais isolé en bas de page).
       chapterStart: kind === "h1" && i === 0,
@@ -406,6 +452,10 @@ export function flowAtoms(atoms, contentHpx, template, bodyLineH) {
   const atomH = (a) => {
     if (a.kind === "image" || a.kind === "tableRow" || a.kind === "qr") return a.h;
     if (a.kind === "hr") return 4;
+    // Ligne de texte / liste / citation : `h` porte l'avance verticale RÉELLE
+    // mesurée (interligne compris), indispensable pour ne pas empiler les
+    // lignes les unes sur les autres (voir pushLineAtoms).
+    if (Number.isFinite(a.h)) return a.h;
     const ln = a.lines?.[0];
     return ln ? ln.bottom - ln.top : 0;
   };
@@ -463,9 +513,14 @@ export function flowAtoms(atoms, contentHpx, template, bodyLineH) {
     }
 
     if (items.length > 0) {
-      // Titre insécable : réserve la place de ~2 lignes de corps après lui.
+      // Titre insécable : un titre se déplace EN BLOC (`restH` = hauteur
+      // restante du titre depuis cette ligne) et réserve en plus la place de
+      // ~2 lignes de corps qui le suivent. Depuis que les lignes sont posées à
+      // leur avance réelle (interligne compris), raisonner sur la seule ligne
+      // courante laissait la 2ᵉ ligne d'un titre seule en bas de page.
       const reserve = atom.keepNext ? bodyLineH * 2 : 0;
-      let needsBreak = y + before + h + reserve > contentHpx;
+      const needed = atom.heading ? (atom.restH || h) + bodyLineH * 2 : h + reserve;
+      let needsBreak = y + before + needed > contentHpx;
 
       if (needsBreak && atom.breakable && atom.groupLines > 1 && !atom.keepNext) {
         // Veuves/orphelines : si une SEULE ligne du bloc tient en fin de page,

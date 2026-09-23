@@ -44,15 +44,27 @@ export async function makeQrDataUrl(text, size = 320) {
 }
 
 // Copyright lisible, affiché sur la page de copyright du document.
+// La PREMIÈRE ligne porte toujours l'identité de l'œuvre et de son auteur, au
+// format demandé « © <année> l'auteur: <nom> » : c'est cette liste qui est
+// rendue par l'aperçu, le PDF, l'EPUB ET le Studio (source unique, donc aucun
+// risque de divergence entre les rendus).
 export function copyrightLines(doc) {
   const year = new Date().getFullYear();
-  const author = doc.author || "L'auteur";
-  const custom = doc.protection?.copyrightText;
-  if (custom && String(custom).trim()) {
-    return String(custom).split("\n").filter(Boolean);
+  const author = String(doc.author || "").trim() || "Auteur non renseigné";
+  const head = `© ${year} l'auteur: ${author}`;
+  const custom = String(doc.protection?.copyrightText || "").trim();
+  if (custom) {
+    const body = custom
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    // Le texte personnalisé remplace les mentions légales, mais la ligne
+    // d'identité reste affichée (sans doublon si elle a déjà été saisie —
+    // « l'auteur: », « l’auteur : », « l auteur : » sont reconnus).
+    return body.some((l) => /l['’\s]?auteur\s*:/i.test(l)) ? body : [head, "", ...body];
   }
   return [
-    `© ${year} ${author}`,
+    head,
     "Tous droits réservés.",
     "",
     "Aucune partie de cette publication ne peut être reproduite, distribuée",

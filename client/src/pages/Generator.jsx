@@ -3109,6 +3109,11 @@ function GenHeadingDecor({ item, template }) {
   const applyRule = rule === "h1h2" || (rule === "h1" && isH1);
   const words = ln.words || [];
   const textW = words.length ? Math.max(...words.map((wd) => wd.x + wd.w)) : 0;
+  // Hauteur du décor = hauteur d'encre du TITRE COMPLET (`groupH`), pas
+  // `lineH` × nombre de lignes : depuis que les lignes d'un bloc sont posées à
+  // leur avance réelle (interligne compris), la barre latérale du h1 couvrirait
+  // sinon seulement une partie du titre.
+  const decorH = item.groupH || lineH * Math.max(1, item.groupLines || 1);
   return (
     <>
       {bar === "left" && isH1 && lineIndex === 0 && (
@@ -3118,7 +3123,7 @@ function GenHeadingDecor({ item, template }) {
             left: -5 * PX_PER_MM,
             top: item.top,
             width: 1.6 * PX_PER_MM,
-            height: lineH * Math.max(1, item.groupLines || 1),
+            height: decorH,
             background: template.colors.accent,
           }}
         />
@@ -3128,7 +3133,9 @@ function GenHeadingDecor({ item, template }) {
           style={{
             position: "absolute",
             left: 0,
-            top: item.top + lineH + 1.4 * PX_PER_MM,
+            // Chaque atome = UNE ligne : `item.top` est déjà la position de
+            // cette ligne, la règle se pose donc sous son encre.
+            top: item.top + ln.top + lineH + 1.4 * PX_PER_MM,
             width: isH1 ? "100%" : textW,
             height: (isH1 ? 0.7 : 0.4) * PX_PER_MM,
             background: template.colors.accent,

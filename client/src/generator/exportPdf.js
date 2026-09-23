@@ -449,7 +449,10 @@ function drawHeadingDecor(doc, item, template, box) {
   const bar = template.headingBar || "none";
   const lineIndex = item.lineIndex ?? 0;
   if (bar === "left" && isH1 && lineIndex === 0) {
-    const barH = pxToMm(lineH) * Math.max(1, item.groupLines || 1);
+    // Hauteur = encre du titre COMPLET (`groupH`) : les lignes d'un bloc sont
+    // désormais posées à leur avance réelle (interligne compris), donc
+    // `lineH × groupLines` ne couvrirait plus tout le titre.
+    const barH = pxToMm(item.groupH || lineH * Math.max(1, item.groupLines || 1));
     setFill(doc, template.colors.accent);
     doc.rect(Math.max(4, m.left - 5), itemTopMm, 1.6, barH, "F");
   }
@@ -464,7 +467,9 @@ function drawHeadingDecor(doc, item, template, box) {
     const rw = isH1 ? contentW : Math.min(textW, contentW);
     setStroke(doc, template.colors.accent);
     doc.setLineWidth(isH1 ? 0.7 : 0.4);
-    const ry = itemTopMm + pxToMm(lineH) + 1.4;
+    // Chaque atome = UNE ligne : `itemTopMm` est déjà la position de CETTE
+    // ligne, la règle se pose donc sous son encre.
+    const ry = itemTopMm + pxToMm(ln.top + lineH) + 1.4;
     doc.line(m.left, ry, m.left + Math.max(10, rw), ry);
   }
 }
