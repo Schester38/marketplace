@@ -5881,6 +5881,24 @@ const GEN5_EN = {
   Page: "Page",
   "Conversion du document impossible": "Could not convert the document",
   "Export impossible": "Export failed",
+  // 🔗 Mots collés (correcteur de mots sans espace du Studio)
+  "Mots collés": "Glued words",
+  "Corrections proposées": "Suggested fixes",
+  "Aucun mot collé détecté.": "No glued words found.",
+  "Détection des mots sans espace (« lesmots », « fin.Le », « 5000francs ») — vérifiez la liste puis corrigez tout d'un clic. La correction est annulable (Ctrl+Z).":
+    "Detects words missing a space (“lesmots”, “fin.Le”, “5000francs”) — check the list, then fix everything in one click. The fix can be undone (Ctrl+Z).",
+  "… et d'autres corrections sur les pages suivantes.": "… and more fixes on the following pages.",
+  "Tout corriger": "Fix all",
+  "Corrections appliquées": "Fixes applied",
+  "Détecter les mots sans espace et tout corriger d'un clic": "Detect words missing a space and fix them all in one click",
+  "Titre, auteur et couverture": "Title, author and cover",
+  "Texte du document": "Document text",
+  "Ponctuation collée": "Punctuation stuck to text",
+  "Espace avant la ponctuation": "Space before punctuation",
+  "Majuscule collée": "Capital stuck to word",
+  "Mots agglutinés": "Run-together words",
+  "Chiffres collés": "Digits stuck to letters",
+  "Apostrophe manquante": "Missing apostrophe",
 };
 
 const GEN3_AR = {
@@ -6054,6 +6072,24 @@ const GEN5_AR = {
   Page: "صفحة",
   "Conversion du document impossible": "تعذّر تحويل المستند",
   "Export impossible": "تعذّر التصدير",
+  // 🔗 Mots collés (correcteur de mots sans espace du Studio)
+  "Mots collés": "كلمات ملتصقة",
+  "Corrections proposées": "تصحيحات مقترحة",
+  "Aucun mot collé détecté.": "لم يتم العثور على كلمات ملتصقة.",
+  "Détection des mots sans espace (« lesmots », « fin.Le », « 5000francs ») — vérifiez la liste puis corrigez tout d'un clic. La correction est annulable (Ctrl+Z).":
+    "يكتشف الكلمات التي فُقدت المسافة بينها («lesmots»، «fin.Le»، «5000francs») — راجع القائمة ثم صحّح الكل بنقرة واحدة. يمكن التراجع عن التصحيح (Ctrl+Z).",
+  "… et d'autres corrections sur les pages suivantes.": "… وتصحيحات أخرى في الصفحات التالية.",
+  "Tout corriger": "تصحيح الكل",
+  "Corrections appliquées": "تم تطبيق التصحيحات",
+  "Détecter les mots sans espace et tout corriger d'un clic": "اكشف الكلمات التي فُقدت المسافة وصحّحها كلها بنقرة واحدة",
+  "Titre, auteur et couverture": "العنوان والمؤلف والغلاف",
+  "Texte du document": "نص المستند",
+  "Ponctuation collée": "ترقيم ملتصق",
+  "Espace avant la ponctuation": "مسافة قبل علامة الترقيم",
+  "Majuscule collée": "حرف كبير ملتصق",
+  "Mots agglutinés": "كلمات مدموجة",
+  "Chiffres collés": "أرقام ملتصقة",
+  "Apostrophe manquante": "فاصلة عليا مفقودة",
 };
 
 const GEN3_ES = {
@@ -6227,6 +6263,24 @@ const GEN5_ES = {
   Page: "Página",
   "Conversion du document impossible": "No se pudo convertir el documento",
   "Export impossible": "Exportación fallida",
+  // 🔗 Mots collés (correcteur de mots sans espace du Studio)
+  "Mots collés": "Palabras pegadas",
+  "Corrections proposées": "Correcciones propuestas",
+  "Aucun mot collé détecté.": "No se detectaron palabras pegadas.",
+  "Détection des mots sans espace (« lesmots », « fin.Le », « 5000francs ») — vérifiez la liste puis corrigez tout d'un clic. La correction est annulable (Ctrl+Z).":
+    "Detecta palabras sin espacio («lesmots», «fin.Le», «5000francs»): revisa la lista y corrígelo todo con un clic. La corrección se puede deshacer (Ctrl+Z).",
+  "… et d'autres corrections sur les pages suivantes.": "… y más correcciones en las páginas siguientes.",
+  "Tout corriger": "Corregir todo",
+  "Corrections appliquées": "Correcciones aplicadas",
+  "Détecter les mots sans espace et tout corriger d'un clic": "Detectar palabras sin espacio y corregirlas todas con un clic",
+  "Titre, auteur et couverture": "Título, autor y portada",
+  "Texte du document": "Texto del documento",
+  "Ponctuation collée": "Puntuación pegada",
+  "Espace avant la ponctuation": "Espacio antes de la puntuación",
+  "Majuscule collée": "Mayúscula pegada",
+  "Mots agglutinés": "Palabras unidas",
+  "Chiffres collés": "Dígitos pegados",
+  "Apostrophe manquante": "Apóstrofo faltante",
 };
 
 export const I18N = {

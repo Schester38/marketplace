@@ -11482,6 +11482,57 @@ a.step {
 .studio-pagekind:hover { border-color: var(--primary); color: var(--primary); }
 .studio-pagekind-icon { font-size: 1.05rem; }
 .studio-planscope { font-size: 0.95rem; color: var(--text); margin: 0; }
+/* ─── 🔗 Mots collés : liste AVANT → APRÈS du correcteur ─── */
+.studio-glued-box { width: min(760px, 96vw); }
+.studio-glued-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.studio-glued-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  padding: 8px 10px;
+}
+.studio-glued-where {
+  flex: 0 0 auto;
+  max-width: 42%;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+.studio-glued-fixes { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.studio-glued-fix {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text);
+  word-break: break-word;
+}
+.studio-glued-rule {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--primary);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: 1px 6px;
+}
+.studio-glued-before { color: var(--text-muted); text-decoration: line-through; }
+.studio-glued-arrow { color: var(--text-muted); }
+.studio-glued-after { font-weight: 600; color: var(--text); }
+@media (max-width: 640px) {
+  .studio-glued-item { flex-direction: column; gap: 4px; }
+  .studio-glued-where { max-width: none; }
+}
 .studio-ctxmenu {
   z-index: 70;
   display: flex;

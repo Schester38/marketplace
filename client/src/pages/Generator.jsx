@@ -1558,6 +1558,21 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
             // sont conservées en mémoire pour que l'export PDF les applique.
             if (env) setMeta((cur) => ({ ...cur, page_layout: env }));
           }}
+          onMetaPatch={(patch) => patchMeta(patch)}
+          onGluedContent={(fixedHtml) => {
+            // « 🔗 Mots collés » corrige aussi le texte de l'onglet Contenu, SANS
+            // émettre d'update : la mise en page du Studio reste intacte et une
+            // prochaine synchronisation ne réintroduit pas les mots collés.
+            const ed = editorRef.current;
+            if (!ed || !fixedHtml) return;
+            ed.commands.setContent(fixedHtml, false);
+            contentRef.current = ed.getJSON();
+            scheduleSave();
+            // L'aperçu paginé classique et le rapport DOCUMENT CHECK repartent du
+            // texte corrigé (aucune resynchronisation : le Studio garde sa mise
+            // en page).
+            setPreview(null);
+          }}
           t={t}
         />
       )}

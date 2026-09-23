@@ -29,6 +29,7 @@ import {
 } from "./studioAi.js";
 import { parseDesignCommand } from "./designCommands.js";
 import { exportStudioPdf, exportStudioEpub } from "./studioExport.js";
+import { fixGluedInPages, fixGluedInHtml, fixGluedDoc, applyGluedChanges } from "./gluedWords.js";
 import StudioCanvas from "./StudioCanvas.jsx";
 
 // ─── Helpers module ──────────────────────────────────────────────────────────
@@ -187,7 +188,7 @@ async function fileToStudioImage(file) {
   }
 }
 
-export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tProp }) {
+export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMetaPatch, onGluedContent, t: tProp }) {
   const t = tProp || ((s) => s);
   // ─── État ──────────────────────────────────────────────────────────────────
   const [pages, setPages] = useState(null); // null = conversion en cours
@@ -215,6 +216,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
   const [aiResult, setAiResult] = useState(null);
   const [pendingPlan, setPendingPlan] = useState(null); // confirmation de portée (§12/§26)
   const [check, setCheck] = useState(null);
+  const [glued, setGlued] = useState(null); // rapport « 🔗 Mots collés » (détection + correction)
   const [sizeScope, setSizeScope] = useState("page"); // taille du texte : selection | page | document
   const [menu, setMenu] = useState(null); // menu contextuel { x, y, elId }
   const [addOpen, setAddOpen] = useState(false); // « + Ajouter une page »
@@ -1042,6 +1044,66 @@ const editZoom = zoom * canvasFit;
     setPanel("check");
   }, [box, docMeta]);
 
+  // ─── 🔗 Mots collés (§20 bis) ──────────────────────────────────────────────
+  // Les textes importés (PDF → DOCX, OCR, copier-coller) arrivent souvent SANS
+  // les espaces (« lesmots », « fin.Le », « 5000francs »). Le moteur PUR
+  // `gluedWords.js` les détecte ; l'utilisateur VOIT la liste avant/après puis
+  // corrige tout d'un clic (un seul point d'historique → annulable Ctrl+Z).
+  const GLUED_RULE_TXT = useMemo(
+    () => ({
+      punct: t("Ponctuation collée"),
+      space: t("Espace avant la ponctuation"),
+      case: t("Majuscule collée"),
+      long: t("Mots agglutinés"),
+      digit: t("Chiffres collés"),
+      apos: t("Apostrophe manquante"),
+    }),
+    [t]
+  );
+  const scanGlued = useCallback(() => {
+    const all = pagesRef.current || [];
+    const { changes } = fixGluedInPages(all);
+    const meta = fixGluedDoc(docMeta || {});
+    const items = changes.map((c) => {
+      const page = all.find((p) => p.id === c.pageId);
+      const el = (page?.elements || []).find((e) => e.id === c.elId);
+      return {
+        key: `${c.pageId}:${c.elId}`,
+        where: `${t("Page")} ${page?.number ?? "?"} · ${t(elementLabel(el) || "")}`,
+        fixes: c.fixes,
+      };
+    });
+    if (meta.fixes.length) {
+      items.push({ key: "meta", where: t("Titre, auteur et couverture"), fixes: meta.fixes });
+    }
+    // Le texte de l'onglet « Contenu » est corrigé EN MÊME TEMPS (le parent
+    // applique le HTML sans émettre d'update : la mise en page du Studio reste
+    // intacte, mais une prochaine synchronisation ne réintroduit pas les mots
+    // collés dans les pages).
+    const content = onGluedContent && html ? fixGluedInHtml(html) : null;
+    if (content?.fixes.length) {
+      items.push({ key: "content", where: t("Texte du document"), fixes: content.fixes });
+    }
+    const total = items.reduce((n, it) => n + it.fixes.length, 0);
+    setGlued({ changes, meta, content, items, total });
+  }, [docMeta, html, onGluedContent, t]);
+  const applyGluedFixes = useCallback(() => {
+    const rep = glued;
+    if (!rep || !rep.total) return;
+    if (rep.changes.length) {
+      commit(`Mots collés — ${rep.changes.reduce((n, c) => n + c.fixes.length, 0)}`, applyGluedChanges(pagesRef.current || [], rep.changes));
+    }
+    if (rep.meta?.count) onMetaPatch?.(rep.meta.patch);
+    if (rep.content?.fixes?.length) {
+      // Empreinte mise à jour tout de suite : la sauvegarde qui suit écrit le
+      // bon `content_key` (sinon une resynchronisation reconstruirait les pages).
+      keysRef.current = { ...keysRef.current, contentKey: studioContentKey(rep.content.html) };
+      onGluedContent?.(rep.content.html);
+    }
+    setGlued(null);
+    flash(`${t("Corrections appliquées")} — ${rep.total}`);
+  }, [glued, commit, onMetaPatch, onGluedContent, t, flash]);
+
   // ─── Exports (§19 : PDF/EPUB ne sont que des exports du modèle) ────────────
   const doExport = useCallback(
     async (kind) => {
@@ -1166,6 +1228,14 @@ const editZoom = zoom * canvasFit;
           👁 {t("Aperçu")}
         </button>
         <button type="button" className="btn btn-outline btn-small" onClick={runCheck}>🔍 {t("Vérifier le document")}</button>
+        <button
+          type="button"
+          className="btn btn-outline btn-small"
+          onClick={scanGlued}
+          title={t("Détecter les mots sans espace et tout corriger d'un clic")}
+        >
+          🔗 {t("Mots collés")}
+        </button>
         <button type="button" className="btn btn-outline btn-small" onClick={() => setPanel("ai")} title={t("Générer avec l'IA")}>
           ✨ {t("IA")}
         </button>
@@ -1671,6 +1741,56 @@ const editZoom = zoom * canvasFit;
               <div className="studio-rowbtns">
                 <button type="button" className="btn btn-small" onClick={confirmPending}>✓ {t("Appliquer")}</button>
                 <button type="button" className="btn btn-outline btn-small" onClick={() => setPendingPlan(null)}>{t("Annuler")}</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {glued && (
+          <div className="studio-modal" onClick={() => setGlued(null)}>
+            <div className="studio-modal-box studio-glued-box" onClick={(e) => e.stopPropagation()}>
+              <strong>
+                🔗 {t("Mots collés")} — {t("Corrections proposées")} ({glued.total})
+              </strong>
+              {glued.total === 0 ? (
+                <p className="studio-okmsg">✓ {t("Aucun mot collé détecté.")}</p>
+              ) : (
+                <>
+                  <p className="studio-hint">
+                    {t(
+                      "Détection des mots sans espace (« lesmots », « fin.Le », « 5000francs ») — vérifiez la liste puis corrigez tout d'un clic. La correction est annulable (Ctrl+Z)."
+                    )}
+                  </p>
+                  <ul className="studio-glued-list">
+                    {glued.items.slice(0, 80).map((it) => (
+                      <li key={it.key} className="studio-glued-item">
+                        <span className="studio-glued-where">{it.where}</span>
+                        <span className="studio-glued-fixes">
+                          {it.fixes.map((f, i) => (
+                            <span key={`${it.key}-${i}`} className="studio-glued-fix">
+                              <span className="studio-glued-rule">{GLUED_RULE_TXT[f.rule] || f.rule}</span>
+                              <span className="studio-glued-before">{f.before}</span>
+                              <span className="studio-glued-arrow">→</span>
+                              <span className="studio-glued-after">{f.after}</span>
+                            </span>
+                          ))}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {glued.items.length > 80 && (
+                    <p className="studio-hint">{t("… et d'autres corrections sur les pages suivantes.")}</p>
+                  )}
+                </>
+              )}
+              <div className="studio-rowbtns">
+                {glued.total > 0 && (
+                  <button type="button" className="btn btn-small" onClick={applyGluedFixes}>
+                    ✓ {t("Tout corriger")} ({glued.total})
+                  </button>
+                )}
+                <button type="button" className="btn btn-outline btn-small" onClick={() => setGlued(null)}>
+                  {t("Fermer")}
+                </button>
               </div>
             </div>
           </div>
