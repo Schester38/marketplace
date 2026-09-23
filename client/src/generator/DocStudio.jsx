@@ -11,7 +11,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   paginateDocument, PX_PER_MM,
 } from "./paginate.js";
-import { GEN_TEMPLATES, resolveTemplate } from "./templates.js";
+import { GEN_TEMPLATES, resolveTemplate, FONT_CSS } from "./templates.js";
 import { api } from "../api.js";
 import {
   buildStudioPages, readStudio, studioBox, serializeStudio, studioDesignKey, studioContentKey,
@@ -19,7 +19,7 @@ import {
   cloneElement, addElement, addElements, removeElements, reorderElement, sortedElements, mergeElement,
   overflowPx, studioCheck, alignOffsets, distributeOffsets, ALIGN_MODES,
   buildCoverPage, buildTocPage,
-  uid, round1, isTextType, elementLabel,
+  uid, round1, isTextType, elementLabel, defaultStyle, stepTextSizes,
 } from "./studioModel.js";
 import {
   ELEMENT_LIBRARY, PAGE_KINDS, buildPage, PAGE_LAYOUTS, applyLayout, smartLayouts, newElement,
@@ -34,6 +34,22 @@ import StudioCanvas from "./StudioCanvas.jsx";
 // ─── Helpers module ──────────────────────────────────────────────────────────
 const mm = (v) => `${round1(Number(v || 0))} mm`;
 const stripHtml = (h) => String(h || "").replace(/<br\s*\/?>/gi, " ").replace(/<[^>]+>/g, "").replace(/&[a-z]+;/gi, " ").replace(/\s+/g, " ").trim();
+// Libellés lisibles des polices (tokens PDF natifs → noms affichés dans la liste).
+const FONT_LABELS = { serif: "Serif — Times", sans: "Sans — Arial", mono: "Mono — Courier" };
+// Taille de base d'un élément texte : réglage manuel s'il existe, sinon défaut
+// du modèle pour ce type (la liste « Police » de l'inspecteur était vide car
+// elle lisait un `template.fonts` qui n'existe pas : les modèles exposent
+// `bodyFont`/`headingFont` + `FONT_CSS`).
+const baseSizeOf = (el, tpl) => {
+  const n = Number(el?.style?.size);
+  if (Number.isFinite(n) && n > 0) return n;
+  if (tpl?.sizes) {
+    try {
+      return Number(defaultStyle(tpl, el?.type).size) || 11;
+    } catch { /* modèle incomplet : repli */ }
+  }
+  return 11;
+};
 
 /** Modèle actif du document (template + style_overrides) — même règle que le PDF. */
 export function resolveActiveTemplate(docMeta = {}) {
@@ -199,6 +215,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
   const [aiResult, setAiResult] = useState(null);
   const [pendingPlan, setPendingPlan] = useState(null); // confirmation de portée (§12/§26)
   const [check, setCheck] = useState(null);
+  const [sizeScope, setSizeScope] = useState("page"); // taille du texte : selection | page | document
   const [menu, setMenu] = useState(null); // menu contextuel { x, y, elId }
   const [addOpen, setAddOpen] = useState(false); // « + Ajouter une page »
   const [designChoices, setDesignChoices] = useState(null); // { pageId, options } (§8)
@@ -658,6 +675,46 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
   );
   const selEls = useMemo(() => (activePage ? sortedElements(activePage).filter((e) => selIds.includes(e.id)) : []), [activePage, selIds]);
   const overflow = useMemo(() => (activePage ? overflowPx(activePage, box) : null), [activePage, box]);
+  // ─── Taille du texte (§4/§11/§12) ──────────────────────────────────────────
+  // Le réglage n'est PAS limité à l'élément sélectionné : la portée choisie
+  // (sélection, page entière, document) touche tous les éléments TEXTE de cette
+  // portée. Une modification globale (§12) passe toujours par la confirmation.
+  // Les pages dont le design est verrouillé (§22) sont ignorées, comme au clic.
+  // Déclaré APRÈS `selEls` : sa liste de dépendances est évaluée pendant le rendu
+  // (sinon TDZ « Cannot access 'selEls' before initialization »).
+  const sizeStep = useCallback(
+    (delta, scope, confirmed = false) => {
+      const all = pagesRef.current || [];
+      const cur = curPage();
+      const hasSel = selEls.some((e) => isTextType(e));
+      const desired = scope === "selection" && !hasSel ? "page" : scope;
+      const scopeLabel =
+        desired === "selection" ? t("Sélection") : desired === "page" ? t("Page entière") : t("Document");
+      const label = `${t("Taille du texte")} ${delta > 0 ? "+" : ""}${delta} pt — ${scopeLabel}`;
+      if (desired === "document" && !confirmed) {
+        // Modification GLOBALE : toujours confirmée (§12).
+        setPendingPlan({ kind: "size", label, delta, sizeScope: desired });
+        return;
+      }
+      const selTextIds =
+        desired === "selection" ? selEls.filter((e) => isTextType(e)).map((e) => e.id) : null;
+      // Réglage pur et testé (studioModel) : borné 5-72 pt, verrous respectés.
+      const { pages: next, count } = stepTextSizes(all, {
+        delta,
+        scope: desired,
+        pageId: cur?.id,
+        selIds: selTextIds || [],
+        template,
+      });
+      if (!count) {
+        flash(t("Taille inchangée (limites atteintes ou aucun texte dans la portée)."));
+        return;
+      }
+      commit(label, next);
+      flash(`${t("Taille du texte mise à jour")} — ${count} ${t("élément(s)")}`);
+    },
+    [selEls, template, commit, t, flash],
+  );
   // ─── IA page par page (§9, §10, §26) ───────────────────────────────────────
   // Portée affichée AVANT application (§26 « Pages concernées : … ») ; le mode
   // « design » ne touche jamais au texte (§10).
@@ -915,10 +972,13 @@ const previewZoom = zoom * previewFit;
         commit(plan.label, (pages || []).map((p) => (ids.has(p.id) ? applyDesignToElements(p, ovr) : p)));
         flash(t("Modification appliquée."));
       }
+    } else if (plan.kind === "size") {
+      // Taille du texte sur tout le document — déjà confirmée par l'utilisateur.
+      sizeStep(plan.delta, plan.sizeScope || "document", true);
     } else if (plan.kind === "ai") {
       runAi(plan);
     }
-  }, [pendingPlan, pages, commit, t, flash, runAi]);
+  }, [pendingPlan, pages, commit, t, flash, runAi, sizeStep]);
 
   // ─── Contrôle qualité (§20) ────────────────────────────────────────────────
   const runCheck = useCallback(() => {
@@ -987,6 +1047,18 @@ const previewZoom = zoom * previewFit;
     );
   }
   const timeShort = (iso) => (iso ? new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "");
+  // Taille moyenne affichée dans « Texte et styles » pour la portée active :
+  // sélection de textes si elle existe, sinon tous les textes de la page.
+  const sizeLabel = useMemo(() => {
+    const scopeEls =
+      sizeScope === "selection" && selEls.some((e) => isTextType(e))
+        ? selEls.filter((e) => isTextType(e))
+        : (activePage?.elements || []).filter((e) => isTextType(e));
+    const vals = scopeEls.map((e) => baseSizeOf(e, template)).filter((n) => Number.isFinite(n));
+    if (!vals.length) return "—";
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    return `${Math.round(avg * 10) / 10} pt`;
+  }, [sizeScope, selEls, activePage, template]);
   return (
     <div className="studio-root">
       {/* Sélecteur de fichier caché — import/remplacement d'image (§3/§6) */}
@@ -1237,6 +1309,30 @@ const previewZoom = zoom * previewFit;
             {panel === "text" && (
               <div className="studio-panel-sec">
                 <strong>🅰 {t("Texte et styles")}</strong>
+                {/* Taille du texte — portée réglable (§4/§11/§12) : jamais limitée
+                    à l'élément sélectionné, on peut agrandir la page ou le livre. */}
+                <div className="studio-sizerow">
+                  <span className="studio-mini-label">{t("Taille du texte")}</span>
+                  <button type="button" className="studio-stepbtn" title={t("Réduire la taille")} onClick={() => sizeStep(-1, sizeScope)}>−</button>
+                  <span className="studio-sizeval">{sizeLabel}</span>
+                  <button type="button" className="studio-stepbtn" title={t("Augmenter la taille")} onClick={() => sizeStep(1, sizeScope)}>+</button>
+                </div>
+                <div className="studio-rowbtns">
+                  {[["selection", "Sélection"], ["page", "Page entière"], ["document", "Document"]].map(([k, lbl]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      className={`studio-chip studio-chip-sm ${sizeScope === k ? "active" : ""}`}
+                      disabled={k === "selection" && !selEls.some((e) => isTextType(e))}
+                      onClick={() => setSizeScope(k)}
+                    >
+                      {t(lbl)}
+                    </button>
+                  ))}
+                </div>
+                <span className="studio-hint">
+                  {t("La taille s'applique à tous les textes de la portée choisie — pas seulement à l'élément sélectionné.")}
+                </span>
                 {!selEls.filter((e) => isTextType(e)).length && <span className="studio-hint">{t("Sélectionnez un texte sur la page.")}</span>}
                 {selEls.filter((e) => isTextType(e)).map((el) => (
                   <div key={el.id} className="studio-texteditor">
@@ -1250,19 +1346,19 @@ const previewZoom = zoom * previewFit;
                     <div className="studio-stylegrid">
                       <label>
                         {t("Police")}
-                        <select value={el.style?.font || "body"} onChange={(e) => patchEls([{ id: el.id, patch: { style: { ...el.style, font: e.target.value } } }], "Police modifiée")}>
-                          {Object.entries(template.fonts || {}).map(([k, v]) => (
-                            <option key={k} value={k}>{k}</option>
+                        <select value={el.style?.font || template.bodyFont || "sans"} onChange={(e) => patchEls([{ id: el.id, patch: { style: { ...el.style, font: e.target.value } } }], "Police modifiée")}>
+                          {Object.keys(FONT_CSS).map((k) => (
+                            <option key={k} value={k}>{FONT_LABELS[k] || k}</option>
                           ))}
                         </select>
                       </label>
                       <label>
                         {t("Taille")}
-                        <input type="number" min="6" max="72" value={el.style?.size || 11} onChange={(e) => patchEls([{ id: el.id, patch: { style: { ...el.style, size: Number(e.target.value) || 11 } } }], "Taille modifiée")} />
+                        <input type="number" min="6" max="72" step="0.5" value={baseSizeOf(el, template)} onChange={(e) => patchEls([{ id: el.id, patch: { style: { ...el.style, size: Math.max(5, Math.min(72, Number(e.target.value) || baseSizeOf(el, template))) } } }], "Taille modifiée")} />
                       </label>
                       <label>
                         {t("Couleur")}
-                        <input type="color" value={el.style?.color || template.colors.text} onChange={(e) => patchEls([{ id: el.id, patch: { style: { ...el.style, color: e.target.value } } }], "Couleur modifiée")} />
+                        <input type="color" value={el.style?.color || template.colors?.body || template.colors?.heading || "#111111"} onChange={(e) => patchEls([{ id: el.id, patch: { style: { ...el.style, color: e.target.value } } }], "Couleur modifiée")} />
                       </label>
                       <label>
                         {t("Interligne")}
@@ -1500,7 +1596,7 @@ const previewZoom = zoom * previewFit;
               <p className="studio-planscope">
                 <strong>{pendingPlan.scope || pendingPlan.label}</strong>
               </p>
-              <p className="studio-hint">{t("Vérifiez la portée : l'IA n'appliquera la modification qu'aux pages annoncées.")}</p>
+              <p className="studio-hint">{t("Vérifiez la portée : la modification ne s'appliquera qu'aux pages annoncées.")}</p>
               <div className="studio-rowbtns">
                 <button type="button" className="btn btn-small" onClick={confirmPending}>✓ {t("Appliquer")}</button>
                 <button type="button" className="btn btn-outline btn-small" onClick={() => setPendingPlan(null)}>{t("Annuler")}</button>

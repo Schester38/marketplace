@@ -988,6 +988,48 @@ export function snapBox(box, { page, others = [], tol = 1.6, axes = "xy" } = {})
   return { box: out, guides };
 }
 // ─── Contrôle de pagination (§20) + vérification du document ────────────────
+/**
+ * Ajuste la taille de police de TOUS les éléments texte d'une portée donnée
+ * (§4 : « augmenter la taille des écritures », §11 multi-pages, §12 global).
+ * `scope` : "selection" (éléments de `selIds`), "page" (`pageId`) ou "document"
+ * (toutes les pages). Renvoie `{ pages, count }` : les pages dont le DESIGN est
+ * verrouillé et les éléments verrouillés ne sont jamais touchés (§13/§22), et la
+ * taille reste bornée entre 5 et 72 pt.
+ */
+export function stepTextSizes(pages, { delta, scope = "page", pageId = null, selIds = [], template = null } = {}) {
+  const d = Number(delta) || 0;
+  const clampSize = (v) => Math.max(5, Math.min(72, Math.round(v * 10) / 10));
+  const baseOf = (el) => {
+    const n = Number(el?.style?.size);
+    if (Number.isFinite(n) && n > 0) return n;
+    if (template?.sizes) {
+      try {
+        return Number(defaultStyle(template, el?.type).size) || 11;
+      } catch { /* modèle incomplet : repli */ }
+    }
+    return 11;
+  };
+  const sel = new Set(selIds || []);
+  let count = 0;
+  const out = (pages || []).map((p) => {
+    const inScope = scope === "selection" || scope === "document" || p?.id === pageId;
+    if (!inScope || p?.locked?.design) return p;
+    let changed = false;
+    const elements = (p.elements || []).map((el) => {
+      if (el.locked || !isTextType(el)) return el;
+      if (scope === "selection" && !sel.has(el.id)) return el;
+      const from = baseOf(el);
+      const to = clampSize(from + d);
+      if (to === from) return el;
+      changed = true;
+      count += 1;
+      return { ...el, style: { ...el.style, size: to } };
+    });
+    return changed ? { ...p, elements } : p;
+  });
+  return { pages: out, count };
+}
+
 /** Débordement en PIXELS (unité affichée dans l'alerte du Studio). */
 export function overflowPx(page, box) {
   const bounds = contentBounds(page, box);

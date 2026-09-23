@@ -10832,6 +10832,42 @@ a.step {
   .gen-section .gen-tpl-name {
     font-size: 10.5px;
     text-align: center;
+    /* Noms longs (« Santé & Bien-être », « Développement personnel ») :
+       2 lignes maximum, tronquées proprement au lieu de déborder. */
+    max-width: 100%;
+    overflow: hidden;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  /* « Éducation · Moderne » en nowrap (~120 px) déborde d'une cellule de
+     ~80 px en 4 colonnes : masqué sur téléphone — le `title` de la carte
+     (category · style · sector) reste accessible au toucher long. */
+  .gen-section .gen-tpl-meta {
+    display: none;
+  }
+  /* Cellule de grille : jamais plus étroite que sa colonne, cartes densifiées. */
+  .gen-section .gen-template-card {
+    min-width: 0;
+    padding: 6px 2px 4px;
+    overflow: hidden;
+  }
+  /* 👁 et ★ redimensionnés/repositionnés à l'intérieur des petites cartes
+     (anciens top: -4px qui débordaient hors cellule). */
+  .gen-section .gen-tpl-eye,
+  .gen-section .gen-tpl-star {
+    top: 1px;
+    font-size: 10px;
+    padding: 1px;
+    opacity: 0.65;
+  }
+  .gen-section .gen-tpl-eye {
+    left: 1px;
+  }
+  .gen-section .gen-tpl-star {
+    right: 1px;
   }
   /* Format et mise en page · Couverture · Styles avancés : 2 par ligne */
   .gen-section .gen-form-row {
@@ -11240,18 +11276,22 @@ a.step {
 }
 .studio-stylegrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 7px;
 }
 .studio-stylegrid label {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   font-size: 0.72rem;
   color: var(--text-muted);
+  min-width: 0;
 }
 .studio-stylegrid select,
 .studio-stylegrid input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 32px;
   border: 1px solid var(--border);
   border-radius: 7px;
   background: var(--input-bg);
@@ -11259,6 +11299,34 @@ a.step {
   font-size: 0.8rem;
   padding: 4px 6px;
   min-width: 0;
+}
+.studio-stylegrid input[type="color"] { padding: 2px; cursor: pointer; }
+/* Taille du texte — stepper toujours visible, portée sélection/page/document */
+.studio-sizerow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.studio-stepbtn {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.studio-stepbtn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.studio-stepbtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.studio-sizeval {
+  min-width: 52px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 0.82rem;
+  padding: 6px 8px;
 }
 .studio-rowbtns, .studio-alignrow { display: flex; flex-wrap: wrap; gap: 5px; }
 .studio-layers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -11456,7 +11524,7 @@ a.step {
   .studio-pages-list.is-grid .studio-pagecard { width: calc(50% - 3px); }
   .studio-center { padding: 8px; }
   .studio-topbar { position: static; }
-  .studio-stylegrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .studio-stylegrid { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
   .studio-pagekinds { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .studio-docname { max-width: 100%; order: -1; flex-basis: 100%; }
 }
