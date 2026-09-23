@@ -866,6 +866,35 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
     commit("Élément remonté (débordement)", next);
     flash(t("Élément remonté dans la page."));
   }, [box, commit, t, flash]);
+// ─── Ajustement de l'aperçu à l'écran (§18 : téléphone compris) ──────────────
+// Une page A4 à zoom 0,85 mesure ~790 px : sur téléphone (~360 px) elle
+// débordait. On applique un facteur `previewFit` pour que la largeur PLEINE
+// de la page tienne toujours dans la zone d'aperçu, sans changer le zoom
+// choisi par l'utilisateur (l'export n'est pas affecté).
+const [previewFit, setPreviewFit] = useState(1);
+useEffect(() => {
+  if (mode !== "preview") return undefined;
+  const el = previewRef.current;
+  if (!el) return undefined;
+  const measure = () => {
+    const raw = box.w * PX_PER_MM * zoom;
+    if (!raw) return;
+    let avail = (el.clientWidth || 360) - 24; // padding de la carte
+    if (previewMode === "mobile") avail = Math.min(avail, 360);
+    else if (previewMode === "spread") avail = avail / 2;
+    setPreviewFit(Math.max(0.15, Math.min(1, avail / raw)));
+  };
+  measure();
+  const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+  ro?.observe(el);
+  window.addEventListener("resize", measure);
+  return () => {
+    ro?.disconnect();
+    window.removeEventListener("resize", measure);
+  };
+}, [mode, previewMode, box.w, zoom]);
+const previewZoom = zoom * previewFit;
+
   // ─── Aperçu plein écran (§19) ─────────────────────────────────────────────
   const toggleFullscreen = useCallback(() => {
     try {
@@ -1075,7 +1104,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
               <strong>{selPageIds.length} {t("page(s) sélectionnée(s)")}</strong>
               <button type="button" className="btn btn-outline btn-small" onClick={() => applyMultiPatch("Police serif", { bodyFont: "serif" })}>Aa serif</button>
               <button type="button" className="btn btn-outline btn-small" onClick={() => applyMultiPatch("Police sans", { bodyFont: "sans" })}>Aa sans</button>
-              <button type="button" className="btn btn-outline btn-small" onClick={() => applyMultiPatch("Couleur d'accent", { accent: template.colors.accent })}>🎨 {t("Couleur")}</button>
+              <button type="button" className="btn btn-outline btn-small" onClick={() => applyMultiPatch("Couleur d'accent", { colors: { accent: template.colors.accent } })}>🎨 {t("Couleur")}</button>
               <button type="button" className="btn btn-outline btn-small studio-danger" onClick={() => doDeletePages(selPageIds)}>🗑 {t("Supprimer la sélection")}</button>
               <button type="button" className="btn btn-outline btn-small" onClick={() => setSelPageIds([])}>{t("Désélectionner")}</button>
             </div>
@@ -1106,7 +1135,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
               />
             </>
           ) : (
-            <div className={`studio-preview ${previewMode === "spread" ? "is-spread" : ""} ${previewMode === "mobile" ? "is-mobile" : ""}`}>
+            <div ref={previewRef} className={`studio-preview ${previewMode === "spread" ? "is-spread" : ""} ${previewMode === "mobile" ? "is-mobile" : ""}`}>
               <div className="studio-preview-tools">
                 {[
                   { id: "single", label: "1 page" },
@@ -1120,14 +1149,14 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, t: tPr
               </div>
               <div className={`studio-preview-pages ${previewMode === "spread" ? "is-spread" : ""}`}>
                 {(pages || []).map((p, i) => (
-                  <div key={p.id} className="studio-preview-page" style={{ width: box.w * PX_PER_MM * zoom, height: box.h * PX_PER_MM * zoom }}>
+                  <div key={p.id} className="studio-preview-page" style={{ width: box.w * PX_PER_MM * previewZoom, height: box.h * PX_PER_MM * previewZoom }}>
                     <StudioCanvas
                       page={p}
                       box={box}
                       template={template}
                       docMeta={docMeta || {}}
                       totalPages={totalPages}
-                      zoom={zoom}
+                      zoom={previewZoom}
                       selectedIds={[]}
                       readOnly
                     />

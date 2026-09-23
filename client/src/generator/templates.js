@@ -13,7 +13,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#111111", coverText: "#ffffff", headingUpper: true,
     headingRule: "h1", headingBar: "none", coverLayout: "center", coverRule: false,
-    coverShape: "none",
+    coverShape: "corners",
     pageDecor: "toprule", // double filet éditorial en tête de page
   },
   {
@@ -26,7 +26,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#1d4ed8", coverText: "#ffffff", headingUpper: false,
     headingRule: "h1", headingBar: "left", coverLayout: "band", coverRule: false,
     coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
-    coverShape: "arc", // quart de cercle d'accent en haut à gauche (style « pro »)
+    coverShape: "sectorSharp",
     pageDecor: "topbar", // fin barre d'accent en haut de chaque page de contenu
   },
   {
@@ -38,7 +38,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#4a3728", coverText: "#f5ead9", headingUpper: false,
     headingRule: "none", headingBar: "none", coverLayout: "center", coverRule: true,
-    coverShape: "none",
+    coverShape: "wave",
     pageDecor: "doublerule", // double filet en tête et en pied (édition classique)
   },
   {
@@ -63,7 +63,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#1e3a5f", coverText: "#ffffff", headingUpper: true,
     headingRule: "h1h2", headingBar: "none", coverLayout: "band", coverRule: false,
     coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
-    coverShape: "diag", // coin biseauté doré en bas à droite
+    coverShape: "stackBlocks",
     pageDecor: "headerband", // bandeau titre du document en tête de page (style rapport)
   },
   {
@@ -75,7 +75,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#14532d", coverText: "#dcfce7", headingUpper: true,
     headingRule: "h1", headingBar: "left", coverLayout: "top", coverRule: true,
-    coverShape: "bars",
+    coverShape: "bookStack",
     pageDecor: "noterule", // marge de cahier : filet vertical gauche
   },
   {
@@ -88,7 +88,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#c2410c", coverText: "#fff7ed", headingUpper: true,
     headingRule: "none", headingBar: "left", coverLayout: "band", coverRule: false,
     coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
-    coverShape: "arc", // quart de cercle d'accent en haut à gauche
+    coverShape: "sliceArc",
     pageDecor: "bottomband", // bande d'accent ambrée au pied de chaque page
   },
   {
@@ -100,7 +100,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#064e3b", coverText: "#d1fae5", headingUpper: false,
     headingRule: "h1h2", headingBar: "none", coverLayout: "left", coverRule: false,
-    coverShape: "diag",
+    coverShape: "growthBars",
     pageDecor: "doubleband", // filet haut + bande pleine au pied (rapport)
   },
   {
@@ -113,7 +113,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#312e81", coverText: "#e0e7ff", headingUpper: false,
     headingRule: "none", headingBar: "left", coverLayout: "top", coverRule: true,
     coverDimDefault: 0.15,
-    coverShape: "circle", // disque + anneau indigo débordant du coin haut-droit
+    coverShape: "circuit",
     pageDecor: "sideline", // filet vertical gradué (fiche technique)
   },
   {
@@ -126,7 +126,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#1c1917", coverText: "#d4af37", headingUpper: false,
     headingRule: "h1", headingBar: "none", coverLayout: "center", coverRule: true,
     coverDimDefault: 0.15,
-    coverShape: "none",
+    coverShape: "diamond",
     pageDecor: "frame", // cadre doré du livre de luxe
   },
   {
@@ -139,7 +139,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#be185d", coverText: "#fce7f3", headingUpper: false,
     headingRule: "none", headingBar: "none", coverLayout: "band", coverRule: false,
     coverDimDefault: 0, // mise en page « bande » : la photo reste NETTE (aucun voile)
-    coverShape: "circle", // gros disque rose débordant du coin haut-droit
+    coverShape: "bubbles",
     pageDecor: "sidestrip", // colonne d'accent rose sur le bord gauche
   },
   {
@@ -152,7 +152,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#111827", coverText: "#ffffff", headingUpper: true,
     headingRule: "h1", headingBar: "none", coverLayout: "top", coverRule: true,
     coverDimDefault: 0.15,
-    coverShape: "diag",
+    coverShape: "stripDiag",
     pageDecor: "masthead", // bandeau portant le titre sur chaque page
     style: "magazine", audience: "grand public", sector: "culture",
   },
@@ -171,7 +171,7 @@ export const GEN_TEMPLATES = [
     align: "left", chapterNewPage: false,
     coverBg: "#1f2a36", coverText: "#e0f2fe", headingUpper: false,
     headingRule: "h1h2", headingBar: "left", coverLayout: "left", coverRule: true,
-    coverShape: "bars",
+    coverShape: "gridDots",
     pageDecor: "headerband",
     style: "corporate", audience: "entreprises", sector: "entreprise",
   },
@@ -185,7 +185,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#7c2d12", coverText: "#fff7ed", headingUpper: true,
     headingRule: "none", headingBar: "none", coverLayout: "band", coverRule: false,
     coverDimDefault: 0,
-    coverShape: "circle",
+    coverShape: "prisms",
     pageDecor: "sidestrip",
     style: "coloré", audience: "entreprises", sector: "commerce",
   },
@@ -198,7 +198,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#1e293b", coverText: "#f1f5f9", headingUpper: false,
     headingRule: "none", headingBar: "none", coverLayout: "center", coverRule: true,
-    coverShape: "none",
+    coverShape: "inkDrop",
     pageDecor: "doublerule",
     style: "classique", audience: "grand public", sector: "culture",
   },
@@ -211,7 +211,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#3b0764", coverText: "#fef3c7", headingUpper: true,
     headingRule: "h1", headingBar: "none", coverLayout: "center", coverRule: true,
-    coverShape: "none",
+    coverShape: "halo",
     pageDecor: "toprule",
     style: "sobre", audience: "grand public", sector: "religion",
   },
@@ -225,7 +225,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#134e4a", coverText: "#ccfbf1", headingUpper: false,
     headingRule: "none", headingBar: "left", coverLayout: "band", coverRule: false,
     coverDimDefault: 0,
-    coverShape: "arc",
+    coverShape: "crossPulse",
     pageDecor: "sidestrip",
     style: "moderne", audience: "grand public", sector: "santé",
   },
@@ -239,7 +239,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#9a3412", coverText: "#fff7ed", headingUpper: false,
     headingRule: "none", headingBar: "left", coverLayout: "band", coverRule: false,
     coverDimDefault: 0,
-    coverShape: "arc",
+    coverShape: "plateRings",
     pageDecor: "topbar",
     style: "chaleureux", audience: "grand public", sector: "restauration",
   },
@@ -253,7 +253,7 @@ export const GEN_TEMPLATES = [
     coverBg: "#155e75", coverText: "#e0f2fe", headingUpper: false,
     headingRule: "h1", headingBar: "none", coverLayout: "top", coverRule: true,
     coverDimDefault: 0.15,
-    coverShape: "circle",
+    coverShape: "compass",
     pageDecor: "sideline",
     style: "moderne", audience: "grand public", sector: "voyage",
   },
@@ -266,7 +266,7 @@ export const GEN_TEMPLATES = [
     align: "justify", chapterNewPage: true,
     coverBg: "#1e3a8a", coverText: "#dbeafe", headingUpper: true,
     headingRule: "h1h2", headingBar: "none", coverLayout: "left", coverRule: true,
-    coverShape: "bars",
+    coverShape: "seal",
     pageDecor: "toprule",
     style: "sobre", audience: "étudiants", sector: "éducation",
   },
@@ -588,6 +588,171 @@ export function coverShapeSpec(template, w, h) {
         rect(0, 0.084 * h, 0.26 * w, 0.016 * h, accent),
         rect(0, 0.118 * h, 0.16 * w, 0.016 * h, heading),
         ring(w - 0.14 * w, 0.1 * h, 0.07 * w, accent, 0.014 * w),
+      ];
+    // ── Une forme unique par modèle (20 designs distincts) ────────────────
+    case "corners":
+      // Équerres éditoriales dans les deux coins opposés.
+      return [
+        rect(0, 0, 0.18 * w, 0.012 * h, accent),
+        rect(0, 0, 0.014 * w, 0.12 * h, accent),
+        rect(0.82 * w, h - 0.012 * h, 0.18 * w, 0.012 * h, accent),
+        rect(w - 0.014 * w, 0.88 * h, 0.014 * w, 0.12 * h, accent),
+      ];
+    case "sectorSharp": {
+      // Coince étroit jaillissant du coin haut-droit + anneau de rappel.
+      const r = 0.85 * w;
+      const pts = [[w, 0]];
+      const steps = 32;
+      for (let i = 0; i <= steps; i += 1) {
+        const a = Math.PI / 2 + Math.PI * 0.28 * (i / steps); // 90° → 140°
+        pts.push([w + r * Math.cos(a), r * Math.sin(a)]);
+      }
+      return [
+        { kind: "poly", color: accent, pts },
+        ring(0.88 * w, 0.14 * h, 0.06 * w, heading, 0.01 * w),
+      ];
+    }
+    case "wave": {
+      // Bande sinusoïdale le long du bord bas + anneau en tête.
+      const wsteps = 60;
+      const wpts = [];
+      for (let i = 0; i <= wsteps; i += 1) {
+        wpts.push([(w * i) / wsteps, h - 0.1 * h + 0.045 * h * Math.sin((i / wsteps) * Math.PI * 3)]);
+      }
+      wpts.push([w, h], [0, h]);
+      return [
+        { kind: "poly", color: accent, pts: wpts },
+        ring(0.9 * w, 0.1 * h, 0.07 * w, heading, 0.012 * w),
+      ];
+    }
+    case "stackBlocks":
+      // Trois blocs empilés en bas à gauche + point d'appel en haut à droite.
+      return [
+        rect(0, h - 0.06 * h, 0.5 * w, 0.024 * h, accent),
+        rect(0, h - 0.096 * h, 0.38 * w, 0.024 * h, heading),
+        rect(0, h - 0.132 * h, 0.26 * w, 0.024 * h, accent),
+        disc(0.9 * w, 0.12 * h, 0.04 * w, accent),
+      ];
+    case "bookStack":
+      // Tranches de livres empilées en bas + signet vertical.
+      return [
+        rect(0.06 * w, h - 0.085 * h, 0.34 * w, 0.02 * h, accent),
+        rect(0.06 * w, h - 0.058 * h, 0.44 * w, 0.02 * h, heading),
+        rect(0.06 * w, h - 0.031 * h, 0.28 * w, 0.02 * h, accent),
+        rect(0.44 * w, h - 0.085 * h, 0.018 * w, 0.075 * h, heading),
+      ];
+    case "sliceArc":
+      // Croissant de lune en haut à droite (disque + évidement + halo).
+      return [
+        disc(0.88 * w, 0.16 * h, 0.3 * w, accent),
+        disc(0.97 * w, 0.1 * h, 0.24 * w, template.colors.bg || "#ffffff"),
+        ring(0.88 * w, 0.16 * h, 0.37 * w, heading, 0.01 * w),
+      ];
+    case "growthBars":
+      // Histogramme ascendant en bas à droite.
+      return [
+        rect(0.6 * w, h - 0.12 * h, 0.08 * w, 0.12 * h, accent),
+        rect(0.7 * w, h - 0.2 * h, 0.08 * w, 0.2 * h, heading),
+        rect(0.8 * w, h - 0.3 * h, 0.08 * w, 0.3 * h, accent),
+        rect(0.8 * w, h - 0.335 * h, 0.2 * w, 0.012 * h, heading),
+      ];
+    case "circuit":
+      // Lignes fines à angles droits + nœuds (esthétique technologique).
+      return [
+        rect(0, 0.16 * h, 0.3 * w, 0.006 * h, accent),
+        rect(0.3 * w, 0.16 * h, 0.006 * w, 0.2 * h, accent),
+        disc(0.3 * w, 0.36 * h, 0.016 * w, heading),
+        rect(0.72 * w, h - 0.22 * h, 0.006 * w, 0.22 * h, heading),
+        rect(0.72 * w, h - 0.22 * h, 0.28 * w, 0.006 * h, heading),
+        disc(0.72 * w, 0.36 * h, 0.014 * w, accent),
+        disc(0.92 * w, 0.1 * h, 0.02 * w, accent),
+      ];
+    case "diamond": {
+      // Losange plein + halo en haut à droite.
+      const dcx = 0.82 * w;
+      const dcy = 0.2 * h;
+      const dr = 0.16 * w;
+      return [
+        { kind: "poly", color: accent, pts: [[dcx, dcy - dr], [dcx + dr, dcy], [dcx, dcy + dr], [dcx - dr, dcy]] },
+        ring(dcx, dcy, dr * 1.4, heading, 0.008 * w),
+      ];
+    }
+    case "bubbles":
+      // Gerbe de bulles en haut à droite.
+      return [
+        disc(0.86 * w, 0.14 * h, 0.1 * w, accent),
+        disc(0.97 * w, 0.26 * h, 0.06 * w, heading),
+        ring(0.8 * w, 0.3 * h, 0.07 * w, accent, 0.01 * w),
+        disc(0.9 * w, 0.05 * h, 0.03 * w, heading),
+      ];
+    case "stripDiag":
+      // Bande diagonale fine traversant le coin bas-droit.
+      return [
+        { kind: "poly", color: accent, pts: [[0.55 * w, h], [w, 0.45 * h], [w, 0.55 * h], [0.63 * w, h]] },
+        { kind: "poly", color: heading, pts: [[0.72 * w, h], [w, 0.68 * h], [w, 0.74 * h], [0.77 * w, h]] },
+        { kind: "poly", color: accent, pts: [[0.87 * w, h], [w, 0.86 * h], [w, 0.9 * h], [0.9 * w, h]] },
+      ];
+    case "gridDots": {
+      // Grille de points 5 × 3 en haut à droite.
+      const prims = [];
+      const d = 0.012 * w;
+      for (let ry = 0; ry < 3; ry += 1) {
+        for (let cx2 = 0; cx2 < 5; cx2 += 1) {
+          prims.push(disc(0.7 * w + cx2 * 0.036 * w, 0.07 * h + ry * 0.036 * h, d, (ry + cx2) % 2 ? heading : accent));
+        }
+      }
+      return prims;
+    }
+    case "prisms":
+      // Deux triangles (prismes) + ligne d'horizon en haut à droite.
+      return [
+        { kind: "poly", color: accent, pts: [[0.78 * w, 0.3 * h], [0.9 * w, 0.08 * h], [w, 0.3 * h]] },
+        { kind: "poly", color: heading, pts: [[0.7 * w, 0.3 * h], [0.78 * w, 0.14 * h], [0.86 * w, 0.3 * h]] },
+        rect(0.7 * w, 0.31 * h, 0.3 * w, 0.008 * h, accent),
+      ];
+    case "inkDrop":
+      // Goutte d'encre en haut à gauche + halo.
+      return [
+        disc(0.12 * w, 0.2 * h, 0.11 * w, accent),
+        { kind: "poly", color: accent, pts: [[0.06 * w, 0.155 * h], [0.18 * w, 0.155 * h], [0.12 * w, 0.04 * h]] },
+        ring(0.12 * w, 0.2 * h, 0.16 * w, heading, 0.006 * w),
+      ];
+    case "halo":
+      // Deux anneaux concentriques + point central en haut à gauche.
+      return [
+        ring(0.16 * w, 0.18 * h, 0.12 * w, accent, 0.014 * w),
+        ring(0.16 * w, 0.18 * h, 0.19 * w, heading, 0.006 * w),
+        disc(0.16 * w, 0.18 * h, 0.035 * w, accent),
+      ];
+    case "crossPulse":
+      // Croix de santé + onde circulaire en haut à droite.
+      return [
+        rect(0.84 * w, 0.1 * h, 0.05 * w, 0.18 * h, accent),
+        rect(0.78 * w, 0.16 * h, 0.17 * w, 0.05 * h, accent),
+        ring(0.865 * w, 0.19 * h, 0.14 * w, heading, 0.007 * w),
+      ];
+    case "plateRings":
+      // Assiettes / plats emboîtés en bas à droite.
+      return [
+        ring(0.82 * w, 0.82 * h, 0.2 * w, accent, 0.016 * w),
+        ring(0.82 * w, 0.82 * h, 0.13 * w, heading, 0.008 * w),
+        disc(0.82 * w, 0.82 * h, 0.05 * w, accent),
+        ring(0.6 * w, 0.9 * h, 0.1 * w, heading, 0.007 * w),
+      ];
+    case "compass":
+      // Boussole en tête de page : anneau + rose des vents.
+      return [
+        ring(0.5 * w, 0.14 * h, 0.1 * w, heading, 0.008 * w),
+        { kind: "poly", color: accent, pts: [[0.5 * w, 0.05 * h], [0.525 * w, 0.14 * h], [0.5 * w, 0.23 * h], [0.475 * w, 0.14 * h]] },
+        { kind: "poly", color: heading, pts: [[0.41 * w, 0.14 * h], [0.5 * w, 0.115 * h], [0.59 * w, 0.14 * h], [0.5 * w, 0.165 * h]] },
+      ];
+    case "seal":
+      // Sceau / médaille en haut à droite : disque, anneau, cœur évidé.
+      return [
+        disc(0.86 * w, 0.16 * h, 0.09 * w, accent),
+        ring(0.86 * w, 0.16 * h, 0.12 * w, heading, 0.006 * w),
+        disc(0.86 * w, 0.16 * h, 0.05 * w, template.colors.bg || "#ffffff"),
+        disc(0.86 * w, 0.16 * h, 0.02 * w, accent),
       ];
     default:
       return [];
