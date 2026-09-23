@@ -274,6 +274,9 @@ export default function GeneratorPanel({ variant = "creator" }) {
           "Collez un texte brut, choisissez un modèle : le Générateur structure, pagine, ajoute couverture, table des matières et protection, puis exporte un PDF professionnel."
         )}
       </p>
+      <p className="gen-pcnote">
+        💻 {t("Pour une meilleure expérience de la plateforme, veuillez générer et éditer votre document sur Ordinateur. Merci !")}
+      </p>
 
       {/* Assistant guidé « Déposez → Analysez → Choisissez → Générez » : le
           chemin le plus court d'un Word (ou d'un texte collé) à l'ebook. */}

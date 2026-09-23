@@ -10475,6 +10475,13 @@ a.step {
   gap: 8px;
   flex-wrap: wrap;
 }
+/* ─── Mention « utilisez un Ordinateur » sous le titre de la bibliothèque ─── */
+.gen-pcnote {
+  margin: 4px 0 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--primary, #2563eb);
+}
 /* ─── Assistant guidé : zone de dépôt + collage de texte (bibliothèque) ────── */
 .gen-dropzone {
   display: flex;
