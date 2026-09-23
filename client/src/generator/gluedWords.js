@@ -216,12 +216,6 @@ const PROTECT_RE = new RegExp(
     String.raw`[^\s<>"'@]{1,64}@[^\s<>"'@]+\.[A-Za-z]{2,}`,
     String.raw`[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.(?:${TLD})\b`,
     String.raw`[A-Za-z0-9_-]+\.(?:${EXT})\b`,
-    // Code en ligne : « `localStorage` », « `originVariants` » — jamais touché
-    // (identifiants techniques, noms de fonctions : la majuscule interne n'est
-    // pas une frontière de mot). Seuls les spans SANS ESPACE sont appariés :
-    // une séquence Markdown `` ` `` ou une apostrophe isolée ne décale pas
-    // l'appariement des identifiants suivants.
-    "[`][^`\\s]*[`]",
     // Segments techniques : chemin, expression, paramètre, identifiant.
     String.raw`[^\s<>"']*[/=@#][^\s<>"']*`,
     String.raw`\{[a-z]+\}`,
@@ -230,9 +224,26 @@ const PROTECT_RE = new RegExp(
 );
 const URL_RE = /(?:https?:\/\/|www\.|ftp:\/\/)\S+/i;
 
+/**
+ * Code en ligne entre backticks (« `localStorage` », « `totalPrice = prix ×
+ * quantité` ») : les identifiants techniques ne doivent JAMAIS être coupés.
+ * Les backticks sont appariés dans l'ordre ; si le texte en contient un nombre
+ * IMPAIR (backtick isolé), le premier est ignoré pour que les paires suivantes
+ * restent alignées.
+ */
+function backtickRanges(text) {
+  const pos = [];
+  for (let i = 0; i < text.length; i += 1) if (text[i] === "`") pos.push(i);
+  if (pos.length < 2) return [];
+  const start = pos.length % 2 ? 1 : 0;
+  const out = [];
+  for (let k = start; k + 1 < pos.length; k += 2) out.push([pos[k], pos[k + 1] + 1]);
+  return out;
+}
+
 /** Plages [début, fin[ des segments protégés (calculées une fois par texte). */
 function protectedRanges(text) {
-  const out = [];
+  const out = backtickRanges(text);
   PROTECT_RE.lastIndex = 0;
   let m;
   while ((m = PROTECT_RE.exec(text))) {
@@ -326,10 +337,112 @@ export const GLUED_RULES = [
   { id: "space", label: "Espace avant la ponctuation", sample: "« mot . » → « mot. »" },
   { id: "case", label: "Majuscule collée", sample: "« bonjourMonde » → « bonjour Monde »" },
   { id: "long", label: "Mots agglutinés", sample: "« intelligenceartificielle » → « intelligence artificielle »" },
+  { id: "ref", label: "Comparatif (vocabulaire du document)", sample: "« lesmots » → « les mots » (mot du document)" },
   { id: "digit", label: "Chiffres collés", sample: "« 5000francs » → « 5000 francs »" },
   { id: "apos", label: "Apostrophe manquante", sample: "« aujourdhui » → « aujourd'hui »" },
 ];
 export const GLUED_RULE_LABELS = GLUED_RULES.reduce((acc, r) => ({ ...acc, [r.id]: r.label }), {});
+
+// ─── COMPARATIF : comparer le texte d'origine au texte des pages ────────────
+/**
+ * Vocabulaire de RÉFÉRENCE du comparatif : tous les mots (≥ 2 lettres) trouvés
+ * dans le texte d'origine — et, si on le souhaite, dans les pages. Sert à
+ * découper un mot collé dont les morceaux sont des mots DU DOCUMENT, même si le
+ * dictionnaire général les ignore (vocabulaire métier, noms propres, sigles).
+ * Accepte du HTML (balises et entités retirées) ou du texte brut.
+ */
+export function buildGluedReference(...sources) {
+  const words = new Set();
+  const re = new RegExp(`[${LETTER}]{2,}`, "g");
+  for (const s of sources) {
+    const text = String(s == null ? "" : s)
+      // Balises HTML : uniquement une vraie balise (lettre ou « / » après « < »,
+      // ≤ 80 caractères, pas de saut de ligne). Un « < » isolé dans du texte
+      // (« l'auteur: <nom> », comparateurs…) ne doit PAS supprimer la suite du
+      // document — sinon des mots entiers manqueraient à la référence.
+      .replace(/<\/?[A-Za-z][^<>\n]{0,80}>/g, " ")
+      .replace(/&[a-z]+;|&#\d+;/gi, " ");
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(text))) words.add(norm(m[0]));
+  }
+  return words;
+}
+
+/** Texte brut de toutes les pages du Studio (html + données textuelles). */
+export function gluedPagesText(pages) {
+  const out = [];
+  for (const page of Array.isArray(pages) ? pages : []) {
+    for (const el of page?.elements || []) {
+      if (typeof el?.html === "string") out.push(el.html);
+      const d = el?.data;
+      if (!d || typeof d !== "object") continue;
+      if (Array.isArray(d.rows)) for (const row of d.rows) for (const c of row || []) if (c?.text) out.push(c.text);
+      if (Array.isArray(d.entries)) for (const e of d.entries) if (e?.text) out.push(e.text);
+      if (Array.isArray(d.series)) for (const s of d.series) if (s?.label) out.push(s.label);
+      if (Array.isArray(d.nodes)) for (const n of d.nodes) if (n?.text) out.push(n.text);
+      if (Array.isArray(d.items)) for (const n of d.items) out.push(`${n?.label || ""} ${n?.value || ""}`);
+      if (typeof d.title === "string") out.push(d.title);
+      if (typeof d.label === "string") out.push(d.label);
+    }
+  }
+  return out.join(" \n ");
+}
+
+/** Fragment acceptable pour le comparatif : mot du document, du dictionnaire ou
+ *  mot-outil court (« de », « et »…). */
+function refKnown(frag, reference) {
+  const x = norm(frag);
+  if (x.length <= 3 && (ARTICLES.has(x) || SHORT_WORDS.has(x) || CHAIN_HEADS.has(x))) return true;
+  if (known(frag)) return true;
+  if (!reference) return false;
+  if (reference.has(x)) return true;
+  if (x.length > 4 && /(?:es|s)$/.test(x) && reference.has(x.replace(/(?:es|s)$/, ""))) return true;
+  return reference.has(`${x}s`) || reference.has(`${x}es`);
+}
+
+/**
+ * Découpe un jeton selon le VOCABULAIRE DU DOCUMENT (comparatif).
+ * Très conservateur, pour ne jamais casser un mot légitime :
+ *   • le jeton ne doit PAS exister tel quel dans le texte d'origine (sinon il
+ *     est considéré correct) et ne doit pas être un identifiant camelCase ;
+ *   • 2 morceaux : « comptabilitéanalytique » → chaque morceau est un mot du
+ *     document (ou du dictionnaire) d'au moins 3 lettres, la tête pouvant être
+ *     un ARTICLE de 2 lettres (« la », « le », « du »…) ;
+ *   • 3 morceaux (≥ 11 lettres) : « La | comptabilité | analytique » — milieu
+ *     court accepté (« de », « et »), fin ≥ 3 lettres.
+ * Un morceau inconnu du document ET du dictionnaire bloque le découpage :
+ * « illimités », « webhooks », « invalide » restent intacts.
+ * Renvoie les coupes RELATIVES, ou null.
+ */
+function splitByReference(token, reference) {
+  const len = token.length;
+  if (!reference || len < 8) return null;
+  // Un mot qui existe TEL QUEL dans le texte d'origine n'est pas collé :
+  // c'est la règle de base du comparatif (et le meilleur garde-fou).
+  if (reference.has(norm(token))) return null;
+  // Identifiants techniques (« localStorage », « originCheck »…) : la majuscule
+  // interne n'est pas une frontière de mot — jamais coupés.
+  if (/[a-zà-ÿ][A-ZÀ-Þ]/.test(token)) return null;
+  const strong = (f) => f.length >= 3 && refKnown(f, reference);
+  const short = (f) => f.length >= 2 && refKnown(f, reference);
+  const head = (f) => (f.length >= 3 ? strong(f) : ARTICLES.has(norm(f)) || SHORT_HEADS.has(norm(f)));
+  // 2 morceaux.
+  for (let cut = len - 3; cut >= 2; cut -= 1) {
+    if (head(token.slice(0, cut)) && strong(token.slice(cut))) return [cut];
+  }
+  // 3 morceaux (mot long).
+  if (len >= 11) {
+    for (let c1 = 2; c1 <= len - 6; c1 += 1) {
+      if (!head(token.slice(0, c1))) continue;
+      for (let c2 = len - 3; c2 >= c1 + 2; c2 -= 1) {
+        if (!short(token.slice(c1, c2)) || !strong(token.slice(c2))) continue;
+        return [c1, c2 - c1];
+      }
+    }
+  }
+  return null;
+}
 
 // ─── MOTEUR ─────────────────────────────────────────────────────────────────
 /**
@@ -342,6 +455,9 @@ export function fixGluedText(input, opts = {}) {
   const src = String(input == null ? "" : input);
   if (!src || src.length > 400000) return { text: src, fixes: [] };
   const only = Array.isArray(opts.rules) && opts.rules.length ? new Set(opts.rules) : null;
+  // Vocabulaire du DOCUMENT (comparatif) : construit par `buildGluedReference`
+  // à partir du texte d'origine et/ou des pages.
+  const reference = opts.reference && opts.reference.size ? opts.reference : null;
   const fixes = [];
   const add = (rule, before, after) => {
     if (!before || before === after || fixes.length >= MAX_FIXES) return;
@@ -465,24 +581,36 @@ export function fixGluedText(input, opts = {}) {
           if (done) break;
         }
       }
+      // Découpe le jeton aux positions RELATIVES `cuts` (un espace après chaque
+      // morceau) — partagé par la règle 4c (mots-outils) et la règle 4d
+      // (comparatif sur le vocabulaire du document).
+      const applyCuts = (rule, cuts) => {
+        let at = start;
+        const words = [];
+        let rest = token;
+        for (const cut of cuts) {
+          at += cut;
+          edits.push({ at, text: " " });
+          words.push(rest.slice(0, cut));
+          rest = rest.slice(cut);
+        }
+        words.push(rest);
+        add(rule, token, words.join(" "));
+        touched = true;
+      };
       // 4c. Mots agglutinés COURTS ou MULTIPLES (« lesmots », « nosclientssont
       //     satisfaits ») : découpage en chaîne, ancré sur un mot-outil en tête.
       if (on("long") && !touched && !known(token)) {
         const cuts = splitChain(token) || splitTail(token);
-        if (cuts) {
-          let at = start;
-          const words = [];
-          let rest = token;
-          for (const cut of cuts) {
-            at += cut;
-            edits.push({ at, text: " " });
-            words.push(rest.slice(0, cut));
-            rest = rest.slice(cut);
-          }
-          words.push(rest);
-          add("long", token, words.join(" "));
-          touched = true;
-        }
+        if (cuts) applyCuts("long", cuts);
+      }
+      // 4d. COMPARATIF : le jeton est absent du dictionnaire mais ses morceaux
+      //     sont des MOTS DU DOCUMENT (texte d'origine et/ou pages) — attrape le
+      //     vocabulaire métier, les noms propres et les sigles que le
+      //     dictionnaire général ignore.
+      if (on("ref") && reference && !touched && !known(token)) {
+        const cuts = splitByReference(token, reference);
+        if (cuts) applyCuts("ref", cuts);
       }
     }
     if (edits.length) {
@@ -577,11 +705,11 @@ export function fixGluedInHtml(html, opts = {}) {
  * (tableau, sommaire, graphique, diagramme, statistiques, libellé du QR).
  * Renvoie `{ patch, fixes }` — `patch` est vide s'il n'y a rien à corriger.
  */
-export function fixGluedInElement(el) {
+export function fixGluedInElement(el, opts = {}) {
   const fixes = [];
   const patch = {};
   if (typeof el?.html === "string" && el.html) {
-    const r = fixGluedInHtml(el.html);
+    const r = fixGluedInHtml(el.html, opts);
     if (r.fixes.length) {
       patch.html = r.html;
       fixes.push(...r.fixes);
@@ -593,7 +721,7 @@ export function fixGluedInElement(el) {
     let touched = false;
     const fixText = (v) => {
       if (typeof v !== "string" || !v) return v;
-      const r = fixGluedText(v);
+      const r = fixGluedText(v, opts);
       if (!r.fixes.length) return v;
       fixes.push(...r.fixes);
       touched = true;
@@ -623,12 +751,12 @@ export function fixGluedInElement(el) {
  * corrections) et le nombre total de corrections — l'appelant décide quand
  * appliquer (historique, sauvegarde, annulation).
  */
-export function fixGluedInPages(pages) {
+export function fixGluedInPages(pages, opts = {}) {
   const changes = [];
   let count = 0;
   for (const page of Array.isArray(pages) ? pages : []) {
     for (const el of page?.elements || []) {
-      const { patch, fixes } = fixGluedInElement(el);
+      const { patch, fixes } = fixGluedInElement(el, opts);
       if (!fixes.length) continue;
       changes.push({ pageId: page.id, elId: el.id, patch, fixes });
       count += fixes.length;
@@ -660,13 +788,13 @@ export function applyGluedChanges(pages, changes) {
  * et quatrième de couverture) : sans cela, une couverture régénérée depuis ces
  * métadonnées réafficherait les mots collés.
  */
-export function fixGluedDoc(docMeta) {
+export function fixGluedDoc(docMeta, opts = {}) {
   const src = docMeta || {};
   const patch = {};
   const fixes = [];
   const fixField = (value) => {
     if (typeof value !== "string" || !value) return value;
-    const r = fixGluedText(value);
+    const r = fixGluedText(value, opts);
     if (!r.fixes.length) return value;
     fixes.push(...r.fixes);
     return r.text;

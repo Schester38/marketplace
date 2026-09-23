@@ -5890,7 +5890,14 @@ const GEN5_EN = {
   "… et d'autres corrections sur les pages suivantes.": "… and more fixes on the following pages.",
   "Tout corriger": "Fix all",
   "Corrections appliquées": "Fixes applied",
-  "Détecter les mots sans espace et tout corriger d'un clic": "Detect words missing a space and fix them all in one click",
+  "Détecter les mots collés (comparatif avec le texte d'origine) et tout corriger d'un clic":
+    "Detect glued words (compared with the original text) and fix them all in one click",
+  "Comparatif (vocabulaire du document)": "Comparison (document vocabulary)",
+  "Comparatif : le texte d'origine ({n} mots) sert de référence aux pages, et réciproquement.":
+    "Comparison: the original text ({n} words) is the reference for the pages, and vice versa.",
+  "Décochez une ligne pour l'ignorer.": "Uncheck a line to ignore it.",
+  "Ignorer cette correction": "Ignore this fix",
+  "Aucune correction sélectionnée.": "No fix selected.",
   "Titre, auteur et couverture": "Title, author and cover",
   "Texte du document": "Document text",
   "Ponctuation collée": "Punctuation stuck to text",
@@ -6081,7 +6088,6 @@ const GEN5_AR = {
   "… et d'autres corrections sur les pages suivantes.": "… وتصحيحات أخرى في الصفحات التالية.",
   "Tout corriger": "تصحيح الكل",
   "Corrections appliquées": "تم تطبيق التصحيحات",
-  "Détecter les mots sans espace et tout corriger d'un clic": "اكشف الكلمات التي فُقدت المسافة وصحّحها كلها بنقرة واحدة",
   "Titre, auteur et couverture": "العنوان والمؤلف والغلاف",
   "Texte du document": "نص المستند",
   "Ponctuation collée": "ترقيم ملتصق",
@@ -6090,6 +6096,14 @@ const GEN5_AR = {
   "Mots agglutinés": "كلمات مدموجة",
   "Chiffres collés": "أرقام ملتصقة",
   "Apostrophe manquante": "فاصلة عليا مفقودة",
+  "Détecter les mots collés (comparatif avec le texte d'origine) et tout corriger d'un clic":
+    "اكشف الكلمات الملتصقة (بالمقارنة مع النص الأصلي) وصحّحها كلها بنقرة واحدة",
+  "Comparatif (vocabulaire du document)": "مقارنة (مفردات المستند)",
+  "Comparatif : le texte d'origine ({n} mots) sert de référence aux pages, et réciproquement.":
+    "المقارنة: النص الأصلي ({n} كلمة) هو المرجع للصفحات، والعكس صحيح.",
+  "Décochez une ligne pour l'ignorer.": "أزل علامة الصف لتجاهله.",
+  "Ignorer cette correction": "تجاهل هذا التصحيح",
+  "Aucune correction sélectionnée.": "لم يتم تحديد أي تصحيح.",
 };
 
 const GEN3_ES = {
@@ -6272,7 +6286,6 @@ const GEN5_ES = {
   "… et d'autres corrections sur les pages suivantes.": "… y más correcciones en las páginas siguientes.",
   "Tout corriger": "Corregir todo",
   "Corrections appliquées": "Correcciones aplicadas",
-  "Détecter les mots sans espace et tout corriger d'un clic": "Detectar palabras sin espacio y corregirlas todas con un clic",
   "Titre, auteur et couverture": "Título, autor y portada",
   "Texte du document": "Texto del documento",
   "Ponctuation collée": "Puntuación pegada",
@@ -6281,6 +6294,14 @@ const GEN5_ES = {
   "Mots agglutinés": "Palabras unidas",
   "Chiffres collés": "Dígitos pegados",
   "Apostrophe manquante": "Apóstrofo faltante",
+  "Détecter les mots collés (comparatif avec le texte d'origine) et tout corriger d'un clic":
+    "Detectar palabras pegadas (comparando con el texto original) y corregirlas todas con un clic",
+  "Comparatif (vocabulaire du document)": "Comparativa (vocabulario del documento)",
+  "Comparatif : le texte d'origine ({n} mots) sert de référence aux pages, et réciproquement.":
+    "Comparativa: el texto original ({n} palabras) es la referencia de las páginas, y viceversa.",
+  "Décochez une ligne pour l'ignorer.": "Desmarca una línea para ignorarla.",
+  "Ignorer cette correction": "Ignorar esta corrección",
+  "Aucune correction sélectionnée.": "Ninguna corrección seleccionada.",
 };
 
 export const I18N = {

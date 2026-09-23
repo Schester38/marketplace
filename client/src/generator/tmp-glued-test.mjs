@@ -1,5 +1,5 @@
 // Banc d'essai du correcteur de mots collés (temporaire — supprimé après tests)
-import { fixGluedText, fixGluedInHtml, fixGluedInPages, fixGluedDoc, fixGluedInElement, applyGluedChanges, GLUED_DICT } from "./gluedWords.js";
+import { fixGluedText, fixGluedInHtml, fixGluedInPages, fixGluedDoc, fixGluedInElement, applyGluedChanges, buildGluedReference, gluedPagesText, GLUED_DICT } from "./gluedWords.js";
 
 const debug = process.argv.includes("--debug");
 if (debug) {
@@ -150,6 +150,53 @@ for (const text of CLEAN) {
   ok("idempotence : métadonnées", meta2.count, 0);
   const html = fixGluedInHtml('<p>bonjourMonde <strong>lesmots</strong></p>');
   ok("idempotence : html", fixGluedInHtml(html.html).fixes.length, 0);
+}
+
+// ─── 8. COMPARATIF : le vocabulaire du DOCUMENT sert de référence ───────────
+{
+  // Texte d'origine (référence) : les mots y sont correctement séparés.
+  const origin =
+    "Le vendeur peut vendre ses produits sur la plateforme MboppiShop. La comptabilité analytique est importante pour la gestion de la boutique.";
+  const reference = buildGluedReference(origin);
+  ok("comparatif : référence construite", reference.size >= 15, true);
+
+  // Pages « collées » : les mêmes mots, sans espaces. Le comparatif doit
+  // retrouver les découpages que le dictionnaire général ignore
+  // (« comptabilité », « analytique », « plateforme »…).
+  const cases = [
+    ["Lacomptabilitéanalytique estimportante", "La comptabilité analytique est importante"],
+    ["Lagestion delaboutique", "La gestion de la boutique"],
+    ["Levendeur peutvendre sesproduits", "Le vendeur peut vendre ses produits"],
+    ["comptabilitéanalytique", "comptabilité analytique"],
+  ];
+  for (const [input, want] of cases) {
+    ok(`comparatif : « ${input} »`, fixGluedText(input, { reference }).text, want);
+  }
+  // Sans la référence, le même texte reste intact (le dictionnaire général ne
+  // connaît pas ces mots) : la preuve que c'est bien le comparatif qui agit.
+  ok("comparatif : sans référence", fixGluedText("Lacomptabilitéanalytique", {}).text, "Lacomptabilitéanalytique");
+  // Un mot légitime (long) non découpable en mots du document reste intact.
+  ok("comparatif : mot légitime intact", fixGluedText("anticonstitutionnellement", { reference }).text, "anticonstitutionnellement");
+  // Pages « collées » : la référence est le TEXTE D'ORIGINE (jamais les pages,
+  // sinon les mots collés des pages entreraient dans la référence).
+  const pages = [{ id: "p1", elements: [{ id: "e1", type: "paragraph", html: "Lacomptabilitéanalytique estessentielle" }] }];
+  const { changes } = fixGluedInPages(pages, { reference: buildGluedReference(origin) });
+  ok("comparatif : pages comparées au texte d'origine", changes.length > 0, true);
+
+  // Mot du document (vocabulaire métier) découpé par le comparatif.
+  const ref2 = buildGluedReference("La responsabilité environnementale et la gouvernance des entreprises.");
+  ok(
+    "comparatif : vocabulaire métier",
+    fixGluedText("Laresponsabilitéenvironnementale", { reference: ref2 }).text,
+    "La responsabilité environnementale"
+  );
+  // Un jeton qui existe TEL QUEL dans le texte d'origine est considéré correct.
+  const ref3 = buildGluedReference("La comptabilité analytique est utile. comptabilitéanalytique apparaît ici collé.");
+  ok(
+    "comparatif : jeton déjà présent → intact",
+    fixGluedText("comptabilitéanalytique", { reference: ref3 }).text,
+    "comptabilitéanalytique"
+  );
 }
 
 console.log(`\n${pass} réussis, ${fail} échoués`);

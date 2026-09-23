@@ -11495,17 +11495,20 @@ a.step {
 .studio-glued-item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--input-bg);
   padding: 8px 10px;
 }
+.studio-glued-item.is-skipped { opacity: 0.5; }
+.studio-glued-check { display: flex; align-items: center; padding-top: 2px; cursor: pointer; }
+.studio-glued-check input { cursor: pointer; }
 .studio-glued-where {
-  flex: 0 0 auto;
-  max-width: 42%;
+  display: block;
   font-size: 0.74rem;
   color: var(--text-muted);
+  margin-bottom: 2px;
 }
 .studio-glued-fixes { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .studio-glued-fix {

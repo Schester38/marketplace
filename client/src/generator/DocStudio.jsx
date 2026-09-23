@@ -29,7 +29,7 @@ import {
 } from "./studioAi.js";
 import { parseDesignCommand } from "./designCommands.js";
 import { exportStudioPdf, exportStudioEpub } from "./studioExport.js";
-import { fixGluedInPages, fixGluedInHtml, fixGluedDoc, applyGluedChanges } from "./gluedWords.js";
+import { fixGluedInPages, fixGluedInHtml, fixGluedDoc, applyGluedChanges, buildGluedReference, gluedPagesText } from "./gluedWords.js";
 import StudioCanvas from "./StudioCanvas.jsx";
 
 // ─── Helpers module ──────────────────────────────────────────────────────────
@@ -217,6 +217,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMeta
   const [pendingPlan, setPendingPlan] = useState(null); // confirmation de portée (§12/§26)
   const [check, setCheck] = useState(null);
   const [glued, setGlued] = useState(null); // rapport « 🔗 Mots collés » (détection + correction)
+  const [gluedSkip, setGluedSkip] = useState([]); // corrections décochées (ignorées)
   const [sizeScope, setSizeScope] = useState("page"); // taille du texte : selection | page | document
   const [menu, setMenu] = useState(null); // menu contextuel { x, y, elId }
   const [addOpen, setAddOpen] = useState(false); // « + Ajouter une page »
@@ -1055,6 +1056,7 @@ const editZoom = zoom * canvasFit;
       space: t("Espace avant la ponctuation"),
       case: t("Majuscule collée"),
       long: t("Mots agglutinés"),
+      ref: t("Comparatif (vocabulaire du document)"),
       digit: t("Chiffres collés"),
       apos: t("Apostrophe manquante"),
     }),
@@ -1062,8 +1064,17 @@ const editZoom = zoom * canvasFit;
   );
   const scanGlued = useCallback(() => {
     const all = pagesRef.current || [];
-    const { changes } = fixGluedInPages(all);
-    const meta = fixGluedDoc(docMeta || {});
+    // ─── COMPARATIF : le texte d'origine et les pages se comparent ─────────
+    // Les mots des PAGES sont découpés selon le vocabulaire du TEXTE D'ORIGINE
+    // (onglet Contenu) et réciproquement : un mot collé dont les morceaux sont
+    // des mots de l'autre texte est découpé même s'il est absent du dictionnaire
+    // général (vocabulaire métier, noms propres, sigles). Un mot qui existe TEL
+    // QUEL dans le texte de référence est considéré correct et n'est jamais
+    // coupé — c'est le garde-fou du comparatif.
+    const originWords = buildGluedReference(html || "");
+    const pageWords = buildGluedReference(gluedPagesText(all));
+    const { changes } = fixGluedInPages(all, { reference: originWords });
+    const meta = fixGluedDoc(docMeta || {}, { reference: originWords });
     const items = changes.map((c) => {
       const page = all.find((p) => p.id === c.pageId);
       const el = (page?.elements || []).find((e) => e.id === c.elId);
@@ -1080,29 +1091,52 @@ const editZoom = zoom * canvasFit;
     // applique le HTML sans émettre d'update : la mise en page du Studio reste
     // intacte, mais une prochaine synchronisation ne réintroduit pas les mots
     // collés dans les pages).
-    const content = onGluedContent && html ? fixGluedInHtml(html) : null;
+    const content = onGluedContent && html ? fixGluedInHtml(html, { reference: pageWords }) : null;
     if (content?.fixes.length) {
       items.push({ key: "content", where: t("Texte du document"), fixes: content.fixes });
     }
     const total = items.reduce((n, it) => n + it.fixes.length, 0);
-    setGlued({ changes, meta, content, items, total });
+    setGluedSkip([]);
+    setGlued({ changes, meta, content, items, total, refWords: originWords.size });
   }, [docMeta, html, onGluedContent, t]);
+  const toggleGluedItem = useCallback((key) => {
+    setGluedSkip((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]));
+  }, []);
+  // Nombre de corrections retenues (celles qui seront appliquées au clic).
+  const gluedSelected = useMemo(() => {
+    if (!glued) return 0;
+    const skipped = new Set(gluedSkip);
+    return glued.items.reduce((n, it) => n + (skipped.has(it.key) ? 0 : it.fixes.length), 0);
+  }, [glued, gluedSkip]);
   const applyGluedFixes = useCallback(() => {
     const rep = glued;
-    if (!rep || !rep.total) return;
-    if (rep.changes.length) {
-      commit(`Mots collés — ${rep.changes.reduce((n, c) => n + c.fixes.length, 0)}`, applyGluedChanges(pagesRef.current || [], rep.changes));
+    if (!rep) return;
+    const skipped = new Set(gluedSkip);
+    const changes = rep.changes.filter((c) => !skipped.has(`${c.pageId}:${c.elId}`));
+    const withMeta = !!(rep.meta?.count && !skipped.has("meta"));
+    const withContent = !!(rep.content?.fixes?.length && !skipped.has("content"));
+    const n =
+      changes.reduce((k, c) => k + c.fixes.length, 0) +
+      (withMeta ? rep.meta.fixes.length : 0) +
+      (withContent ? rep.content.fixes.length : 0);
+    if (!n) {
+      flash(t("Aucune correction sélectionnée."));
+      return;
     }
-    if (rep.meta?.count) onMetaPatch?.(rep.meta.patch);
-    if (rep.content?.fixes?.length) {
+    if (changes.length) {
+      commit(`Mots collés — ${n}`, applyGluedChanges(pagesRef.current || [], changes));
+    }
+    if (withMeta) onMetaPatch?.(rep.meta.patch);
+    if (withContent) {
       // Empreinte mise à jour tout de suite : la sauvegarde qui suit écrit le
       // bon `content_key` (sinon une resynchronisation reconstruirait les pages).
       keysRef.current = { ...keysRef.current, contentKey: studioContentKey(rep.content.html) };
       onGluedContent?.(rep.content.html);
     }
     setGlued(null);
-    flash(`${t("Corrections appliquées")} — ${rep.total}`);
-  }, [glued, commit, onMetaPatch, onGluedContent, t, flash]);
+    setGluedSkip([]);
+    flash(`${t("Corrections appliquées")} — ${n}`);
+  }, [glued, gluedSkip, commit, onMetaPatch, onGluedContent, t, flash]);
 
   // ─── Exports (§19 : PDF/EPUB ne sont que des exports du modèle) ────────────
   const doExport = useCallback(
@@ -1232,7 +1266,7 @@ const editZoom = zoom * canvasFit;
           type="button"
           className="btn btn-outline btn-small"
           onClick={scanGlued}
-          title={t("Détecter les mots sans espace et tout corriger d'un clic")}
+          title={t("Détecter les mots collés (comparatif avec le texte d'origine) et tout corriger d'un clic")}
         >
           🔗 {t("Mots collés")}
         </button>
@@ -1760,22 +1794,35 @@ const editZoom = zoom * canvasFit;
                       "Détection des mots sans espace (« lesmots », « fin.Le », « 5000francs ») — vérifiez la liste puis corrigez tout d'un clic. La correction est annulable (Ctrl+Z)."
                     )}
                   </p>
+                  <p className="studio-hint">
+                    🔎{" "}
+                    {t("Comparatif : le texte d'origine ({n} mots) sert de référence aux pages, et réciproquement.", {
+                      n: glued.refWords,
+                    })}{" "}
+                    {t("Décochez une ligne pour l'ignorer.")}
+                  </p>
                   <ul className="studio-glued-list">
-                    {glued.items.slice(0, 80).map((it) => (
-                      <li key={it.key} className="studio-glued-item">
-                        <span className="studio-glued-where">{it.where}</span>
-                        <span className="studio-glued-fixes">
-                          {it.fixes.map((f, i) => (
-                            <span key={`${it.key}-${i}`} className="studio-glued-fix">
-                              <span className="studio-glued-rule">{GLUED_RULE_TXT[f.rule] || f.rule}</span>
-                              <span className="studio-glued-before">{f.before}</span>
-                              <span className="studio-glued-arrow">→</span>
-                              <span className="studio-glued-after">{f.after}</span>
-                            </span>
-                          ))}
-                        </span>
-                      </li>
-                    ))}
+                    {glued.items.slice(0, 80).map((it) => {
+                      const off = gluedSkip.includes(it.key);
+                      return (
+                        <li key={it.key} className={`studio-glued-item ${off ? "is-skipped" : ""}`}>
+                          <label className="studio-glued-check" title={t("Ignorer cette correction")}>
+                            <input type="checkbox" checked={!off} onChange={() => toggleGluedItem(it.key)} />
+                          </label>
+                          <span className="studio-glued-fixes">
+                            <span className="studio-glued-where">{it.where}</span>
+                            {it.fixes.map((f, i) => (
+                              <span key={`${it.key}-${i}`} className="studio-glued-fix">
+                                <span className="studio-glued-rule">{GLUED_RULE_TXT[f.rule] || f.rule}</span>
+                                <span className="studio-glued-before">{f.before}</span>
+                                <span className="studio-glued-arrow">→</span>
+                                <span className="studio-glued-after">{f.after}</span>
+                              </span>
+                            ))}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                   {glued.items.length > 80 && (
                     <p className="studio-hint">{t("… et d'autres corrections sur les pages suivantes.")}</p>
@@ -1784,8 +1831,8 @@ const editZoom = zoom * canvasFit;
               )}
               <div className="studio-rowbtns">
                 {glued.total > 0 && (
-                  <button type="button" className="btn btn-small" onClick={applyGluedFixes}>
-                    ✓ {t("Tout corriger")} ({glued.total})
+                  <button type="button" className="btn btn-small" onClick={applyGluedFixes} disabled={!gluedSelected}>
+                    ✓ {t("Tout corriger")} ({gluedSelected})
                   </button>
                 )}
                 <button type="button" className="btn btn-outline btn-small" onClick={() => setGlued(null)}>

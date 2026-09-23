@@ -89,47 +89,6 @@ function textStyle(el, zoom) {
   }
   return out;
 }
-// ─── Barre de mise en forme SUR SÉLECTION (§4) ──────────────────────────────
-// Une sélection de quelques mots doit pouvoir être mise en forme sans toucher
-// au reste du document : `execCommand` agit sur la portion sélectionnée du
-// contentEditable, et le HTML obtenu est assaini par sanitizeHtml (gras,
-// italique, souligné, barré, surlignage, listes, liens et indentation gardés).
-const FMT_BUTTONS = [
-  { cmd: "bold", label: "G", title: "Gras" },
-  { cmd: "italic", label: "I", title: "Italique" },
-  { cmd: "underline", label: "S", title: "Souligné" },
-  { cmd: "strikeThrough", label: "S̶", title: "Barré" },
-  { cmd: "hiliteColor", value: "#fde68a", label: "🖍", title: "Surlignage" },
-  { cmd: "insertUnorderedList", label: "•", title: "Liste à puces" },
-  { cmd: "insertOrderedList", label: "1.", title: "Liste numérotée" },
-  { cmd: "outdent", label: "⇤", title: "Désindenter" },
-  { cmd: "indent", label: "⇥", title: "Indenter" },
-];
-const FMT_ALIGN = [
-  { cmd: "justifyLeft", label: "⯇", title: "Aligner à gauche" },
-  { cmd: "justifyCenter", label: "≡", title: "Centrer" },
-  { cmd: "justifyRight", label: "⯈", title: "Aligner à droite" },
-  { cmd: "justifyFull", label: "▤", title: "Justifier" },
-];
-function runFmt(cmd, value) {
-  try {
-    document.execCommand("styleWithCSS", false, true);
-    document.execCommand(cmd, false, value);
-  } catch { /* commande non supportée par le navigateur : ignorée */ }
-}
-function promptLink() {
-  const sel = window.getSelection();
-  const range = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
-  const url = window.prompt("Lien (https://…)", "https://");
-  if (!url) return;
-  // La sélection est rétablie avant d'appliquer le lien (le prompt l'a perdue).
-  if (range && sel) {
-    sel.removeAllRanges();
-    sel.addRange(range);
-  }
-  runFmt("createLink", url);
-}
-
 // ─── Élément texte (§4 : édition riche directement sur la page) ─────────────
 function TextView({ el, zoom, editing, onCommitHtml, tokensCtx }) {
   const ref = useRef(null);
@@ -143,41 +102,16 @@ function TextView({ el, zoom, editing, onCommitHtml, tokensCtx }) {
     if (editing && ref.current) ref.current.innerHTML = html;
   }, [editing, html]);
   return (
-    <>
-      {editing ? (
-        <div
-          className="studio-fmt"
-          style={{ transform: `scale(${round1(1 / (zoom || 1))})` }}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          {FMT_BUTTONS.map((b) => (
-            <button key={b.cmd} type="button" title={b.title} onMouseDown={(e) => { e.preventDefault(); runFmt(b.cmd, b.value); }}>
-              {b.label}
-            </button>
-          ))}
-          <span className="studio-fmt-sep" />
-          {FMT_ALIGN.map((b) => (
-            <button key={b.cmd} type="button" title={b.title} onMouseDown={(e) => { e.preventDefault(); runFmt(b.cmd); }}>
-              {b.label}
-            </button>
-          ))}
-          <span className="studio-fmt-sep" />
-          <button type="button" title="Insérer un lien" onMouseDown={(e) => { e.preventDefault(); promptLink(); }}>
-            🔗
-          </button>
-        </div>
-      ) : null}
-      <div
-        ref={ref}
-        className={`studio-text ${el.data?.pre ? "studio-pre" : ""} ${editing ? "editing" : ""}`}
-        style={textStyle(el, zoom)}
-        contentEditable={editing || undefined}
-        suppressContentEditableWarning
-        spellCheck={editing || undefined}
-        onBlur={editing ? (e) => onCommitHtml(sanitizeHtml(e.currentTarget.innerHTML)) : undefined}
-        {...(editing ? {} : { dangerouslySetInnerHTML: { __html: html } })}
-      />
-    </>
+    <div
+      ref={ref}
+      className={`studio-text ${el.data?.pre ? "studio-pre" : ""} ${editing ? "editing" : ""}`}
+      style={textStyle(el, zoom)}
+      contentEditable={editing || undefined}
+      suppressContentEditableWarning
+      spellCheck={editing || undefined}
+      onBlur={editing ? (e) => onCommitHtml(sanitizeHtml(e.currentTarget.innerHTML)) : undefined}
+      {...(editing ? {} : { dangerouslySetInnerHTML: { __html: html } })}
+    />
   );
 }
 
