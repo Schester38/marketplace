@@ -56,7 +56,7 @@ export default function Footer() {
           <p className="tp-sub">{t("Partagez votre expérience avec nous sur Trustpilot")}</p>
           <a
             className="tp-btn"
-            href="https://fr.trustpilot.com/review/mboppi-mboppi.vercel.app"
+            href="https://fr.trustpilot.com/review/mboppishop.com"
             target="_blank"
             rel="noopener"
           >

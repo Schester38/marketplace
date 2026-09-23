@@ -189,7 +189,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 ## Conventions de dev (IMPORTANT)
 
 1. **Ne jamais committer sans demande explicite.** Quand le user demande « deployer » / « mettre en ligne » : bump + commit + push.
-2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.57.92 / mboppi-v322**.
+2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.57.93 / mboppi-v323**.
 3. **Build** : `npm run build` dans `client/` (le hash du JS local diffère de celui de Vercel pour des raisons d'environnement ; vérifier le déploiement via le CSS hash ou en cherchant une chaîne caractéristique du nouveau code dans le JS servi).
 4. **Vérifier le déploiement** : attendre ~75–90 s après push, puis `curl` sur `https://mboppi-mboppi.vercel.app/` (header `Accept: text/html` pour le HTML SEO) et chercher le hash CSS/JS du build local ; tester les API concernées.
 5. Commandes utiles : `node --check server/routes/*.js` pour la syntaxe serveur.
@@ -207,11 +207,13 @@ Le code est **piloté par l'environnement** : changer de domaine ne demande **au
 5. Hors code : mettre à jour l'URL du webhook chez **Meta** (WhatsApp), re-soumettre le **sitemap** à Google, et le profil **Trustpilot** (le lien `Footer.jsx` + le meta `trustpilot-one-time-domain-verification-id` sont liés au domaine).
 
 Pilotés par l'environnement : `client/src/config.js` (`BASE_URL` ← `VITE_SITE_URL`), `client/vite.config.js` (remplace `__SITE_URL__` dans `index.html`), `client/index.html`, `client/src/components/{ShareVitrine,Invoice}.jsx`, `client/src/pages/Admin.jsx`, `server/app.js` + `server/security.js` (CORS ← `SITE_URL`/`PUBLIC_URL`), `server/mailer.js`, `server/chat-knowledge.js`, `server/routes/{seo,auth,newsletter,admin}.js`, `server/services/campaigns.js`.
-Restent en dur **volontairement** : `client/src/components/Footer.jsx` (lien Trustpilot, attaché au profil) et `.github/workflows/keepalive.yml` (ping sur l'alias `vercel.app`, toujours valide).
+Restent en dur **volontairement** : `.github/workflows/keepalive.yml` (ping sur l'alias `vercel.app`, toujours valide). Le lien Trustpilot du footer (`Footer.jsx`) pointe depuis 1.57.93 vers le **profil revendiqué du nouveau domaine** (`https://fr.trustpilot.com/review/mboppishop.com`).
 
 ## Historique récent des modifications
 
-(Changelog partiel — version courante **1.57.92** / cache PWA **mboppi-v322**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+(Changelog partiel — version courante **1.57.93** / cache PWA **mboppi-v323**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+
+- **1.57.93** : **profil Trustpilot migré vers `mboppishop.com`** — le bouton « Évaluez-nous sur Trustpilot » du footer pointe désormais vers `https://fr.trustpilot.com/review/mboppishop.com` (nouveau profil revendiqué, 0 avis) au lieu de l'ancien domaine `mboppi-mboppi.vercel.app` ; la balise meta `trustpilot-one-time-domain-verification-id` de l'ancien domaine est retirée de `client/index.html` (ID « one-time » déjà consommé). Le nouveau domaine est vérifié côté Trustpilot par **enregistrement DNS TXT** (`trustpilot-one-time-verification-id=…` ajouté chez Vercel DNS, zone `mboppishop.com`). Cache PWA v323.
 
 - **1.57.92** : **bascule domaine `mboppishop.com` — `robots.txt` dynamique** — `client/public/robots.txt` (servi tel quel par `handle: filesystem`) pointait encore vers `mboppi-mboppi.vercel.app` : il est désormais **généré par le serveur** (`server/routes/seo.js`, handler `/robots.txt` construit depuis `PUBLIC_URL` comme le sitemap), avec la route `{ "/robots\\.txt" → "/api/index" }` ajoutée dans `vercel.json` **avant** `handle: filesystem` ; le fichier statique reste en repli (dev) et pointe sur le nouveau domaine. `client/public/og-image.svg` (asset non référencé) aligné sur `www.mboppishop.com`. Vérifié en production : `https://www.mboppishop.com/robots.txt` renvoie `Sitemap: https://www.mboppishop.com/sitemap.xml`. Cache PWA v322.
 
