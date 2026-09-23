@@ -434,6 +434,10 @@ export default function StudioCanvas({
   const startGesture = useCallback(
     (ev, mode, handle, el) => {
       if (readOnly || lockDesign || !el || el.locked) return;
+      // Touch : le geste « déplacer » n'appartient au doigt QUE si l'élément est
+      // DÉJÀ sélectionné (tap = sélection, glisser depuis un élément non
+      // sélectionné = défilement naturel de la page — voir also touch-action CSS).
+      if (ev.pointerType === "touch" && mode === "move" && !selectedIds.includes(el.id)) return;
       ev.preventDefault();
       ev.stopPropagation();
       const ids =
@@ -504,6 +508,7 @@ export default function StudioCanvas({
       const onUp = () => {
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp); // geste annulé par le navigateur
         if (g.moved) onEndGesture?.();
         else onEndGesture?.("cancel"); // clic sans mouvement → instantané abandonné
         gesture.current = null;
@@ -512,6 +517,10 @@ export default function StudioCanvas({
       };
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
+      // Sans pointercancel, un geste interrompu par le navigateur (scroll, alerte)
+      // laissait les listeners attachés et l'état « bloqué » : l'élément suivait
+      // encore le doigt pendant qu'on voulait faire défiler la page.
+      window.addEventListener("pointercancel", onUp);
     },
     [readOnly, lockDesign, selectedIds, elMap, els, box, zoom, onBeginGesture, onPatch, onEndGesture],
   );
@@ -642,6 +651,10 @@ export default function StudioCanvas({
           opacity: el.hidden ? 0.28 : Number(el.opacity ?? 1) < 1 ? Number(el.opacity) : 1,
           zIndex: sel ? 500 : undefined,
           cursor: readOnly ? "default" : el.locked ? "not-allowed" : "move",
+          // Touch : seuls les éléments réellement déplaçables (sélectionnés,
+          // édition autorisée, non verrouillés) capturent le doigt ; sinon le
+          // geste reste au navigateur = défilement normal de la page.
+          touchAction: !readOnly && !lockDesign && !el.locked && sel ? "none" : undefined,
         };
         let inner = null;
         // Dispatch par kind du modèle (§24 : chaque élément garde sa nature).

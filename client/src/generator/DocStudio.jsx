@@ -1005,7 +1005,7 @@ useEffect(() => {
     ro?.disconnect();
     window.removeEventListener("resize", measure);
   };
-}, [mode, box.w, busy, pages.length]);
+}, [mode, box.w, busy, (pages || []).length]);
 const editZoom = zoom * canvasFit;
 
   // ─── Aperçu plein écran (§19) ─────────────────────────────────────────────
