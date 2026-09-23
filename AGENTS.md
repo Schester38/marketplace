@@ -189,7 +189,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 ## Conventions de dev (IMPORTANT)
 
 1. **Ne jamais committer sans demande explicite.** Quand le user demande « deployer » / « mettre en ligne » : bump + commit + push.
-2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.57.64 / mboppi-v295**.
+2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.57.92 / mboppi-v322**.
 3. **Build** : `npm run build` dans `client/` (le hash du JS local diffère de celui de Vercel pour des raisons d'environnement ; vérifier le déploiement via le CSS hash ou en cherchant une chaîne caractéristique du nouveau code dans le JS servi).
 4. **Vérifier le déploiement** : attendre ~75–90 s après push, puis `curl` sur `https://mboppi-mboppi.vercel.app/` (header `Accept: text/html` pour le HTML SEO) et chercher le hash CSS/JS du build local ; tester les API concernées.
 5. Commandes utiles : `node --check server/routes/*.js` pour la syntaxe serveur.
@@ -211,7 +211,9 @@ Restent en dur **volontairement** : `client/src/components/Footer.jsx` (lien Tru
 
 ## Historique récent des modifications
 
-(Changelog partiel — version courante **1.57.91** / cache PWA **mboppi-v321**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+(Changelog partiel — version courante **1.57.92** / cache PWA **mboppi-v322**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+
+- **1.57.92** : **bascule domaine `mboppishop.com` — `robots.txt` dynamique** — `client/public/robots.txt` (servi tel quel par `handle: filesystem`) pointait encore vers `mboppi-mboppi.vercel.app` : il est désormais **généré par le serveur** (`server/routes/seo.js`, handler `/robots.txt` construit depuis `PUBLIC_URL` comme le sitemap), avec la route `{ "/robots\\.txt" → "/api/index" }` ajoutée dans `vercel.json` **avant** `handle: filesystem` ; le fichier statique reste en repli (dev) et pointe sur le nouveau domaine. `client/public/og-image.svg` (asset non référencé) aligné sur `www.mboppishop.com`. Vérifié en production : `https://www.mboppishop.com/robots.txt` renvoie `Sitemap: https://www.mboppishop.com/sitemap.xml`. Cache PWA v322.
 
 - **1.57.91** : **mention « PC recommandé » sous la bibliothèque du Générateur** — nouveau bloc `.gen-pcnote` (texte `var(--primary)`, gras 600, visible en **light et dark** — `--primary` orange Mboppi identique dans les deux thèmes) juste sous le paragraphe d'intro de l'onglet 📚 Générateur : « Pour une meilleure expérience de la plateforme, veuillez générer et éditer votre document sur Ordinateur. Merci !! » (orthographe corrigée « une meilleure expérience / veuillez générer ») ; clé i18n fr/en/ar/es. **Note** : le fichier `i18n.jsx` avait brièvement été réécrit en ANSI (mojibake) par un `Set-Content` PowerShell — restauré depuis git en UTF-8 puis les 3 traductions réinsérées via l'éditeur. Cache PWA v321.
 

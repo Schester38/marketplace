@@ -505,6 +505,15 @@ ${entries.map((e) => `  <url><loc>${e.loc}</loc><changefreq>${e.freq}</changefre
   }
 });
 
+// robots.txt piloté par l'environnement (PUBLIC_URL), comme le sitemap : la
+// bascule de domaine ne demande aucune édition de fichier statique.
+router.get("/robots.txt", (req, res) => {
+  res.set("Cache-Control", HTML_CACHE);
+  res
+    .type("text/plain")
+    .send(`User-agent: *\nAllow: /\n\nSitemap: ${BASE_URL}/sitemap.xml\n`);
+});
+
 const CITIES = [
   ["douala", "Douala"],
   ["yaounde", "Yaoundé"],
