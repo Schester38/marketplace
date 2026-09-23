@@ -189,7 +189,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 ## Conventions de dev (IMPORTANT)
 
 1. **Ne jamais committer sans demande explicite.** Quand le user demande « deployer » / « mettre en ligne » : bump + commit + push.
-2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.57.94 / mboppi-v324**.
+2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.57.96 / mboppi-v326**.
 3. **Build** : `npm run build` dans `client/` (le hash du JS local diffère de celui de Vercel pour des raisons d'environnement ; vérifier le déploiement via le CSS hash ou en cherchant une chaîne caractéristique du nouveau code dans le JS servi).
 4. **Vérifier le déploiement** : attendre ~75–90 s après push, puis `curl` sur `https://mboppi-mboppi.vercel.app/` (header `Accept: text/html` pour le HTML SEO) et chercher le hash CSS/JS du build local ; tester les API concernées.
 5. Commandes utiles : `node --check server/routes/*.js` pour la syntaxe serveur.
@@ -211,7 +211,11 @@ Restent en dur **volontairement** : `.github/workflows/keepalive.yml` (ping sur 
 
 ## Historique récent des modifications
 
-(Changelog partiel — version courante **1.57.94** / cache PWA **mboppi-v324**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+(Changelog partiel — version courante **1.57.96** / cache PWA **mboppi-v326**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+
+- **1.57.96** : **connexion 403 « Origine non autorisée » depuis l'apex corrigée** — la liste blanche d'origines ne contenait que `www.mboppishop.com` : un login envoyé depuis `https://mboppishop.com` (sans `www`) était refusé en 403. `server/security.js` : nouveau helper `originVariants()` qui génère les variantes `www.`/apex pour **chaque** origine de la liste (apex + ancien domaine + iKeePay) ; `server/app.js` : la déclaration CORS locale en double (qui aurait cassé le serveur avec un `SyntaxError`) est supprimée — il importe `ALLOWED_ORIGINS` depuis `security.js` (source unique). Validé par test simulé : apex ✅, www ✅, ancien domaine ✅, origine étrangère 🛑 403. (Le 504 transitoire vu en console était un timeout Vercel sans rapport.)
+
+- **1.57.95** : **marque « Mboppi » → « MboppiShop » + ancien domaine → `www.mboppishop.com` partout** — 117 fichiers / 917 lignes : textes visibles, métadonnées SEO, manifests, e-mails et liens ; protégés : identifiants `mboppi_*`, clés localStorage, classes CSS, `ShareMboppiButton`, cache PWA. Fichier artefact `in` (782 Ko) retiré du repo + `.gitignore`.
 
 - **1.57.94** : **e-mail acheteur → reçu de livraison + invitation Trustpilot** — les 3 formulaires d'achat acceptent un **e-mail optionnel** (`buyer_email`, pré-rempli depuis le compte) : fiche produit (`PurchasePage.jsx`), panier (`Cart.jsx`), tunnel digital (`DigitalBuyTunnel.jsx`). Serveur : colonnes `buyer_email` ajoutées à `sales` **et** `orders` (migration auto `ADD COLUMN IF NOT EXISTS` dans `db.js`), saisie validée par regex (invalide = ignorée, jamais 400), sinon repli sur l'e-mail du compte. `mailer.js` : `sendMail()` accepte `bcc`, constante **`TRUSTPILOT_INVITE_EMAIL`** (défaut `mboppishop.com+8f839a5b1c@invite.trustpilot.com`, désactivable par env vide/`off`), nouveau **`sendOrderDeliveredEmail()`** (« Votre commande est livrée 🎁 » + lien `/suivi/:id?code=` + bouton ⭐ Trustpilot + l'adresse d'invitation en BCC). Déclenché par `sales.js` `POST /:id/deliver` si `buyer_email` existe (appel **non bloquant** `.catch(() => {})`). i18n : 2 clés fr/en/ar/es.
 

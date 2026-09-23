@@ -1,18 +1,44 @@
 import { q } from "./db.js";
 
-const ALLOWED_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost:4173",
-  process.env.ALLOWED_ORIGIN,
-  // Domaine public (SITE_URL / PUBLIC_URL définis sur Vercel) : la bascule vers
-  // un domaine personnalisé ne demande donc aucune modification du code.
-  process.env.SITE_URL,
-  process.env.PUBLIC_URL,
-  "https://www.mboppishop.com",
-  // iKeePay (webhook de confirmation de paiement, origine du tunnel en iframe)
-  "https://ikeepay.com",
-  "https://www.ikeepay.com",
-].filter(Boolean);
+// Origine canonique d'une URL + sa variante www/apex : le site est atteignable
+// via `www.mboppishop.com` ET `mboppishop.com` — les deux doivent pouvoir se
+// connecter (sans cela, POST depuis l'apex → 403 « Origine non autorisée »).
+function originVariants(url) {
+  try {
+    const u = new URL(url);
+    const out = [u.origin];
+    const host = u.hostname;
+    if (host.includes("localhost") || host.includes("127.0.0.1")) return out;
+    if (host.startsWith("www.")) out.push(u.origin.replace("//www.", "//"));
+    else out.push(`${u.protocol}//www.${host}${u.port ? `:${u.port}` : ""}`);
+    return out;
+  } catch {
+    return []; // valeur non-URL (ignorée proprement)
+  }
+}
+
+export const ALLOWED_ORIGINS = [
+  ...new Set(
+    [
+      "http://localhost:5173",
+      "http://localhost:4173",
+      process.env.ALLOWED_ORIGIN,
+      // Domaine public (SITE_URL / PUBLIC_URL définis sur Vercel) : la bascule vers
+      // un domaine personnalisé ne demande donc aucune modification du code.
+      process.env.SITE_URL,
+      process.env.PUBLIC_URL,
+      "https://www.mboppishop.com",
+      // Ancien alias (redirection 301) : une page encore en cache là-bas doit
+      // pouvoir finir ses appels API.
+      "https://mboppi-mboppi.vercel.app",
+      // iKeePay (webhook de confirmation de paiement, origine du tunnel en iframe)
+      "https://ikeepay.com",
+      "https://www.ikeepay.com",
+    ]
+      .filter(Boolean)
+      .flatMap((o) => originVariants(o)),
+  ),
+];
 
 const CSP =
   "default-src 'self' data: blob:; " +

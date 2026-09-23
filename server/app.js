@@ -41,7 +41,7 @@ import usersRoutes from "./routes/users.js";
 import digitalRoutes from "./routes/digital.js";
 import generatorRoutes from "./routes/generator.js";
 import { authRequired } from "./auth.js";
-import { securityHeaders, originCheck } from "./security.js";
+import { securityHeaders, originCheck, ALLOWED_ORIGINS } from "./security.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -64,19 +64,10 @@ const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
-const ALLOWED_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost:4173",
-  process.env.ALLOWED_ORIGIN,
-  // Domaine public (SITE_URL / PUBLIC_URL définis sur Vercel) — bascule de
-  // domaine sans modification du code.
-  process.env.SITE_URL,
-  process.env.PUBLIC_URL,
-  "https://www.mboppishop.com",
-  "https://ikeepay.com",
-  "https://www.ikeepay.com",
-].filter(Boolean);
-
+// Liste blanche unique : importée depuis security.js (originVariants inclut les
+// variantes www/apex de chaque domaine — sans elles, POST depuis l'apex reçoit
+// 403 « Origine non autorisée »). Ne PAS redéclarer une constante locale du
+// même nom (SyntaxError : Identifier 'ALLOWED_ORIGINS' already declared).
 app.use(cors({ origin: ALLOWED_ORIGINS }));
 app.use(securityHeaders);
 app.use(
