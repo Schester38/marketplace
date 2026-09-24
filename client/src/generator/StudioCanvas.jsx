@@ -14,7 +14,7 @@ import PageDecor from "./PageDecor.jsx";
 import CoverDecor from "./CoverDecor.jsx";
 import { coverDecorPrims } from "./coverDecor.js";
 import { makeQrDataUrl } from "./protection.js";
-import { watermarkPreviewFontSize } from "./watermark.js";
+import { watermarkPreviewFontSize, watermarkOpacity } from "./watermark.js";
 
 const mm2px = (v, zoom = 1) => Number(v || 0) * PX_PER_MM * zoom;
 const pt2px = (v, zoom = 1) => Number(v || 0) * PT_TO_PX * zoom;
@@ -609,7 +609,7 @@ export default function StudioCanvas({
           style={{
             fontSize: pt2px(watermarkPreviewFontSize(box), zoom),
             color: docMeta.protection.watermark.color || "#555555",
-            opacity: docMeta.protection.watermark.mode === "visible" ? 0.16 : 0.06,
+            opacity: watermarkOpacity(docMeta.protection.watermark.mode),
           }}
         >
           {docMeta.protection.watermark.text || `© ${docMeta.author || "Auteur"}`}

@@ -50,7 +50,7 @@ import CoverDecor from "../generator/CoverDecor.jsx";
 // avec le Studio, TOUJOURS dessiné derrière le texte (z-index 0).
 import PageDecor from "../generator/PageDecor.jsx";
 import DocStudio, { resolveActiveTemplate } from "../generator/DocStudio.jsx";
-import { watermarkPreviewFontSize } from "../generator/watermark.js";
+import { watermarkPreviewFontSize, watermarkOpacity } from "../generator/watermark.js";
 import StudioCanvas from "../generator/StudioCanvas.jsx";
 import { readStudio, studioBox, buildStudioPages, serializeStudio, studioDesignKey, studioContentKey, ensureStudioFooters } from "../generator/studioModel.js";
 import { exportStudioPdf } from "../generator/studioExport.js";
@@ -2997,7 +2997,7 @@ function GenPage({ page, paginated, docMeta, fit }) {
           style={{
             fontSize: pt(watermarkPreviewFontSize(box)),
             color: docMeta.protection.watermark.color || "#555555",
-            opacity: docMeta.protection.watermark.mode === "visible" ? 0.16 : 0.06,
+            opacity: watermarkOpacity(docMeta.protection.watermark.mode),
           }}
         >
           {docMeta.protection.watermark.text || `© ${docMeta.author || "Auteur"}`}

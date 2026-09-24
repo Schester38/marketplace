@@ -82,8 +82,18 @@ function collectLines(el, hostRect, template) {
   const words = [];
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
   let node;
+  // Conserve la séparation du texte source, y compris entre deux balises
+  // inlinestrong. La position graphique seule ne suffit pas : une espace peut
+  // mesurer moins de 1,5 px selon la police, et les mots seraient recollés
+  // lors de la reconstruction HTML du Studio.
+  let trailingSpace = false;
   while ((node = walker.nextNode())) {
-    if (!node.data.trim()) continue;
+    if (!node.data.trim()) {
+      // Un nœud entièrement blanc entre deux nœuds textuels est aussi un
+      // séparateur source (par exemple « bonjour <strong>Monde</strong> »).
+      trailingSpace = true;
+      continue;
+    }
     const parent = node.parentElement;
     if (!parent) continue;
     const style = styleOf(parent, template);
@@ -100,14 +110,21 @@ function collectLines(el, hostRect, template) {
       if (!rects.length) continue;
       const r = rects[rects.length - 1];
       if (!r || !r.width) continue;
+      const leadingSpace = m.index > 0 && /\s/.test(node.data.slice(0, m.index));
       words.push({
         text: m[0],
         x: r.left - hostRect.left,
         w: r.width,
         top: r.top - hostRect.top,
         bottom: r.bottom - hostRect.top,
-        style, href,
+        style,
+        href,
+        // `true` signifie qu'une espace existait réellement avant ce mot.
+        // `false` est important : il empêche un faux espace créé uniquement par
+        // l'écart graphique de deux glyphes sans espace dans le texte source.
+        spaceBefore: Boolean(leadingSpace || trailingSpace),
       });
+      trailingSpace = /\s/.test(node.data.slice(m.index + m[0].length));
     }
   }
   if (!words.length) return [];
@@ -134,9 +151,10 @@ function collectLines(el, hostRect, template) {
       if (run && run.key === key && Math.abs(w.x - (run.lastX + run.lastW)) < 1.5) {
         run.text += w.text;
         run.w += w.w;
+        run.words.push({ text: w.text, x: w.x, w: w.w, spaceBefore: w.spaceBefore });
       } else {
         run = { key, text: w.text, x: w.x, w: w.w, style: w.style, href: w.href,
-          words: [{ text: w.text, x: w.x, w: w.w }] };
+          words: [{ text: w.text, x: w.x, w: w.w, spaceBefore: w.spaceBefore }] };
         ln.runs.push(run);
       }
       run.lastX = w.x;
@@ -563,13 +581,17 @@ export function flowAtoms(atoms, contentHpx, template, bodyLineH) {
   return { pages, headings };
 }
 
-// Reconstitue le texte d'une ligne mesurée (espaces déduits des positions).
+// Reconstitue le texte d'une ligne mesurée. `spaceBefore` vient du texte
+// source ; le seuil graphique reste le repli pour les anciens layouts.
 export function lineText(ln) {
   if (!ln) return "";
   let out = "";
   let prev = null;
-  for (const w of ln.words) {
-    if (prev && w.x - (prev.x + prev.w) > 1.5) out += " ";
+  for (const w of ln.words || []) {
+    const sourceSpace = typeof w.spaceBefore === "boolean"
+      ? w.spaceBefore
+      : prev && w.x - (prev.x + prev.w) > 1.5;
+    if (sourceSpace) out += " ";
     out += w.text;
     prev = w;
   }

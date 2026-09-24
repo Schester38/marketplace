@@ -13,13 +13,20 @@ function setWatermarkColor(doc, hex) {
 }
 
 export function watermarkPreviewFontSize(box) {
-  return Math.min(42, Math.max(18, Math.min(Number(box?.w) || 210, Number(box?.h) || 297) * 0.16));
+  // ×2 par rapport à l'ancienne taille : le filigrane doit être perceptible
+  // sans nécessiter un zoom, y compris sur un écran de téléphone.
+  return Math.min(84, Math.max(36, Math.min(Number(box?.w) || 210, Number(box?.h) || 297) * 0.32));
+}
+
+/** Opacité commune à l'aperçu et aux exports PDF. */
+export function watermarkOpacity(mode) {
+  return mode === "visible" ? 0.3 : 0.12;
 }
 
 export function watermarkFontSize(doc, text, box) {
   const { w, h } = box;
   const maxWidth = (w + h) / Math.SQRT2 * 0.82;
-  let size = Math.min(42, Math.max(18, Math.min(w, h) * 0.16));
+  let size = Math.min(84, Math.max(36, Math.min(w, h) * 0.32));
   doc.setFontSize(size);
   while (size > 9 && doc.getTextWidth(String(text)) > maxWidth) {
     size -= 1;
@@ -36,7 +43,7 @@ export function drawWatermarkPdf(doc, docMeta, box, { font = "sans" } = {}) {
   const { w, h } = box;
   doc.saveGraphicsState();
   try {
-    doc.setGState(new doc.GState({ opacity: wm.mode === "visible" ? 0.16 : 0.06 }));
+    doc.setGState(new doc.GState({ opacity: watermarkOpacity(wm.mode) }));
   } catch {
     /* Certains builds jsPDF n exposent pas GState : le texte reste visible. */
   }

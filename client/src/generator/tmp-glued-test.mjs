@@ -1,5 +1,7 @@
 // Banc d'essai du correcteur de mots collés (temporaire — supprimé après tests)
 import { fixGluedText, fixGluedInHtml, fixGluedInPages, fixGluedDoc, fixGluedInElement, applyGluedChanges, buildGluedReference, gluedPagesText, GLUED_DICT } from "./gluedWords.js";
+import { lineText } from "./paginate.js";
+import { needsSourceSpace } from "./studioModel.js";
 
 const debug = process.argv.includes("--debug");
 if (debug) {
@@ -197,6 +199,27 @@ for (const text of CLEAN) {
     fixGluedText("comptabilitéanalytique", { reference: ref3 }).text,
     "comptabilitéanalytique"
   );
+}
+
+// ─── 8. ESPACES SOURCE : PRÉFÉRENCE AU TEXTE, PAS À LA POSITION ────────────
+{
+  const line = {
+    words: [
+      { text: "bonjour", x: 0, w: 50, spaceBefore: false },
+      { text: "monde", x: 51, w: 45, spaceBefore: true },
+      { text: "collé", x: 97, w: 35, spaceBefore: false },
+    ],
+  };
+  ok("reconstruction : espace source conservée malgré un écart < 1,5 px", lineText(line), "bonjour mondecollé");
+  ok("reconstruction : espace absente entre deux mots réellement collés", lineText({
+    words: [
+      { text: "mot", x: 0, w: 30, spaceBefore: false },
+      { text: "suivant", x: 31, w: 50, spaceBefore: false },
+    ],
+  }), "motsuivant");
+  ok("helper : priorité au marqueur source", needsSourceSpace({ x: 100, w: 20, spaceBefore: true }, 99), true);
+  ok("helper : repli graphique ancien modèle", needsSourceSpace({ x: 100, w: 20 }, 97), true);
+  ok("helper : pas d'espace source malgré écart", needsSourceSpace({ x: 100, w: 20, spaceBefore: false }, 97), false);
 }
 
 console.log(`\n${pass} réussis, ${fail} échoués`);

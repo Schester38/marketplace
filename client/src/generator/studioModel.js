@@ -287,6 +287,18 @@ function runCss(s, base) {
   return out.join(";");
 }
 
+/**
+ * Indique s'il faut reconstruire une espace avant un mot.
+ * Les documents reconstruits depuis le navigateur portent `spaceBefore` :
+ * cette information est prioritaire, car la position graphique peut être
+ * trompeuse selon la police. Le seuil historique reste le repli pour les
+ * anciens modèles de pages qui ne possèdent pas encore cette métadonnée.
+ */
+export function needsSourceSpace(word, prevEnd = null) {
+  if (word && typeof word.spaceBefore === "boolean") return word.spaceBefore;
+  return prevEnd !== null && Number(word?.x) - Number(prevEnd) > 1.5;
+}
+
 /** HTML d'un groupe d'atomes mesurés (les lignes d'un même bloc de texte). */
 function groupToHtml(atoms, base, kind) {
   const soft = kind === "pre" ? "\n" : " ";
@@ -298,10 +310,10 @@ function groupToHtml(atoms, base, kind) {
       for (const run of ln.runs || []) {
         const css = runCss(run.style, base);
         for (const w of run.words || []) {
-          const space = prevEnd !== null && w.x - prevEnd > 1.5;
+          const space = needsSourceSpace(w, prevEnd);
           prevEnd = w.x + w.w;
           const last = chunks[chunks.length - 1];
-          if (last && last.css === css && last.href === run.href && !space) {
+          if (last && last.css === css && last.href === run.href && !space && !pending) {
             last.text += w.text;
           } else {
             chunks.push({ css, href: run.href || null, text: (pending || space ? soft : "") + w.text });
@@ -772,7 +784,7 @@ export function readStudio(pageLayout) {
  *   v2 → avance de ligne réelle mesurée + espacements appliqués aux bords du
  *        bloc (plus aucun chevauchement de texte).
  */
-export const LAYOUT_ENGINE_VERSION = 2;
+export const LAYOUT_ENGINE_VERSION = 3;
 
 /**
  * Empreinte du DESIGN (modèle, styles avancés, format, marges, sommaire,
