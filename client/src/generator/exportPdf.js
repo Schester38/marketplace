@@ -10,7 +10,7 @@ import { jsPDF } from "jspdf";
 import { FONT_PDF, resolveCover, coverLayoutBox } from "./templates.js";
 import { coverDecorPrims, drawCoverDecorPdf } from "./coverDecor.js";
 import { PX_PER_MM } from "./paginate.js";
-import { copyrightLines, makeQrDataUrl, verificationPayload } from "./protection.js";
+import { copyrightLines, COPYRIGHT_FONT_PT, COPYRIGHT_REFERENCE_FONT_PT, makeQrDataUrl, verificationPayload } from "./protection.js";
 import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL, MBOPPI_PROMO_FONT_PT } from "./footerPromo.js";
 import { drawWatermarkPdf } from "./watermark.js";
 import { BASE_URL } from "../config.js";
@@ -484,11 +484,14 @@ function drawCopyright(doc, docMeta, template, box, contentHash, decorPrims) {
   // Anti-débordement : le bloc complet (copyright + référence + empreinte +
   // signature MboppiShop) doit tenir au-dessus du bas de page, même quand la liste
   // est longue — le départ remonte au besoin (plafonné à 42 % de la hauteur).
-  const lineH = (template.sizes.small * 1.6) / 2.83;
-  const blockH = lines.length * lineH + 12 + 5 + 12 + (contentHash ? 5 : 0);
+  const size = COPYRIGHT_FONT_PT;
+  const lineH = (size * 1.6) / 2.83;
+  const refSize = COPYRIGHT_REFERENCE_FONT_PT;
+  const detailSize = Math.max(8, template.sizes.small - 1);
+  const blockH = lines.length * lineH + 12 + 5 + 12 + (contentHash ? 5 : 0) + (docMeta.doc_ref ? 7 + 4.5 : 0);
   let y = Math.min(h * 0.42, h - 18 - blockH);
   doc.setFont(FONT_PDF[template.bodyFont], "normal");
-  doc.setFontSize(template.sizes.small);
+  doc.setFontSize(size);
   for (const line of lines) {
     if (!line) {
       y += 3;
@@ -500,19 +503,20 @@ function drawCopyright(doc, docMeta, template, box, contentHash, decorPrims) {
     y += lineH;
   }
   y += 12;
+  doc.setFontSize(refSize);
   setText(doc, template.colors.accent);
   const ref = `Référence : ${docMeta.doc_ref}`;
   doc.text(ref, (w - doc.getTextWidth(ref)) / 2, y);
   if (contentHash) {
     y += 5;
-    doc.setFontSize(template.sizes.small - 1);
+    doc.setFontSize(detailSize);
     const hashLine = `Empreinte SHA-256 : ${contentHash.slice(0, 32)}…`;
     doc.text(hashLine, (w - doc.getTextWidth(hashLine)) / 2, y);
   }
   // Signature MboppiShop (anti-contrefaçon) : chaque téléchargement porte la
   // mention d'authenticité + le lien public de vérification de la référence.
   if (docMeta.doc_ref) {
-    doc.setFontSize(template.sizes.small - 1);
+    doc.setFontSize(detailSize);
     setText(doc, template.colors.accent);
     y += 7;
     const sign1 = "Authentifié sur MboppiShop";

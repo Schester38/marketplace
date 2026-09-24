@@ -17,7 +17,7 @@
 import { PX_PER_MM, PT_TO_PX, lineText } from "./paginate.js";
 import { resolvePageBox, resolveCover, coverLayoutBox, FONT_CSS } from "./templates.js";
 import { coverDecorPrims } from "./coverDecor.js";
-import { copyrightLines, verificationPayload } from "./protection.js";
+import { copyrightLines, COPYRIGHT_FONT_PT, COPYRIGHT_REFERENCE_FONT_PT } from "./protection.js";
 import { MBOPPI_PROMO_HTML, MBOPPI_PROMO_FONT_PT, MBOPPI_PROMO_BOX_H_MM, hasMboppiPromo } from "./footerPromo.js";
 import { BASE_URL } from "../config.js";
 
@@ -585,7 +585,7 @@ function copyrightPage(docMeta, template, box) {
   const { w, h, m } = box;
   const contentW = w - m.left - m.right;
   const lines = copyrightLines(docMeta);
-  const size = template.sizes.small;
+  const size = COPYRIGHT_FONT_PT;
   const height = Math.max(10, lines.length * size * 1.6 * 0.3528 + 2);
   const els = [];
   coverDecorPrims(template, w, h).forEach((prim, i) => {
@@ -599,8 +599,9 @@ function copyrightPage(docMeta, template, box) {
     // séparé, qui ferait doublon sur la page.
     style: { ...defaultStyle(template, "paragraph"), size, align: "center", lineHeight: 1.6, paraSpace: 0 },
   }));
-  els.push(makeElement(template, "reference", { x: m.left, y: round1(h * 0.4 + height + 12), w: contentW, h: 8 }, {
+  els.push(makeElement(template, "reference", { x: m.left, y: round1(h * 0.4 + height + 12), w: contentW, h: 10 }, {
     name: "Référence du document", z: 5, html: `Référence : ${escapeHtml(docMeta.doc_ref || "")}`,
+    style: { ...defaultStyle(template, "reference"), size: COPYRIGHT_REFERENCE_FONT_PT, align: "center", lineHeight: 1.4, paraSpace: 0 },
   }));
   return makePage({ kind: "copyright", label: "Copyright", design: { bg: template.colors.bg, decor: template.pageDecor }, elements: els });
 }

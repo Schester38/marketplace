@@ -11,6 +11,11 @@ export async function sha256Hex(str) {
 
 import { BASE_URL } from "../config.js";
 
+// Taille commune de la page de copyright dans tous les rendus.
+// Les mentions principales restent lisibles sans augmenter la taille du reste du document.
+export const COPYRIGHT_FONT_PT = 12;
+export const COPYRIGHT_REFERENCE_FONT_PT = 10.5;
+
 // Payload encodé dans le QR code : référence + auteur + date + empreinte +
 // lien PUBLIC de vérification (/verifier/<référence>) : le scan ouvre la page
 // d'authenticité MboppiShop. Sert à prouver l'origine du document (identifiant

@@ -11,7 +11,7 @@
 import JSZip from "jszip";
 import { FONT_CSS, getTemplate, resolveTemplate } from "./templates.js";
 import { renderCoverImage } from "./coverImage.js";
-import { copyrightLines, makeQrDataUrl, verificationPayload } from "./protection.js";
+import { copyrightLines, COPYRIGHT_FONT_PT, COPYRIGHT_REFERENCE_FONT_PT, makeQrDataUrl, verificationPayload } from "./protection.js";
 import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL, MBOPPI_PROMO_FONT_PT } from "./footerPromo.js";
 
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" };
@@ -156,7 +156,8 @@ function epubCss(template) {
     `.cover-page .t{font-size:26pt;font-weight:bold;color:${c.heading};}`,
     `.cover-page .s{font-size:14pt;color:${c.accent};margin-top:1em;}`,
     `.cover-page .a{font-size:12pt;margin-top:2em;}`,
-    `.copyright-page{margin-top:45%;font-size:.85em;white-space:pre-line;}`,
+    `.copyright-page{margin-top:40%;font-size:${COPYRIGHT_FONT_PT}pt;line-height:1.6;white-space:pre-line;}`,
+    `.copyright-page .copyright-reference{font-size:${COPYRIGHT_REFERENCE_FONT_PT}pt;line-height:1.4;color:${c.accent};margin-top:1em;}`,
   ].join("\n");
 }
 
@@ -290,7 +291,7 @@ export async function exportEpub({ doc, docMeta, onProgress }) {
     title: "Copyright",
     xhtml: simpleXhtml(
       "Copyright",
-      `<div class="copyright-page">${esc(copyrightLines(docMeta).join("\n"))}${docMeta.doc_ref ? `\n\n${esc(docMeta.doc_ref)}` : ""}</div>`
+      `<div class="copyright-page">${esc(copyrightLines(docMeta).join("\n"))}${docMeta.doc_ref ? `\n<div class="copyright-reference">Référence : ${esc(docMeta.doc_ref)}</div>` : ""}</div>`
     ),
   });
 

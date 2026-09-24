@@ -56,6 +56,8 @@ import { readStudio, studioBox, studioDesignKey, studioContentKey, ensureStudioF
 import { exportStudioPdf } from "../generator/studioExport.js";
 import {
   copyrightLines,
+  COPYRIGHT_FONT_PT,
+  COPYRIGHT_REFERENCE_FONT_PT,
   makeQrDataUrl,
   sha256Hex,
   verificationPayload,
@@ -3090,9 +3092,9 @@ function GenPage({ page, paginated, docMeta, fit }) {
     return (
       <div className="gen-page" style={{ ...pageStyle, background: template.colors.bg, color: template.colors.body }}>
         <CoverDecor prims={decorPrims} w={w} h={h} />
-        <div className="gen-cover-body" style={{ top: "40%", left: mm(m.left), right: mm(m.right), fontSize: pt(template.sizes.small), lineHeight: 1.6, whiteSpace: "pre-line" }}>
+        <div className="gen-cover-body" style={{ top: "40%", left: mm(m.left), right: mm(m.right), fontSize: pt(COPYRIGHT_FONT_PT), lineHeight: 1.6, whiteSpace: "pre-line" }}>
           {copyrightLines(docMeta).join("\n")}
-          <div style={{ marginTop: mm(4), color: template.colors.accent }}>Référence : {docMeta.doc_ref}</div>
+          <div style={{ marginTop: mm(4), color: template.colors.accent, fontSize: pt(COPYRIGHT_REFERENCE_FONT_PT), lineHeight: 1.4 }}>Référence : {docMeta.doc_ref}</div>
         </div>
         {promoFooter}
       </div>
