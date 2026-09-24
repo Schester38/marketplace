@@ -1,5 +1,7 @@
-const CACHE_NAME = 'mboppi-v339';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/icon.png', '/favicon-32x32.png', '/apple-touch-icon.png', '/navbar-logo.png', '/assistant-avatar.webp', '/og-image.svg', '/og-image.png', '/robots.txt', '/splash.js', '/diapo/MboppiShop_Developpez_votre_boutique.webp', '/diapo/MboppiShop_Gagner_telephone_connexion.webp', '/diapo/MboppiShop_Paiement_a_la_livraison_1x1.webp', '/diapo/MboppiShop_Shopify_optimise.webp'];
+const CACHE_NAME = 'mboppi-v340';
+const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/robots.txt', '/splash.js'];
+// Les diapositives, illustrations sociales et logos secondaires sont charges a la
+// demande : les precacher a chaque version augmentait l'egress des installations.
 
 // Endpoints GET publics : servis depuis le cache quand le reseau est lent ou coupe,
 // puis rafraichis en arriere-plan (stale-while-revalidate).
@@ -14,6 +16,8 @@ const API_SWR = [
   '/api/reviews/product/',
 ];
 const API_TIMEOUT = 6000;
+const API_FRESH_MS = 60 * 1000;
+const API_REVALIDATIONS = new Map();
 
 function isApiSwr(pathname) {
   return API_SWR.some((p) => pathname === p || pathname.startsWith(p));
@@ -250,7 +254,7 @@ self.addEventListener('fetch', (event) => {
   // immÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©diatement, le reseau rafraichit en arriere-plan. Les fichiers ont un hash,
   // donc deux versions ne se melangent jamais.
   if (url.pathname.startsWith('/assets/')) {
-    event.respondWith(assetSwr(event.request));
+    event.respondWith(assetCacheFirst(event.request));
     return;
   }
 
@@ -277,38 +281,62 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+function fetchAndCacheApi(request) {
+  const key = request.url;
+  if (API_REVALIDATIONS.has(key)) return API_REVALIDATIONS.get(key);
+  const shared = (async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), API_TIMEOUT);
+    try {
+      const resp = await fetch(request, { signal: controller.signal });
+      clearTimeout(timer);
+      if (resp && resp.ok && /application\/json/.test(resp.headers.get('content-type') || '')) {
+        const body = await resp.clone().arrayBuffer();
+        const headers = new Headers(resp.headers);
+        headers.set('x-sw-cached-at', String(Date.now()));
+        await caches.open(CACHE_NAME).then((cache) =>
+          cache.put(request, new Response(body, { status: resp.status, statusText: resp.statusText, headers }))
+        );
+      }
+      return resp;
+    } catch (err) {
+      clearTimeout(timer);
+      return null;
+    }
+  })();
+  API_REVALIDATIONS.set(key, shared);
+  shared.then(
+    () => { if (API_REVALIDATIONS.get(key) === shared) API_REVALIDATIONS.delete(key); },
+    () => { if (API_REVALIDATIONS.get(key) === shared) API_REVALIDATIONS.delete(key); }
+  );
+  return shared;
+}
+
 async function apiSwr(request) {
   const cached = await caches.match(request);
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), API_TIMEOUT);
+  const cachedAt = Number(cached?.headers.get('x-sw-cached-at') || 0);
+  if (cached && Date.now() - cachedAt < API_FRESH_MS) return cached;
+  if (cached) {
+    fetchAndCacheApi(request);
+    return cached;
+  }
+  return (await fetchAndCacheApi(request)) || cached ||
+    new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
+}
+
+async function assetCacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
   try {
-    const resp = await fetch(request, { signal: controller.signal });
-    clearTimeout(timer);
-    if (resp && resp.ok && /application\/json/.test(resp.headers.get('content-type') || '')) {
+    const resp = await fetch(request);
+    if (resp.ok) {
       const clone = resp.clone();
       caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
     }
     return resp;
   } catch (err) {
-    clearTimeout(timer);
-    if (cached) return cached;
     return new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
   }
-}
-
-async function assetSwr(request) {
-  const cached = await caches.match(request);
-  const net = fetch(request, { cache: 'no-store' })
-    .then((resp) => {
-      if (resp.ok) {
-        const clone = resp.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-      }
-      return resp;
-    })
-    .catch(() => null);
-  if (cached) return cached;
-  return net.then((resp) => resp || new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' }));
 }
 
 async function navSwr(request) {

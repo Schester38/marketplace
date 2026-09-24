@@ -109,8 +109,17 @@ function contentHash(content) {
   return crypto.createHash("sha256").update(JSON.stringify(content), "utf8").digest("hex");
 }
 
-function docRow(row) {
-  return {
+const DOC_META_FIELDS = [
+  "id", "doc_ref", "owner_id", "title", "subtitle", "author", "status",
+  "page_format", "page_width", "page_height", "orientation", "margins",
+  "template_id", "style_overrides", "cover", "back_cover", "protection",
+  "content_hash", "published_product_id", "created_at", "updated_at",
+];
+const DOC_META_SELECT = DOC_META_FIELDS.join(", ");
+const DOC_META_SELECT_D = DOC_META_FIELDS.map((field) => `d.${field}`).join(", ");
+
+function docRow(row, { includeLayout = false } = {}) {
+  const out = {
     id: row.id,
     doc_ref: row.doc_ref,
     owner_id: row.owner_id,
@@ -130,25 +139,28 @@ function docRow(row) {
     protection: row.protection || {},
     content_hash: row.content_hash,
     published_product_id: row.published_product_id || null,
-    // Modèle du Studio (page par page) — null si le document n'y a jamais été ouvert.
-    page_layout: row.page_layout || null,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
+  // Le layout peut peser plusieurs mégaoctets. Il n'est chargé que lorsqu'un
+  // document est ouvert explicitement, jamais par la bibliothèque ou l'autosave.
+  if (includeLayout) out.page_layout = row.page_layout || null;
+  return out;
 }
 
-const SELECT_DOC = `SELECT * FROM gen_documents WHERE id = $1`;
+const SELECT_DOC = `SELECT ${DOC_META_SELECT}, page_layout FROM gen_documents WHERE id = $1`;
+const SELECT_DOC_META = `SELECT ${DOC_META_SELECT} FROM gen_documents WHERE id = $1`;
 
 // `req` (optionnel) active la PORTÉE multi-utilisateur : l'admin voit tous les
 // documents, un créateur uniquement les siens (les autres répondent 404 — on
 // ne révèle pas leur existence).
-async function loadDoc(id, req = null) {
+async function loadDoc(id, req = null, { includeLayout = false } = {}) {
   if (!Number.isInteger(id) || id <= 0) {
     const err = new Error("Identifiant invalide");
     err.statusCode = 400;
     throw err;
   }
-  const row = (await q(SELECT_DOC, [id]))[0];
+  const row = (await q(includeLayout ? SELECT_DOC : SELECT_DOC_META, [id]))[0];
   const mine = row && Number(row.owner_id) === Number(req?.user?.id);
   if (!row || (req && req.user?.role !== "admin" && !mine)) {
     const err = new Error("Document introuvable");
@@ -250,15 +262,15 @@ router.get(
     // Portée : l'admin voit tout, un créateur uniquement SA bibliothèque.
     const rows = isAdminReq(req)
       ? await q(
-          `SELECT d.*, (SELECT COUNT(*)::int FROM gen_versions v WHERE v.doc_id = d.id) AS versions
+          `SELECT ${DOC_META_SELECT_D}, (SELECT COUNT(*)::int FROM gen_versions v WHERE v.doc_id = d.id) AS versions
            FROM gen_documents d ORDER BY d.updated_at DESC LIMIT 500`
         )
       : await q(
-          `SELECT d.*, (SELECT COUNT(*)::int FROM gen_versions v WHERE v.doc_id = d.id) AS versions
+          `SELECT ${DOC_META_SELECT_D}, (SELECT COUNT(*)::int FROM gen_versions v WHERE v.doc_id = d.id) AS versions
            FROM gen_documents d WHERE d.owner_id = $1 ORDER BY d.updated_at DESC LIMIT 500`,
           [Number(req.user.id)]
         );
-    res.json({ documents: rows.map((r) => ({ ...docRow(r), versions: r.versions })) });
+    res.json({ documents: rows.map((r) => ({ ...docRow(r, { includeLayout: false }), versions: r.versions })) });
   })
 );
 
@@ -302,7 +314,7 @@ router.post(
 router.get(
   "/documents/:id",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id), req);
+    const row = await loadDoc(Number(req.params.id), req, { includeLayout: true });
     const data = (
       await q(`SELECT content FROM gen_documents_data WHERE doc_id = $1`, [row.id])
     )[0];
@@ -311,7 +323,7 @@ router.get(
       [row.id]
     );
     res.json({
-      document: docRow(row),
+      document: docRow(row, { includeLayout: true }),
       content: data?.content || { type: "doc", content: [{ type: "paragraph" }] },
       versions,
     });
@@ -322,7 +334,10 @@ router.get(
 router.patch(
   "/documents/:id",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id), req);
+    // L'autosave n'a besoin que des métadonnées pour vérifier la portée. Le
+    // layout est déjà détenu par le client et ne doit pas être relu depuis
+    // PostgreSQL à chaque frappe (il peut représenter plusieurs mégaoctets).
+    const row = await loadDoc(Number(req.params.id), req, { includeLayout: false });
     const body = req.body || {};
     const sets = [];
     const params = [];
@@ -384,15 +399,21 @@ router.patch(
       );
     }
 
-    if (sets.length === 0) return res.json({ document: docRow(row), saved: false });
+    if (sets.length === 0) {
+      return res.json({ document: docRow(row, { includeLayout: false }), saved: false });
+    }
 
     sets.push(`updated_at = now()`);
     params.push(row.id);
+    // RETURNING exclut volontairement page_layout : le client conserve sa copie
+    // locale exacte. Evite de faire sortir plusieurs Mo de PostgreSQL à chaque
+    // sauvegarde, tout en renvoyant les métadonnées，轻à jour.
     const updated = await q(
-      `UPDATE gen_documents SET ${sets.join(", ")} WHERE id = $${params.length} RETURNING *`,
+      `UPDATE gen_documents SET ${sets.join(", ")} WHERE id = $${params.length}
+       RETURNING ${DOC_META_SELECT}`,
       params
     );
-    res.json({ document: docRow(updated[0]), saved: true });
+    res.json({ document: docRow(updated[0], { includeLayout: false }), saved: true });
   })
 );
 
@@ -409,7 +430,7 @@ router.post(
               page_width, page_height, orientation, margins, template_id,
               style_overrides, cover, back_cover, protection, content_hash,
               page_layout
-       FROM gen_documents WHERE id = $3 RETURNING *`,
+       FROM gen_documents WHERE id = $3 RETURNING ${DOC_META_SELECT}`,
       [Number(req.user.id) || 0, newDocRef(), row.id]
     );
     await q(
@@ -481,7 +502,8 @@ router.post(
       [row.id, JSON.stringify(content)]
     );
     const updated = await q(
-      `UPDATE gen_documents SET content_hash = $2, updated_at = now() WHERE id = $1 RETURNING *`,
+      `UPDATE gen_documents SET content_hash = $2, updated_at = now()
+       WHERE id = $1 RETURNING ${DOC_META_SELECT}`,
       [row.id, contentHash(content)]
     );
     logAudit(req.user.id, "generator.version_restored", `${row.doc_ref} #${version.id}`, req.ip);
@@ -936,7 +958,7 @@ router.post(
 
     const updated = await q(
       `UPDATE gen_documents SET published_product_id = $2, status = 'ready'
-        WHERE id = $1 RETURNING *`,
+        WHERE id = $1 RETURNING ${DOC_META_SELECT}`,
       [row.id, productId]
     );
     logAudit(req.user.id, "generator.doc_published", `${row.doc_ref} → #${productId}`, req.ip);

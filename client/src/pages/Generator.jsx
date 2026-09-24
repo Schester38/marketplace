@@ -52,7 +52,7 @@ import PageDecor from "../generator/PageDecor.jsx";
 import DocStudio, { resolveActiveTemplate } from "../generator/DocStudio.jsx";
 import { watermarkPreviewFontSize, watermarkOpacity } from "../generator/watermark.js";
 import StudioCanvas from "../generator/StudioCanvas.jsx";
-import { readStudio, studioBox, buildStudioPages, serializeStudio, studioDesignKey, studioContentKey, ensureStudioFooters } from "../generator/studioModel.js";
+import { readStudio, studioBox, studioDesignKey, studioContentKey, ensureStudioFooters } from "../generator/studioModel.js";
 import { exportStudioPdf } from "../generator/studioExport.js";
 import {
   copyrightLines,
@@ -413,6 +413,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   // le champ prix et envoyée au serveur — plus de « XAF » en dur.
   const priceCurrency = countrySymbol(user?.country) || "XAF";
   const [meta, setMeta] = useState(initialDoc.document);
+  const [studioLayoutStale, setStudioLayoutStale] = useState(false);
   const [versions, setVersions] = useState(initialDoc.versions || []);
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
   const [view, setView] = useState("edit"); // edit | design | preview
@@ -534,7 +535,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     saveInFlight.current = true;
     setSaveState("saving");
     try {
-      const d = await api.genSaveDocument(m.id, {
+      const payload = {
         title: m.title,
         subtitle: m.subtitle,
         author: m.author,
@@ -550,10 +551,10 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
         back_cover: m.back_cover || {},
         protection: m.protection || {},
         content: contentRef.current,
-        // La mise en page est écrite dans la même sauvegarde sérialisée ; cela
-        // évite qu'une ancienne requête de contenu n'écrase le Studio courant.
-        page_layout: m.page_layout || null,
-      });
+        // Le page_layout est volumineux et n'est jamais renvoyé par
+        // l'autosave du contenu. Seul DocStudio l'envoie, via sa route dédiée.
+      };
+      const d = await api.genSaveDocument(m.id, payload);
       // Une réponse peut être reçue après une modification plus récente : on ne
       // réécrit alors ni les métadonnées ni le statut de sauvegarde.
       if (version === saveRevision.current && !saveQueued.current) {
@@ -598,74 +599,19 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   // qu'il est affiché (effet plus bas), et le rapport qualité suit.
   const previewStaleTimer = useRef(null);
   const markContentDirty = useCallback(() => {
+    // Une frappe ne reconstruit ni ne renvoie le gros page_layout : cette
+    // reconstruction appartient au Studio et sera faite à son ouverture.
+    setStudioLayoutStale(true);
     if (previewStaleTimer.current) clearTimeout(previewStaleTimer.current);
     previewStaleTimer.current = setTimeout(() => {
       setPreview(null);
-      resyncStudio();
     }, 800);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── Synchronisation Contenu / Design → Studio ─────────────────────────────
-  // Une mise en page du Studio dérive du TEXTE et du DESIGN du document. Dès que
-  // l'un des deux change, elle est régénérée ici avec les mêmes fonctions que le
-  // Studio : Aperçu, PDF exporté et Studio affichent donc toujours la même
-  // chose. Aucune page Studio n'est créée si le Studio n'a jamais été utilisé —
-  // la pagination automatique reste alors la référence.
-  const studioResyncTimer = useRef(null);
-  const resyncStudio = useCallback(() => {
-    if (studioResyncTimer.current) clearTimeout(studioResyncTimer.current);
-    studioResyncTimer.current = setTimeout(async () => {
-      const m = metaRef.current;
-      const stored = readStudio(m?.page_layout);
-      const ed = editorRef.current;
-      if (!stored || !stored.length || !ed) return;
-      try {
-        const src = ed.getHTML();
-        const paginated = await paginateDocument({
-          html: src,
-          doc: m,
-          toc: m?.protection?.toc !== false,
-        });
-        const pages = buildStudioPages({ paginated, docMeta: m || {} });
-        const payload = serializeStudio(pages, {
-          template_id: m?.template_id || "",
-          design_key: studioDesignKey(m || {}),
-          content_key: studioContentKey(src),
-        });
-        const next = { ...m, page_layout: payload };
-        metaRef.current = next;
-        setMeta(next);
-        // On passe par la même file d'attente que l'autosave du contenu :
-        // aucune requête page_layout parallèle ne peut remplacer une
-        // modification plus récente du Studio.
-        try {
-          await saveNow();
-        } catch {
-          /* l'aperçu local est déjà à jour ; la prochaine sauvegarde réessaiera */
-        }
-      } catch {
-        // Silencieux : au pire, l'aperçu classique reste disponible.
-      }
-    }, 700);
-  }, []);
-
-  // À l'ouverture d'un document : une mise en page Studio enregistrée mais
-  // périmée (texte ou design modifiés entre-temps) est régénérée tout de suite.
-  useEffect(() => {
-    const m = metaRef.current;
-    const stored = readStudio(m?.page_layout);
-    if (!stored || !stored.length) return;
-    const ed = editorRef.current;
-    const src = ed ? ed.getHTML() : "";
-    if (
-      m?.page_layout?.design_key !== studioDesignKey(m || {}) ||
-      m?.page_layout?.content_key !== studioContentKey(src)
-    ) {
-      resyncStudio();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // ─── Studio → Aperçu ────────────────────────────────────────────────────────
+  // Un layout Studio n'est utilisé que s'il correspond encore exactement au
+  // texte et au design actuels. Le Studio le reconstruit lui-même si nécessaire.
 
   // Le rapport « 🔍 DOCUMENT CHECK » reste cohérent : dès qu'un nouvel aperçu
   // paginé est construit alors que le rapport est ouvert, il est recalculé.
@@ -1063,17 +1009,24 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     if (layoutKeyRef.current === layoutKey) return;
     layoutKeyRef.current = layoutKey;
     setPreview(null);
-    // Un réglage du design a changé : la mise en page Studio enregistrée est
-    // régénérée avec le nouveau modèle (elle est la référence de l'aperçu/PDF).
-    resyncStudio();
-  }, [layoutKey, resyncStudio]);
+    // Le changement de design invalide le layout Studio sans le reconstruire
+    // ni le renvoyer ici. DocStudio le reconstruira à son ouverture.
+    if (readStudio(metaRef.current?.page_layout)) setStudioLayoutStale(true);
+  }, [layoutKey]);
 
   // ─── Synchronisation Studio → Aperçu ────────────────────────────────────────
   // Dès qu'une mise en page du Studio est enregistrée, l'aperçu (et donc le PDF
   // exporté) montre CES pages : ce que l'on voit est exactement ce qui sort.
+  const currentStudioContentKey = studioContentKey(editor?.getHTML() || "");
+  const studioLayoutIsFresh = useMemo(() => {
+    if (studioLayoutStale) return false;
+    const layout = meta.page_layout;
+    if (!readStudio(layout)) return false;
+    return layout.design_key === studioDesignKey(meta) && layout.content_key === currentStudioContentKey;
+  }, [meta, studioLayoutStale, currentStudioContentKey]);
   const studioPages = useMemo(
-    () => ensureStudioFooters(readStudio(meta.page_layout), studioBox(meta), resolveActiveTemplate(meta), meta),
-    [meta]
+    () => (studioLayoutIsFresh ? ensureStudioFooters(readStudio(meta.page_layout), studioBox(meta), resolveActiveTemplate(meta), meta) : []),
+    [meta, studioLayoutIsFresh],
   );
   const studioTpl = useMemo(
     () => (studioPages && studioPages.length ? { box: studioBox(meta), template: resolveActiveTemplate(meta) } : null),
@@ -1098,7 +1051,9 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
       // le PDF exporté correspond exactement aux pages éditées (décors,
       // positions, textes), sans repasser par la pagination automatique.
       const m = metaRef.current || {};
-      const studioPages = ensureStudioFooters(readStudio(m.page_layout), studioBox(m), resolveActiveTemplate(m), m);
+      const studioPages = studioLayoutIsFresh
+        ? ensureStudioFooters(readStudio(m.page_layout), studioBox(m), resolveActiveTemplate(m), m)
+        : [];
       if (studioPages && studioPages.length) {
         await exportStudioPdf({
           pages: studioPages,
@@ -1640,6 +1595,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
             if (env) {
               metaRef.current = { ...metaRef.current, page_layout: env };
               setMeta((cur) => ({ ...cur, page_layout: env }));
+              setStudioLayoutStale(false);
             }
           }}
           onLayoutChange={(env) => {
@@ -1649,6 +1605,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
             if (env) {
               metaRef.current = { ...metaRef.current, page_layout: env };
               setMeta((cur) => ({ ...cur, page_layout: env }));
+              setStudioLayoutStale(false);
             }
           }}
           onMetaPatch={(patch) => patchMeta(patch)}
