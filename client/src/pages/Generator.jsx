@@ -2359,6 +2359,69 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
           </div>
 
           <div className="gen-design-block">
+            <h4>🛡️ {t("Protection et authenticité")}</h4>
+            <label className="gen-check">
+              <input
+                type="checkbox"
+                checked={meta.protection?.watermark?.enabled ?? false}
+                onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), watermark: { ...(meta.protection?.watermark || {}), enabled: e.target.checked } } })}
+              />
+              {t("Filigrane (watermark) sur les pages de contenu")}
+            </label>
+            {meta.protection?.watermark?.enabled && (
+              <div className="gen-form-row">
+                <div className="gen-grow">
+                  <label>{t("Texte du filigrane")}</label>
+                  <input
+                    className="input"
+                    value={meta.protection?.watermark?.text ?? ""}
+                    placeholder={`© ${meta.author || "Auteur"}`}
+                    onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), watermark: { ...(meta.protection?.watermark || {}), text: e.target.value } } })}
+                  />
+                </div>
+                <div>
+                  <label>{t("Intensité")}</label>
+                  <select
+                    className="input"
+                    value={meta.protection?.watermark?.mode || "discreet"}
+                    onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), watermark: { ...(meta.protection?.watermark || {}), mode: e.target.value } } })}
+                  >
+                    <option value="discreet">{t("Discret")}</option>
+                    <option value="visible">{t("Visible")}</option>
+                  </select>
+                </div>
+              </div>
+            )}
+            <label className="gen-check">
+              <input
+                type="checkbox"
+                checked={meta.protection?.qrEnabled !== false}
+                onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), qrEnabled: e.target.checked } })}
+              />
+              {t("QR code de vérification (référence + empreinte) sur la couverture")}
+            </label>
+            <label className="gen-check">
+              <input
+                type="checkbox"
+                checked={meta.protection?.copyright !== false}
+                onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), copyright: e.target.checked } })}
+              />
+              {t("Page de copyright (mention légale automatique)")}
+            </label>
+            <label className="gen-check">
+              <input
+                type="checkbox"
+                checked={meta.protection?.toc !== false}
+                onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), toc: e.target.checked } })}
+              />
+              {t("Table des matières (numéros de page exacts)")}
+            </label>
+            <p className="hint">
+              {t("Chaque document porte une référence unique (DOC-2026-XXXXXXXX) et une empreinte SHA-256 calculée sur le contenu — affichées dans le PDF et encodées dans le QR code.")}
+            </p>
+          </div>
+
+          <div className="gen-design-block">
             <h4>⚙️ {t("Styles avancés")}</h4>
             <p className="hint">
               {t("Surchargez la typographie et les couleurs sans changer de modèle. Un champ vide garde la valeur du modèle.")}
