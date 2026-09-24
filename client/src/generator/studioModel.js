@@ -18,7 +18,7 @@ import { PX_PER_MM, lineText } from "./paginate.js";
 import { resolvePageBox, resolveCover, coverLayoutBox, FONT_CSS } from "./templates.js";
 import { coverDecorPrims } from "./coverDecor.js";
 import { copyrightLines, verificationPayload } from "./protection.js";
-import { MBOPPI_PROMO_HTML, hasMboppiPromo } from "./footerPromo.js";
+import { MBOPPI_PROMO_HTML, MBOPPI_PROMO_FONT_PT, MBOPPI_PROMO_BOX_H_MM, hasMboppiPromo } from "./footerPromo.js";
 import { BASE_URL } from "../config.js";
 
 /** Lien public de vérification encodé dans le QR code d'une page. */
@@ -222,7 +222,7 @@ export function defaultStyle(template, type, extra = {}) {
   }
 }
 // ─── Fabrique d'éléments ────────────────────────────────────────────────────
-/** Élément complet : boîte (mm), style du modèle, ordre, verrous, visibilité. */
+/** Élément complet : boîte (mm), style du modèle, ordre et visibilité. */
 export function makeElement(template, type, box = {}, patch = {}) {
   const def = elementType(type);
   const kind = def.kind;
@@ -233,7 +233,6 @@ export function makeElement(template, type, box = {}, patch = {}) {
     box: { x: 0, y: 0, w: def.box.w, h: def.box.h, ...box },
     rot: Number(patch.rot) || 0,
     z: patch.z !== undefined ? patch.z : 10,
-    locked: !!patch.locked,
     hidden: !!patch.hidden,
     opacity: patch.opacity !== undefined ? clamp(patch.opacity, 0, 1) : 1,
     // Hauteur automatique : le Studio remesure le contenu (texte, tableau…)
@@ -340,6 +339,20 @@ export function estimateLines(text, maxWmm, sizePt, bold = false) {
   }
   return lines;
 }
+function stripElementLocks(el = {}) {
+  const { locked: _legacyLock, ...clean } = el || {};
+  return clean;
+}
+
+/** Retire les anciens verrous d'une page sans modifier le reste du layout. */
+function stripPageLocks(page = {}) {
+  const { locked: _legacyPageLock, ...clean } = page || {};
+  return {
+    ...clean,
+    elements: (page?.elements || []).map(stripElementLocks),
+  };
+}
+
 // ─── Fabrique de pages ─────────────────────────────────────────────────────
 export function makePage(patch = {}) {
   return {
@@ -352,13 +365,7 @@ export function makePage(patch = {}) {
     // (modèle, couleurs, polices) vit dans le document ; ici on ne surcharge
     // que ce qui est propre à la page.
     design: { bg: "#ffffff", decor: null, ...(patch.design || {}) },
-    // Deux verrous distincts (§22) : contenu (le texte ne peut plus être
-    // modifié) et design (la structure visuelle est figée).
-    locked: {
-      content: !!(patch.locked && patch.locked.content),
-      design: !!(patch.locked && patch.locked.design),
-    },
-    elements: patch.elements || [],
+    elements: (patch.elements || []).map(stripElementLocks),
   };
 }
 
@@ -375,27 +382,51 @@ export function renumber(pages) {
  */
 export function ensureStudioFooters(pages, box, template) {
   if (!box?.m || !template?.sizes) return pages || [];
-  return (pages || []).map((page) => {
+  return (pages || []).map((rawPage) => {
+    const page = stripPageLocks(rawPage);
     if (page?.kind === "cover") return page;
     const elements = page?.elements || [];
-    if (elements.some((el) => el?.type === "footer" && hasMboppiPromo(el.html))) return page;
     const contentW = Math.max(20, box.w - box.m.left - box.m.right);
-    const y = Math.max(box.m.top, box.h - Math.max(6, box.m.bottom * 0.5));
+    const y = Math.max(box.m.top, box.h - Math.max(16, box.m.bottom * 0.95 + 3));
+    // Un ancien pied promotionnel peut déjà être présent : on l'agrandit au
+    // lieu d'en ajouter un second. Le texte et le lien restent inchangés.
+    const existing = elements.find((el) => el?.type === "footer" && hasMboppiPromo(el.html));
+    if (existing) {
+      const updated = {
+        ...existing,
+        box: {
+          ...existing.box,
+          x: box.m.left,
+          y: round1(y),
+          w: round1(contentW),
+          h: MBOPPI_PROMO_BOX_H_MM,
+        },
+        style: {
+          ...existing.style,
+          size: MBOPPI_PROMO_FONT_PT,
+          color: template.colors.accent,
+          align: "left",
+          italic: true,
+          lineHeight: 1,
+          paraSpace: 0,
+        },
+      };
+      return { ...page, elements: elements.map((el) => (el === existing ? updated : el)) };
+    }
     const promo = makeElement(template, "footer", {
       x: box.m.left,
       y: round1(y),
-      w: round1(Math.min(contentW * 0.72, 115)),
-      h: 6,
+      w: round1(contentW),
+      h: MBOPPI_PROMO_BOX_H_MM,
     }, {
       name: "Promotion MboppiShop",
       z: 29,
       autoH: false,
-      locked: true,
       html: MBOPPI_PROMO_HTML,
       data: { promotion: "mboppi-content" },
       style: {
         ...defaultStyle(template, "footer"),
-        size: Math.max(7, Math.min(8.5, Number(template.sizes.small) || 8.5)),
+        size: MBOPPI_PROMO_FONT_PT,
         color: template.colors.accent,
         align: "left",
         italic: true,
@@ -683,11 +714,11 @@ function contentPage(page, docMeta, template, box) {
     }
     elements.push(textElementFromGroup(template, group, box));
   }
-  // Numéro de page : un élément comme un autre (déplaçable, masquable,
-  // verrouillable) — le jeton {page} est remplacé au rendu.
+  // Numéro de page : un élément comme un autre (déplaçable, masquable et
+  // modifiable) — le jeton {page} est remplacé au rendu.
   elements.push(makeElement(template, "pageNumber", {
     x: m.left, y: round1(Math.min(h - 6, h - m.bottom * 0.5)), w: contentW, h: 6,
-  }, { name: "Numéro de page", z: 30, html: "{page}", autoH: false, locked: true }));
+  }, { name: "Numéro de page", z: 30, html: "{page}", autoH: false }));
   const pg = makePage({
     kind: "content",
     design: { bg: template.colors.bg, decor: template.pageDecor },
@@ -720,14 +751,14 @@ export function serializeStudio(pages, meta = {}) {
     version: STUDIO_VERSION,
     updated_at: new Date().toISOString(),
     ...meta,
-    pages,
+    pages: (pages || []).map(stripPageLocks),
   };
 }
 
-/** Pages du Studio déjà enregistrées (ou null). */
+/** Pages du Studio déjà enregistrées (ou null), sans anciens verrous. */
 export function readStudio(pageLayout) {
   if (!pageLayout || !Array.isArray(pageLayout.pages) || !pageLayout.pages.length) return null;
-  return pageLayout.pages;
+  return pageLayout.pages.map(stripPageLocks);
 }
 
 /**
@@ -802,15 +833,14 @@ export function duplicatePage(pages, pageId, { toEnd = false } = {}) {
   const idx = pages.findIndex((p) => p.id === pageId);
   if (idx < 0) return pages;
   const src = pages[idx];
-  const copy = {
+  const copy = stripPageLocks({
     ...src,
     id: uid("p"),
     number: 0,
     label: src.label ? `${src.label} (copie)` : "",
     design: { ...src.design },
-    locked: { ...src.locked },
     elements: src.elements.map((el) => cloneElement(el)),
-  };
+  });
   const out = pages.slice();
   out.splice(toEnd ? out.length : idx + 1, 0, copy);
   return renumber(out);
@@ -832,9 +862,8 @@ export function updatePage(pages, pageId, patch) {
 }
 
 export function mergePage(p, patch) {
-  const out = { ...p, ...patch };
+  const out = stripPageLocks({ ...p, ...patch });
   if (patch.design) out.design = { ...p.design, ...patch.design };
-  if (patch.locked) out.locked = { ...p.locked, ...patch.locked };
   return out;
 }
 
@@ -850,7 +879,7 @@ export function patchElements(pages, ids, fn) {
     ...p,
     elements: p.elements.map((el) => {
       const next = fn(el, p);
-      return next ? { ...el, ...next } : el;
+      return next ? stripElementLocks({ ...el, ...next }) : stripElementLocks(el);
     }),
   }));
 }
@@ -858,7 +887,7 @@ export function patchElements(pages, ids, fn) {
 // ─── Opérations sur les éléments (§3, §5, §13, §14, §16) ───────────────────
 export function cloneElement(el) {
   return {
-    ...el,
+    ...stripElementLocks(el),
     id: uid(),
     box: { ...el.box },
     style: { ...el.style },
@@ -893,7 +922,10 @@ export function patchElement(pages, pageId, elId, patch) {
 }
 
 export function mergeElement(el, patch) {
-  const out = { ...el, ...patch };
+  const out = {
+    ...stripElementLocks(el),
+    ...stripElementLocks(patch),
+  };
   if (patch.box) out.box = { ...el.box, ...patch.box };
   if (patch.style) out.style = { ...el.style, ...patch.style };
   if (patch.data) out.data = { ...el.data, ...patch.data };
@@ -1047,9 +1079,9 @@ export function snapBox(box, { page, others = [], tol = 1.6, axes = "xy" } = {})
  * Ajuste la taille de police de TOUS les éléments texte d'une portée donnée
  * (§4 : « augmenter la taille des écritures », §11 multi-pages, §12 global).
  * `scope` : "selection" (éléments de `selIds`), "page" (`pageId`) ou "document"
- * (toutes les pages). Renvoie `{ pages, count }` : les pages dont le DESIGN est
- * verrouillé et les éléments verrouillés ne sont jamais touchés (§13/§22), et la
- * taille reste bornée entre 5 et 72 pt.
+ * (toutes les pages). Renvoie `{ pages, count }` : toutes les pages et tous les
+ * éléments texte de la portée sont modifiables ; la taille reste bornée entre
+ * 5 et 72 pt.
  */
 export function stepTextSizes(pages, { delta, scope = "page", pageId = null, selIds = [], template = null } = {}) {
   const d = Number(delta) || 0;
@@ -1068,10 +1100,10 @@ export function stepTextSizes(pages, { delta, scope = "page", pageId = null, sel
   let count = 0;
   const out = (pages || []).map((p) => {
     const inScope = scope === "selection" || scope === "document" || p?.id === pageId;
-    if (!inScope || p?.locked?.design) return p;
+    if (!inScope) return p;
     let changed = false;
     const elements = (p.elements || []).map((el) => {
-      if (el.locked || !isTextType(el)) return el;
+      if (!isTextType(el)) return el;
       if (scope === "selection" && !sel.has(el.id)) return el;
       const from = baseOf(el);
       const to = clampSize(from + d);
@@ -1089,17 +1121,15 @@ export function stepTextSizes(pages, { delta, scope = "page", pageId = null, sel
  * Met tous les textes courants du document en gras.
  * Les titres (chapitres, titres et sous-titres) et les citations gardent
  * exactement leur style : cette commande uniformise le CORPS du livre sans
- * écraser sa hiérarchie éditoriale. Les pages au design verrouillé et les
- * éléments 🔒 ne sont jamais modifiés. La fonction est pure et idempotente.
+ * écraser sa hiérarchie éditoriale. La fonction est pure et idempotente.
  */
 export function boldDocumentText(pages) {
   const excluded = new Set(["chapter", "heading", "subtitle", "quote"]);
   let count = 0;
   const out = (pages || []).map((p) => {
-    if (p?.locked?.design) return p;
     let changed = false;
     const elements = (p.elements || []).map((el) => {
-      if (el.locked || !isTextType(el) || excluded.has(el.type) || el.style?.bold) return el;
+      if (!isTextType(el) || excluded.has(el.type) || el.style?.bold) return el;
       changed = true;
       count += 1;
       return { ...el, style: { ...el.style, bold: true } };
@@ -1141,14 +1171,12 @@ export function studioCheck(pages, box, docMeta = {}) {
   const outsidePages = [];
   let images = 0;
   let words = 0;
-  let lockedCount = 0;
 
   pages.forEach((p) => {
     const visible = (p.elements || []).filter((e) => !e.hidden);
     const text = visible.filter((e) => e.html).map((e) => String(e.html).replace(/<[^>]+>/g, " ")).join(" ");
     words += text.split(/\s+/).filter(Boolean).length;
     images += visible.filter((e) => e.src || e.type === "gallery").length;
-    lockedCount += visible.filter((e) => e.locked).length;
     const solid = visible.some((e) => e.src || e.type === "toc" || e.type === "table" || e.type === "chart" || e.type === "diagram" || e.type === "stats");
     if (!visible.length || (!text.trim() && !solid)) emptyPages.push(p.number);
     const bounds = contentBounds(p, box);
@@ -1190,7 +1218,7 @@ export function studioCheck(pages, box, docMeta = {}) {
   if (!images && pages.length > 4) push(suggestions, "no_image", "Aucune image dans le document.", "Une illustration toutes les 3–4 pages retient l'attention du lecteur.");
 
   const score = Math.max(0, Math.round(100 - errors.length * 18 - warnings.length * 6 - suggestions.length * 2));
-  return { errors, warnings, suggestions, fixables, score, lockedCount, words, images };
+  return { errors, warnings, suggestions, fixables, score, words, images };
 }
 
 // ─── Historique (§17) ──────────────────────────────────────────────────────

@@ -15,7 +15,7 @@ import { drawPageDecor, toDataUrl, saveBlob } from "./exportPdf.js";
 import { coverDecorPrims, drawCoverDecorPdf } from "./coverDecor.js";
 import { makeQrDataUrl } from "./protection.js";
 import { drawWatermarkPdf } from "./watermark.js";
-import { safeWebUrl } from "./footerPromo.js";
+import { safeWebUrl, MBOPPI_PROMO_FONT_PT } from "./footerPromo.js";
 import { applyTokens, elementType, sortedElements, mixHex } from "./studioModel.js";
 
 const PT2MM = 0.3527777;
@@ -1059,7 +1059,7 @@ figure img { max-width: 100%; height: auto; }
 .gallery { display: flex; flex-wrap: wrap; gap: 6px; }
 .gallery img { width: 30%; }
 table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.92em; }
-.mboppi-footer { margin-top: 1.5em; padding-top: .5em; border-top: 1px solid ${template.colors.accent}55; font-size: .82em; font-style: italic; text-align: left; }
+.mboppi-footer { margin-top: 1.5em; padding-top: .5em; border-top: 1px solid ${template.colors.accent}55; font-size: ${MBOPPI_PROMO_FONT_PT}pt; font-style: italic; text-align: left; }
 a { color: ${template.colors.accent}; }
 th, td { border: 1px solid ${template.colors.accent}66; padding: 4px 6px; text-align: left; }
 th { background: ${template.colors.accent}22; color: ${template.colors.heading}; }

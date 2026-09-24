@@ -367,8 +367,6 @@ export default function StudioCanvas({
   selectedIds = [],
   showHidden = false,
   readOnly = false,
-  lockContent = false,
-  lockDesign = false,
   onSelect,
   onBeginGesture,
   onPatch,
@@ -401,7 +399,7 @@ export default function StudioCanvas({
   // snapBox), validation à la fin. Un déplacement < 3 px est un simple clic.
   const startGesture = useCallback(
     (ev, mode, handle, el) => {
-      if (readOnly || lockDesign || !el || el.locked) return;
+      if (readOnly || !el) return;
       // Touch : le geste « déplacer » n'appartient au doigt QUE si l'élément est
       // DÉJÀ sélectionné (tap = sélection, glisser depuis un élément non
       // sélectionné = défilement naturel de la page — voir also touch-action CSS).
@@ -410,7 +408,7 @@ export default function StudioCanvas({
       ev.stopPropagation();
       const ids =
         mode === "move" && selectedIds.includes(el.id) && selectedIds.length > 1
-          ? selectedIds.filter((id) => !elMap.get(id)?.locked)
+          ? selectedIds
           : [el.id];
       const startBoxes = ids
         .map((id) => elMap.get(id))
@@ -490,7 +488,7 @@ export default function StudioCanvas({
       // encore le doigt pendant qu'on voulait faire défiler la page.
       window.addEventListener("pointercancel", onUp);
     },
-    [readOnly, lockDesign, selectedIds, elMap, els, box, zoom, onBeginGesture, onPatch, onEndGesture],
+    [readOnly, selectedIds, elMap, els, box, zoom, onBeginGesture, onPatch, onEndGesture],
   );
   // ─── Clavier (§5 : flèches = déplacement fin, Suppr, Échap) ─────────────────
   useEffect(() => {
@@ -503,8 +501,8 @@ export default function StudioCanvas({
         if (e.key === "Escape" && editingId) setEditingId(null);
         return;
       }
-      if (!selectedIds.length || lockDesign) return;
-      const targets = selectedIds.map((id) => elMap.get(id)).filter(Boolean).filter((o) => !o.locked);
+      if (!selectedIds.length) return;
+      const targets = selectedIds.map((id) => elMap.get(id)).filter(Boolean);
       if (!targets.length) return;
       const step = e.shiftKey ? 5 : 1; // pas fin 1 mm, pas large 5 mm (Maj)
       const move = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
@@ -525,7 +523,7 @@ export default function StudioCanvas({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [readOnly, lockDesign, selectedIds, elMap, editingId, onBeginGesture, onPatch, onEndGesture, onDelete, onSelect]);
+  }, [readOnly, selectedIds, elMap, editingId, onBeginGesture, onPatch, onEndGesture, onDelete, onSelect]);
 
   // ─── Débordements de la page (§20 « ⚠️ Ce contenu dépasse de N px ») ────────
   const overflow = useMemo(() => overflowPx(page, box), [page, box]);
@@ -554,7 +552,7 @@ export default function StudioCanvas({
     }
   };
   const handleDblClick = (ev, el) => {
-    if (readOnly || lockContent || el.locked) return;
+    if (readOnly) return;
     ev.stopPropagation();
     if (isTextType(el) || el.type === "header" || el.type === "footer" || el.type === "pageNumber") {
       onSelect?.([el.id], false);
@@ -630,11 +628,11 @@ export default function StudioCanvas({
           transform: el.rot ? `rotate(${el.rot}deg)` : undefined,
           opacity: el.hidden ? 0.28 : Number(el.opacity ?? 1) < 1 ? Number(el.opacity) : 1,
           zIndex: sel ? 500 : undefined,
-          cursor: readOnly ? "default" : el.locked ? "not-allowed" : "move",
+          cursor: readOnly ? "default" : "move",
           // Touch : seuls les éléments réellement déplaçables (sélectionnés,
           // édition autorisée, non verrouillés) capturent le doigt ; sinon le
           // geste reste au navigateur = défilement normal de la page.
-          touchAction: !readOnly && !lockDesign && !el.locked && sel ? "none" : undefined,
+          touchAction: !readOnly && sel ? "none" : undefined,
         };
         let inner = null;
         // Dispatch par kind du modèle (§24 : chaque élément garde sa nature).
@@ -653,7 +651,7 @@ export default function StudioCanvas({
           <div
             key={el.id}
             data-el-id={el.id}
-            className={`studio-el ${sel ? "selected" : ""} ${el.hidden ? "hidden-el" : ""} ${el.locked ? "locked-el" : ""}`}
+            className={`studio-el ${sel ? "selected" : ""} ${el.hidden ? "hidden-el" : ""}`}
             style={style}
             onPointerDown={(e) => {
               if (editing || e.target?.closest?.("a[href]")) return;
@@ -673,10 +671,8 @@ export default function StudioCanvas({
                 <div className="studio-rotate-handle" title="Pivoter" onPointerDown={(e) => startGesture(e, "rotate", null, el)}>
                   ⟳
                 </div>
-                {el.locked ? <div className="studio-lock-badge" title="Élément verrouillé">🔒</div> : null}
               </>
             ) : null}
-            {el.locked && !sel ? <div className="studio-lock-badge mini">🔒</div> : null}
           </div>
         );
       })}

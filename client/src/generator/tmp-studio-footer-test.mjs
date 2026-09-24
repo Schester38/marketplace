@@ -1,6 +1,6 @@
 // Test des pieds de page promotionnels du Studio (temporaire — supprimé après tests)
 import { ensureStudioFooters, makeElement, makePage } from "./studioModel.js";
-import { MBOPPI_CONTENT_LABEL, MBOPPI_CONTENT_URL, safeWebUrl } from "./footerPromo.js";
+import { MBOPPI_CONTENT_LABEL, MBOPPI_CONTENT_URL, MBOPPI_PROMO_FONT_PT, safeWebUrl } from "./footerPromo.js";
 import { exportDocumentPdf } from "./exportPdf.js";
 
 let pass = 0;
@@ -40,7 +40,9 @@ ok("pied personnalisé conservé", content.elements[0], custom);
 ok("une promotion par page non-couverture", withPromotion.slice(1).map((p) => p.elements.filter((el) => el.data?.promotion === "mboppi-content").length), [1, 1]);
 ok("promotion à gauche", promo.style.align, "left");
 ok("promotion en italique", promo.style.italic, true);
-ok("promotion verrouillée", promo.locked, true);
+ok("promotion lisible", promo.style.size, MBOPPI_PROMO_FONT_PT);
+ok("boîte assez haute", promo.box.h >= 8, true);
+ok("promotion modifiable", Boolean(promo.locked), false);
 ok("domaine affiché", promo.html.includes(MBOPPI_CONTENT_LABEL), true);
 ok("lien de promotion", promo.html.includes(`href="${MBOPPI_CONTENT_URL}"`), true);
 ok("URL https valide", safeWebUrl(MBOPPI_CONTENT_URL), `${MBOPPI_CONTENT_URL}/`);

@@ -11,7 +11,7 @@ import { FONT_PDF, resolveCover, coverLayoutBox } from "./templates.js";
 import { coverDecorPrims, drawCoverDecorPdf } from "./coverDecor.js";
 import { PX_PER_MM } from "./paginate.js";
 import { copyrightLines, makeQrDataUrl, verificationPayload } from "./protection.js";
-import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL } from "./footerPromo.js";
+import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL, MBOPPI_PROMO_FONT_PT } from "./footerPromo.js";
 import { drawWatermarkPdf } from "./watermark.js";
 import { BASE_URL } from "../config.js";
 
@@ -592,20 +592,50 @@ function drawHeaderFooter(doc, page, docMeta, template, box) {
     // Promotion MboppiShop : à gauche, en italique, avec une annotation PDF
     // réelle sur le domaine. Le numéro reste centré et les champs existantes
     // gardent leurs emplacements centre/droite.
-    const size = template.sizes.small;
+    const size = MBOPPI_PROMO_FONT_PT;
     doc.setFont(FONT_PDF[template.bodyFont], "italic");
     doc.setFontSize(size);
     setText(doc, template.colors.accent);
     const prefix = "visitez ";
+    const label = MBOPPI_CONTENT_LABEL;
     const suffix = " pour plus de contenu";
+    const fullText = `${prefix}${label}${suffix}`;
     const x = m.left;
-    const prefixW = doc.getTextWidth(prefix);
-    const linkW = doc.getTextWidth(MBOPPI_CONTENT_LABEL);
-    doc.text(prefix, x, slotY);
-    doc.text(MBOPPI_CONTENT_LABEL, x + prefixW, slotY);
-    doc.text(suffix, x + prefixW + linkW, slotY);
-    const suffixW = doc.getTextWidth(suffix);
-    const promoEnd = x + prefixW + linkW + suffixW;
+    const maxPromoW = Math.max(20, w - m.left - m.right - 8);
+    const lines = doc.splitTextToSize(fullText, maxPromoW);
+    const lineStep = size * 0.3528 * 1.15;
+    if (lines.length > 1) {
+      // Petit format : retour à la ligne pour garder 10,5 pt sans sortir de la
+      // page. Chaque ligne reste cliquable vers MboppiShop.
+      lines.forEach((line, i) => {
+        const lineY = slotY - (lines.length - 1 - i) * lineStep;
+        const lineW = doc.getTextWidth(line);
+        doc.text(line, x, lineY);
+        setStroke(doc, template.colors.accent);
+        doc.setLineWidth(0.12);
+        doc.line(x, lineY + 0.55, x + lineW, lineY + 0.55);
+        try {
+          doc.link(x, lineY - size * 0.35, lineW, size * 0.5, { url: MBOPPI_CONTENT_URL });
+        } catch {
+          /* Le texte reste affiché même si l'annotation échoue. */
+        }
+      });
+    } else {
+      const prefixW = doc.getTextWidth(prefix);
+      const linkW = doc.getTextWidth(label);
+      doc.text(prefix, x, slotY);
+      doc.text(label, x + prefixW, slotY);
+      doc.text(suffix, x + prefixW + linkW, slotY);
+      setStroke(doc, template.colors.accent);
+      doc.setLineWidth(0.12);
+      doc.line(x + prefixW, slotY + 0.55, x + prefixW + linkW, slotY + 0.55);
+      try {
+        doc.link(x + prefixW, slotY - size * 0.35, linkW, size * 0.5, { url: MBOPPI_CONTENT_URL });
+      } catch {
+        /* Si un build jsPDF refuse l’annotation, le texte reste dessiné. */
+      }
+    }
+    const promoEnd = x + Math.max(...lines.map((line) => doc.getTextWidth(line)));
     // Un pied gauche personnalisé n'est jamais écrasé : il commence après la
     // promotion, sur la même ligne, tant qu'il reste de la place.
     const customLeft = cfg.footerLeft ? resolveText(cfg.footerLeft).trim() : "";
@@ -614,15 +644,8 @@ function drawHeaderFooter(doc, page, docMeta, template, box) {
       const maxRight = w - m.right - doc.getTextWidth(customLeft);
       fill(cfg.footerLeft, "left", slotY, Math.min(promoEnd + 2, maxRight));
     }
-    setStroke(doc, template.colors.accent);
-    doc.setLineWidth(0.12);
-    doc.line(x + prefixW, slotY + 0.55, x + prefixW + linkW, slotY + 0.55);
-    try {
-      doc.link(x + prefixW, slotY - size * 0.35, linkW, size * 0.5, { url: MBOPPI_CONTENT_URL });
-    } catch {
-      /* Si un build jsPDF refuse l’annotation, le texte reste dessiné. */
-    }
-    fill(cfg.footerCenter || "{page}", "center", slotY);
+    // Sur A5/ebook, le numéro passe à droite pour ne pas masquer la mention.
+    fill(cfg.footerCenter || "{page}", w < 170 ? "right" : "center", slotY);
     fill(cfg.footerRight || "", "right", slotY);
   }
 }

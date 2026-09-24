@@ -1100,18 +1100,6 @@ export default function Navbar({ onLogout }) {
         <span className="dl-label">{t("Je soutiens")}</span>
       </Link>
       <a
-        href="https://www.chariow.pics/U6Z28RUJ"
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={close}
-        className="drawer-link drawer-link-tuto"
-      >
-        <span className="dl-icon">
-          <IconBook size={15} />
-        </span>
-        <span className="dl-label">{t("Formations en ligne")}</span>
-      </a>
-      <a
         href="https://www.tiktok.com/@mboppishop?_r=1&_t=ZS-99TrzaxlgCD"
         target="_blank"
         rel="noopener noreferrer"

@@ -12,7 +12,7 @@ import JSZip from "jszip";
 import { FONT_CSS, getTemplate, resolveTemplate } from "./templates.js";
 import { renderCoverImage } from "./coverImage.js";
 import { copyrightLines, makeQrDataUrl, verificationPayload } from "./protection.js";
-import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL } from "./footerPromo.js";
+import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL, MBOPPI_PROMO_FONT_PT } from "./footerPromo.js";
 
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" };
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ESC[c]);
@@ -147,7 +147,7 @@ function epubCss(template) {
     `th{background:${c.accent}22;}`,
     `hr{border:0;border-top:1px solid ${c.accent};margin:1.5em 0;}`,
     `a{color:${c.accent};}`,
-    `.mboppi-footer{margin-top:2em;padding-top:.6em;border-top:1px solid ${c.accent}55;font-size:.82em;font-style:italic;text-align:left;color:${c.accent};}`,
+    `.mboppi-footer{margin-top:2em;padding-top:.6em;border-top:1px solid ${c.accent}55;font-size:${MBOPPI_PROMO_FONT_PT}pt;font-style:italic;text-align:left;color:${c.accent};}`,
     `.mboppi-footer a{color:inherit;text-decoration:underline;}`,
     `mark{background:${c.accent}33;}`,
     `.u{text-decoration:underline;}`,

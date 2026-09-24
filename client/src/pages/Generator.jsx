@@ -34,7 +34,7 @@ import {
 } from "../generator/templates.js";
 import { useAuth } from "../App.jsx";
 import { DIGITAL_CATEGORIES, countrySymbol } from "../config.js";
-import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL } from "../generator/footerPromo.js";
+import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL, MBOPPI_PROMO_FONT_PT } from "../generator/footerPromo.js";
 import { detectStructureHtml } from "../generator/structure.js";
 import { detectScope } from "../generator/scope.js";
 import { HeadingAutoDetect, formatHeadings } from "../generator/headings.js";
@@ -273,7 +273,7 @@ export default function GeneratorPanel({ variant = "creator" }) {
       </div>
       <p className="hint">
         {t(
-          "Collez un texte brut, choisissez un modèle : le Générateur structure, pagine, ajoute couverture, table des matières et protection, puis exporte un PDF professionnel."
+          "Collez un texte brut, choisissez un modèle : le Générateur structure, pagine, ajoute couverture et table des matières, puis exporte un PDF professionnel."
         )}
       </p>
       <p className="gen-pcnote">
@@ -804,7 +804,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
       case "coverIdeas": return t("{n} propositions de couverture", { n: c.value });
       case "cover": return t("Couleur de couverture appliquée");
       case "variants": return t("{n} variantes de design proposées", { n: c.value });
-      case "contentLock": return t("Contenu verrouillé : seul le design change");
+      case "contentLock": return t("Contenu conservé : seul le design change");
       default: return "";
     }
   };
@@ -2359,60 +2359,6 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
           </div>
 
           <div className="gen-design-block">
-            <h4>🛡️ {t("Protection et authenticité")}</h4>
-            <label className="gen-check">
-              <input
-                type="checkbox"
-                checked={meta.protection?.watermark?.enabled ?? false}
-                onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), watermark: { ...(meta.protection?.watermark || {}), enabled: e.target.checked } } })}
-              />
-              {t("Filigrane (watermark) sur les pages de contenu")}
-            </label>
-            {meta.protection?.watermark?.enabled && (
-              <div className="gen-form-row">
-                <div className="gen-grow">
-                  <label>{t("Texte du filigrane")}</label>
-                  <input className="input" value={meta.protection?.watermark?.text ?? ""} placeholder={`© ${meta.author || "Auteur"}`} onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), watermark: { ...(meta.protection?.watermark || {}), text: e.target.value } } })} />
-                </div>
-                <div>
-                  <label>{t("Intensité")}</label>
-                  <select className="input" value={meta.protection?.watermark?.mode || "discreet"} onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), watermark: { ...(meta.protection?.watermark || {}), mode: e.target.value } } })}>
-                    <option value="discreet">{t("Discret")}</option>
-                    <option value="visible">{t("Visible")}</option>
-                  </select>
-                </div>
-              </div>
-            )}
-            <label className="gen-check">
-              <input
-                type="checkbox"
-                checked={meta.protection?.qrEnabled !== false}
-                onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), qrEnabled: e.target.checked } })}
-              />
-              {t("QR code de vérification (référence + empreinte) sur la couverture")}
-            </label>
-            <label className="gen-check">
-              <input
-                type="checkbox"
-                checked={meta.protection?.copyright !== false}
-                onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), copyright: e.target.checked } })}
-              />
-              {t("Page de copyright (mention légale automatique)")}
-            </label>
-            <label className="gen-check">
-              <input
-                type="checkbox"
-                checked={meta.protection?.toc !== false}
-                onChange={(e) => patchMeta({ protection: { ...(meta.protection || {}), toc: e.target.checked } })}
-              />
-              {t("Table des matières (numéros de page exacts)")}
-            </label>
-            <p className="hint">
-              {t("Chaque document porte une référence unique (DOC-2026-XXXXXXXX) et une empreinte SHA-256 calculée sur le contenu — affichées dans le PDF et encodées dans le QR code.")}
-            </p>
-          </div>
-
-          <div className="gen-design-block">
             <h4>⚙️ {t("Styles avancés")}</h4>
             <p className="hint">
               {t("Surchargez la typographie et les couleurs sans changer de modèle. Un champ vide garde la valeur du modèle.")}
@@ -2908,11 +2854,11 @@ function GenPage({ page, paginated, docMeta, fit }) {
       style={{
         bottom: mm(1.5),
         display: "grid",
-        gridTemplateColumns: "1fr auto 1fr",
+        gridTemplateColumns: w < 170 ? "minmax(0, 1fr) auto" : "1fr auto 1fr",
         alignItems: "center",
         gap: mm(1),
         padding: `0 ${mm(m.left)}`,
-        fontSize: pt(template.sizes.small),
+        fontSize: pt(MBOPPI_PROMO_FONT_PT),
         color: template.colors.accent,
       }}
     >

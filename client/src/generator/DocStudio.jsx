@@ -502,11 +502,9 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
   const applyPageLayout = useCallback(
     (pageId, layoutId) => {
       const cur = pagesRef.current || [];
+      // Les anciennes pages peuvent contenir un ancien verrou de mise en page.
+      // Il n'est plus utilisé par le Studio : toutes les pages restent éditables.
       const page = cur.find((p) => p.id === pageId);
-      if (page?.locked?.design) {
-        flash(t("Design verrouillé : la mise en page ne peut pas être modifiée."));
-        return;
-      }
       // Multi-pages (§11) : un layout choisi s'applique à toute la sélection.
       const ids = selPageIds.length > 1 && selPageIds.includes(pageId) ? selPageIds : [pageId];
       let next = cur;
@@ -546,18 +544,8 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
     (patches, label) => {
       const page = curPage();
       if (!page) return;
-      // Verrous de page (§22) : le contenu et le design se protègent séparément.
-      const lock = page.locked || {};
-      const touchesContent = patches.some((p) => p.patch && ("html" in p.patch || "src" in p.patch || "data" in p.patch));
-      const touchesDesign = patches.some((p) => p.patch && ("box" in p.patch || "rot" in p.patch || "style" in p.patch || "z" in p.patch || "hidden" in p.patch || "opacity" in p.patch));
-      if (lock.content && touchesContent && !touchesDesign) {
-        flash(t("Contenu verrouillé : le texte ne peut pas être modifié."));
-        return;
-      }
-      if (lock.design && touchesDesign) {
-        flash(t("Design verrouillé : la mise en page ne peut pas être modifiée."));
-        return;
-      }
+      // Aucun verrou de page n'est appliqué : le contenu et le design restent
+      // librement modifiables dans le Studio.
       commit(label, applyPatchesToPage(pagesRef.current || [], page.id, patches));
     },
     [commit, t, flash],
@@ -643,10 +631,6 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
     setMenu(null);
     flash(t("Collé sur cette page."));
   }, [box, commit, t, flash]);
-  const toggleLockEls = useCallback(
-    (lock) => patchEls(selIds.map((id) => ({ id, patch: { locked: lock } })), lock ? "Éléments verrouillés" : "Éléments déverrouillés"),
-    [selIds, patchEls],
-  );
   const toggleHideEls = useCallback(
     (hidden) => patchEls(selIds.map((id) => ({ id, patch: { hidden } })), hidden ? "Calque masqué" : "Calque affiché"),
     [selIds, patchEls],
@@ -706,7 +690,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
   // Le réglage n'est PAS limité à l'élément sélectionné : la portée choisie
   // (sélection, page entière, document) touche tous les éléments TEXTE de cette
   // portée. Une modification globale (§12) passe toujours par la confirmation.
-  // Les pages dont le design est verrouillé (§22) sont ignorées, comme au clic.
+  // Tous les textes de la portée choisie sont modifiables.
   // Déclaré APRÈS `selEls` : sa liste de dépendances est évaluée pendant le rendu
   // (sinon TDZ « Cannot access 'selEls' before initialization »).
   const sizeStep = useCallback(
@@ -770,15 +754,6 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
   const runAi = useCallback(
     async (plan) => {
       setPendingPlan(null);
-      const lock = activePage?.locked || {};
-      if (plan.mode === "design" && lock.design) {
-        flash(t("Design verrouillé : la mise en page ne peut pas être modifiée."));
-        return;
-      }
-      if (plan.mode !== "design" && lock.content) {
-        flash(t("Contenu verrouillé : le texte ne peut pas être modifié."));
-        return;
-      }
       setBusy("ai");
       setError("");
       try {
@@ -837,7 +812,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
                 : {
                     ...q,
                     elements: q.elements.map((e) =>
-                      patches[e.id] != null && !e.locked ? { ...e, html: patches[e.id] } : e,
+                      patches[e.id] != null ? { ...e, html: patches[e.id] } : e,
                     ),
                   },
             );
@@ -853,7 +828,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
             const ids = Object.keys(patches || {});
             if (!ids.length) continue;
             nextPages = nextPages.map((q) =>
-              q.id !== p.id ? q : { ...q, elements: q.elements.map((e) => (patches[e.id] != null && !e.locked ? { ...e, html: patches[e.id] } : e)) },
+              q.id !== p.id ? q : { ...q, elements: q.elements.map((e) => (patches[e.id] != null ? { ...e, html: patches[e.id] } : e)) },
             );
             applied += 1;
           }
@@ -879,27 +854,14 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
     (label, overrides) => {
       const all = pages || [];
       const wanted = selPageIds.length ? selPageIds : all.map((p) => p.id);
-      const ids = wanted.filter((id) => !all.find((p) => p.id === id)?.locked?.design);
-      if (!ids.length) {
-        flash(t("Design verrouillé : la mise en page ne peut pas être modifiée."));
-        return;
-      }
+      const ids = wanted;
       setPendingPlan({ kind: "multi", label: `${label} — ${ids.length} page(s)`, ids, patch: { overrides: overrides || {} } });
     },
     [selPageIds, pages, t, flash],
   );
   const applyMultiFont = useCallback((fontFamily) => applyMultiPatch(`Police ${fontFamily}`, { bodyFont: fontFamily }), [applyMultiPatch]);
-  // ─── Verrouillage de page (§22 : contenu / design, séparément) ─────────────
-  const setPageLock = useCallback(
-    (key, value) => {
-      const ids = selPageIds.length ? selPageIds : [activeIdRef.current];
-      const next = patchPages(pagesRef.current || [], ids, (p) => ({ ...p, locked: { ...(p.locked || {}), [key]: !!value } }));
-      commit(`Verrouillage ${key === "design" ? "design" : "contenu"} — ${ids.length} page(s)`, next);
-      flash(t("Verrouillage mis à jour."));
-    },
-    [selPageIds, commit, t, flash],
-  );
-  // ─── Éléments éditoriaux sur la sélection (§11) ───────────────────────────
+  // Aucun verrou de page ni d'élément n'est appliqué : toutes les pages et tous
+  // les éléments restent modifiables.
   const addEditorialToPages = useCallback(
     (ids, typeId) => {
       const cur = pagesRef.current || [];
@@ -1405,8 +1367,6 @@ const editZoom = zoom * canvasFit;
                 zoom={editZoom}
                 selectedIds={selIds}
                 readOnly={false}
-                lockContent={!!activePage?.locked?.content}
-                lockDesign={!!activePage?.locked?.design}
                 onSelect={onSelectEls}
                 onBeginGesture={beginGesture}
                 onPatch={applyLive}
@@ -1628,14 +1588,12 @@ const editZoom = zoom * canvasFit;
                     <li key={el.id} className={`${selIds.includes(el.id) ? "active" : ""} ${el.hidden ? "is-hidden" : ""}`}>
                       <button type="button" className="studio-layername" onClick={() => onSelectEls([el.id])}>
                         {elementLabel(el)}
-                        {el.locked ? " 🔒" : ""}
                         {el.hidden ? " 👁‍🗨" : ""}
                       </button>
                       <span className="studio-layerbtns">
                         <button type="button" title={t("Monter")} onClick={() => { setSelIds([el.id]); reorderSel("up"); }}>↑</button>
                         <button type="button" title={t("Descendre")} onClick={() => { setSelIds([el.id]); reorderSel("down"); }}>↓</button>
                         <button type="button" title={el.hidden ? t("Afficher") : t("Masquer")} onClick={() => toggleHideEls(!el.hidden) || setSelIds([el.id])}>{el.hidden ? "👁" : "👁‍🗨"}</button>
-                        <button type="button" title={el.locked ? t("Déverrouiller") : t("Verrouiller")} onClick={() => toggleLockEls(!el.locked) || setSelIds([el.id])}>{el.locked ? "🔓" : "🔒"}</button>
                       </span>
                     </li>
                   ))}
@@ -1759,7 +1717,7 @@ const editZoom = zoom * canvasFit;
                           const tighten = (pg) => ({
                             ...pg,
                             elements: (pg.elements || []).map((el) =>
-                              el.html && !el.locked
+                              el.html
                                 ? { ...el, style: { ...el.style, lineHeight: Math.max(0.9, (Number(el.style?.lineHeight) || 1.5) - 0.15) } }
                                 : el,
                             ),
@@ -1787,7 +1745,6 @@ const editZoom = zoom * canvasFit;
               { label: `✂️ ${t("Couper")}`, fn: cutEls, disabled: !selIds.length },
               { label: `📥 ${t("Coller")}`, fn: pasteEls, disabled: !clipboardEl.current?.length },
               { label: `🖼️ ${t("Remplacer l'image")}`, fn: () => askImage("replace"), disabled: !selEls.some((e) => MEDIA_TYPES.includes(e.type)) },
-              { label: `🔒 ${t("Verrouiller")}`, fn: () => toggleLockEls(true), disabled: !selIds.length },
               { label: `🗑 ${t("Supprimer")}`, fn: doDeleteEls, disabled: !selIds.length, danger: true },
             ].map((it) => (
               <button key={it.label} type="button" className={`${it.danger ? "studio-danger" : ""}`} disabled={it.disabled} onClick={it.fn}>

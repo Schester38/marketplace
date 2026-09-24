@@ -44,10 +44,10 @@ ok("titre laissé intact", byId.title.style.bold, true);
 ok("sous-titre non gras laissé intact", byId.subtitle.style.bold, false);
 ok("chapitre laissé intact", byId.chapter.style.bold, true);
 ok("citation laissée intacte", byId.quote.style.bold, false);
-ok("élément verrouillé laissé intact", byId.locked.style.bold, false);
+ok("ancien élément verrouillé devient modifiable", byId.locked.style.bold, true);
 ok("élément non textuel laissé intact", byId.image.style, { radius: 2 });
-ok("page au design verrouillé laissée intacte", result.pages[1], pages[1]);
-ok("nombre d’éléments modifiés", result.count, 1);
+ok("ancienne page verrouillée devient modifiable", byId.frozen.style.bold, true);
+ok("nombre d’éléments modifiés", result.count, 3);
 ok("pages d’origine non mutées", JSON.stringify(pages), snapshot);
 
 const second = boldDocumentText(result.pages);

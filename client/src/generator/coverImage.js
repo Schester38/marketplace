@@ -143,19 +143,22 @@ export async function renderCoverImage(docMeta, { width = 480, maxBytes = 0 } = 
   }
 
   // QR de vérification sur l'affiche du produit publié (et les miniatures) :
-  // même payload que le PDF, dessiné sur plaque blanche en bas à gauche quand
-  // la protection QR est active. L'affiche vendue au catalogue prouve donc
-  // elle-même l'origine du document.
+  // même emplacement que le QR de couverture PDF : coin inférieur droit, avec
+  // une marge proportionnelle équivalente aux 10 mm du PDF. L'affiche vendue
+  // au catalogue prouve donc elle-même l'origine du document.
   if (docMeta.protection?.qrEnabled !== false && docMeta.doc_ref) {
     try {
       const qr = await makeQrDataUrl(verificationPayload(docMeta, docMeta.content_hash), 240);
       const qimg = qr ? await loadImage(qr) : null;
       if (qimg) {
-        const size = Math.round(w * 0.18);
-        const pad = Math.round(w * 0.045);
+        // 22 mm sur une largeur A4 de 210 mm ≈ 10,48 % ; 10 mm ≈ 4,76 %.
+        const size = Math.max(1, Math.round(w * 0.1048));
+        const pad = Math.max(1, Math.round(w * 0.0476));
+        const x = w - size - pad;
+        const y = h - size - pad;
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(pad - 2, h - size - pad - 2, size + 4, size + 4);
-        ctx.drawImage(qimg, pad, h - size - pad, size, size);
+        ctx.fillRect(x - 2, y - 2, size + 4, size + 4);
+        ctx.drawImage(qimg, x, y, size, size);
       }
     } catch {
       /* QR indisponible : couverture sans QR */
