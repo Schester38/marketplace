@@ -727,36 +727,38 @@ export default function ProductDetail() {
                   ? "❤️ " + t("Retirer des favoris")
                   : "🤍 " + t("Ajouter aux favoris")}
               </button>
-              <button
-                type="button"
-                className="btn btn-outline"
-                onClick={async () => {
-                  const url = `${BASE_URL}/produit/${product.id}`;
-                  const text = t("Découvrez « {name} » à {price} {symbol} sur MboppiShop.", {
-                    name: product.name,
-                    price: formatMoney(displayPrice),
-                    symbol,
-                  });
-                  try {
-                    if (navigator.share) {
-                      await nativeShareWithImage({
-                        title: product.name,
-                        text,
-                        url,
-                        imageUrl: firstProductImage(product),
-                      });
-                    } else {
-                      await navigator.clipboard.writeText(url);
-                      setShared(true);
-                      setTimeout(() => setShared(false), 2000);
+              {(!isOwner || !product.is_digital) && (
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={async () => {
+                    const url = `${BASE_URL}/produit/${product.id}`;
+                    const text = t("Découvrez « {name} » à {price} {symbol} sur MboppiShop.", {
+                      name: product.name,
+                      price: formatMoney(displayPrice),
+                      symbol,
+                    });
+                    try {
+                      if (navigator.share) {
+                        await nativeShareWithImage({
+                          title: product.name,
+                          text,
+                          url,
+                          imageUrl: firstProductImage(product),
+                        });
+                      } else {
+                        await navigator.clipboard.writeText(url);
+                        setShared(true);
+                        setTimeout(() => setShared(false), 2000);
+                      }
+                    } catch {
+                      /* annulé par l'utilisateur */
                     }
-                  } catch {
-                    /* annulé par l'utilisateur */
-                  }
-                }}
-              >
-                {shared ? t("Lien copié !") : "🔗 " + t("Partager")}
-              </button>
+                  }}
+                >
+                  {shared ? t("Lien copié !") : "🔗 " + t("Partager")}
+                </button>
+              )}
             </div>
 
             {isOwner && (

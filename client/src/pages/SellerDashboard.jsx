@@ -658,6 +658,7 @@ export default function SellerDashboard() {
                   key={p.id}
                   product={p}
                   showCommission
+                  hideShare={p.is_digital === true}
                   action={t("Vendre")}
                   onAction={() => shareSale(p)}
                   extraAction={{

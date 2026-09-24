@@ -45,6 +45,7 @@ export default function ProductCard({
   secondaryAction,
   onSecondaryAction,
   showCommission,
+  hideShare = false,
   badge,
   extraAction,
 }) {
@@ -107,20 +108,22 @@ export default function ProductCard({
       >
         {fav ? <IconHeartFilled size={18} /> : <IconHeart size={18} />}
       </button>
-      <a
-        className="share-btn"
-        href={waLink(
-          "",
-          `${product.name} — ${displayPrice} ${symbol} sur MboppiShop → https://${window.location.host}/produit/${product.id}`
-        )}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={t("Partager")}
-        title={t("Partager")}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <IconWhatsApp size={18} />
-      </a>
+      {!hideShare && (
+        <a
+          className="share-btn"
+          href={waLink(
+            "",
+            `${product.name} — ${displayPrice} ${symbol} sur MboppiShop → https://${window.location.host}/produit/${product.id}`
+          )}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={t("Partager")}
+          title={t("Partager")}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <IconWhatsApp size={18} />
+        </a>
+      )}
       {flash && <span className="badge badge-promo">-{flash.discount_percent}%</span>}
       {hasPromo && !flash && <span className="badge badge-promo">-{promoPct}%</span>}
       {/* Ventes : seul le compteur « X vendus » est affiché (les ventes en
@@ -251,7 +254,7 @@ export default function ProductCard({
                 {t(secondaryAction)}
               </button>
             )}
-            {extraAction && (
+            {extraAction && !hideShare && (
               <button
                 className="btn btn-outline btn-block"
                 onClick={() => extraAction.onClick(product)}
