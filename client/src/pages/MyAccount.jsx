@@ -381,7 +381,7 @@ export default function MyAccount() {
     }
   };
 
-  // Photo de profil : le fichier est d'abord optimisé (WebP ≤ 1024 px) par
+  // Photo de profil : le fichier est d'abord optimisé (WebP ≤ 1600 px) par
   // `smartProcessImageFile`, affiché en aperçu immédiat, puis déposé sur le
   // stockage par le serveur qui ne conserve que l'URL.
   const pickAvatar = async (e) => {

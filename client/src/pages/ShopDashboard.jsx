@@ -123,7 +123,7 @@ export default function ShopDashboard() {
     try {
       const remaining = MAX_PHOTOS - form.photos.length;
       const batch = list.slice(0, remaining);
-      const processed = await Promise.allSettled(batch.map((f) => smartProcessImageFile(f)));
+      const processed = await Promise.allSettled(batch.map((f) => smartProcessImageFile(f, { requireProductResolution: true })));
       const entries = [];
       for (const p of processed) {
         if (p.status === "fulfilled") {

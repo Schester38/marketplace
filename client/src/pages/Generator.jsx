@@ -1314,7 +1314,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
       setPubBusy(t("Création du produit…"));
       let coverData = "";
       try {
-        coverData = (await renderCoverImage(metaRef.current, { width: 480 })) || "";
+        coverData = (await renderCoverImage(metaRef.current, { width: 1000, maxBytes: 350 * 1024 })) || "";
       } catch {
         coverData = "";
       }

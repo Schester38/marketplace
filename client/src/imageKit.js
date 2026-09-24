@@ -6,7 +6,7 @@
  *    est fait DANS LE NAVIGATEUR, avant l'envoi au serveur. Vercel ne fait que
  *    stocker : aucune CPU serveur pour les images.
  *  - On ne dégrade jamais inutilement une image déjà excellente :
- *      keep      → image déjà optimisée (WebP/AVIF, ≤ 350 Ko, ≤ 1250 px) :
+ *      keep      → image déjà optimisée (WebP/AVIF, ≤ 350 Ko, ≤ 1600 px) :
  *                  les variantes nécessaires sont dérivées, la version max est
  *                  conservée telle quelle (aucun re-encodage dessus).
  *      resize    → image moderne mais trop grande ou trop lourde :
@@ -49,12 +49,12 @@ export const PAYMENT_PROOF_CONFIG = {
 
 export const IMAGE_CONFIG = {
   /** Une SEULE variante par photo (le système thumb/medium/large est abandonné). */
-  single: { max: 1024, quality: 0.8, key: "Photo" },
+  single: { max: 1600, quality: 0.88, targetBytes: 350 * 1024, minOutputLongEdge: 1000, key: "Photo", minSourceLongEdge: 1000 },
   /** Règle « déjà optimisée » : format moderne + poids faible + dimensions ok. */
   alreadyOptimized: {
     formats: ["image/webp", "image/avif"],
     maxBytes: 350 * 1024, // 350 Ko
-    maxDim: 1250, // ~largeur max (une image 1250 px peut servir de « large »)
+    maxDim: 1600, // une image ≤ 1600 px peut être conservée telle quelle
   },
   /** Fichier source refusé au-delà de 15 Mo (les mobiles ne remplissent pas ça). */
   maxSourceFileBytes: 15 * 1024 * 1024,
@@ -174,6 +174,36 @@ function renderVariant(img, maxDim, quality) {
   const fmt = (dataUrl.match(/^data:(image\/[a-z+]+)/) || [])[1] || "image/webp";
   return { dataUrl, width, height, bytes: dataUrlBytes(dataUrl), format: fmt };
 }
+
+/**
+ * Rend une image en privilégiant la qualité, tout en respectant un budget
+ * de poids. Les dimensions diminuent seulement si la qualité seule ne suffit
+ * pas ; une affiche produit ne descend jamais sous `minOutputLongEdge`.
+ */
+function renderBoundedVariant(img, { max, quality, targetBytes, minOutputLongEdge }) {
+  const sourceLongEdge = Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height);
+  const startingDim = Math.min(max, sourceLongEdge);
+  const dimensions = [];
+  let dim = startingDim;
+  while (dim >= minOutputLongEdge) {
+    if (!dimensions.includes(dim)) dimensions.push(dim);
+    if (dim === minOutputLongEdge) break;
+    dim = Math.max(minOutputLongEdge, Math.floor(dim * 0.85));
+  }
+  if (!dimensions.length) dimensions.push(startingDim);
+  const qualities = [quality, 0.84, 0.8, 0.76, 0.72, 0.68];
+  let best = null;
+  for (const dim of dimensions) {
+    for (const q of qualities) {
+      const candidate = renderVariant(img, dim, q);
+      if (!best || candidate.bytes < best.bytes || (candidate.bytes === best.bytes && candidate.width > best.width)) {
+        best = candidate;
+      }
+      if (candidate.bytes <= targetBytes) return candidate;
+    }
+  }
+  return best || renderVariant(img, startingDim, quality);
+}
 /* ------------------------------------------------------------------ */
 /* Décision intelligente                                              */
 /* ------------------------------------------------------------------ */
@@ -253,7 +283,7 @@ export function pickPaymentProofStrategy({ format, bytes, width, height }) {
  *    par redimensionnement CSS + déduplication serveur).
  *  - info  : métriques de surveillance prêtes pour l'UI
  */
-export async function smartProcessImageFile(file) {
+export async function smartProcessImageFile(file, { requireProductResolution = false } = {}) {
   if (!file) throw new Error("Aucun fichier sélectionné");
   const okType = IMAGE_CONFIG.acceptedTypes.includes(file.type) || file.type.startsWith("image/");
   if (!okType) {
@@ -272,6 +302,14 @@ export async function smartProcessImageFile(file) {
 
   const sourceDataUrl = await blobToDataUrl(file);
   const { img, width, height } = await decodeSource(sourceDataUrl, file.name || "image");
+  const longEdge = Math.max(width, height);
+  const V = IMAGE_CONFIG.single;
+  const minSourceLongEdge = requireProductResolution ? V.minSourceLongEdge : 0;
+  if (minSourceLongEdge && longEdge < minSourceLongEdge) {
+    throw new Error(
+      `Image trop petite (${width}×${height}px). Utilisez une affiche d’au moins ${minSourceLongEdge}px sur son plus grand côté pour éviter un affichage flou.`
+    );
+  }
 
   const strategy = pickImageStrategy({
     format: file.type || "image/jpeg",
@@ -280,21 +318,27 @@ export async function smartProcessImageFile(file) {
     height,
   });
 
-  const V = IMAGE_CONFIG.single;
   const srcFits = (max) => Math.max(width, height) <= max;
 
-  // Une seule version : ni thumb, ni medium, ni large.
-  // - si déjà optimisée et ≤ max → on garde l'originale (le serveur déduplique) ;
-  // - sinon → redimensionnement unique (max 1024 px, qualité 0.8 → WebP).
+  // Une seule version haute définition : la même ressource est utilisée dans
+  // la carte, la fiche produit et le zoom, sans thumbnail 480px sous-échantillonnée.
+  // Le budget de 350 Ko évite de faire gonfler le Storage et l'egress.
   let single;
+  let rendered = null;
   if (strategy.action === "keep" && srcFits(V.max)) {
     single = sourceDataUrl;
   } else {
-    single = renderVariant(img, V.max, V.quality).dataUrl;
+    rendered = renderBoundedVariant(img, V);
+    single = rendered.dataUrl;
   }
 
   const refFormat = (single.match(/^data:(image\/[a-z+]+)/) || [])[1] || "image/webp";
   const totalBytes = dataUrlBytes(single);
+  if (requireProductResolution && totalBytes > V.targetBytes) {
+    throw new Error(
+      `L'image reste trop lourde après optimisation (${formatBytes(totalBytes)}). Choisissez une affiche plus simple ou moins détaillée pour rester sous 350 Ko.`
+    );
+  }
 
   const meta = {
     width: Math.min(width, V.max),

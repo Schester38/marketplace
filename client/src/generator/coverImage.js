@@ -41,7 +41,7 @@ function wrap(ctx, text, maxWidth, maxLines) {
   return lines;
 }
 
-export async function renderCoverImage(docMeta, { width = 480 } = {}) {
+export async function renderCoverImage(docMeta, { width = 480, maxBytes = 0 } = {}) {
   const template = resolveTemplate(
     (await import("./templates.js")).getTemplate(docMeta.template_id),
     docMeta.style_overrides
@@ -163,7 +163,21 @@ export async function renderCoverImage(docMeta, { width = 480 } = {}) {
   }
 
   try {
-    return canvas.toDataURL("image/jpeg", 0.86);
+    // La couverture catalogue est une affiche : on évite de faire remonter
+    // une image trop lourde dans le bucket public. Les couvertures EPUB/PDF
+    // utilisent leur propre rendu et ne sont pas affectées par ce plafond.
+    const qualities = [0.86, 0.82, 0.78, 0.74, 0.7, 0.66];
+    let encoded = canvas.toDataURL("image/jpeg", qualities[0]);
+    if (maxBytes > 0 && w >= 800) {
+      for (const quality of qualities) {
+        encoded = canvas.toDataURL("image/jpeg", quality);
+        const base64 = encoded.split(",")[1] || "";
+        const bytes = Math.floor((base64.length * 3) / 4);
+        if (bytes <= maxBytes) return encoded;
+      }
+      return null;
+    }
+    return encoded;
   } catch {
     return null;
   }

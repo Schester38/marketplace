@@ -12,7 +12,7 @@ const ok = (v) => typeof v === "string" && (v.startsWith("data:image/") || /^htt
 /**
  * Normalise une entrée photo en { thumb, medium, large }.
  * Depuis la refonte « une seule photo » : le client envoie `{ thumb }` (une
- * seule variante, max 1024px, WebP) — on propage la même URL sur medium/large
+ * une seule variante, max 1600px, WebP) — on propage la même URL sur medium/large
  * pour la rétrocompat (les anciens produits ont des variants thumb/medium/large).
  * Formats acceptés (rétrocompatibles) :
  *  - "https://…"                        (string seule)

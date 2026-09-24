@@ -1780,7 +1780,7 @@ textarea {
 .product-thumb img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transition: transform 0.35s ease;
 }
 .product-card:hover .product-thumb img {
@@ -8514,7 +8514,7 @@ a.step {
 .pd-slide img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transition: transform 0.25s ease;
 }
 .pd-empty {

@@ -1,5 +1,5 @@
 import { storage, sessionStore } from "../storage";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
@@ -56,6 +56,14 @@ export default function ProductDetail() {
   const [dBuy, setDBuy] = useState(null);
   const dBuyRef = useRef(null);
   const dPollRef = useRef(null);
+
+  // Une navigation SPA conserve parfois le scroll de la page catalogue.
+  // On remet la fiche produit en haut AVANT le premier rendu visible, sinon
+  // le navigateur affiche la partie basse de la nouvelle page puis exige un
+  // scroll manuel pour revenir au titre et à la photo du produit.
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [id]);
 
   useEffect(() => {
     setProduct(null);
@@ -580,18 +588,8 @@ export default function ProductDetail() {
           )}
           {product.description && <p>{product.description}</p>}
           <div className="product-meta">
-            {Number(product.sold_month) > 0 && (
-              <span className="meta-chip">
-                🔥 {t("{n} vendus ce mois-ci", { n: product.sold_month })}
-              </span>
-            )}
             {Number(product.sold) > 0 && (
               <span className="meta-chip">🔥 {t("{n} vendus", { n: product.sold })}</span>
-            )}
-            {Number(product.pending_count) > 0 && (
-              <span className="meta-chip">
-                ⏳ {t("{n} en attente", { n: product.pending_count })}
-              </span>
             )}
             {product.warranty && (
               <span className="meta-chip">

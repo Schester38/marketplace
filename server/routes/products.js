@@ -61,12 +61,23 @@ const OWNER_ROLES = ["shop", "creator"];
 
 async function preparePhotos(photos, folder) {
   const photoList = normalizeUploadPhotos(photos);
+  if (!photoList.length) return [];
   try {
     const stored = await storePhotos(photoList, folder);
-    return stored.length ? stored : photoList;
+    if (stored.length) return stored;
+    const err = new Error(
+      "Le stockage des photos est indisponible. Le produit n'a pas été enregistré afin de ne pas stocker l'image dans la base de données."
+    );
+    err.statusCode = 503;
+    throw err;
   } catch (err) {
-    console.error("[storage] upload échoué, fallback base64 :", err.message);
-    return photoList;
+    console.error("[storage] upload photo produit échoué :", err.message);
+    if (err?.statusCode) throw err;
+    const storageError = new Error(
+      "Le stockage des photos est indisponible. Réessayez plus tard."
+    );
+    storageError.statusCode = 503;
+    throw storageError;
   }
 }
 
