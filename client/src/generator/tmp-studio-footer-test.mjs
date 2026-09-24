@@ -30,12 +30,17 @@ const pages = [
   makePage({ kind: "copyright", elements: [] }),
 ];
 const snapshot = JSON.stringify(pages);
-const withPromotion = ensureStudioFooters(pages, box, template);
+const withPromotion = ensureStudioFooters(pages, box, template, { protection: { qrEnabled: false } });
+const withQr = ensureStudioFooters(pages, box, template, { doc_ref: "DOC-TEST-1234", protection: { qrEnabled: true } });
+const coverQr = withQr[0].elements.find((el) => el.data?.coverQr);
 const content = withPromotion[1];
 const promo = content.elements.find((el) => el.data?.promotion === "mboppi-content");
 
 ok("pages d’origine non mutées", JSON.stringify(pages), snapshot);
 ok("couverture sans promotion", withPromotion[0].elements.length, 0);
+ok("QR automatique sur couverture", Boolean(coverQr), true);
+ok("QR en bas à droite", coverQr.box.x, box.w - 22 - 10);
+ok("QR sans texte partiel", coverQr.data.label, "Vérification");
 ok("pied personnalisé conservé", content.elements[0], custom);
 ok("une promotion par page non-couverture", withPromotion.slice(1).map((p) => p.elements.filter((el) => el.data?.promotion === "mboppi-content").length), [1, 1]);
 ok("promotion à gauche", promo.style.align, "left");
@@ -47,7 +52,8 @@ ok("domaine affiché", promo.html.includes(MBOPPI_CONTENT_LABEL), true);
 ok("lien de promotion", promo.html.includes(`href="${MBOPPI_CONTENT_URL}"`), true);
 ok("URL https valide", safeWebUrl(MBOPPI_CONTENT_URL), `${MBOPPI_CONTENT_URL}/`);
 ok("URL dangereuse refusée", safeWebUrl("javascript:alert(1)"), null);
-ok("commande idempotente", ensureStudioFooters(withPromotion, box, template), withPromotion);
+ok("commande idempotente", ensureStudioFooters(withPromotion, box, template, { protection: { qrEnabled: false } }), withPromotion);
+ok("QR idempotent", ensureStudioFooters(withQr, box, template, { doc_ref: "DOC-TEST-1234", protection: { qrEnabled: true } }), withQr);
 
 const paginated = {
   box,

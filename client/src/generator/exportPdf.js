@@ -352,7 +352,7 @@ export function drawPageDecor(doc, template, box, docMeta) {
 
 // ─── Rendu des pages spéciales ──────────────────────────────────────────────
 
-async function drawCover(doc, page, docMeta, template, box, qrDataUrl, hasQrMarker) {
+async function drawCover(doc, page, docMeta, template, box, qrDataUrl) {
   const { w, h } = box;
   const cover = resolveCover(docMeta, template);
   const geo = coverLayoutBox(cover, w);
@@ -426,10 +426,8 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl, hasQrMark
       color: fg, align: geo.band ? "right" : geo.leftish ? "left" : "center",
     });
   }
-  // QR de couverture UNIQUEMENT en l'absence de marqueur [QR] dans le contenu
-  // (sinon le QR apparaît deux fois : à l'emplacement demandé + en coin fixe,
-  // ce qui donne l'impression qu'il est « mis ailleurs »).
-  if (qrDataUrl && !hasQrMarker) {
+  // QR de couverture : toujours en bas à droite, sans exiger [QR].
+  if (qrDataUrl) {
     const s = 22;
     doc.addImage(qrDataUrl, "PNG", w - s - 10, h - s - 10, s, s);
   }
@@ -686,20 +684,15 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
     verificationPayload(docMeta, contentHash),
     320
   );
-  // L'auteur a placé un marqueur [QR] dans le contenu ? Dans ce cas le QR est
-  // dessiné EXACTEMENT à cet emplacement (boîte réservée par la pagination) et
-  // PLUS en coin fixe de la couverture — sinon il apparaîtrait « ailleurs » et
-  // en double. Sans marqueur, le QR de couverture reste le filet de sécurité.
-  const hasQrMarker = pages.some((pg) =>
-    (pg.items || []).some((it) => it && it.kind === "qr")
-  );
+  // Le marqueur [QR] reste rendu dans le contenu à sa position choisie.
+  // La couverture possède en plus son QR automatique en bas à droite.
 
   for (let i = 0; i < total; i++) {
     if (i > 0) doc2.addPage([w, h], w > h ? "landscape" : "portrait");
     const page = pages[i];
     onProgress?.(Math.round(((i + 1) / total) * 100), i + 1, total);
     if (page.kind === "cover") {
-      await drawCover(doc2, page, docMeta, template, box, qrDataUrl, hasQrMarker);
+      await drawCover(doc2, page, docMeta, template, box, qrDataUrl);
     } else if (page.kind === "copyright") {
       drawCopyright(doc2, docMeta, template, box, contentHash, coverDecorPrims(template, w, h));
     } else if (page.kind === "toc") {

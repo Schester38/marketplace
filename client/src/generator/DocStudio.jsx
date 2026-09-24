@@ -277,7 +277,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
         doc?.page_layout?.content_key === keys.contentKey;
       if (stored && stored.length && upToDate) {
         if (!alive) return;
-        const withFooters = ensureStudioFooters(stored, studioBox(docMeta), resolveActiveTemplate(docMeta));
+        const withFooters = ensureStudioFooters(stored, studioBox(docMeta), resolveActiveTemplate(docMeta), docMeta);
         const footerAdded = JSON.stringify(withFooters) !== JSON.stringify(stored);
         setPages(withFooters);
         setActiveId(withFooters[0].id);
@@ -465,7 +465,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
     (kindId) => {
       const cur = pagesRef.current || [];
       const at = cur.findIndex((p) => p.id === activeIdRef.current);
-      const page = ensureStudioFooters([buildPage(kindId, template, box, docMeta || {}, { ...helpers, entries: tocEntries(cur) })], box, template)[0];
+      const page = ensureStudioFooters([buildPage(kindId, template, box, docMeta || {}, { ...helpers, entries: tocEntries(cur) })], box, template, docMeta)[0];
       commit(`Nouvelle page ajoutée (${PAGE_KINDS.find((k) => k.id === kindId)?.label || kindId})`, insertPage(cur, page, at + 1));
       setActiveId(page.id);
       setSelIds([]);

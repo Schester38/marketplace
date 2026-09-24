@@ -148,6 +148,7 @@ const FALLBACKS = {
   fr: "Je suis désolé, je ne peux pas répondre pour le moment. Contactez-nous via la page Contact et nous vous répondrons sous 24 heures ! 💬",
   en: "Sorry, I can't answer right now. Please contact us via the Contact page and we'll reply within 24 hours! 💬",
   ar: "عذراً، لا أستطيع الإجابة الآن. يرجى التواصل معنا عبر صفحة الاتصال وسنرد خلال 24 ساعة! 💬",
+  es: "Lo siento, no puedo responder ahora. Escríbenos desde la página de Contacto y responderemos en menos de 24 horas. 💬",
 };
 
 function fallback(lang, extra = {}) {

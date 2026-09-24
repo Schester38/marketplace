@@ -30,6 +30,7 @@ const INTERNAL_PATHS = [
   "panier",
   "favoris",
   "mon-compte",
+  "generateur",
 ];
 
 const LINK_RE = new RegExp(
@@ -94,7 +95,7 @@ export default function ChatWidget() {
   const listRef = useRef(null);
   const openRef = useRef(false);
 
-  const langKey = lang === "en" ? "en" : lang === "ar" ? "ar" : "fr";
+  const langKey = lang === "en" ? "en" : lang === "ar" ? "ar" : lang === "es" ? "es" : "fr";
 
   const greeting = t(
     "Bonjour 👋 Je suis Vérone, l'assistante MboppiShop. Posez-moi vos questions sur la boutique, les commandes, les paiements ou la livraison !"

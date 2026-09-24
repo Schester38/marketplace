@@ -392,11 +392,22 @@ export function renumber(pages) {
  * supprimés ni réécrits : la promotion est un élément distinct, ce qui évite
  * d'écraser une personnalisation. La fonction est pure et idempotente.
  */
-export function ensureStudioFooters(pages, box, template) {
+export function ensureStudioFooters(pages, box, template, docMeta = {}) {
   if (!box?.m || !template?.sizes) return pages || [];
   return (pages || []).map((rawPage) => {
     const page = stripPageLocks(rawPage);
-    if (page?.kind === "cover") return page;
+    if (page?.kind === "cover") {
+      const elements = page.elements || [];
+      if (docMeta?.protection?.qrEnabled === false || elements.some((el) => el?.data?.coverQr)) return page;
+      const size = 22;
+      const qr = makeElement(template, "qr", {
+        x: box.w - size - 10, y: box.h - size - 10, w: size, h: size,
+      }, {
+        name: "QR de vérification", z: 7, autoH: false,
+        data: { url: verificationUrl(docMeta), label: "Vérification", coverQr: true },
+      });
+      return { ...page, elements: [...elements, qr] };
+    }
     const elements = page?.elements || [];
     const contentW = Math.max(20, box.w - box.m.left - box.m.right);
     const y = Math.max(box.m.top, box.h - Math.max(16, box.m.bottom * 0.95 + 3));
@@ -555,6 +566,16 @@ function coverPage(docMeta, template, box) {
     els.push(makeElement(template, "paragraph", { x: geo.pad, y: h - (geo.band ? 8 : 14), w: w - geo.pad * 2, h: 8 }, {
       name: "Auteur", z: 6, html: escapeHtml(cover.author),
       style: { ...defaultStyle(template, "paragraph"), size: template.sizes.h3, color: fg, align, lineHeight: 1.3, bold: false, paraSpace: 0 },
+    }));
+  }
+  // QR automatique de couverture : toujours en bas à droite, sans marqueur [QR].
+  if (docMeta?.protection?.qrEnabled !== false) {
+    const size = 22;
+    els.push(makeElement(template, "qr", {
+      x: w - size - 10, y: h - size - 10, w: size, h: size,
+    }, {
+      name: "QR de vérification", z: 7, autoH: false,
+      data: { url: verificationUrl(docMeta), label: "Vérification", coverQr: true },
     }));
   }
   return makePage({ kind: "cover", label: "Couverture", design: { bg: cover.bg, decor: null }, elements: els });
@@ -754,7 +775,7 @@ export function buildStudioPages({ paginated, docMeta }) {
     else if (p.kind === "toc") out.push(tocPage(p, template, box));
     else out.push(contentPage(p, docMeta, template, box));
   }
-  return ensureStudioFooters(renumber(out), box, template);
+  return ensureStudioFooters(renumber(out), box, template, docMeta);
 }
 
 /** Enveloppe persistée dans `gen_documents.page_layout` (JSONB additif). */

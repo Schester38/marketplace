@@ -56,7 +56,9 @@ import { readStudio, studioBox, buildStudioPages, serializeStudio, studioDesignK
 import { exportStudioPdf } from "../generator/studioExport.js";
 import {
   copyrightLines,
+  makeQrDataUrl,
   sha256Hex,
+  verificationPayload,
 } from "../generator/protection.js";
 
 const EMPTY_DOC = { type: "doc", content: [{ type: "paragraph" }] };
@@ -1070,7 +1072,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   // Dès qu'une mise en page du Studio est enregistrée, l'aperçu (et donc le PDF
   // exporté) montre CES pages : ce que l'on voit est exactement ce qui sort.
   const studioPages = useMemo(
-    () => ensureStudioFooters(readStudio(meta.page_layout), studioBox(meta), resolveActiveTemplate(meta)),
+    () => ensureStudioFooters(readStudio(meta.page_layout), studioBox(meta), resolveActiveTemplate(meta), meta),
     [meta]
   );
   const studioTpl = useMemo(
@@ -1096,7 +1098,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
       // le PDF exporté correspond exactement aux pages éditées (décors,
       // positions, textes), sans repasser par la pagination automatique.
       const m = metaRef.current || {};
-      const studioPages = ensureStudioFooters(readStudio(m.page_layout), studioBox(m), resolveActiveTemplate(m));
+      const studioPages = ensureStudioFooters(readStudio(m.page_layout), studioBox(m), resolveActiveTemplate(m), m);
       if (studioPages && studioPages.length) {
         await exportStudioPdf({
           pages: studioPages,
@@ -2909,6 +2911,24 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
 // PDF jsPDF — chaque mot est dessiné à sa position mesurée).
 // ═════════════════════════════════════════════════════════════════════════════
 const GEN_PREVIEW_SCALE = 0.75;
+const previewQrCache = new Map();
+
+function PreviewQr({ text, style }) {
+  const [src, setSrc] = useState(() => previewQrCache.get(text || "") || null);
+  useEffect(() => {
+    const key = text || "";
+    if (!key || previewQrCache.has(key)) return undefined;
+    let alive = true;
+    makeQrDataUrl(key, 240).then((data) => {
+      previewQrCache.set(key, data);
+      if (alive) setSrc(data);
+    });
+    return () => { alive = false; };
+  }, [text]);
+  return src ? <img src={src} alt="QR de vérification" style={style} /> : (
+    <div style={{ ...style, border: "1px dashed #888", display: "flex", alignItems: "center", justifyContent: "center", color: "#555" }}>QR</div>
+  );
+}
 
 // Aperçu miniature du décor d'un modèle (barre, bandeau, cadre, colonne…) :
 // rendu DANS la pastille de la grille de choix, pour que la différence entre
@@ -2990,6 +3010,10 @@ function GenPage({ page, paginated, docMeta, fit }) {
   // Décor géométrique du modèle : mêmes primitives sur TOUTES les pages
   // (couverture, copyright, table des matières, contenu), derrière le texte.
   const decorPrims = coverDecorPrims(template, w, h);
+  const qrPayload =
+    docMeta?.protection?.qrEnabled === false
+      ? ""
+      : verificationPayload(docMeta || {}, docMeta?.content_hash || "");
   const promoFooter = (
     <div
       className="gen-page-footer"
@@ -3072,6 +3096,20 @@ function GenPage({ page, paginated, docMeta, fit }) {
               />
             )}
           </div>
+        )}
+        {qrPayload && (
+          <PreviewQr
+            text={qrPayload}
+            style={{
+              position: "absolute",
+              right: mm(10),
+              bottom: mm(10),
+              width: mm(22),
+              height: mm(22),
+              zIndex: 4,
+              background: "#ffffff",
+            }}
+          />
         )}
         {cover.author && (
           <div
@@ -3159,7 +3197,7 @@ function GenPage({ page, paginated, docMeta, fit }) {
         }}
       >
         {page.items.map((item, i) => (
-          <GenItem key={i} item={item} template={template} />
+          <GenItem key={i} item={item} template={template} qrPayload={qrPayload} />
         ))}
       </div>
       {promoFooter}
@@ -3168,7 +3206,7 @@ function GenPage({ page, paginated, docMeta, fit }) {
 }
 
 // Un atome (bloc de lignes, image, séparateur, ligne de tableau) positionné.
-function GenItem({ item, template }) {
+function GenItem({ item, template, qrPayload }) {
   if (item.kind === "image") {
     return (
       <img
@@ -3197,7 +3235,7 @@ function GenItem({ item, template }) {
         className="gen-qr-slot"
         style={{ position: "absolute", top: item.top, left: item.x ?? 0, width: item.w, height: item.h }}
       >
-        <span>QR</span>
+        <PreviewQr text={qrPayload} style={{ width: "100%", height: "100%" }} />
       </div>
     );
   }
