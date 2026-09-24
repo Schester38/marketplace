@@ -578,6 +578,13 @@ const AI_ACTIONS = {
       "Rédige une courte biographie d'auteur (60 à 90 mots) au nom de l'auteur indiqué, dans un style sobre et crédible. " +
       "Réponds uniquement par la biographie.",
   },
+  description: {
+    instruction:
+      "Rédige une description courte et captivating pour la fiche catalogue de ce document, en 2 à 4 phrases (35 à 60 mots maximum). " +
+      "Présente le sujet, la promesse ou l'intérêt principal pour le lecteur, avec un ton clair, percutant et Professionnel. " +
+      "Ne cite pas le titre comme un slogan, n'invente aucun fait absent du texte et n'ajoute ni hashtag ni liste. " +
+      "Réponds uniquement par la description, sans commentaire ni bloc de code.",
+  },
   translate: {
     instruction:
       "Traduis fidèlement le passage fourni dans la langue demandée, en conservant le formatage. " +
@@ -688,8 +695,12 @@ router.post(
       .join("\n");
 
     const needsText = ["structure", "improve", "correct", "rephrase", "summarize", "expand", "tone", "translate"].includes(action);
-    if (needsText && !text) {
-      const err = new Error("Sélectionnez d'abord un passage dans le document.");
+    if ((needsText || action === "description") && !text) {
+      const err = new Error(
+        action === "description"
+          ? "Le document doit contenir du texte avant de générer sa description."
+          : "Sélectionnez d'abord un passage dans le document."
+      );
       err.statusCode = 422;
       throw err;
     }
@@ -713,10 +724,22 @@ router.post(
       [],
       "Tu réponds à un auteur qui met en page un document professionnel.",
       "fr",
-      // Plafonds élargis : sans eux, l'entrée était tronquée à 2000 caractères
-      // (le passage fourni perdait sa fin) et la sortie à 800 tokens (réponses
-      // coupées au milieu d'une phrase sur traduire/développer/structurer).
-      { maxInputChars: 8000, maxOutputTokens: 4096 }
+      // Le Générateur est un appel synchrone court : pas de catalogue produit,
+      // pas de longs essais de modèles invalides, budget total sous le timeout
+      // Vercel. Une réponse Gemini utile est renvoyée normalement ; sinon le
+      // fallback explicite devient une erreur 502 rapide et lisible.
+      {
+        maxInputChars: 8000,
+        maxOutputTokens: 2048,
+        includeCatalog: false,
+        models: [
+          "gemini-3.5-flash-lite",
+          process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
+          "gemini-3.1-flash-lite",
+        ].filter((m, i, a) => a.indexOf(m) === i),
+        perModelMs: 5000,
+        totalBudgetMs: 9000,
+      }
     );
     const out = String(reply || "").trim();
     if (!out || /je ne peux pas répondre|can't answer|لا أستطيع الإجابة/.test(out)) {

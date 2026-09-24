@@ -20,6 +20,7 @@ import {
   overflowPx, studioCheck, alignOffsets, distributeOffsets, ALIGN_MODES,
   buildCoverPage, buildTocPage,
   uid, round1, isTextType, elementLabel, defaultStyle, stepTextSizes, boldDocumentText, ensureStudioFooters,
+  fitMeasuredTextHeight,
 } from "./studioModel.js";
 import {
   ELEMENT_LIBRARY, PAGE_KINDS, buildPage, PAGE_LAYOUTS, applyLayout, smartLayouts, newElement,
@@ -230,6 +231,9 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
   const previewRef = useRef(null); // conteneur de l'aperçu — plein écran (§19)
   const centerRef = useRef(null); // zone centrale — ajustement du canvas (§18)
   const saveTimer = useRef(null);
+  const saveVersion = useRef(0);
+  const saveInFlight = useRef(false);
+  const saveQueued = useRef(false);
   const pagesRef = useRef(null);
   pagesRef.current = pages;
   const layoutRef = useRef(onLayoutChange);
@@ -316,9 +320,11 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
 
   // ─── Sauvegarde + automatique (§2) ─────────────────────────────────────────
   const markDirty = useCallback(() => {
+    saveVersion.current += 1;
+    if (saveInFlight.current) saveQueued.current = true;
     setDirty(true);
     clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => saveRef.current(true), 2500); // autosave 2,5 s
+    saveTimer.current = setTimeout(() => saveRef.current(true), 900); // autosave rapide
   }, []);
 
   const publishLayout = useCallback((nextPages) => {
@@ -337,6 +343,16 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
   const save = useCallback(
     async (silent = false) => {
       if (!doc?.id) return;
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      // Une seule requête Studio à la fois. Si une modification arrive pendant
+      // l'écriture, la sauvegarde courante reste valide mais ne peut pas
+      // effacer le statut « non enregistré » de cette nouvelle révision.
+      if (saveInFlight.current) {
+        saveQueued.current = true;
+        return;
+      }
+      const version = saveVersion.current;
+      saveInFlight.current = true;
       setSaving(true);
       setError("");
       try {
@@ -345,14 +361,25 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
         // ont changé et si le Studio doit se resynchroniser.
         const payload = publishLayout(pagesRef.current || []);
         await api.genSaveDocument(doc.id, { page_layout: payload });
-        setDirty(false);
-        setSavedAt(new Date());
-        onSaved?.(payload);
-        if (!silent) flash(t("Document enregistré."));
+        if (version === saveVersion.current && !saveQueued.current) {
+          setDirty(false);
+          setSavedAt(new Date());
+          onSaved?.(payload);
+          if (!silent) flash(t("Document enregistré."));
+        }
       } catch (e) {
-        setError(e?.message || t("Enregistrement impossible"));
+        if (version === saveVersion.current && !saveQueued.current) {
+          setError(e?.message || t("Enregistrement impossible"));
+        }
       } finally {
-        setSaving(false);
+        if (saveQueued.current) {
+          saveQueued.current = false;
+          saveInFlight.current = false;
+          setTimeout(() => saveRef.current(true), 0);
+        } else {
+          saveInFlight.current = false;
+          setSaving(false);
+        }
       }
     },
     [doc?.id, docMeta?.template_id, onSaved, publishLayout, t, flash],
@@ -550,6 +577,36 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
     },
     [commit, t, flash],
   );
+  const autoHeightQueue = useRef(new Map());
+  const autoHeightFrame = useRef(0);
+  // La mesure DOM fait partie de la gesture courante : elle ne crée pas une
+  // nouvelle entrée d'historique. Les mesures de plusieurs pages sont accumulées
+  // dans une seule frame afin qu'aucune page n'écrase la hauteur ajustée avant.
+  const fitTextHeight = useCallback(
+    (pageId, elId, heightMm) => {
+      autoHeightQueue.current.set(`${pageId}:${elId}`, { pageId, elId, heightMm });
+      if (autoHeightFrame.current) return;
+      autoHeightFrame.current = requestAnimationFrame(() => {
+        autoHeightFrame.current = 0;
+        let next = pagesRef.current || [];
+        let changed = false;
+        for (const item of autoHeightQueue.current.values()) {
+          const updated = fitMeasuredTextHeight(next, item.pageId, item.elId, item.heightMm);
+          if (updated !== next) changed = true;
+          next = updated;
+        }
+        autoHeightQueue.current.clear();
+        if (!changed) return;
+        pagesRef.current = next;
+        setPages(next);
+        markDirty();
+      });
+    },
+    [markDirty],
+  );
+  useEffect(() => () => {
+    if (autoHeightFrame.current) cancelAnimationFrame(autoHeightFrame.current);
+  }, []);
   const onImagePicked = useCallback(
     async (file) => {
       const intent = fileIntent.current || { intent: "add", typeId: "image" };
@@ -1372,6 +1429,7 @@ const editZoom = zoom * canvasFit;
                 onPatch={applyLive}
                 onEndGesture={endGesture}
                 onElementMenu={(pos, elId) => setMenu({ ...pos, elId })}
+                onAutoHeight={fitTextHeight}
               />
             </>
           ) : (
@@ -1399,6 +1457,7 @@ const editZoom = zoom * canvasFit;
                       zoom={previewZoom}
                       selectedIds={[]}
                       readOnly
+                      onAutoHeight={fitTextHeight}
                     />
                     <button type="button" className="studio-preview-edit" onClick={() => { goPage(p.id); setMode("edit"); }}>
                       ✏️ {t("Modifier cette page")}

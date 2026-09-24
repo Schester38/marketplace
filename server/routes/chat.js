@@ -6,15 +6,16 @@ const router = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-flash-latest";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 const API_KEY = process.env.GEMINI_API_KEY || "";
 
 const MODEL_FALLBACKS = [
+  // Recommandé par Google lorsque le modèle Flash générique renvoie UNAVAILABLE.
+  "gemini-3.5-flash-lite",
   "gemini-flash-latest",
+  "gemini-3.1-flash-lite",
   "gemini-3.6-flash",
   "gemini-3.5-flash",
-  "gemini-3.1-flash-lite",
-  "gemini-2.5-flash-lite",
 ];
 
 const MAX_MESSAGE = 2000;
@@ -157,10 +158,9 @@ function fallback(lang, extra = {}) {
 // (services/whatsappBot.js). Renvoie toujours une string (jamais de throw).
 // history : [{role:'user'|'assistant', text|content}] (formats site et bot).
 // extraSystem : instructions supplémentaires (prompts du robot WhatsApp).
-// opts (optionnel) : { maxInputChars, maxOutputTokens } — le chat du site et le
-// robot WhatsApp gardent les défauts ; le Générateur passe des plafonds plus
-// larges (passages longs à traduire/développer) sans quoi les réponses étaient
-// coupées (entrée tronquée à 2000 caractères, sortie limitée à 800 tokens).
+// opts (optionnel) : { maxInputChars, maxOutputTokens, includeCatalog, models,
+// perModelMs, totalBudgetMs }. Chat et WhatsApp gardent leurs valeurs par
+// défaut ; le Générateur fournit un budget court et ses modèles de secours.
 export async function askAI(message, history = [], extraSystem = "", lang = "fr", opts = {}) {
   const maxIn = Number(opts.maxInputChars) > 0 ? Number(opts.maxInputChars) : MAX_MESSAGE;
   const maxOut = Number(opts.maxOutputTokens) > 0 ? Number(opts.maxOutputTokens) : 800;
@@ -170,11 +170,14 @@ export async function askAI(message, history = [], extraSystem = "", lang = "fr"
   let sys = SYSTEM_PROMPTS[lang] || SYSTEM_PROMPTS.fr;
   if (extraSystem) sys += `\n\n${extraSystem}`;
 
+  const includeCatalog = opts.includeCatalog !== false;
   let catalog = null;
-  try {
-    catalog = await catalogSnapshot(clean);
-  } catch (err) {
-    console.error("Chat : impossible de charger le catalogue ->", err.message);
+  if (includeCatalog) {
+    try {
+      catalog = await catalogSnapshot(clean);
+    } catch (err) {
+      console.error("Chat : impossible de charger le catalogue ->", err.message);
+    }
   }
 
   const baseSys = catalog
@@ -197,11 +200,23 @@ export async function askAI(message, history = [], extraSystem = "", lang = "fr"
     generationConfig: { temperature: 0.7, maxOutputTokens: maxOut },
   };
 
-  const models = [MODEL, ...MODEL_FALLBACKS.filter((m) => m !== MODEL)];
+  const requestedModels = Array.isArray(opts.models)
+    ? opts.models.map((m) => String(m || "").trim()).filter(Boolean)
+    : [MODEL, ...MODEL_FALLBACKS.filter((m) => m !== MODEL)];
+  const models = [...new Set(requestedModels)];
+  // Budget total optionnel. Sans opts, chaque modèle conserve le délai
+  // historique de 25 s (chat/WhatsApp inchangés). Le Générateur fixe un budget
+  // plus court et passe `perModelMs` pour éviter les 504 Vercel en série.
+  const perModelMs = Number(opts.perModelMs) > 0 ? Number(opts.perModelMs) : 25000;
+  const totalBudgetMs = Number(opts.totalBudgetMs) > 0 ? Number(opts.totalBudgetMs) : 0;
+  const deadline = totalBudgetMs > 0 ? Date.now() + totalBudgetMs : 0;
 
   for (const model of models) {
+    const remaining = deadline ? deadline - Date.now() : 0;
+    if (deadline && remaining <= 250) break;
+    const attemptMs = perModelMs > 0 ? perModelMs : remaining;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25000);
+    const timeout = setTimeout(() => controller.abort(), Math.max(500, attemptMs));
     try {
       const r = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(API_KEY)}`,

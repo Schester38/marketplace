@@ -91,7 +91,7 @@ function textStyle(el, zoom) {
   return out;
 }
 // ─── Élément texte (§4 : édition riche directement sur la page) ─────────────
-function TextView({ el, zoom, editing, onCommitHtml, tokensCtx }) {
+function TextView({ el, zoom, editing, onCommitHtml, tokensCtx, onAutoHeight, pageId }) {
   const ref = useRef(null);
   const html = useMemo(
     () => (el.data?.pre ? (el.html || "").replace(/\n/g, "<br>") : applyTokens(el.html || "", tokensCtx)),
@@ -102,6 +102,23 @@ function TextView({ el, zoom, editing, onCommitHtml, tokensCtx }) {
   useEffect(() => {
     if (editing && ref.current) ref.current.innerHTML = html;
   }, [editing, html]);
+  // Mesure réelle après chaque changement de taille/style. Un paragraphe qui
+  // grandit peut sinon déborder de sa boîte et recouvrir le paragraphe suivant.
+  // La conversion px CSS → mm utilise le même zoom que le canvas, donc
+  // l'aperçu et le PDF restent sur le même repère.
+  useEffect(() => {
+    if (!el.autoH || !onAutoHeight || !ref.current || typeof ResizeObserver === "undefined") return undefined;
+    const node = ref.current;
+    const report = () => {
+      const rect = node.getBoundingClientRect();
+      const heightMm = rect.height / (PX_PER_MM * zoom);
+      if (heightMm > 0.2) onAutoHeight(pageId, el.id, heightMm);
+    };
+    const observer = new ResizeObserver(report);
+    observer.observe(node);
+    report();
+    return () => observer.disconnect();
+  }, [pageId, el.id, el.autoH, el.html, el.box?.w, el.style, zoom, onAutoHeight]);
   return (
     <div
       ref={ref}
@@ -373,6 +390,7 @@ export default function StudioCanvas({
   onEndGesture,
   onElementDblClick,
   onElementMenu,
+  onAutoHeight,
   onDelete,
 }) {
   const gesture = useRef(null);
@@ -637,7 +655,7 @@ export default function StudioCanvas({
         let inner = null;
         // Dispatch par kind du modèle (§24 : chaque élément garde sa nature).
         if (isTextType(el) || el.type === "header" || el.type === "footer" || el.type === "pageNumber") {
-          inner = <TextView el={el} zoom={zoom} editing={editing} onCommitHtml={(html) => commitEdit(el, html)} tokensCtx={tokensCtx} />;
+          inner = <TextView el={el} zoom={zoom} editing={editing} onCommitHtml={(html) => commitEdit(el, html)} tokensCtx={tokensCtx} onAutoHeight={onAutoHeight} pageId={page.id} />;
         } else if (el.type === "line" || el.type === "divider" || el.type === "shape" || el.type === "circle" || el.type === "rect" || el.type === "block") {
           inner = <ShapeView el={el} zoom={zoom} />;
         } else if (el.type === "image" || el.type === "logo" || el.type === "icon" || el.type === "gallery" || el.type === "qr") {

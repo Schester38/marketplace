@@ -460,6 +460,13 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   // sans validation), export EPUB, publication produit.
   const [aiBusy, setAiBusy] = useState(null); // action en cours
   const [aiResult, setAiResult] = useState(null); // { action, text, replaceSel }
+  const aiResultRef = useRef(null);
+  useEffect(() => {
+    if (!aiResult?.text) return;
+    requestAnimationFrame(() => {
+      try { aiResultRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch { /* ancien navigateur */ }
+    });
+  }, [aiResult]);
   const [epubStep, setEpubStep] = useState(null); // label progression EPUB
   const [pub, setPub] = useState(null); // formulaire { price, description }
   const [pubBusy, setPubBusy] = useState(null); // label d'étape ou null
@@ -507,19 +514,22 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   editorRef.current = editor;
 
   // ─── Autosave : PATCH complet débouncé (1,5 s après la dernière frappe) ────
-  // Deux pièges corrigés ici : (1) la réponse du serveur écrasait TOUT l'état
-  // local (`{ ...cur, ...d.document }`) — une réponse ANCIENNE (deux
-  // sauvegardes en vol, ex. police puis taille) remettait donc l'ancien
-  // design : les réglages « changeaient tout seuls » et ne collaient pas ;
-  // (2) `page_layout` n'est pas envoyé par cette route mais était repris de la
-  // réponse → la mise en page du Studio (resynchronisée localement) était
-  // perdue. On n'applique donc que la réponse LA PLUS RÉCENTE, et jamais
-  // `page_layout` (écrit par le Studio/la resynchronisation eux-mêmes).
-  const saveSeq = useRef(0);
+  // Les sauvegardes sont sérialisées : une nouvelle modification arrivée pendant
+  // une requête est conservée pour la requête suivante. Une réponse serveur ne
+  // remplace jamais une révision plus récente du state local.
+  const saveRevision = useRef(0);
+  const saveInFlight = useRef(false);
+  const saveQueued = useRef(false);
   const saveNow = useCallback(async () => {
+    if (saveInFlight.current) {
+      saveQueued.current = true;
+      return;
+    }
     const m = metaRef.current;
+    if (!m?.id) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    const seq = ++saveSeq.current;
+    const version = saveRevision.current;
+    saveInFlight.current = true;
     setSaveState("saving");
     try {
       const d = await api.genSaveDocument(m.id, {
@@ -538,18 +548,42 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
         back_cover: m.back_cover || {},
         protection: m.protection || {},
         content: contentRef.current,
+        // La mise en page est écrite dans la même sauvegarde sérialisée ; cela
+        // évite qu'une ancienne requête de contenu n'écrase le Studio courant.
+        page_layout: m.page_layout || null,
       });
-      if (seq !== saveSeq.current) return; // réponse périmée : état local prioritaire
-      setMeta((cur) => ({ ...cur, ...d.document, page_layout: cur.page_layout }));
-      setSaveState("saved");
+      // Une réponse peut être reçue après une modification plus récente : on ne
+      // réécrit alors ni les métadonnées ni le statut de sauvegarde.
+      if (version === saveRevision.current && !saveQueued.current) {
+        const next = {
+          ...metaRef.current,
+          ...d.document,
+          // `page_layout` est écrit par le Studio ; cette route ne le renvoie
+          // pas dans `document` et ne doit jamais l'effacer.
+          page_layout: metaRef.current.page_layout,
+        };
+        metaRef.current = next;
+        setMeta(next);
+        setSaveState("saved");
+      }
     } catch (e) {
-      if (seq !== saveSeq.current) return;
-      setSaveState("error");
-      setError(e?.message || "Sauvegarde impossible");
+      if (version === saveRevision.current && !saveQueued.current) {
+        setSaveState("error");
+        setError(e?.message || "Sauvegarde impossible");
+      }
+    } finally {
+      saveInFlight.current = false;
+      if (saveQueued.current) {
+        saveQueued.current = false;
+        setTimeout(() => saveNow(), 0);
+      }
     }
   }, []);
 
   const scheduleSave = useCallback(() => {
+    saveRevision.current += 1;
+    if (saveInFlight.current) saveQueued.current = true;
+    setSaveState("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => saveNow(), 1500);
   }, [saveNow]);
@@ -597,14 +631,16 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
           design_key: studioDesignKey(m || {}),
           content_key: studioContentKey(src),
         });
-        setMeta((cur) => ({ ...cur, page_layout: payload }));
-        // Enregistrement DIRECT de la mise en page : l'autosave de contenu ne
-        // transporte pas `page_layout`, il serait donc perdu à la réponse
-        // suivante (et le Studio/PDF reviendrait à l'ancienne mise en page).
+        const next = { ...m, page_layout: payload };
+        metaRef.current = next;
+        setMeta(next);
+        // On passe par la même file d'attente que l'autosave du contenu :
+        // aucune requête page_layout parallèle ne peut remplacer une
+        // modification plus récente du Studio.
         try {
-          await api.genSaveDocument(m.id, { page_layout: payload });
+          await saveNow();
         } catch {
-          /* l'aperçu local est déjà à jour ; la prochaine resynchronisation réessaiera */
+          /* l'aperçu local est déjà à jour ; la prochaine sauvegarde réessaiera */
         }
       } catch {
         // Silencieux : au pire, l'aperçu classique reste disponible.
@@ -637,9 +673,14 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   }, [preview]);
 
   const patchMeta = (patch, immediate = false) => {
-    setMeta((cur) => ({ ...cur, ...patch }));
-    if (immediate) setTimeout(saveNow, 0);
-    else scheduleSave();
+    const next = { ...metaRef.current, ...patch };
+    metaRef.current = next;
+    setMeta(next);
+    if (immediate) {
+      saveRevision.current += 1;
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveNow();
+    } else scheduleSave();
   };
 
   // ─── Bibliothèque de modèles : filtres, recherche, favoris, récents ─────────
@@ -910,6 +951,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     if (!ed) return;
     ed.commands.setContent(html);
     contentRef.current = ed.getJSON();
+    saveRevision.current += 1;
     saveNow();
   };
   const onImportFile = async (e) => {
@@ -1112,6 +1154,33 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     }
   };
 
+  // La description catalogue concerne le document entier, pas seulement la
+  // sélection courante. On envoie le texte TipTap complet ; le serveur applique
+  // ensuite sa limite de 4 000 caractères pour ne pas gonfler l'appel IA.
+  const documentText = () => {
+    const ed = editorRef.current;
+    if (!ed) return "";
+    try {
+      return ed.getText({ blockSeparator: "\n\n" });
+    } catch {
+      return "";
+    }
+  };
+
+  const useDescriptionForPublication = () => {
+    const description = String(aiResult?.text || "").trim().slice(0, 4000);
+    if (!description) return;
+    setError("");
+    setAiResult(null);
+    setPub({
+      price: "",
+      description,
+      title: metaRef.current.title || "",
+      category: "Digital",
+      commission: "",
+    });
+  };
+
   const runAi = async (action, { instruction, tone, lang } = {}) => {
     setError("");
     setAiBusy(action);
@@ -1120,7 +1189,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
       const m = metaRef.current;
       const d = await api.genAi({
         action,
-        text: selectionText(),
+        text: action === "description" ? documentText() : selectionText(),
         title: m.title,
         subtitle: m.subtitle,
         author: m.author,
@@ -1146,7 +1215,9 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
         }
         return;
       }
-      setAiResult({ action, text: String(d.text || "").trim() });
+      const text = String(d.text || "").trim();
+      if (!text) throw new Error(t("L'assistant IA n'a renvoyé aucun résultat. Réessayez dans un instant."));
+      setAiResult({ action, text });
     } catch (e) {
       const msg = e?.message || t("Assistant IA indisponible");
       setError(/503|GEMINI|clé|activé|configuré/i.test(msg)
@@ -1559,7 +1630,9 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
           html={editor?.getHTML() || ""}
           onClose={() => setView("edit")}
           onSaved={(env) => {
-            setSaveState("saved");
+            // Le Studio possède son propre état d'enregistrement ; ne pas
+            // annoncer « enregistré » dans le parent si son autosave de contenu
+            // est encore en attente.
             // Synchronisation Studio → Aperçu / Export : les pages éditées
             // sont conservées en mémoire pour que l'export PDF les applique.
             if (env) {
@@ -1570,7 +1643,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
           onLayoutChange={(env) => {
             // Le Studio publie sa version courante immédiatement : le bouton
             // PDF de la page principale ne peut pas utiliser une ancienne
-            // copie de page_layout pendant l'autosave de 2,5 s.
+            // copie de page_layout pendant l'autosave de 900 ms.
             if (env) {
               metaRef.current = { ...metaRef.current, page_layout: env };
               setMeta((cur) => ({ ...cur, page_layout: env }));
@@ -1752,6 +1825,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
                   ["write_chapter", t("✍️ Rédiger ce chapitre")],
                   ["blurb", t("Quatrième de couverture")],
                   ["bio", t("Biographie d'auteur")],
+                  ["description", t("Description")],
                   ["design", t("Proposer un design")],
                 ].map(([action, label]) => (
                   <button
@@ -1783,15 +1857,20 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
               </div>
               {aiBusy && <p className="hint">{t("L'assistant travaille…")}</p>}
               {aiResult?.text && (
-                <div className="gen-ai-result">
+                <div ref={aiResultRef} className="gen-ai-result">
                   <pre>{aiResult.text}</pre>
                   <div className="gen-ai-result-actions">
-                    {editor && !editor.state.selection.empty && aiResult.action !== "design" && (
+                    {aiResult.action === "description" && (
+                      <button type="button" className="btn btn-small btn-primary" onClick={useDescriptionForPublication}>
+                        {t("Utiliser pour la publication")}
+                      </button>
+                    )}
+                    {editor && !editor.state.selection.empty && aiResult.action !== "design" && aiResult.action !== "description" && (
                       <button type="button" className="btn btn-small btn-primary" onClick={() => applyAiResult(true)}>
                         {t("Remplacer la sélection")}
                       </button>
                     )}
-                    {aiResult.action !== "design" && (
+                    {aiResult.action !== "design" && aiResult.action !== "description" && (
                       <button type="button" className="btn btn-small btn-outline" onClick={() => applyAiResult(false)}>
                         {aiResult.action === "structure" ? t("Remplacer tout le contenu") : t("Ajouter à la fin")}
                       </button>

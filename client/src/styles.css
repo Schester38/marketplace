@@ -10724,10 +10724,14 @@ a.step {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) rotate(45deg);
+  width: 88%;
   max-width: 88%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-overflow: clip;
+  text-align: center;
   font-weight: bold;
   pointer-events: none;
 }
@@ -11133,10 +11137,14 @@ a.step {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) rotate(45deg);
+  width: 88%;
   max-width: 88%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-overflow: clip;
+  text-align: center;
   font-weight: 700;
   line-height: 1;
   pointer-events: none;

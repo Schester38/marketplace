@@ -923,6 +923,43 @@ export function addElements(pages, pageId, els) {
   return pages.map((p) => (p.id === pageId ? { ...p, elements: [...p.elements, ...list] } : p));
 }
 
+/**
+ * Agrandit ou réduit la boîte d'un texte après un changement de police et
+ * décale les autres éléments automatiques situés sous lui. Le canvas mesure la
+ * hauteur réelle dans le navigateur ; cette fonction transforme cette mesure
+ * (mm) en mise en page persistée. Seuls les blocs `autoH` suivent le flux : les
+ * titres, images, pieds de page et éléments positionnés manuellement ne bougent pas.
+ */
+export function fitMeasuredTextHeight(pages, pageId, elId, measuredHeightMm) {
+  const height = Number(measuredHeightMm);
+  if (!Number.isFinite(height) || height <= 0) return pages || [];
+  let changed = false;
+  const out = (pages || []).map((page) => {
+    if (page.id !== pageId) return page;
+    const elements = page.elements || [];
+    const index = elements.findIndex((el) => el.id === elId);
+    if (index < 0) return page;
+    const target = elements[index];
+    if (!isTextType(target) || target.autoH === false) return page;
+    const nextHeight = round1(height);
+    const delta = round1(nextHeight - (Number(target.box?.h) || 0));
+    if (Math.abs(delta) < 0.15) return page;
+    const oldBottom = (Number(target.box?.y) || 0) + (Number(target.box?.h) || 0);
+    const nextElements = elements.map((el, i) => {
+      if (i === index) return { ...el, box: { ...el.box, h: nextHeight } };
+      // Flux automatique uniquement : un paragraphe plus grand repousse les
+      // paragraphes suivants ; après une réduction, ils remontent ensemble.
+      // Images, formes et pieds de page positionnés manuellement restent fixes.
+      if (!isTextType(el) || el.autoH === false || (Number(el.box?.y) || 0) < oldBottom - 0.15) return el;
+      return { ...el, box: { ...el.box, y: round1((Number(el.box?.y) || 0) + delta) } };
+    });
+    changed = true;
+    return { ...page, elements: nextElements };
+  });
+  return changed ? out : (pages || []);
+}
+
+
 export function patchElement(pages, pageId, elId, patch) {
   return pages.map((p) => {
     if (p.id !== pageId) return p;

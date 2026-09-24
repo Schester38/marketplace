@@ -5606,6 +5606,7 @@ const GEN2_EN = {
   Masquer: "Hide",
   "📋 Plan de livre": "📋 Book plan",
   "✍️ Rédiger ce chapitre": "✍️ Write this chapter",
+  "Utiliser pour la publication": "Use for publication",
   "Décrivez le livre à planifier : sujet, audience, longueur (ex. « ebook de 40 pages sur le marketing digital pour jeunes entrepreneurs »).":
     "Describe the book to plan: topic, audience, length (e.g. \"40-page ebook on digital marketing for young entrepreneurs\").",
   "Titre (ou thème précis) du chapitre à rédiger :": "Title (or precise theme) of the chapter to write:",
@@ -5648,6 +5649,7 @@ const GEN2_AR = {
   Masquer: "إخفاء",
   "📋 Plan de livre": "📋 خطة كتاب",
   "✍️ Rédiger ce chapitre": "✍️ كتابة هذا الفصل",
+  "Utiliser pour la publication": "استخدامها للنشر",
   "Décrivez le livre à planifier : sujet, audience, longueur (ex. « ebook de 40 pages sur le marketing digital pour jeunes entrepreneurs »).":
     "صف الكتاب المراد تخطيطه: الموضوع والجمهور والطول (مثال: «كتاب إلكتروني من 40 صفحة عن التسويق الرقمي لرواد الأعمال الشباب»).",
   "Titre (ou thème précis) du chapitre à rédiger :": "عنوان (أو موضوع دقيق) الفصل المراد كتابته:",
@@ -5690,6 +5692,7 @@ const GEN2_ES = {
   Masquer: "Ocultar",
   "📋 Plan de livre": "📋 Plan del libro",
   "✍️ Rédiger ce chapitre": "✍️ Redactar este capítulo",
+  "Utiliser pour la publication": "Usar para la publicación",
   "Décrivez le livre à planifier : sujet, audience, longueur (ex. « ebook de 40 pages sur le marketing digital pour jeunes entrepreneurs »).":
     "Describe el libro a planificar: tema, público, extensión (ej. «ebook de 40 páginas sobre marketing digital para jóvenes emprendedores»).",
   "Titre (ou thème précis) du chapitre à rédiger :": "Título (o tema preciso) del capítulo a redactar:",
