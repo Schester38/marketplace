@@ -50,6 +50,7 @@ import CoverDecor from "../generator/CoverDecor.jsx";
 // avec le Studio, TOUJOURS dessiné derrière le texte (z-index 0).
 import PageDecor from "../generator/PageDecor.jsx";
 import DocStudio, { resolveActiveTemplate } from "../generator/DocStudio.jsx";
+import { watermarkPreviewFontSize } from "../generator/watermark.js";
 import StudioCanvas from "../generator/StudioCanvas.jsx";
 import { readStudio, studioBox, buildStudioPages, serializeStudio, studioDesignKey, studioContentKey, ensureStudioFooters } from "../generator/studioModel.js";
 import { exportStudioPdf } from "../generator/studioExport.js";
@@ -1561,7 +1562,19 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
             setSaveState("saved");
             // Synchronisation Studio → Aperçu / Export : les pages éditées
             // sont conservées en mémoire pour que l'export PDF les applique.
-            if (env) setMeta((cur) => ({ ...cur, page_layout: env }));
+            if (env) {
+              metaRef.current = { ...metaRef.current, page_layout: env };
+              setMeta((cur) => ({ ...cur, page_layout: env }));
+            }
+          }}
+          onLayoutChange={(env) => {
+            // Le Studio publie sa version courante immédiatement : le bouton
+            // PDF de la page principale ne peut pas utiliser une ancienne
+            // copie de page_layout pendant l'autosave de 2,5 s.
+            if (env) {
+              metaRef.current = { ...metaRef.current, page_layout: env };
+              setMeta((cur) => ({ ...cur, page_layout: env }));
+            }
           }}
           onMetaPatch={(patch) => patchMeta(patch)}
           onGluedContent={(fixedHtml) => {
@@ -3036,7 +3049,7 @@ function GenPage({ page, paginated, docMeta, fit }) {
         <div
           className="gen-watermark"
           style={{
-            fontSize: pt(42),
+            fontSize: pt(watermarkPreviewFontSize(box)),
             color: docMeta.protection.watermark.color || "#555555",
             opacity: docMeta.protection.watermark.mode === "visible" ? 0.16 : 0.06,
           }}

@@ -188,7 +188,7 @@ async function fileToStudioImage(file) {
   }
 }
 
-export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMetaPatch, onGluedContent, t: tProp }) {
+export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayoutChange, onMetaPatch, onGluedContent, t: tProp }) {
   const t = tProp || ((s) => s);
   // ─── État ──────────────────────────────────────────────────────────────────
   const [pages, setPages] = useState(null); // null = conversion en cours
@@ -232,6 +232,8 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMeta
   const saveTimer = useRef(null);
   const pagesRef = useRef(null);
   pagesRef.current = pages;
+  const layoutRef = useRef(onLayoutChange);
+  layoutRef.current = onLayoutChange;
   const activeIdRef = useRef(null);
   activeIdRef.current = activeId;
   const activePage = useMemo(() => (pages || []).find((p) => p.id === activeId) || null, [pages, activeId]);
@@ -318,6 +320,20 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMeta
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => saveRef.current(true), 2500); // autosave 2,5 s
   }, []);
+
+  const publishLayout = useCallback((nextPages) => {
+    const payload = serializeStudio(nextPages || [], {
+      template_id: docMeta?.template_id || "",
+      design_key: keysRef.current.designKey,
+      content_key: keysRef.current.contentKey,
+    });
+    layoutRef.current?.(payload);
+    return payload;
+  }, [docMeta?.template_id]);
+  useEffect(() => {
+    if (pages?.length) publishLayout(pages);
+  }, [pages, publishLayout]);
+
   const save = useCallback(
     async (silent = false) => {
       if (!doc?.id) return;
@@ -327,11 +343,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMeta
         // Enveloppe enregistrée : pages + empreintes contenu/design. Les
         // empreintes servent à savoir, à la réouverture, si les autres onglets
         // ont changé et si le Studio doit se resynchroniser.
-        const payload = serializeStudio(pagesRef.current || [], {
-          template_id: docMeta?.template_id || "",
-          design_key: keysRef.current.designKey,
-          content_key: keysRef.current.contentKey,
-        });
+        const payload = publishLayout(pagesRef.current || []);
         await api.genSaveDocument(doc.id, { page_layout: payload });
         setDirty(false);
         setSavedAt(new Date());
@@ -343,7 +355,7 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMeta
         setSaving(false);
       }
     },
-    [doc?.id, docMeta?.template_id, onSaved, t, flash],
+    [doc?.id, docMeta?.template_id, onSaved, publishLayout, t, flash],
   );
   const saveRef = useRef(save);
   saveRef.current = save;
@@ -355,9 +367,10 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMeta
       setPast((p) => [...p.slice(-79), { id: uid("h"), label, at: new Date().toISOString(), pages: pagesRef.current }]);
       setFuture([]);
       setPages(nextPages);
+      publishLayout(nextPages);
       markDirty();
     },
-    [markDirty],
+    [markDirty, publishLayout],
   );
   const undo = useCallback(() => {
     setPast((p) => {
@@ -365,20 +378,22 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMeta
       const entry = p[p.length - 1];
       setFuture((f) => [...f, { id: uid("h"), label: entry.label, at: entry.at, pages: pagesRef.current }]);
       setPages(entry.pages);
+      publishLayout(entry.pages);
       markDirty();
       return p.slice(0, -1);
     });
-  }, [markDirty]);
+  }, [markDirty, publishLayout]);
   const redo = useCallback(() => {
     setFuture((f) => {
       if (!f.length) return f;
       const entry = f[f.length - 1];
       setPast((p) => [...p, { id: uid("h"), label: entry.label, at: entry.at, pages: pagesRef.current }]);
       setPages(entry.pages);
+      publishLayout(entry.pages);
       markDirty();
       return f.slice(0, -1);
     });
-  }, [markDirty]);
+  }, [markDirty, publishLayout]);
 
   // ─── Protocole des gestes du canvas (sélection → patchs vifs → validation) ──
   const beginGesture = useCallback((label) => {
@@ -386,22 +401,27 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onMeta
   }, []);
   const applyLive = useCallback(
     (patches) => {
-      setPages((cur) => applyPatchesToPage(cur || [], activeIdRef.current, patches));
+      const next = applyPatchesToPage(pagesRef.current || [], activeIdRef.current, patches);
+      pagesRef.current = next;
+      setPages(next);
+      publishLayout(next);
       markDirty();
     },
-    [markDirty],
+    [markDirty, publishLayout],
   );
   const endGesture = useCallback((cancel) => {
     const snap = gestureSnap.current;
     gestureSnap.current = null;
     if (!snap) return;
     if (cancel) {
+      pagesRef.current = snap.pages;
       setPages(snap.pages);
+      publishLayout(snap.pages);
       return;
     }
     setPast((p) => [...p.slice(-79), { id: uid("h"), label: snap.label, at: new Date().toISOString(), pages: snap.pages }]);
     setFuture([]);
-  }, []);
+  }, [markDirty, publishLayout]);
   const onSelectEls = useCallback((ids, additive) => {
     setSelIds((cur) => (additive ? [...new Set([...cur, ...ids])] : ids));
   }, []);
@@ -1697,6 +1717,8 @@ const editZoom = zoom * canvasFit;
                         setPast((p) => p.slice(0, p.indexOf(h) + 1));
                         setFuture((f) => [...f, { id: uid("h"), label: h.label, at: h.at, pages: pagesRef.current }]);
                         setPages(h.pages);
+                        pagesRef.current = h.pages;
+                        publishLayout(h.pages);
                         markDirty();
                       }}>
                         {t("Restaurer")}

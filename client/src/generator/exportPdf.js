@@ -12,6 +12,7 @@ import { coverDecorPrims, drawCoverDecorPdf } from "./coverDecor.js";
 import { PX_PER_MM } from "./paginate.js";
 import { copyrightLines, makeQrDataUrl, verificationPayload } from "./protection.js";
 import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL } from "./footerPromo.js";
+import { drawWatermarkPdf } from "./watermark.js";
 import { BASE_URL } from "../config.js";
 
 const pxToMm = (v) => v / PX_PER_MM;
@@ -626,19 +627,9 @@ function drawHeaderFooter(doc, page, docMeta, template, box) {
   }
 }
 
-// Watermark diagonal discret ou visible, toutes les pages de contenu.
+// Filigrane diagonal discret ou visible, toutes les pages de contenu.
 function drawWatermark(doc, docMeta, template, box) {
-  const wm = docMeta.protection?.watermark;
-  if (!wm?.enabled) return;
-  const { w, h } = box;
-  const text = wm.text || `© ${docMeta.author || "Auteur"}`;
-  doc.saveGraphicsState();
-  doc.setGState(new doc.GState({ opacity: wm.mode === "visible" ? 0.16 : 0.06 }));
-  doc.setFont(FONT_PDF[template.headingFont], "bold");
-  doc.setFontSize(42);
-  setText(doc, wm.color || "#555555");
-  doc.text(text, w / 2, h / 2, { angle: 45, align: "center" });
-  doc.restoreGraphicsState();
+  drawWatermarkPdf(doc, docMeta, box, { font: template?.headingFont || "sans" });
 }
 
 // ─── Export PDF complet (même sortie paginée que l'aperçu HTML) ──────────────

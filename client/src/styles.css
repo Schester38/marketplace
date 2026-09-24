@@ -10724,8 +10724,11 @@ a.step {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) rotate(45deg);
-  font-weight: bold;
+  max-width: 88%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: bold;
   pointer-events: none;
 }
 .gen-page-footer {
@@ -11125,6 +11128,20 @@ a.step {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
+.studio-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  max-width: 88%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 450;
+}
 .studio-page-readonly { box-shadow: none; }
 .studio-el { position: absolute; touch-action: pan-x pan-y; }
 /* Poignées : toujours capturées par le doigt (redimensionner/pivoter), jamais
@@ -11212,6 +11229,15 @@ a.step {
   background: rgba(148, 163, 184, 0.1);
 }
 .studio-text { white-space: pre-wrap; word-break: break-word; }
+.studio-text p { margin: 0 0 var(--ps, 0px); }
+.studio-text p:last-child { margin-bottom: 0; }
+.studio-text.studio-dropcap::first-letter {
+  float: left;
+  margin: 0.04em 0.12em 0 0;
+  font-size: 2.8em;
+  font-weight: 700;
+  line-height: 0.78;
+}
 .studio-text.studio-pre { white-space: pre-wrap; font-family: monospace; }
 .studio-table { border-collapse: collapse; font-size: 0.8rem; }
 .studio-table td { border: 1px solid var(--border-strong); padding: 4px 6px; vertical-align: top; }

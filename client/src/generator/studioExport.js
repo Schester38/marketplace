@@ -14,6 +14,7 @@ import { FONT_PDF, resolvePageBox, resolveTemplate, getTemplate } from "./templa
 import { drawPageDecor, toDataUrl, saveBlob } from "./exportPdf.js";
 import { coverDecorPrims, drawCoverDecorPdf } from "./coverDecor.js";
 import { makeQrDataUrl } from "./protection.js";
+import { drawWatermarkPdf } from "./watermark.js";
 import { safeWebUrl } from "./footerPromo.js";
 import { applyTokens, elementType, sortedElements, mixHex } from "./studioModel.js";
 
@@ -36,18 +37,44 @@ function setStroke(doc, hex) {
   const [r, g, b] = rgb(hex);
   doc.setDrawColor(r, g, b);
 }
+function resetCharSpace(doc) {
+  if (typeof doc.setCharSpace === "function") doc.setCharSpace(0);
+}
+
 function withOpacity(doc, opacity, draw) {
   if (opacity >= 99) {
     draw();
     return;
   }
+  let saved = false;
   try {
     doc.saveGraphicsState();
-    doc.setGState(new doc.GState({ opacity: Math.max(0, opacity) / 100 }));
+    saved = true;
+    try { doc.setGState(new doc.GState({ opacity: Math.max(0, opacity) / 100 })); } catch { /* GState indisponible */ }
+  } finally {
+    // Le rendu est exécuté même si le moteur ne supporte pas GState.
+  }
+  try {
     draw();
-    doc.restoreGraphicsState();
-  } catch {
-    draw();
+  } finally {
+    if (saved) {
+      try { doc.restoreGraphicsState(); } catch { /* état graphique déjà restauré */ }
+    }
+  }
+}
+
+async function withOpacityAsync(doc, opacity, draw) {
+  if (opacity >= 99) return draw();
+  let saved = false;
+  try {
+    doc.saveGraphicsState();
+    saved = true;
+    try { doc.setGState(new doc.GState({ opacity: Math.max(0, opacity) / 100 })); } catch { /* GState indisponible */ }
+    return await draw();
+  } finally {
+    if (saved) {
+      try { doc.restoreGraphicsState(); } catch { /* état graphique déjà restauré */ }
+    }
   }
 }
 function shape(doc, box, radius, mode) {
@@ -67,10 +94,13 @@ export function htmlRuns(html, base = {}) {
     bold: !!base.bold, italic: !!base.italic, underline: !!base.underline, strike: !!base.strike,
     color: base.color || "#111111", bg: null, sup: false, sub: false, href: null,
     font: base.font || "serif", size: Number(base.size) || 10.5,
+    letterSpacing: Number(base.letterSpacing) || 0, uppercase: !!base.uppercase,
+    paraSpace: Number(base.paraSpace) || 0, paraBreak: false,
   };
   const runs = [];
   if (typeof DOMParser === "undefined") {
-    runs.push({ ...start, text: String(html || "").replace(/<[^>]+>/g, " ") });
+    const value = String(html || "").replace(/<[^>]+>/g, " ");
+    runs.push({ ...start, text: start.uppercase ? value.toLocaleUpperCase() : value });
     return runs;
   }
   let root = null;
@@ -81,13 +111,15 @@ export function htmlRuns(html, base = {}) {
     root = null;
   }
   if (!root) {
-    runs.push({ ...start, text: String(html || "").replace(/<[^>]+>/g, " ") });
+    const value = String(html || "").replace(/<[^>]+>/g, " ");
+    runs.push({ ...start, text: start.uppercase ? value.toLocaleUpperCase() : value });
     return runs;
   }
   const walk = (node, st) => {
     for (const child of node.childNodes) {
       if (child.nodeType === 3) {
-        const t = String(child.nodeValue || "").replace(/\s+/g, " ");
+        let t = String(child.nodeValue || "").replace(/\s+/g, " ");
+        if (st.uppercase) t = t.toLocaleUpperCase(st.language || "fr-FR");
         if (t.trim() || (t && runs.length)) runs.push({ ...st, text: t });
         continue;
       }
@@ -96,6 +128,9 @@ export function htmlRuns(html, base = {}) {
       if (tag === "BR") {
         runs.push({ ...st, text: "", br: true });
         continue;
+      }
+      if (/^(P|DIV|H[1-6]|LI|BLOCKQUOTE|PRE|TABLE|TR)$/.test(tag) && runs.length) {
+        runs.push({ ...st, text: "", br: true, paraBreak: true });
       }
       const cs = { ...st };
       if (/^(STRONG|B)$/.test(tag)) cs.bold = true;
@@ -120,6 +155,14 @@ export function htmlRuns(html, base = {}) {
       if (bgc) cs.bg = bgc[1];
       const fs = /font-size\s*:\s*([\d.]+)pt/i.exec(styleAttr);
       if (fs) cs.size = Number(fs[1]) || cs.size;
+      const ls = /letter-spacing\s*:\s*([\d.]+)px/i.exec(styleAttr);
+      if (ls) cs.letterSpacing = Number(ls[1]) || cs.letterSpacing;
+      const family = /font-family\s*:\s*([^;]+)/i.exec(styleAttr);
+      if (family) {
+        const value = family[1].toLowerCase();
+        cs.font = /courier|mono/.test(value) ? "mono" : /times|serif|georgia/.test(value) ? "serif" : "sans";
+      }
+      if (/text-transform\s*:\s*uppercase/i.test(styleAttr)) cs.uppercase = true;
       if (/vertical-align\s*:\s*super/i.test(styleAttr)) cs.sup = true;
       if (/vertical-align\s*:\s*sub/i.test(styleAttr)) cs.sub = true;
       walk(child, cs);
@@ -138,25 +181,37 @@ function fontName(r) {
 function applyFont(doc, r) {
   doc.setFont(FONT_PDF[r.font] || "times", fontName(r));
   doc.setFontSize(r.size);
+  // jsPDF n'inclut pas l'espacement des caractères dans getTextWidth().
+  // On l'applique au contexte PDF et on l'ajoute aussi aux mesures manuelles.
+  if (typeof doc.setCharSpace === "function") {
+    doc.setCharSpace(Math.max(0, Number(r.letterSpacing) || 0) * PT2MM);
+  }
+}
+function runWidth(doc, r, text) {
+  const value = String(text || "");
+  return doc.getTextWidth(value) + Math.max(0, value.length - 1) * (Number(r.letterSpacing) || 0) * PT2MM;
 }
 /** Coupe des runs en lignes mesurées avec les métriques de jsPDF. */
 function layoutRuns(doc, runs, maxWmm) {
   const lines = [];
   let cur = { w: 0, runs: [] };
-  const flush = () => {
+  const flush = (after = 0) => {
+    cur.after = Math.max(cur.after || 0, after);
     lines.push(cur);
-    cur = { w: 0, runs: [] };
+    cur = { w: 0, runs: [], after: 0 };
   };
   for (const run of runs) {
     if (run.br) {
-      if (cur.runs.length || !lines.length) flush();
+      if (cur.runs.length || !lines.length) {
+        flush((run.paraBreak ? Number(run.paraSpace) || 0 : 0) * PT2MM);
+      }
       continue;
     }
     const tokens = String(run.text || "").split(/(\s+)/);
     for (const token of tokens) {
       if (!token) continue;
       applyFont(doc, run);
-      const w = doc.getTextWidth(token);
+      const w = runWidth(doc, run, token);
       const isSpace = /^\s+$/.test(token);
       if (isSpace) {
         if (!cur.runs.length) continue; // pas d'espace en tête de ligne
@@ -183,16 +238,25 @@ function layoutRuns(doc, runs, maxWmm) {
 /** Dessine une ligne de runs depuis x (bord gauche) et y (ligne de base). */
 function drawRunsLine(doc, line, x, y, { align = "left", maxW = 0, color } = {}) {
   let cursor = x;
+  const spaceCount = line.runs.filter((r) => /^\s+$/.test(r.text || "")).length;
+  const extraSpace = align === "justify" && spaceCount > 0 && line.w < maxW
+    ? (maxW - line.w) / spaceCount
+    : 0;
   if (align === "center") cursor = x + (maxW - line.w) / 2;
   else if (align === "right") cursor = x + maxW - line.w;
   for (const r of line.runs) {
     applyFont(doc, r);
-    const w = doc.getTextWidth(r.text);
+    const w = runWidth(doc, r, r.text);
     const lift = r.sup ? r.size * 0.35 * PT2MM : r.sub ? -r.size * 0.18 * PT2MM : 0;
     const base = y - lift;
     if (r.bg) {
       setFill(doc, r.bg);
       doc.rect(cursor, base - r.size * PT2MM * 0.82, w, r.size * PT2MM * 1.1, "F");
+    }
+    if (/^\s+$/.test(r.text || "")) {
+      doc.text(r.text, cursor, base);
+      cursor += w + extraSpace;
+      continue;
     }
     setText(doc, r.href ? "#0B5FFF" : r.color || color || "#111111");
     doc.text(r.text, cursor, base);
@@ -281,6 +345,13 @@ function drawTextElement(doc, el, ctx) {
 
   const columns = Math.max(1, Math.min(4, Number(st.columns) || 1));
   const firstBaseline = innerY + size * PT2MM * 0.92;
+  const drawLines = (items, startX, maxLineW) => {
+    let y = firstBaseline;
+    items.forEach((ln) => {
+      drawRunsLine(doc, ln, startX, y, { align, maxW: maxLineW, color: st.color });
+      y += lhmm + (Number(ln.after) || 0);
+    });
+  };
   if (columns > 1) {
     const gut = 5;
     const colW = (innerW - gut * (columns - 1)) / columns;
@@ -288,17 +359,12 @@ function drawTextElement(doc, el, ctx) {
     const per = Math.ceil(all.length / columns);
     for (let c = 0; c < columns; c++) {
       const cx = innerX + c * (colW + gut);
-      all.slice(c * per, (c + 1) * per).forEach((ln, i) => {
-        drawRunsLine(doc, ln, cx, firstBaseline + i * lhmm, { align, maxW: colW, color: st.color });
-      });
+      drawLines(all.slice(c * per, (c + 1) * per), cx, colW);
     }
     return;
   }
 
-  const lines = layoutRuns(doc, runs, w);
-  lines.forEach((ln, i) => {
-    drawRunsLine(doc, ln, x, firstBaseline + i * lhmm, { align, maxW: w, color: st.color });
-  });
+  drawLines(layoutRuns(doc, runs, w), x, w);
   if (dropCap) {
     applyFont(doc, dropCap.style);
     setText(doc, st.color || "#111111");
@@ -314,13 +380,40 @@ async function imageData(src) {
   imageCache.set(src, data);
   return data;
 }
-function addImage(doc, data, box) {
+function addImage(doc, data, box, fit = "fill") {
   if (!data) return false;
   try {
     const fmt = /^data:image\/png/i.test(data) ? "PNG" : /^data:image\/webp/i.test(data) ? "WEBP" : "JPEG";
-    doc.addImage(data, fmt, box.x, box.y, box.w, box.h, undefined, "FAST");
+    const target = { ...box };
+    if (fit === "contain" || fit === "cover") {
+      const props = doc.getImageProperties(data);
+      const ratio = props.width / props.height;
+      const boxRatio = box.w / box.h;
+      if (fit === "contain") {
+        if (ratio > boxRatio) target.h = box.w / ratio;
+        else target.w = box.h * ratio;
+      } else if (ratio > boxRatio) {
+        target.h = box.h;
+        target.w = box.h * ratio;
+      } else {
+        target.w = box.w;
+        target.h = box.w / ratio;
+      }
+      target.x = box.x + (box.w - target.w) / 2;
+      target.y = box.y + (box.h - target.h) / 2;
+      if (fit === "cover") {
+        doc.saveGraphicsState();
+        doc.rect(box.x, box.y, box.w, box.h, "S");
+        doc.clip();
+      }
+    }
+    doc.addImage(data, fmt, target.x, target.y, target.w, target.h, undefined, "FAST");
+    if (fit === "cover") doc.restoreGraphicsState();
     return true;
   } catch {
+    if (fit === "cover") {
+      try { doc.restoreGraphicsState(); } catch { /* état graphique déjà restauré */ }
+    }
     return false;
   }
 }
@@ -428,14 +521,30 @@ function drawShapeElement(doc, el, ctx) {
     shape(doc, el.box, st.radius || 0, "S");
   }
 }
+function drawMediaFrame(doc, el, ctx) {
+  const st = el.style || {};
+  const box = el.box || {};
+  if (st.bg && st.bg !== "transparent") {
+    withOpacity(doc, st.bgOpacity == null ? 100 : st.bgOpacity, () => {
+      setFill(doc, st.bg);
+      shape(doc, box, st.radius || 0, "F");
+    });
+  }
+  if (st.border) {
+    setStroke(doc, st.borderColor || ctx.accent);
+    doc.setLineWidth(st.border);
+    shape(doc, box, st.radius || 0, "S");
+  }
+}
+
 /** Médias : image, logo, galerie, icône (glyphe → PNG), QR réel. */
 async function drawMediaElement(doc, el, ctx) {
   const t = elementType(el.type).id;
   const st = el.style || {};
+  drawMediaFrame(doc, el, ctx);
   if (t === "image" || t === "logo") {
     const data = await imageData(el.src);
-    const opacity = (el.opacity == null ? 1 : el.opacity) * 100;
-    if (data) withOpacity(doc, opacity, () => addImage(doc, data, el.box));
+    if (data) addImage(doc, data, el.box, st.fit || "fill");
     else drawImagePlaceholder(doc, el, ctx);
     return;
   }
@@ -457,7 +566,7 @@ async function drawMediaElement(doc, el, ctx) {
         w: cw, h: ch,
       };
       const data = await imageData(items[i].src || items[i]);
-      if (!addImage(doc, data, box)) drawImagePlaceholder(doc, { ...el, box }, ctx);
+      if (!addImage(doc, data, box, st.fit || "cover")) drawImagePlaceholder(doc, { ...el, box }, ctx);
     }
     return;
   }
@@ -760,23 +869,9 @@ function drawTocElement(doc, el, ctx) {
   });
 }
 // ─── Rendu d'UNE page du modèle structuré ──────────────────────────────────
-/** Filigrane du document (protection) — même rendu que le reste du Générateur. */
+/** Filigrane du document — le calcul est partagé avec le PDF classique. */
 function drawWatermark(doc, docMeta, box) {
-  const wm = docMeta?.protection?.watermark;
-  if (!wm || !wm.enabled) return;
-  const { w, h } = box;
-  const text = wm.text || `© ${docMeta.author || "Auteur"}`;
-  const opacity = wm.mode === "visible" ? 16 : 6;
-  withOpacity(doc, opacity, () => {
-    doc.setFont(FONT_PDF.sans, "bold");
-    doc.setFontSize(Math.min(110, w * 0.42));
-    setText(doc, wm.color || "#555555");
-    try {
-      doc.text(String(text), w / 2, h / 2, { align: "center", angle: 45 });
-    } catch {
-      doc.text(String(text), w / 2, h / 2, { align: "center" });
-    }
-  });
+  drawWatermarkPdf(doc, docMeta, box, { font: "sans" });
 }
 
 /** Applique la rotation d'un élément (si jsPDF le permet) autour de son centre. */
@@ -844,6 +939,7 @@ async function drawStudioPage(doc, page, ctx) {
   for (const el of sortedElements(page)) {
     if (el.hidden) continue;
     const kind = elementType(el.type).kind;
+    resetCharSpace(doc);
     const paint = async () => {
       if (kind === "media") await drawMediaElement(doc, el, tokens);
       else if (kind === "shape") drawShapeElement(doc, el, tokens);
@@ -855,7 +951,8 @@ async function drawStudioPage(doc, page, ctx) {
       } else if (el.type === "toc") drawTocElement(doc, el, tokens);
       else drawTextElement(doc, el, tokens);
     };
-    await withRotation(doc, el, paint);
+    const opacity = (el.opacity == null ? 1 : Math.max(0, Number(el.opacity))) * 100;
+    await withOpacityAsync(doc, opacity, () => withRotation(doc, el, paint));
   }
   drawWatermark(doc, docMeta, box);
 }

@@ -14,6 +14,7 @@ import PageDecor from "./PageDecor.jsx";
 import CoverDecor from "./CoverDecor.jsx";
 import { coverDecorPrims } from "./coverDecor.js";
 import { makeQrDataUrl } from "./protection.js";
+import { watermarkPreviewFontSize } from "./watermark.js";
 
 const mm2px = (v, zoom = 1) => Number(v || 0) * PX_PER_MM * zoom;
 const pt2px = (v, zoom = 1) => Number(v || 0) * PT_TO_PX * zoom;
@@ -78,7 +79,7 @@ function textStyle(el, zoom) {
     padding: s.padding ? mm2px(s.padding, zoom) : undefined,
     background: s.bg && s.bg !== "transparent" ? cssAlpha(s.bg, (s.bgOpacity ?? 100) / 100) : undefined,
     borderRadius: s.radius ? mm2px(s.radius, zoom) : undefined,
-    "--ps": s.paraSpace ? `${mm2px(s.paraSpace, zoom)}px` : "0px",
+    "--ps": s.paraSpace ? `${pt2px(s.paraSpace, zoom)}px` : "0px",
   };
   const bw = s.border ? mm2px(s.border, zoom) : 0;
   if (bw) {
@@ -104,7 +105,7 @@ function TextView({ el, zoom, editing, onCommitHtml, tokensCtx }) {
   return (
     <div
       ref={ref}
-      className={`studio-text ${el.data?.pre ? "studio-pre" : ""} ${editing ? "editing" : ""}`}
+      className={`studio-text ${el.data?.pre ? "studio-pre" : ""} ${el.style?.dropCap ? "studio-dropcap" : ""} ${editing ? "editing" : ""}`}
       style={textStyle(el, zoom)}
       contentEditable={editing || undefined}
       suppressContentEditableWarning
@@ -156,7 +157,7 @@ function MediaView({ el, zoom }) {
     width: "100%",
     height: "100%",
     borderRadius: s.radius ? mm2px(s.radius, zoom) : undefined,
-    border: s.border ? `${mm2px(s.border, zoom)}px solid ${s.borderColor || "#111"}` : undefined,
+    border: s.border ? `${Math.max(1, mm2px(s.border, zoom))}px solid ${s.borderColor || "#111"}` : undefined,
     overflow: "hidden",
     background: s.bg && s.bg !== "transparent" ? cssAlpha(s.bg, (s.bgOpacity ?? 100) / 100) : undefined,
     boxSizing: "border-box",
@@ -183,7 +184,7 @@ function MediaView({ el, zoom }) {
     return (
       <div style={{ ...frame, display: "grid", gridTemplateColumns: `repeat(${Math.min(items.length, 3)}, 1fr)`, gap: mm2px(1.5, zoom) }}>
         {items.map((src, i) => (
-          <img key={i} src={src} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img key={i} src={src} alt="" draggable={false} style={{ width: "100%", height: "100%", objectFit: s.fit === "contain" ? "contain" : s.fit === "cover" ? "cover" : "fill" }} />
         ))}
       </div>
     );
@@ -201,22 +202,29 @@ function MediaView({ el, zoom }) {
       src={el.src}
       alt={el.name || ""}
       draggable={false}
-      style={{ ...frame, width: "100%", height: "100%", objectFit: s.fit === "contain" ? "contain" : "cover" }}
+      style={{
+        ...frame,
+        width: "100%",
+        height: "100%",
+        objectFit: s.fit === "contain" ? "contain" : s.fit === "cover" ? "cover" : "fill",
+      }}
     />
   );
 }
 // ─── Éléments de données (tableau, graphique, diagramme, statistiques, TOC) ─
 function DataView({ el, template, zoom }) {
   const d = el.data || {};
-  const accent = template?.colors?.accent || "#1d4ed8";
-  const bodyFont = FONT_CSS[template?.bodyFont] || FONT_CSS.serif;
-  const bodyColor = template?.colors?.body || "#111";
+  const st = el.style || {};
+  const accent = st.accent || st.palette?.[0] || template?.colors?.accent || "#1d4ed8";
+  const bodyFont = FONT_CSS[st.font || template?.bodyFont] || FONT_CSS.serif;
+  const bodyColor = st.color || template?.colors?.body || "#111";
+  const smallSize = Number(st.size) || Number(template?.sizes?.small) || 8;
   if (el.type === "table") {
     const rows = d.rows || [];
     const cols = d.colWidths && d.colWidths.length ? d.colWidths : rows[0]?.map(() => 1) || [];
     const total = cols.reduce((a, b) => a + b, 0) || 1;
     return (
-      <table className="studio-table" style={{ width: "100%", height: "100%", tableLayout: "fixed", borderCollapse: "collapse", fontSize: pt2px(template?.sizes?.small || 8, zoom), fontFamily: bodyFont }}>
+      <table className="studio-table" style={{ width: "100%", height: "100%", tableLayout: "fixed", borderCollapse: "collapse", fontSize: pt2px(Number(st.size) || Number(template?.sizes?.small) || 8, zoom), fontFamily: bodyFont }}>
         <colgroup>
           {cols.map((w, i) => (
             <col key={i} style={{ width: `${(w / total) * 100}%` }} />
@@ -229,12 +237,12 @@ function DataView({ el, template, zoom }) {
                 <td
                   key={ci}
                   style={{
-                    border: `1px solid ${cssAlpha(accent, 0.55)}`,
-                    padding: mm2px(1, zoom),
-                    background: c.header ? cssAlpha(accent, 0.14) : undefined,
+                    border: `${Math.max(1, mm2px(st.borderWidth || 0.25, zoom))}px solid ${cssAlpha(st.borderColor || accent, 0.55)}`,
+                    padding: mm2px(st.padding || 1, zoom),
+                    background: c.header ? cssAlpha(st.headerBg || accent, 0.14) : undefined,
                     fontWeight: c.header ? 700 : 400,
-                    textAlign: c.align || "left",
-                    color: bodyColor,
+                    textAlign: c.align || st.align || "left",
+                    color: c.header ? st.headerColor || bodyColor : bodyColor,
                     overflow: "hidden",
                   }}
                 >
@@ -250,12 +258,14 @@ function DataView({ el, template, zoom }) {
   if (el.type === "chart") {
     const series = d.series || [];
     const max = Math.max(1, ...series.map((p) => Number(p.value) || 0));
+    const palette = Array.isArray(st.palette) && st.palette.length ? st.palette : [accent];
+    const size = Number(st.size) || smallSize;
     return (
       <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", gap: mm2px(1, zoom), fontFamily: bodyFont }}>
-        {d.title ? <div style={{ fontSize: pt2px(template?.sizes?.small || 8, zoom), fontWeight: 700, color: template?.colors?.heading || "#111" }}>{d.title}</div> : null}
+        {d.title ? <div style={{ fontSize: pt2px(smallSize + 1, zoom), fontWeight: 700, color: st.color || template?.colors?.heading || "#111" }}>{d.title}</div> : null}
         <div style={{ flex: 1, display: "flex", alignItems: "flex-end", gap: mm2px(2, zoom) }}>
           {series.map((p, i) => (
-            <div key={i} style={{ flex: 1, height: `${((Number(p.value) || 0) / max) * 100}%`, minHeight: 2, background: cssAlpha(accent, 0.75), borderRadius: mm2px(0.8, zoom) }} title={`${p.label} : ${p.value}`} />
+            <div key={i} style={{ flex: 1, height: `${((Number(p.value) || 0) / max) * 100}%`, minHeight: 2, background: cssAlpha(palette[i % palette.length], 0.75), borderRadius: mm2px(st.radius || 0.8, zoom) }} title={`${p.label} : ${p.value}`} />
           ))}
         </div>
         <div style={{ display: "flex", gap: mm2px(2, zoom), fontSize: pt2px((template?.sizes?.small || 8) - 1, zoom), color: bodyColor }}>
@@ -270,12 +280,36 @@ function DataView({ el, template, zoom }) {
   }
   if (el.type === "diagram") {
     const nodes = d.nodes || [];
+    const horizontal = (d.flow || "h") === "h";
     return (
-      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", gap: mm2px(2, zoom), fontFamily: bodyFont }}>
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: horizontal ? "row" : "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: mm2px(2, zoom),
+          fontFamily: bodyFont,
+        }}
+      >
         {nodes.map((n, i) => (
           <React.Fragment key={i}>
-            {i > 0 ? <div style={{ flex: "0 0 auto", color: cssAlpha(accent, 0.8), fontSize: pt2px(10, zoom) }}>➜</div> : null}
-            <div style={{ flex: 1, border: `1px solid ${cssAlpha(accent, 0.5)}`, borderRadius: mm2px(2, zoom), padding: mm2px(1.5, zoom), textAlign: "center", fontSize: pt2px(template?.sizes?.small || 8, zoom), color: bodyColor, overflow: "hidden" }}>
+            {i > 0 ? <div style={{ flex: "0 0 auto", color: cssAlpha(st.accent || accent, 0.8), fontSize: pt2px(st.size || 10, zoom) }}>{horizontal ? "➜" : "↓"}</div> : null}
+            <div
+              style={{
+                flex: 1,
+                border: `${Math.max(1, mm2px(st.boxStrokeWidth || 0.3, zoom))}px solid ${st.boxStroke || accent}`,
+                borderRadius: mm2px(st.radius || 2, zoom),
+                padding: mm2px(st.padding || 1.5, zoom),
+                textAlign: "center",
+                fontSize: pt2px(st.size || smallSize, zoom),
+                color: st.color || bodyColor,
+                background: st.boxFill ? cssAlpha(st.boxFill, 1) : undefined,
+                overflow: "hidden",
+              }}
+            >
               {n.text}
             </div>
           </React.Fragment>
@@ -289,8 +323,8 @@ function DataView({ el, template, zoom }) {
       <div style={{ width: "100%", height: "100%", display: "flex", gap: mm2px(3, zoom), fontFamily: bodyFont }}>
         {items.map((it, i) => (
           <div key={i} style={{ flex: 1, textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
-            <div style={{ fontSize: pt2px((template?.sizes?.h2 || 16) * 0.9, zoom), fontWeight: 800, color: accent }}>{it.value}</div>
-            <div style={{ fontSize: pt2px(template?.sizes?.small || 8, zoom), color: bodyColor }}>{it.label}</div>
+            <div style={{ fontSize: pt2px(st.size || (template?.sizes?.h2 || 16) * 0.9, zoom), fontWeight: 800, color: st.color || accent }}>{it.value}</div>
+            <div style={{ fontSize: pt2px(st.labelSize || smallSize, zoom), color: st.labelColor || bodyColor }}>{it.label}</div>
           </div>
         ))}
       </div>
@@ -301,7 +335,7 @@ function DataView({ el, template, zoom }) {
     return (
       <div style={{ width: "100%", height: "100%", overflow: "hidden", fontFamily: bodyFont }}>
         {entries.map((e, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "baseline", gap: mm2px(1, zoom), paddingLeft: mm2px((Number(e.level) || 1) * 4, zoom), fontSize: pt2px(template?.sizes?.body || 10, zoom), color: bodyColor, lineHeight: 1.7 }}>
+          <div key={i} style={{ display: "flex", alignItems: "baseline", gap: mm2px(1, zoom), paddingLeft: mm2px((Number(e.level) || 1) * 4, zoom), fontSize: pt2px(st.size || template?.sizes?.body || 10, zoom), color: st.color || bodyColor, lineHeight: st.lineHeight || 1.7 }}>
             <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.text}</span>
             <span style={{ flex: 1, borderBottom: `1px dotted ${cssAlpha(accent, 0.6)}`, transform: "translateY(-3px)" }} />
             <span>{e.page}</span>
@@ -571,6 +605,18 @@ export default function StudioCanvas({
         docMeta={docMeta || {}}
         scale={zoom}
       />
+      {page.kind !== "cover" && docMeta?.protection?.watermark?.enabled ? (
+        <div
+          className="studio-watermark"
+          style={{
+            fontSize: pt2px(watermarkPreviewFontSize(box), zoom),
+            color: docMeta.protection.watermark.color || "#555555",
+            opacity: docMeta.protection.watermark.mode === "visible" ? 0.16 : 0.06,
+          }}
+        >
+          {docMeta.protection.watermark.text || `© ${docMeta.author || "Auteur"}`}
+        </div>
+      ) : null}
       {els.map((el) => {
         if (el.hidden && !showHidden) return null;
         const sel = selectedSet.has(el.id);
