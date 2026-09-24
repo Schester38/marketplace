@@ -14,7 +14,7 @@
 // Ce module est PUR (aucun accès DOM, aucun réseau) : il fabrique, transforme
 // et analyse le modèle. La mesure du texte vit dans StudioCanvas (mesure
 // navigateur) et dans studioExport (métriques jsPDF).
-import { PX_PER_MM, lineText } from "./paginate.js";
+import { PX_PER_MM, PT_TO_PX, lineText } from "./paginate.js";
 import { resolvePageBox, resolveCover, coverLayoutBox, FONT_CSS } from "./templates.js";
 import { coverDecorPrims } from "./coverDecor.js";
 import { copyrightLines, verificationPayload } from "./protection.js";
@@ -627,7 +627,15 @@ function textElementFromGroup(template, group, box) {
   const top = Math.min(...group.map((a) => a.top));
   let bottom = top;
   for (const a of group) {
-    for (const ln of a.lines || []) bottom = Math.max(bottom, a.top + (ln.bottom || ln.top || 0));
+    const lineBottom = Math.max(
+      ...(a.lines || []).map((ln) => Number(ln?.bottom) || Number(ln?.top) || 0),
+      0,
+    );
+    // La boîte doit couvrir l'AVANCE de la dernière ligne (`a.h`), pas
+    // seulement son encre (`lineBottom`). Cette distinction est visible dès
+    // qu'un paragraphe comporte plusieurs lignes : sinon sa boîte est trop
+    // courte et le Studio la repousse plusieurs fois à la première mesure.
+    bottom = Math.max(bottom, a.top + Math.max(Number(a.h) || 0, lineBottom));
   }
   const kind = first.kind; // p | h1..h4 | quote | pre | list
   const type = kind === "h1" ? "heading" : kind === "h2" ? "subtitle"
@@ -645,6 +653,18 @@ function textElementFromGroup(template, group, box) {
     data.pre = true;
   }
   if (kind === "list") data.list = true;
+  // Le dernier atome d'un paragraphe peut avoir `a.h` égal à la seule
+  // hauteur d'encre (la pagination réserve l'interligne après la ligne).
+  // La boîte Studio doit toutefois contenir la hauteur CSS complète de sa
+  // dernière ligne ; sinon le div déborde immédiatement sur le bloc suivant.
+  const sizePx = Number(style.size || template.sizes.body) * PT_TO_PX;
+  const lineHeightPx = sizePx * (Number(style.lineHeight) || template.lineHeight || 1.5);
+  const last = group[group.length - 1];
+  const lastLineBottom = Math.max(
+    ...(last?.lines || []).map((ln) => Number(ln?.bottom) || Number(ln?.top) || 0),
+    0,
+  );
+  if (last) bottom = Math.max(bottom, (Number(last.top) || 0) + Math.max(Number(last.h) || 0, lastLineBottom, lineHeightPx));
   return makeElement(template, type, {
     x: m.left,
     y: round1(m.top + px2mm(top)),
@@ -804,8 +824,10 @@ export function readStudio(pageLayout) {
  *   v1 → avant correction de l'avance de ligne (hauteur d'encre seule).
  *   v2 → avance de ligne réelle mesurée + espacements appliqués aux bords du
  *        bloc (plus aucun chevauchement de texte).
+ *   v3 → première mesure DOM Studio neutralisée + reconstruction ordonnée du
+ *        flux après une modification (pas de dérive à l'ouverture).
  */
-export const LAYOUT_ENGINE_VERSION = 3;
+export const LAYOUT_ENGINE_VERSION = 4;
 
 /**
  * Empreinte du DESIGN (modèle, styles avancés, format, marges, sommaire,

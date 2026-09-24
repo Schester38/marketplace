@@ -102,12 +102,19 @@ function TextView({ el, zoom, editing, onCommitHtml, tokensCtx, onAutoHeight, pa
   useEffect(() => {
     if (editing && ref.current) ref.current.innerHTML = html;
   }, [editing, html]);
-  // Mesure réelle après chaque changement de taille/style. Un paragraphe qui
-  // grandit peut sinon déborder de sa boîte et recouvrir le paragraphe suivant.
-  // La conversion px CSS → mm utilise le même zoom que le canvas, donc
-  // l'aperçu et le PDF restent sur le même repère.
+  // La première mesure est celle de l'ouverture : la hauteur initiale vient
+  // déjà du moteur paginé et ne doit surtout pas déclencher un nouveau flux.
+  // Une mesure n'est demandée qu'après une vraie modification (HTML, style,
+  // largeur ou zoom). La clé exclut box.h afin que le repositionnement
+  // automatique ne redéclenche jamais lui-même une mesure.
+  const measureKey = JSON.stringify([html, el.style, el.box?.w, zoom]);
+  const firstMeasureRef = useRef(true);
   useEffect(() => {
-    if (!el.autoH || !onAutoHeight || !ref.current || typeof ResizeObserver === "undefined") return undefined;
+    if (firstMeasureRef.current) {
+      firstMeasureRef.current = false;
+      return undefined;
+    }
+    if (el.autoH === false || !onAutoHeight || !ref.current || typeof ResizeObserver === "undefined") return undefined;
     const node = ref.current;
     const report = () => {
       const rect = node.getBoundingClientRect();
@@ -118,7 +125,7 @@ function TextView({ el, zoom, editing, onCommitHtml, tokensCtx, onAutoHeight, pa
     observer.observe(node);
     report();
     return () => observer.disconnect();
-  }, [pageId, el.id, el.autoH, el.html, el.box?.w, el.style, zoom, onAutoHeight]);
+  }, [measureKey, pageId, el.id, el.autoH, onAutoHeight]);
   return (
     <div
       ref={ref}

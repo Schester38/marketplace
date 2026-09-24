@@ -590,7 +590,20 @@ export default function DocStudio({ doc, docMeta, html, onClose, onSaved, onLayo
         autoHeightFrame.current = 0;
         let next = pagesRef.current || [];
         let changed = false;
-        for (const item of autoHeightQueue.current.values()) {
+        // Les hauteurs reçues pendant la frame sont cohérentes avec la même
+        // révision du DOM : on les applique dans l'ordre des pages puis des
+        // éléments, jamais dans l'ordre arbitraire des callbacks navigateur.
+        const pageOrder = new Map(next.map((page, index) => [page.id, index]));
+        const itemY = (item) => {
+          const page = next.find((candidate) => candidate.id === item.pageId);
+          const element = page?.elements?.find((candidate) => candidate.id === item.elId);
+          return Number(element?.box?.y) || 0;
+        };
+        const items = [...autoHeightQueue.current.values()].sort((a, b) => {
+          const pageDelta = (pageOrder.get(a.pageId) ?? 0) - (pageOrder.get(b.pageId) ?? 0);
+          return pageDelta || itemY(a) - itemY(b);
+        });
+        for (const item of items) {
           const updated = fitMeasuredTextHeight(next, item.pageId, item.elId, item.heightMm);
           if (updated !== next) changed = true;
           next = updated;
