@@ -342,6 +342,18 @@ const SELECT_PRODUCT = `
   LEFT JOIN flash_promotions fp ON fp.product_id = p.id AND fp.ends_at > now()
 `;
 
+// Variante propriétaire : ajoute UNIQUEMENT l'identifiant du document source
+// quand le produit a été publié par le Générateur. Le contenu/page_layout n'est
+// jamais chargé ici ; la relation suffit au bouton « Modifier » de l'espace
+// créateur et reste absente des réponses publiques du catalogue.
+const SELECT_OWNER_PRODUCT = SELECT_PRODUCT.replace(
+  "fp.duration_minutes AS flash_duration_minutes",
+  `fp.duration_minutes AS flash_duration_minutes,
+         (SELECT gd.id FROM gen_documents gd
+          WHERE gd.published_product_id = p.id AND gd.owner_id = p.shop_id
+          ORDER BY gd.updated_at DESC LIMIT 1) AS generator_document_id`
+);
+
 const NORMALIZE_TEXT = (col) =>
   `regexp_replace(translate(lower(${col}), 'àâäáéèêëíîïóôöúùûüçñ', 'aaaaeeeeiiiioooouuuucn'), '[^a-z0-9]', '', 'g')`;
 
@@ -545,7 +557,7 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
 router.get("/mine", authRequired, roleRequired(...OWNER_ROLES), async (req, res) => {
   const products = (
     await q(
-      SELECT_PRODUCT +
+      SELECT_OWNER_PRODUCT +
         ` WHERE p.shop_id = $1
             AND NOT EXISTS (SELECT 1 FROM flash_promotions fp2 WHERE fp2.product_id = p.id AND fp2.ends_at > now())
           ORDER BY p.created_at DESC`,

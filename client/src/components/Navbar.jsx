@@ -1091,7 +1091,7 @@ export default function Navbar({ onLogout }) {
         <span className="dl-icon">
           <IconBook size={15} />
         </span>
-        <span className="dl-label">{t("Formations et Digital")}</span>
+        <span className="dl-label">{t("Produits digitaux")}</span>
       </Link>
       <Link to="/soutien" onClick={close} className="drawer-link drawer-link-support">
         <span className="dl-icon">

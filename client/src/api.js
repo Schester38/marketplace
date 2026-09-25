@@ -170,13 +170,13 @@ export const api = {
     request("/auth/password", { method: "PUT", body: JSON.stringify(payload) }),
   deleteAccount: (payload) =>
     request("/auth/me", { method: "DELETE", body: JSON.stringify(payload) }),
-  listProducts: (params = {}) => {
+  listProducts: (params = {}, options = {}) => {
     const qs = new URLSearchParams(
       Object.fromEntries(
         Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
       )
     ).toString();
-    return request("/products" + (qs ? `?${qs}` : ""));
+    return request("/products" + (qs ? `?${qs}` : ""), options);
   },
   geo: () => request("/geo"),
   listCities: (search = "") =>
@@ -189,7 +189,7 @@ export const api = {
     ).toString();
     return request("/shop" + (qs ? `?${qs}` : ""));
   },
-  getProduct: (id) => request(`/products/${id}`),
+  getProduct: (id, options = {}) => request(`/products/${id}`, options),
   myProducts: () => request("/products/mine"),
   createProduct: (payload) =>
     request("/products", { method: "POST", body: JSON.stringify(payload) }),

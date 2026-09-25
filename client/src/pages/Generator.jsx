@@ -149,7 +149,7 @@ function DocThumb({ doc }) {
 
 // variant : "creator" (page /generateur, portée utilisateur — défaut) ou
 // "admin" (onglet 📚 du panneau, portée admin : tous les documents).
-export default function GeneratorPanel({ variant = "creator" }) {
+export default function GeneratorPanel({ variant = "creator", initialDocumentId = null }) {
   const { t } = useLang();
   useEffect(() => {
     setGeneratorScope(variant === "admin");
@@ -162,6 +162,7 @@ export default function GeneratorPanel({ variant = "creator" }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [openDoc, setOpenDoc] = useState(null); // { document, content, versions }
+  const initialOpenedRef = useRef(0);
 
   const load = useCallback(() => {
     api
@@ -185,6 +186,15 @@ export default function GeneratorPanel({ variant = "creator" }) {
       setBusy(false);
     }
   };
+
+  // Ouverture profonde depuis « Modifier » dans l'espace créateur. Le serveur
+  // conserve la propriété : un autre document répond 404 et n'est jamais ouvert.
+  useEffect(() => {
+    const id = Number(initialDocumentId || 0);
+    if (!id || initialOpenedRef.current === id) return;
+    initialOpenedRef.current = id;
+    open(id);
+  }, [initialDocumentId]);
 
   // ─── Assistant guidé : « Déposez → Analysez → Choisissez → Générez » ────────
   // Dépose d'un fichier (ou collage de texte) : le document est créé, ouvert
@@ -1325,15 +1335,37 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
   }
 
-  const openPublish = () => {
+  const openPublish = async () => {
     setError("");
+    const productId = Number(metaRef.current.published_product_id || 0);
+    const current = metaRef.current;
     setPub({
       price: "",
       description: "",
-      title: metaRef.current.title || "",
+      title: current.title || "",
       category: "Digital",
       commission: "",
     });
+    if (!productId) return;
+    try {
+      // La publication existante doit être mise à jour, jamais remplacée par
+      // une nouvelle fiche vide. On relit les valeurs commerciales actuelles.
+      const d = await api.getProduct(productId, { cache: "no-store" });
+      const p = d?.product || {};
+      const price = Number(p.price || 0);
+      setPub({
+        price: price ? String(price) : "",
+        description: p.description || "",
+        title: p.name || current.title || "",
+        category: p.category || "Digital",
+        commission:
+          price && p.commission_percent != null
+            ? String(Math.round(price * Number(p.commission_percent)) / 100)
+            : "",
+      });
+    } catch (e) {
+      setError(e?.message || t("Impossible de charger la publication actuelle."));
+    }
   };
 
   const doPublish = async () => {

@@ -224,6 +224,9 @@ export const productListQuerySchema = z.object({
   max_price: z.coerce.number().min(0, "Prix maximum invalide").optional(),
   city: z.string().max(60).optional(),
   country: z.string().max(60).optional(),
+  // Jeton de rafraîchissement interne pour une nouvelle publication digitale.
+  // Il est accepté mais n'entre jamais dans la requête SQL.
+  catalog_refresh: z.coerce.number().int().nonnegative().optional(),
   limit: z.coerce.number().int().min(1).max(100, "Maximum 100 résultats par page").optional(),
   offset: z.coerce.number().int().min(0).optional(),
 });

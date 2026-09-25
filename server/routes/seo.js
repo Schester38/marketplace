@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { q } from "../db.js";
+import { proxyPhotoUrl } from "../photoProxy.js";
 
 const router = Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -135,9 +136,10 @@ function originOf(req) {
 }
 
 function absImageOf(image, origin = BASE_URL) {
-  if (!image || /^data:/.test(image)) return OG_DEFAULT;
-  if (/^https?:/.test(image)) return image;
-  return `${origin}${image}`;
+  const proxied = proxyPhotoUrl(image);
+  if (!proxied || /^data:/.test(proxied)) return OG_DEFAULT;
+  if (/^https?:/.test(proxied)) return proxied;
+  return `${origin}${proxied}`;
 }
 
 router.get("/", async (req, res) => {
@@ -180,12 +182,9 @@ router.get("/", async (req, res) => {
           position: i + 1,
           name: p.name,
           url: `${BASE_URL}/produit/${p.id}`,
-          image:
-            p.image && /^https?:/.test(p.image)
-              ? p.image
-              : p.image
-                ? `${BASE_URL}${p.image}`
-                : undefined,
+          image: p.image
+            ? absImageOf(p.image, originOf(req))
+            : undefined,
           offers: {
             "@type": "Offer",
             price: String(Number(p.price || 0)),
@@ -255,7 +254,7 @@ router.get(["/produit/:id", "/acheter/:id"], async (req, res) => {
       "@context": "https://schema.org",
       "@type": "Product",
       name: p.name,
-      image,
+      image: absImage,
       description: descText,
       url: canonical,
       offers: {

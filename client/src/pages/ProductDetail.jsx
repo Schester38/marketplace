@@ -25,6 +25,16 @@ import {
   IconLayers,
 } from "../components/icons.jsx";
 
+/** URL absolue pour les métadonnées sociales et le partage d'une image produit. */
+function absoluteProductImage(image) {
+  if (!image || typeof image !== "string" || image.startsWith("data:")) return null;
+  try {
+    return new URL(image, `${BASE_URL}/`).toString();
+  } catch {
+    return null;
+  }
+}
+
 export default function ProductDetail() {
   const { id } = useParams();
   const [params] = useSearchParams();
@@ -150,7 +160,7 @@ export default function ProductDetail() {
       "@context": "https://schema.org",
       "@type": "Product",
       name: product.name,
-      image: (product.photos && product.photos[0]) || product.image || undefined,
+      image: absoluteProductImage(firstProductImage(product)),
       description: product.description || product.name,
       sku: String(product.id),
       brand: { "@type": "Brand", name: product.shop_name },
@@ -298,7 +308,22 @@ export default function ProductDetail() {
         const d = await api.digitalWaitOnline(saleId, code);
         if (d.confirmed && dBuyRef.current && dBuyRef.current.saleId === saleId) {
           stopDigitalPoll();
-          setDBuy((b) => (b && b.saleId === saleId ? { ...b, stage: "ready", err: "" } : b));
+          // Une vidéo s'ouvre dès la confirmation ; un fichier reste derrière
+          // son bouton de téléchargement pour éviter un téléchargement multiple.
+          if (product.digital_kind === "youtube") {
+            try {
+              const video = await api.digitalVideo(saleId, code);
+              setDBuy((b) =>
+                b && b.saleId === saleId
+                  ? { ...b, stage: "ready", videoSrc: video.embed_src, err: "" }
+                  : b
+              );
+            } catch (e) {
+              setDBuy((b) => (b && b.saleId === saleId ? { ...b, stage: "ready", err: e.message } : b));
+            }
+          } else {
+            setDBuy((b) => (b && b.saleId === saleId ? { ...b, stage: "ready", err: "" } : b));
+          }
         }
       } catch {
         /* réseau/timeout : on réessaie au prochain tick */
@@ -317,6 +342,7 @@ export default function ProductDetail() {
         saleId: d.sale_id,
         code: d.confirm_code,
         checkoutUrl: d.checkout_url,
+        digitalKind: product.digital_kind === "youtube" ? "youtube" : "file",
       });
     } catch (e) {
       setDBuy({ stage: "error", err: e.message });
@@ -328,14 +354,18 @@ export default function ProductDetail() {
     setDBuy(null);
   };
 
-  // Téléchargement UNIQUE : pendant l'envoi le bouton est désactivé ; dès que
-  // le fichier part sur l'appareil → félicitations, puis retour automatique à
-  // la vitrine (fermeture de la modale après quelques secondes).
+  // Contenu numérique après confirmation : un fichier déclenche l'URL signée ;
+  // une vidéo appelle la route serveur protégée et affiche l'iframe YouTube.
   const downloadDigitalNow = async () => {
     const current = dBuyRef.current;
     if (!current) return;
     setDBuy((b) => ({ ...b, stage: "downloading", err: "" }));
     try {
+      if (current.digitalKind === "youtube") {
+        const d = await api.digitalVideo(current.saleId, current.code);
+        setDBuy((b) => ({ ...b, stage: "ready", videoSrc: d.embed_src, err: "" }));
+        return;
+      }
       const d = await api.digitalDownload(current.saleId, current.code);
       const a = document.createElement("a");
       a.href = d.url;
@@ -385,6 +415,7 @@ export default function ProductDetail() {
           symbol,
           shop: product.shop_name,
         })}
+        ogImage={absoluteProductImage(firstProductImage(product))}
       />
       <Link to="/" className="btn btn-outline" style={{ marginBottom: 16 }}>
         ← {t("Retour aux produits")}
@@ -744,7 +775,7 @@ export default function ProductDetail() {
                           title: product.name,
                           text,
                           url,
-                          imageUrl: firstProductImage(product),
+                          imageUrl: absoluteProductImage(firstProductImage(product)),
                         });
                       } else {
                         await navigator.clipboard.writeText(url);
@@ -870,17 +901,37 @@ export default function ProductDetail() {
             {(dBuy.stage === "ready" || dBuy.stage === "downloading") && (
               <div className="digital-buy-center">
                 <p className="digital-buy-title">📁 {product.name}</p>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-block"
-                  onClick={downloadDigitalNow}
-                  disabled={dBuy.stage === "downloading"}
-                >
-                  {dBuy.stage === "downloading"
-                    ? `⏳ ${t("Téléchargement en cours…")}`
-                    : `⬇️ ${t("Télécharger mon fichier")}`}
-                </button>
-                <p className="hint">{t("Un seul téléchargement est autorisé pour cet achat.")}</p>
+                {dBuy.videoSrc ? (
+                  <div className="protected-video-frame">
+                    <iframe
+                      src={dBuy.videoSrc}
+                      title={product.name}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      referrerPolicy="strict-origin-when-cross-origin"
+                    />
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-block"
+                    onClick={downloadDigitalNow}
+                    disabled={dBuy.stage === "downloading"}
+                  >
+                    {dBuy.stage === "downloading"
+                      ? `⏳ ${dBuy.digitalKind === "youtube" ? t("Ouverture de la vidéo…") : t("Téléchargement en cours…")}`
+                      : dBuy.digitalKind === "youtube"
+                        ? `▶ ${t("Regarder la vidéo")}`
+                        : `⬇️ ${t("Télécharger mon fichier")}`}
+                  </button>
+                )}
+                {!dBuy.videoSrc && (
+                  <p className="hint">
+                    {dBuy.digitalKind === "youtube"
+                      ? t("La vidéo s'ouvrira après validation de votre accès.")
+                      : t("Un seul téléchargement est autorisé pour cet achat.")}
+                  </p>
+                )}
                 {dBuy.err && <p className="error">{dBuy.err}</p>}
               </div>
             )}

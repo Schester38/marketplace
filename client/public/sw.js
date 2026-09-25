@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v342';
+const CACHE_NAME = 'mboppi-v343';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/robots.txt', '/splash.js'];
 // Les diapositives, illustrations sociales et logos secondaires sont charges a la
 // demande : les precacher a chaque version augmentait l'egress des installations.
@@ -235,10 +235,11 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin !== location.origin) return;
 
-  // Donnees API : JSON publics servis depuis le cache (stale-while-revalidate avec timeout)
-  // pour que la page s'ouvre meme en reseau tres lent ; le reste est en reseau pur.
+  // Un changement vers les produits digitaux doit voir immédiatement une
+  // publication récente. Le cache du service worker ne doit pas masquer le
+  // résultat réseau de cette requête explicitement fraîche.
   if (url.pathname.startsWith('/api/')) {
-    if (isApiSwr(url.pathname)) {
+    if (isApiSwr(url.pathname) && event.request.cache !== 'no-store') {
       event.respondWith(apiSwr(event.request));
     } else {
       event.respondWith(

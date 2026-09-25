@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import ProductCard, { formatMoney } from "../components/ProductCard.jsx";
 import Seo from "../components/Seo.jsx";
@@ -61,6 +61,7 @@ const PHOTO_PROMPT =
 export default function CreatorDashboard() {
   const { user } = useAuth();
   const { t } = useLang();
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
   const [stats, setStats] = useState(null);
@@ -254,6 +255,15 @@ export default function CreatorDashboard() {
   };
 
   const editProduct = async (p) => {
+    // Produit issu du Générateur MboppiShop : ouvrir le document source et son
+    // éditeur. La publication existante sera mise à jour depuis le Générateur,
+    // sans recréer un second produit.
+    const documentId = Number(p.generator_document_id || 0);
+    if (p.is_digital === true && documentId > 0) {
+      navigate(`/generateur?document=${documentId}`);
+      return;
+    }
+
     const currentPrefix = countryPhone(user?.country);
     const contact =
       p.contact && p.contact.startsWith(currentPrefix)

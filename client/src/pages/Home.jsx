@@ -30,6 +30,10 @@ export default function Home() {
   const { user } = useAuth();
   const [params, setSearchParams] = useSearchParams();
   const mounted = useRef(true);
+  // Chaque changement de filtre doit invalider la réponse précédente : sans ce
+  // jeton, une requête « physiques » tardive peut écraser la réponse « digital »
+  // et faire croire qu'un actualisation manuelle est nécessaire.
+  const productRequestId = useRef(0);
   const hasLoaded = useRef(false);
   const hasData = useRef(false);
   const retryRef = useRef(0);
@@ -81,9 +85,10 @@ export default function Home() {
   const [recent, setRecent] = useState([]);
 
   useEffect(() => {
-    try {
-      const cached = sessionStore.getItem("mboppi_products");
-      const arr = cached ? JSON.parse(cached) : null;
+      if (ptype !== "physical") return;
+      try {
+        const cached = sessionStore.getItem("mboppi_products");
+        const arr = cached ? JSON.parse(cached) : null;
       if (Array.isArray(arr) && arr.length) {
         hasLoaded.current = true;
         hasData.current = true;
@@ -122,7 +127,14 @@ export default function Home() {
   }, [params.get("cat")]);
 
   useEffect(() => {
-    setPtype(params.get("type") === "digital" ? "digital" : "physical");
+    const nextType = params.get("type") === "digital" ? "digital" : "physical";
+    setPtype(nextType);
+    // Afficher immédiatement la nouvelle famille, jamais les anciennes cartes
+    // pendant que la requêtefiltrée est en cours.
+    setProducts([]);
+    hasLoaded.current = false;
+    hasData.current = false;
+    setLoading(true);
     setOffset(0);
     setPage(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -256,6 +268,7 @@ export default function Home() {
 
   const loadProducts = useCallback(
     (silent, append) => {
+      const requestId = ++productRequestId.current;
       if (!silent && !hasLoaded.current) setLoading(true);
       // Navigation libre (sans recherche ni filtre) : les produits tournent à
       // chaque visite via la graine. Recherche/filtres : ordre pertinent conservé.
@@ -268,15 +281,20 @@ export default function Home() {
           sort: sort || undefined,
           // Volet actif : produits physiques OU digitaux (jamais les deux).
           type: ptype,
+          // Le catalogue public est court-caché par Supabase/Vercel. Un produit
+          // digital vient d'être publié : cette clé unique force une réponse
+          // fraîche sans disable-cache global et sans invalider le cache navigateur
+          // des autres onglets.
+          ...(ptype === "digital" ? { catalog_refresh: Date.now() } : {}),
           ...(scope && scope !== "product" ? { scope } : {}),
           ...(minPrice ? { min_price: Number(minPrice) } : {}),
           ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
           ...(localOnly && geoCountry ? { country: geoCountry } : {}),
           limit: isBrowse ? BROWSE_PAGE_SIZE : PER_PAGE,
           offset: isBrowse ? page * BROWSE_PAGE_SIZE : offset,
-        })
+        }, ptype === "digital" ? { cache: "no-store" } : {})
         .then((d) => {
-          if (mounted.current) {
+          if (mounted.current && requestId === productRequestId.current) {
             hasLoaded.current = true;
             const next = d.products || [];
             const unfiltered =
@@ -299,9 +317,11 @@ export default function Home() {
             }
           }
         })
-        .catch((e) => mounted.current && setError(e.message))
+        .catch((e) => {
+          if (mounted.current && requestId === productRequestId.current) setError(e.message);
+        })
         .finally(() => {
-          if (mounted.current) {
+          if (mounted.current && requestId === productRequestId.current) {
             setLoading(false);
             setLoadingMore(false);
             if (
