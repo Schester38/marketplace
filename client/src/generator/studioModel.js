@@ -844,8 +844,10 @@ export function readStudio(pageLayout) {
  *        bloc (plus aucun chevauchement de texte).
  *   v3 → première mesure DOM Studio neutralisée + reconstruction ordonnée du
  *        flux après une modification (pas de dérive à l'ouverture).
+ *   v5 → plus de retrait artificiel d'ouverture de chapitre : le titre d'un
+ *        chapitre qui ouvre une page commence à la marge haute (`m.top`).
  */
-export const LAYOUT_ENGINE_VERSION = 4;
+export const LAYOUT_ENGINE_VERSION = 5;
 
 /**
  * Empreinte du DESIGN (modèle, styles avancés, format, marges, sommaire,

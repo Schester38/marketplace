@@ -5803,6 +5803,8 @@ const GEN4_EN = {
 
 // Studio d'édition page par page — Digital Publishing Studio (§1-§28).
 const GEN5_EN = {
+  "Marge haut (mm)": "Top margin (mm)",
+  "Marge bas (mm)": "Bottom margin (mm)",
   Studio: "Studio",
   "Studio synchronisé avec le contenu et le design du document.": "Studio synced with the document's content and design.",
   "Mise en page du Studio active : l'aperçu et le PDF exporté suivent les pages éditées page par page.": "Studio layout active: the preview and the exported PDF follow the pages you edited page by page.",
@@ -6007,6 +6009,8 @@ const GEN4_AR = {
 
 // Studio d'édition page par page — Digital Publishing Studio (§1-§28).
 const GEN5_AR = {
+  "Marge haut (mm)": "الهامش العلوي (مم)",
+  "Marge bas (mm)": "الهامش السفلي (مم)",
   "Studio synchronisé avec le contenu et le design du document.": "تمت مزامنة الاستوديو مع محتوى المستند وتصميمه.",
   "Mise en page du Studio active : l'aperçu et le PDF exporté suivent les pages éditées page par page.": "تخطيط الاستوديو مُفعَّل: المعاينة وملف PDF المُصدَّر يتبعان الصفحات التي حرّرتها صفحة بصفحة.",
   "Ouvrir le Studio": "افتح الاستوديو",
@@ -6211,6 +6215,8 @@ const GEN4_ES = {
 
 // Studio d'édition page par page — Digital Publishing Studio (§1-§28).
 const GEN5_ES = {
+  "Marge haut (mm)": "Margen superior (mm)",
+  "Marge bas (mm)": "Margen inferior (mm)",
   Studio: "Estudio",
   "Studio synchronisé avec le contenu et le design du document.": "Estudio sincronizado con el contenido y el diseño del documento.",
   "Mise en page du Studio active : l'aperçu et le PDF exporté suivent les pages éditées page par page.": "Diseño del Estudio activo: la vista previa y el PDF exportado siguen las páginas que editaste página por página.",

@@ -2269,11 +2269,19 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
                 </select>
               </div>
               <div>
-                <label>{t("Marge haut/bas (mm)")}</label>
+                <label>{t("Marge haut (mm)")}</label>
                 <input
                   className="input" type="number" min={5} max={60}
                   value={meta.margins?.top ?? 20}
-                  onChange={(e) => patchMeta({ margins: { ...(meta.margins || {}), top: Number(e.target.value), bottom: Number(e.target.value) } })}
+                  onChange={(e) => patchMeta({ margins: { ...(meta.margins || {}), top: Number(e.target.value) } })}
+                />
+              </div>
+              <div>
+                <label>{t("Marge bas (mm)")}</label>
+                <input
+                  className="input" type="number" min={5} max={60}
+                  value={meta.margins?.bottom ?? 20}
+                  onChange={(e) => patchMeta({ margins: { ...(meta.margins || {}), bottom: Number(e.target.value) } })}
                 />
               </div>
               <div>
@@ -3106,7 +3114,9 @@ export function GenPage({ page, paginated, docMeta, fit }) {
   const footerSize = MBOPPI_PROMO_FONT_PT;
   const smallPt = template.sizes.small;
   const baselineTop = (sizePt) => mm((Number(sizePt) * BASELINE_EM) / 2.83);
-  const footerBaseline = h - m.bottom + 8;
+  // Pied de page : 8 mm sous le texte, mais TOUJOURS dans la page même avec une
+  // marge basse minimale (5 mm → sans borne, la ligne de base tombait à h+3).
+  const footerBaseline = Math.min(h - m.bottom + 8, h - 6);
   const headerBaseline = m.top - 7;
   const hfBase = { position: "absolute", zIndex: 3, whiteSpace: "nowrap", color: template.colors.accent };
   const prot = docMeta.protection || {};

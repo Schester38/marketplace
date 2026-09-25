@@ -449,10 +449,6 @@ export async function measureDocument(html, docMeta, template) {
 
 // ─── Flux en pages ──────────────────────────────────────────────────────────
 
-// Retrait d'ouverture de chapitre (fraction de la hauteur utile) : la première
-// page d'un chapitre respire, comme dans un livre imprimé.
-const CHAPTER_DROP = 0.1;
-
 function findGroupStart(items, groupId) {
   for (let i = 0; i < items.length; i++) {
     if (items[i].groupId === groupId) return i;
@@ -524,12 +520,12 @@ export function flowAtoms(atoms, contentHpx, template, bodyLineH) {
     // suite), sinon chaque ligne en majuscules couperait la page.
     if (atom.chapterStart && template.chapterNewPage && firstPlaced) {
       flush();
-      // Retrait « ouverture de chapitre » : la page respire, comme dans un
-      // livre imprimé (le PDF et l'aperçu consomment la même position).
-      if (items.length === 0) {
-        y = contentHpx * CHAPTER_DROP;
-        prevAfter = 0;
-      }
+      // Aucun retrait artificiel : un chapitre qui ouvre une page commence
+      // EXACTEMENT à la marge haute (`m.top`), comme le reste du texte. Un
+      // décalage de 10 % de la hauteur utile éloignait le titre du haut sur
+      // les modèles `chapterNewPage` et donnait l'impression d'une mauvaise
+      // marge ; la respiration du chapitre reste assurée par l'espacement
+      // `blockSpacing("h1").before` en cours de page.
     }
 
     if (items.length > 0) {

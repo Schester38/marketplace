@@ -611,7 +611,9 @@ function drawHeaderFooter(doc, page, docMeta, template, box) {
     fill(cfg.headerRight, "right", slotY);
   }
   if (cfg.footer !== false) {
-    const slotY = h - m.bottom + 8;
+    // Même borne que l'aperçu (`GenPage`) : la ligne de base du pied reste dans
+    // la page quand la marge basse est très petite (5 mm).
+    const slotY = Math.min(h - m.bottom + 8, h - 6);
     // Promotion MboppiShop : à gauche, en italique, avec une annotation PDF
     // réelle sur le domaine. Le numéro reste centré et les champs existantes
     // gardent leurs emplacements centre/droite.
