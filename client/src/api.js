@@ -57,13 +57,14 @@ function notifyAdminSessionExpired() {
 }
 
 async function request(path, options = {}, retries = 2) {
-  const token = storage.getItem("token");
-  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  const { skipAuth, ...fetchOptions } = options;
+  const token = skipAuth ? null : storage.getItem("token");
+  const headers = { "Content-Type": "application/json", ...(fetchOptions.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const method = (options.method || "GET").toUpperCase();
+  const method = (fetchOptions.method || "GET").toUpperCase();
   let data = {};
   try {
-    const res = await fetch(API + path, { ...options, headers });
+    const res = await fetch(API + path, { ...fetchOptions, headers });
     data = await res.json().catch(() => ({}));
     if (!res.ok) {
       if (
@@ -89,7 +90,7 @@ async function request(path, options = {}, retries = 2) {
     // ou 5xx transitoire (cold start, déploiement) -> invisible pour l'utilisateur.
     if ((network || serverError) && method === "GET" && retries > 0) {
       await sleep(network ? 1200 : retries === 2 ? 800 : 2000);
-      return request(path, options, retries - 1);
+      return request(path, { ...fetchOptions, skipAuth }, retries - 1);
     }
     if (serverError) reportServerError(path, err.status, data?.error || "");
     throw err;
@@ -459,7 +460,7 @@ export const api = {
   createActivationWithdrawal: (payload) =>
     request("/activation-withdrawals", { method: "POST", body: JSON.stringify(payload) }),
   // Paiements en ligne (iKeePay — PAYIN uniquement : adhésion + don)
-  paymentSettings: () => request("/payments/settings"),
+  paymentSettings: () => request("/payments/settings", { cache: "default", skipAuth: true }),
   membershipStatus: () => request("/payments/membership-status"),
   membershipPayin: () => request("/payments/membership-payin", { method: "POST" }),
   donationPayin: (payload) =>

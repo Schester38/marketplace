@@ -105,6 +105,7 @@ export default function ProductDetail() {
             review_count: p.review_count,
             quantity: p.quantity,
             category: p.category,
+            is_digital: p.is_digital === true,
           };
           const updated = [
             entry,

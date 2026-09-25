@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v345';
+const CACHE_NAME = 'mboppi-v346';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/robots.txt', '/splash.js'];
 // Les diapositives, illustrations sociales et logos secondaires sont charges a la
 // demande : les precacher a chaque version augmentait l'egress des installations.
@@ -11,6 +11,7 @@ const API_SWR = [
   '/api/offers',
   '/api/metrics/trending',
   '/api/sales/recent',
+  '/api/payments/settings',
   '/api/messages/popup',
   '/api/shop/',
   '/api/reviews/product/',

@@ -119,12 +119,15 @@ router.post("/push-open", async (req, res) => {
 
 router.get("/trending", async (req, res) => {
   const type = req.query.type === "digital" ? "digital" : req.query.type === "physical" ? "physical" : "";
-  // Le catalogue digital doit être visible immédiatement après publication.
-  if (type === "digital") {
-    res.set("Cache-Control", "no-store");
-  } else {
-    res.set("Cache-Control", "public, s-maxage=120, max-age=60, stale-while-revalidate=30");
-  }
+  // Le catalogue digital doit être visible rapidement après publication, mais
+  // reste mis en cache CDN 30 s : sinon chaque onglet déclenche quatre requêtes
+  // SQL (trending, ventes, popularité, nouveautés) et fait monter les logs.
+  res.set(
+    "Cache-Control",
+    type === "digital"
+      ? "public, s-maxage=30, max-age=15, stale-while-revalidate=30"
+      : "public, s-maxage=120, max-age=60, stale-while-revalidate=30"
+  );
   const typeClause = type === "digital" ? "AND p.is_digital = TRUE" : type === "physical" ? "AND p.is_digital = FALSE" : "";
   const rows = await q(
     `SELECT p.id, p.name, p.price, p.commission_percent, p.currency, p.quantity, p.shop_id, p.is_digital,

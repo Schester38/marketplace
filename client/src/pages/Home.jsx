@@ -46,6 +46,9 @@ export default function Home() {
   // Volets produits : « physiques » (défaut) et « digitaux » — jamais mélangés
   // dans la même liste (serveur `type=` + filtre client des rails).
   const [ptype, setPtype] = useState(() => (params.get("type") === "digital" ? "digital" : "physical"));
+  // Un jeton stable évite de créer une nouvelle clé Vercel à chaque focus/filtrage.
+  // Il est renewal uniquement lors d'un vrai changement de famille.
+  const catalogRefreshRef = useRef(ptype === "digital" ? Date.now() : 0);
   const [sort, setSort] = useState("popular");
   const [scope, setScope] = useState("product");
   const [minPrice, setMinPrice] = useState("");
@@ -129,6 +132,11 @@ export default function Home() {
   useEffect(() => {
     const nextType = params.get("type") === "digital" ? "digital" : "physical";
     setPtype(nextType);
+    if (nextType === "digital" && !catalogRefreshRef.current) {
+      catalogRefreshRef.current = Date.now();
+    } else if (nextType === "physical") {
+      catalogRefreshRef.current = 0;
+    }
     // Afficher immédiatement la nouvelle famille, jamais les anciennes cartes
     // pendant que la requêtefiltrée est en cours.
     setProducts([]);
@@ -179,8 +187,10 @@ export default function Home() {
     setBestSellers([]);
     setPopular([]);
     setNewArrivals([]);
-    const railOptions = ptype === "digital" ? { cache: "no-store" } : {};
-    const railRefresh = ptype === "digital" ? { catalog_refresh: Date.now() } : {};
+    // Le jeton catalog_refresh change au vrai basculement physique/digital ;
+    // le cache Vercel peut ensuite servir les quatre rails sans no-store.
+    const railOptions = {};
+    const railRefresh = ptype === "digital" ? { catalog_refresh: catalogRefreshRef.current } : {};
     api
       .trending({ type: ptype, ...railRefresh }, railOptions)
       .then((d) => ok && setTrending(d.products || []))
@@ -294,14 +304,14 @@ export default function Home() {
           // digital vient d'être publié : cette clé unique force une réponse
           // fraîche sans disable-cache global et sans invalider le cache navigateur
           // des autres onglets.
-          ...(ptype === "digital" ? { catalog_refresh: Date.now() } : {}),
+          ...(ptype === "digital" ? { catalog_refresh: catalogRefreshRef.current } : {}),
           ...(scope && scope !== "product" ? { scope } : {}),
           ...(minPrice ? { min_price: Number(minPrice) } : {}),
           ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
           ...(localOnly && geoCountry ? { country: geoCountry } : {}),
           limit: isBrowse ? BROWSE_PAGE_SIZE : PER_PAGE,
           offset: isBrowse ? page * BROWSE_PAGE_SIZE : offset,
-        }, ptype === "digital" ? { cache: "no-store" } : {})
+        }, ptype === "digital" ? { cache: "default" } : {})
         .then((d) => {
           if (mounted.current && requestId === productRequestId.current) {
             hasLoaded.current = true;
@@ -454,13 +464,24 @@ export default function Home() {
     !debouncedSearch.trim() &&
     scope === "product";
 
+  // Dernier garde-fou de rendu : même si une réponse arrive pendant une
+  // transition, la grande liste ne peut jamais mélanger les deux familles.
+  const displayProducts =
+    ptype === "digital"
+      ? products.filter((p) => p.is_digital === true)
+      : products.filter((p) => p.is_digital !== true);
+
   // Découpage en lignes de 10 produits glissables (10 lignes par page).
   const productRows = [];
-  for (let i = 0; i < products.length; i += 10) productRows.push(products.slice(i, i + 10));
+  for (let i = 0; i < displayProducts.length; i += 10) {
+    productRows.push(displayProducts.slice(i, i + 10));
+  }
 
   // Rails filtrés par le volet actif (physique / digital) — jamais mélangés.
   const filterType = (list) =>
-    ptype === "digital" ? list.filter((p) => p.is_digital) : list.filter((p) => !p.is_digital);
+    ptype === "digital"
+      ? list.filter((p) => p.is_digital === true)
+      : list.filter((p) => p.is_digital !== true);
   const fTrending = filterType(trending);
   const fBestSellers = filterType(bestSellers);
   const fPopular = filterType(popular);
@@ -1056,7 +1077,7 @@ export default function Home() {
               </div>
             ))}
           </div>
-        ) : products.length === 0 ? (
+        ) : displayProducts.length === 0 ? (
           <div className="card page-center">
             <p className="empty">
               {category
@@ -1101,7 +1122,7 @@ export default function Home() {
         ) : (
           <>
             <div className="grid">
-              {products.map((p) => (
+              {displayProducts.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
             </div>

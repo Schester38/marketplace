@@ -23,13 +23,28 @@ const webhookRouter = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
+// Réponse publique sans secret : un cache court évite plusieurs lectures
+// platform_settings par onglet et par vague de clients. Le cache Vercel reste
+// la couche principale ; ceci couvre aussi les instances serverless isolates.
+const PUBLIC_SETTINGS_CACHE_MS = 15_000;
+let publicSettingsCache = null;
+let publicSettingsCachedAt = 0;
+
 // Infos publiques de configuration (mode actif + présence de clés) — aucun
 // secret n'est exposé. Utilisé par le client pour choisir entre les deux
 // systèmes (manuel / automatique).
 router.get(
   "/settings",
   ah(async (req, res) => {
-    res.json(await getPublicPaymentSettings());
+    res.set("Cache-Control", "public, s-maxage=30, max-age=15, stale-while-revalidate=60");
+    const now = Date.now();
+    if (publicSettingsCache && now - publicSettingsCachedAt < PUBLIC_SETTINGS_CACHE_MS) {
+      return res.json(publicSettingsCache);
+    }
+    const settings = await getPublicPaymentSettings();
+    publicSettingsCache = settings;
+    publicSettingsCachedAt = now;
+    res.json(settings);
   })
 );
 

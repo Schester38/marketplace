@@ -2,6 +2,13 @@ import pg from "pg";
 
 const { Pool } = pg;
 
+// Une version de schéma doit être incrémentée uniquement lorsqu'une nouvelle
+// migration est ajoutée à initDb(). Sans ce garde-fou, chaque cold start Vercel
+// rejouait toutes les CREATE/ALTER/INDEX et produisait des logs PostgreSQL.
+const DB_INIT_VERSION = "2026-09-25-log-ingestion-v1";
+const DB_INIT_LOCK = "mboppi-db-init-v1";
+let initDbPromise = null;
+
 const LOCAL_DEFAULT = "postgres://postgres:postgres@localhost:5432/marketplace";
 
 // PRIORITÉ : DATABASE_URL (l'URL qui a toujours fonctionné en production).
@@ -129,7 +136,7 @@ export async function withTransaction(fn) {
   }
 }
 
-export async function initDb() {
+async function runInitDb() {
   await getPool().query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -824,6 +831,53 @@ export async function initDb() {
   } catch {
     /* purge best-effort : un échec ne doit pas bloquer le démarrage */
   }
+}
+
+// Lance le schéma une seule fois par version sur une base partagée. Le
+// marqueur est posé seulement après la réussite complète des migrations.
+// Une autre instance qui frappe pendant l'initialisation peut lire un ancien
+// marqueur et démarrer la même course : le verrou advisory PostgreSQL évite ce
+// doublon sans conserver d'état en mémoire entre fonctions Vercel.
+export async function initDb() {
+  if (initDbPromise) return initDbPromise;
+  initDbPromise = (async () => {
+    const client = await getPool().connect();
+    try {
+      // Attendre le propriétaire éventuel du verrou est volontaire : une autre
+      // instance doit lire le marqueur après la première, au lieu de believing
+      // que l'initialisation est terminée. Le verrou est de session et libéré
+      // dans le finally, même en cas d'erreur de migration.
+      await client.query("SELECT pg_advisory_lock(hashtext($1))", [DB_INIT_LOCK]);
+
+      let marker = null;
+      try {
+        marker = (
+          await client.query("SELECT value FROM platform_settings WHERE key = $1", [
+            "db_init_version",
+          ])
+        ).rows?.[0]?.value;
+      } catch {
+        // Première installation : la table sera créée par runInitDb().
+      }
+      if (marker === DB_INIT_VERSION) return;
+
+      await runInitDb();
+      await client.query(
+        `INSERT INTO platform_settings (key, value, updated_at)
+         VALUES ('db_init_version', $1, now())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+        [DB_INIT_VERSION]
+      );
+    } finally {
+      await client.query("SELECT pg_advisory_unlock(hashtext($1))", [DB_INIT_LOCK]).catch(() => {});
+      client.release();
+    }
+  })().catch((err) => {
+    // Une instance suivante pourra réessayer si la migration a échoué.
+    initDbPromise = null;
+    throw err;
+  });
+  return initDbPromise;
 }
 
 const RETENTION_DAYS = Number(process.env.TRANSACTION_RETENTION_DAYS || 2555);
