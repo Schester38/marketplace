@@ -19,6 +19,12 @@ import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { useAuth } from "../App.jsx";
 import { useGeo } from "../geo.js";
 import { proxyPhotoUrl } from "../share.js";
+import {
+  nextCatalogRefresh,
+  normalizeServerCatalog,
+  productsOfType,
+  shouldRetryDigitalCatalog,
+} from "./homeCatalog.js";
 
 function mergeUnique(prev, next) {
   if (!prev.length) return next;
@@ -35,6 +41,7 @@ export default function Home() {
   // jeton, une requête « physiques » tardive peut écraser la réponse « digital »
   // et faire croire qu'un actualisation manuelle est nécessaire.
   const productRequestId = useRef(0);
+  const catalogByTypeRef = useRef({ physical: [], digital: [] });
   const hasLoaded = useRef(false);
   const hasData = useRef(false);
   const retryRef = useRef(0);
@@ -91,18 +98,19 @@ export default function Home() {
     if (ptype === "digital") {
       // Monotone : même plusieurs changements dans la même milliseconde, chaque
       // bascule digital→physique→digital obtient une URL Vercel différente.
-      catalogRefreshRef.current = Math.max(Date.now(), catalogRefreshRef.current + 1);
+      catalogRefreshRef.current = nextCatalogRefresh(catalogRefreshRef.current);
     }
     // Invalide sans attendre le prochain effet une réponse de l'ancienne
     // famille qui pourrait encore être en vol.
+    const cached = catalogByTypeRef.current[ptype];
     productRequestId.current += 1;
-    hasLoaded.current = false;
-    hasData.current = false;
+    hasLoaded.current = cached.length > 0;
+    hasData.current = cached.length > 0;
     retryRef.current = 0;
-    setProducts([]);
+    setProducts(cached);
     setHasMore(false);
     setError("");
-    setLoading(true);
+    setLoading(cached.length === 0);
     setLoadingMore(false);
     setOffset(0);
     setPage(0);
@@ -121,6 +129,7 @@ export default function Home() {
         const cached = sessionStore.getItem("mboppi_products");
         const arr = cached ? JSON.parse(cached) : null;
       if (Array.isArray(arr) && arr.length) {
+        catalogByTypeRef.current.physical = arr;
         hasLoaded.current = true;
         hasData.current = true;
         setProducts(arr);
@@ -215,25 +224,42 @@ export default function Home() {
     setBestSellers([]);
     setPopular([]);
     setNewArrivals([]);
-    // Le jeton catalog_refresh change au vrai basculement physique/digital ;
-    // le cache Vercel peut ensuite servir les quatre rails sans no-store.
-    const railOptions = {};
+    // Les requêtes digitales ignorent explicitement les caches navigateur et
+    // PWA. Chaque rail alimente aussi le catalogue principal : si la requête
+    // complète est retardée, la section du bas peut immédiatement réutiliser
+    // les produits digitaux déjà affichés dans « Nouveautés ».
+    const railOptions = ptype === "digital" ? { cache: "no-store" } : {};
     const railRefresh = ptype === "digital" ? { catalog_refresh: catalogRefreshRef.current } : {};
+    const acceptRail = (setter, data) => {
+      if (!ok) return;
+      const next = normalizeServerCatalog(ptype, data.products);
+      setter(next);
+      if (ptype === "digital") {
+        const merged = mergeUnique(catalogByTypeRef.current.digital, next);
+        catalogByTypeRef.current.digital = merged;
+        if (merged.length > 0) {
+          hasLoaded.current = true;
+          hasData.current = true;
+          setLoading(false);
+          setProducts((current) => mergeUnique(current, merged));
+        }
+      }
+    };
     api
       .trending({ type: ptype, ...railRefresh }, railOptions)
-      .then((d) => ok && setTrending(d.products || []))
+      .then((d) => acceptRail(setTrending, d))
       .catch(() => {});
     api
       .listProducts({ sort: "sales", type: ptype, ...railRefresh, limit: 10 }, railOptions)
-      .then((d) => ok && setBestSellers(d.products || []))
+      .then((d) => acceptRail(setBestSellers, d))
       .catch(() => {});
     api
       .listProducts({ sort: "popular", type: ptype, ...railRefresh, limit: 10 }, railOptions)
-      .then((d) => ok && setPopular(d.products || []))
+      .then((d) => acceptRail(setPopular, d))
       .catch(() => {});
     api
       .listProducts({ sort: "recent", type: ptype, ...railRefresh, limit: 10 }, railOptions)
-      .then((d) => ok && setNewArrivals(d.products || []))
+      .then((d) => acceptRail(setNewArrivals, d))
       .catch(() => {});
 
     api
@@ -321,36 +347,68 @@ export default function Home() {
       // chaque visite via la graine. Recherche/filtres : ordre pertinent conservé.
       const isBrowse =
         !debouncedSearch && !category && !minPrice && !maxPrice && scope === "product";
+      const query = {
+        search: debouncedSearch || undefined,
+        category: category || undefined,
+        sort: sort || undefined,
+        // Volet actif : produits physiques OU digitaux (jamais les deux).
+        type: ptype,
+        // Une clé numérique unique évite qu'une réponse Vercel ancienne et vide
+        // soit confondue avec le catalogue digital actuel.
+        ...(ptype === "digital" ? { catalog_refresh: catalogRefreshRef.current } : {}),
+        ...(scope && scope !== "product" ? { scope } : {}),
+        ...(minPrice ? { min_price: Number(minPrice) } : {}),
+        ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
+        ...(localOnly && geoCountry ? { country: geoCountry } : {}),
+        limit: isBrowse ? BROWSE_PAGE_SIZE : PER_PAGE,
+        offset: isBrowse ? page * BROWSE_PAGE_SIZE : offset,
+      };
+      const fetchOptions = ptype === "digital" ? { cache: "no-store" } : {};
       api
-        .listProducts({
-          search: debouncedSearch || undefined,
-          category: category || undefined,
-          sort: sort || undefined,
-          // Volet actif : produits physiques OU digitaux (jamais les deux).
-          type: ptype,
-          // Le catalogue public est court-caché par Supabase/Vercel. Un produit
-          // digital vient d'être publié : cette clé unique force une réponse
-          // fraîche sans disable-cache global et sans invalider le cache navigateur
-          // des autres onglets.
-          ...(ptype === "digital" ? { catalog_refresh: catalogRefreshRef.current } : {}),
-          ...(scope && scope !== "product" ? { scope } : {}),
-          ...(minPrice ? { min_price: Number(minPrice) } : {}),
-          ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
-          ...(localOnly && geoCountry ? { country: geoCountry } : {}),
-          limit: isBrowse ? BROWSE_PAGE_SIZE : PER_PAGE,
-          offset: isBrowse ? page * BROWSE_PAGE_SIZE : offset,
-        }, ptype === "digital" ? { cache: "default" } : {})
+        .listProducts(query, fetchOptions)
+        .then((d) => {
+          const unfiltered =
+            !debouncedSearch && !category && !minPrice && !maxPrice && scope === "product";
+          if (
+            shouldRetryDigitalCatalog({
+              type: ptype,
+              products: d.products,
+              unfiltered,
+              append,
+              retryCount: retryRef.current,
+            })
+          ) {
+            retryRef.current += 1;
+            const retryRefresh = nextCatalogRefresh(catalogRefreshRef.current);
+            catalogRefreshRef.current = retryRefresh;
+            return api.listProducts(
+              { ...query, catalog_refresh: retryRefresh },
+              { cache: "no-store" }
+            );
+          }
+          return d;
+        })
         .then((d) => {
           if (mounted.current && requestId === productRequestId.current) {
             hasLoaded.current = true;
-            const next = (d.products || []).filter((p) =>
-              ptype === "digital" ? p.is_digital === true : p.is_digital !== true
-            );
+            const next = normalizeServerCatalog(ptype, d.products);
             const unfiltered =
               !debouncedSearch && !category && !minPrice && !maxPrice && scope === "product";
-            if (next.length === 0 && hasData.current && unfiltered && ptype === "physical") {
+            if (ptype === "digital") {
+              // Le catalogue complet remplace les fragments de rails, mais une
+              // réponse éventuellement vide ne doit jamais les effacer.
+              catalogByTypeRef.current.digital =
+                next.length > 0 ? next : catalogByTypeRef.current.digital;
+              const visible = next.length > 0 ? next : catalogByTypeRef.current.digital;
+              setHasMore(Boolean(d.hasMore));
+              setProducts((prev) => (append ? mergeUnique(prev, visible) : visible));
+              hasData.current = d.total != null ? d.total > 0 : visible.length > 0;
+              if (visible.length > 0) retryRef.current = 0;
+              setError("");
+            } else if (next.length === 0 && hasData.current && unfiltered) {
               setError("");
             } else {
+              catalogByTypeRef.current.physical = next;
               setHasMore(Boolean(d.hasMore));
               setProducts((prev) => (append ? mergeUnique(prev, next) : next));
               hasData.current = d.total != null ? d.total > 0 : next.length > 0;
@@ -494,10 +552,7 @@ export default function Home() {
 
   // Dernier garde-fou de rendu : même si une réponse arrive pendant une
   // transition, la grande liste ne peut jamais mélanger les deux familles.
-  const displayProducts =
-    ptype === "digital"
-      ? products.filter((p) => p.is_digital === true)
-      : products.filter((p) => p.is_digital !== true);
+  const displayProducts = productsOfType(ptype, products);
 
   // Découpage en lignes de 10 produits glissables (10 lignes par page).
   const productRows = [];
@@ -506,10 +561,7 @@ export default function Home() {
   }
 
   // Rails filtrés par le volet actif (physique / digital) — jamais mélangés.
-  const filterType = (list) =>
-    ptype === "digital"
-      ? list.filter((p) => p.is_digital === true)
-      : list.filter((p) => p.is_digital !== true);
+  const filterType = (list) => productsOfType(ptype, list);
   const fTrending = filterType(trending);
   const fBestSellers = filterType(bestSellers);
   const fPopular = filterType(popular);

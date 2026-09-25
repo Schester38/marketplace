@@ -395,7 +395,13 @@ const CAP_SORTS = {
 };
 
 router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
-  cachePublic(res);
+  // Le catalogue digital ne doit jamais être réutilisé depuis un ancien cache :
+  // ses réponses doivent refléter immédiatement toute publication récente.
+  if (req.query.type === "digital") {
+    res.set("Cache-Control", "private, no-store, max-age=0");
+  } else {
+    cachePublic(res);
+  }
   // Digest quotidien (non bloquant, fire-and-forget) : au premier appel de la
   // journée, informe tous les abonnés push du nombre de nouveaux produits.
   // Cache mémoire 10 min pour n'exécuter la vérification qu'au plus toutes les
