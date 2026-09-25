@@ -20,10 +20,12 @@ import { useAuth } from "../App.jsx";
 import { useGeo } from "../geo.js";
 import { proxyPhotoUrl } from "../share.js";
 import {
+  isCatalogResponseStale,
   nextCatalogRefresh,
   normalizeServerCatalog,
   productsOfType,
   shouldRetryDigitalCatalog,
+  shouldRetryPhysicalCatalog,
 } from "./homeCatalog.js";
 
 function mergeUnique(prev, next) {
@@ -45,6 +47,10 @@ export default function Home() {
   const hasLoaded = useRef(false);
   const hasData = useRef(false);
   const retryRef = useRef(0);
+  // Réessai différé (réponse vide uniquement) : le minuteur est annulé dès que
+  // la famille affichée change, pour qu'un ancien retry « physiques » ne vienne
+  // jamais invalider le chargement « digitaux » lancé au clic sur le volet.
+  const retryTimerRef = useRef(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -57,6 +63,15 @@ export default function Home() {
   // Un jeton stable évite de créer une nouvelle clé Vercel à chaque focus/filtrage.
   // Il est renouvelé uniquement lors d'un vrai changement de famille.
   const catalogRefreshRef = useRef(ptype === "digital" ? Date.now() : 0);
+  // Famille réellement AFFICHÉE (suit le rendu courant) : une réponse — ou un
+  // réessai programmé — de l'autre famille ne doit jamais s'appliquer, sinon la
+  // liste du bas reste vide jusqu'à l'actualisation de la page.
+  const ptypeRef = useRef(ptype);
+  ptypeRef.current = ptype;
+  // Famille dont le premier chargement est terminé : pendant la transition vers
+  // un volet jamais chargé, on montre des squelettes — jamais le message
+  // « aucun produit pour le moment » alors que la requête est encore en vol.
+  const [loadedFamily, setLoadedFamily] = useState(null);
   const [sort, setSort] = useState("popular");
   const [scope, setScope] = useState("product");
   const [minPrice, setMinPrice] = useState("");
@@ -94,15 +109,25 @@ export default function Home() {
   // principale ne soit relancée ; sinon elle part avec catalog_refresh=0 et
   // reçoit une ancienne réponse vide. Après un rechargement direct sur
   // ?type=digital, la valeur Date.now() initialisée plus haut joue le même rôle.
-  useEffect(() => {
-    if (ptype === "digital") {
+  // Bascule de volet : les boutons l'appliquent AVANT le rendu (la liste du bas
+  // affiche immédiatement le cache de la famille choisie, sinon des squelettes)
+  // et l'effet ci-dessous la rejoue quand le changement vient de l'URL.
+  const applyTypeTransition = (nextType) => {
+    if (nextType === "digital") {
       // Monotone : même plusieurs changements dans la même milliseconde, chaque
       // bascule digital→physique→digital obtient une URL Vercel différente.
       catalogRefreshRef.current = nextCatalogRefresh(catalogRefreshRef.current);
     }
+    // Un réessai différé de l'ancienne famille est annulé : envoyé après la
+    // bascule, il invaliderait la requête du nouveau volet (liste du bas vide
+    // jusqu'à l'actualisation de la page).
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
     // Invalide sans attendre le prochain effet une réponse de l'ancienne
     // famille qui pourrait encore être en vol.
-    const cached = catalogByTypeRef.current[ptype];
+    const cached = catalogByTypeRef.current[nextType];
     productRequestId.current += 1;
     hasLoaded.current = cached.length > 0;
     hasData.current = cached.length > 0;
@@ -112,8 +137,13 @@ export default function Home() {
     setError("");
     setLoading(cached.length === 0);
     setLoadingMore(false);
+    setLoadedFamily(cached.length > 0 ? nextType : null);
     setOffset(0);
     setPage(0);
+  };
+
+  useEffect(() => {
+    applyTypeTransition(ptype);
   }, [ptype]);
 
   // Lien « Promotions » du header : /?rail=promos ouvre directement le rail.
@@ -341,7 +371,23 @@ export default function Home() {
 
   const loadProducts = useCallback(
     (silent, append) => {
+      // Famille visée par CETTE requête : si l'utilisateur change de volet
+      // pendant qu'elle vole, sa réponse est ignorée — elle ne doit ni écraser
+      // l'autre famille ni empêcher la sienne de s'afficher.
+      const family = ptype;
       const requestId = ++productRequestId.current;
+      // Une réponse VIDE (cache Vercel obsolète) mérite un réessai différé ;
+      // une réponse normale n'en programme jamais (sinon : boucle infinie de
+      // requêtes « physiques » qui invalide le catalogue digital).
+      let emptyResult = false;
+      const stillCurrent = () =>
+        !isCatalogResponseStale({
+          mounted: mounted.current,
+          requestId,
+          latestRequestId: productRequestId.current,
+          family,
+          currentFamily: ptypeRef.current,
+        });
       if (!silent && !hasLoaded.current) setLoading(true);
       // Navigation libre (sans recherche ni filtre) : les produits tournent à
       // chaque visite via la graine. Recherche/filtres : ordre pertinent conservé.
@@ -352,10 +398,10 @@ export default function Home() {
         category: category || undefined,
         sort: sort || undefined,
         // Volet actif : produits physiques OU digitaux (jamais les deux).
-        type: ptype,
+        type: family,
         // Une clé numérique unique évite qu'une réponse Vercel ancienne et vide
         // soit confondue avec le catalogue digital actuel.
-        ...(ptype === "digital" ? { catalog_refresh: catalogRefreshRef.current } : {}),
+        ...(family === "digital" ? { catalog_refresh: catalogRefreshRef.current } : {}),
         ...(scope && scope !== "product" ? { scope } : {}),
         ...(minPrice ? { min_price: Number(minPrice) } : {}),
         ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
@@ -363,15 +409,18 @@ export default function Home() {
         limit: isBrowse ? BROWSE_PAGE_SIZE : PER_PAGE,
         offset: isBrowse ? page * BROWSE_PAGE_SIZE : offset,
       };
-      const fetchOptions = ptype === "digital" ? { cache: "no-store" } : {};
+      const fetchOptions = family === "digital" ? { cache: "no-store" } : {};
       api
         .listProducts(query, fetchOptions)
         .then((d) => {
           const unfiltered =
             !debouncedSearch && !category && !minPrice && !maxPrice && scope === "product";
+          // Réponse obsolète (volet changé, requête plus récente) : aucun effet,
+          // aucun réessai — elle n'appartient plus à l'écran affiché.
+          if (!stillCurrent()) return d;
           if (
             shouldRetryDigitalCatalog({
-              type: ptype,
+              type: family,
               products: d.products,
               unfiltered,
               append,
@@ -389,12 +438,12 @@ export default function Home() {
           return d;
         })
         .then((d) => {
-          if (mounted.current && requestId === productRequestId.current) {
+          if (stillCurrent()) {
             hasLoaded.current = true;
-            const next = normalizeServerCatalog(ptype, d.products);
+            const next = normalizeServerCatalog(family, d.products);
             const unfiltered =
               !debouncedSearch && !category && !minPrice && !maxPrice && scope === "product";
-            if (ptype === "digital") {
+            if (family === "digital") {
               // Le catalogue complet remplace les fragments de rails, mais une
               // réponse éventuellement vide ne doit jamais les effacer.
               catalogByTypeRef.current.digital =
@@ -406,6 +455,8 @@ export default function Home() {
               if (visible.length > 0) retryRef.current = 0;
               setError("");
             } else if (next.length === 0 && hasData.current && unfiltered) {
+              // Réponse vide suspecte : la liste déjà affichée est conservée.
+              emptyResult = true;
               setError("");
             } else {
               catalogByTypeRef.current.physical = next;
@@ -413,6 +464,7 @@ export default function Home() {
               setProducts((prev) => (append ? mergeUnique(prev, next) : next));
               hasData.current = d.total != null ? d.total > 0 : next.length > 0;
               if (next.length > 0) retryRef.current = 0;
+              else emptyResult = true;
               setError("");
             }
             if (unfiltered && sort === "recent" && !append) {
@@ -425,24 +477,38 @@ export default function Home() {
           }
         })
         .catch((e) => {
-          if (mounted.current && requestId === productRequestId.current) setError(e.message);
+          if (stillCurrent()) setError(e.message);
         })
         .finally(() => {
-          if (mounted.current && requestId === productRequestId.current) {
+          if (stillCurrent()) {
             setLoading(false);
             setLoadingMore(false);
+            setLoadedFamily(family);
+            // Réessai UNIQUEMENT pour une réponse physique vide et sans filtre
+            // (deux tentatives maximum). L'ancienne condition (`hasLoaded`) en
+            // reprogrammait un après CHAQUE réponse non vide, en boucle : ces
+            // requêtes invalidaient le chargement du volet digital, qui restait
+            // vide jusqu'à l'actualisation de la page.
             if (
-              hasLoaded.current &&
-              !debouncedSearch &&
-              !category &&
-              !minPrice &&
-              !maxPrice &&
-              scope === "product" &&
-              ptype === "physical" &&
-              retryRef.current < 2
+              shouldRetryPhysicalCatalog({
+                type: family,
+                empty: emptyResult,
+                append,
+                unfiltered:
+                  !debouncedSearch && !category && !minPrice && !maxPrice && scope === "product",
+                retryCount: retryRef.current,
+              })
             ) {
               retryRef.current += 1;
-              setTimeout(() => loadProducts(true), 900);
+              if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+              retryTimerRef.current = setTimeout(() => {
+                retryTimerRef.current = null;
+                // Le volet a pu changer pendant l'attente : le réessai est sans
+                // objet (et ne doit pas invalider la requête du nouveau volet).
+                if (ptypeRef.current === "physical" && productRequestId.current === requestId) {
+                  loadProducts(true);
+                }
+              }, 900);
             }
           }
         });
@@ -456,6 +522,11 @@ export default function Home() {
     appendRef.current = false;
     return () => {
       mounted.current = false;
+      // Aucun réessai ne doit survivre au démontage (ou au changement de volet).
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
     };
   }, [loadProducts]);
 
@@ -488,6 +559,15 @@ export default function Home() {
 
   const goToProducts = () => {
     produitsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Clic sur « 📦 Produits physiques » / « 📁 Produits digitaux » : la liste du
+  // bas bascule IMMÉDIATEMENT (cache de la famille choisie, sinon squelettes) et
+  // les réponses encore en vol de l'ancienne famille sont invalidées.
+  const onSelectType = (nextType) => {
+    if (nextType !== ptype) applyTypeTransition(nextType);
+    setPtype(nextType);
+    goToProducts();
   };
 
   const scrollTabs = (dir) => {
@@ -734,12 +814,7 @@ export default function Home() {
               role="tab"
               aria-selected={ptype === "physical"}
               className={`ptype-tab ${ptype === "physical" ? "active" : ""}`}
-              onClick={() => {
-                setPtype("physical");
-                setOffset(0);
-                setPage(0);
-                goToProducts();
-              }}
+              onClick={() => onSelectType("physical")}
             >
               📦 {t("Produits physiques")}
             </button>
@@ -748,12 +823,7 @@ export default function Home() {
               role="tab"
               aria-selected={ptype === "digital"}
               className={`ptype-tab ${ptype === "digital" ? "active" : ""}`}
-              onClick={() => {
-                setPtype("digital");
-                setOffset(0);
-                setPage(0);
-                goToProducts();
-              }}
+              onClick={() => onSelectType("digital")}
             >
               📁 {t("Produits digitaux")}
             </button>
@@ -1149,7 +1219,7 @@ export default function Home() {
               </p>
             )}
           </div>
-        ) : loading && !hasLoaded.current ? (
+        ) : (loading || loadedFamily !== ptype) && displayProducts.length === 0 ? (
           <div className="grid">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="card product-card skeleton" aria-hidden="true">

@@ -41,3 +41,32 @@ export function shouldRetryDigitalCatalog({
     normalizeServerCatalog(type, products).length === 0
   );
 }
+
+// Une réponse (ou un réessai programmé) ne s'applique QUE s'il vise encore la
+// famille affichée et qu'aucune requête plus récente n'a été lancée. Sans ce
+// garde, une requête « physiques » retardée écrasait le catalogue « digitaux »
+// fraîchement chargé — liste du bas vide jusqu'à l'actualisation de la page.
+export function isCatalogResponseStale({
+  mounted,
+  requestId,
+  latestRequestId,
+  family,
+  currentFamily,
+}) {
+  return !mounted || requestId !== latestRequestId || family !== currentFamily;
+}
+
+// Réessai automatique des réponses physiques VIDES (cache Vercel obsolète) :
+// deux tentatives maximum, jamais pour une réponse normale — sinon chaque
+// réponse non vide en reprogrammait un, en boucle, et invalidait le volet
+// digital au passage. Jamais sur un ajout de page (`append`), qui remplacerait
+// la liste au lieu de la compléter.
+export function shouldRetryPhysicalCatalog({ type, empty, append, unfiltered, retryCount }) {
+  return (
+    type === "physical" &&
+    empty === true &&
+    !append &&
+    unfiltered === true &&
+    retryCount < 2
+  );
+}
