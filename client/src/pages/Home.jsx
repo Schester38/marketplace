@@ -14,19 +14,25 @@ import TrustBadges from "../components/TrustBadges.jsx";
 import Reveal from "../components/Reveal.jsx";
 // import SocialProof from "../components/SocialProof.jsx"; // réactiver avec la section (voir plus bas)
 import { useLang } from "../i18n.jsx";
-import { PRODUCT_CATEGORIES, currencySymbol } from "../config.js";
+import { DIGITAL_CATEGORIES, PHYSICAL_CATEGORIES, currencySymbol } from "../config.js";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { useAuth } from "../App.jsx";
 import { useGeo } from "../geo.js";
 import { proxyPhotoUrl } from "../share.js";
 import {
+  catalogCategories,
   isCatalogResponseStale,
+  keepsCategoryOnType,
   nextCatalogRefresh,
   normalizeServerCatalog,
   productsOfType,
   shouldRetryDigitalCatalog,
   shouldRetryPhysicalCatalog,
 } from "./homeCatalog.js";
+
+// Catégories proposées par le champ « Filtrer par catégorie » : chaque volet a
+// SA liste (digital = ebooks/formations/IA…, physique = produits matériels).
+const CATEGORY_LISTS = { digital: DIGITAL_CATEGORIES, physical: PHYSICAL_CATEGORIES };
 
 function mergeUnique(prev, next) {
   if (!prev.length) return next;
@@ -215,6 +221,15 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.get("type")]);
 
+  // Garde de cohérence : la catégorie sélectionnée doit appartenir au volet
+  // actif. Un lien direct (?type=digital&cat=Téléphones…), un retour arrière ou
+  // une bascule d'onglet pouvait laisser une catégorie de l'autre famille — le
+  // filtre serveur renvoyait alors une liste vide.
+  useEffect(() => {
+    if (!keepsCategoryOnType(ptype, category, CATEGORY_LISTS)) setCategory("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ptype, category]);
+
   useEffect(() => {
     const next = new URLSearchParams(params);
     if ((next.get("type") || "physical") !== ptype) {
@@ -314,6 +329,7 @@ export default function Home() {
   const [sugOpen, setSugOpen] = useState(false);
   const [sugActive, setSugActive] = useState(-1);
   const sugTimer = useRef(null);
+  const sugReq = useRef(0);
   const sugRefs = useRef([]);
 
   useEffect(() => {
@@ -327,14 +343,16 @@ export default function Home() {
       return;
     }
     setSugLoading(true);
+    // Jeton de requête : une réponse d'un AUTRE volet (physique ↔ digital) ou
+    // d'une frappe précédente ne doit jamais remplir les suggestions.
+    const requestId = ++sugReq.current;
     sugTimer.current = setTimeout(() => {
-      let ok = true;
       Promise.all([
-        api.listProducts({ search: query, limit: 6 }),
+        api.listProducts({ search: query, limit: 6, type: ptype }),
         api.listShops({ search: query, limit: 4 }),
       ])
         .then(([pr, sr]) => {
-          if (!ok) return;
+          if (requestId !== sugReq.current) return;
           const items = [
             ...(pr.products || []).map((p) => ({
               kind: "product",
@@ -360,14 +378,13 @@ export default function Home() {
           setSugActive(-1);
         })
         .catch(() => {})
-        .finally(() => ok && setSugLoading(false));
-      return () => {
-        ok = false;
-      };
+        .finally(() => {
+          if (requestId === sugReq.current) setSugLoading(false);
+        });
     }, 250);
     return () => clearTimeout(sugTimer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  }, [search, ptype]);
 
   const loadProducts = useCallback(
     (silent, append) => {
@@ -565,6 +582,9 @@ export default function Home() {
   // bas bascule IMMÉDIATEMENT (cache de la famille choisie, sinon squelettes) et
   // les réponses encore en vol de l'ancienne famille sont invalidées.
   const onSelectType = (nextType) => {
+    // Une catégorie de l'autre famille ne doit pas rester sélectionnée :
+    // « Téléphones & Tablettes » en digital viderait la liste.
+    if (!keepsCategoryOnType(nextType, category, CATEGORY_LISTS)) setCategory("");
     if (nextType !== ptype) applyTypeTransition(nextType);
     setPtype(nextType);
     goToProducts();
@@ -633,6 +653,10 @@ export default function Home() {
   // Dernier garde-fou de rendu : même si une réponse arrive pendant une
   // transition, la grande liste ne peut jamais mélanger les deux familles.
   const displayProducts = productsOfType(ptype, products);
+
+  // Champ « Filtrer par catégorie » : listes PROPRES à chaque volet (le menu
+  // unique mélangeait ebooks/formations et produits matériels).
+  const categoryOptions = catalogCategories(ptype, CATEGORY_LISTS);
 
   // Découpage en lignes de 10 produits glissables (10 lignes par page).
   const productRows = [];
@@ -1056,7 +1080,7 @@ export default function Home() {
             aria-label={t("Filtrer par catégorie")}
           >
             <option value="">{t("Toutes les catégories")}</option>
-            {PRODUCT_CATEGORIES.map((c) => (
+            {categoryOptions.map((c) => (
               <option key={c} value={c}>
                 {t(c)}
               </option>

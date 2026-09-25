@@ -11,7 +11,7 @@
 import JSZip from "jszip";
 import { FONT_CSS, getTemplate, resolveTemplate } from "./templates.js";
 import { renderCoverImage } from "./coverImage.js";
-import { copyrightLines, COPYRIGHT_FONT_PT, COPYRIGHT_REFERENCE_FONT_PT, makeQrDataUrl, verificationPayload } from "./protection.js";
+import { copyrightBlock, COPYRIGHT_FONT_PT, COPYRIGHT_REFERENCE_FONT_PT, makeQrDataUrl, verificationPayload } from "./protection.js";
 import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL, MBOPPI_PROMO_FONT_PT } from "./footerPromo.js";
 
 const ESC = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" };
@@ -138,7 +138,7 @@ function epubCss(template) {
     `h3{font-size:${template.sizes.h3}pt;margin:1.2em 0 .5em;}`,
     `h4{font-size:${template.sizes.h4}pt;margin:1em 0 .4em;}`,
     `p{margin:0 0 ${template.paraSpace || 6}px;text-align:${template.align === "justify" ? "justify" : "left"};}`,
-    `blockquote{border-left:3px solid ${c.accent};margin:1em 0;padding:.2em 1em;color:${c.accent};font-style:italic;}`,
+    `blockquote{border-left:3px solid ${c.accent};margin:1em 0;padding:.2em 1em;color:${c.body};font-style:italic;}`,
     `img{max-width:100%;height:auto;}`,
     `figure{margin:1em 0;text-align:center;}`,
     `figcaption{font-size:.85em;color:${c.accent};}`,
@@ -292,7 +292,10 @@ export async function exportEpub({ doc, docMeta, onProgress }) {
     title: "Copyright",
     xhtml: simpleXhtml(
       "Copyright",
-      `<div class="copyright-page">${esc(copyrightLines(docMeta).join("\n"))}${docMeta.doc_ref ? `\n<div class="copyright-reference">Référence : ${esc(docMeta.doc_ref)}</div>` : ""}</div>`
+      `<div class="copyright-page">${copyrightBlock(docMeta, { detailPt: COPYRIGHT_REFERENCE_FONT_PT })
+        .filter((it) => it.text)
+        .map((it) => (it.href ? `<div><a href="${esc(it.href)}">${esc(it.text)}</a></div>` : `<div>${esc(it.text)}</div>`))
+        .join("")}</div>`
     ),
   });
 

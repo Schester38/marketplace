@@ -70,3 +70,20 @@ export function shouldRetryPhysicalCatalog({ type, empty, append, unfiltered, re
     retryCount < 2
   );
 }
+
+// Catégories du champ « Filtrer par catégorie » : chaque volet affiche
+// UNIQUEMENT ses catégories (ebooks/formations pour le digital, produits
+// matériels pour le physique). Le menu unique (`PRODUCT_CATEGORIES`, qui
+// contient les deux familles) proposait « Téléphones & Tablettes » sur
+// l'onglet digital.
+export function catalogCategories(type, { digital = [], physical = [] } = {}) {
+  return type === "digital" ? digital : physical;
+}
+
+// La catégorie sélectionnée appartient-elle encore au volet actif ? Sinon elle
+// doit être effacée (bascule d'onglet, lien direct, retour arrière) — le filtre
+// serveur ne renverrait sinon aucun produit.
+export function keepsCategoryOnType(type, category, lists = {}) {
+  if (!category) return true;
+  return catalogCategories(type, lists).includes(category);
+}

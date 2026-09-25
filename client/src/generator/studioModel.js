@@ -167,7 +167,10 @@ export function defaultStyle(template, type, extra = {}) {
     case "subtitle":
       return { ...base, font: template.headingFont, size: s.h2, color: c.heading, align: "left", bold: true, lineHeight: 1.3, paraSpace: 3 };
     case "quote":
-      return { ...base, size: s.body + 0.5, italic: true, color: c.heading, align: "left", indent: 8, border: 1.6, borderSide: "left", borderColor: accent };
+      // Texte en couleur de CORPS : la citation reste lisible sur tous les
+      // décors (bandes/filets/colonne teintée en accent) — seule la barre
+      // latérale garde la couleur d'accent.
+      return { ...base, size: s.body + 0.5, italic: true, color: c.body, align: "left", indent: 8, border: 1.6, borderSide: "left", borderColor: accent };
     case "note":
       return { ...base, size: s.small + 1, align: "left", bg: mixHex(c.bg, accent, 0.12), border: 0.6, borderSide: "all", padding: 3, radius: 1.5 };
     case "box":
@@ -599,6 +602,17 @@ function copyrightPage(docMeta, template, box) {
     name: "Référence du document", z: 5, html: `Référence : ${escapeHtml(docMeta.doc_ref || "")}`,
     style: { ...defaultStyle(template, "reference"), size: COPYRIGHT_REFERENCE_FONT_PT, align: "center", lineHeight: 1.4, paraSpace: 0 },
   }));
+  if (docMeta.doc_ref) {
+    // Lien du document : même URL que l'aperçu, le PDF et l'EPUB, rendue en
+    // ANCRE pour que l'aperçu du Studio et l'export PDF Studio l'affichent
+    // cliquable (annotation de lien réelle côté jsPDF).
+    const verifyUrl = `${BASE_URL}/verifier/${docMeta.doc_ref}`;
+    els.push(makeElement(template, "reference", { x: m.left, y: round1(h * 0.4 + height + 24), w: contentW, h: 10 }, {
+      name: "Lien de vérification", z: 5,
+      html: `<a href="${escapeHtml(verifyUrl).replace(/"/g, "&quot;")}">${escapeHtml(verifyUrl)}</a>`,
+      style: { ...defaultStyle(template, "reference"), size: COPYRIGHT_REFERENCE_FONT_PT, align: "center", lineHeight: 1.4, paraSpace: 0 },
+    }));
+  }
   return makePage({ kind: "copyright", label: "Copyright", design: { bg: template.colors.bg, decor: template.pageDecor }, elements: els });
 }
 function tocPage(page, template, box) {
@@ -846,8 +860,10 @@ export function readStudio(pageLayout) {
  *        flux après une modification (pas de dérive à l'ouverture).
  *   v5 → plus de retrait artificiel d'ouverture de chapitre : le titre d'un
  *        chapitre qui ouvre une page commence à la marge haute (`m.top`).
+ *   v6 → citations en couleur de corps (contraste garanti sur les décors de
+ *        la même teinte que l'accent) ; les anciennes pages sont reconstruites.
  */
-export const LAYOUT_ENGINE_VERSION = 5;
+export const LAYOUT_ENGINE_VERSION = 6;
 
 /**
  * Empreinte du DESIGN (modèle, styles avancés, format, marges, sommaire,

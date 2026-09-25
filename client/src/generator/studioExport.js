@@ -1051,7 +1051,7 @@ h1, h2, h3, h4 { font-family: ${head}; color: ${template.colors.heading}; line-h
 h1 { font-size: 1.7em; } h2 { font-size: 1.35em; } h3 { font-size: 1.15em; } h4 { font-size: 1.05em; }
 p { margin: 0 0 0.8em; }
 em { font-style: italic; } strong { font-weight: bold; }
-blockquote { margin: 1em 1.2em; border-left: 3px solid ${template.colors.accent}; padding-left: 0.9em; font-style: italic; color: ${template.colors.heading}; }
+blockquote { margin: 1em 1.2em; border-left: 3px solid ${template.colors.accent}; padding-left: 0.9em; font-style: italic; color: ${template.colors.body}; }
 .note, .box { background: ${template.colors.accent}1A; border: 1px solid ${template.colors.accent}55; border-radius: 4px; padding: 0.7em 0.9em; margin: 1em 0; }
 .reference { color: ${template.colors.accent}; font-size: 0.9em; }
 .footnote { font-size: 0.85em; border-top: 1px solid #ddd; padding-top: 0.4em; }

@@ -3325,7 +3325,18 @@ export function GenPage({ page, paginated, docMeta, fit }) {
                 color: it.tone === "accent" ? template.colors.accent : template.colors.body,
               }}
             >
-              {it.text}
+              {it.href ? (
+                <a
+                  href={it.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "inherit", textDecoration: "underline" }}
+                >
+                  {it.text}
+                </a>
+              ) : (
+                it.text
+              )}
             </div>
           );
         })}

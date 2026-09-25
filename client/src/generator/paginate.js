@@ -184,7 +184,11 @@ function blockInlineStyle(kind, template) {
     h2: `font-family:${FONT_CSS[template.headingFont]};font-size:${s.h2}pt;line-height:1.3;font-weight:bold;color:${template.colors.heading};margin:0;`,
     h3: `font-family:${FONT_CSS[template.headingFont]};font-size:${s.h3}pt;line-height:1.35;font-weight:bold;color:${template.colors.heading};margin:0;`,
     h4: `font-family:${FONT_CSS[template.headingFont]};font-size:${s.h4}pt;line-height:1.35;font-weight:bold;color:${template.colors.accent};margin:0;`,
-    quote: `font-family:${FONT_CSS[template.bodyFont]};font-size:${s.body}pt;line-height:${template.lineHeight};font-style:italic;color:${template.colors.accent};margin:0;border-left:3px solid ${template.colors.accent};padding-left:14px;text-align:${template.align};`,
+    // Citation : texte en couleur de CORPS (lisible sur tous les fonds et
+    // décors), barre latérale et italique en accent — la couleur d'accent
+    // seule rendait la citation invisible sur les décors de la même teinte
+    // (bandes, filets, colonne teintée) et peu lisible sur fond clair.
+    quote: `font-family:${FONT_CSS[template.bodyFont]};font-size:${s.body}pt;line-height:${template.lineHeight};font-style:italic;color:${template.colors.body};margin:0;border-left:3px solid ${template.colors.accent};padding-left:14px;text-align:${template.align};`,
     pre: `font-family:${FONT_CSS.mono};font-size:${s.small + 0.5}pt;line-height:1.45;color:${template.colors.body};margin:0;white-space:pre;background:#f4f4f5;padding:8px;`,
     liText: `font-family:${FONT_CSS[template.bodyFont]};font-size:${s.body}pt;line-height:${template.lineHeight};color:${template.colors.body};margin:0;text-align:${template.align};padding-left:18px;text-indent:-18px;${template.bodyBold ? "font-weight:700;" : ""}`,
   };

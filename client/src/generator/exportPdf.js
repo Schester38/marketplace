@@ -532,7 +532,17 @@ function drawCopyright(doc, docMeta, template, box, contentHash, decorPrims) {
     setText(doc, it.tone === "accent" ? template.colors.accent : template.colors.body);
     const baseline = boxTop + (sizePt * BASELINE_EM) / 2.83;
     const tw = doc.getTextWidth(it.text);
-    doc.text(it.text, (w - tw) / 2, baseline);
+    const x = (w - tw) / 2;
+    doc.text(it.text, x, baseline);
+    if (it.href) {
+      // Lien RÉEL dans le PDF (annotation /URI) : un clic ouvre la page du
+      // document sur le site — même href que l'aperçu, l'EPUB et le Studio.
+      try {
+        doc.link(x, baseline - (sizePt * BASELINE_EM) / 2.83, tw, (sizePt * 1.2) / 2.83, { url: it.href });
+      } catch {
+        /* build jsPDF sans annotations : le texte reste lisible */
+      }
+    }
   });
 }
 

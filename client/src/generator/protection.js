@@ -87,18 +87,29 @@ export function copyrightLines(doc) {
 export const COPYRIGHT_LINE_HEIGHT = 1.6; // interligne commun (em)
 export const BASELINE_EM = 0.89; // ligne de base sous le haut de la boîte (CSS line-height 1.2)
 
+// Première URL `http(s)://…` d'une ligne : la page de copyright s'en sert pour
+// rendre le lien du document CLIQUABLE dans l'aperçu (ancre), le PDF
+// (annotation de lien réelle), l'EPUB et le Studio — un seul href pour tous.
+const URL_RE = /https?:\/\/[^\s<>()"']+/i;
+export function firstUrl(text) {
+  const m = String(text || "").match(URL_RE);
+  return m ? m[0] : null;
+}
+
 export function copyrightBlock(doc, { detailPt = 8 } = {}) {
   const items = copyrightLines(doc).map((text) => ({
     text,
     sizePt: COPYRIGHT_FONT_PT,
     gapMm: 0,
     tone: "body",
+    href: firstUrl(text),
   }));
   items.push({
     text: `Référence : ${doc?.doc_ref || ""}`,
     sizePt: COPYRIGHT_REFERENCE_FONT_PT,
     gapMm: 6,
     tone: "accent",
+    href: null,
   });
   if (doc?.content_hash) {
     items.push({
@@ -106,15 +117,18 @@ export function copyrightBlock(doc, { detailPt = 8 } = {}) {
       sizePt: detailPt,
       gapMm: 5,
       tone: "detail",
+      href: null,
     });
   }
   if (doc?.doc_ref) {
-    items.push({ text: "Authentifié sur MboppiShop", sizePt: detailPt, gapMm: 7, tone: "accent" });
+    const verifyUrl = `${BASE_URL}/verifier/${doc.doc_ref}`;
+    items.push({ text: "Authentifié sur MboppiShop", sizePt: detailPt, gapMm: 7, tone: "accent", href: null });
     items.push({
-      text: `${BASE_URL}/verifier/${doc.doc_ref}`,
+      text: verifyUrl,
       sizePt: detailPt,
       gapMm: 4.5,
       tone: "accent",
+      href: verifyUrl,
     });
   }
   return items;

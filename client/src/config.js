@@ -216,7 +216,11 @@ export const DIGITAL_CATEGORIES = [
   "Voyage & Guides pratiques",
 ];
 
-export const PRODUCT_CATEGORIES = [
+// Catégories des produits PHYSIQUES (boutiques). Le champ « Filtrer par
+// catégorie » de l'accueil utilise cette liste PURE pour le volet physique ;
+// `PRODUCT_CATEGORIES` (plus bas) reste l'union historique physique + digitale
+// (navbar, formulaires existants) et n'est pas modifiée.
+export const PHYSICAL_CATEGORIES = [
   "Électronique & Téléphones",
   "Téléphones & Tablettes",
   "Ordinateurs & Accessoires",
@@ -250,9 +254,11 @@ export const PRODUCT_CATEGORIES = [
   "Services & Prestations",
   "Immobilier",
   "Autre",
-  // Catégories digitales (ebooks, formations, IA, développement personnel…).
-  ...DIGITAL_CATEGORIES,
 ];
+
+// Union historique (navbar, formulaires, grille de catégories) : physique +
+// digitale. Les volets de l'accueil utilisent les listes pures ci-dessus.
+export const PRODUCT_CATEGORIES = [...PHYSICAL_CATEGORIES, ...DIGITAL_CATEGORIES];
 
 export const OPERATORS_BY_COUNTRY = {
   Cameroun: ["ORANGE", "MTN"],

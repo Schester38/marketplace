@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import {
+  catalogCategories,
   isCatalogResponseStale,
+  keepsCategoryOnType,
   nextCatalogRefresh,
   normalizeServerCatalog,
   productsOfType,
   shouldRetryDigitalCatalog,
   shouldRetryPhysicalCatalog,
 } from "./homeCatalog.js";
+import { DIGITAL_CATEGORIES, PHYSICAL_CATEGORIES } from "../config.js";
 
 const oldDigitalResponse = [{ id: 170, name: "Digital sans is_digital" }];
 const normalized = normalizeServerCatalog("digital", oldDigitalResponse);
@@ -153,4 +156,17 @@ assert.equal(
   false
 );
 
-console.log("homeCatalog: 18 assertions OK");
+// Champ « Filtrer par catégorie » : chaque volet a SA liste, et une catégorie
+// de l'autre famille est effacée à la bascule (sinon le filtre vide la liste).
+const REAL = { digital: DIGITAL_CATEGORIES, physical: PHYSICAL_CATEGORIES };
+assert.deepEqual(catalogCategories("digital", REAL), DIGITAL_CATEGORIES);
+assert.deepEqual(catalogCategories("physical", REAL), PHYSICAL_CATEGORIES);
+assert.equal(DIGITAL_CATEGORIES.includes("Téléphones & Tablettes"), false);
+assert.equal(PHYSICAL_CATEGORIES.includes("IA & Technologies"), false);
+assert.equal(keepsCategoryOnType("digital", "IA & Technologies", REAL), true);
+assert.equal(keepsCategoryOnType("digital", "Téléphones & Tablettes", REAL), false);
+assert.equal(keepsCategoryOnType("physical", "Téléphones & Tablettes", REAL), true);
+assert.equal(keepsCategoryOnType("physical", "IA & Technologies", REAL), false);
+assert.equal(keepsCategoryOnType("digital", "", REAL), true);
+
+console.log("homeCatalog: 27 assertions OK");
