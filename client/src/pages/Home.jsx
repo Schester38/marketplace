@@ -48,7 +48,7 @@ export default function Home() {
   // dans la même liste (serveur `type=` + filtre client des rails).
   const [ptype, setPtype] = useState(() => (params.get("type") === "digital" ? "digital" : "physical"));
   // Un jeton stable évite de créer une nouvelle clé Vercel à chaque focus/filtrage.
-  // Il est renewal uniquement lors d'un vrai changement de famille.
+  // Il est renouvelé uniquement lors d'un vrai changement de famille.
   const catalogRefreshRef = useRef(ptype === "digital" ? Date.now() : 0);
   const [sort, setSort] = useState("popular");
   const [scope, setScope] = useState("product");
@@ -80,6 +80,33 @@ export default function Home() {
   // Géolocalisation : pays détecté + préférence « produits de mon pays d'abord ».
   const { country: geoCountry, city: geoCity, loading: geoLoading } = useGeo();
   const [localOnly, setLocalOnly] = useState(true);
+
+  // Transition de catalogue centralisée : cet effet doit précéder les effets
+  // qui chargent le grand catalogue et les rails. Le changement vers
+  // « Produits digitaux » renouvelle ainsi sa clé Vercel AVANT que la requête
+  // principale ne soit relancée ; sinon elle part avec catalog_refresh=0 et
+  // reçoit une ancienne réponse vide. Après un rechargement direct sur
+  // ?type=digital, la valeur Date.now() initialisée plus haut joue le même rôle.
+  useEffect(() => {
+    if (ptype === "digital") {
+      // Monotone : même plusieurs changements dans la même milliseconde, chaque
+      // bascule digital→physique→digital obtient une URL Vercel différente.
+      catalogRefreshRef.current = Math.max(Date.now(), catalogRefreshRef.current + 1);
+    }
+    // Invalide sans attendre le prochain effet une réponse de l'ancienne
+    // famille qui pourrait encore être en vol.
+    productRequestId.current += 1;
+    hasLoaded.current = false;
+    hasData.current = false;
+    retryRef.current = 0;
+    setProducts([]);
+    setHasMore(false);
+    setError("");
+    setLoading(true);
+    setLoadingMore(false);
+    setOffset(0);
+    setPage(0);
+  }, [ptype]);
 
   // Lien « Promotions » du header : /?rail=promos ouvre directement le rail.
   useEffect(() => {
@@ -139,22 +166,13 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.get("cat")]);
 
+  // Une navigation externe (lien direct, retour/avance) aligne l'onglet sur
+  // l'URL. La transition centralisée ci-dessus gère déjà le reset et la clé
+  // fraîche ; on ne les répète pas ici pour ne pas effacer une réponse déjà
+  // chargée quand le clic vient d'ajouter ?type=digital à l'URL.
   useEffect(() => {
     const nextType = params.get("type") === "digital" ? "digital" : "physical";
     setPtype(nextType);
-    if (nextType === "digital" && !catalogRefreshRef.current) {
-      catalogRefreshRef.current = Date.now();
-    } else if (nextType === "physical") {
-      catalogRefreshRef.current = 0;
-    }
-    // Afficher immédiatement la nouvelle famille, jamais les anciennes cartes
-    // pendant que la requêtefiltrée est en cours.
-    setProducts([]);
-    hasLoaded.current = false;
-    hasData.current = false;
-    setLoading(true);
-    setOffset(0);
-    setPage(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.get("type")]);
 
