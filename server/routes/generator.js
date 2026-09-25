@@ -118,7 +118,17 @@ const DOC_META_FIELDS = [
 const DOC_META_SELECT = DOC_META_FIELDS.join(", ");
 const DOC_META_SELECT_D = DOC_META_FIELDS.map((field) => `d.${field}`).join(", ");
 
-function docRow(row, { includeLayout = false } = {}) {
+function withoutInlineMedia(value) {
+  if (!value || typeof value !== "object") return {};
+  const out = { ...value };
+  // Les couvertures importées restent parfois des data-URI. Elles ne doivent
+  // jamais être renvoyées dans la bibliothèque ou une sauvegarde : elles sont
+  // volumineuses et le document complet les contient déjà lorsqu'on l'ouvre.
+  if (typeof out.image === "string" && out.image.startsWith("data:")) delete out.image;
+  return out;
+}
+
+function docRow(row, { includeLayout = false, includeMedia = true } = {}) {
   const out = {
     id: row.id,
     doc_ref: row.doc_ref,
@@ -134,8 +144,8 @@ function docRow(row, { includeLayout = false } = {}) {
     margins: row.margins || {},
     template_id: row.template_id,
     style_overrides: row.style_overrides || {},
-    cover: row.cover || {},
-    back_cover: row.back_cover || {},
+    cover: includeMedia ? (row.cover || {}) : withoutInlineMedia(row.cover),
+    back_cover: includeMedia ? (row.back_cover || {}) : withoutInlineMedia(row.back_cover),
     protection: row.protection || {},
     content_hash: row.content_hash,
     published_product_id: row.published_product_id || null,
@@ -270,7 +280,12 @@ router.get(
            FROM gen_documents d WHERE d.owner_id = $1 ORDER BY d.updated_at DESC LIMIT 500`,
           [Number(req.user.id)]
         );
-    res.json({ documents: rows.map((r) => ({ ...docRow(r, { includeLayout: false }), versions: r.versions })) });
+    res.json({
+      documents: rows.map((r) => ({
+        ...docRow(r, { includeLayout: false }),
+        versions: r.versions,
+      })),
+    });
   })
 );
 
@@ -289,7 +304,7 @@ router.post(
     };
     const inserted = await q(
       `INSERT INTO gen_documents (owner_id, doc_ref, title, subtitle, author, page_format, template_id, content_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING ${DOC_META_SELECT}`,
       [
         Number(req.user.id) || 0,
         newDocRef(),
@@ -310,11 +325,23 @@ router.post(
   })
 );
 
+// Layout Studio ciblé : la requête ne renvoie que le champ page_layout.
+// Le contenu et les métadonnées restent dans la requête d'ouverture normale.
+router.get(
+  "/documents/:id/layout",
+  ah(async (req, res) => {
+    const row = await loadDoc(Number(req.params.id), req, { includeLayout: true });
+    res.json({ page_layout: row.page_layout || null });
+  })
+);
+
+
 // ─── Document complet ────────────────────────────────────────────────────────
 router.get(
   "/documents/:id",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id), req, { includeLayout: true });
+    const includeLayout = ["1", "true", "yes"].includes(String(req.query.layout || req.query.include_layout || "").toLowerCase());
+    const row = await loadDoc(Number(req.params.id), req, { includeLayout });
     const data = (
       await q(`SELECT content FROM gen_documents_data WHERE doc_id = $1`, [row.id])
     )[0];
@@ -323,7 +350,7 @@ router.get(
       [row.id]
     );
     res.json({
-      document: docRow(row, { includeLayout: true }),
+      document: docRow(row, { includeLayout }),
       content: data?.content || { type: "doc", content: [{ type: "paragraph" }] },
       versions,
     });
@@ -400,7 +427,10 @@ router.patch(
     }
 
     if (sets.length === 0) {
-      return res.json({ document: docRow(row, { includeLayout: false }), saved: false });
+      return res.json({
+        document: docRow(row, { includeLayout: false, includeMedia: false }),
+        saved: false,
+      });
     }
 
     sets.push(`updated_at = now()`);
@@ -413,7 +443,8 @@ router.patch(
        RETURNING ${DOC_META_SELECT}`,
       params
     );
-    res.json({ document: docRow(updated[0], { includeLayout: false }), saved: true });
+    const document = docRow(updated[0], { includeLayout: false, includeMedia: false });
+    res.json({ document, saved: true });
   })
 );
 
@@ -459,12 +490,16 @@ router.post(
       }
       content = data.content;
     }
-    await q(`INSERT INTO gen_versions (doc_id, label, content) VALUES ($1, $2, $3::jsonb)`, [
-      row.id,
-      label,
-      JSON.stringify(content),
-    ]);
-    res.status(201).json({ ok: true });
+    const inserted = await q(
+      `INSERT INTO gen_versions (doc_id, label, content) VALUES ($1, $2, $3::jsonb)
+       RETURNING id, label, created_at`,
+      [row.id, label, JSON.stringify(content)]
+    );
+    const versions = await q(
+      `SELECT id, label, created_at FROM gen_versions WHERE doc_id = $1 ORDER BY created_at DESC LIMIT 50`,
+      [row.id]
+    );
+    res.status(201).json({ ok: true, version: inserted[0] || null, versions });
   })
 );
 
@@ -502,7 +537,7 @@ router.post(
       [row.id, JSON.stringify(content)]
     );
     const updated = await q(
-      `UPDATE gen_documents SET content_hash = $2, updated_at = now()
+      `UPDATE gen_documents SET content_hash = $2, page_layout = NULL, updated_at = now()
        WHERE id = $1 RETURNING ${DOC_META_SELECT}`,
       [row.id, contentHash(content)]
     );

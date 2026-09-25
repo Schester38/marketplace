@@ -504,7 +504,10 @@ export const api = {
 
   // ─── Générateur de documents (ebooks/PDF) — module admin isolé ──────────
   genDocuments: () => generatorRequest("/generator/documents"),
-  genDocument: (id) => generatorRequest(`/generator/documents/${id}`),
+  genDocument: (id, { includeLayout = false } = {}) =>
+    generatorRequest(`/generator/documents/${id}${includeLayout ? "?layout=1" : ""}`),
+  // Layout Studio chargé uniquement à l'ouverture de l'onglet Studio.
+  genDocumentLayout: (id) => generatorRequest(`/generator/documents/${id}/layout`),
   genCreateDocument: (payload) =>
     generatorRequest("/generator/documents", { method: "POST", body: JSON.stringify(payload) }),
   // Autosave : payload partiel (content, title, cover, design, protection…).

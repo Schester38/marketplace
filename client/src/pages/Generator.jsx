@@ -418,7 +418,8 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   const [studioLayoutStale, setStudioLayoutStale] = useState(false);
   const [versions, setVersions] = useState(initialDoc.versions || []);
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
-  const [view, setView] = useState("edit"); // edit | design | preview
+  const [studioLayoutLoading, setStudioLayoutLoading] = useState(false);
+  const [view, setView] = useState("edit"); // edit | design | studio | preview
   // Ajustement automatique de l'aperçu à la largeur disponible (téléphone :
   // la page entière est visible, plus besoin de faire défiler horizontalement).
   // NB : computeFit est déclaré APRÈS `preview` (il lit preview.box.w).
@@ -489,6 +490,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   const metaRef = useRef(meta);
   metaRef.current = meta;
   const saveTimer = useRef(null);
+  const studioLayoutLoaded = useRef(Object.prototype.hasOwnProperty.call(initialDoc.document, "page_layout"));
   const editorRef = useRef(null);
 
   const editor = useEditor({
@@ -563,6 +565,10 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
         const next = {
           ...metaRef.current,
           ...d.document,
+          // Les réponses d'autosave sont allégées des data-URI de couverture ;
+          // on conserve donc les médias déjà présents dans l'état local.
+          cover: { ...(metaRef.current.cover || {}), ...(d.document.cover || {}) },
+          back_cover: { ...(metaRef.current.back_cover || {}), ...(d.document.back_cover || {}) },
           // `page_layout` est écrit par le Studio ; cette route ne le renvoie
           // pas dans `document` et ne doit jamais l'effacer.
           page_layout: metaRef.current.page_layout,
@@ -1043,6 +1049,29 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     if (view === "design") analyzeScope();
   }, [view, analyzeScope]);
 
+  // ─── Ouverture du Studio : layout chargé à la demande ─────────────────────
+  const openStudio = useCallback(async () => {
+    if (studioLayoutLoaded.current || metaRef.current?.page_layout) {
+      setView("studio");
+      return;
+    }
+    setStudioLayoutLoading(true);
+    setError("");
+    try {
+      const d = await api.genDocumentLayout(metaRef.current.id);
+      const next = { ...metaRef.current, page_layout: d.page_layout || null };
+      studioLayoutLoaded.current = true;
+      metaRef.current = next;
+      setMeta(next);
+      setStudioLayoutStale(false);
+      setView("studio");
+    } catch (e) {
+      setError(e?.message || t("Studio indisponible"));
+    } finally {
+      setStudioLayoutLoading(false);
+    }
+  }, [t]);
+
   // ─── Export PDF réel (jsPDF, mêmes positions que l'aperçu) ─────────────────
   const doExport = async () => {
     setError("");
@@ -1084,8 +1113,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     if (label === null) return;
     try {
       await saveNow();
-      await api.genSaveVersion(meta.id, { label });
-      const d = await api.genDocument(meta.id);
+      const d = await api.genSaveVersion(meta.id, { label });
       setVersions(d.versions || []);
     } catch (e) {
       setError(e?.message || "Version impossible");
@@ -1473,9 +1501,13 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
               role="tab"
               aria-selected={view === id}
               className={`gen-tab ${view === id ? "active" : ""}`}
-              onClick={() => setView(id)}
+              onClick={() => {
+                if (id === "studio") openStudio();
+                else setView(id);
+              }}
+              disabled={id === "studio" && studioLayoutLoading}
             >
-              {label}
+              {id === "studio" && studioLayoutLoading ? "⏳ …" : label}
             </button>
           ))}
         </div>
