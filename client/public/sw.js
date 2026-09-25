@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v343';
+const CACHE_NAME = 'mboppi-v344';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/robots.txt', '/splash.js'];
 // Les diapositives, illustrations sociales et logos secondaires sont charges a la
 // demande : les precacher a chaque version augmentait l'egress des installations.
@@ -65,11 +65,9 @@ self.addEventListener('activate', (event) => {
             // chunks ont disparu. Les onglets VISIBLES en plein usage ne
             // sont pas forcÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©s (respect du travail en cours) : ils reÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§oivent
             // APP_UPDATED et l'app applique/retarde la mise ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â  jour en SPA.
-            if (client.visibilityState === 'hidden' && typeof client.navigate === 'function') {
-              try {
-                client.navigate(client.url);
-              } catch (e) {}
-            }
+            // `client.url` est une URL absolue : ne pas l'utiliser ici.
+            // La page reçoit APP_UPDATED et main.jsx applique la mise à jour
+            // au moment sûr, sans provoquer « Cannot navigate to URL ».
           });
         })
       )
@@ -193,15 +191,27 @@ self.addEventListener('notificationclick', (event) => {
     );
   } catch (e) {}
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windowClients) => {
+      let target;
+      try {
+        target = new URL(url, self.location.origin);
+      } catch (e) {
+        target = new URL('/', self.location.origin);
+      }
+      // Une notification peut contenir un lien externe : WindowClient.navigate
+      // ne sert que pour une URL interne et attend une URL relative.
+      if (target.origin !== self.location.origin) return clients.openWindow(target.href);
+      const relativeUrl = `${target.pathname}${target.search}${target.hash}`;
       for (const client of windowClients) {
         if ('focus' in client) {
           client.focus();
-          client.navigate(url);
+          try {
+            await client.navigate(relativeUrl);
+          } catch (e) {}
           return;
         }
       }
-      return clients.openWindow(url);
+      return clients.openWindow(target.href);
     })
   );
 });
@@ -239,7 +249,10 @@ self.addEventListener('fetch', (event) => {
   // publication récente. Le cache du service worker ne doit pas masquer le
   // résultat réseau de cette requête explicitement fraîche.
   if (url.pathname.startsWith('/api/')) {
-    if (isApiSwr(url.pathname) && event.request.cache !== 'no-store') {
+    const isFreshCatalog =
+      url.pathname === '/api/products' &&
+      (url.searchParams.get('type') === 'digital' || url.searchParams.has('catalog_refresh'));
+    if (isApiSwr(url.pathname) && event.request.cache !== 'no-store' && !isFreshCatalog) {
       event.respondWith(apiSwr(event.request));
     } else {
       event.respondWith(

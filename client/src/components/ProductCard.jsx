@@ -72,6 +72,12 @@ export default function ProductCard({
   const hasPromo = oldPrice > 0 && oldPrice > displayPrice;
   const promoPct = hasPromo ? Math.round((1 - displayPrice / oldPrice) * 100) : 0;
 
+  const runAction = (event, callback) => {
+    event.preventDefault();
+    event.stopPropagation();
+    callback?.(product);
+  };
+
   const add = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -243,21 +249,27 @@ export default function ProductCard({
       <div className="card-actions">
         {action ? (
           <>
-            <button className="btn btn-primary btn-block" onClick={() => onAction(product)}>
+            <button
+              type="button"
+              className="btn btn-primary btn-block"
+              onClick={(e) => runAction(e, onAction)}
+            >
               {t(action)}
             </button>
             {secondaryAction && (
               <button
+                type="button"
                 className="btn btn-danger btn-block"
-                onClick={() => onSecondaryAction(product)}
+                onClick={(e) => runAction(e, onSecondaryAction)}
               >
                 {t(secondaryAction)}
               </button>
             )}
             {extraAction && !hideShare && (
               <button
+                type="button"
                 className="btn btn-outline btn-block"
-                onClick={() => extraAction.onClick(product)}
+                onClick={(e) => runAction(e, extraAction.onClick)}
               >
                 {extraAction.label}
               </button>

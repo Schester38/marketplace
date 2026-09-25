@@ -296,7 +296,9 @@ export default function Home() {
         .then((d) => {
           if (mounted.current && requestId === productRequestId.current) {
             hasLoaded.current = true;
-            const next = d.products || [];
+            const next = (d.products || []).filter((p) =>
+              ptype === "digital" ? p.is_digital === true : p.is_digital !== true
+            );
             const unfiltered =
               !debouncedSearch && !category && !minPrice && !maxPrice && scope === "product";
             if (next.length === 0 && hasData.current && unfiltered && ptype === "physical") {

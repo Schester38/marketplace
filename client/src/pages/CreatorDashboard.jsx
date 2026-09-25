@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import ProductCard, { formatMoney } from "../components/ProductCard.jsx";
@@ -73,6 +73,7 @@ export default function CreatorDashboard() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [picking, setPicking] = useState(false);
+  const formRef = useRef(null);
   const [proofSale, setProofSale] = useState(null);
   const [proofLoading, setProofLoading] = useState(false);
   // Création vidéo dont on gère les accès (modale) — null = modale fermée.
@@ -148,6 +149,17 @@ export default function CreatorDashboard() {
     load();
   }, [load]);
   useRefreshOnFocus(load);
+
+  // Un clic sur « Modifier » doit afficher immédiatement le formulaire, même si
+  // la recharge des détails du produit est lente. Le défilement rend aussi le
+  // résultat visible quand la carte se trouve plus bas dans la page.
+  useEffect(() => {
+    if (!showForm) return;
+    const id = requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [showForm, editingId]);
 
   // Temps réel : rafraîchit créations et statistiques toutes les 30 s
   useEffect(() => {
@@ -255,6 +267,9 @@ export default function CreatorDashboard() {
   };
 
   const editProduct = async (p) => {
+    if (!p) return;
+    setError("");
+    setSuccess("");
     // Produit issu du Générateur MboppiShop : ouvrir le document source et son
     // éditeur. La publication existante sera mise à jour depuis le Générateur,
     // sans recréer un second produit.
@@ -269,28 +284,6 @@ export default function CreatorDashboard() {
       p.contact && p.contact.startsWith(currentPrefix)
         ? p.contact.slice(currentPrefix.length)
         : p.contact || "";
-    let photos = Array.isArray(p.photos) && p.photos.length ? p.photos : [];
-    try {
-      const detail = await api.getProduct(p.id);
-      const dp = detail.product || {};
-      const mediums = Array.isArray(dp.photos) ? dp.photos : [];
-      if (mediums.length) {
-        const thumbs =
-          Array.isArray(dp.photos_thumb) && dp.photos_thumb.length
-            ? dp.photos_thumb
-            : Array.isArray(p.photos)
-              ? p.photos
-              : [];
-        const larges = Array.isArray(dp.photos_large) ? dp.photos_large : [];
-        photos = mediums.map((medium, i) => ({
-          thumb: thumbs[i] || medium,
-          medium,
-          large: larges[i] || medium,
-        }));
-      }
-    } catch {
-      /* silencieux */
-    }
     setForm({
       name: p.name || "",
       description: p.description || "",
@@ -306,36 +299,52 @@ export default function CreatorDashboard() {
         p.price != null && p.commission_percent != null
           ? String(Math.round(Number(p.price) * Number(p.commission_percent)) / 100)
           : "",
-      photos,
-      digital: {
-        enabled: true,
-        name: null,
-        size: 0,
-        mime: null,
-        key: null,
-      },
-      // Contenu PROTÉGÉ déjà enregistré : type (fichier ou vidéo YouTube) et
-      // durée d'accès ("" = illimité). Le lien complet est reconstruit depuis
-      // l'ID (le serveur ne l'expose qu'au propriétaire).
+      photos: Array.isArray(p.photos) ? p.photos : [],
+      digital: { enabled: true, name: null, size: 0, mime: null, key: null },
       digital_kind: p.digital_kind === "youtube" ? "youtube" : "file",
       youtube_url: p.youtube_id ? `https://www.youtube.com/watch?v=${p.youtube_id}` : "",
-      access_days: p.access_days !== null && p.access_days !== undefined ? String(p.access_days) : "",
+      access_days:
+        p.access_days !== null && p.access_days !== undefined ? String(p.access_days) : "",
     });
     setEditingDigital(
       p.is_digital === true
         ? {
             name: p.digital_name || t("Fichier du produit"),
             size: Number(p.digital_size || 0),
-            // « youtube » = vidéo protégée : aucun fichier à téléverser, le
-            // sélecteur de fichier est masqué et l'ancienne vidéo peut être
-            // conservée si le type ne change pas.
             kind: p.digital_kind === "youtube" ? "youtube" : "file",
             youtube: Boolean(p.youtube_id),
           }
         : null
     );
     setEditingId(p.id);
+    // Afficher le formulaire sans attendre le fetch de détail : le clic doit
+    // toujours produire un retour visible, même sur une connexion lente.
     setShowForm(true);
+
+    try {
+      const detail = await api.getProduct(p.id);
+      const dp = detail.product || {};
+      const mediums = Array.isArray(dp.photos) ? dp.photos : [];
+      if (mediums.length) {
+        const thumbs =
+          Array.isArray(dp.photos_thumb) && dp.photos_thumb.length
+            ? dp.photos_thumb
+            : Array.isArray(p.photos)
+              ? p.photos
+              : [];
+        const larges = Array.isArray(dp.photos_large) ? dp.photos_large : [];
+        setForm((current) => ({
+          ...current,
+          photos: mediums.map((medium, i) => ({
+            thumb: thumbs[i] || medium,
+            medium,
+            large: larges[i] || medium,
+          })),
+        }));
+      }
+    } catch {
+      /* le formulaire est déjà affiché avec les données de la carte */
+    }
   };
 
   const removeProduct = async (p) => {
@@ -397,7 +406,7 @@ export default function CreatorDashboard() {
       <OnlineEarningsCard role="creator" />
 
       {showForm && (
-        <div className="card form-card">
+        <div className="card form-card" ref={formRef}>
           <h2>{editingId ? t("Modifier la création") : t("Nouvelle création")}</h2>
           <div className="photo-tip">
             <strong>{t("📸 Astuce : des photos de qualité pour vos produits")}</strong>
@@ -693,7 +702,7 @@ export default function CreatorDashboard() {
                 product={p}
                 showCommission
                 action={t("Modifier")}
-                onAction={() => editProduct(p)}
+                onAction={(selected) => editProduct(selected || p)}
                 secondaryAction={t("Rétirer")}
                 onSecondaryAction={() => removeProduct(p)}
               />
