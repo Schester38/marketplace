@@ -123,6 +123,13 @@ const fmtDate = (iso) => {
   }
 };
 
+// ─── Onglet Studio masqué ────────────────────────────────────────────────────
+// L'interface n'affiche plus l'onglet « Studio » (Contenu, Design et Aperçu
+// restent disponibles). Le moteur reste en place : les mises en page Studio
+// enregistrées continuent d'alimenter l'aperçu et l'export PDF via un
+// chargement silencieux. Repasser ce drapeau à `true` réaffiche l'onglet.
+const SHOW_STUDIO_TAB = false;
+
 // ═════════════════════════════════════════════════════════════════════════════
 // Panneau « Générateur » : bibliothèque + éditeur.
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1083,6 +1090,31 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     }
   }, [t]);
 
+  // Studio masqué : la mise en page enregistrée est chargée EN SILENCE (une
+  // requête par document) pour que l'aperçu et l'export PDF continuent de
+  // suivre les pages éditées. Aucun écran Studio n'est ouvert.
+  useEffect(() => {
+    if (SHOW_STUDIO_TAB) return;
+    if (studioLayoutLoaded.current) return;
+    if (!meta?.id) return;
+    let alive = true;
+    api
+      .genDocumentLayout(meta.id)
+      .then((d) => {
+        if (!alive) return;
+        studioLayoutLoaded.current = true;
+        const next = { ...metaRef.current, page_layout: d.page_layout || null };
+        metaRef.current = next;
+        setMeta((cur) => ({ ...cur, page_layout: d.page_layout || null }));
+      })
+      .catch(() => {
+        /* silencieux : le générateur classique reste utilisable */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [meta?.id]);
+
   // ─── Export PDF réel (jsPDF, mêmes positions que l'aperçu) ─────────────────
   const doExport = async () => {
     setError("");
@@ -1547,7 +1579,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
           {[
             ["edit", t("Contenu")],
             ["design", t("Design")],
-            ["studio", t("Studio")],
+            ...(SHOW_STUDIO_TAB ? [["studio", t("Studio")]] : []),
             ["preview", t("Aperçu")],
           ].map(([id, label]) => (
             <button
@@ -2772,9 +2804,11 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
             <>
               <p className="hint">
                 🧩 {t("Mise en page du Studio active : l'aperçu et le PDF exporté suivent les pages éditées page par page.")}{" "}
-                <button type="button" className="btn btn-outline btn-small" onClick={() => setView("studio")}>
-                  {t("Ouvrir le Studio")}
-                </button>
+                {SHOW_STUDIO_TAB && (
+                  <button type="button" className="btn btn-outline btn-small" onClick={() => setView("studio")}>
+                    {t("Ouvrir le Studio")}
+                  </button>
+                )}
               </p>
               <div className="studio-preview">
                 <div className="studio-preview-pages">
