@@ -172,20 +172,29 @@ export default function Home() {
 
   useEffect(() => {
     let ok = true;
+    // Les rails suivent exactement le volet actif. Sans `type=ptype`, une
+    // réponse physique tardive pouvait être filtrée côté client et laisser un
+    // seul produit digital (ou masquer les autres) jusqu'à l'actualisation.
+    setTrending([]);
+    setBestSellers([]);
+    setPopular([]);
+    setNewArrivals([]);
+    const railOptions = ptype === "digital" ? { cache: "no-store" } : {};
+    const railRefresh = ptype === "digital" ? { catalog_refresh: Date.now() } : {};
     api
-      .trending()
+      .trending({ type: ptype, ...railRefresh }, railOptions)
       .then((d) => ok && setTrending(d.products || []))
       .catch(() => {});
     api
-      .listProducts({ sort: "sales", limit: 10 })
+      .listProducts({ sort: "sales", type: ptype, ...railRefresh, limit: 10 }, railOptions)
       .then((d) => ok && setBestSellers(d.products || []))
       .catch(() => {});
     api
-      .listProducts({ sort: "popular", limit: 10 })
+      .listProducts({ sort: "popular", type: ptype, ...railRefresh, limit: 10 }, railOptions)
       .then((d) => ok && setPopular(d.products || []))
       .catch(() => {});
     api
-      .listProducts({ sort: "recent", limit: 10 })
+      .listProducts({ sort: "recent", type: ptype, ...railRefresh, limit: 10 }, railOptions)
       .then((d) => ok && setNewArrivals(d.products || []))
       .catch(() => {});
 
@@ -196,7 +205,7 @@ export default function Home() {
     return () => {
       ok = false;
     };
-  }, []);
+  }, [ptype]);
 
   useEffect(() => {
     const id = setTimeout(() => {

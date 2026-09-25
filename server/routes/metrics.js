@@ -118,10 +118,17 @@ router.post("/push-open", async (req, res) => {
 });
 
 router.get("/trending", async (req, res) => {
-  res.set("Cache-Control", "public, s-maxage=120, max-age=60, stale-while-revalidate=30");
+  const type = req.query.type === "digital" ? "digital" : req.query.type === "physical" ? "physical" : "";
+  // Le catalogue digital doit être visible immédiatement après publication.
+  if (type === "digital") {
+    res.set("Cache-Control", "no-store");
+  } else {
+    res.set("Cache-Control", "public, s-maxage=120, max-age=60, stale-while-revalidate=30");
+  }
+  const typeClause = type === "digital" ? "AND p.is_digital = TRUE" : type === "physical" ? "AND p.is_digital = FALSE" : "";
   const rows = await q(
-    `SELECT p.id, p.name, p.price, p.commission_percent, p.currency, p.quantity, p.shop_id, u.name AS shop_name,
-            u.country AS shop_country,
+    `SELECT p.id, p.name, p.price, p.commission_percent, p.currency, p.quantity, p.shop_id, p.is_digital,
+            u.name AS shop_name, u.country AS shop_country,
             COALESCE(v.w1_views, 0) AS w1_views, COALESCE(s.n, 0) AS sold
      FROM products p
      JOIN users u ON u.id = p.shop_id
@@ -132,6 +139,7 @@ router.get("/trending", async (req, res) => {
      LEFT JOIN (SELECT product_id, SUM(quantity) AS n
                 FROM sales WHERE status = 'delivered' GROUP BY product_id) s ON s.product_id = p.id
      WHERE p.quantity > 0
+       ${typeClause}
        AND NOT EXISTS (SELECT 1 FROM flash_promotions fp WHERE fp.product_id = p.id AND fp.ends_at > now())
        AND (COALESCE(v.w1_views, 0) > 0 OR COALESCE(s.n, 0) > 0)
      ORDER BY (COALESCE(v.w1_views, 0) + COALESCE(s.n, 0) * 3) DESC, p.created_at DESC
@@ -148,6 +156,7 @@ router.get("/trending", async (req, res) => {
     shop_name: p.shop_name,
     shop_country: p.shop_country,
     quantity: Number(p.quantity),
+    is_digital: p.is_digital === true,
     image: null,
     w1_views: Number(p.w1_views),
     sold: Number(p.sold),

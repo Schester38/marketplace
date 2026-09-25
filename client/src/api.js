@@ -412,7 +412,14 @@ export const api = {
   flashPromotions: () => request("/flash-promotions"),
   createFlashPromotion: (payload) =>
     request("/flash-promotions", { method: "POST", body: JSON.stringify(payload) }),
-  trending: () => request("/metrics/trending"),
+  trending: (params = {}, options = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(params).filter(([_, v]) => v !== undefined && v !== null && v !== "")
+      )
+    ).toString();
+    return request("/metrics/trending" + (qs ? `?${qs}` : ""), options);
+  },
   publicStats: () => request("/metrics/public"),
   createDonation: (payload) =>
     request("/donations", { method: "POST", body: JSON.stringify(payload) }),
