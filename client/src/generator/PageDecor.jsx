@@ -89,7 +89,9 @@ export default function PageDecor({ template, box, docMeta, scale = 1 }) {
               left: mm(pad),
               top: mm(pad),
               width: mm(w - pad * 1.5),
-              height: mm(h - pad),
+              // Cadre SYMÉTRIQUE, identique au PDF (drawPageDecor) : le bord bas
+              // est à `h − pad/2` dans les deux rendus.
+              height: mm(h - pad * 1.5),
               border: `${lw}px solid ${accent}`,
               boxSizing: "border-box",
             }}

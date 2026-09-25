@@ -77,3 +77,60 @@ export function copyrightLines(doc) {
     "limites prévues par la loi.",
   ];
 }
+
+// ─── Bloc de copyright : SOURCE UNIQUE aperçu HTML ↔ PDF ────────────────────
+// Aperçu et PDF empilent EXACTEMENT les mêmes entrées, avec les mêmes tailles
+// et les mêmes espacements (l'aperçu était auparavant incomplet : le PDF
+// ajoutait l'empreinte SHA-256 et la signature de vérification que l'aperçu ne
+// montrait pas). « gapMm » = espace AVANT l'entrée, mesuré depuis le bas de la
+// ligne précédente (les deux rendus avancent donc identiquement).
+export const COPYRIGHT_LINE_HEIGHT = 1.6; // interligne commun (em)
+export const BASELINE_EM = 0.89; // ligne de base sous le haut de la boîte (CSS line-height 1.2)
+
+export function copyrightBlock(doc, { detailPt = 8 } = {}) {
+  const items = copyrightLines(doc).map((text) => ({
+    text,
+    sizePt: COPYRIGHT_FONT_PT,
+    gapMm: 0,
+    tone: "body",
+  }));
+  items.push({
+    text: `Référence : ${doc?.doc_ref || ""}`,
+    sizePt: COPYRIGHT_REFERENCE_FONT_PT,
+    gapMm: 6,
+    tone: "accent",
+  });
+  if (doc?.content_hash) {
+    items.push({
+      text: `Empreinte SHA-256 : ${String(doc.content_hash).slice(0, 32)}…`,
+      sizePt: detailPt,
+      gapMm: 5,
+      tone: "detail",
+    });
+  }
+  if (doc?.doc_ref) {
+    items.push({ text: "Authentifié sur MboppiShop", sizePt: detailPt, gapMm: 7, tone: "accent" });
+    items.push({
+      text: `${BASE_URL}/verifier/${doc.doc_ref}`,
+      sizePt: detailPt,
+      gapMm: 4.5,
+      tone: "accent",
+    });
+  }
+  return items;
+}
+
+// Hauteur totale du bloc (mm) : sert aux DEUX rendus pour le même départ
+// vertical (aucun débordement en bas de page, aperçu = PDF).
+export function copyrightBlockHeightMm(items) {
+  let total = 0;
+  items.forEach((it, i) => {
+    total += (Number(it.sizePt) * COPYRIGHT_LINE_HEIGHT) / 2.83;
+    if (i > 0) total += Number(it.gapMm) || 0;
+  });
+  // Hauteur de la dernière ligne d'encre : on retire la descente de la ligne
+  // (le bloc se mesure jusqu'au bas de l'encre, pas jusqu'au bas de la boîte).
+  const last = items[items.length - 1];
+  if (last) total -= (Number(last.sizePt) * (COPYRIGHT_LINE_HEIGHT - BASELINE_EM)) / 2.83;
+  return Math.max(0, total);
+}

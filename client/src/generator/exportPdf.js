@@ -10,10 +10,16 @@ import { jsPDF } from "jspdf";
 import { FONT_PDF, resolveCover, coverLayoutBox } from "./templates.js";
 import { coverDecorPrims, drawCoverDecorPdf } from "./coverDecor.js";
 import { PX_PER_MM } from "./paginate.js";
-import { copyrightLines, COPYRIGHT_FONT_PT, COPYRIGHT_REFERENCE_FONT_PT, makeQrDataUrl, verificationPayload } from "./protection.js";
+import {
+  copyrightBlock,
+  copyrightBlockHeightMm,
+  COPYRIGHT_LINE_HEIGHT,
+  BASELINE_EM,
+  makeQrDataUrl,
+  verificationPayload,
+} from "./protection.js";
 import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL, MBOPPI_PROMO_FONT_PT } from "./footerPromo.js";
 import { drawWatermarkPdf } from "./watermark.js";
-import { BASE_URL } from "../config.js";
 
 const pxToMm = (v) => v / PX_PER_MM;
 
@@ -107,6 +113,15 @@ function drawLine(doc, ln, offsetXmm = 0, offsetYmm = 0) {
     let baseMm = baselineMm;
     if (style.sup) baseMm -= (style.sizePx * 0.75) / 2.83 * 0.33;
     if (style.sub) baseMm += (style.sizePx * 0.75) / 2.83 * 0.18;
+    if (doc.__mboppiTrace) {
+      doc.__mboppiTrace.push({
+        page: doc.__mboppiPage,
+        text: w.text,
+        x: xMm,
+        y: baseMm,
+        size: style.sizePx * 0.75,
+      });
+    }
     // Le surlignage est dessiné dans une passe dédiée (avant tous les textes).
     if (!style.bg) doc.text(w.text, xMm, baseMm, { baseline: "alphabetic" });
     if (style.underline) {
@@ -198,7 +213,15 @@ function drawParagraphText(doc, text, xMm, yMm, maxWmm, opts) {
     doc.text(ln, x, y);
     y += lh;
   }
-  return y;
+  // Repères partagés avec l'aperçu HTML : `yMm` est la ligne de base de la
+  // PREMIÈRE ligne (l'aperçu place la boîte à `yMm − 0,89 em`) et `boxBottom`
+  // est le bas de la dernière boîte — les deux rendus enchaînent leurs blocs
+  // avec exactement les mêmes écarts.
+  return {
+    lastBaseline: y - lh,
+    boxBottom: yMm - (size * BASELINE_EM) / 2.83 + lines.length * lh,
+    count: lines.length,
+  };
 }
 
 // ─── Décor de page propre au modèle de design ───────────────────────────────
@@ -254,7 +277,7 @@ export function drawPageDecor(doc, template, box, docMeta) {
     case "headerband": {
       const bh = Math.max(9, m.top * 0.62);
       band(0, 0, w, bh, accent, 0.14);
-      rule(0, bh, w, bh, 1.1);
+      rule(0, bh, w, bh, 0.5);
       if (title) {
         doc.setFont(FONT_PDF[template.headingFont], "bold");
         doc.setFontSize(template.sizes.small);
@@ -299,7 +322,7 @@ export function drawPageDecor(doc, template, box, docMeta) {
     case "sidebartint": {
       const bw = Math.max(12, m.left * 0.8);
       band(0, 0, bw, h, accent, 0.12);
-      rule(bw, 0, bw, h, 0.9);
+      rule(bw, 0, bw, h, 0.5);
       break;
     }
 
@@ -399,17 +422,25 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl) {
   const titleSize = geo.band ? template.sizes.h1 + 4 : template.sizes.h1 + 8;
 
   // Titre + sous-titre : affichables/masquables et positionnables (titleX/titleY).
-  let y = (geo.yPct / 100) * h;
+  // Géométrie STRICTEMENT identique à l'aperçu HTML : la boîte du titre commence
+  // à `yPct` % de la hauteur, la première ligne de base est à +0,89 em (CSS
+  // `line-height: 1.2`), le sous-titre suit à 3 mm du bas de la boîte du titre
+  // et la règle d'accent à 3 mm sous ce bloc.
+  const titleLineHeight = 1.2;
+  let blockBottom = 0;
   if (cover.showTitle) {
-    y = drawParagraphText(doc, cover.title, geo.x, y, geo.maxW, {
+    const topMm = (geo.yPct / 100) * h;
+    const title = drawParagraphText(doc, cover.title, geo.x, topMm + (titleSize * BASELINE_EM) / 2.83, geo.maxW, {
       size: titleSize, font: FONT_PDF[template.headingFont], styleName: "bold",
-      color: fg, align, lineHeight: 1.2,
+      color: fg, align, lineHeight: titleLineHeight,
     });
+    blockBottom = title.boxBottom;
     if (cover.subtitle) {
-      y = drawParagraphText(doc, cover.subtitle, geo.x, y + 6, geo.maxW, {
+      const sub = drawParagraphText(doc, cover.subtitle, geo.x, blockBottom + 3 + (template.sizes.h3 * BASELINE_EM) / 2.83, geo.maxW, {
         size: template.sizes.h3, font: FONT_PDF[template.headingFont], styleName: "normal",
         color: fg, align, lineHeight: 1.3,
       });
+      blockBottom = sub.boxBottom;
     }
     // Règle d'accent sous le bloc titre (identité du modèle).
     if (cover.rule && !geo.band) {
@@ -417,15 +448,12 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl) {
       const rx = align === "center" ? geo.x + (geo.maxW - rw) / 2 : geo.x;
       setStroke(doc, cover.accent);
       doc.setLineWidth(0.9);
-      doc.line(rx, y + 3, rx + rw, y + 3);
+      const ry = blockBottom + 3;
+      doc.line(rx, ry, rx + rw, ry);
     }
   }
-  if (cover.author) {
-    drawParagraphText(doc, cover.author, geo.pad, geo.band ? h - 14 : h - 24, w - geo.pad * 2, {
-      size: template.sizes.h4, font: FONT_PDF[template.bodyFont], styleName: "normal",
-      color: fg, align: geo.band ? "right" : geo.leftish ? "left" : "center",
-    });
-  }
+  // L'auteur n'est JAMAIS dessiné sur la couverture (règle produit) : il reste
+  // sur la page de copyright, dans les en-têtes et les métadonnées du PDF.
   // QR de couverture : toujours en bas à droite, sans exiger [QR].
   if (qrDataUrl) {
     const s = 22;
@@ -480,84 +508,77 @@ function drawCopyright(doc, docMeta, template, box, contentHash, decorPrims) {
   doc.rect(0, 0, w, h, "F");
   // Décor géométrique du modèle : derrière le texte (dessiné juste après le fond).
   if (decorPrims && decorPrims.length) drawCoverDecorPdf(doc, decorPrims);
-  const lines = copyrightLines(docMeta);
-  // Anti-débordement : le bloc complet (copyright + référence + empreinte +
-  // signature MboppiShop) doit tenir au-dessus du bas de page, même quand la liste
-  // est longue — le départ remonte au besoin (plafonné à 42 % de la hauteur).
-  const size = COPYRIGHT_FONT_PT;
-  const lineH = (size * 1.6) / 2.83;
-  const refSize = COPYRIGHT_REFERENCE_FONT_PT;
-  const detailSize = Math.max(8, template.sizes.small - 1);
-  const blockH = lines.length * lineH + 12 + 5 + 12 + (contentHash ? 5 : 0) + (docMeta.doc_ref ? 7 + 4.5 : 0);
-  let y = Math.min(h * 0.42, h - 18 - blockH);
-  doc.setFont(FONT_PDF[template.bodyFont], "normal");
-  doc.setFontSize(size);
-  for (const line of lines) {
-    if (!line) {
-      y += 3;
-      continue;
+  // MÊME bloc que l'aperçu HTML (contenu, tailles, espacements) : une seule
+  // source (`copyrightBlock`) → aucune divergence possible entre les rendus.
+  const detailPt = Math.max(8, template.sizes.small - 1);
+  const items = copyrightBlock(
+    { ...docMeta, content_hash: contentHash || docMeta.content_hash },
+    { detailPt }
+  );
+  const blockH = copyrightBlockHeightMm(items);
+  // Anti-débordement : le départ remonte au besoin (plafonné à 40 % de la page),
+  // exactement comme l'aperçu (aucun débordement en bas de page).
+  const startMm = Math.min(h * 0.4, h - 18 - blockH);
+  let boxTop = startMm;
+  items.forEach((it, i) => {
+    if (i > 0) {
+      const prev = items[i - 1];
+      boxTop += (Number(prev.sizePt) * COPYRIGHT_LINE_HEIGHT) / 2.83 + (Number(it.gapMm) || 0);
     }
-    const tw = doc.getTextWidth(line);
-    setText(doc, template.colors.body);
-    doc.text(line, (w - tw) / 2, y);
-    y += lineH;
-  }
-  y += 12;
-  doc.setFontSize(refSize);
-  setText(doc, template.colors.accent);
-  const ref = `Référence : ${docMeta.doc_ref}`;
-  doc.text(ref, (w - doc.getTextWidth(ref)) / 2, y);
-  if (contentHash) {
-    y += 5;
-    doc.setFontSize(detailSize);
-    const hashLine = `Empreinte SHA-256 : ${contentHash.slice(0, 32)}…`;
-    doc.text(hashLine, (w - doc.getTextWidth(hashLine)) / 2, y);
-  }
-  // Signature MboppiShop (anti-contrefaçon) : chaque téléchargement porte la
-  // mention d'authenticité + le lien public de vérification de la référence.
-  if (docMeta.doc_ref) {
-    doc.setFontSize(detailSize);
-    setText(doc, template.colors.accent);
-    y += 7;
-    const sign1 = "Authentifié sur MboppiShop";
-    doc.text(sign1, (w - doc.getTextWidth(sign1)) / 2, y);
-    y += 4.5;
-    const sign2 = `${BASE_URL}/verifier/${docMeta.doc_ref}`;
-    doc.text(sign2, (w - doc.getTextWidth(sign2)) / 2, y);
-  }
+    if (!it.text) return; // ligne vide : elle ne consomme que son interligne
+    const sizePt = Number(it.sizePt) || 12;
+    doc.setFont(FONT_PDF[template.bodyFont], "normal");
+    doc.setFontSize(sizePt);
+    setText(doc, it.tone === "accent" ? template.colors.accent : template.colors.body);
+    const baseline = boxTop + (sizePt * BASELINE_EM) / 2.83;
+    const tw = doc.getTextWidth(it.text);
+    doc.text(it.text, (w - tw) / 2, baseline);
+  });
 }
 
-const TOC_LH = 1.9;
+const TOC_LH = 1.9; // conservé pour compatibilité (géométrie désormais commune à l'aperçu)
 
 function drawToc(doc, page, template, box) {
   const { w, m } = box;
   // NB : le fond et les décors sont peints par l'appelant AVANT cette fonction
   // (repeindre la page ici effaçait le décor du modèle sur le sommaire).
+  // Géométrie IDENTIQUE à l'aperçu HTML : titre à `m.top` (line-height 1.2),
+  // entrées espacées de 1,5 mm, interligne 1,2, retrait 3 mm au niveau 2 et
+  // troncature à 62 caractères — l'aperçu et le PDF se superposent.
   const s = template.sizes;
-  let y = m.top + 14;
+  const LH = 1.2;
+  const ENTRY_GAP_MM = 1.5;
+  const ENTRY_INDENT_MM = 3;
+  const ENTRY_MAX_CHARS = 62;
+  let boxTop = m.top;
   doc.setFont(FONT_PDF[template.headingFont], "bold");
   doc.setFontSize(s.h2);
   setText(doc, template.colors.heading);
-  doc.text("Table des matières", m.left, y);
-  y += s.h2 * 1.2 / 2.83;
+  doc.text("Table des matières", m.left, boxTop + (s.h2 * BASELINE_EM) / 2.83);
+  boxTop += (s.h2 * LH) / 2.83;
   for (const entry of page.entries) {
-    doc.setFontSize(entry.level === 1 ? s.body + 0.5 : s.body);
+    boxTop += ENTRY_GAP_MM;
+    const size = s.body;
+    doc.setFontSize(size);
     doc.setFont(FONT_PDF[template.bodyFont], entry.level === 1 ? "bold" : "normal");
-    const indent = entry.level === 1 ? 0 : 8;
+    const indent = entry.level === 1 ? 0 : ENTRY_INDENT_MM;
     setText(doc, entry.level === 1 ? template.colors.heading : template.colors.body);
-    const title = entry.text.length > 68 ? entry.text.slice(0, 68) + "…" : entry.text;
+    const title = entry.text.length > ENTRY_MAX_CHARS
+      ? entry.text.slice(0, ENTRY_MAX_CHARS) + "…"
+      : entry.text;
     const tw = doc.getTextWidth(title);
     const numStr = String(entry.page);
     const nw = doc.getTextWidth(numStr);
-    doc.text(title, m.left + indent, y);
-    doc.text(numStr, w - m.right - nw, y);
-    // Points de conduite.
+    const baseline = boxTop + (size * BASELINE_EM) / 2.83;
+    doc.text(title, m.left + indent, baseline);
+    doc.text(numStr, w - m.right - nw, baseline);
+    // Points de conduite (aperçu : bordure pointillée fine sous la ligne).
     setStroke(doc, template.colors.accent);
-    doc.setLineWidth(0.15);
-    doc.setLineDashPattern([0.6, 0.8], 0);
-    doc.line(m.left + indent + tw + 3, y - 1, w - m.right - nw - 3, y - 1);
+    doc.setLineWidth(0.2);
+    doc.setLineDashPattern([0.4, 0.6], 0);
+    doc.line(m.left + indent + tw + 3, baseline + 0.4, w - m.right - nw - 3, baseline + 0.4);
     doc.setLineDashPattern([], 0);
-    y += (s.body * TOC_LH) / 2.83;
+    boxTop += (size * LH) / 2.83;
   }
 }
 
@@ -662,7 +683,7 @@ function drawWatermark(doc, docMeta, template, box) {
 // + html (HTML sérialisé de l'éditeur, déjà paginé par paginateDocument).
 // Options : filename (nom imposé), download:false → renvoie l'instance jsPDF
 // sans télécharger (utilisé par la publication « Vendre sur MboppiShop »).
-export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, filename, download = true }) {
+export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, filename, download = true, trace = null }) {
   const { pages, box, contentWpx } = paginated;
   const { w, h, m } = box;
   const doc2 = new jsPDF({
@@ -671,6 +692,12 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
     orientation: w > h ? "landscape" : "portrait",
     compress: true,
   });
+  // Journal OPTIONNEL des positions réellement dessinées (aucun effet sur le
+  // PDF) : utilisé par le test de fidélité aperçu ↔ PDF.
+  if (trace) {
+    doc2.__mboppiTrace = trace;
+    doc2.__mboppiPage = 0;
+  }
 
   // Métadonnées complètes (protection / traçabilité du document).
   doc2.setProperties({
@@ -694,6 +721,7 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
   for (let i = 0; i < total; i++) {
     if (i > 0) doc2.addPage([w, h], w > h ? "landscape" : "portrait");
     const page = pages[i];
+    if (trace) doc2.__mboppiPage = i;
     onProgress?.(Math.round(((i + 1) / total) * 100), i + 1, total);
     if (page.kind === "cover") {
       await drawCover(doc2, page, docMeta, template, box, qrDataUrl);
@@ -738,10 +766,15 @@ export async function exportDocumentPdf({ doc, docMeta, paginated, onProgress, f
             }
           }
         } else if (item.kind === "hr") {
+          // Séparateur : PLEINE largeur de contenu, comme l'aperçu HTML (qui
+          // affiche l'élément `<hr>` sur toute la largeur utile). L'ancien tracé
+          // 20 % → 80 % ne correspondait à rien dans l'aperçu.
           setStroke(doc2, template.colors.accent);
           doc2.setLineWidth(0.3);
           const yMm = itemTopMm + pxToMm(2);
-          doc2.line(m.left + pxToMm(contentWpx * 0.2), yMm, m.left + pxToMm(contentWpx * 0.8), yMm);
+          const x1 = m.left + pxToMm(item.x || 0);
+          const x2 = x1 + pxToMm(item.w || contentWpx);
+          doc2.line(x1, yMm, x2, yMm);
         } else if (item.kind === "qr") {
           // Emplacement [QR] : le vrai QR de vérification est dessiné dans la
           // boîte réservée (pagination identique à une image, insécable).
@@ -806,8 +839,24 @@ function drawTableRow(doc, item, template, box) {
   const rowY = m.top + pxToMm(item.top);
   for (const cell of item.cells) {
     const cellX = m.left + pxToMm(cell.x);
-    setFill(doc, cell.header ? template.colors.accent + "22" : "#ffffff");
-    doc.rect(cellX, rowY, pxToMm(cell.w), pxToMm(cell.h), "FD");
+    const cw = pxToMm(cell.w);
+    const ch = pxToMm(cell.h);
+    // Fond d'en-tête TRANSLUCIDE : l'aperçu utilise `accent + 22` (≈ 13 %
+    // d'opacité). L'ancien code passait une couleur hex à 8 chiffres à jsPDF,
+    // qui n'en lisait que les 6 premiers → en-tête PLEIN, très différent.
+    if (cell.header) {
+      withOpacity(doc, 0.13, () => {
+        setFill(doc, template.colors.accent);
+        doc.rect(cellX, rowY, cw, ch, "F");
+      });
+    }
+    // Bordure discrète (`accent + 55` ≈ 33 % dans l'aperçu) et AUCUN fond blanc :
+    // le décor du modèle reste visible derrière les cellules, comme à l'écran.
+    withOpacity(doc, 0.33, () => {
+      setStroke(doc, template.colors.accent);
+      doc.setLineWidth(0.26);
+      doc.rect(cellX, rowY, cw, ch, "S");
+    });
     for (const ln of cell.lines || []) drawLine(doc, ln, cellX, rowY);
   }
 }

@@ -274,7 +274,7 @@ function DataView({ el, template, zoom }) {
                     border: `${Math.max(1, mm2px(st.borderWidth || 0.25, zoom))}px solid ${cssAlpha(st.borderColor || accent, 0.55)}`,
                     padding: mm2px(st.padding || 1, zoom),
                     background: c.header ? cssAlpha(st.headerBg || accent, 0.14) : undefined,
-                    fontWeight: c.header ? 700 : 400,
+                    fontWeight: c.header || st.bold ? 700 : 400,
                     textAlign: c.align || st.align || "left",
                     color: c.header ? st.headerColor || bodyColor : bodyColor,
                     overflow: "hidden",

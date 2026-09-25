@@ -619,8 +619,9 @@ function drawTableElement(doc, el, ctx) {
     const isHeaderRow = ri === 0 && row.some((c) => c && c.header);
     const cells = widths.map((w, ci) => {
       const cell = row[ci] || { text: "" };
-      const bold = !!(cell.header || isHeaderRow);
-      const color = bold ? st.headerColor || st.color : st.color;
+      const headerCell = !!(cell.header || isHeaderRow);
+      const bold = !!(headerCell || st.bold);
+      const color = headerCell ? st.headerColor || st.color : st.color;
       const runs = htmlRuns(String(cell.text || ""), { ...st, size, bold, color, font: st.font });
       return { cell, bold, color, lines: layoutRuns(doc, runs, Math.max(4, w - pad * 2)) };
     });

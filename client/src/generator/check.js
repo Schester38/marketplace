@@ -155,7 +155,7 @@ export function checkDocument({ paginated, docMeta }) {
       warnings,
       "no_author",
       "Aucun auteur renseigné.",
-      "Le nom de l'auteur figure sur la couverture, les en-têtes et les métadonnées du PDF."
+      "Le nom de l'auteur figure dans les en-têtes, la page de copyright et les métadonnées du PDF (jamais sur la couverture)."
     );
   }
   if (!String(docMeta.cover?.title || docMeta.title || "").trim()) {

@@ -130,7 +130,7 @@ function epubCss(template) {
   const c = template.colors;
   const headingFont = FONT_CSS[template.headingFont] || FONT_CSS.sans;
   return [
-    `body{font-family:${FONT_CSS[template.bodyFont] || FONT_CSS.sans};font-size:${template.sizes.body}pt;`,
+    `body{font-family:${FONT_CSS[template.bodyFont] || FONT_CSS.sans};font-size:${template.sizes.body}pt;${template.bodyBold ? "font-weight:700;" : ""}`,
     `line-height:${template.lineHeight};color:${c.body};background:${c.bg};margin:5% 6%;}`,
     `h1,h2,h3,h4{font-family:${headingFont};color:${c.heading};line-height:1.25;}`,
     `h1{font-size:${template.sizes.h1}pt;margin:1.6em 0 .7em;}`,
@@ -273,12 +273,13 @@ export async function exportEpub({ doc, docMeta, onProgress }) {
 
   // Fichiers XHTML : couverture éditoriale, copyright, puis un par chapitre.
   const documents = []; // { id, file, title, xhtml }
+  // L'auteur n'apparaît JAMAIS sur la couverture (règle produit) : il reste
+  // dans les métadonnées (`dc:creator`) et sur la page de copyright.
   const coverLines =
     `<div class="t">${esc(docMeta.cover?.title || title)}</div>` +
     (docMeta.cover?.subtitle || docMeta.subtitle
       ? `<div class="s">${esc(docMeta.cover?.subtitle || docMeta.subtitle)}</div>`
-      : "") +
-    (author ? `<div class="a">${esc(author)}</div>` : "");
+      : "");
   documents.push({
     id: "cover",
     file: "cover.xhtml",

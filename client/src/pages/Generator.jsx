@@ -55,9 +55,10 @@ import StudioCanvas from "../generator/StudioCanvas.jsx";
 import { readStudio, studioBox, studioDesignKey, studioContentKey, ensureStudioFooters } from "../generator/studioModel.js";
 import { exportStudioPdf } from "../generator/studioExport.js";
 import {
-  copyrightLines,
-  COPYRIGHT_FONT_PT,
-  COPYRIGHT_REFERENCE_FONT_PT,
+  copyrightBlock,
+  copyrightBlockHeightMm,
+  COPYRIGHT_LINE_HEIGHT,
+  BASELINE_EM,
   makeQrDataUrl,
   sha256Hex,
   verificationPayload,
@@ -2284,6 +2285,22 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
                 />
               </div>
             </div>
+            {/* Gras global : un seul clic met TOUT le texte courant en gras
+                (paragraphes, listes, tableaux) — aperçu, PDF, EPUB et Studio
+                lisent le même drapeau `style_overrides.bodyBold`. */}
+            <div className="gen-tpl-variant">
+              <button
+                type="button"
+                className={`btn btn-small ${styleOv.bodyBold ? "btn-primary" : "btn-outline"}`}
+                aria-pressed={styleOv.bodyBold === true}
+                onClick={() => setStyleOv({ bodyBold: styleOv.bodyBold !== true })}
+              >
+                {styleOv.bodyBold ? "✓ " : ""}{t("Tout le document en gras")}
+              </button>
+              <span className="hint">
+                {t("Met en gras tous les textes du document, sauf les titres et les citations.")}
+              </span>
+            </div>
           </div>
 
           <div className="gen-design-block">
@@ -3056,7 +3073,7 @@ function decorMarks(tpl) {
   }
 }
 
-function GenPage({ page, paginated, docMeta, fit }) {
+export function GenPage({ page, paginated, docMeta, fit }) {
   const { box, template, contentWpx, contentHpx } = paginated;
   const { w, h, m } = box;
   // Zoom : 0.75 = 75 % d'une page au 96 dpi, multiplié par le facteur
@@ -3077,31 +3094,81 @@ function GenPage({ page, paginated, docMeta, fit }) {
     docMeta?.protection?.qrEnabled === false
       ? ""
       : verificationPayload(docMeta || {}, docMeta?.content_hash || "");
+  // Pied de page / en-tête : MÊMES coordonnées que le PDF (exportPdf.js) —
+  // mention MboppiShop, numéro de page et champs personnalisés se placent à la
+  // même distance des bords, mesurée depuis la ligne de base (l'aperçu les
+  // affichait auparavant à 1,5 mm du bas de page, sans les en-têtes).
+  const hfText = (text) =>
+    String(text || "")
+      .replaceAll("{title}", docMeta.title || "")
+      .replaceAll("{author}", docMeta.author || "")
+      .replaceAll("{page}", String(page.number ?? ""));
+  const footerSize = MBOPPI_PROMO_FONT_PT;
+  const smallPt = template.sizes.small;
+  const baselineTop = (sizePt) => mm((Number(sizePt) * BASELINE_EM) / 2.83);
+  const footerBaseline = h - m.bottom + 8;
+  const headerBaseline = m.top - 7;
+  const hfBase = { position: "absolute", zIndex: 3, whiteSpace: "nowrap", color: template.colors.accent };
+  const prot = docMeta.protection || {};
+  const hasHeader = prot.header !== false && (prot.headerLeft || prot.headerCenter || prot.headerRight);
   const promoFooter = (
-    <div
-      className="gen-page-footer"
-      style={{
-        bottom: mm(1.5),
-        display: "grid",
-        gridTemplateColumns: w < 170 ? "minmax(0, 1fr) auto" : "1fr auto 1fr",
-        alignItems: "center",
-        gap: mm(1),
-        padding: `0 ${mm(m.left)}`,
-        fontSize: pt(MBOPPI_PROMO_FONT_PT),
-        color: template.colors.accent,
-      }}
-    >
-      <em style={{ fontStyle: "italic" }}>visitez{" "}
-        <a
-          href={MBOPPI_CONTENT_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: "inherit", textDecoration: "underline" }}
-        >{MBOPPI_CONTENT_LABEL}</a> pour plus de contenu
-      </em>
-      <span>{page.number}</span>
-      <span />
-    </div>
+    <>
+      {hasHeader && (
+        <>
+          {prot.headerLeft && (
+            <div style={{ ...hfBase, left: mm(m.left), top: mm(headerBaseline) - baselineTop(smallPt), fontSize: pt(smallPt) }}>
+              {hfText(prot.headerLeft)}
+            </div>
+          )}
+          {prot.headerCenter && (
+            <div style={{ ...hfBase, left: mm(w / 2), transform: "translateX(-50%)", top: mm(headerBaseline) - baselineTop(smallPt), fontSize: pt(smallPt) }}>
+              {hfText(prot.headerCenter)}
+            </div>
+          )}
+          {prot.headerRight && (
+            <div style={{ ...hfBase, right: mm(m.right), top: mm(headerBaseline) - baselineTop(smallPt), fontSize: pt(smallPt) }}>
+              {hfText(prot.headerRight)}
+            </div>
+          )}
+        </>
+      )}
+      {prot.footer !== false && (
+        <>
+          <div style={{ ...hfBase, left: mm(m.left), top: mm(footerBaseline) - baselineTop(footerSize), fontSize: pt(footerSize), fontStyle: "italic" }}>
+            visitez{" "}
+            <a
+              href={MBOPPI_CONTENT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "inherit", textDecoration: "underline" }}
+            >
+              {MBOPPI_CONTENT_LABEL}
+            </a>{" "}
+            pour plus de contenu
+            {prot.footerLeft ? (
+              <span style={{ fontStyle: "normal", marginLeft: mm(3) }}>{hfText(prot.footerLeft)}</span>
+            ) : null}
+          </div>
+          <div
+            style={{
+              ...hfBase,
+              ...(prot.footerCenter || w >= 170
+                ? { left: mm(w / 2), transform: "translateX(-50%)" }
+                : { right: mm(m.right) }),
+              top: mm(footerBaseline) - baselineTop(smallPt),
+              fontSize: pt(smallPt),
+            }}
+          >
+            {hfText(prot.footerCenter || "{page}")}
+          </div>
+          {prot.footerRight && (
+            <div style={{ ...hfBase, right: mm(m.right), top: mm(footerBaseline) - baselineTop(smallPt), fontSize: pt(smallPt) }}>
+              {hfText(prot.footerRight)}
+            </div>
+          )}
+        </>
+      )}
+    </>
   );
 
   if (page.kind === "cover") {
@@ -3141,12 +3208,13 @@ function GenPage({ page, paginated, docMeta, fit }) {
               style={{
                 fontWeight: "bold",
                 fontSize: pt(geo.band ? template.sizes.h1 + 4 : template.sizes.h1 + 8),
+                lineHeight: 1.2, // même interligne que le PDF (drawParagraphText)
               }}
             >
               {cover.title}
             </div>
             {cover.subtitle && (
-              <div style={{ fontSize: pt(template.sizes.h3), marginTop: mm(3) }}>{cover.subtitle}</div>
+              <div style={{ fontSize: pt(template.sizes.h3), marginTop: mm(3), lineHeight: 1.3 }}>{cover.subtitle}</div>
             )}
             {cover.rule && !geo.band && (
               <div
@@ -3174,32 +3242,49 @@ function GenPage({ page, paginated, docMeta, fit }) {
             }}
           />
         )}
-        {cover.author && (
-          <div
-            className="gen-cover-author"
-            style={{
-              bottom: geo.band ? mm(4) : mm(6),
-              left: `${(geo.pad / w) * 100}%`,
-              width: `${((w - geo.pad * 2) / w) * 100}%`,
-              textAlign: geo.band ? "right" : align,
-              fontSize: pt(template.sizes.h4),
-            }}
-          >
-            {cover.author}
-          </div>
-        )}
+        {/* L'auteur n'apparaît JAMAIS sur la couverture (règle produit) : il
+            reste sur la page de copyright, dans les en-têtes et les métadonnées. */}
       </div>
     );
   }
 
   if (page.kind === "copyright") {
+    // MÊMES lignes, mêmes tailles et mêmes espacements que le PDF : le bloc est
+    // construit par `copyrightBlock` (source unique) et empilé avec la même
+    // arithmétique de lignes de base — plus de mentions présentes d'un seul côté.
+    const detailPt = Math.max(8, template.sizes.small - 1);
+    const blockItems = copyrightBlock(docMeta, { detailPt });
+    const blockH = copyrightBlockHeightMm(blockItems);
+    const startMm = Math.min(h * 0.4, h - 18 - blockH);
+    let boxTop = startMm;
     return (
       <div className="gen-page" style={{ ...pageStyle, background: template.colors.bg, color: template.colors.body }}>
         <CoverDecor prims={decorPrims} w={w} h={h} />
-        <div className="gen-cover-body" style={{ top: "40%", left: mm(m.left), right: mm(m.right), fontSize: pt(COPYRIGHT_FONT_PT), lineHeight: 1.6, whiteSpace: "pre-line" }}>
-          {copyrightLines(docMeta).join("\n")}
-          <div style={{ marginTop: mm(4), color: template.colors.accent, fontSize: pt(COPYRIGHT_REFERENCE_FONT_PT), lineHeight: 1.4 }}>Référence : {docMeta.doc_ref}</div>
-        </div>
+        {blockItems.map((it, i) => {
+          if (i > 0) {
+            const prev = blockItems[i - 1];
+            boxTop += (Number(prev.sizePt) * COPYRIGHT_LINE_HEIGHT) / 2.83 + (Number(it.gapMm) || 0);
+          }
+          if (!it.text) return null;
+          return (
+            <div
+              key={i}
+              style={{
+                position: "absolute",
+                zIndex: 1,
+                top: mm(boxTop),
+                left: mm(m.left),
+                right: mm(m.right),
+                textAlign: "center",
+                fontSize: pt(it.sizePt),
+                lineHeight: COPYRIGHT_LINE_HEIGHT,
+                color: it.tone === "accent" ? template.colors.accent : template.colors.body,
+              }}
+            >
+              {it.text}
+            </div>
+          );
+        })}
         {promoFooter}
       </div>
     );
@@ -3211,11 +3296,11 @@ function GenPage({ page, paginated, docMeta, fit }) {
         <CoverDecor prims={decorPrims} w={w} h={h} />
         <PageDecor template={template} box={box} docMeta={docMeta} scale={s} />
         <div style={{ position: "relative", zIndex: 2, padding: `${mm(m.top)}px ${mm(m.right)}px 0 ${mm(m.left)}px` }}>
-          <div style={{ fontWeight: "bold", fontSize: pt(template.sizes.h2), color: template.colors.heading }}>
+          <div style={{ fontWeight: "bold", fontSize: pt(template.sizes.h2), color: template.colors.heading, lineHeight: 1.2 }}>
             Table des matières
           </div>
           {page.entries.map((e, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "baseline", gap: mm(1), fontSize: pt(template.sizes.body), marginTop: mm(1.5), paddingLeft: e.level === 1 ? 0 : mm(3) }}>
+            <div key={i} style={{ display: "flex", alignItems: "baseline", gap: mm(1), fontSize: pt(template.sizes.body), lineHeight: 1.2, marginTop: mm(1.5), paddingLeft: e.level === 1 ? 0 : mm(3) }}>
               <span style={{ fontWeight: e.level === 1 ? "bold" : "normal", color: e.level === 1 ? template.colors.heading : template.colors.body }}>
                 {e.text.length > 62 ? e.text.slice(0, 62) + "…" : e.text}
               </span>

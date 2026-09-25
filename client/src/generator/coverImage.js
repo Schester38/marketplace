@@ -91,7 +91,6 @@ export async function renderCoverImage(docMeta, { width = 480, maxBytes = 0 } = 
   const align = geo.leftish ? "left" : cover.align;
   const titleFont = coverageFont(template.headingFont, Math.round(w * (geo.band ? 0.09 : 0.105)));
   const subFont = coverageFont(template.headingFont, Math.round(w * 0.05));
-  const authorFont = coverageFont(template.bodyFont, Math.round(w * 0.045));
   const titleLH = Math.round(w * 0.13);
   const subLH = Math.round(w * 0.075);
 
@@ -131,16 +130,7 @@ export async function renderCoverImage(docMeta, { width = 480, maxBytes = 0 } = 
     }
   }
 
-  if (cover.author) {
-    ctx.font = authorFont;
-    ctx.textAlign = geo.band ? "right" : align;
-    const ax = geo.band ? geo.x + geo.maxW : textX;
-    ctx.fillText(
-      String(cover.author).slice(0, 60),
-      ax,
-      geo.band ? h - Math.round(h * 0.045) : h - Math.round(h * 0.06)
-    );
-  }
+  // L'auteur n'est JAMAIS dessiné sur la couverture (règle produit).
 
   // QR de vérification sur l'affiche du produit publié (et les miniatures) :
   // même emplacement que le QR de couverture PDF : coin inférieur droit, avec

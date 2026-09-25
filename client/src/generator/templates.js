@@ -429,6 +429,10 @@ export function resolveTemplate(template, overrides) {
   if (ov.bodyFont && FONT_CSS[ov.bodyFont]) out.bodyFont = ov.bodyFont;
   if (ov.headingFont && FONT_CSS[ov.headingFont]) out.headingFont = ov.headingFont;
   if (ov.align === "left" || ov.align === "justify" || ov.align === "center") out.align = ov.align;
+  // Gras global du corps : bouton « Tout le document en gras » de l'onglet
+  // Design. La pagination, l'aperçu, le PDF, l'EPUB et le Studio lisent tous
+  // ce drapeau ; les titres (déjà gras) et les citations restent inchangés.
+  out.bodyBold = ov.bodyBold === true;
   const lh = Number(ov.lineHeight);
   if (Number.isFinite(lh) && lh >= 1.1 && lh <= 2.4) out.lineHeight = lh;
   const ps = Number(ov.paraSpace);

@@ -562,12 +562,8 @@ function coverPage(docMeta, template, box) {
       }));
     }
   }
-  if (cover.author) {
-    els.push(makeElement(template, "paragraph", { x: geo.pad, y: h - (geo.band ? 8 : 14), w: w - geo.pad * 2, h: 8 }, {
-      name: "Auteur", z: 6, html: escapeHtml(cover.author),
-      style: { ...defaultStyle(template, "paragraph"), size: template.sizes.h3, color: fg, align, lineHeight: 1.3, bold: false, paraSpace: 0 },
-    }));
-  }
+  // L'auteur n'est JAMAIS dessiné sur la couverture (règle produit) : il reste
+  // sur la page de copyright, dans les en-têtes et les métadonnées.
   // QR automatique de couverture : toujours en bas à droite, sans marqueur [QR].
   if (docMeta?.protection?.qrEnabled !== false) {
     const size = 22;
@@ -782,6 +778,26 @@ function contentPage(page, docMeta, template, box) {
   return pg;
 }
 
+// Gras global du corps (`style_overrides.bodyBold`, bouton de l'onglet Design) :
+// même règle que la pagination classique — textes courants (paragraphes, listes,
+// notes, bibliographie, tableaux) en gras ; titres, citations, en-têtes, pieds de
+// page, numéros et sommaire restent tels quels (titres déjà gras).
+function applyBodyBold(pages) {
+  const excluded = new Set([
+    "chapter", "heading", "subtitle", "quote",
+    "header", "footer", "pageNumber", "toc",
+  ]);
+  return (pages || []).map((p) => ({
+    ...p,
+    elements: (p.elements || []).map((el) => {
+      if (el.style?.bold) return el;
+      if (el.type === "table") return { ...el, style: { ...el.style, bold: true } };
+      if (isTextType(el) && !excluded.has(el.type)) return { ...el, style: { ...el.style, bold: true } };
+      return el;
+    }),
+  }));
+}
+
 /**
  * Document paginé → pages STRUCTURÉES et éditables (§24/§25).
  * Conversion non destructive : le document source (docModel TipTap) n'est pas
@@ -796,7 +812,8 @@ export function buildStudioPages({ paginated, docMeta }) {
     else if (p.kind === "toc") out.push(tocPage(p, template, box));
     else out.push(contentPage(p, docMeta, template, box));
   }
-  return ensureStudioFooters(renumber(out), box, template, docMeta);
+  const withBold = template.bodyBold ? applyBodyBold(out) : out;
+  return ensureStudioFooters(renumber(withBold), box, template, docMeta);
 }
 
 /** Enveloppe persistée dans `gen_documents.page_layout` (JSONB additif). */
@@ -1307,7 +1324,7 @@ export function studioCheck(pages, box, docMeta = {}) {
     fixables.push({ code: "add_toc", label: "Ajouter une table des matières" });
   }
   if (words < 150) push(suggestions, "short_doc", "Le document est encore court.", `${words} mots détectés dans les pages éditées.`);
-  if (!docMeta.author) push(suggestions, "no_author", "Auteur non renseigné.", "L'auteur apparaît sur la couverture et la page de copyright.");
+  if (!docMeta.author) push(suggestions, "no_author", "Auteur non renseigné.", "L'auteur apparaît sur la page de copyright, dans les en-têtes et les métadonnées du PDF.");
   if (!images && pages.length > 4) push(suggestions, "no_image", "Aucune image dans le document.", "Une illustration toutes les 3–4 pages retient l'attention du lecteur.");
 
   const score = Math.max(0, Math.round(100 - errors.length * 18 - warnings.length * 6 - suggestions.length * 2));

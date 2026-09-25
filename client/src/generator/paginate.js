@@ -179,14 +179,14 @@ function kindOfTag(tag) {
 function blockInlineStyle(kind, template) {
   const s = template.sizes;
   const map = {
-    p: `font-family:${FONT_CSS[template.bodyFont]};font-size:${s.body}pt;line-height:${template.lineHeight};color:${template.colors.body};margin:0;text-align:${template.align};`,
+    p: `font-family:${FONT_CSS[template.bodyFont]};font-size:${s.body}pt;line-height:${template.lineHeight};color:${template.colors.body};margin:0;text-align:${template.align};${template.bodyBold ? "font-weight:700;" : ""}`,
     h1: `font-family:${FONT_CSS[template.headingFont]};font-size:${s.h1}pt;line-height:1.25;font-weight:bold;color:${template.colors.heading};margin:0;`,
     h2: `font-family:${FONT_CSS[template.headingFont]};font-size:${s.h2}pt;line-height:1.3;font-weight:bold;color:${template.colors.heading};margin:0;`,
     h3: `font-family:${FONT_CSS[template.headingFont]};font-size:${s.h3}pt;line-height:1.35;font-weight:bold;color:${template.colors.heading};margin:0;`,
     h4: `font-family:${FONT_CSS[template.headingFont]};font-size:${s.h4}pt;line-height:1.35;font-weight:bold;color:${template.colors.accent};margin:0;`,
     quote: `font-family:${FONT_CSS[template.bodyFont]};font-size:${s.body}pt;line-height:${template.lineHeight};font-style:italic;color:${template.colors.accent};margin:0;border-left:3px solid ${template.colors.accent};padding-left:14px;text-align:${template.align};`,
     pre: `font-family:${FONT_CSS.mono};font-size:${s.small + 0.5}pt;line-height:1.45;color:${template.colors.body};margin:0;white-space:pre;background:#f4f4f5;padding:8px;`,
-    liText: `font-family:${FONT_CSS[template.bodyFont]};font-size:${s.body}pt;line-height:${template.lineHeight};color:${template.colors.body};margin:0;text-align:${template.align};padding-left:18px;text-indent:-18px;`,
+    liText: `font-family:${FONT_CSS[template.bodyFont]};font-size:${s.body}pt;line-height:${template.lineHeight};color:${template.colors.body};margin:0;text-align:${template.align};padding-left:18px;text-indent:-18px;${template.bodyBold ? "font-weight:700;" : ""}`,
   };
   return map[kind] || map.p;
 }
@@ -324,7 +324,9 @@ function atomsFromBlock(el, host, hostRect, template, groupId) {
     const clone = el.cloneNode(true);
     clone.style.cssText = "border-collapse:collapse;width:100%;margin:0;";
     [...clone.querySelectorAll("td,th")].forEach((td) => {
-      td.style.cssText += `border:1px solid ${template.colors.accent}55;padding:4px 6px;vertical-align:top;`;
+      td.style.cssText += `border:1px solid ${template.colors.accent}55;padding:4px 6px;vertical-align:top;${
+        template.bodyBold ? "font-weight:700;" : ""
+      }`;
     });
     host.appendChild(clone);
     const rows = [...clone.querySelectorAll("tr")];
