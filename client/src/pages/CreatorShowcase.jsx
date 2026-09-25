@@ -6,6 +6,7 @@ import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { waLink } from "../config.js";
+import { proxyPhotoUrl } from "../share.js";
 
 export default function CreatorShowcase() {
   const { id } = useParams();
@@ -68,7 +69,7 @@ export default function CreatorShowcase() {
         <div className="shop-header">
           {creator.avatar ? (
             <img
-              src={creator.avatar}
+              src={proxyPhotoUrl(creator.avatar)}
               alt={creator.name}
               className="shop-avatar creator-avatar"
               loading="lazy"

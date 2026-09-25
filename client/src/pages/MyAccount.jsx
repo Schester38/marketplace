@@ -10,6 +10,7 @@ import { CITIES } from "../cities.js";
 import { useLang } from "../i18n.jsx";
 import { formatMoney } from "../components/ProductCard.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
+import { proxyPhotoUrl } from "../share.js";
 import { requestPushPermission } from "../push.js";
 import { smartProcessImageFile } from "../imageKit.js";
 
@@ -535,7 +536,7 @@ export default function MyAccount() {
             {avatarPreview || user?.avatar ? (
               <img
                 className="avatar-lg"
-                src={avatarPreview || user.avatar}
+                src={proxyPhotoUrl(avatarPreview || user.avatar)}
                 alt={t("Photo de profil")}
               />
             ) : (

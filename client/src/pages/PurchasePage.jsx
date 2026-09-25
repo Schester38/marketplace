@@ -19,6 +19,7 @@ import PaymentMethodsStrip from "../components/PaymentMethodsStrip.jsx";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 import { PriceEquivalent } from "../money.jsx";
+import { proxyPhotoUrl } from "../share.js";
 
 export default function PurchasePage() {
   const { id } = useParams();
@@ -227,7 +228,7 @@ export default function PurchasePage() {
     );
   }
 
-  const photo = (product.photos && product.photos[0]) || product.image;
+  const photo = (product.photos && product.photos[0]) || proxyPhotoUrl(product.image);
   const symbol = countrySymbol(product.shop_country);
   const flash = product.flash_promo || null;
   const displayPrice = flash ? Number(flash.price) : Number(product.price);

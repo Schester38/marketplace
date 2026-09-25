@@ -10,7 +10,7 @@
 //   en URL canonique (pour ne jamais stocker /api/photo en base).
 // - photoProxyPath()  : valide un chemin de photo (anti-SSRF).
 const MARK = "/storage/v1/object/public/photos/";
-const PATH_RE = /^(products|offers)\/[A-Za-z0-9][A-Za-z0-9._/-]{0,240}$/;
+const PATH_RE = /^(products|offers|avatars)\/[A-Za-z0-9][A-Za-z0-9._/-]{0,240}$/;
 
 export function photoProxyPath(value) {
   const v = String(value || "");

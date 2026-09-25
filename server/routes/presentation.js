@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { q } from "../db.js";
 import { fullPhotos } from "../photo.js";
+import { proxyPhotoUrl } from "../photoProxy.js";
 
 const router = Router();
 const imageRouter = Router();
 
 function firstPhoto(p) {
-  return fullPhotos(p.photos)[0] || p.image || null;
+  return fullPhotos(p.photos)[0] || proxyPhotoUrl(p.image) || null;
 }
 
 function dataUriParts(uri) {
@@ -27,7 +28,7 @@ imageRouter.get("/:id", async (req, res) => {
     res.set("Cache-Control", "public, max-age=86400");
     return res.send(parts.buffer);
   }
-  if (String(photo || "").startsWith("http")) {
+  if (String(photo || "").startsWith("http") || String(photo || "").startsWith("/")) {
     return res.redirect(photo);
   }
   return res.status(404).json({ error: "Image introuvable" });

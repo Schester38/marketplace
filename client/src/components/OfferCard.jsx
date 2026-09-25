@@ -11,6 +11,7 @@ import {
 } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import Logo from "./Logo.jsx";
+import { proxyPhotoUrl } from "../share.js";
 
 export default function OfferCard({ offer }) {
   const { t } = useLang();
@@ -29,7 +30,7 @@ export default function OfferCard({ offer }) {
     <div className="card offer-card">
       <Link to={`/offre/${offer.id}`} className="offer-photo">
         {hasPhotos ? (
-          <img src={photos[0]} alt={offer.name} loading="lazy" decoding="async" />
+          <img src={proxyPhotoUrl(photos[0])} alt={offer.name} loading="lazy" decoding="async" />
         ) : (
           <Logo className="logo-inline" />
         )}

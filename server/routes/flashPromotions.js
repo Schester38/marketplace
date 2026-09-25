@@ -2,6 +2,7 @@ import { Router } from "express";
 import { q } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { listPhotos } from "../photo.js";
+import { proxyPhotoUrl } from "../photoProxy.js";
 import { createFlashPromoSchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
 import { broadcastNotification } from "../services/notifications.js";
@@ -31,7 +32,7 @@ function promoRow(row) {
     product_id: row.product_id,
     product_name: row.name,
     product_category: row.category,
-    image: photoList[0] || row.image || null,
+    image: photoList[0] || proxyPhotoUrl(row.image) || null,
     photos: photoList,
     price: Number(row.price),
     promo_price: Number(row.promo_price),

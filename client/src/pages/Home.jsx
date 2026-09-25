@@ -18,6 +18,7 @@ import { PRODUCT_CATEGORIES, currencySymbol } from "../config.js";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { useAuth } from "../App.jsx";
 import { useGeo } from "../geo.js";
+import { proxyPhotoUrl } from "../share.js";
 
 function mergeUnique(prev, next) {
   if (!prev.length) return next;
@@ -105,7 +106,16 @@ export default function Home() {
   useEffect(() => {
     try {
       const list = JSON.parse(storage.getItem("mboppi_recent") || "[]");
-      const filtered = Array.isArray(list) ? list.filter((p) => Number(p.quantity || 0) > 0) : [];
+      const filtered = Array.isArray(list)
+        ? list
+            .filter((p) => Number(p.quantity || 0) > 0)
+            .map((p) => ({
+              ...p,
+              photo: proxyPhotoUrl(p.photo),
+              image: proxyPhotoUrl(p.image),
+              photos: Array.isArray(p.photos) ? p.photos.map(proxyPhotoUrl) : p.photos,
+            }))
+        : [];
       setRecent(filtered);
     } catch {
       /* ignore */
@@ -259,7 +269,7 @@ export default function Home() {
               sub: p.shop_name || t("Produit"),
               price: p.price,
               currency: p.currency,
-              image: p.image,
+              image: proxyPhotoUrl(p.image),
               url: `/produit/${p.id}`,
             })),
             ...(sr.shops || []).map((s) => ({

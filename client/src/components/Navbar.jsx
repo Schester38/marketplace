@@ -3,6 +3,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../App.jsx";
+import { proxyPhotoUrl } from "../share.js";
 import { LANGS, useLang } from "../i18n.jsx";
 import { useCart, useFavs } from "../store.jsx";
 import { api } from "../api.js";
@@ -1203,7 +1204,7 @@ export default function Navbar({ onLogout }) {
           </Link>
           <span className="user-chip">
             {user.avatar ? (
-              <img className="user-chip-avatar" src={user.avatar} alt="" />
+              <img className="user-chip-avatar" src={proxyPhotoUrl(user.avatar)} alt="" />
             ) : null}
             {user.name} ({roleLabel})
             {user.verified && (

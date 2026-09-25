@@ -2,6 +2,7 @@ import { Router } from "express";
 import { q } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { listPhotos, mediumPhotos, fullPhotos, normalizeUploadPhotos } from "../photo.js";
+import { proxyPhotoUrl } from "../photoProxy.js";
 import { defaultCurrencyFor, validCurrency } from "../currency.js";
 import {
   storePhotos,
@@ -262,7 +263,7 @@ function productRow(p, mode = "list", { ownerView = false } = {}) {
   const larges = fullPhotos(p.photos);
   // Catalogue/rails → thumb ; fiche produit → medium (zoom large dispo à part).
   const photos = mode === "detail" ? mediums : thumbs;
-  const image = photos[0] || p.image || null;
+  const image = photos[0] || proxyPhotoUrl(p.image) || null;
   const {
     n,
     n_month,
@@ -292,6 +293,7 @@ function productRow(p, mode = "list", { ownerView = false } = {}) {
     ...(ownerView && youtube_id ? { youtube_id } : {}),
     photos,
     image,
+    shop_avatar: proxyPhotoUrl(p.shop_avatar),
     ...(mode === "detail" ? { photos_thumb: thumbs, photos_large: larges } : {}),
     rating_avg: Number(rating_avg || 0),
     review_count: Number(review_count || 0),

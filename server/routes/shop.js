@@ -2,6 +2,7 @@ import { Router } from "express";
 import { q } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { listPhotos } from "../photo.js";
+import { proxyPhotoUrl } from "../photoProxy.js";
 import { updatePaymentMethodsSchema, shopListQuerySchema } from "../validators.js";
 import { validate, validateQuery } from "../middlewares/validate.js";
 import { normalizeWalletPrimary } from "../services/payouts.js";
@@ -157,7 +158,13 @@ router.get(
     GROUP BY u.id
     ORDER BY u.name ASC`;
     const shops = await q(sql, params);
-    res.json({ shops });
+    res.json({
+      shops: shops.map((s) => ({
+        ...s,
+        avatar: proxyPhotoUrl(s.avatar),
+        sample_image: proxyPhotoUrl(s.sample_image),
+      })),
+    });
   })
 );
 
@@ -190,12 +197,12 @@ router.get(
     ).map((p) => ({
       ...p,
       photos: listPhotos(p.photos),
-      image: listPhotos(p.photos)[0] || p.image || null,
+      image: listPhotos(p.photos)[0] || proxyPhotoUrl(p.image) || null,
       price: Number(p.price),
       sold: Number(p.n || 0),
       pending_count: Number(p.pending_n || 0),
     }));
-    res.json({ shop, products });
+    res.json({ shop: { ...shop, avatar: proxyPhotoUrl(shop.avatar) }, products });
   })
 );
 

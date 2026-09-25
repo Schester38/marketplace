@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { proxyPhotoUrl } from "./share.js";
 
 const CartContext = createContext(null);
 const FavContext = createContext(null);
@@ -44,7 +45,7 @@ export function StoreProvider({ children }) {
           name: product.name,
           price: Number(product.flash_promo ? product.flash_promo.price : product.price),
           old_price: product.flash_promo ? Number(product.price) : null,
-          photo: (product.photos && product.photos[0]) || product.image || null,
+          photo: proxyPhotoUrl((product.photos && product.photos[0]) || product.image),
           country: product.shop_country || null,
           // Un produit digital ne suit pas le circuit de livraison : le panier
           // doit le savoir pour ouvrir le tunnel de paiement iKeePay (téléchargement

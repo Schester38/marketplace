@@ -342,7 +342,7 @@ router.get("/boutique/:id", async (req, res) => {
       "@type": "Store",
       name: shop.name,
       url: canonical,
-      image: image || undefined,
+      image: absImage || undefined,
       description: descText,
       ...(shop.location
         ? {
@@ -616,7 +616,7 @@ router.get("/offre/:id", async (req, res) => {
       "@context": "https://schema.org",
       "@type": "Product",
       name: o.name,
-      image: image || undefined,
+      image: absImage || undefined,
       description: descText,
       url: canonical,
       offers: {

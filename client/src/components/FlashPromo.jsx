@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatMoney } from "./ProductCard.jsx";
 import { countrySymbol } from "../config.js";
+import { proxyPhotoUrl } from "../share.js";
 import { useLang } from "../i18n.jsx";
 
 export function formatFlashTime(ms) {
@@ -35,7 +36,7 @@ export function FlashCountdown({ endsAt, render }) {
 export default function FlashPromoCard({ promo, onDelete, onShare, showShop = true }) {
   const { t } = useLang();
   const symbol = countrySymbol(promo.shop_country);
-  const image = promo.image;
+  const image = proxyPhotoUrl(promo.image);
   return (
     <div className="card product-card flash-promo-card">
       <Link

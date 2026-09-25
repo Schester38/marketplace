@@ -6,6 +6,7 @@ import { formatMoney } from "../components/ProductCard.jsx";
 import { countrySymbol, countryPhone, BASE_URL } from "../config.js";
 import { useAuth } from "../App.jsx";
 import { useCart } from "../store.jsx";
+import { proxyPhotoUrl } from "../share.js";
 import { useLang } from "../i18n.jsx";
 import CopyCode from "../components/CopyCode.jsx";
 import DigitalBuyTunnel from "../components/DigitalBuyTunnel.jsx";
@@ -347,7 +348,7 @@ export default function Cart() {
               return (
                 <div className="cart-item" key={i.id}>
                   <div className="cart-item-photo">
-                    {i.photo ? <img src={i.photo} alt={i.name} loading="lazy" /> : <span>📦</span>}
+                    {i.photo ? <img src={proxyPhotoUrl(i.photo)} alt={i.name} loading="lazy" /> : <span>📦</span>}
                   </div>
                   <div className="cart-item-info">
                     <Link to={`/produit/${i.id}`} className="cart-item-name">

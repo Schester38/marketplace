@@ -5,6 +5,7 @@ import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import { waLink } from "../config.js";
+import { proxyPhotoUrl } from "../share.js";
 import { IconWhatsApp } from "../components/icons.jsx";
 
 export default function Creators() {
@@ -53,7 +54,7 @@ export default function Creators() {
                 <div className="shop-item-head">
                   {c.avatar ? (
                     <img
-                      src={c.avatar}
+                      src={proxyPhotoUrl(c.avatar)}
                       alt={c.name}
                       className="shop-avatar creator-avatar"
                       loading="lazy"

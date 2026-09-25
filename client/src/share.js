@@ -1,4 +1,24 @@
 const LOGO_URL = "/share-logo.png";
+const MARK = "/storage/v1/object/public/photos/";
+const PATH_RE = /^(products|offers|avatars)\/[A-Za-z0-9][A-Za-z0-9._/-]{0,240}$/;
+
+/** Convertit une ancienne URL publique Supabase vers le proxy Vercel. */
+export function proxyPhotoUrl(value) {
+  if (typeof value !== "string" || !value || value.startsWith("data:")) return value;
+  const i = value.indexOf(MARK);
+  if (i < 0) return value;
+  const path = value.slice(i + MARK.length).split(/[?#]/)[0];
+  if (!PATH_RE.test(path)) return value;
+  return `/api/photo?p=${encodeURIComponent(path)}`;
+}
+
+export function firstPhoto(product) {
+  const photos = product?.photos;
+  const p = Array.isArray(photos) ? photos[0] : null;
+  if (typeof p === "string") return proxyPhotoUrl(p);
+  if (p && typeof p === "object") return proxyPhotoUrl(p.full || p.large || p.medium || p.thumb);
+  return proxyPhotoUrl(product?.image);
+}
 
 let logoFilePromise = null;
 
@@ -32,13 +52,9 @@ export async function getFileFromImageUrl(imageUrl, name = "image.png") {
   }
 }
 
-/** Premier visuel d'un produit (photos[] = chaînes ou {thumb, full}). */
+/** Premier visuel d'un produit, avec normalisation des anciennes URL Supabase. */
 export function firstProductImage(product) {
-  if (!product) return null;
-  const p = product.photos && product.photos[0];
-  if (typeof p === "string") return p;
-  if (p && typeof p === "object") return p.full || p.thumb || null;
-  return product.image || null;
+  return firstPhoto(product);
 }
 
 /** Vrai sur appareil à écran tactile (téléphone/tablette), false sur ordinateur. */

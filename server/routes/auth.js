@@ -12,6 +12,7 @@ import { validate } from "../middlewares/validate.js";
 import { membershipRoles } from "../services/membershipGate.js";
 import { notifyAdmins } from "../services/adminNotify.js";
 import { collectStorageKeys, deleteStorageKeys, uploadPhoto } from "../storage.js";
+import { proxyPhotoUrl } from "../photoProxy.js";
 
 const router = Router();
 
@@ -68,7 +69,7 @@ async function publicUser(u) {
     country: u.country || null,
     phone: u.phone || null,
     // Photo de profil (tous les rôles) — URL publique WebP, null si absente.
-    avatar: u.avatar || null,
+    avatar: proxyPhotoUrl(u.avatar) || null,
     seller_code: u.seller_code || null,
     reference_number: u.reference_number || null,
     email_verified: !!u.email_verified,

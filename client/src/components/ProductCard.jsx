@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { countrySymbol, waLink } from "../config.js";
 import { useAuth } from "../App.jsx";
+import { proxyPhotoUrl } from "../share.js";
 import { PriceEquivalent } from "../money.jsx";
 import { useLang } from "../i18n.jsx";
 import { useCart, useFavs } from "../store.jsx";
@@ -56,7 +57,7 @@ export default function ProductCard({
   const { addToCart } = useCart();
   const { isFav, toggleFav } = useFavs();
   const [added, setAdded] = useState(false);
-  const photo = (product.photos && product.photos[0]) || product.image;
+  const photo = (product.photos && product.photos[0]) || proxyPhotoUrl(product.image);
   const qty = product.is_digital ? 9999 : Number(product.quantity || 0);
   const symbol = countrySymbol(product?.shop_country);
   const fav = isFav(product.id);
@@ -166,7 +167,7 @@ export default function ProductCard({
               {product.shop_avatar && (
                 <img
                   className="card-shop-avatar"
-                  src={product.shop_avatar}
+                  src={proxyPhotoUrl(product.shop_avatar)}
                   alt=""
                   loading="lazy"
                   decoding="async"

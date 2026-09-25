@@ -15,6 +15,7 @@ import Seo from "../components/Seo.jsx";
 import Logo from "../components/Logo.jsx";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
+import { proxyPhotoUrl } from "../share.js";
 
 export default function OfferDetail() {
   const { id } = useParams();
@@ -48,7 +49,7 @@ export default function OfferDetail() {
 
   useRefreshOnFocus(refetchOffer);
 
-  const photos = offer ? offer.photos || [] : [];
+  const photos = offer ? (offer.photos || []).map(proxyPhotoUrl) : [];
   useEffect(() => {
     if (!lightbox) return;
     const onKey = (e) => {

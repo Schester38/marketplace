@@ -5,6 +5,7 @@ import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
 import { formatMoney } from "./ProductCard.jsx";
 import { countrySymbol } from "../config.js";
+import { proxyPhotoUrl } from "../share.js";
 import { FlashCountdown, formatFlashTime } from "./FlashPromo.jsx";
 
 const ALLOWED_PATHS = ["/", "/shop", "/seller", "/client", "/creator", "/livreur"];
@@ -124,7 +125,7 @@ export default function FlashPromoPopup() {
               tabIndex={depth > 0 ? -1 : undefined}
             >
               {p.image && (
-                <img src={p.image} alt={p.product_name} loading="lazy" decoding="async" />
+                <img src={proxyPhotoUrl(p.image)} alt={p.product_name} loading="lazy" decoding="async" />
               )}
               <div className="flash-popup-info">
                 <h3>{p.product_name}</h3>

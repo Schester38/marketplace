@@ -10,7 +10,7 @@ import { useAuth } from "../App.jsx";
 import { useCart, useFavs } from "../store.jsx";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
-import { nativeShareWithImage, firstProductImage } from "../share.js";
+import { nativeShareWithImage, firstProductImage, proxyPhotoUrl } from "../share.js";
 import Reviews from "../components/Reviews.jsx";
 import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 import PaymentMethodsStrip from "../components/PaymentMethodsStrip.jsx";
@@ -95,7 +95,7 @@ export default function ProductDetail() {
             currency: p.currency,
             old_price: p.old_price,
             photos: p.photos,
-            image: p.image,
+            image: proxyPhotoUrl(p.image),
             shop_name: p.shop_name,
             shop_role: p.shop_role,
             shop_id: p.shop_id,
@@ -560,7 +560,7 @@ export default function ProductDetail() {
               {product.shop_avatar && (
                 <img
                   className="card-shop-avatar"
-                  src={product.shop_avatar}
+                  src={proxyPhotoUrl(product.shop_avatar)}
                   alt=""
                   loading="lazy"
                   decoding="async"
