@@ -76,6 +76,10 @@ export default function ShopDashboard() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [picking, setPicking] = useState(false);
+  // Suppression VOLONTAIRE de la photo en cours d'édition (bouton ✕) : seule
+  // cette intention est transmise au serveur (`remove_photos`). Sans elle, une
+  // modification du produit ne peut plus effacer la photo existante.
+  const [photoRemoved, setPhotoRemoved] = useState(false);
   const [shopCode, setShopCode] = useState(null);
   const [codeLoading, setCodeLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -133,6 +137,9 @@ export default function ShopDashboard() {
         }
       }
       setForm((f) => ({ ...f, photos: [...f.photos, ...entries].slice(0, MAX_PHOTOS) }));
+      // Une nouvelle photo remplace l'ancienne : l'intention de suppression
+      // éventuelle n'a plus lieu d'être.
+      setPhotoRemoved(false);
     } finally {
       setPicking(false);
     }
@@ -140,6 +147,8 @@ export default function ShopDashboard() {
 
   const removePhoto = (i) => {
     setForm((f) => ({ ...f, photos: f.photos.filter((_, idx) => idx !== i) }));
+    // Le clic sur ✕ est la SEULE suppression volontaire transmise au serveur.
+    setPhotoRemoved(true);
   };
 
   const load = useCallback(async () => {
@@ -215,6 +224,9 @@ export default function ShopDashboard() {
       quantity: Number(form.quantity || 1),
       warranty: form.warranty.trim() || null,
       contact: form.contact ? `${prefix}${form.contact.trim()}` : "",
+      // Suppression explicite de la photo (bouton ✕) : sans ce drapeau, le
+      // serveur CONSERVE la photo existante quand aucune nouvelle n'est envoyée.
+      remove_photos: photoRemoved,
     };
     try {
       if (editingId) {
@@ -226,6 +238,7 @@ export default function ShopDashboard() {
       }
       setForm(EMPTY_FORM);
       setEditingId(null);
+      setPhotoRemoved(false);
       setShowForm(false);
       load();
     } catch (err) {
@@ -234,6 +247,7 @@ export default function ShopDashboard() {
   };
 
   const editProduct = async (p) => {
+    setPhotoRemoved(false);
     const currentPrefix = countryPhone(user?.country);
     const contact =
       p.contact && p.contact.startsWith(currentPrefix)

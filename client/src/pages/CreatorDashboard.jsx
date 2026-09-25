@@ -73,6 +73,10 @@ export default function CreatorDashboard() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [picking, setPicking] = useState(false);
+  // Suppression VOLONTAIRE de la photo en cours d'édition (bouton ✕) : seule
+  // cette intention est transmise au serveur (`remove_photos`). Sans elle, une
+  // modification du produit ne peut plus effacer la photo existante.
+  const [photoRemoved, setPhotoRemoved] = useState(false);
   const formRef = useRef(null);
   const [proofSale, setProofSale] = useState(null);
   const [proofLoading, setProofLoading] = useState(false);
@@ -125,6 +129,9 @@ export default function CreatorDashboard() {
         }
       }
       setForm((f) => ({ ...f, photos: [...f.photos, ...entries].slice(0, MAX_PHOTOS) }));
+      // Une nouvelle photo remplace l'ancienne : l'intention de suppression
+      // éventuelle n'a plus lieu d'être.
+      setPhotoRemoved(false);
     } finally {
       setPicking(false);
     }
@@ -132,6 +139,8 @@ export default function CreatorDashboard() {
 
   const removePhoto = (i) => {
     setForm((f) => ({ ...f, photos: f.photos.filter((_, idx) => idx !== i) }));
+    // Le clic sur ✕ est la SEULE suppression volontaire transmise au serveur.
+    setPhotoRemoved(true);
   };
 
   const load = useCallback(async () => {
@@ -247,6 +256,9 @@ export default function CreatorDashboard() {
       // Durée d'accès après confirmation du paiement : champ vide = accès
       // illimité (null) — le validateur zod refuse une chaîne vide.
       access_days: String(form.access_days || "").trim() === "" ? null : Number(form.access_days),
+      // Suppression explicite de la photo (bouton ✕) : sans ce drapeau, le
+      // serveur CONSERVE la photo existante quand aucune nouvelle n'est envoyée.
+      remove_photos: photoRemoved,
     };
     try {
       if (editingId) {
@@ -259,6 +271,7 @@ export default function CreatorDashboard() {
       setForm(EMPTY_FORM);
       setEditingId(null);
       setEditingDigital(null);
+      setPhotoRemoved(false);
       setShowForm(false);
       load();
     } catch (err) {
@@ -270,6 +283,7 @@ export default function CreatorDashboard() {
     if (!p) return;
     setError("");
     setSuccess("");
+    setPhotoRemoved(false);
     // Produit issu du Générateur MboppiShop : ouvrir le document source et son
     // éditeur. La publication existante sera mise à jour depuis le Générateur,
     // sans recréer un second produit.

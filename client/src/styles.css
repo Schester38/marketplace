@@ -7112,17 +7112,36 @@ a.step {
 .card-contact {
   display: flex;
   align-items: center;
-  gap: 10px;
+  /* Les cartes des rails sont étroites (146 px, 124 px sur mobile) : sans
+     retour à la ligne, le lien WhatsApp dépassait de la carte et était rogné
+     par `overflow: hidden`, et le numéro de téléphone se comprimait en colonne. */
+  flex-wrap: wrap;
+  gap: 1px 10px;
   margin: 4px 0 0;
   font-size: 0.8rem;
+  min-width: 0;
 }
 .card-contact a {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  /* Le numéro peut se replier sur 2 lignes dans les cartes très étroites
+     (124 px) : jamais de débordement ni de lien rogné par la carte. */
+  flex: 0 1 auto;
+  min-width: 0;
   color: var(--primary);
   text-decoration: none;
   font-weight: 600;
+}
+/* Cartes étroites des rails : on garde tout visible (WhatsApp passe à la ligne). */
+.rail-scroll .card-contact {
+  gap: 1px 8px;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+/* L'icône WhatsApp/du téléphone ne doit jamais être comprimée par le flex. */
+.card-contact a svg {
+  flex: 0 0 auto;
 }
 .product-creator-contact {
   display: flex;
@@ -11230,7 +11249,14 @@ a.step {
   font-size: 0.76rem;
   background: rgba(148, 163, 184, 0.1);
 }
-.studio-text { white-space: pre-wrap; word-break: break-word; }
+/* Le texte du Studio doit se replier EXACTEMENT comme le moteur de pagination
+   (sinon une ligne d'écart est réinjectée dans le flux automatique et décale
+   les blocs suivants). Le moteur mesure en `white-space: normal` : on ne garde
+   donc plus `pre-wrap`/`word-break: break-word` ici — `pre-wrap` n'est conservé
+   que pour les blocs de code (`.studio-pre` ci-dessous), qui portent leurs
+   propres retours à la ligne. `overflow-wrap` ne coupe que les mots plus longs
+   que la boîte (URL), comme le navigateur mesure. */
+.studio-text { white-space: normal; overflow-wrap: break-word; }
 .studio-text p { margin: 0 0 var(--ps, 0px); }
 .studio-text p:last-child { margin-bottom: 0; }
 .studio-text.studio-dropcap::first-letter {

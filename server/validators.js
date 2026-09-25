@@ -33,6 +33,11 @@ export const createProductSchema = z.object({
     .max(100, "Commission maximale 100%")
     .default(0),
   photos: z.any().optional(),
+  // Modification d'un produit : suppression EXPLICITE de la photo (bouton ✕ du
+  // formulaire). Sans ce signal, une galerie vide — URL proxée non reconnue,
+  // chargement partiel, ancien client — CONSERVE la photo déjà enregistrée au
+  // lieu de l'effacer (voir PUT /api/products/:id).
+  remove_photos: z.boolean().optional(),
   category: z.string().max(100).optional(),
   warranty: z.string().max(60).optional().nullable(),
   delivery_fee: z.coerce.number().min(0, "Frais de livraison invalides").default(0),

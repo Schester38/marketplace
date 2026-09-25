@@ -1,5 +1,6 @@
 import {
   computeRedistribution,
+  normalizeOldPrice,
   referralThresholdReached,
   commissionThresholdReached,
   REFERRAL_CLAIM_THRESHOLD,
@@ -121,6 +122,27 @@ suite("computeRedistribution", () => {
     const r = computeRedistribution(sale);
     assertEqual(r.shopAmount, -500, "shopAmount");
     assertEqual(r.sellerAmount, 1500, "sellerAmount");
+  });
+});
+
+suite("normalizeOldPrice (prix barré — publication Générateur)", () => {
+  test("accepte un prix barré strictement supérieur", () => {
+    assertEqual(normalizeOldPrice(4000, 2500), 4000, "4000 > 2500");
+  });
+
+  test("accepte la virgule décimale et arrondit au centime", () => {
+    assertEqual(normalizeOldPrice("3500,555", 2500), 3500.56, "arrondi au centime");
+  });
+
+  test("refuse un prix barré égal ou inférieur au prix de vente", () => {
+    assertEqual(normalizeOldPrice(2500, 2500), null, "égal refusé");
+    assertEqual(normalizeOldPrice(1000, 2500), null, "inférieur refusé");
+  });
+
+  test("ignore un prix barré vide, nul ou invalide", () => {
+    assertEqual(normalizeOldPrice("", 2500), null, "chaîne vide");
+    assertEqual(normalizeOldPrice(null, 2500), null, "null");
+    assertEqual(normalizeOldPrice("abc", 2500), null, "texte");
   });
 });
 
@@ -276,6 +298,34 @@ suite("validators: createProductSchema", () => {
       },
       "zero commission"
     );
+  });
+
+  // NON-RÉGRESSION photo : le formulaire d'édition renvoie la photo existante
+  // sous forme d'URL proxée (`/api/photo?p=…`) que le serveur ne reconnaît pas
+  // comme une nouvelle image ; la galerie peut donc arriver vide alors que
+  // l'utilisateur n'a rien supprimé. Seul `remove_photos: true` (bouton ✕)
+  // autorise la suppression — ces deux cas doivent rester valides.
+  test("conserve remove_photos (suppression explicite) après validation", () => {
+    const parsed = createProductSchema.safeParse({
+      name: "Ebook",
+      price: 5000,
+      quantity: 1,
+      photos: [],
+      remove_photos: true,
+    });
+    if (!parsed.success) throw new Error("payload photo refusé par le schéma");
+    assertEqual(parsed.data.remove_photos, true, "remove_photos conservé");
+  });
+
+  test("accepte une galerie vide sans suppression explicite", () => {
+    const parsed = createProductSchema.safeParse({
+      name: "Ebook",
+      price: 5000,
+      quantity: 1,
+      photos: [],
+    });
+    if (!parsed.success) throw new Error("galerie vide refusée par le schéma");
+    assertEqual(parsed.data.remove_photos, undefined, "remove_photos absent");
   });
 });
 

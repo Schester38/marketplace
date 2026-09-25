@@ -5075,6 +5075,9 @@ const RICH_EN = {
   "≈ {p} % du prix": "≈ {p}% of the price",
   "Montant supérieur au prix : la commission est limitée au prix de vente.":
     "Amount higher than the price: the commission is capped at the sale price.",
+  "Prix barré (optionnel)": "Original price (optional)",
+  "Le prix barré doit être supérieur au prix de vente.":
+    "The original price must be higher than the sale price.",
   "Paiements acceptés — sécurisés par iKeepay": "Accepted payments — secured by iKeepay",
   "Carte bancaire (Visa / Mastercard), USDT et Mobile Money — transaction chiffrée et vérifiée.":
     "Bank card (Visa / Mastercard), USDT and Mobile Money — encrypted and verified transaction.",
@@ -5226,6 +5229,9 @@ const RICH_ES = {
   "≈ {p} % du prix": "≈ {p} % del precio",
   "Montant supérieur au prix : la commission est limitée au prix de vente.":
     "Importe superior al precio: la comisión se limita al precio de venta.",
+  "Prix barré (optionnel)": "Precio tachado (opcional)",
+  "Le prix barré doit être supérieur au prix de vente.":
+    "El precio tachado debe ser superior al precio de venta.",
   "Paiements acceptés — sécurisés par iKeepay": "Pagos aceptados — asegurados por iKeepay",
   "Carte bancaire (Visa / Mastercard), USDT et Mobile Money — transaction chiffrée et vérifiée.":
     "Tarjeta bancaria (Visa / Mastercard), USDT y Mobile Money — transacción cifrada y verificada.",
@@ -5343,6 +5349,9 @@ const RICH_AR = {
   "≈ {p} % du prix": "≈ {p} % من السعر",
   "Montant supérieur au prix : la commission est limitée au prix de vente.":
     "المبلغ أعلى من السعر: تُحَدّ العمولة بسعر البيع.",
+  "Prix barré (optionnel)": "السعر المشطوب (اختياري)",
+  "Le prix barré doit être supérieur au prix de vente.":
+    "يجب أن يكون السعر المشطوب أعلى من سعر البيع.",
   "Paiements acceptés — sécurisés par iKeepay": "طرق الدفع المقبولة — مؤمَّنة عبر iKeepay",
   "Carte bancaire (Visa / Mastercard), USDT et Mobile Money — transaction chiffrée et vérifiée.":
     "بطاقة بنكية (فيزا / ماستركارد) وUSDT والموبايل موني — معاملة مشفّرة وموثّقة.",

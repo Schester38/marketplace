@@ -102,12 +102,20 @@ function TextView({ el, zoom, editing, onCommitHtml, tokensCtx, onAutoHeight, pa
   useEffect(() => {
     if (editing && ref.current) ref.current.innerHTML = html;
   }, [editing, html]);
-  // La première mesure est celle de l'ouverture : la hauteur initiale vient
-  // déjà du moteur paginé et ne doit surtout pas déclencher un nouveau flux.
-  // Une mesure n'est demandée qu'après une vraie modification (HTML, style,
-  // largeur ou zoom). La clé exclut box.h afin que le repositionnement
-  // automatique ne redéclenche jamais lui-même une mesure.
-  const measureKey = JSON.stringify([html, el.style, el.box?.w, zoom]);
+  // Le ZOOM ne fait PAS partie de la clé de mesure : à l'ouverture du Studio,
+  // `canvasFit` (téléphone, tablette, fenêtre étroite) et `previewFit` changent
+  // le zoom APRÈS le montage → le nœud observé change de taille et TOUS les
+  // textes étaient remesurés. Comme le rendu navigateur peut différer d'une
+  // ligne du moteur de pagination (`word-break`/espaces), ces écarts étaient
+  // réinjectés dans `fitMeasuredTextHeight`, qui décalait tous les blocs
+  // suivants : contenu chevauché/débordé dès l'ouverture, et pire après chaque
+  // modification. On mémorise donc le zoom de création de l'effet : un rapport
+  // dont le zoom a changé est un simple redimensionnement visuel, pas une
+  // modification du document — il est ignoré. Une vraie modification (HTML,
+  // style, largeur) recrée l'effet avec le zoom courant et est bien mesurée.
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
+  const measureKey = JSON.stringify([html, el.style, el.box?.w]);
   const firstMeasureRef = useRef(true);
   useEffect(() => {
     if (firstMeasureRef.current) {
@@ -116,9 +124,11 @@ function TextView({ el, zoom, editing, onCommitHtml, tokensCtx, onAutoHeight, pa
     }
     if (el.autoH === false || !onAutoHeight || !ref.current || typeof ResizeObserver === "undefined") return undefined;
     const node = ref.current;
+    const layoutZoom = zoomRef.current;
     const report = () => {
+      if (zoomRef.current !== layoutZoom) return; // zoom seul : ne pas remesurer
       const rect = node.getBoundingClientRect();
-      const heightMm = rect.height / (PX_PER_MM * zoom);
+      const heightMm = rect.height / (PX_PER_MM * layoutZoom);
       if (heightMm > 0.2) onAutoHeight(pageId, el.id, heightMm);
     };
     const observer = new ResizeObserver(report);

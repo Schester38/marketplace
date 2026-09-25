@@ -484,7 +484,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     });
   }, [aiResult]);
   const [epubStep, setEpubStep] = useState(null); // label progression EPUB
-  const [pub, setPub] = useState(null); // formulaire { price, description }
+  const [pub, setPub] = useState(null); // formulaire { price, old_price, description }
   const [pubBusy, setPubBusy] = useState(null); // label d'étape ou null
   const [published, setPublished] = useState(null); // { product_id, updated }
   const [delBusy, setDelBusy] = useState(false); // suppression du produit publié
@@ -1171,6 +1171,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     setAiResult(null);
     setPub({
       price: "",
+      old_price: "",
       description,
       title: metaRef.current.title || "",
       category: "Digital",
@@ -1341,6 +1342,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     const current = metaRef.current;
     setPub({
       price: "",
+      old_price: "",
       description: "",
       title: current.title || "",
       category: "Digital",
@@ -1355,6 +1357,12 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
       const price = Number(p.price || 0);
       setPub({
         price: price ? String(price) : "",
+        // Prix barré déjà enregistré : rechargé pour que la mise à jour du
+        // produit n'efface pas la promotion affichée sur la fiche.
+        old_price:
+          p.old_price !== null && p.old_price !== undefined && Number(p.old_price) > 0
+            ? String(p.old_price)
+            : "",
         description: p.description || "",
         title: p.name || current.title || "",
         category: p.category || "Digital",
@@ -1374,6 +1382,18 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     if (!Number.isFinite(price) || price < 0) {
       setError(t("Prix invalide : indiquez un montant positif."));
       return;
+    }
+    // Prix barré (optionnel) : STRICTEMENT supérieur au prix de vente, sinon le
+    // faux rabais serait refusé par le serveur — on prévient avant l'export.
+    const oldRaw = String(pub.old_price ?? "").trim();
+    let oldPrice = null;
+    if (oldRaw !== "") {
+      const n = Number(oldRaw.replace(",", "."));
+      if (!Number.isFinite(n) || n <= 0 || n <= price) {
+        setError(t("Le prix barré doit être supérieur au prix de vente."));
+        return;
+      }
+      oldPrice = Math.round(n * 100) / 100;
     }
     setPubBusy(t("Génération du PDF…"));
     try {
@@ -1411,6 +1431,8 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
       const d = await api.genPublish(meta.id, {
         key: signed.path,
         price,
+        // Prix barré (null = aucun) : affiché barré sur la carte et la fiche.
+        old_price: oldPrice,
         currency: priceCurrency,
         title: pub.title || metaRef.current.title,
         description: pub.description || "",
@@ -2844,6 +2866,24 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
                 placeholder="2500"
               />
             </label>
+            <label>
+              {t("Prix barré (optionnel)")} ({priceCurrency})
+              <input
+                className="input"
+                type="number"
+                min="0"
+                step="100"
+                value={pub.old_price || ""}
+                onChange={(e) => setPub({ ...pub, old_price: e.target.value })}
+                placeholder="3500"
+              />
+            </label>
+            {(() => {
+              const sale = Number(String(pub.price || "").replace(",", ".")) || 0;
+              const old = Number(String(pub.old_price || "").replace(",", ".")) || 0;
+              if (old <= 0 || sale <= 0 || old > sale) return null;
+              return <p className="hint">{t("Le prix barré doit être supérieur au prix de vente.")}</p>;
+            })()}
             <div className="gen-form-row">
               <div className="gen-grow">
                 <label>{t("Commission vendeur (montant)")}</label>

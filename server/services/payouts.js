@@ -36,6 +36,20 @@ export function normalizeWalletPrimary(list) {
   });
 }
 
+/**
+ * Prix barré (optionnel) d'un produit — utilisé par la publication du
+ * Générateur de documents. Il n'est retenu que s'il est STRICTEMENT supérieur
+ * au prix de vente (sinon la fiche afficherait un faux rabais) ; vide, null ou
+ * invalide → `null` (aucun prix barré). Arrondi au centime.
+ */
+export function normalizeOldPrice(raw, price) {
+  const sale = Number(price);
+  if (!Number.isFinite(sale) || sale < 0) return null;
+  if (raw === undefined || raw === null || String(raw).trim() === "") return null;
+  const n = Number(String(raw).replace(",", "."));
+  if (!Number.isFinite(n) || n <= sale) return null;
+  return Math.round(n * 100) / 100;
+}
 
 export const REFERRAL_CLAIM_THRESHOLD = 5000;
 export const COMMISSION_CLAIM_THRESHOLD = REFERRAL_CLAIM_THRESHOLD;

@@ -27,6 +27,7 @@ import { authRequired, roleRequired } from "../auth.js";
 import { logAudit } from "../security.js";
 import { askAI } from "./chat.js";
 import { defaultCurrencyFor, validCurrency } from "../currency.js";
+import { normalizeOldPrice } from "../services/payouts.js";
 import {
   createDigitalUploadUrl,
   digitalObjectKey,
@@ -906,6 +907,10 @@ router.post(
     if (!Number.isFinite(price) || price < 0) {
       return res.status(400).json({ error: "Prix invalide." });
     }
+    // Prix barré (optionnel) : affiché barré sur la carte et la fiche produit.
+    // Règle centralisée et testée dans services/payouts.js : strictement
+    // supérieur au prix de vente, sinon ignoré (jamais de faux rabais).
+    const oldPrice = normalizeOldPrice(body.old_price, price);
     // Devise : celle du PAYS du compte (comme products.js) — XAF au Cameroun,
     // XOF au Sénégal/Côte d'Ivoire, etc. Le client envoie countrySymbol(user.country) ;
     // toute devise inconnue retombe sur la devise du pays du compte.
@@ -967,15 +972,21 @@ router.post(
     let productId;
     if (existing) {
       productId = existing.id;
+      // Galerie : sans NOUVELLE couverture, on conserve celle déjà publiée.
+      // L'ancien `CASE WHEN $9::jsonb = '[]'::jsonb` échouait à l'exécution
+      // (« CASE types jsonb and text cannot be matched ») car la colonne
+      // `photos` est de type text — la republication renvoyait donc une erreur.
+      const photosAfter = image ? photos : existing.photos || "[]";
       await q(
         `UPDATE products SET name = $2, description = $3, price = $4, currency = $5, category = $6,
             commission_percent = $7, image = COALESCE($8, image),
-            photos = CASE WHEN $9::jsonb = '[]'::jsonb THEN photos ELSE $9::jsonb END,
-            digital_path = $10, digital_name = $11, digital_mime = $12, digital_size = $13, delivery_fee = 0
+            photos = $9,
+            digital_path = $10, digital_name = $11, digital_mime = $12, digital_size = $13, delivery_fee = 0,
+            old_price = $14
           WHERE id = $1`,
         [
-          productId, title, description, price, currency, category, commission, image, photos,
-          key, `${title}.${safeFileExt(key)}`, mime, meta.size,
+          productId, title, description, price, currency, category, commission, image, photosAfter,
+          key, `${title}.${safeFileExt(key)}`, mime, meta.size, oldPrice,
         ]
       );
     } else {
@@ -983,11 +994,11 @@ router.post(
         `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos,
             category, warranty, delivery_fee, contact, quantity, currency,
             is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit)
-         VALUES ($1, $2, $3, $4, NULL, $5, $6, $7::jsonb, $8, NULL, 0, NULL, 1, $9,
+         VALUES ($1, $2, $3, $4, $14, $5, $6, $7::jsonb, $8, NULL, 0, NULL, 1, $9,
             TRUE, $10, $11, $12, $13, 5) RETURNING id`,
         [
           ownerId, title, description, price, commission, image, photos, category, currency,
-          key, `${title}.${safeFileExt(key)}`, mime, meta.size,
+          key, `${title}.${safeFileExt(key)}`, mime, meta.size, oldPrice,
         ]
       );
       productId = inserted[0].id;

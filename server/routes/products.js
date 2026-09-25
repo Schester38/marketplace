@@ -1,7 +1,13 @@
 import { Router } from "express";
 import { q } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
-import { listPhotos, mediumPhotos, fullPhotos, normalizeUploadPhotos } from "../photo.js";
+import {
+  listPhotos,
+  mediumPhotos,
+  fullPhotos,
+  normalizeUploadPhotos,
+  photoEntries,
+} from "../photo.js";
 import { proxyPhotoUrl } from "../photoProxy.js";
 import { defaultCurrencyFor, validCurrency } from "../currency.js";
 import {
@@ -922,12 +928,16 @@ router.put(
       currency,
       digital,
       digital_download_limit,
+      remove_photos,
     } = req.body;
 
     // --- Fichier digital : nouveau fichier, retrait, ou conservation ---
     const parsedDigital = parseDigitalPayload(digital, req.user.id);
     if (parsedDigital?.error) return res.status(400).json({ error: parsedDigital.error });
     const removeDigital = digital?.remove === true;
+    // Suppression VOLONTAIRE de la photo (bouton ✕) : sans ce signal, une
+    // galerie vide conserve la photo déjà enregistrée (voir plus bas).
+    const removePhotos = remove_photos === true;
 
     // --- Contenu PROTÉGÉ (vidéo YouTube / durée d'accès) ---------------------
     // Le TYPE de contenu est figé à la création : basculer fichier ↔ YouTube
@@ -1087,7 +1097,21 @@ router.put(
         ? Math.min(Number(digital_download_limit), 100)
         : Number(product.digital_download_limit) || 5;
 
-    const photoList = await preparePhotos(photos, `products/${req.user.id}`);
+    // --- Photo : ne JAMAIS l'effacer par accident --------------------------
+    // Le formulaire de modification renvoie la photo EXISTANTE telle que l'API
+    // la lui a donnée (`/api/photo?p=…`) : `normalizeUploadPhotos` ne reconnaît
+    // que les data-URI et les http(s)://, donc la liste revenait VIDE et le
+    // `UPDATE` écrivait `image = NULL` + `photos = '[]'` — la photo disparaissait
+    // à chaque simple modification. Désormais :
+    //   • nouvelle photo envoyée            → elle remplace l'ancienne ;
+    //   • liste vide + `remove_photos:true` → suppression VOULUE (bouton ✕) ;
+    //   • liste vide sans ce signal          → photo existante CONSERVÉE.
+    const submittedPhotos = await preparePhotos(photos, `products/${req.user.id}`);
+    const photoList = submittedPhotos.length
+      ? submittedPhotos
+      : removePhotos
+        ? []
+        : photoEntries(product.photos);
     // Catégorie : un produit digital n'est jamais rangé dans « Arts &
     // Artisanat » (catégorie forcée des créateurs pour le reste).
     const cleanCategory = isDigitalAfter
