@@ -13,6 +13,7 @@ import {
 } from "./paginate.js";
 import { GEN_TEMPLATES, resolveTemplate, FONT_CSS } from "./templates.js";
 import { api } from "../api.js";
+import { BASE_URL } from "../config.js";
 import {
   buildStudioPages, readStudio, studioBox, serializeStudio, studioDesignKey, studioContentKey,
   insertPage, deletePages, duplicatePage, movePage, updatePage, patchPages, patchElements,
@@ -1345,7 +1346,7 @@ const editZoom = zoom * canvasFit;
           type="button"
           className="btn btn-outline btn-small"
           onClick={() => {
-            navigator.clipboard?.writeText(`${window.location.origin}/generateur?ref=${encodeURIComponent(doc?.ref || "")}`);
+            navigator.clipboard?.writeText(`${BASE_URL}/generateur?ref=${encodeURIComponent(doc?.ref || "")}`);
             flash(t("Lien de partage copié."));
           }}
         >

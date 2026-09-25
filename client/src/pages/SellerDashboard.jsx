@@ -136,8 +136,11 @@ export default function SellerDashboard() {
     }
   };
 
-  const productLink = (p) => `${window.location.origin}/produit/${p.id}`;
-  const saleLink = (p) => `${window.location.origin}/acheter/${p.id}?code=${sellerCode}`;
+  // Liens de partage TOUJOURS sur le domaine public officiel (BASE_URL ←
+  // VITE_SITE_URL, repli https://www.mboppishop.com) : consulter son espace
+  // depuis l'ancien alias ne doit jamais diffuser l'ancienne adresse.
+  const productLink = (p) => `${BASE_URL}/produit/${p.id}`;
+  const saleLink = (p) => `${BASE_URL}/acheter/${p.id}?code=${sellerCode}`;
 
   const copy = async (kind, text) => {
     const ok = await copyText(text);

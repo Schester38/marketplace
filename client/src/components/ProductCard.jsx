@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { countrySymbol, waLink } from "../config.js";
+import { BASE_URL, countrySymbol, waLink } from "../config.js";
 import { useAuth } from "../App.jsx";
 import { proxyPhotoUrl } from "../share.js";
 import { PriceEquivalent } from "../money.jsx";
@@ -120,7 +120,7 @@ export default function ProductCard({
           className="share-btn"
           href={waLink(
             "",
-            `${product.name} — ${displayPrice} ${symbol} sur MboppiShop → https://${window.location.host}/produit/${product.id}`
+            `${product.name} — ${displayPrice} ${symbol} sur MboppiShop → ${BASE_URL}/produit/${product.id}`
           )}
           target="_blank"
           rel="noopener noreferrer"

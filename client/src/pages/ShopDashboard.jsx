@@ -11,7 +11,7 @@ import { useAuth } from "../App.jsx";
 import { compressImage } from "../utils.js";
 import { smartProcessImageFile, formatBytes, optimizePaymentProof } from "../imageKit.js";
 import { nativeShareWithImage, firstProductImage } from "../share.js";
-import { PRODUCT_CATEGORIES, countryPhone, countrySymbol } from "../config.js";
+import { BASE_URL, PRODUCT_CATEGORIES, countryPhone, countrySymbol } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import { useRefreshOnFocus } from "../useRefreshOnFocus.js";
 import ExportSalesButton from "../components/ExportSalesButton.jsx";
@@ -407,7 +407,7 @@ export default function ShopDashboard() {
   };
 
   const shareFlashPromo = async (pr) => {
-    const url = `${window.location.origin}/produit/${pr.product_id}`;
+    const url = `${BASE_URL}/produit/${pr.product_id}`;
     const text = t(
       "⚡ Offre éclair chez {shop} : {name} à {price} {symbol} au lieu de {old} {symbol} (-{pct}%) sur MboppiShop.",
       {
