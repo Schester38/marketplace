@@ -335,6 +335,9 @@ router.get(
   ah(async (req, res) => {
     // Les commandes retirées par l'admin (hidden_for contient son id) ne
     // s'affichent plus dans SA liste — aucun impact pour les utilisateurs.
+    // Les produits DIGITAUX sont exclus : rien à livrer (le suivi GPS ne
+    // concerne que les colis) et un simple clic sur « Télécharger » sans
+    // paiement créait une fausse « commande » dans cet onglet.
     const rows = await q(
       `SELECT s.id, s.status, s.created_at,
               s.buyer_name, s.buyer_city, s.buyer_lat, s.buyer_lng,
@@ -346,6 +349,7 @@ router.get(
       WHERE (s.status IN ('pending', 'confirmed')
          OR (s.status = 'delivered'
              AND COALESCE(s.delivered_at, s.created_at) >= now() - INTERVAL '7 days'))
+        AND p.is_digital IS NOT TRUE
         AND NOT ($1 = ANY(COALESCE(s.hidden_for, '{}')))
       ORDER BY s.created_at DESC
       LIMIT 20`,

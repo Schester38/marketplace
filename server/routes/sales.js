@@ -46,6 +46,22 @@ export const SALES_LIST_COLUMNS = `s.id, s.product_id, s.seller_id, s.buyer_id, 
       s.payment_external_reference, s.payment_provider_reference, s.payment_link, s.payment_error,
       s.payment_received_by, s.payout_initiated, s.payout_initiated_at`;
 
+// Une vente ne compte dans les STATISTIQUES (« Ventes enregistrées », séries,
+// meilleurs produits) que si l'achat a été CONFIRMÉ : paiement confirmé par la
+// boutique (`shop_confirmed_at`), payé en ligne (`paid_online_at` : produits
+// digitaux) ou commande livrée. Sans ce garde, les ventes DIGITALES créées au
+// clic sur « Télécharger » puis jamais payées (statut `pending`, aucun paiement)
+// gonflaient les stats du créateur et du vendeur ; les ventes annulées non plus.
+export const CONFIRMED_SALE_SQL = `(s.status IN ('confirmed', 'delivered', 'bought')
+         OR s.shop_confirmed_at IS NOT NULL OR s.paid_online_at IS NOT NULL)`;
+
+// Vente digitale « fantôme » : enregistrée au clic sur « Télécharger » puis
+// jamais payée (statut `pending`, aucun paiement, aucune confirmation). Elle ne
+// doit apparaître NULLE PART comme un achat — y compris dans le fil public
+// « ventes récentes » de l'accueil.
+export const GHOST_DIGITAL_SALE_SQL = `(p.is_digital IS TRUE AND s.status = 'pending'
+         AND s.shop_confirmed_at IS NULL AND s.paid_online_at IS NULL)`;
+
 router.post(
   "/",
   authRequired,
@@ -188,7 +204,7 @@ router.get(
      FROM sales s
      JOIN products p ON p.id = s.product_id
      JOIN users u ON u.id = p.shop_id
-     WHERE s.status <> 'cancelled'
+     WHERE s.status <> 'cancelled' AND NOT ${GHOST_DIGITAL_SALE_SQL}
      ORDER BY s.created_at DESC
      LIMIT 10`
     );
@@ -225,11 +241,11 @@ FROM sales s
     const stats = (
       await q(
         `SELECT
-         COUNT(*) AS total_sales,
+         COUNT(*) FILTER (WHERE ${CONFIRMED_SALE_SQL}) AS total_sales,
          COALESCE(SUM(commission + referral_commission), 0) AS total_commission,
          COALESCE(SUM(CASE WHEN paid THEN commission + referral_commission ELSE 0 END), 0) AS earned_commission,
          COALESCE(SUM(CASE WHEN status = 'delivered' AND NOT paid THEN commission + referral_commission ELSE 0 END), 0) AS pending_commission
-       FROM sales WHERE seller_id = $1 AND NOT ($1 = ANY(hidden_for))`,
+       FROM sales s WHERE s.seller_id = $1 AND NOT ($1 = ANY(s.hidden_for))`,
         [req.user.id]
       )
     )[0];
@@ -294,7 +310,7 @@ FROM sales s
     const stats = (
       await q(
         `SELECT
-         COUNT(*) AS total_sales,
+         COUNT(*) FILTER (WHERE ${CONFIRMED_SALE_SQL}) AS total_sales,
          COALESCE(SUM(s.total_price) FILTER (WHERE s.status = 'delivered'), 0) AS revenue,
          COALESCE(SUM(s.delivery_fee) FILTER (WHERE s.status = 'delivered'), 0) AS delivery_revenue,
          COALESCE(SUM(CASE WHEN s.seller_id IS NOT NULL THEN s.commission ELSE 0 END) + SUM(CASE WHEN s.referred_by IS NOT NULL THEN s.referral_commission ELSE 0 END), 0) AS total_commission,
@@ -313,6 +329,7 @@ FROM sales s
        FROM sales s
        JOIN products p ON p.id = s.product_id
        WHERE p.shop_id = $1 AND s.created_at >= now() - interval '13 days' AND NOT ($1 = ANY(s.hidden_for))
+         AND ${CONFIRMED_SALE_SQL}
        GROUP BY 1 ORDER BY 1`,
         [req.user.id]
       )
@@ -322,7 +339,7 @@ FROM sales s
         `SELECT p.name, COUNT(*) AS cnt, COALESCE(SUM(s.total_price) FILTER (WHERE s.status = 'delivered'), 0) AS rev
        FROM sales s
        JOIN products p ON p.id = s.product_id
-       WHERE p.shop_id = $1 AND NOT ($1 = ANY(s.hidden_for))
+       WHERE p.shop_id = $1 AND NOT ($1 = ANY(s.hidden_for)) AND ${CONFIRMED_SALE_SQL}
        GROUP BY p.id, p.name
        ORDER BY rev DESC, cnt DESC
        LIMIT 5`,

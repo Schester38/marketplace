@@ -4739,9 +4739,13 @@ a.step {
 .share-btn:hover {
   transform: scale(1.12);
 }
-.share-btn svg {
-  width: 90px;
-  height: 90px;
+.product-card > .share-btn {
+  overflow: hidden;
+}
+.product-card > .share-btn svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
   display: block;
 }
 .fav-btn:hover {
@@ -5216,15 +5220,16 @@ a.step {
     height: 24px;
     font-size: 0.75rem;
   }
-  .share-btn {
+  .product-card > .share-btn {
     top: 5px;
     right: 33px;
     width: 24px;
     height: 24px;
   }
-  .share-btn svg {
-    width: 58px;
-    height: 58px;
+  .product-card > .share-btn svg {
+    width: 16px;
+    height: 16px;
+    flex-basis: 16px;
   }
   .badge-sold {
     top: 6px;
