@@ -1,6 +1,9 @@
 import { useEffect } from "react";
+import { BASE_URL } from "../config.js";
 
-const OG_DEFAULT = `${window.location.origin}/share-logo.jpg`;
+// URL officielle du site (BASE_URL ← VITE_SITE_URL) : canonical, og:url et
+// image OG ne doivent JAMAIS reprendre l'ancien alias d'où la page est vue.
+const OG_DEFAULT = `${BASE_URL}/share-logo.jpg`;
 
 const ensureMeta = (selector, create) => {
   let el = document.head.querySelector(selector);
@@ -40,7 +43,7 @@ export default function Seo({ title, description, noindex, ogImage }) {
         description
       );
     }
-    const canonical = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+    const canonical = `${BASE_URL}${window.location.pathname}${window.location.search}`;
     let link = document.head.querySelector('link[rel="canonical"]');
     if (!link) {
       link = document.createElement("link");

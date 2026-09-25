@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useLang } from "../i18n.jsx";
+import { BASE_URL } from "../config.js";
 
 // Bannière d'installation de la PWA, affichée automatiquement quand
 // l'installation est possible. Couvre les 3 cas :
@@ -86,14 +87,20 @@ export default function InstallAppPrompt() {
   };
 
   const openInChrome = () => {
-    // Ouvre Chrome (Android) sur la page courante ; sans effet ailleurs.
-    const url = window.location.href.replace(/^https?:\/\//, "");
+    // Ouvre Chrome (Android) sur la page courante, sur le domaine OFFICIEL
+    // (un navigateur intégré ouvert sur l'ancien alias ne doit pas y installer
+    // la PWA) ; sans effet ailleurs.
+    const url = `${BASE_URL}${window.location.pathname}${window.location.search}`.replace(
+      /^https?:\/\//,
+      ""
+    );
     window.location.href = `intent://${url}#Intent;scheme=https;package=com.android.chrome;end`;
   };
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(window.location.origin);
+      // Lien public officiel (BASE_URL ← VITE_SITE_URL) : jamais l'ancien alias.
+      await navigator.clipboard.writeText(BASE_URL);
       setCopied(true);
       setTimeout(() => setCopied(false), 4000);
     } catch {
