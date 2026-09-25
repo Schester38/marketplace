@@ -2582,6 +2582,14 @@ export default function Admin() {
                   {t("récupérables")})
                 </span>
               )}
+              {Number.isFinite(bucketUsage.orphelins_photos?.orphelins) && (
+                <span>
+                  🖼️ {t("Orphelins photos")} :{" "}
+                  <strong>{bucketUsage.orphelins_photos.orphelins}</strong>{" "}
+                  ({formatBytes(Number(bucketUsage.orphelins_photos.orphelins_octets || 0))}{" "}
+                  {t("récupérables")})
+                </span>
+              )}
             </div>
             <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
@@ -2596,7 +2604,10 @@ export default function Admin() {
                 type="button"
                 className="btn btn-outline btn-small"
                 onClick={purgeOrphans}
-                disabled={bucketPurgeBusy || !bucketUsage.orphelins_digitaux?.orphelins}
+                disabled={
+                  bucketPurgeBusy ||
+                  (!bucketUsage.orphelins_digitaux?.orphelins && !bucketUsage.orphelins_photos?.orphelins)
+                }
               >
                 🧹 {bucketPurgeBusy ? t("Purge en cours…") : t("Purger les orphelins")}
               </button>

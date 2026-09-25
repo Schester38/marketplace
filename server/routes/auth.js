@@ -11,7 +11,7 @@ import { registerSchema } from "../validators.js";
 import { validate } from "../middlewares/validate.js";
 import { membershipRoles } from "../services/membershipGate.js";
 import { notifyAdmins } from "../services/adminNotify.js";
-import { uploadPhoto } from "../storage.js";
+import { collectStorageKeys, deleteStorageKeys, uploadPhoto } from "../storage.js";
 
 const router = Router();
 
@@ -88,6 +88,17 @@ async function publicUser(u) {
         (!u.membership_expires_at || new Date(u.membership_expires_at) > new Date())
       ),
   };
+}
+
+// Nettoie un ancien avatar uniquement après la modification de la ligne
+// utilisateur : deleteStorageKeys vérifie qu'aucun autre compte ne le partage.
+async function deleteUnreferencedAvatar(oldAvatar) {
+  if (!oldAvatar) return;
+  const keys = collectStorageKeys(JSON.stringify([oldAvatar]));
+  if (!keys.length) return;
+  await deleteStorageKeys(keys).catch((err) => {
+    console.warn("[auth] ancien avatar conservé :", err.message);
+  });
 }
 
 const VALID_ROLES = ["shop", "seller", "client", "creator", "livreur"];
@@ -723,21 +734,20 @@ router.put(
 
 // Photo de profil — OUVERTE À TOUS LES RÔLES (le nom du compte reste modifiable
 // ailleurs). Le client envoie une data-URI déjà redimensionnée
-// (`smartProcessImageFile`, WebP ≤ 1024 px) et le stockage reconvertit en WebP
-// avant dépôt dans le bucket public `photos` : la base ne conserve qu'une URL
-// légère, jamais le binaire. `avatar: null` retire la photo (l'ancien fichier
-// reste dans le bucket : la déduplication par hash peut le partager avec
-// d'autres comptes, on ne le supprime donc jamais ici).
+// `avatar: null` retire la photo. Après l'écriture de la ligne, l'ancien
+// objet est supprimé seulement si aucun autre compte ne le référence.
 router.put(
   "/avatar",
   authRequired,
   ah(async (req, res) => {
     const { avatar } = req.body || {};
     if (avatar === null || avatar === "") {
+      const previous = (await q("SELECT avatar FROM users WHERE id = $1", [req.user.id]))[0];
       const cleared = (
         await q("UPDATE users SET avatar = NULL WHERE id = $1 RETURNING *", [req.user.id])
       )[0];
       if (!cleared) return res.status(404).json({ error: "Compte introuvable" });
+      await deleteUnreferencedAvatar(previous?.avatar);
       return res.json({ user: await publicUser(cleared) });
     }
     if (typeof avatar !== "string" || !/^data:image\/[a-z0-9+.-]+;base64,/i.test(avatar)) {
@@ -748,6 +758,7 @@ router.put(
     if (avatar.length > 6 * 1024 * 1024) {
       return res.status(413).json({ error: "Image trop lourde (6 Mo maximum)" });
     }
+    const previous = (await q("SELECT avatar FROM users WHERE id = $1", [req.user.id]))[0];
     const url = await uploadPhoto(avatar, "avatars", "thumb").catch((err) => {
       console.error("[auth] upload avatar impossible :", err.message);
       return null;
@@ -757,6 +768,7 @@ router.put(
       await q("UPDATE users SET avatar = $1 WHERE id = $2 RETURNING *", [url, req.user.id])
     )[0];
     if (!updated) return res.status(404).json({ error: "Compte introuvable" });
+    if (previous?.avatar && previous.avatar !== url) await deleteUnreferencedAvatar(previous.avatar);
     logAudit(req.user.id, "profile.avatar", { url });
     res.json({ user: await publicUser(updated) });
   })
@@ -846,6 +858,7 @@ router.delete(
       }
       throw err;
     }
+    await deleteUnreferencedAvatar(user.avatar);
     await logAudit(null, "account.deleted", `user=${user.id} role=${user.role} email=${user.email}`, req.ip);
     res.json({ ok: true });
   })

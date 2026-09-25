@@ -194,7 +194,9 @@ async function referencedPhotoKeys() {
   const rows = await q(
     `SELECT photos::text AS photos, image FROM products WHERE photos IS NOT NULL
      UNION ALL
-     SELECT photos::text AS photos, NULL FROM offers WHERE photos IS NOT NULL`
+     SELECT photos::text AS photos, NULL FROM offers WHERE photos IS NOT NULL
+     UNION ALL
+     SELECT avatar AS photos, NULL FROM users WHERE avatar IS NOT NULL`
   );
   const keys = new Set();
   const MARK = "/storage/v1/object/public/photos/";

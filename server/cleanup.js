@@ -1,5 +1,12 @@
 import { q } from "./db.js";
-import { collectStorageKeys, deleteStorageKeys, listDigitalObjects, deleteDigitalFile } from "./storage.js";
+import {
+  collectStorageKeys,
+  deleteStorageKeys,
+  listDigitalObjects,
+  listBucketObjects,
+  photoBucketName,
+  deleteDigitalFile,
+} from "./storage.js";
 
 // Purge des statistiques datant de plus de 6 mois : daily_visits, item_views,
 // client_logs et audit_log. Ces tables grossissent chaque jour sans servir au-delà
@@ -134,7 +141,7 @@ export async function cleanupOutOfStock({ dryRun = false } = {}) {
 // Sécurité : les objets de moins de `minAgeHours` heures sont toujours
 // conservés (un créateur peut être en train de remplir son formulaire).
 // Retourne aussi les totaux en mode dry-run (aucune suppression).
-export async function purgeDigitalOrphans({ dryRun = false, minAgeHours = 24 } = {}) {
+export async function purgeDigitalOrphans({ dryRun = false, minAgeHours = 24, maxDeletes = 200 } = {}) {
   const objects = await listDigitalObjects();
   if (!objects) {
     return { erreur: "Stockage non configuré (SUPABASE_URL / SUPABASE_SERVICE_KEY absents)" };
@@ -146,9 +153,10 @@ export async function purgeDigitalOrphans({ dryRun = false, minAgeHours = 24 } =
     (o) => !referenced.has(o.key) && o.updatedAt > 0 && o.updatedAt < cutoff
   );
   const orphansBytes = orphans.reduce((s, o) => s + Number(o.size || 0), 0);
+  const selected = orphans.slice(0, Math.max(1, maxDeletes));
   let deleted = 0;
   if (!dryRun) {
-    for (const o of orphans) {
+    for (const o of selected) {
       try {
         if (await deleteDigitalFile(o.key)) deleted += 1;
       } catch (err) {
@@ -164,5 +172,114 @@ export async function purgeDigitalOrphans({ dryRun = false, minAgeHours = 24 } =
     orphelins: orphans.length,
     orphelins_octets: orphansBytes,
     supprimes: dryRun ? 0 : deleted,
+    restants: Math.max(0, orphans.length - selected.length),
+  };
+}
+
+function canonicalPhotoEntry(entry) {
+  if (typeof entry === "string") return /^https?:\/\//i.test(entry) ? entry : null;
+  if (!entry || typeof entry !== "object") return null;
+  const source = entry.full || entry.large || entry.medium || entry.thumb || null;
+  // Une data-URI doit rester à migrateInlinePhotos ; elle ne doit jamais être
+  // choisie comme "canonique" puis réinjectée dans la table par la purge.
+  return source && /^https?:\/\//i.test(source) ? source : null;
+}
+
+// Consolide les anciennes entrées {thumb, medium, large, full} vers une seule
+// URL canonique. La base est mise à jour avant le DELETE ; deleteStorageKeys
+// revérifie aussi les commandes historiques avant de supprimer un ancien objet.
+export async function consolidatePhotoVariants({ dryRun = false, maxRows = 200 } = {}) {
+  const products = await q("SELECT id, photos, image FROM products ORDER BY id LIMIT $1", [maxRows]);
+  const offers = await q("SELECT id, photos FROM offers ORDER BY id LIMIT $1", [maxRows]).catch(() => []);
+  let candidates = 0;
+  let staleKeys = 0;
+  let deleted = 0;
+
+  for (const row of products) {
+    let entries = [];
+    try { entries = JSON.parse(row.photos || "[]"); } catch { entries = []; }
+    if (!Array.isArray(entries) || !entries.length) continue;
+    const next = entries.map(canonicalPhotoEntry).filter(Boolean);
+    if (!next.length) continue;
+    const serialized = JSON.stringify(next.map((url) => ({
+      thumb: url, medium: url, large: url, full: url,
+    })));
+    const oldKeys = collectStorageKeys(row.photos);
+    if (row.image) oldKeys.push(...collectStorageKeys(JSON.stringify([row.image])));
+    const nextKeys = collectStorageKeys(serialized);
+    const obsolete = [...new Set(oldKeys)].filter((key) => !nextKeys.includes(key));
+    if (!obsolete.length) continue;
+    candidates += 1;
+    staleKeys += obsolete.length;
+    if (dryRun) continue;
+    await q("UPDATE products SET photos = $2, image = $3 WHERE id = $1", [row.id, serialized, next[0]]);
+    deleted += await deleteStorageKeys(obsolete, { excludeProductId: row.id });
+  }
+
+  for (const row of offers) {
+    let entries = [];
+    try { entries = JSON.parse(row.photos || "[]"); } catch { entries = []; }
+    if (!Array.isArray(entries) || !entries.length) continue;
+    const next = entries.map(canonicalPhotoEntry).filter(Boolean);
+    if (!next.length) continue;
+    const oldKeys = collectStorageKeys(row.photos);
+    const nextKeys = collectStorageKeys(JSON.stringify(next));
+    const obsolete = [...new Set(oldKeys)].filter((key) => !nextKeys.includes(key));
+    if (!obsolete.length) continue;
+    candidates += 1;
+    staleKeys += obsolete.length;
+    if (dryRun) continue;
+    await q("UPDATE offers SET photos = $2 WHERE id = $1", [row.id, JSON.stringify(next)]);
+    deleted += await deleteStorageKeys(obsolete);
+  }
+  return { Candidats: candidates, variantes_obsoletes: staleKeys, supprimes: deleted };
+}
+
+// Purge les images publiques orphelines (upload terminé mais ligne produit/offre
+// jamais créée, avatar historique, version de photo remplacée). Les objets de
+// moins de minAgeHours heures sont toujours conservés. Chaque suppression repasse
+// par deleteStorageKeys(), qui revérifie les références en base juste avant le DELETE.
+export async function purgePhotoOrphans({ dryRun = false, minAgeHours = 24, maxDeletes = 200 } = {}) {
+  const consolidation = await consolidatePhotoVariants({ dryRun, maxRows: 200 });
+  const objects = await listBucketObjects(photoBucketName());
+  if (!objects) return { erreur: "Stockage non configuré" };
+  const [products, offers, users, orders] = await Promise.all([
+    q("SELECT photos, image FROM products"),
+    q("SELECT photos FROM offers").catch(() => []),
+    q("SELECT avatar FROM users WHERE avatar IS NOT NULL").catch(() => []),
+    q("SELECT items FROM orders").catch(() => []),
+  ]);
+  const referenced = new Set();
+  const add = (value) => {
+    const json = typeof value === "string" ? value : JSON.stringify(value || []);
+    for (const key of collectStorageKeys(json)) referenced.add(key);
+  };
+  for (const row of products) {
+    add(row.photos);
+    if (row.image) add(JSON.stringify([row.image]));
+  }
+  for (const row of offers) add(row.photos);
+  for (const row of users) add(JSON.stringify([row.avatar]));
+  for (const row of orders) add(JSON.stringify(row.items || []));
+
+  const cutoff = Date.now() - Math.max(1, minAgeHours) * 3600 * 1000;
+  const orphans = objects.filter(
+    (o) => !referenced.has(o.key) && o.updatedAt > 0 && o.updatedAt < cutoff
+  );
+  const orphanBytes = orphans.reduce((sum, o) => sum + Number(o.size || 0), 0);
+  const selected = orphans.slice(0, Math.max(1, maxDeletes));
+  const deleted = dryRun
+    ? 0
+    : await deleteStorageKeys(selected.map((o) => o.key));
+  return {
+    mode: dryRun ? "dry-run" : "effectif",
+    min_age_heures: Math.max(1, minAgeHours),
+    objets_total: objects.length,
+    objets_references: referenced.size,
+    orphelins: orphans.length,
+    orphelins_octets: orphanBytes,
+    supprimes: deleted,
+    restants: Math.max(0, orphans.length - selected.length),
+    consolidation,
   };
 }

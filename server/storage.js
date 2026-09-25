@@ -44,6 +44,10 @@ function apiToken() {
   return cachedToken;
 }
 
+export function photoBucketName() {
+  return BUCKET;
+}
+
 export function isStoredUrl(s) {
   return typeof s === "string" && /^https?:\/\//.test(s) && !s.startsWith("data:");
 }
@@ -487,31 +491,25 @@ export async function storePhotos(photoList, folder = "products") {
   const out = [];
   for (const ph of photoList || []) {
     if (!ph || typeof ph !== "object") continue;
-    const entry = {};
-    const variants = [
-      ["thumb", ph.thumb],
-      ["medium", ph.medium],
-      ["large", ph.large],
-      ["full", ph.full],
-    ];
-    for (const [name, value] of variants) {
-      if (typeof value !== "string" || !value) continue;
-      if (isStoredUrl(value)) {
-        // Une URL proxée (/api/photo?p=…) n'est jamais persistée : on stocke
-        // l'URL canonique Supabase.
-        entry[name] = unproxyPhotoUrl(value);
-      } else if (isBase64Photo(value)) {
-        const url = await uploadPhoto(value, folder, name === "full" ? "full" : name);
-        if (url) entry[name] = url;
-      }
+
+    // Une photo produit n'a besoin que d'un objet canonique. Les anciennes
+    // versions stockaient chaque variante (thumb/medium/large/full), donc la
+    // même image pouvait occuper 3 à 4 fois le bucket. Les champs restent
+    // tous renseignés pour le code historique, mais pointent vers ce même objet.
+    const source = ph.full || ph.large || ph.medium || ph.thumb;
+    if (!source || typeof source !== "string") continue;
+
+    let url = null;
+    if (isStoredUrl(source)) {
+      url = unproxyPhotoUrl(source);
+    } else if (isBase64Photo(source)) {
+      url = await uploadPhoto(source, folder, "auto");
     }
-    // Rétrocompat : un `full` legacy se comporte comme le « large » de l'époque.
-    if (!entry.medium && entry.full) entry.medium = entry.full;
-    if (!entry.large && entry.full) entry.large = entry.full;
-    if (entry.thumb || entry.medium || entry.large) {
-      if (ph.meta && typeof ph.meta === "object") entry.meta = ph.meta;
-      out.push(entry);
-    }
+    if (!url) continue;
+
+    const entry = { thumb: url, medium: url, large: url, full: url };
+    if (ph.meta && typeof ph.meta === "object") entry.meta = ph.meta;
+    out.push(entry);
   }
   return out.slice(0, 3);
 }
@@ -576,6 +574,7 @@ async function isKeyStillUsed(key, excludeProductId) {
     `SELECT 1 FROM products WHERE id <> $1 AND (photos LIKE $2 OR image LIKE $2)
      UNION ALL SELECT 1 FROM offers WHERE photos LIKE $2
      UNION ALL SELECT 1 FROM orders WHERE items::text LIKE $2
+     UNION ALL SELECT 1 FROM users WHERE avatar LIKE $2
      LIMIT 1`,
     [excludeProductId ?? -1, pat]
   );
@@ -655,8 +654,16 @@ export async function storageUsage(bucketName = BUCKET) {
 // réponse du Storage — l'`id` seul ne suffit pas (certaines versions du
 // Storage en donnent un aux dossiers) ; les inclure briserait la maintenance.
 export async function listBucketKeys(bucketName = BUCKET) {
+  const objects = await listBucketObjects(bucketName);
+  return objects ? objects.map((o) => o.key) : [];
+}
+
+// Liste les objets avec taille/date pour les purges d'orphelins. Seuls les
+// fichiers (metadata objet) sont retournés, pas les pseudo-dossiers.
+export async function listBucketObjects(bucketName = BUCKET) {
+  if (!SUPABASE_URL || !SERVICE_KEY) return null;
   const token = apiToken();
-  const keys = [];
+  const out = [];
   let offset = 0;
   for (;;) {
     const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${bucketName}`, {
@@ -665,32 +672,6 @@ export async function listBucketKeys(bucketName = BUCKET) {
       body: JSON.stringify({ prefix: "", limit: 1000, offset }),
     });
     if (!res.ok) throw new Error(`Liste du bucket échouée (${res.status})`);
-    const items = await res.json();
-    if (!Array.isArray(items) || !items.length) break;
-    for (const it of items) {
-      if (it?.id && it?.metadata && typeof it.metadata === "object") keys.push(it.name);
-    }
-    offset += items.length;
-    if (items.length < 1000) break;
-  }
-  return keys;
-}
-
-// Liste les objets du bucket digital privé : [{ key, size, updatedAt }]
-// (pagination 1000, fichiers seulement). Sert à la purge des orphelins et au
-// suivi de consommation du panneau Admin.
-export async function listDigitalObjects() {
-  if (!SUPABASE_URL || !SERVICE_KEY) return null;
-  const token = apiToken();
-  const out = [];
-  let offset = 0;
-  for (;;) {
-    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/list/${DIGITAL_BUCKET}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, apikey: token, "Content-Type": "application/json" },
-      body: JSON.stringify({ prefix: "", limit: 1000, offset }),
-    });
-    if (!res.ok) throw new Error(`Liste du bucket ${DIGITAL_BUCKET} échouée (${res.status})`);
     const items = await res.json();
     if (!Array.isArray(items) || !items.length) break;
     for (const it of items) {
@@ -706,6 +687,13 @@ export async function listDigitalObjects() {
     if (items.length < 1000) break;
   }
   return out;
+}
+
+// Liste les objets du bucket digital privé : [{ key, size, updatedAt }]
+// (pagination 1000, fichiers seulement). Sert à la purge des orphelins et au
+// suivi de consommation du panneau Admin.
+export async function listDigitalObjects() {
+  return listBucketObjects(DIGITAL_BUCKET);
 }
 
 // Header cache-control effectivement servi pour un objet public.
@@ -852,15 +840,16 @@ export async function migrateInlinePhotos() {
   if (!SUPABASE_URL || !SERVICE_KEY) return { error: "Storage non configuré" };
   const upload = (uri, variant) => uploadPhoto(uri, "products", variant);
   const fixEntry = async (e) => {
-    if (typeof e === "string") return (await upload(e, "thumb")) || e;
+    if (typeof e === "string") return (await upload(e, "auto")) || e;
     if (!e || typeof e !== "object") return e;
-    const out = { ...e };
-    for (const f of ["thumb", "medium", "large", "full"]) {
-      if (isBase64Photo(out[f])) {
-        const url = await upload(out[f], f === "full" ? "full" : f);
-        if (url) out[f] = url;
-      }
-    }
+    // Une entrée/base64 ne crée qu'un objet canonique. Les champs historiques
+    // pointent tous dessus ; inutile de dupliquer le même binaire 3–4 fois.
+    const source = [e.full, e.large, e.medium, e.thumb].find((v) => isBase64Photo(v));
+    if (!source) return e;
+    const url = await upload(source, "auto");
+    if (!url) return e;
+    const out = { thumb: url, medium: url, large: url, full: url };
+    if (e.meta && typeof e.meta === "object") out.meta = e.meta;
     return out;
   };
   let productsFixed = 0;

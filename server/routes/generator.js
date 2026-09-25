@@ -954,9 +954,11 @@ router.post(
     const mime = safeFileExt(key) === "pdf" ? "application/pdf" : "application/octet-stream";
 
     // Republication : on MET À JOUR le produit existant (même lien de partage)
-    // au lieu de créer un doublon dans le catalogue.
+    // au lieu de créer un doublon dans le catalogue. Les anciens PDF et
+    // couvertures sont conservés jusqu'après la réussite de l'UPDATE, puis
+    // supprimés seulement s'ils ne sont référencés par aucun autre produit.
     const existing = row.published_product_id
-      ? (await q(`SELECT id FROM products WHERE id = $1 AND shop_id = $2`, [
+      ? (await q(`SELECT id, photos, digital_path FROM products WHERE id = $1 AND shop_id = $2`, [
           row.published_product_id,
           ownerId,
         ]))[0]
@@ -989,6 +991,33 @@ router.post(
         ]
       );
       productId = inserted[0].id;
+    }
+
+    // Nettoyage post-republication : la nouvelle clé est désormais persistée.
+    // Ne jamais faire ce ménage AVANT l'UPDATE (une erreur SQL laisserait le
+    // produit sans fichier). Les gardes de référence protègent la déduplication.
+    if (existing) {
+      if (existing.digital_path && existing.digital_path !== key) {
+        try {
+          const [still] = await q(
+            "SELECT 1 FROM products WHERE id <> $1 AND digital_path = $2 LIMIT 1",
+            [productId, existing.digital_path]
+          );
+          if (!still) await deleteDigitalFile(existing.digital_path);
+        } catch (err) {
+          console.error("[generator] ancien PDF orphelin conservé :", err.message);
+        }
+      }
+      if (image) {
+        const oldPhotoKeys = collectStorageKeys(existing.photos);
+        const newPhotoKeys = collectStorageKeys(photos);
+        const stalePhotoKeys = oldPhotoKeys.filter((k) => !newPhotoKeys.includes(k));
+        if (stalePhotoKeys.length) {
+          await deleteStorageKeys(stalePhotoKeys, { excludeProductId: productId }).catch((err) => {
+            console.error("[generator] ancienne couverture conservée :", err.message);
+          });
+        }
+      }
     }
 
     const updated = await q(

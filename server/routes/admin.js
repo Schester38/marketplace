@@ -5,7 +5,7 @@ import { q, ensureColumn, withTransaction } from "../db.js";
 import { authRequired, roleRequired, signToken } from "../auth.js";
 import { logAudit } from "../security.js";
 import { migrateImages } from "../migrate-images.js";
-import { cleanupOutOfStock, cleanupOldStats, dbUsageReport, purgeDigitalOrphans } from "../cleanup.js";
+import { cleanupOutOfStock, cleanupOldStats, dbUsageReport, purgeDigitalOrphans, purgePhotoOrphans } from "../cleanup.js";
 import { storageUsage, migrateInlinePhotos, digitalBucketName } from "../storage.js";
 import { runStorageMaintenanceNow } from "../services/storageMaintenance.js";
 import { notifyActivationReferralPaid } from "../services/activationReferral.js";
@@ -1111,15 +1111,17 @@ router.get(
       storageUsage(digitalBucketName()),
       storageUsage("payment-proofs"),
     ]);
-    const orphelins = await purgeDigitalOrphans({ dryRun: true }).catch((e) => ({
-      erreur: e.message,
-    }));
+    const [orphelins, orphelinsPhotos] = await Promise.all([
+      purgeDigitalOrphans({ dryRun: true }).catch((e) => ({ erreur: e.message })),
+      purgePhotoOrphans({ dryRun: true }).catch((e) => ({ erreur: e.message })),
+    ]);
     res.json({
       ok: true,
       photos: photos.status === "fulfilled" ? photos.value : { erreur: photos.reason?.message },
       digital: digital.status === "fulfilled" ? digital.value : { erreur: digital.reason?.message },
       proofs: proofs.status === "fulfilled" ? proofs.value : { erreur: proofs.reason?.message },
       orphelins_digitaux: orphelins,
+      orphelins_photos: orphelinsPhotos,
     });
   })
 );
@@ -1128,14 +1130,28 @@ router.post(
   "/storage/purge-digital-orphans",
   ah(async (req, res) => {
     const minAgeHours = Math.max(1, Number(req.body?.min_age_hours) || 24);
-    const result = await purgeDigitalOrphans({ dryRun: false, minAgeHours });
+    const [digitalResult, photoResult] = await Promise.all([
+      purgeDigitalOrphans({ dryRun: false, minAgeHours }),
+      purgePhotoOrphans({ dryRun: false, minAgeHours }),
+    ]);
+    const supprimes = Number(digitalResult.supprimes || 0) + Number(photoResult.supprimes || 0);
+    const orphelins = Number(digitalResult.orphelins || 0) + Number(photoResult.orphelins || 0);
+    const orphelinsOctets = Number(digitalResult.orphelins_octets || 0) + Number(photoResult.orphelins_octets || 0);
     await logAudit(
       req.user.id,
       "admin.storage_purge_orphans",
-      JSON.stringify(result),
+      JSON.stringify({ digitalResult, photoResult }),
       req.ip
     );
-    res.json({ ok: !result.erreur, ...result });
+    res.json({
+      ok: !digitalResult.erreur && !photoResult.erreur,
+      ...digitalResult,
+      supprimes,
+      orphelins,
+      orphelins_octets: orphelinsOctets,
+      digital: digitalResult,
+      photos: photoResult,
+    });
   })
 );
 
