@@ -375,7 +375,15 @@ export const api = {
   adminDeleteProduct: (id) => adminRequest(`/admin/products/${id}`, { method: "DELETE" }),
   // Consommation du Storage Supabase (buckets) + purge des fichiers digitaux
   // orphelins — carte « 💾 Stockage Supabase » (Admin ⚙️ Système).
-  adminStorageUsage: () => adminRequest("/admin/storage/usage"),
+  // `orphans` : scan complet du Storage (à la demande uniquement) ;
+  // `refresh` : ignore le cache serveur de 10 minutes.
+  adminStorageUsage: (opts = {}) => {
+    const params = new URLSearchParams();
+    if (opts.orphans) params.set("orphans", "1");
+    if (opts.refresh) params.set("refresh", "1");
+    const qs = params.toString();
+    return adminRequest(`/admin/storage/usage${qs ? `?${qs}` : ""}`);
+  },
   adminPurgeDigitalOrphans: () =>
     adminRequest("/admin/storage/purge-digital-orphans", {
       method: "POST",

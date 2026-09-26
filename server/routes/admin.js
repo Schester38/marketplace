@@ -1107,26 +1107,69 @@ router.get(
 // peser 50 Mo chacun. La purge supprime les fichiers digitaux présents dans le
 // bucket mais rattachés à aucun produit (uploads abandonnés), en épargnant les
 // objets récents (un créateur peut être en train de remplir son formulaire).
+//
+// ⚠️ EGRESS SUPABASE : lister un bucket (`storageUsage`) — et surtout SCANNER
+// LES ORPHELINS (`purgePhotoOrphans`/`purgeDigitalOrphans` en dry-run, qui
+// relisent TOUT le Storage + produits/commandes) — consomme de l'egress pour
+// chaque objet. Le panneau rafraîchissait cette carte toutes les 30 s, soit
+// 5 listes complètes + 2 gros scans par cycle : des centaines de Mo d'egress
+// par jour et par admin connecté, pour une donnée qui ne change presque jamais.
+// Désormais : résultat mis en cache 10 minutes côté serveur (`?refresh=1`
+// l'ignore) et scan des orphelins UNIQUEMENT sur demande (`?orphans=1`).
+const STORAGE_USAGE_TTL_MS = 10 * 60 * 1000;
+const storageUsageCache = { usage: null, orphans: null }; // { at, data }
+
+async function computeStorageUsage() {
+  const [photos, digital, proofs] = await Promise.allSettled([
+    storageUsage(),
+    storageUsage(digitalBucketName()),
+    storageUsage("payment-proofs"),
+  ]);
+  return {
+    photos: photos.status === "fulfilled" ? photos.value : { erreur: photos.reason?.message },
+    digital: digital.status === "fulfilled" ? digital.value : { erreur: digital.reason?.message },
+    proofs: proofs.status === "fulfilled" ? proofs.value : { erreur: proofs.reason?.message },
+  };
+}
+
 router.get(
   "/storage/usage",
   ah(async (req, res) => {
-    const [photos, digital, proofs] = await Promise.allSettled([
-      storageUsage(),
-      storageUsage(digitalBucketName()),
-      storageUsage("payment-proofs"),
-    ]);
-    const [orphelins, orphelinsPhotos] = await Promise.all([
-      purgeDigitalOrphans({ dryRun: true }).catch((e) => ({ erreur: e.message })),
-      purgePhotoOrphans({ dryRun: true }).catch((e) => ({ erreur: e.message })),
-    ]);
-    res.json({
+    const refresh = req.query.refresh === "1";
+    let refreshed = false;
+    let entry = storageUsageCache.usage;
+    if (refresh || !entry || Date.now() - entry.at >= STORAGE_USAGE_TTL_MS) {
+      entry = { at: Date.now(), data: await computeStorageUsage() };
+      storageUsageCache.usage = entry;
+      refreshed = true;
+    }
+    const payload = {
       ok: true,
-      photos: photos.status === "fulfilled" ? photos.value : { erreur: photos.reason?.message },
-      digital: digital.status === "fulfilled" ? digital.value : { erreur: digital.reason?.message },
-      proofs: proofs.status === "fulfilled" ? proofs.value : { erreur: proofs.reason?.message },
-      orphelins_digitaux: orphelins,
-      orphelins_photos: orphelinsPhotos,
-    });
+      date: new Date().toISOString(),
+      ...entry.data,
+      cached_at: new Date(entry.at).toISOString(),
+    };
+    // Scan des orphelins : uniquement à la demande (bouton « Analyser »).
+    if (req.query.orphans === "1") {
+      let oEntry = storageUsageCache.orphans;
+      if (refresh || !oEntry || Date.now() - oEntry.at >= STORAGE_USAGE_TTL_MS) {
+        const [orphelins, orphelinsPhotos] = await Promise.all([
+          purgeDigitalOrphans({ dryRun: true }).catch((e) => ({ erreur: e.message })),
+          purgePhotoOrphans({ dryRun: true }).catch((e) => ({ erreur: e.message })),
+        ]);
+        oEntry = {
+          at: Date.now(),
+          data: { orphelins_digitaux: orphelins, orphelins_photos: orphelinsPhotos },
+        };
+        storageUsageCache.orphans = oEntry;
+        refreshed = true;
+      }
+      Object.assign(payload, oEntry.data, { orphans_cached_at: new Date(oEntry.at).toISOString() });
+    }
+    if (refreshed) {
+      await logAudit(req.user.id, "admin.storage_usage", "Consommation Storage consultée", req.ip);
+    }
+    res.json(payload);
   })
 );
 

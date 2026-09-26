@@ -5088,6 +5088,9 @@ const RICH_EN = {
   "Orphelins digitaux": "Digital orphans",
   "Orphelins photos": "Photo orphans",
   "Purger les orphelins": "Purge orphans",
+  "Analyser les orphelins": "Scan for orphans",
+  "Analyse en cours…": "Scanning…",
+  "Analyse des orphelins à la demande : elle parcourt tout le Storage Supabase (résultat mis en cache 10 minutes).": "The orphan scan runs on demand: it walks the whole Supabase Storage (result cached for 10 minutes).",
   "Purge en cours…": "Purge in progress…",
   "Produits digitaux : paiement en ligne immédiat, puis téléchargement automatique du fichier.":
     "Digital products: instant online payment, then automatic file download.",
@@ -5242,6 +5245,9 @@ const RICH_ES = {
   "Orphelins digitaux": "Huérfanos digitales",
   "Orphelins photos": "Fotos huérfanas",
   "Purger les orphelins": "Purgar huérfanos",
+  "Analyser les orphelins": "Analizar huérfanos",
+  "Analyse en cours…": "Analizando…",
+  "Analyse des orphelins à la demande : elle parcourt tout le Storage Supabase (résultat mis en cache 10 minutes).": "El análisis de huérfanos se ejecuta a demanda: recorre todo el Supabase Storage (resultado en caché 10 minutos).",
   "Purge en cours…": "Purga en curso…",
   "Produits digitaux : paiement en ligne immédiat, puis téléchargement automatique du fichier.":
     "Productos digitales: pago en línea instantáneo, luego descarga automática del archivo.",
@@ -5362,6 +5368,9 @@ const RICH_AR = {
   "Orphelins digitaux": "ملفات رقمية يتيمة",
   "Orphelins photos": "صور يتيمة",
   "Purger les orphelins": "تنظيف الملفات اليتيمة",
+  "Analyser les orphelins": "تحليل الملفات اليتيمة",
+  "Analyse en cours…": "جارٍ التحليل…",
+  "Analyse des orphelins à la demande : elle parcourt tout le Storage Supabase (résultat mis en cache 10 minutes).": "يُشغَّل تحليل الملفات اليتيمة عند الطلب: يمسح كامل مساحة Supabase (النتيجة مخزّنة 10 دقائق).",
   "Purge en cours…": "جارٍ التنظيف…",
   "Produits digitaux : paiement en ligne immédiat, puis téléchargement automatique du fichier.":
     "منتجات رقمية: دفع فوري عبر الإنترنت، ثم تنزيل تلقائي للملف.",

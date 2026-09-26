@@ -586,10 +586,10 @@ export default function Admin() {
   }, [gate, load]);
   useRefreshOnFocus(load);
 
-  const loadStorageInfo = useCallback(() => {
+  const loadStorageInfo = useCallback((opts = {}) => {
     setBucketBusy(true);
     api
-      .adminStorageUsage()
+      .adminStorageUsage(opts)
       .then((d) => setBucketUsage(d))
       .catch(() => setBucketUsage(null))
       .finally(() => setBucketBusy(false));
@@ -606,7 +606,8 @@ export default function Admin() {
           o: formatBytes(Number(d.orphelins_octets || 0)),
         })
       );
-      loadStorageInfo();
+      // La purge vient de tourner : on rafraîchit l'analyse (compteurs à jour).
+      loadStorageInfo({ orphans: true, refresh: true });
     } catch (e) {
       setBucketPurgeMsg(t("Purge impossible : {msg}", { msg: e.message }));
     } finally {
@@ -614,17 +615,15 @@ export default function Admin() {
     }
   };
 
-  // Stockage Supabase : chargé au montage + toutes les 30 s, quel que soit
-  // l'onglet affiché (seul l'affichage de la carte est conditionné par l'onglet).
+  // Stockage Supabase : chargé à l'ouverture de l'onglet ⚙️ Système (et via les
+  // boutons Actualiser / Analyser). ⚠️ AUCUN sondage périodique : chaque
+  // chargement LISTE les buckets Supabase (egress Storage) et le scan des
+  // orphelins relit tout le Storage + la base — le scan n'a donc lieu que si
+  // l'admin clique « Analyser les orphelins » (résultat mis en cache 10 min).
   useEffect(() => {
-    if (gate) return undefined;
+    if (gate || adminTab !== "system") return;
     loadStorageInfo();
-    const id = setInterval(() => {
-      if (document.hidden) return;
-      loadStorageInfo();
-    }, 30000);
-    return () => clearInterval(id);
-  }, [gate, loadStorageInfo]);
+  }, [gate, adminTab, loadStorageInfo]);
 
   // Temps réel : actualisation silencieuse des statistiques, transactions et
   // visites toutes les 30 s, quel que soit le mode de paiement.
@@ -2590,15 +2589,31 @@ export default function Admin() {
                   {t("récupérables")})
                 </span>
               )}
+              {!Number.isFinite(bucketUsage.orphelins_digitaux?.orphelins) &&
+                !Number.isFinite(bucketUsage.orphelins_photos?.orphelins) && (
+                  <span className="hint">
+                    {t(
+                      "Analyse des orphelins à la demande : elle parcourt tout le Storage Supabase (résultat mis en cache 10 minutes)."
+                    )}
+                  </span>
+                )}
             </div>
             <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button
                 type="button"
                 className="btn btn-outline btn-small"
-                onClick={loadStorageInfo}
-                disabled={bucketBusy}
+                onClick={() => loadStorageInfo({ refresh: true })}
+                disabled={bucketBusy || bucketPurgeBusy}
               >
                 🔄 {bucketBusy ? t("Actualisation…") : t("Actualiser")}
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline btn-small"
+                onClick={() => loadStorageInfo({ orphans: true, refresh: true })}
+                disabled={bucketBusy || bucketPurgeBusy}
+              >
+                🔎 {bucketBusy ? t("Analyse en cours…") : t("Analyser les orphelins")}
               </button>
               <button
                 type="button"
@@ -2606,6 +2621,7 @@ export default function Admin() {
                 onClick={purgeOrphans}
                 disabled={
                   bucketPurgeBusy ||
+                  bucketBusy ||
                   (!bucketUsage.orphelins_digitaux?.orphelins && !bucketUsage.orphelins_photos?.orphelins)
                 }
               >
