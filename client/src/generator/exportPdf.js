@@ -455,8 +455,10 @@ async function drawCover(doc, page, docMeta, template, box, qrDataUrl) {
   // L'auteur n'est JAMAIS dessiné sur la couverture (règle produit) : il reste
   // sur la page de copyright, dans les en-têtes et les métadonnées du PDF.
   // QR de couverture : toujours en bas à droite, sans exiger [QR].
+  // Taille 32 mm (au lieu de 22 mm) : plus facile à scanner depuis l'affiche
+  // produit et une impression papier ; marge de 10 mm des bords inchangée.
   if (qrDataUrl) {
-    const s = 22;
+    const s = 32;
     doc.addImage(qrDataUrl, "PNG", w - s - 10, h - s - 10, s, s);
   }
 }

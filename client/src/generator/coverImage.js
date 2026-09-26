@@ -144,8 +144,9 @@ export async function renderCoverImage(docMeta, { width = 480, maxBytes = 0 } = 
       const qr = await makeQrDataUrl(verificationPayload(docMeta, docMeta.content_hash), 240);
       const qimg = qr ? await loadImage(qr) : null;
       if (qimg) {
-        // 22 mm sur une largeur A4 de 210 mm ≈ 10,48 % ; 10 mm ≈ 4,76 %.
-        const size = Math.max(1, Math.round(w * 0.1048));
+        // 32 mm sur une largeur A4 de 210 mm ≈ 15,24 % ; 10 mm ≈ 4,76 %.
+        // (Même taille que le QR de couverture du PDF et du Studio.)
+        const size = Math.max(1, Math.round(w * 0.1524));
         const pad = Math.max(1, Math.round(w * 0.0476));
         const x = w - size - pad;
         const y = h - size - pad;

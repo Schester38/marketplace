@@ -3343,8 +3343,8 @@ export function GenPage({ page, paginated, docMeta, fit }) {
               position: "absolute",
               right: mm(10),
               bottom: mm(10),
-              width: mm(22),
-              height: mm(22),
+              width: mm(32),
+              height: mm(32),
               zIndex: 4,
               background: "#ffffff",
             }}

@@ -402,7 +402,7 @@ export function ensureStudioFooters(pages, box, template, docMeta = {}) {
     if (page?.kind === "cover") {
       const elements = page.elements || [];
       if (docMeta?.protection?.qrEnabled === false || elements.some((el) => el?.data?.coverQr)) return page;
-      const size = 22;
+      const size = 32;
       const qr = makeElement(template, "qr", {
         x: box.w - size - 10, y: box.h - size - 10, w: size, h: size,
       }, {
@@ -567,9 +567,10 @@ function coverPage(docMeta, template, box) {
   }
   // L'auteur n'est JAMAIS dessiné sur la couverture (règle produit) : il reste
   // sur la page de copyright, dans les en-têtes et les métadonnées.
-  // QR automatique de couverture : toujours en bas à droite, sans marqueur [QR].
+  // QR automatique de couverture : toujours en bas à droite, sans marqueur
+  // [QR] — 32 mm, même taille que le PDF et l'affiche produit.
   if (docMeta?.protection?.qrEnabled !== false) {
-    const size = 22;
+    const size = 32;
     els.push(makeElement(template, "qr", {
       x: w - size - 10, y: h - size - 10, w: size, h: size,
     }, {
@@ -863,7 +864,7 @@ export function readStudio(pageLayout) {
  *   v6 → citations en couleur de corps (contraste garanti sur les décors de
  *        la même teinte que l'accent) ; les anciennes pages sont reconstruites.
  */
-export const LAYOUT_ENGINE_VERSION = 6;
+export const LAYOUT_ENGINE_VERSION = 7;
 
 /**
  * Empreinte du DESIGN (modèle, styles avancés, format, marges, sommaire,
