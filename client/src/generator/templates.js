@@ -480,6 +480,9 @@ export function resolveCover(docMeta, template) {
     fg: c.text || template.coverText,
     accent: template.colors.accent,
     image: c.image || null,
+    // Miniature de couverture (~20 Ko) : utilisée par la bibliothèque, qui ne
+    // reçoit jamais l'image complète (egress Supabase).
+    thumb: c.thumb || null,
     dim,
     showTitle: c.showTitle !== false,
     title: String(c.title || (docMeta && docMeta.title) || "Sans titre"),

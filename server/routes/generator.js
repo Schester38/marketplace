@@ -119,6 +119,28 @@ const DOC_META_FIELDS = [
 const DOC_META_SELECT = DOC_META_FIELDS.join(", ");
 const DOC_META_SELECT_D = DOC_META_FIELDS.map((field) => `d.${field}`).join(", ");
 
+// ─── Sélections ALLÉGÉES (egress Supabase) ──────────────────────────────────
+// Une couverture importée est une image base64 de 300 à 465 Ko stockée dans
+// `cover`. `cover - 'image'` la retire CÔTÉ POSTGRESQL : la valeur lourde n'est
+// ni remontée vers Node ni transférée à chaque requête (egress).
+// Les chemins CHAUDS (bibliothèque, autosave, versions, layout, publication)
+// utilisent ces sélections ; seule l'ouverture d'un document
+// (GET /documents/:id) charge la couverture complète, car l'éditeur en a besoin.
+const LIGHT_FIELDS = DOC_META_FIELDS.filter((f) => f !== "cover" && f !== "back_cover");
+const DOC_META_SELECT_LIGHT = [
+  ...LIGHT_FIELDS,
+  "(cover - 'image') AS cover",
+  "(back_cover - 'image') AS back_cover",
+].join(", ");
+// Bibliothèque : l'image de couverture n'est transportée QUE pour les documents
+// HISTORIQUES (sans miniature `thumb`) — sinon `cover - 'image'` la retire côté
+// PostgreSQL (zéro transfert du base64 de 300-465 Ko).
+const DOC_META_SELECT_LIST_D = [
+  ...LIGHT_FIELDS.map((f) => `d.${f}`),
+  "CASE WHEN d.cover ? 'thumb' THEN (d.cover - 'image') ELSE d.cover END AS cover",
+  "(d.back_cover - 'image') AS back_cover",
+].join(", ");
+
 function withoutInlineMedia(value) {
   if (!value || typeof value !== "object") return {};
   const out = { ...value };
@@ -161,17 +183,27 @@ function docRow(row, { includeLayout = false, includeMedia = true } = {}) {
 
 const SELECT_DOC = `SELECT ${DOC_META_SELECT}, page_layout FROM gen_documents WHERE id = $1`;
 const SELECT_DOC_META = `SELECT ${DOC_META_SELECT} FROM gen_documents WHERE id = $1`;
+const SELECT_DOC_LIGHT = `SELECT ${DOC_META_SELECT_LIGHT} FROM gen_documents WHERE id = $1`;
+// Chargement du seul modèle Studio (page_layout) : jamais la couverture.
+const SELECT_DOC_LAYOUT_ONLY = `SELECT id, owner_id, doc_ref, page_layout FROM gen_documents WHERE id = $1`;
 
 // `req` (optionnel) active la PORTÉE multi-utilisateur : l'admin voit tous les
 // documents, un créateur uniquement les siens (les autres répondent 404 — on
 // ne révèle pas leur existence).
-async function loadDoc(id, req = null, { includeLayout = false } = {}) {
+async function loadDoc(id, req = null, { includeLayout = false, light = false, layoutOnly = false } = {}) {
   if (!Number.isInteger(id) || id <= 0) {
     const err = new Error("Identifiant invalide");
     err.statusCode = 400;
     throw err;
   }
-  const row = (await q(includeLayout ? SELECT_DOC : SELECT_DOC_META, [id]))[0];
+  const sql = layoutOnly
+    ? SELECT_DOC_LAYOUT_ONLY
+    : includeLayout
+      ? SELECT_DOC
+      : light
+        ? SELECT_DOC_LIGHT
+        : SELECT_DOC_META;
+  const row = (await q(sql, [id]))[0];
   const mine = row && Number(row.owner_id) === Number(req?.user?.id);
   if (!row || (req && req.user?.role !== "admin" && !mine)) {
     const err = new Error("Document introuvable");
@@ -273,11 +305,11 @@ router.get(
     // Portée : l'admin voit tout, un créateur uniquement SA bibliothèque.
     const rows = isAdminReq(req)
       ? await q(
-          `SELECT ${DOC_META_SELECT_D}, (SELECT COUNT(*)::int FROM gen_versions v WHERE v.doc_id = d.id) AS versions
+          `SELECT ${DOC_META_SELECT_LIST_D}, (SELECT COUNT(*)::int FROM gen_versions v WHERE v.doc_id = d.id) AS versions
            FROM gen_documents d ORDER BY d.updated_at DESC LIMIT 500`
         )
       : await q(
-          `SELECT ${DOC_META_SELECT_D}, (SELECT COUNT(*)::int FROM gen_versions v WHERE v.doc_id = d.id) AS versions
+          `SELECT ${DOC_META_SELECT_LIST_D}, (SELECT COUNT(*)::int FROM gen_versions v WHERE v.doc_id = d.id) AS versions
            FROM gen_documents d WHERE d.owner_id = $1 ORDER BY d.updated_at DESC LIMIT 500`,
           [Number(req.user.id)]
         );
@@ -305,7 +337,7 @@ router.post(
     };
     const inserted = await q(
       `INSERT INTO gen_documents (owner_id, doc_ref, title, subtitle, author, page_format, template_id, content_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING ${DOC_META_SELECT}`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING ${DOC_META_SELECT_LIGHT}`,
       [
         Number(req.user.id) || 0,
         newDocRef(),
@@ -331,7 +363,7 @@ router.post(
 router.get(
   "/documents/:id/layout",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id), req, { includeLayout: true });
+    const row = await loadDoc(Number(req.params.id), req, { layoutOnly: true });
     res.json({ page_layout: row.page_layout || null });
   })
 );
@@ -364,8 +396,9 @@ router.patch(
   ah(async (req, res) => {
     // L'autosave n'a besoin que des métadonnées pour vérifier la portée. Le
     // layout est déjà détenu par le client et ne doit pas être relu depuis
-    // PostgreSQL à chaque frappe (il peut représenter plusieurs mégaoctets).
-    const row = await loadDoc(Number(req.params.id), req, { includeLayout: false });
+    // PostgreSQL à chaque frappe (il peut représenter plusieurs mégaoctets) ;
+    // la sélection `light` retire aussi l'image de couverture (400 Ko).
+    const row = await loadDoc(Number(req.params.id), req, { light: true });
     const body = req.body || {};
     const sets = [];
     const params = [];
@@ -436,12 +469,12 @@ router.patch(
 
     sets.push(`updated_at = now()`);
     params.push(row.id);
-    // RETURNING exclut volontairement page_layout : le client conserve sa copie
-    // locale exacte. Evite de faire sortir plusieurs Mo de PostgreSQL à chaque
-    // sauvegarde, tout en renvoyant les métadonnées，轻à jour.
+    // RETURNING exclut volontairement page_layout ET l'image de couverture :
+    // le client conserve ses copies locales exactes. Évite de faire sortir
+    // plusieurs centaines de Ko de PostgreSQL à chaque sauvegarde (egress).
     const updated = await q(
       `UPDATE gen_documents SET ${sets.join(", ")} WHERE id = $${params.length}
-       RETURNING ${DOC_META_SELECT}`,
+       RETURNING ${DOC_META_SELECT_LIGHT}`,
       params
     );
     const document = docRow(updated[0], { includeLayout: false, includeMedia: false });
@@ -453,7 +486,7 @@ router.patch(
 router.post(
   "/documents/:id/duplicate",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id), req);
+    const row = await loadDoc(Number(req.params.id), req, { light: true });
     const inserted = await q(
       `INSERT INTO gen_documents (owner_id, doc_ref, title, subtitle, author, status, page_format,
                                   page_width, page_height, orientation, margins, template_id,
@@ -462,7 +495,7 @@ router.post(
               page_width, page_height, orientation, margins, template_id,
               style_overrides, cover, back_cover, protection, content_hash,
               page_layout
-       FROM gen_documents WHERE id = $3 RETURNING ${DOC_META_SELECT}`,
+       FROM gen_documents WHERE id = $3 RETURNING ${DOC_META_SELECT_LIGHT}`,
       [Number(req.user.id) || 0, newDocRef(), row.id]
     );
     await q(
@@ -479,23 +512,30 @@ router.post(
 router.post(
   "/documents/:id/versions",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id), req);
+    const row = await loadDoc(Number(req.params.id), req, { light: true });
     const label = String(req.body?.label || "").trim().slice(0, 100) || "Instantané";
-    let content = parseContent(req.body?.content);
-    if (content === null) {
-      const data = (await q(`SELECT content FROM gen_documents_data WHERE doc_id = $1`, [row.id]))[0];
-      if (!data) {
-        const err = new Error("Aucun contenu à archiver");
-        err.statusCode = 422;
-        throw err;
-      }
-      content = data.content;
+    const content = parseContent(req.body?.content);
+    // Egress : sans contenu fourni, l'instantané COPIE le contenu en SQL
+    // (INSERT … SELECT) — le document (jusqu'à ~860 Ko) n'est jamais remonté
+    // vers Node pour être réécrit.
+    const inserted =
+      content === null
+        ? await q(
+            `INSERT INTO gen_versions (doc_id, label, content)
+             SELECT doc_id, $2, content FROM gen_documents_data WHERE doc_id = $1
+             RETURNING id, label, created_at`,
+            [row.id, label]
+          )
+        : await q(
+            `INSERT INTO gen_versions (doc_id, label, content) VALUES ($1, $2, $3::jsonb)
+             RETURNING id, label, created_at`,
+            [row.id, label, JSON.stringify(content)]
+          );
+    if (!inserted.length) {
+      const err = new Error("Aucun contenu à archiver");
+      err.statusCode = 422;
+      throw err;
     }
-    const inserted = await q(
-      `INSERT INTO gen_versions (doc_id, label, content) VALUES ($1, $2, $3::jsonb)
-       RETURNING id, label, created_at`,
-      [row.id, label, JSON.stringify(content)]
-    );
     const versions = await q(
       `SELECT id, label, created_at FROM gen_versions WHERE doc_id = $1 ORDER BY created_at DESC LIMIT 50`,
       [row.id]
@@ -507,7 +547,7 @@ router.post(
 router.delete(
   "/documents/:id",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id), req);
+    const row = await loadDoc(Number(req.params.id), req, { light: true });
     await q(`DELETE FROM gen_documents WHERE id = $1`, [row.id]);
     logAudit(req.user.id, "generator.doc_deleted", row.doc_ref, req.ip);
     res.json({ ok: true });
@@ -518,7 +558,7 @@ router.delete(
 router.post(
   "/documents/:id/versions/:vid/restore",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id), req);
+    const row = await loadDoc(Number(req.params.id), req, { light: true });
     const vid = Number(req.params.vid);
     const version = (
       await q(`SELECT id, label, content FROM gen_versions WHERE id = $1 AND doc_id = $2`, [
@@ -539,7 +579,7 @@ router.post(
     );
     const updated = await q(
       `UPDATE gen_documents SET content_hash = $2, page_layout = NULL, updated_at = now()
-       WHERE id = $1 RETURNING ${DOC_META_SELECT}`,
+       WHERE id = $1 RETURNING ${DOC_META_SELECT_LIGHT}`,
       [row.id, contentHash(content)]
     );
     logAudit(req.user.id, "generator.version_restored", `${row.doc_ref} #${version.id}`, req.ip);
@@ -550,7 +590,7 @@ router.post(
 router.delete(
   "/documents/:id/versions/:vid",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id), req);
+    const row = await loadDoc(Number(req.params.id), req, { light: true });
     await q(`DELETE FROM gen_versions WHERE id = $1 AND doc_id = $2`, [
       Number(req.params.vid) || 0,
       row.id,
@@ -847,7 +887,7 @@ const PUBLISH_EXT = new Set(["pdf", "epub", "zip"]);
 router.post(
   "/documents/:id/upload-url",
   ah(async (req, res) => {
-    await loadDoc(Number(req.params.id), req);
+    await loadDoc(Number(req.params.id), req, { light: true });
     const { name, size, hash } = req.body || {};
     const fileName = String(name || "document.pdf").trim().slice(0, 160);
     const ext = safeFileExt(fileName);
@@ -887,7 +927,7 @@ router.post(
 router.post(
   "/documents/:id/publish",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id), req);
+    const row = await loadDoc(Number(req.params.id), req, { light: true });
     const body = req.body || {};
     const ownerId = await resolveOwnerId(req);
     const key = String(body.key || "").trim();
@@ -1033,7 +1073,7 @@ router.post(
 
     const updated = await q(
       `UPDATE gen_documents SET published_product_id = $2, status = 'ready'
-        WHERE id = $1 RETURNING ${DOC_META_SELECT}`,
+        WHERE id = $1 RETURNING ${DOC_META_SELECT_LIGHT}`,
       [row.id, productId]
     );
     logAudit(req.user.id, "generator.doc_published", `${row.doc_ref} → #${productId}`, req.ip);
@@ -1054,7 +1094,7 @@ router.post(
 router.delete(
   "/documents/:id/product",
   ah(async (req, res) => {
-    const row = await loadDoc(Number(req.params.id), req);
+    const row = await loadDoc(Number(req.params.id), req, { light: true });
     const productId = Number(row.published_product_id);
     if (!Number.isInteger(productId) || productId <= 0) {
       return res.status(404).json({ error: "Aucun produit publié pour ce document." });

@@ -64,8 +64,11 @@ export async function renderCoverImage(docMeta, { width = 480, maxBytes = 0 } = 
   drawCoverDecorCanvas(ctx, coverDecorPrims(template, w, h));
 
   // Image de fond éventuelle + voile RÉGLABLE (« Opacité de l'image »).
-  if (cover.image) {
-    const img = await loadImage(cover.image);
+  // La bibliothèque ne reçoit qu'une MINIATURE (`thumb`, ~20 Ko) : les gros
+  // data-URI de couverture ne circulent plus dans la liste (egress Supabase).
+  const bgImage = cover.image || cover.thumb;
+  if (bgImage) {
+    const img = await loadImage(bgImage);
     if (img) {
       const scale = Math.max(w / img.width, h / img.height);
       const dw = img.width * scale;
@@ -188,6 +191,29 @@ function coverageFont(token, px) {
 // Miniatures de bibliothèque : cache mémoire (une couverture par document et
 // par largeur) — évite de redessiner le canvas à chaque rendu de la liste.
 const thumbCache = new Map();
+
+/**
+ * Miniature d'une image de couverture DÉJÀ en data-URI — migration douce des
+ * couvertures importées avant l'existence de `cover.thumb` : la bibliothèque
+ * n'a alors plus besoin de transporter l'image complète (egress Supabase).
+ */
+export async function makeCoverThumb(dataUrl, maxW = 280, quality = 0.68) {
+  if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:")) return null;
+  const img = await loadImage(dataUrl);
+  if (!img || !img.width) return null;
+  const scale = Math.min(1, maxW / img.width);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(img.width * scale));
+  canvas.height = Math.max(1, Math.round(img.height * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  try {
+    return canvas.toDataURL("image/jpeg", quality);
+  } catch {
+    return null;
+  }
+}
 
 export async function libraryThumb(docMeta, width = 120) {
   const key = `${docMeta.id}:${width}:${docMeta.updated_at}:${docMeta.template_id}:${

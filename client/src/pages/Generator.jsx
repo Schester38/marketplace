@@ -42,7 +42,7 @@ import { paginateDocument, PX_PER_MM, PT_TO_PX } from "../generator/paginate.js"
 import { exportDocumentPdf, saveBlob } from "../generator/exportPdf.js";
 import { exportEpub } from "../generator/epub.js";
 import { checkDocument } from "../generator/check.js";
-import { renderCoverImage, libraryThumb } from "../generator/coverImage.js";
+import { renderCoverImage, libraryThumb, makeCoverThumb } from "../generator/coverImage.js";
 import { coverDecorPrims } from "../generator/coverDecor.js";
 import { parseDesignCommand, recommendTemplates } from "../generator/designCommands.js";
 import CoverDecor from "../generator/CoverDecor.jsx";
@@ -545,6 +545,12 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   const saveRevision = useRef(0);
   const saveInFlight = useRef(false);
   const saveQueued = useRef(false);
+  // Dernières valeurs ENVOYÉES avec succès (JSON) : le contenu (jusqu'à
+  // ~860 Ko) et la couverture (image base64 de 300-465 Ko) ne sont
+  // re-téléversés que s'ils ont réellement changé entre deux autosaves.
+  const sentCoverRef = useRef(null);
+  const sentBackCoverRef = useRef(null);
+  const sentContentRef = useRef(null);
   const saveNow = useCallback(async () => {
     if (saveInFlight.current) {
       saveQueued.current = true;
@@ -557,6 +563,12 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     saveInFlight.current = true;
     setSaveState("saving");
     try {
+      // Egress : n'envoyer le contenu et la couverture que s'ils ont CHANGÉ
+      // depuis le dernier envoi réussi. Régler un design, une couleur ou le
+      // statut re-téléversait auparavant tout le document à chaque autosave.
+      const contentJson = JSON.stringify(contentRef.current || {});
+      const coverJson = JSON.stringify(m.cover || {});
+      const backCoverJson = JSON.stringify(m.back_cover || {});
       const payload = {
         title: m.title,
         subtitle: m.subtitle,
@@ -569,14 +581,19 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
         page_height: m.page_height,
         orientation: m.orientation,
         margins: m.margins || {},
-        cover: m.cover || {},
-        back_cover: m.back_cover || {},
         protection: m.protection || {},
-        content: contentRef.current,
         // Le page_layout est volumineux et n'est jamais renvoyé par
         // l'autosave du contenu. Seul DocStudio l'envoie, via sa route dédiée.
       };
+      if (coverJson !== sentCoverRef.current) payload.cover = m.cover || {};
+      if (backCoverJson !== sentBackCoverRef.current) payload.back_cover = m.back_cover || {};
+      if (contentJson !== sentContentRef.current) payload.content = contentRef.current;
       const d = await api.genSaveDocument(m.id, payload);
+      // Ce qui vient d'être envoyé est mémorisé : les prochains autosaves ne
+      // renvoient plus ni le contenu ni la couverture inchangés.
+      sentCoverRef.current = coverJson;
+      sentBackCoverRef.current = backCoverJson;
+      sentContentRef.current = contentJson;
       // Une réponse peut être reçue après une modification plus récente : on ne
       // réécrit alors ni les métadonnées ni le statut de sauvegarde.
       if (version === saveRevision.current && !saveQueued.current) {
@@ -656,6 +673,29 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
       saveNow();
     } else scheduleSave();
   };
+
+  // Migration douce (egress) : une couverture importée AVANT l'existence de
+  // `cover.thumb` n'a que l'image complète (300-465 Ko), que la bibliothèque
+  // devrait alors transporter. On fabrique la miniature à l'ouverture du
+  // document ; l'autosave immédiat l'enregistre et la liste redevient légère.
+  const thumbBusyRef = useRef(false);
+  useEffect(() => {
+    const c = meta.cover || {};
+    if (!c.image || c.thumb || thumbBusyRef.current) return undefined;
+    let alive = true;
+    thumbBusyRef.current = true;
+    makeCoverThumb(c.image)
+      .then((thumb) => {
+        if (alive && thumb) patchMeta({ cover: { ...(metaRef.current.cover || {}), thumb } }, true);
+      })
+      .finally(() => {
+        thumbBusyRef.current = false;
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meta.cover?.image, meta.cover?.thumb]);
 
   // ─── Bibliothèque de modèles : filtres, recherche, favoris, récents ─────────
   // Tout est LOCAL (localStorage + analyse de chaînes) : aucun impact serveur,
@@ -1476,8 +1516,15 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
         commission_amount: Math.max(0, Number(String(pub.commission || "").replace(",", ".")) || 0),
         cover: coverData,
       });
-      setMeta(d.document);
-      metaRef.current = d.document;
+      // Réponse serveur allégée de l'image de couverture (egress) : on
+      // conserve la copie locale, comme pour l'autosave.
+      const published = {
+        ...d.document,
+        cover: { ...(metaRef.current.cover || {}), ...(d.document.cover || {}) },
+        back_cover: { ...(metaRef.current.back_cover || {}), ...(d.document.back_cover || {}) },
+      };
+      setMeta(published);
+      metaRef.current = published;
       setPublished({ product_id: d.product_id, updated: d.updated });
       setPub(null);
     } catch (e) {
@@ -1526,9 +1573,20 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     try {
       await saveNow();
       const d = await api.genRestoreVersion(meta.id, v.id);
-      setMeta(d.document);
-      metaRef.current = d.document;
+      // Réponse serveur allégée de l'image de couverture : on conserve la
+      // copie locale, puis on mémorise ce qui est DÉJÀ en base (le contenu
+      // restauré, la couverture) pour ne pas le re-téléverser à l'autosave.
+      const restored = {
+        ...d.document,
+        cover: { ...(metaRef.current.cover || {}), ...(d.document.cover || {}) },
+        back_cover: { ...(metaRef.current.back_cover || {}), ...(d.document.back_cover || {}) },
+      };
+      setMeta(restored);
+      metaRef.current = restored;
       contentRef.current = d.content || EMPTY_DOC;
+      sentContentRef.current = JSON.stringify(d.content || EMPTY_DOC);
+      sentCoverRef.current = JSON.stringify(restored.cover || {});
+      sentBackCoverRef.current = JSON.stringify(restored.back_cover || {});
       editorRef.current?.commands.setContent(contentRef.current, false);
       setPreview(null);
       setCheck(null);
@@ -2412,7 +2470,13 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
                       e.target.value = "";
                       if (!file) return;
                       try {
-                        patchMeta({ cover: { ...(meta.cover || {}), image: await compressImage(file, 1600, 0.82) } });
+                        // `image` = couverture complète (éditeur + PDF) ;
+                        // `thumb` = miniature ~20 Ko pour la bibliothèque : la
+                        // liste des documents ne transporte donc plus les gros
+                        // data-URI de couverture (egress Supabase).
+                        const image = await compressImage(file, 1600, 0.82);
+                        const thumb = await compressImage(file, 280, 0.68);
+                        patchMeta({ cover: { ...(meta.cover || {}), image, thumb } });
                       } catch {
                         setError("Image non lisible.");
                       }
@@ -2420,7 +2484,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
                   />
                 </label>
                 {meta.cover?.image && (
-                  <button type="button" className="btn btn-small btn-danger" onClick={() => patchMeta({ cover: { ...(meta.cover || {}), image: null } })}>
+                  <button type="button" className="btn btn-small btn-danger" onClick={() => patchMeta({ cover: { ...(meta.cover || {}), image: null, thumb: null } })}>
                     {t("Retirer")}
                   </button>
                 )}
