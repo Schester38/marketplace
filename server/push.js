@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { q } from "./db.js";
+import { absoluteUrl, canonicalizeText, PUSH_ORIGIN_HOSTS } from "./urls.js";
 
 const PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
 const PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
@@ -9,7 +10,7 @@ if (!PUBLIC_KEY || !PRIVATE_KEY) {
     "⚠️  VAPID keys non configurées : les push notifications seront désactivées. Définissez VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY."
   );
 } else {
-  webpush.setVapidDetails("mailto:contact@mboppi.app", PUBLIC_KEY, PRIVATE_KEY);
+  webpush.setVapidDetails("mailto:contact@mboppishop.com", PUBLIC_KEY, PRIVATE_KEY);
 }
 
 export const vapidPublicKey = PUBLIC_KEY || "";
@@ -29,8 +30,11 @@ function stableTag(source) {
 
 function buildPayload(payload) {
   return {
-    title: payload.title,
-    body: payload.body,
+    // Titre/corps nettoyés : toute mention d'un ancien domaine (texte d'une
+    // campagne enregistrée avant la bascule, message d'administration…) est
+    // remplacée par le domaine officiel.
+    title: canonicalizeText(payload.title),
+    body: canonicalizeText(payload.body),
     icon: payload.icon || "/icon-192.png",
     badge: "/favicon-32x32.png",
     tag: payload.tag || stableTag(`${payload.title}|${payload.body}`),
@@ -43,7 +47,11 @@ function buildPayload(payload) {
     // La notification reste affichée tant que l'utilisateur n'a pas réagi
     // (utile pour commandes/paiements), sauf demande contraire du payload.
     requireInteraction: payload.requireInteraction !== false,
-    data: { url: payload.url || "/" },
+    // URL ABSOLUE sur le domaine officiel : un clic ouvre toujours
+    // www.mboppishop.com, même si le service worker qui affiche la
+    // notification est resté sur l'ancien alias (les anciens SW résolvaient un
+    // chemin relatif contre leur propre origine).
+    data: { url: absoluteUrl(payload.url) },
   };
 }
 
@@ -94,9 +102,14 @@ export async function sendPush(userId, payload) {
     }
     return 0;
   }
-  const subs = await q("SELECT id, endpoint, keys FROM push_subscriptions WHERE user_id = $1", [
-    userId,
-  ]);
+  // Seuls les abonnements créés sur une origine OFFICIELLE reçoivent le push :
+  // une notification est affichée par le service worker de l'origine de
+  // l'abonnement — un abonnement hérité (ancien alias, apex, ou antérieur à la
+  // colonne `origin`) ferait apparaître l'ancienne URL (voir server/urls.js).
+  const subs = await q(
+    "SELECT id, endpoint, keys FROM push_subscriptions WHERE user_id = $1 AND origin = ANY($2::text[])",
+    [userId, PUSH_ORIGIN_HOSTS]
+  );
   if (!subs.length) return 0;
   const raw = buildPayload(payload);
   let sent = 0;
@@ -130,11 +143,12 @@ export async function sendPushToUsers(userIds, payload, { channel, timeoutMs = 2
      FROM push_subscriptions ps
      ${withPrefs ? "LEFT JOIN push_prefs pp ON pp.user_id = ps.user_id" : ""}
      WHERE ps.user_id = ANY($1::int[])
+       AND ps.origin = ANY($2::text[])
        ${withPrefs ? `AND COALESCE(pp.${col}, TRUE) = TRUE` : ""}
      ORDER BY ps.id`;
   let subs = null;
   try {
-    subs = await q(buildSql(Boolean(col)), [ids]);
+    subs = await q(buildSql(Boolean(col)), [ids, PUSH_ORIGIN_HOSTS]);
   } catch (err) {
     if (!col) {
       console.error("[push] requête abonnés impossible :", err.message);
@@ -142,7 +156,7 @@ export async function sendPushToUsers(userIds, payload, { channel, timeoutMs = 2
     }
     console.warn("[push] push_prefs indisponible, envoi sans préférences :", err.message);
     try {
-      subs = await q(buildSql(false), [ids]);
+      subs = await q(buildSql(false), [ids, PUSH_ORIGIN_HOSTS]);
     } catch (err2) {
       console.error("[push] requête abonnés impossible (fallback) :", err2.message);
       return 0;
@@ -191,6 +205,11 @@ export async function sendPushToAll(
     params.push(Number(excludeUserId));
     filters.push(`u.id <> $${params.length}`);
   }
+  // Origine officielle uniquement (voir server/urls.js) : les abonnements créés
+  // sur l'ancien alias / l'apex afficheraient l'ancienne URL sous la
+  // notification ; ils se réabonnent automatiquement sur le domaine officiel.
+  params.push(PUSH_ORIGIN_HOSTS);
+  filters.push(`ps.origin = ANY($${params.length}::text[])`);
   // Préférences par canal : absence de ligne push_prefs = canal activé.
   // Si la table push_prefs n'existe pas encore (migration pas encore passée),
   // on diffuse sans filtre de préférences plutôt que d'échouer.

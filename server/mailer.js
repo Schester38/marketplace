@@ -7,7 +7,7 @@ const SMTP_USER = process.env.SMTP_USER || "";
 const SMTP_PASS = process.env.SMTP_PASS || "";
 const EMAIL_FROM =
   process.env.EMAIL_FROM ||
-  (SMTP_USER ? `MboppiShop <${SMTP_USER}>` : "MboppiShop <noreply@mboppi.vercel.app>");
+  (SMTP_USER ? `MboppiShop <${SMTP_USER}>` : "MboppiShop <noreply@mboppishop.com>");
 
 // Domaine public du site (logo et liens des e-mails) — SITE_URL sur Vercel.
 const SITE_URL = String(process.env.SITE_URL || "https://www.mboppishop.com").replace(

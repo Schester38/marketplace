@@ -4,6 +4,7 @@
 // pour envoyer automatiquement la campagne du jour.
 import { q } from "../db.js";
 import { getSetting, setSetting } from "./ikeepay.js";
+import { SITE_URL, absoluteUrl, canonicalizeText } from "../urls.js";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 
 export const CAMPAIGN_AUDIENCES = {
@@ -83,6 +84,12 @@ export function todayDouala() {
 // Envoi réel d'une campagne (push + email). Mutualisé entre l'envoi manuel
 // (panneau Admin) et l'envoi automatique (cron) pour un comportement identique.
 export async function dispatchCampaign({ title, message, url = "/", audience = "all", channels = ["push", "email"] }) {
+  // Textes et lien normalisés : une campagne enregistrée avant la bascule du
+  // domaine peut citer l'ancienne adresse — le push et l'e-mail envoyés
+  // affichent donc toujours le domaine officiel.
+  title = canonicalizeText(title);
+  message = canonicalizeText(message);
+  const link = absoluteUrl(url);
   const doPush = channels.includes("push");
   const doEmail = channels.includes("email");
   const roles = Object.prototype.hasOwnProperty.call(CAMPAIGN_AUDIENCES, audience)
@@ -104,7 +111,7 @@ export async function dispatchCampaign({ title, message, url = "/", audience = "
         {
           title: `📣 ${title}`,
           body: message,
-          url,
+          url: link,
           tag: `campaign-${Date.now()}`,
         },
         { roles: roles || undefined, channel: "messages" }
@@ -133,7 +140,7 @@ export async function dispatchCampaign({ title, message, url = "/", audience = "
       }
       const { sendMail, mailConfigured, newsletterEmailHtml } = await import("../mailer.js");
       result.email_simulated = !mailConfigured();
-      const unsubscribeUrl = `${process.env.SITE_URL || "https://www.mboppishop.com"}/`;
+      const unsubscribeUrl = `${SITE_URL}/`;
       for (const r of recipients) {
         try {
           await sendMail({

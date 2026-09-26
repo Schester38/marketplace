@@ -2,10 +2,30 @@ import { Router } from "express";
 import { q, withTransaction } from "../db.js";
 import { authRequired } from "../auth.js";
 import { vapidPublicKey, sendPush } from "../push.js";
+import { PUSH_ORIGIN_HOSTS } from "../urls.js";
 
 const router = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+// Origine (hôte) du service worker qui s'abonne : c'est ELLE que le navigateur
+// affichera sous la notification. On l'enregistre pour ne plus envoyer de push
+// aux abonnements créés sur l'ancien alias / l'apex (server/urls.js).
+function requestHost(req) {
+  const from = req.headers.origin || req.headers.referer || "";
+  if (from) {
+    try {
+      return new URL(from).host.toLowerCase();
+    } catch {
+      /* en-tête illisible : on retombe sur l'hôte de la requête */
+    }
+  }
+  return (
+    String(req.headers["x-forwarded-host"] || req.headers.host || "")
+      .toLowerCase()
+      .split(":")[0] || null
+  );
+}
 
 router.get("/key", (req, res) => {
   res.json({ public_key: vapidPublicKey });
@@ -26,10 +46,15 @@ router.post(
       return res.status(400).json({ error: "Abonnement push invalide" });
     }
     await q(
-      `INSERT INTO push_subscriptions (user_id, endpoint, keys)
-     VALUES ($1, $2, $3)
-     ON CONFLICT (endpoint) DO UPDATE SET user_id = EXCLUDED.user_id, keys = EXCLUDED.keys`,
-      [req.user.id, String(endpoint), { p256dh: String(keys.p256dh), auth: String(keys.auth) }]
+      `INSERT INTO push_subscriptions (user_id, endpoint, keys, origin)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (endpoint) DO UPDATE SET user_id = EXCLUDED.user_id, keys = EXCLUDED.keys, origin = EXCLUDED.origin`,
+      [
+        req.user.id,
+        String(endpoint),
+        { p256dh: String(keys.p256dh), auth: String(keys.auth) },
+        requestHost(req),
+      ]
     );
     res.json({ ok: true });
   })
@@ -57,14 +82,16 @@ router.post(
   authRequired,
   ah(async (req, res) => {
     const [row] = await q(
-      "SELECT COUNT(*)::int AS n FROM push_subscriptions WHERE user_id = $1",
-      [req.user.id]
+      "SELECT COUNT(*)::int AS n FROM push_subscriptions WHERE user_id = $1 AND origin = ANY($2::text[])",
+      [req.user.id, PUSH_ORIGIN_HOSTS]
     );
     const count = Number(row?.n || 0);
     if (!count) {
-      return res
-        .status(400)
-        .json({ error: "Aucun appareil abonné sur ce compte.", code: "NO_SUB" });
+      return res.status(400).json({
+        error:
+          "Aucun appareil abonné sur ce compte (un abonnement créé sur l'ancienne adresse doit être réactivé depuis www.mboppishop.com).",
+        code: "NO_SUB",
+      });
     }
     const sent = await sendPush(req.user.id, {
       title: "🔔 Test de notification MboppiShop",
@@ -102,13 +129,14 @@ router.post(
           String(old_endpoint),
         ]);
         await tx.query(
-          `INSERT INTO push_subscriptions (user_id, endpoint, keys)
-           VALUES ($1, $2, $3)
-           ON CONFLICT (endpoint) DO UPDATE SET keys = EXCLUDED.keys, created_at = now()`,
+          `INSERT INTO push_subscriptions (user_id, endpoint, keys, origin)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (endpoint) DO UPDATE SET keys = EXCLUDED.keys, created_at = now(), origin = EXCLUDED.origin`,
           [
             found[0].user_id,
             String(newEndpoint),
             { p256dh: String(keys.p256dh), auth: String(keys.auth) },
+            requestHost(req),
           ]
         );
         return 1;
@@ -130,8 +158,8 @@ router.get(
   authRequired,
   ah(async (req, res) => {
     const [sub] = await q(
-      "SELECT COUNT(*)::int AS n FROM push_subscriptions WHERE user_id = $1",
-      [req.user.id]
+      "SELECT COUNT(*)::int AS n FROM push_subscriptions WHERE user_id = $1 AND origin = ANY($2::text[])",
+      [req.user.id, PUSH_ORIGIN_HOSTS]
     );
     res.json({
       subscribed: Number(sub?.n || 0) > 0,

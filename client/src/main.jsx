@@ -5,9 +5,32 @@ import { BrowserRouter } from "react-router-dom";
 import App, { AuthProvider } from "./App.jsx";
 import { LangProvider } from "./i18n.jsx";
 import { StoreProvider } from "./store.jsx";
+import { BASE_URL } from "./config.js";
 import "./styles.css";
 
 import * as Sentry from "@sentry/react";
+
+// ─── Domaine canonique (www.mboppishop.com) ─────────────────────────────────
+// L'ancien alias Vercel et l'apex sans www servent encore l'application : chaque
+// origine ayant son PROPRE service worker, les notifications ouvertes depuis ces
+// adresses (et les liens partagés) affichaient l'ANCIENNE URL. Le serveur
+// redirige déjà les navigations HTML en 301 ; ce garde couvre les pages servies
+// par le cache du service worker, sans passer par le réseau. Les préversions
+// Vercel et le développement local ne sont pas concernés.
+const LEGACY_HOSTS = ["mboppi-mboppi.vercel.app", "mboppishop.com"];
+const redirectingToCanonicalHost = (() => {
+  try {
+    const here = window.location.hostname.toLowerCase();
+    if (!LEGACY_HOSTS.includes(here)) return false;
+    if (new URL(BASE_URL).hostname.toLowerCase() === here) return false;
+    window.location.replace(
+      `${BASE_URL}${window.location.pathname}${window.location.search}${window.location.hash}`
+    );
+    return true;
+  } catch {
+    return false; // URL illisible : ne jamais bloquer l'application
+  }
+})();
 
 const DSN = import.meta.env.VITE_SENTRY_DSN;
 if (DSN) {
@@ -84,7 +107,7 @@ if (pathname.startsWith("/verone")) {
   document.title = "MboppiShop Admin";
 }
 
-if ("serviceWorker" in navigator) {
+if (!redirectingToCanonicalHost && "serviceWorker" in navigator) {
   // Mise à jour automatique : quand un nouveau SW prend le contrôle (nouvelle
   // version déployée), la page se recharge avec la nouvelle version SANS
   // action de l'utilisateur.
@@ -188,4 +211,8 @@ const Root = () => (
     </BrowserRouter>
   </React.StrictMode>
 );
-ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
+// Redirection vers le domaine officiel en cours : on ne monte rien (aucun
+// abonnement push ni cache ne doit être créé sur l'ancienne origine).
+if (!redirectingToCanonicalHost) {
+  ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
+}

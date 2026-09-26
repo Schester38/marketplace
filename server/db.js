@@ -212,6 +212,13 @@ async function runInitDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
+    -- Origine (hôte) du service worker qui a créé l'abonnement : un push est
+    -- affiché par le SW de CETTE origine — un abonnement créé sur l'ancien
+    -- alias ou l'apex faisait donc apparaître l'ancienne URL sous la
+    -- notification. Les envois ne visent que les origines officielles
+    -- (server/urls.js), les autres se réabonnent sur le domaine officiel.
+    ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS origin TEXT;
+
     CREATE TABLE IF NOT EXISTS newsletter_subscribers (
       id SERIAL PRIMARY KEY,
       email TEXT NOT NULL UNIQUE,

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { q } from "../db.js";
 import { authRequired } from "../auth.js";
+import { canonicalizeText } from "../urls.js";
 
 const router = Router();
 
@@ -10,8 +11,9 @@ router.get(
   "/",
   authRequired,
   ah(async (req, res) => {
-    const notifications = await q(
-      `SELECT n.*, s.product_id, COALESCE(p.name, n.product_name) AS product_name,
+    const notifications = (
+      await q(
+        `SELECT n.*, s.product_id, COALESCE(p.name, n.product_name) AS product_name,
               seller.name AS seller_name, seller.id AS seller_id, seller.seller_code,
               parrain.name AS parrain_name, parrain.id AS parrain_id,
               shop.name AS shop_name, shop.id AS shop_id, shop.country AS shop_country,
@@ -26,8 +28,15 @@ router.get(
        WHERE n.user_id = $1
        ORDER BY n.created_at DESC
        LIMIT 50`,
-      [req.user.id]
-    );
+        [req.user.id]
+      )
+      // Mentions d'un ancien domaine dans le texte (notifications enregistrées
+      // avant la bascule) → toujours l'adresse officielle à l'affichage.
+    ).map((n) => ({
+      ...n,
+      title: canonicalizeText(n.title),
+      body: canonicalizeText(n.body),
+    }));
     const unread = (
       await q("SELECT COUNT(*) FROM notifications WHERE user_id = $1 AND read = FALSE", [
         req.user.id,

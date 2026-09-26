@@ -42,6 +42,7 @@ import digitalRoutes from "./routes/digital.js";
 import generatorRoutes from "./routes/generator.js";
 import { authRequired } from "./auth.js";
 import { securityHeaders, originCheck, ALLOWED_ORIGINS } from "./security.js";
+import { isLegacyHost, canonicalUrl } from "./urls.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -63,6 +64,22 @@ if (process.env.SENTRY_DSN) {
 const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
+
+// ─── Domaine canonique (www.mboppishop.com) ─────────────────────────────────
+// L'ancien alias Vercel et l'apex sans www répondaient encore l'application :
+// chaque origine ayant son propre service worker, les notifications (et les
+// liens ouverts depuis la cloche, les partages…) y affichaient l'ANCIENNE URL.
+// Toute NAVIGATION HTML est donc redirigée en 301 vers le domaine officiel.
+// Ne sont PAS redirigés : les appels API (JSON), le sitemap, robots.txt et les
+// assets — une page encore en cache sur l'ancien domaine doit pouvoir finir
+// ses appels, et le service worker doit pouvoir se mettre à jour.
+app.use((req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") return next();
+  if (!String(req.headers.accept || "").includes("text/html")) return next();
+  const host = String(req.headers["x-forwarded-host"] || req.headers.host || "");
+  if (!isLegacyHost(host)) return next();
+  return res.redirect(301, canonicalUrl(req.originalUrl || "/"));
+});
 
 // Liste blanche unique : importée depuis security.js (originVariants inclut les
 // variantes www/apex de chaque domaine — sans elles, POST depuis l'apex reçoit
