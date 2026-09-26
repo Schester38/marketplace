@@ -4,17 +4,23 @@
 //      titre (« CHAPITRE 3 », « INTRODUCTION », « 1.2 Mesure », ligne EN
 //      MAJUSCULES…) la transforme en vrai titre (h1-h4) et ouvre un paragraphe.
 //   2. Collage intelligent : coller un texte BRUT d'au moins 3 lignes contenant
-//      des titres/listes/citations applique la même détection que l'import
-//      TXT/Markdown (detectStructureHtml). Un collage riche (HTML) garde le
-//      comportement natif de TipTap.
+//      des titres/listes/citations/tableaux applique la même détection que
+//      l'import TXT/Markdown (detectStructureHtml) — les tableaux copiés « à
+//      plat » (tabulations, « | », 2 espaces, « ; ») sont reconstruits en
+//      vrais tableaux. Un collage riche (HTML) garde le comportement natif de
+//      TipTap, sauf s'il ne contient aucun tableau alors que son texte brut,
+//      lui, en contient un (onglets).
 //   3. Passe complète « 🧠 Détecter les titres » : formatHeadings() convertit
 //      tout le document et peut numéroter en continu les chapitres sans numéro.
+//      La passe « 🔳 Détecter les tableaux » (tables.js → formatTables) fait la
+//      même chose pour les tableaux déjà présents dans le document.
 //
 // La règle de détection elle-même vit dans structure.js (une seule vérité,
 // partagée avec l'import) : l'éditeur et l'import donnent le même résultat.
 import { Extension } from "@tiptap/core";
 import { Plugin, TextSelection } from "@tiptap/pm/state";
 import { detectHeading, detectStructureHtml, looksStructured, chapterNumber, hasChapterNumber } from "./structure.js";
+import { planTableBlocks } from "./tables.js";
 
 export const HeadingAutoDetect = Extension.create({
   name: "headingAutoDetect",
@@ -50,11 +56,24 @@ export const HeadingAutoDetect = Extension.create({
           },
 
           // ── Collage d'un texte brut structuré (document, PDF copié) ───────
+          // Un collage RICHE garde le rendu natif de TipTap — sauf s'il ne
+          // contient aucun vrai tableau alors que son texte brut, lui,
+          // transporte un tableau tabulé (certains logiciels aplatissent les
+          // tableaux en HTML sans <table>).
           handlePaste(_view, event) {
             const cd = event.clipboardData;
             if (!cd) return false;
-            if (cd.getData("text/html")) return false; // collage riche → natif
+            const html = cd.getData("text/html") || "";
             const text = cd.getData("text/plain") || "";
+            if (html) {
+              if (/<table[\s>]/i.test(html)) return false; // vrai tableau → natif
+              const tabTable =
+                text.includes("\t") &&
+                planTableBlocks(text.split(/\r\n?|\n/), { minRows: 2 }).some(
+                  (b) => b.separator === "tab"
+                );
+              if (!tabTable) return false;
+            }
             if (!looksStructured(text)) return false;
             event.preventDefault();
             editor.chain().focus().insertContent(detectStructureHtml(text)).run();

@@ -36,6 +36,7 @@ import { useAuth } from "../App.jsx";
 import { DIGITAL_CATEGORIES, countrySymbol } from "../config.js";
 import { MBOPPI_CONTENT_URL, MBOPPI_CONTENT_LABEL, MBOPPI_PROMO_FONT_PT } from "../generator/footerPromo.js";
 import { detectStructureHtml } from "../generator/structure.js";
+import { formatTables } from "../generator/tables.js";
 import { detectScope } from "../generator/scope.js";
 import { HeadingAutoDetect, formatHeadings } from "../generator/headings.js";
 import { paginateDocument, PX_PER_MM, PT_TO_PX } from "../generator/paginate.js";
@@ -1349,6 +1350,32 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     }
   };
 
+  // ─── Reconstruire les tableaux copiés « à plat » (passe complète) ──────────
+  // Un tableau copié depuis un PDF (ou un tableur sans HTML) arrive en texte :
+  // colonnes séparées par des tabulations, des « | », 2 espaces ou plus, ou des
+  // « ; ». On repère ces blocs et on les convertit en vrais tableaux TipTap,
+  // identiques à ceux du bouton ▦ (éditables, dessinés dans le PDF et l'EPUB).
+  // Aucun autre contenu n'est modifié ; tout est annulable (Ctrl+Z).
+  const detectTables = () => {
+    const ed = editorRef.current;
+    if (!ed) return;
+    const res = formatTables(ed);
+    setFormatMsg(
+      res.tables === 0
+        ? t(
+            "Aucun tableau détecté : les colonnes d'un tableau copié doivent être séparées par des tabulations, des barres verticales (|), au moins 2 espaces ou des points-virgules, sur 2 lignes ou plus."
+          )
+        : t("{n} tableau(x) reconstruit(s) — {r} ligne(s) au total.", {
+            n: res.tables,
+            r: res.rows,
+          })
+    );
+    if (res.tables) {
+      contentRef.current = ed.getJSON();
+      saveNow();
+    }
+  };
+
   // ─── Contrôle qualité (🔍 DOCUMENT CHECK — analyse de la sortie paginée) ───
   const runCheck = async () => {
     setError("");
@@ -1685,6 +1712,16 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
             )}
           >
             🧠 {t("Détecter les titres")}
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline btn-small"
+            onClick={detectTables}
+            title={t(
+              "Repérer les tableaux copiés « à plat » (colonnes séparées par des tabulations, des |, 2 espaces ou des ;) et les reconstruire en vrais tableaux"
+            )}
+          >
+            🔳 {t("Détecter les tableaux")}
           </button>
           <button
             type="button"

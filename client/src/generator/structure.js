@@ -2,6 +2,9 @@
 // léger) en HTML sémantique que l'éditeur TipTap peut ingérer.
 //
 // Règles appliquées :
+//   - blocs tabulaires « à plat » (tabulations, « | », 2 espaces ou plus,
+//     « ; ») → TABLEAU reconstruit (tables.js) — testé en premier, sinon
+//     « Nom  Âge  Ville » deviendrait un titre ;
 //   - 1re ligne courte, sans ponctuation finale → titre du document (H1) ;
 //   - « Chapitre N », « Partie N », ligne EN MAJUSCULES, Introduction,
 //     Conclusion, etc. → titre de chapitre (H2) ;
@@ -11,6 +14,8 @@
 //   - lignes « > » → citation ;
 //   - « --- » → séparateur ;
 //   - tout le reste → paragraphe (lignes consécutives fusionnées).
+
+import { detectTableBlock, planTableBlocks, tableBlockHtml } from "./tables.js";
 
 function escapeHtml(s) {
   return String(s)
@@ -126,6 +131,10 @@ export function looksStructured(raw) {
     .map((l) => l.trim())
     .filter(Boolean);
   if (lines.length < 3) return false;
+  // Tableaux « à plat » (≥ 3 lignes) : même reconstruction que l'import — sans
+  // ce test, un texte qui n'est QUE le contenu d'un tableau copié (PDF) ne
+  // serait pas converti au collage dans l'éditeur.
+  if (planTableBlocks(lines, { minRows: 3 }).length) return true;
   return lines.some(
     (l) =>
       detectHeading(l) ||
@@ -166,12 +175,26 @@ export function detectStructureHtml(rawText) {
   let firstMeaningfulSeen = false;
   let titleUsed = false;
 
-  for (const raw of lines) {
+  for (let i = 0; i < lines.length; i += 1) {
+    const raw = lines[i];
     const line = raw.trim();
 
     if (!line) {
       flushPara();
       flushList();
+      continue;
+    }
+
+    // Tableaux « à plat » (copie de PDF, de tableur…) : reconstruits AVANT
+    // toute autre règle — sinon « Nom  Âge  Ville » deviendrait un titre et
+    // les colonnes seraient perdues.
+    const table = detectTableBlock(lines, i, { minRows: 2 });
+    if (table) {
+      flushPara();
+      flushList();
+      out.push(tableBlockHtml(table.rows, { header: table.header }));
+      firstMeaningfulSeen = true;
+      i = table.end - 1; // la boucle avance d'un cran
       continue;
     }
 

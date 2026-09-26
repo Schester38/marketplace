@@ -6364,11 +6364,39 @@ const GEN5_ES = {
   "Aucune correction sélectionnée.": "Ninguna corrección seleccionada.",
 };
 
+// 🔳 Détecter les tableaux (reconstruction des tableaux copiés « à plat »).
+const GEN6_EN = {
+  "Détecter les tableaux": "Detect tables",
+  "Repérer les tableaux copiés « à plat » (colonnes séparées par des tabulations, des |, 2 espaces ou des ;) et les reconstruire en vrais tableaux":
+    "Find tables pasted as flat text (columns separated by tabs, |, 2 spaces or ;) and rebuild them as real tables",
+  "Aucun tableau détecté : les colonnes d'un tableau copié doivent être séparées par des tabulations, des barres verticales (|), au moins 2 espaces ou des points-virgules, sur 2 lignes ou plus.":
+    "No table detected: the columns of a copied table must be separated by tabs, vertical bars (|), at least 2 spaces or semicolons, over 2 lines or more.",
+  "{n} tableau(x) reconstruit(s) — {r} ligne(s) au total.": "{n} table(s) rebuilt — {r} row(s) in total.",
+};
+
+const GEN6_AR = {
+  "Détecter les tableaux": "اكتشاف الجداول",
+  "Repérer les tableaux copiés « à plat » (colonnes séparées par des tabulations, des |, 2 espaces ou des ;) et les reconstruire en vrais tableaux":
+    "التعرّف على الجداول المنسوخة كنص مسطّح (أعمدة مفصولة بعلامات جدولة أو | أو مسافتين أو ;) وإعادة بنائها كجداول حقيقية",
+  "Aucun tableau détecté : les colonnes d'un tableau copié doivent être séparées par des tabulations, des barres verticales (|), au moins 2 espaces ou des points-virgules, sur 2 lignes ou plus.":
+    "لم يتم اكتشاف أي جدول: يجب أن تكون أعمدة الجدول المنسوخ مفصولة بعلامات جدولة أو أشرطة عمودية (|) أو مسافتين على الأقل أو فاصلات منقوطة، على سطرين أو أكثر.",
+  "{n} tableau(x) reconstruit(s) — {r} ligne(s) au total.": "تمت إعادة بناء {n} جدول — {r} سطرًا إجمالاً.",
+};
+
+const GEN6_ES = {
+  "Détecter les tableaux": "Detectar tablas",
+  "Repérer les tableaux copiés « à plat » (colonnes séparées par des tabulations, des |, 2 espaces ou des ;) et les reconstruire en vrais tableaux":
+    "Localizar tablas copiadas como texto plano (columnas separadas por tabulaciones, |, 2 espacios o ;) y reconstruirlas como tablas reales",
+  "Aucun tableau détecté : les colonnes d'un tableau copié doivent être séparées par des tabulations, des barres verticales (|), au moins 2 espaces ou des points-virgules, sur 2 lignes ou plus.":
+    "No se detectó ninguna tabla: las columnas de una tabla copiada deben estar separadas por tabulaciones, barras verticales (|), al menos 2 espacios o puntos y comas, en 2 líneas o más.",
+  "{n} tableau(x) reconstruit(s) — {r} ligne(s) au total.": "{n} tabla(s) reconstruida(s) — {r} fila(s) en total.",
+};
+
 export const I18N = {
   fr: {},
-  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN },
-  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR },
-  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES },
+  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN },
+  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR },
+  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES },
 };
 
 function tr(str, vars, lang) {

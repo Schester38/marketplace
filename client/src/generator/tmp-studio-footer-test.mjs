@@ -39,7 +39,7 @@ const promo = content.elements.find((el) => el.data?.promotion === "mboppi-conte
 ok("pages d’origine non mutées", JSON.stringify(pages), snapshot);
 ok("couverture sans promotion", withPromotion[0].elements.length, 0);
 ok("QR automatique sur couverture", Boolean(coverQr), true);
-ok("QR en bas à droite", coverQr.box.x, box.w - 22 - 10);
+ok("QR en bas à droite", coverQr.box.x, box.w - 32 - 10);
 ok("QR sans texte partiel", coverQr.data.label, "Vérification");
 ok("pied personnalisé conservé", content.elements[0], custom);
 ok("une promotion par page non-couverture", withPromotion.slice(1).map((p) => p.elements.filter((el) => el.data?.promotion === "mboppi-content").length), [1, 1]);
