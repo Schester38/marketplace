@@ -5,7 +5,8 @@
 //   - blocs tabulaires « à plat » (tabulations, « | », espaces — y compris une
 //     seule — ou « ; ») → TABLEAU reconstruit (tables.js) — testé en premier,
 //     sinon « Nom  Âge  Ville » deviendrait un titre ; les cellules repliées
-//     sur la ligne suivante sont recollées et les lignes de tirets consommées ;
+//     sur la ligne suivante sont recollées, les lignes de tirets consommées et
+//     un bloc annoncé par une légende « Tableau … » est reconnu en priorité ;
 //   - 1re ligne courte, sans ponctuation finale → titre du document (H1) ;
 //   - « Chapitre N », « Partie N », ligne EN MAJUSCULES, Introduction,
 //     Conclusion, etc. → titre de chapitre (H2) ;

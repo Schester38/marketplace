@@ -1354,10 +1354,11 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
   // Un tableau copié depuis un PDF (ou un tableur sans HTML) arrive en texte :
   // colonnes séparées par des tabulations, des « | », des espaces (une seule
   // suffit) ou des « ; » — les cellules repliées sur la ligne suivante sont
-  // recollées et un soulignement de tirets est consommé. On repère ces blocs et
-  // on les convertit en vrais tableaux TipTap, identiques à ceux du bouton ▦
-  // (éditables, dessinés dans le PDF et l'EPUB). Aucun autre contenu n'est
-  // modifié ; tout est annulable (Ctrl+Z).
+  // recollées et un soulignement de tirets est consommé. Un bloc annoncé par
+  // une légende (« Tableau 3 : … », « Tab. 4 ») est détecté en priorité, dès
+  // 2 lignes et même sans chiffres. On convertit ces blocs en vrais tableaux
+  // TipTap, identiques à ceux du bouton ▦ (éditables, dessinés dans le PDF et
+  // l'EPUB). Aucun autre contenu n'est modifié ; tout est annulable (Ctrl+Z).
   const detectTables = () => {
     const ed = editorRef.current;
     if (!ed) return;
@@ -1365,7 +1366,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
     setFormatMsg(
       res.tables === 0
         ? t(
-            "Aucun tableau détecté : les colonnes d'un tableau copié doivent être séparées par des tabulations, des barres verticales (|), des espaces ou des points-virgules, sur 2 lignes ou plus. Une cellule repliée sur la ligne suivante est recollée automatiquement."
+            "Aucun tableau détecté : les colonnes d'un tableau copié doivent être séparées par des tabulations, des barres verticales (|), des espaces ou des points-virgules, sur 2 lignes ou plus. Une cellule repliée sur la ligne suivante est recollée automatiquement, et les lignes qui suivent une légende « Tableau … » sont détectées en priorité (dès 2 lignes, même sans chiffres)."
           )
         : t("{n} tableau(x) reconstruit(s) — {r} ligne(s) au total.", {
             n: res.tables,
@@ -1720,7 +1721,7 @@ function GenEditor({ initialDoc, onBack, pendingImport, onPendingImportDone }) {
             className="btn btn-outline btn-small"
             onClick={detectTables}
             title={t(
-              "Repérer les tableaux copiés « à plat » (colonnes séparées par des tabulations, des |, des espaces — une seule suffit — ou des ;) et les reconstruire en vrais tableaux"
+              "Repérer les tableaux copiés « à plat » (colonnes séparées par des tabulations, des |, des espaces — une seule suffit — ou des ;), y compris ceux annoncés par une légende « Tableau … », et les reconstruire en vrais tableaux"
             )}
           >
             🔳 {t("Détecter les tableaux")}

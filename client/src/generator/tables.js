@@ -24,6 +24,15 @@
 //                         numérique fiable — les milliers groupés (« 3 663 000 »)
 //                         restent une seule cellule.
 //
+// LÉGENDE « Tableau … » (détection PAR MOT) : une ligne qui COMMENCE par
+// « Tableau », « Tableaux », « Table », « Tab. » (éventuellement numérotée
+// « 2. Tableau », « Annexe 3 — Tableau ») annonce un tableau : le bloc qui
+// suit est alors détecté avec des règles ASSOUPLIES (dès 2 lignes, cellules
+// jusqu'à 90 caractères, tableau de libellés sans aucun chiffre, cellules
+// moins courtes) — les garde-fous de fond restent (pas de ponctuation de
+// phrase, colonnes de même largeur, libellés capitalisés, pas de colonnes
+// entièrement répétées).
+//
 // GARDE-FOUS ANTI-PROSE (un paragraphe n'est JAMAIS transformé en tableau) :
 //   - les séparateurs « risqués » (espaces, « ; ») exigent au moins 3 lignes,
 //     des cellules courtes, aucune cellule terminée par une ponctuation de
@@ -79,6 +88,14 @@ const SINGLE_CELL_MAX = 45;
 const PROBE_CELL_MAX = 60;
 const PROBE_DEPTH = 16;
 const MAX_RUN_ROWS = 400;
+// Légende de tableau (détection PAR MOT) : la ligne COMMENCE par le mot-clé
+// (éventuellement précédé d'un numéro « 2. », « 2.1 », d'un « Annexe N »).
+// Le bloc suivant est détecté avec des règles assouplies (voir `caption`).
+const TABLE_CAPTION_RE =
+  /^(?:(?:\d{1,3}(?:\.\d{1,3})*[.)]?|annexe\s*\d{0,3})\s*[:—–-]?\s*)?(?:tableaux?|tables?|tabl?\.?)\b/i;
+// En mode légende, une cellule peut aller jusqu'à cette longueur (au lieu de
+// 45-60 caractères) : un tableau annoncé peut porter des libellés plus longs.
+const CAPTION_CELL_MAX = 90;
 
 // Règles par séparateur : nombre de lignes minimal, longueur maximale d'une
 // cellule, proportion de cellules remplies, contrôles supplémentaires.
@@ -305,24 +322,36 @@ export function looksLikeHeaderRow(row, rest) {
   return numericRows >= Math.ceil(rest.length / 2) || row.every((c) => c.length <= 20);
 }
 
-function validBlock(rows, offsets, kind, flags) {
+function validBlock(rows, offsets, kind, flags, caption = false) {
   const rule = RULES[kind];
   const cells = rows.flat();
   // Cellules complétées par une ligne de continuation : leur ponctuation
   // finale et leur longueur viennent du texte d'origine, pas d'une phrase.
   const merged = flags ? flags.flat() : [];
   const relaxed = (idx) => merged[idx] === true;
+  // Mode légende (« Tableau 3 : … ») : le tableau est annoncé, les seuils de
+  // forme sont assouplis — jamais les garde-fous de fond (ponctuation de
+  // phrase, alignement, colonnes répétées).
+  const maxCell = caption ? Math.max(rule.maxCell, CAPTION_CELL_MAX) : rule.maxCell;
+  const minFill = caption ? Math.min(rule.minFill, 0.6) : rule.minFill;
   const filled = cells.filter((c) => c !== "").length;
-  if (filled < Math.ceil(cells.length * rule.minFill)) return false;
-  if (cells.some((c, idx) => c.length > rule.maxCell && !relaxed(idx))) return false;
+  if (filled < Math.ceil(cells.length * minFill)) return false;
+  if (cells.some((c, idx) => c.length > maxCell && !relaxed(idx))) return false;
   if (rule.aligned && alignedColumns(rows, offsets) < Math.min(2, rows[0].length)) return false;
   if (rule.risky) {
     // Une phrase se termine par un point : jamais une cellule de tableau.
     if (cells.some((c, idx) => SENTENCE_END_RE.test(c) && !relaxed(idx))) return false;
     const dataRows = rows.filter((r) => r.some(looksNumeric)).length;
     const shortCells = cells.every((c) => c.length <= 22);
-    if (dataRows === 0 && !shortCells && !looksLikeHeaderRow(rows[0], rows.slice(1))) return false;
-    if (kind === "space" && dataRows === 0 && capitalizedRatio(cells) < 0.6) return false;
+    const caps = capitalizedRatio(cells);
+    if (caption) {
+      // Bloc annoncé par une légende : des libellés capitalisés suffisent.
+      if (dataRows === 0 && caps < 0.3) return false;
+    } else if (dataRows === 0 && !shortCells && !looksLikeHeaderRow(rows[0], rows.slice(1))) {
+      return false;
+    } else if (kind === "space" && dataRows === 0 && caps < 0.6) {
+      return false;
+    }
   }
   // Une ligne sans aucune cellule remplie terminerait le tableau.
   return rows.every((r) => r.some((c) => c !== ""));
@@ -467,7 +496,7 @@ function strongTwoRowSpace(rows, offsets) {
 // Assemblage d'un bloc candidat : largeur de référence = mode des lignes (une
 // ligne qui a perdu sa DERNIÈRE colonne vide est complétée à droite — cas très
 // fréquent dans les PDF), puis garde-fous anti-prose. null = bloc rejeté.
-function assembleSpaceBlock(run, kind, minRows) {
+function assembleSpaceBlock(run, kind, minRows, caption = false) {
   const mode = modeOf(run.rows.map((r) => r.length));
   if (mode < 2) return null;
   const rows = [];
@@ -487,13 +516,13 @@ function assembleSpaceBlock(run, kind, minRows) {
       break; // largeur franchement différente : le tableau s'arrête ici
     }
   }
-  const strongTwo = kind === "space" && strongTwoRowSpace(rows, offsets);
+  const strongTwo = kind === "space" && !caption && strongTwoRowSpace(rows, offsets);
   if (rows.length < minRows && !strongTwo) return null;
-  if (!validBlock(rows, offsets, kind, flags)) return null;
+  if (!validBlock(rows, offsets, kind, flags, caption)) return null;
   return { rows, offsets };
 }
 
-function blockForKind(lines, start, kind, minRows) {
+function blockForKind(lines, start, kind, minRows, caption = false) {
   const firstLine = normalizeTableLine(lines[start]).trim();
   const first = cellsFor(kind, firstLine);
   if (!first || first.length < 2) return null;
@@ -506,12 +535,12 @@ function blockForKind(lines, start, kind, minRows) {
     continuation,
     limit: sonde ? PROBE_DEPTH : MAX_RUN_ROWS,
   });
-  let block = run.rows.length ? assembleSpaceBlock(run, kind, minRows) : null;
+  let block = run.rows.length ? assembleSpaceBlock(run, kind, minRows, caption) : null;
   if (sonde && run.hitLimit) {
     if (!block) return null; // sonde non concluante : rien à faire ici
     // 2) Sonde concluante : on collecte le bloc entier (plafonné) et on valide.
     run = collectRun(lines, start, kind, { continuation, limit: MAX_RUN_ROWS });
-    block = assembleSpaceBlock(run, kind, minRows);
+    block = assembleSpaceBlock(run, kind, minRows, caption);
   }
   if (!block) return null;
 
@@ -606,12 +635,15 @@ function collectSingleSpace(lines, start, variant, limit = MAX_RUN_ROWS) {
   };
 }
 
-function validSingleSpace(rows) {
+function validSingleSpace(rows, caption = false) {
   const n = rows[0].length;
   const cells = rows.flat();
   if (cells.some((c) => !c)) return false; // pas de cellule vide ici
-  if (cells.some((c) => c.length > RULES.space1.maxCell)) return false;
+  const maxCell = caption ? Math.max(RULES.space1.maxCell, PROSE_CELL_MAX) : RULES.space1.maxCell;
+  if (cells.some((c) => c.length > maxCell)) return false;
   if (cells.some((c) => SENTENCE_END_RE.test(c))) return false; // pas une phrase
+  const caps = capitalizedRatio(cells);
+  const header = looksLikeHeaderRow(rows[0], rows.slice(1));
   // Une colonne numérique fiable, jamais la première (une ligne commençant par
   // un nombre — « 3 pommes rouges » — est une énumération, pas un tableau)…
   let numericCol = -1;
@@ -623,18 +655,24 @@ function validSingleSpace(rows) {
       numericCol = c;
     }
   }
-  if (numericCol < 1 || bestShare < (n === 2 ? 0.8 : 0.6)) return false;
-  // … qui porte une vraie donnée (une valeur répétée n'est pas un tableau).
-  const values = new Set(rows.map((r) => r[numericCol]).filter(looksNumeric));
-  if (values.size < 2) return false;
+  const numericOk =
+    numericCol >= 1 &&
+    bestShare >= (n === 2 ? 0.8 : 0.6) &&
+    // … et qui porte une vraie donnée (une valeur répétée n'en est pas une).
+    new Set(rows.map((r) => r[numericCol]).filter(looksNumeric)).size >= 2;
+  // Après une légende « Tableau N », des libellés capitalisés suffisent — le
+  // tableau a été explicitement annoncé par l'auteur.
+  if (!numericOk && !(caption && caps >= 0.45)) return false;
   // Des cellules courtes (des phrases ne tiennent pas dans une colonne).
-  if (cells.filter((c) => c.length <= 22).length / cells.length < 0.6) return false;
+  if (cells.filter((c) => c.length <= 22).length / cells.length < (caption ? 0.5 : 0.6)) {
+    return false;
+  }
   // Des colonnes entièrement répétées : prose (« … à charge » sur chaque ligne).
   const identical = identicalColumns(rows);
   if (identical >= 2 && identical / n >= 0.4) return false;
   // Enfin, des libellés capitalisés — ou un en-tête repérable (libellés au-dessus
   // de valeurs) : « il a lu » est de la prose, « Douala » est une donnée.
-  if (!looksLikeHeaderRow(rows[0], rows.slice(1)) && capitalizedRatio(cells) < 0.45) return false;
+  if (!header && caps < (caption ? 0.3 : 0.45)) return false;
   return true;
 }
 
@@ -651,7 +689,7 @@ function pickSingleSpaceRun(raw, grouped, minRows) {
   return null;
 }
 
-function blockForKindSingleSpace(lines, start, minRows) {
+function blockForKindSingleSpace(lines, start, minRows, caption = false) {
   // 1) Sonde courte : si le début de la suite de lignes n'est pas tabulaire,
   //    inutile d'aller plus loin — c'est ce qui borne le coût sur les textes à
   //    lignes uniformes (sinon O(n²) : plusieurs secondes).
@@ -661,12 +699,12 @@ function blockForKindSingleSpace(lines, start, minRows) {
     minRows
   );
   if (!probe) return null;
-  if (probe.run.hitLimit && !validSingleSpace(probe.run.rows)) return null;
+  if (probe.run.hitLimit && !validSingleSpace(probe.run.rows, caption)) return null;
   // 2) Sonde concluante : le bloc entier (plafonné) est collecté et validé.
   const run = probe.run.hitLimit
     ? collectSingleSpace(lines, start, probe.variant, MAX_RUN_ROWS)
     : probe.run;
-  if (!validSingleSpace(run.rows)) return null;
+  if (!validSingleSpace(run.rows, caption)) return null;
   return {
     rows: run.rows,
     offsets: run.offsets,
@@ -676,22 +714,57 @@ function blockForKindSingleSpace(lines, start, minRows) {
   };
 }
 
+// ─── Légende de tableau (détection PAR MOT) ────────────────────────────────
+// « Tableau 3 : Effectifs », « TABLEAU n°2 — Population », « Tab. 4 »… : la
+// ligne COMMENCE par le mot-clé (un simple renvoi dans une phrase — « voir le
+// tableau 3 » — ne compte pas). Le bloc qui suit est un tableau ANNONCÉ : les
+// seuils de forme sont assouplis (voir `caption` dans les validateurs).
+
+export function isTableCaption(raw) {
+  return TABLE_CAPTION_RE.test(normalizeTableLine(raw).trim());
+}
+
+/**
+ * La dernière ligne non vide au-dessus de `start` (au plus 2 lignes vides
+ * d'écart) est-elle une légende de tableau ?
+ */
+export function tableCaptionBefore(lines, start) {
+  if (!Array.isArray(lines) || start <= 0) return false;
+  let blanks = 0;
+  for (let i = start - 1; i >= 0; i -= 1) {
+    const line = normalizeTableLine(lines[i]).trim();
+    if (!line) {
+      blanks += 1;
+      if (blanks > 2) return false;
+      continue;
+    }
+    return TABLE_CAPTION_RE.test(line);
+  }
+  return false;
+}
+
 // ─── API publique ──────────────────────────────────────────────────────────
 
 /**
  * Détecte un tableau qui commence à la ligne `lines[start]`.
+ * Une ligne « Tableau 3 : … » juste au-dessus assouplit les seuils (le bloc
+ * suivant est un tableau annoncé : dès 2 lignes, cellules plus longues,
+ * tableau de libellés sans chiffres).
  * @returns null | { rows: string[][], offsets, end: number,
  *                   separator: "tab"|"pipe"|"space"|"semicolon"|"space1",
  *                   header: boolean }
  */
 export function detectTableBlock(lines, start = 0, { minRows = 2 } = {}) {
   if (!Array.isArray(lines) || start < 0 || start >= lines.length) return null;
+  const caption = tableCaptionBefore(lines, start);
   for (const kind of KINDS) {
-    const need = Math.max(2, RULES[kind].minRows, minRows);
+    const need = caption
+      ? Math.max(2, RULES[kind].minRows - 1)
+      : Math.max(2, RULES[kind].minRows, minRows);
     const block =
       kind === "space1"
-        ? blockForKindSingleSpace(lines, start, need)
-        : blockForKind(lines, start, kind, need);
+        ? blockForKindSingleSpace(lines, start, need, caption)
+        : blockForKind(lines, start, kind, need, caption);
     if (block) return block;
   }
   return null;

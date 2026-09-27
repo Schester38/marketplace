@@ -11,6 +11,8 @@ import {
   planTableBlocks,
   tableBlockHtml,
   looksNumeric,
+  isTableCaption,
+  tableCaptionBefore,
 } from "./tables.js";
 import { detectStructureHtml, looksStructured } from "./structure.js";
 
@@ -310,6 +312,58 @@ ok(
   looksStructured("Douala 3 663 000\nYaoundé 2 765 000\nBafoussam 800 000"),
   "collage : un tableau à une espace est structuré"
 );
+
+// ─── 11. Légende « Tableau … » (détection PAR MOT-CLÉ) ─────────────────────
+// L'auteur annonce un tableau : le bloc suivant est détecté même sans aucun
+// chiffre, dès 2 lignes, avec des cellules plus longues.
+ok(isTableCaption("Tableau 3 : Effectifs par ville"), "légende : « Tableau 3 : … »");
+ok(isTableCaption("TABLEAU n°2 — Population"), "légende : « TABLEAU n°2 — … »");
+ok(isTableCaption("Tab. 4"), "légende : « Tab. 4 »");
+ok(isTableCaption("2. Tableau des dépenses"), "légende : « 2. Tableau … »");
+ok(isTableCaption("Annexe 3 — Tableau 2"), "légende : « Annexe 3 — Tableau 2 »");
+ok(!isTableCaption("Voir le tableau 3 ci-dessus"), "légende : un renvoi en pleine phrase ne compte pas");
+ok(!isTableCaption("Le tablier du pont est solide"), "légende : « tablier » n'est pas un mot-clé");
+ok(tableCaptionBefore(["Tableau 1 : Tests", "", "Nom Statut"], 2), "légende : repérée au-dessus à 1 ligne vide");
+ok(!tableCaptionBefore(["Tableau 1 : Tests", "", "", "", "Nom Statut"], 4), "légende : plus de 2 lignes vides = oubliée");
+
+// Tableau de libellés (AUCUN chiffre) annoncé par une légende : détecté.
+const captioned = [
+  "Tableau 1 : Rôles et responsabilités",
+  "Rôle Statut Responsable",
+  "Vendeur Actif Boutique",
+  "Livreur Actif Plateforme",
+];
+const captionedBlock = detectTableBlock(captioned, 1);
+ok(
+  captionedBlock?.separator === "space1" && captionedBlock.rows.length === 3,
+  "légende : tableau de libellés (sans chiffres) détecté"
+);
+ok(captionedBlock?.header === true, "légende : en-tête reconnu");
+ok(!detectTableBlock(captioned.slice(1), 0), "légende : sans la légende, le même bloc reste refusé");
+
+// Légende séparée par une ligne vide, et tableau de 2 lignes seulement.
+const captionedBlank = ["Tableau 2 — Tests", "", "Option Ancienne Nouvelle", "Vitesse Lente Rapide"];
+ok(!!detectTableBlock(captionedBlank, 2), "légende : détectée après une ligne vide, 2 lignes suffisent");
+
+// La légende n'avale JAMAIS la prose qui suit.
+const captionedProse = [
+  "Tableau 5 : Rappel",
+  "Il faut agir rapidement; le temps presse vraiment beaucoup.",
+  "Elle a dit qu'il viendrait; nous verrons bien ce qui se passera.",
+];
+ok(!detectTableBlock(captionedProse, 1), "légende : prose ponctuée toujours refusée");
+const captionedProse2 = [
+  "Tableau 6 : Rappel",
+  "le premier paragraphe explique la situation en détail",
+  "le second paragraphe poursuit la même idée",
+];
+ok(!detectTableBlock(captionedProse2, 1), "légende : prose en minuscules toujours refusée");
+
+// Import complet : la légende reste un paragraphe, le tableau suit.
+const captionedDoc = detectStructureHtml(`${captioned.join("\n")}\n\nFin du chapitre.`);
+ok(captionedDoc.includes("<table>"), "import : tableau après légende reconstruit");
+ok(captionedDoc.includes("<th><p>Rôle</p></th>"), "import : en-tête du tableau après légende");
+ok(!/<h[1-4]>[^<]*Vendeur/.test(captionedDoc), "import : aucune ligne transformée en titre");
 
 console.log(`\n${pass} réussis, ${fail} échoués`);
 if (fail) process.exit(1);
