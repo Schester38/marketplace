@@ -42,6 +42,7 @@ import {
   IconUserCheck,
   IconTruck,
   IconShield,
+  IconPhone,
 } from "./icons.jsx";
 
 // Groupes de la barre de catégories statique : chaque groupe ouvre un
@@ -1112,6 +1113,12 @@ export default function Navbar({ onLogout }) {
         </span>
         <span className="dl-label">{t("Tutoriel MboppiShop")}</span>
       </a>
+      <Link to="/contact" onClick={close} className="drawer-link drawer-link-contact">
+        <span className="dl-icon">
+          <IconPhone size={15} />
+        </span>
+        <span className="dl-label">{t("Contact")}</span>
+      </Link>
       <a
         href="https://chat.whatsapp.com/IkP0cv2vjybDwOgmYYUmJv?s=cl&p=a&mlu=4&ilr=4"
         target="_blank"

@@ -71,7 +71,7 @@ export default function Contact() {
               <h3>E-mail</h3>
               <p>{t("Pour les demandes écrites détaillées.")}</p>
               <a className="btn btn-outline" href="mailto:mboppishop@gmail.com">
-                contact@mboppi.com
+                contact@mboppishop.com
               </a>
             </div>
           </div>

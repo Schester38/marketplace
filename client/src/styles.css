@@ -9062,6 +9062,10 @@ a.step {
   --dl-accent: #14b8a6;
   --dl-tint: rgba(20, 184, 166, 0.1);
 }
+.drawer-link-contact {
+  --dl-accent: #0ea5e9;
+  --dl-tint: rgba(14, 165, 233, 0.1);
+}
 .drawer-link-space {
   --dl-accent: #6366f1;
   --dl-tint: rgba(99, 102, 241, 0.09);
