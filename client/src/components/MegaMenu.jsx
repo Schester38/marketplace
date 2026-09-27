@@ -3,11 +3,12 @@ import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { useLang } from "../i18n.jsx";
 import { getCategoryIcon } from "./icons.jsx";
+import { categoryLink } from "../pages/homeCatalog.js";
 
 function MegaMenuItem({ sub, cat, t, closeMegaMenu }) {
   return (
     <Link
-      to={`/?cat=${encodeURIComponent(sub)}`}
+      to={categoryLink(sub)}
       onClick={closeMegaMenu}
       className="mega-menu-item"
       role="menuitem"
@@ -33,7 +34,7 @@ function MegaMenuContent({ cat, t, closeMegaMenu }) {
     <div className="mega-menu-content">
       <div className="mega-menu-header">
         <Link
-          to={`/?cat=${encodeURIComponent(cat.main || cat.label)}`}
+          to={categoryLink(cat.main || cat.label)}
           onClick={closeMegaMenu}
           className="mega-menu-title-link"
         >
@@ -178,7 +179,7 @@ function MegaMenuTrigger({
       >
         <Link
           ref={triggerRef}
-          to={`/?cat=${encodeURIComponent(mainTarget)}`}
+          to={categoryLink(mainTarget)}
           data-cat={mainTarget}
           className={`cat-link mega-link${activeCat === mainTarget ? " cat-active" : ""}`}
           role="tab"

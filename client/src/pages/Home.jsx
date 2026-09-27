@@ -26,6 +26,7 @@ import {
   nextCatalogRefresh,
   normalizeServerCatalog,
   productsOfType,
+  resolveType,
   shouldRetryDigitalCatalog,
   shouldRetryPhysicalCatalog,
 } from "./homeCatalog.js";
@@ -63,11 +64,14 @@ export default function Home() {
   const [search, setSearch] = useState(() => params.get("q") || "");
   const [debouncedSearch, setDebouncedSearch] = useState(() => params.get("q") || "");
   const [category, setCategory] = useState(() => params.get("cat") || "");
-  // Volets produits : « physiques » (défaut) et « digitaux » — jamais mélangés
-  // dans la même liste (serveur `type=` + filtre client des rails).
-  const [ptype, setPtype] = useState(() => (params.get("type") === "digital" ? "digital" : "physical"));
+  // Volets produits : « digitaux » (défaut, DEFAULT_TYPE) et « physiques » —
+  // jamais mélangés dans la même liste (serveur `type=` + filtre client des
+  // rails). `?type=` reste prioritaire : un lien direct ouvre le bon volet.
+  const [ptype, setPtype] = useState(() => resolveType(params.get("type")));
   // Un jeton stable évite de créer une nouvelle clé Vercel à chaque focus/filtrage.
-  // Il est renouvelé uniquement lors d'un vrai changement de famille.
+  // Il est renouvelé uniquement lors d'un vrai changement de famille. Le volet
+  // digital exige une clé FRAÎCHE dès le montage (une réponse Vercel ancienne et
+  // vide y confondrait le catalogue) : on l'amorce donc toujours à Date.now().
   const catalogRefreshRef = useRef(ptype === "digital" ? Date.now() : 0);
   // Famille réellement AFFICHÉE (suit le rendu courant) : une réponse — ou un
   // réessai programmé — de l'autre famille ne doit jamais s'appliquer, sinon la
@@ -160,6 +164,9 @@ export default function Home() {
   const [recent, setRecent] = useState([]);
 
   useEffect(() => {
+      // Ce cache de session ne contient QUE des produits physiques : il ne doit
+      // jamais pré-remplir la liste du volet digital (défaut du site), sous peine
+      // d'afficher un catalogue incoherent avant l'arrivée de la vraie réponse.
       if (ptype !== "physical") return;
       try {
         const cached = sessionStore.getItem("mboppi_products");
@@ -216,7 +223,7 @@ export default function Home() {
   // fraîche ; on ne les répète pas ici pour ne pas effacer une réponse déjà
   // chargée quand le clic vient d'ajouter ?type=digital à l'URL.
   useEffect(() => {
-    const nextType = params.get("type") === "digital" ? "digital" : "physical";
+    const nextType = resolveType(params.get("type"));
     setPtype(nextType);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.get("type")]);
@@ -232,7 +239,7 @@ export default function Home() {
 
   useEffect(() => {
     const next = new URLSearchParams(params);
-    if ((next.get("type") || "physical") !== ptype) {
+    if (resolveType(next.get("type")) !== ptype) {
       next.set("type", ptype);
       setSearchParams(next, { replace: true });
     }
@@ -829,19 +836,11 @@ export default function Home() {
             </button>
           ) : null}
         </div>
-        {/* Volets « Produits physiques » / « Produits digitaux » : deux familles
-            jamais mélangées (filtre serveur + rails filtrés côté client). */}
+        {/* Volets « Produits digitaux » / « Produits physiques » : deux familles
+            jamais mélangées (filtre serveur + rails filtrés côté client).
+            Les produits DIGITAUX sont affichés par défaut (DEFAULT_TYPE). */}
         {mode === "products" && (
           <div className="ptype-tabs" role="tablist" aria-label={t("Type de produits")}>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={ptype === "physical"}
-              className={`ptype-tab ${ptype === "physical" ? "active" : ""}`}
-              onClick={() => onSelectType("physical")}
-            >
-              📦 {t("Produits physiques")}
-            </button>
             <button
               type="button"
               role="tab"
@@ -850,6 +849,15 @@ export default function Home() {
               onClick={() => onSelectType("digital")}
             >
               📁 {t("Produits digitaux")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={ptype === "physical"}
+              className={`ptype-tab ${ptype === "physical" ? "active" : ""}`}
+              onClick={() => onSelectType("physical")}
+            >
+              📦 {t("Produits physiques")}
             </button>
           </div>
         )}

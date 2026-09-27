@@ -1089,11 +1089,15 @@ export default function Navbar({ onLogout }) {
         </span>
         <span className="dl-label">{t("Créateurs")}</span>
       </Link>
-      <Link to="/?type=digital" onClick={close} className="drawer-link drawer-link-learn">
+      <Link
+        to="/?type=physical"
+        onClick={close}
+        className="drawer-link drawer-link-learn"
+      >
         <span className="dl-icon">
-          <IconBook size={15} />
+          <IconShoppingBag size={15} />
         </span>
-        <span className="dl-label">{t("Produits digitaux")}</span>
+        <span className="dl-label">{t("Produits physiques")}</span>
       </Link>
       <Link to="/soutien" onClick={close} className="drawer-link drawer-link-support">
         <span className="dl-icon">

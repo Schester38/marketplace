@@ -1,6 +1,26 @@
 // Helpers purs du catalogue de l'accueil : le serveur filtre déjà les produits
 // avec `type=physical|digital`. Le client normalise les anciennes réponses CDN
 // qui précédaient l'exposition publique de `is_digital`.
+// Volet affiché par défaut à l'ouverture du site (« Produits digitaux »).
+// C'est la SOURCE UNIQUE du défaut : Home.jsx, les liens de catégorie et les
+// tests lisent cette constante, plus aucun « physical » codé en dur.
+export const DEFAULT_TYPE = "digital";
+
+// Lit le paramètre `?type=` de l'URL. Toute valeur absente ou inconnue retombe
+// sur le défaut — sans cela, un lien de catégorie physique (/ ?cat=…) ouvrirait
+// le volet digital et afficherait des produits hors de la catégorie demandée.
+export function resolveType(raw) {
+  if (raw === "digital" || raw === "physical") return raw;
+  return DEFAULT_TYPE;
+}
+
+// Lien de catégorie qui conserve la famille du lien : la grille et le méga-menu
+// listent des catégories PHYSIQUES, ils doivent donc rester sur le volet
+// physique même si le défaut du site est désormais le digital.
+export function categoryLink(category, type = "physical") {
+  return `/?type=${type}&cat=${encodeURIComponent(category)}`;
+}
+
 export function isDigitalProduct(product) {
   return (
     product?.is_digital === true ||

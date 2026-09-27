@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import {
   catalogCategories,
+  categoryLink,
+  DEFAULT_TYPE,
   isCatalogResponseStale,
   keepsCategoryOnType,
   nextCatalogRefresh,
   normalizeServerCatalog,
   productsOfType,
+  resolveType,
   shouldRetryDigitalCatalog,
   shouldRetryPhysicalCatalog,
 } from "./homeCatalog.js";
@@ -169,4 +172,25 @@ assert.equal(keepsCategoryOnType("physical", "Téléphones & Tablettes", REAL), 
 assert.equal(keepsCategoryOnType("physical", "IA & Technologies", REAL), false);
 assert.equal(keepsCategoryOnType("digital", "", REAL), true);
 
-console.log("homeCatalog: 27 assertions OK");
+// --- Défaut du site : les PRODUITS DIGITAUX s'affichent à l'ouverture.
+assert.equal(DEFAULT_TYPE, "digital");
+assert.equal(resolveType(null), "digital");
+assert.equal(resolveType(undefined), "digital");
+assert.equal(resolveType(""), "digital");
+assert.equal(resolveType("bidon"), "digital");
+assert.equal(resolveType("physical"), "physical");
+assert.equal(resolveType("digital"), "digital");
+
+// --- Liens de catégorie : ils conservent le volet PHYSIQUE (la grille et le
+// méga-menu ne listent que des catégories matérielles). Sans `type=physical`,
+// un clic sur « Téléphones » ouvrirait le volet digital par défaut.
+assert.equal(categoryLink("Téléphones & Tablettes"), "/?type=physical&cat=T%C3%A9l%C3%A9phones%20%26%20Tablettes");
+assert.equal(categoryLink("Beauté & Cosmétiques"), "/?type=physical&cat=Beaut%C3%A9%20%26%20Cosm%C3%A9tiques");
+// Toute catégorie physique du catalogue passe bien par le volet physique.
+for (const cat of PHYSICAL_CATEGORIES) {
+  assert.equal(categoryLink(cat).startsWith("/?type=physical&cat="), true);
+}
+// Le menu principal garde l'accès explicite à l'autre famille.
+assert.equal(categoryLink("Livres & Formation", "digital"), "/?type=digital&cat=Livres%20%26%20Formation");
+
+console.log("homeCatalog: 39 assertions OK");
