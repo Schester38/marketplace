@@ -2,9 +2,10 @@
 // léger) en HTML sémantique que l'éditeur TipTap peut ingérer.
 //
 // Règles appliquées :
-//   - blocs tabulaires « à plat » (tabulations, « | », 2 espaces ou plus,
-//     « ; ») → TABLEAU reconstruit (tables.js) — testé en premier, sinon
-//     « Nom  Âge  Ville » deviendrait un titre ;
+//   - blocs tabulaires « à plat » (tabulations, « | », espaces — y compris une
+//     seule — ou « ; ») → TABLEAU reconstruit (tables.js) — testé en premier,
+//     sinon « Nom  Âge  Ville » deviendrait un titre ; les cellules repliées
+//     sur la ligne suivante sont recollées et les lignes de tirets consommées ;
 //   - 1re ligne courte, sans ponctuation finale → titre du document (H1) ;
 //   - « Chapitre N », « Partie N », ligne EN MAJUSCULES, Introduction,
 //     Conclusion, etc. → titre de chapitre (H2) ;

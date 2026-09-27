@@ -15,17 +15,27 @@
 //   - tabulation        → tableur / « texte non formaté » (une cellule vide du
 //                         tableur donne une tabulation de plus) ;
 //   - barre verticale   → tableaux Markdown (| a | b |) et texte « a | b » ;
-//   - 2 espaces ou plus → tableaux de PDF (colonnes alignées) ;
-//   - point-virgule     → CSV « ; ».
+//   - 2 espaces ou plus → tableaux de PDF (colonnes alignées) ; une cellule
+//                         repliée sur la ligne suivante est RECOLLÉE et une
+//                         ligne de tirets (soulignement d'en-tête) est consommée ;
+//   - point-virgule     → CSV « ; » ;
+//   - UNE seule espace  → copie de PDF/HTML « aplatie » (dernier recours) :
+//                         même nombre de mots sur toutes les lignes et colonne
+//                         numérique fiable — les milliers groupés (« 3 663 000 »)
+//                         restent une seule cellule.
 //
 // GARDE-FOUS ANTI-PROSE (un paragraphe n'est JAMAIS transformé en tableau) :
 //   - les séparateurs « risqués » (espaces, « ; ») exigent au moins 3 lignes,
-//     des cellules ≤ 60 caractères, aucune cellule terminée par une ponctuation
-//     de phrase, et un signal tabulaire (colonne numérique, cellules très
-//     courtes, majuscules systématiques ou en-tête repérable) ;
+//     des cellules courtes, aucune cellule terminée par une ponctuation de
+//     phrase, et un signal tabulaire (colonne numérique, cellules très courtes,
+//     majuscules systématiques ou en-tête repérable) ;
 //   - les colonnes espacées doivent être ALIGNÉES : les cellules d'une même
-//     colonne commencent (ou finissent) à la même position — une double espace
-//     au milieu d'une phrase ne suffit donc jamais ;
+//     colonne commencent (ou finissent) à la même position — mesurée sur 75 %
+//     des lignes, pour qu'une seule ligne qui dérape ne fasse pas tout échouer ;
+//   - la détection à UNE espace est la plus prudente : nombre de mots identique
+//     sur toutes les lignes, colonne numérique (au-delà de la première) à
+//     valeurs distinctes, libellés capitalisés ou en-tête, et rejet des
+//     colonnes entièrement répétées (signature d'un texte de prose) ;
 //   - tabulation et barre verticale sont tenues pour fiables : elles
 //     n'apparaissent pas dans de la prose.
 //
@@ -34,36 +44,72 @@
 
 // Espaces typographiques (copie de PDF français : insécables, fines…) traités
 // comme des espaces ordinaires — sans quoi « 3 663 000 » ou des colonnes
-// issues d'InDesign ne se découpent pas.
+// issues d'InDesign ne se découpent pas. Les caractères invisibles (BOM,
+// largeur nulle) ajoutés par certains PDF sont supprimés.
 const UNICODE_SPACES_RE = /[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000]/g;
+const ZERO_WIDTH_RE = /[\u200B-\u200D\u2060\uFEFF]/g;
 const TABS_RE = /\t/g;
 const PIPES_RE = /\|/g;
 const MULTISPACE_RE = /\s{2,}/g;
+const ANY_SPACE_RE = /\s+/g; // découpage « une espace » (copie aplatie)
 const SEMICOLON_RE = /;/g;
 const HAS_MULTISPACE_RE = /\s\s/; // test non global (pas de lastIndex)
-const MD_RULE_RE = /^:?-{2,}:?$/; // ligne « |---|---| » d'un tableau Markdown
+const MD_RULE_RE = /^:?[-–—_=]{2,}:?$/; // « |---|---| », « --- », soulignement
+const BARE_RULE_RE = /^[-–—_=]{2,}$/; // ligne faite UNIQUEMENT de tirets
 const SENTENCE_END_RE = /[.!?]$/; // fin de phrase → cellule de prose
 const NUMBER_CELL_RE = /^[+-]?[\d\s.,'’]*\d[\d\s.,'’%:/°+-]*$/;
 const MONEY_SUFFIX_RE = /(%|€|\$|FCFA|XAF|XOF|USD|EUR|CHF|F)\s*$/i;
+// Jeton d'un nombre (« 250 », « 3 663 ») et unité accolée (« 12 % », « 5 kg ») :
+// ils servent à recoller les milliers groupés d'une copie de PDF.
+const NUMERIC_TOKEN_RE = /^[+-]?\d+(?:[.,]\d+)?$/;
+const UNIT_TOKEN_RE =
+  /^(%|‰|€|\$|£|FCFA|XAF|XOF|USD|EUR|CHF|CAD|F|kg|g|km²|km|m²|m|cm|mm|L|cl|ml|h|min|s|ans?|jours?|mois|semaines?)$/i;
 
 // Longueur au-delà de laquelle une cellule n'est plus une cellule de tableau
 // mais un morceau de paragraphe (garde anti-prose des séparateurs risqués).
 const PROSE_CELL_MAX = 60;
+// Idem pour la détection à UNE seule espace — plus stricte encore.
+const SINGLE_CELL_MAX = 45;
+// Sonde de coût (séparateurs risqués) : une cellule plus longue que cela ou
+// terminée par une ponctuation de phrase est de la PROSE — inutile de scanner
+// la suite du document depuis cette ligne (condition nécessaire, donc jamais de
+// tableau valide perdu). `PROBE_DEPTH` : profondeur de la sonde d'un bloc
+// candidat (un début de bloc qui n'est toujours pas tabulaire au bout de ces
+// lignes ne le deviendra pas) ; `MAX_RUN_ROWS` : plafond d'un bloc.
+const PROBE_CELL_MAX = 60;
+const PROBE_DEPTH = 16;
+const MAX_RUN_ROWS = 400;
 
 // Règles par séparateur : nombre de lignes minimal, longueur maximale d'une
 // cellule, proportion de cellules remplies, contrôles supplémentaires.
+// `continuation` : la ligne suivante sans séparateur peut être la suite
+// repliée d'une cellule (copie de PDF) et est alors recollée à celle-ci.
+// `probe` : abandon immédiat dès qu'une ligne ressemble à une phrase.
 const RULES = {
   tab: { minRows: 2, maxCell: 200, minFill: 0.5 },
   pipe: { minRows: 2, maxCell: 200, minFill: 0.5 },
-  space: { minRows: 3, maxCell: PROSE_CELL_MAX, minFill: 0.75, risky: true, aligned: true },
+  space: {
+    minRows: 3,
+    maxCell: PROSE_CELL_MAX,
+    minFill: 0.75,
+    risky: true,
+    aligned: true,
+    continuation: true,
+    probe: true,
+  },
   semicolon: { minRows: 3, maxCell: PROSE_CELL_MAX, minFill: 0.75, risky: true },
+  space1: { minRows: 3, maxCell: SINGLE_CELL_MAX, minFill: 0.9, risky: true, probe: true },
 };
 
 // Ordre d'essai des séparateurs : du plus fiable au plus ambigu.
-const KINDS = ["tab", "pipe", "space", "semicolon"];
+const KINDS = ["tab", "pipe", "space", "semicolon", "space1"];
 
 export function normalizeTableLine(raw) {
-  return String(raw ?? "").replace(/\r/g, "").replace(UNICODE_SPACES_RE, " ");
+  return String(raw ?? "")
+    .replace(/\r/g, "")
+    .replace(ZERO_WIDTH_RE, "")
+    .replace(/[\f\v]/g, " ")
+    .replace(UNICODE_SPACES_RE, " ");
 }
 
 function escapeHtml(s) {
@@ -103,6 +149,46 @@ function splitLine(line, re) {
   });
 }
 
+// Un nombre écrit avec des espaces (« 3 663 000 ») arrive en plusieurs jetons :
+// on recolle les jetons numériques consécutifs en UNE cellule (ainsi que
+// l'unité qui les suit : « 12 % »). Deux lectures restent donc possibles pour
+// une ligne donnée — « 3 663 000 » = 1 cellule ou 3 cellules : la détection à
+// une espace essaie les deux et garde celle qui donne le même nombre de
+// colonnes sur tout le bloc.
+function mergeNumberGroups(parts) {
+  const out = [];
+  let run = null; // cellule numérique en cours d'assemblage
+  for (let i = 0; i < parts.length; i += 1) {
+    const p = parts[i];
+    const next = parts[i + 1];
+    if (NUMERIC_TOKEN_RE.test(p.text)) {
+      // « 210 km² » : le jeton suivant est une UNITÉ — le nombre qui le précède
+      // commence alors un nouveau nombre (il ne complète pas le groupe de trois
+      // chiffres que le run vient de fermer)… sauf s'il complète exactement une
+      // tête courte : dans « 800 000 FCFA », « 000 » complète bien « 800 ».
+      const unitNext = !!next && UNIT_TOKEN_RE.test(next.text);
+      const completesRun = run && !(unitNext && run.text.includes(" "));
+      if (completesRun) {
+        run.text = `${run.text} ${p.text}`;
+        run.end = p.end;
+      } else {
+        run = { text: p.text, start: p.start, end: p.end };
+        out.push(run);
+      }
+      continue;
+    }
+    if (run && UNIT_TOKEN_RE.test(p.text)) {
+      run.text = `${run.text} ${p.text}`; // « 12 % », « 5 kg », « 210 km² »
+      run.end = p.end;
+      run = null;
+      continue;
+    }
+    run = null;
+    out.push({ text: p.text, start: p.start, end: p.end });
+  }
+  return out;
+}
+
 // Cellules d'une ligne pour un type de séparateur donné, ou null si la ligne
 // ne peut pas être une ligne de tableau de ce type.
 function cellsFor(kind, line) {
@@ -136,16 +222,34 @@ function cellsFor(kind, line) {
     if (!line.includes(";")) return null;
     return splitLine(line, SEMICOLON_RE);
   }
+  if (kind === "space1") {
+    if (!/\s/.test(line)) return null;
+    return mergeNumberGroups(splitLine(line, ANY_SPACE_RE));
+  }
   return null;
 }
 
 // ─── Validation d'un bloc candidat ─────────────────────────────────────────
 
-// Nombre de colonnes dont les cellules sont alignées (mêmes débuts à ±4
-// caractères ou mêmes fins à ±3). C'est le signal décisif des tableaux de PDF :
-// dans de la prose, deux espaces tombent à des endroits différents à chaque
-// ligne. Une colonne trop peu remplie compte comme neutre (elle n'apporte ni
-// preuve ni contre-preuve).
+// Étendue d'une majorité (75 %) de valeurs : une seule ligne qui « dérape »
+// ne fait plus échouer l'alignement d'une colonne de PDF.
+function spreadMajority(values, ratio = 0.75) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const keep = Math.max(2, Math.ceil(sorted.length * ratio));
+  if (sorted.length <= keep) return sorted[sorted.length - 1] - sorted[0];
+  let best = Infinity;
+  for (let i = 0; i + keep - 1 < sorted.length; i += 1) {
+    best = Math.min(best, sorted[i + keep - 1] - sorted[i]);
+  }
+  return best;
+}
+
+// Nombre de colonnes dont les cellules sont alignées (mêmes débuts ou mêmes
+// fins pour la majorité des lignes). C'est le signal décisif des tableaux de
+// PDF : dans de la prose, deux espaces tombent à des endroits différents à
+// chaque ligne. Une colonne trop peu remplie compte comme neutre (elle
+// n'apporte ni preuve ni contre-preuve) et une cellule recollée (suite d'une
+// ligne repliée) n'apporte pas de fin fiable.
 function alignedColumns(rows, offsets) {
   const n = rows[0].length;
   let aligned = 0;
@@ -156,17 +260,29 @@ function alignedColumns(rows, offsets) {
       const off = offsets[r][c];
       if (!rows[r][c] || !off || off.start < 0) continue;
       starts.push(off.start);
-      ends.push(off.end);
+      if (off.end >= 0) ends.push(off.end);
     }
     if (starts.length < 2) {
       aligned += 1;
       continue;
     }
-    const spreadStart = Math.max(...starts) - Math.min(...starts);
-    const spreadEnd = Math.max(...ends) - Math.min(...ends);
-    if (spreadStart <= 4 || spreadEnd <= 3) aligned += 1;
+    if (spreadMajority(starts) <= 5) aligned += 1;
+    else if (ends.length >= 2 && spreadMajority(ends) <= 4) aligned += 1;
   }
   return aligned;
+}
+
+// Colonnes dont TOUTES les valeurs sont identiques (ligne d'en-tête comprise) :
+// deux telles colonnes ou plus dans un petit tableau trahissent de la prose
+// (mots répétés en fin de phrase) plutôt qu'un vrai tableau.
+function identicalColumns(rows) {
+  const n = rows[0].length;
+  let count = 0;
+  for (let c = 0; c < n; c += 1) {
+    const first = rows[0][c];
+    if (rows.every((r) => r[c] === first)) count += 1;
+  }
+  return count;
 }
 
 // Part des cellules qui commencent par une majuscule ou un chiffre : un
@@ -189,16 +305,20 @@ export function looksLikeHeaderRow(row, rest) {
   return numericRows >= Math.ceil(rest.length / 2) || row.every((c) => c.length <= 20);
 }
 
-function validBlock(rows, offsets, kind) {
+function validBlock(rows, offsets, kind, flags) {
   const rule = RULES[kind];
   const cells = rows.flat();
+  // Cellules complétées par une ligne de continuation : leur ponctuation
+  // finale et leur longueur viennent du texte d'origine, pas d'une phrase.
+  const merged = flags ? flags.flat() : [];
+  const relaxed = (idx) => merged[idx] === true;
   const filled = cells.filter((c) => c !== "").length;
   if (filled < Math.ceil(cells.length * rule.minFill)) return false;
-  if (cells.some((c) => c.length > rule.maxCell)) return false;
+  if (cells.some((c, idx) => c.length > rule.maxCell && !relaxed(idx))) return false;
   if (rule.aligned && alignedColumns(rows, offsets) < Math.min(2, rows[0].length)) return false;
   if (rule.risky) {
     // Une phrase se termine par un point : jamais une cellule de tableau.
-    if (cells.some((c) => SENTENCE_END_RE.test(c))) return false;
+    if (cells.some((c, idx) => SENTENCE_END_RE.test(c) && !relaxed(idx))) return false;
     const dataRows = rows.filter((r) => r.some(looksNumeric)).length;
     const shortCells = cells.every((c) => c.length <= 22);
     if (dataRows === 0 && !shortCells && !looksLikeHeaderRow(rows[0], rows.slice(1))) return false;
@@ -210,21 +330,89 @@ function validBlock(rows, offsets, kind) {
 
 // ─── Collecte d'un bloc candidat ───────────────────────────────────────────
 
-function collectRun(lines, start, kind) {
+// Ligne faite uniquement de tirets (« ----- », « ____ ») : soulignement
+// d'en-tête ou bordure de tableau (très fréquent dans les copies de PDF) —
+// consommée, jamais une ligne de données.
+function isBareRuleLine(line) {
+  return BARE_RULE_RE.test(line);
+}
+
+// Une cellule peut se replier sur la ligne suivante (copie de PDF) : la ligne
+// recollée commence à la verticale de la cellule qu'elle poursuit et débute
+// par une minuscule (« … de la région » poursuit « La population de la »).
+// Sans cette règle, une seule cellule longue coupait tout le tableau.
+function mergeContinuation(rows, offsets, flags, text, lead) {
+  const last = offsets[offsets.length - 1];
+  if (!last) return false;
+  if (text.length > 90) return false;
+  if (!/^[a-zà-öø-ÿ0-9(«"'’\-–—]/.test(text)) return false;
+  let col = -1;
+  let distance = Infinity;
+  for (let c = 0; c < last.length; c += 1) {
+    const off = last[c];
+    if (!off || off.start < 0) continue;
+    const d = Math.abs(off.start - lead);
+    if (d < distance) {
+      distance = d;
+      col = c;
+    }
+  }
+  if (col < 0 || distance > 8) return false;
+  const row = rows[rows.length - 1];
+  const joined = row[col] ? `${row[col]} ${text}` : text;
+  if (joined.length > 240) return false;
+  row[col] = joined;
+  flags[flags.length - 1][col] = true;
+  offsets[offsets.length - 1][col] = { start: last[col].start, end: -1 };
+  return true;
+}
+
+// Sonde de coût : une cellule de phrase (ponctuation finale) ou trop longue
+// élimine le bloc. C'est une condition NÉCESSAIRE des garde-fous anti-prose —
+// la vérifier tôt évite de scanner tout le document depuis chaque ligne
+// (les textes à lignes uniformes étaient sinon parcourus en O(n²)).
+function probeCells(cells) {
+  return !cells.some((c) => c && (c.length > PROBE_CELL_MAX || SENTENCE_END_RE.test(c)));
+}
+
+function collectRun(lines, start, kind, { continuation = false, limit = MAX_RUN_ROWS } = {}) {
   const rows = [];
   const offsets = [];
+  const flags = [];
   const lineIndexes = [];
+  const probe = !!RULES[kind].probe;
   let headerRule = false; // règle Markdown « |---|---| » juste après la 1re ligne
   let lastRuleLine = null;
   let i = start;
-  while (i < lines.length) {
-    const line = normalizeTableLine(lines[i]).trim();
+  while (i < lines.length && rows.length < limit) {
+    const raw = normalizeTableLine(lines[i]);
+    const line = raw.trim();
     if (!line) break;
+    if (isBareRuleLine(line)) {
+      if (!rows.length) break; // soulignement sans tableau au-dessus
+      if (rows.length === 1) headerRule = true;
+      else break; // bordure de fin : rendue au document (trait horizontal)
+      lastRuleLine = i;
+      i += 1;
+      continue;
+    }
     const cells = cellsFor(kind, line);
-    if (!cells || cells.length < 2) break;
-    // Ligne « |---|---| » : elle sépare l'en-tête des données (l'en-tête est
-    // reconstruit depuis les cellules <th>), jamais une ligne du tableau.
-    if (kind === "pipe" && cells.every((c) => MD_RULE_RE.test(c.text))) {
+    if (!cells || cells.length < 2) {
+      // Ligne sans séparateur : peut-être la SUITE repliée de la cellule
+      // précédente — recollée, jamais ajoutée comme ligne.
+      if (continuation && rows.length) {
+        const lead = raw.length - raw.trimStart().length;
+        if (mergeContinuation(rows, offsets, flags, line, lead)) {
+          i += 1;
+          continue;
+        }
+      }
+      break;
+    }
+    // Ligne de règle écrite avec le séparateur (« ---  --- », « |---|---| ») :
+    // elle sépare l'en-tête des données (l'en-tête est reconstruit depuis les
+    // cellules <th>), jamais une ligne du tableau.
+    if (cells.every((c) => MD_RULE_RE.test(c.text))) {
       if (!rows.length) break; // règle sans en-tête au-dessus : pas un tableau
       if (rows.length === 1) headerRule = true;
       lastRuleLine = i;
@@ -233,10 +421,21 @@ function collectRun(lines, start, kind) {
     }
     rows.push(cells.map((c) => c.text));
     offsets.push(cells.map((c) => ({ start: c.start, end: c.end })));
+    flags.push(cells.map(() => false));
     lineIndexes.push(i);
+    if (probe && !probeCells(rows[rows.length - 1])) break;
     i += 1;
   }
-  return { rows, offsets, lineIndexes, headerRule, lastRuleLine, end: i };
+  return {
+    rows,
+    offsets,
+    flags,
+    lineIndexes,
+    headerRule,
+    lastRuleLine,
+    end: i,
+    hitLimit: rows.length >= limit,
+  };
 }
 
 // Largeur (nombre de colonnes) la plus fréquente du bloc — pas forcément celle
@@ -255,46 +454,225 @@ function modeOf(values) {
   return best;
 }
 
-function blockForKind(lines, start, kind, minRows) {
-  const firstLine = normalizeTableLine(lines[start]).trim();
-  const first = cellsFor(kind, firstLine);
-  if (!first || first.length < 2) return null;
-  const run = collectRun(lines, start, kind);
-  if (run.rows.length < minRows) return null;
+// Deux lignes seulement : accepté UNIQUEMENT sur un signal fort — la seconde
+// porte des données numériques et les colonnes sont alignées. Une double
+// espace dans deux phrases ne suffit jamais.
+function strongTwoRowSpace(rows, offsets) {
+  if (rows.length !== 2) return false;
+  if (rows[0].some((c) => !c || c.length > 30)) return false;
+  if (!rows[1].some(looksNumeric)) return false;
+  return alignedColumns(rows, offsets) >= Math.min(2, rows[0].length);
+}
 
+// Assemblage d'un bloc candidat : largeur de référence = mode des lignes (une
+// ligne qui a perdu sa DERNIÈRE colonne vide est complétée à droite — cas très
+// fréquent dans les PDF), puis garde-fous anti-prose. null = bloc rejeté.
+function assembleSpaceBlock(run, kind, minRows) {
   const mode = modeOf(run.rows.map((r) => r.length));
   if (mode < 2) return null;
-
-  // Plus long préfixe de largeur homogène : une ligne qui a perdu sa DERNIÈRE
-  // colonne (vide) est complétée à droite — cas très fréquent dans les PDF.
   const rows = [];
   const offsets = [];
+  const flags = [];
   for (let k = 0; k < run.rows.length; k += 1) {
     const r = run.rows[k];
     if (r.length === mode) {
       rows.push(r);
       offsets.push(run.offsets[k]);
+      flags.push(run.flags[k]);
     } else if (r.length === mode - 1) {
       rows.push([...r, ""]);
       offsets.push([...run.offsets[k], { start: -1, end: -1 }]);
+      flags.push([...run.flags[k], false]);
     } else {
       break; // largeur franchement différente : le tableau s'arrête ici
     }
   }
-  if (rows.length < minRows) return null;
-  if (!validBlock(rows, offsets, kind)) return null;
+  const strongTwo = kind === "space" && strongTwoRowSpace(rows, offsets);
+  if (rows.length < minRows && !strongTwo) return null;
+  if (!validBlock(rows, offsets, kind, flags)) return null;
+  return { rows, offsets };
+}
+
+function blockForKind(lines, start, kind, minRows) {
+  const firstLine = normalizeTableLine(lines[start]).trim();
+  const first = cellsFor(kind, firstLine);
+  if (!first || first.length < 2) return null;
+  const continuation = !!RULES[kind].continuation;
+  const sonde = !!RULES[kind].probe;
+  // 1) Sonde courte : un bloc qui n'est toujours pas tabulaire au bout de
+  //    PROBE_DEPTH lignes ne le deviendra pas — sans elle, les textes à lignes
+  //    uniformes étaient parcourus en O(n²) (plusieurs secondes).
+  let run = collectRun(lines, start, kind, {
+    continuation,
+    limit: sonde ? PROBE_DEPTH : MAX_RUN_ROWS,
+  });
+  let block = run.rows.length ? assembleSpaceBlock(run, kind, minRows) : null;
+  if (sonde && run.hitLimit) {
+    if (!block) return null; // sonde non concluante : rien à faire ici
+    // 2) Sonde concluante : on collecte le bloc entier (plafonné) et on valide.
+    run = collectRun(lines, start, kind, { continuation, limit: MAX_RUN_ROWS });
+    block = assembleSpaceBlock(run, kind, minRows);
+  }
+  if (!block) return null;
 
   // Fin du bloc : la dernière ligne retenue, règle Markdown comprise si elle
   // tombe dans le tableau.
-  let end = run.lineIndexes[rows.length - 1] + 1;
+  let end = run.lineIndexes[block.rows.length - 1] + 1;
   if (run.lastRuleLine !== null) end = Math.max(end, run.lastRuleLine + 1);
 
   return {
+    rows: block.rows,
+    offsets: block.offsets,
+    separator: kind,
+    header: run.headerRule || looksLikeHeaderRow(block.rows[0], block.rows.slice(1)),
+    end,
+  };
+}
+
+// ─── Détection à UNE seule espace (copie de PDF/HTML « aplatie ») ───────────
+// Dernier recours : quand le presse-papiers ne transporte plus qu'une espace
+// entre les colonnes. Deux lectures d'une même ligne sont possibles — chaque
+// jeton = une colonne, ou milliers groupés recollés (« 3 663 000 » = une
+// cellule). On garde celle qui donne le MÊME nombre de colonnes sur le plus
+// grand nombre de lignes, et la lecture recollée à égalité (un nombre groupé
+// est plus probable que deux colonnes numériques collées).
+
+// Découpage « une espace » de TOUTES les lignes, mémorisé par tableau de lignes
+// (les mêmes lignes sont réanalysées depuis chaque position : import, bouton 🔳,
+// collage). Les deux lectures possibles (jetons bruts / milliers recollés) sont
+// préparées d'avance. WeakMap : rien n'est retenu quand le tableau de lignes est
+// libéré.
+const singleSpaceCache = new WeakMap();
+
+function singleSpaceTable(lines) {
+  let table = singleSpaceCache.get(lines);
+  if (table) return table;
+  table = lines.map((raw) => {
+    const line = normalizeTableLine(raw).trim();
+    if (!line) return null;
+    const split = splitLine(line, ANY_SPACE_RE);
+    const grouped = mergeNumberGroups(splitLine(line, ANY_SPACE_RE));
+    return {
+      raw: {
+        cells: split.map((c) => c.text),
+        offsets: split.map((c) => ({ start: c.start, end: c.end })),
+      },
+      grouped: {
+        cells: grouped.map((c) => c.text),
+        offsets: grouped.map((c) => ({ start: c.start, end: c.end })),
+      },
+    };
+  });
+  singleSpaceCache.set(lines, table);
+  return table;
+}
+
+function collectSingleSpace(lines, start, variant, limit = MAX_RUN_ROWS) {
+  const table = singleSpaceTable(lines);
+  const rows = [];
+  const offsets = [];
+  let count = 0;
+  let headerRule = false;
+  let lastRuleLine = null;
+  let i = start;
+  while (i < lines.length && rows.length < limit) {
+    const line = normalizeTableLine(lines[i]).trim();
+    if (!line) break;
+    if (isBareRuleLine(line)) {
+      if (!rows.length) break;
+      if (rows.length === 1) headerRule = true;
+      else break;
+      lastRuleLine = i;
+      i += 1;
+      continue;
+    }
+    const entry = table[i] ? table[i][variant] : null;
+    if (!entry || entry.cells.length < 2) break;
+    if (!rows.length) count = entry.cells.length;
+    else if (entry.cells.length !== count) break;
+    rows.push([...entry.cells]);
+    offsets.push([...entry.offsets]);
+    if (!probeCells(entry.cells)) break; // ligne de prose : on arrête
+    i += 1;
+  }
+  return {
     rows,
     offsets,
-    separator: kind,
-    header: run.headerRule || looksLikeHeaderRow(rows[0], rows.slice(1)),
-    end,
+    count,
+    headerRule,
+    lastRuleLine,
+    end: i,
+    hitLimit: rows.length >= limit,
+  };
+}
+
+function validSingleSpace(rows) {
+  const n = rows[0].length;
+  const cells = rows.flat();
+  if (cells.some((c) => !c)) return false; // pas de cellule vide ici
+  if (cells.some((c) => c.length > RULES.space1.maxCell)) return false;
+  if (cells.some((c) => SENTENCE_END_RE.test(c))) return false; // pas une phrase
+  // Une colonne numérique fiable, jamais la première (une ligne commençant par
+  // un nombre — « 3 pommes rouges » — est une énumération, pas un tableau)…
+  let numericCol = -1;
+  let bestShare = 0;
+  for (let c = 1; c < n; c += 1) {
+    const share = rows.filter((r) => looksNumeric(r[c])).length / rows.length;
+    if (share > bestShare) {
+      bestShare = share;
+      numericCol = c;
+    }
+  }
+  if (numericCol < 1 || bestShare < (n === 2 ? 0.8 : 0.6)) return false;
+  // … qui porte une vraie donnée (une valeur répétée n'est pas un tableau).
+  const values = new Set(rows.map((r) => r[numericCol]).filter(looksNumeric));
+  if (values.size < 2) return false;
+  // Des cellules courtes (des phrases ne tiennent pas dans une colonne).
+  if (cells.filter((c) => c.length <= 22).length / cells.length < 0.6) return false;
+  // Des colonnes entièrement répétées : prose (« … à charge » sur chaque ligne).
+  const identical = identicalColumns(rows);
+  if (identical >= 2 && identical / n >= 0.4) return false;
+  // Enfin, des libellés capitalisés — ou un en-tête repérable (libellés au-dessus
+  // de valeurs) : « il a lu » est de la prose, « Douala » est une donnée.
+  if (!looksLikeHeaderRow(rows[0], rows.slice(1)) && capitalizedRatio(cells) < 0.45) return false;
+  return true;
+}
+
+// Choix entre les deux lectures d'une suite de lignes : celle qui donne le même
+// nombre de colonnes sur le plus grand nombre de lignes l'emporte ; à égalité,
+// la lecture recollée (un nombre groupé est plus probable que deux colonnes
+// numériques collées).
+function pickSingleSpaceRun(raw, grouped, minRows) {
+  const usable = (run) => run.rows.length >= minRows && run.count >= 2;
+  if (usable(grouped) && (!usable(raw) || grouped.rows.length >= raw.rows.length)) {
+    return { run: grouped, variant: "grouped" };
+  }
+  if (usable(raw)) return { run: raw, variant: "raw" };
+  return null;
+}
+
+function blockForKindSingleSpace(lines, start, minRows) {
+  // 1) Sonde courte : si le début de la suite de lignes n'est pas tabulaire,
+  //    inutile d'aller plus loin — c'est ce qui borne le coût sur les textes à
+  //    lignes uniformes (sinon O(n²) : plusieurs secondes).
+  const probe = pickSingleSpaceRun(
+    collectSingleSpace(lines, start, "raw", PROBE_DEPTH),
+    collectSingleSpace(lines, start, "grouped", PROBE_DEPTH),
+    minRows
+  );
+  if (!probe) return null;
+  if (probe.run.hitLimit && !validSingleSpace(probe.run.rows)) return null;
+  // 2) Sonde concluante : le bloc entier (plafonné) est collecté et validé.
+  const run = probe.run.hitLimit
+    ? collectSingleSpace(lines, start, probe.variant, MAX_RUN_ROWS)
+    : probe.run;
+  if (!validSingleSpace(run.rows)) return null;
+  return {
+    rows: run.rows,
+    offsets: run.offsets,
+    separator: "space1",
+    header: run.headerRule || looksLikeHeaderRow(run.rows[0], run.rows.slice(1)),
+    end: run.end,
   };
 }
 
@@ -303,12 +681,17 @@ function blockForKind(lines, start, kind, minRows) {
 /**
  * Détecte un tableau qui commence à la ligne `lines[start]`.
  * @returns null | { rows: string[][], offsets, end: number,
- *                   separator: "tab"|"pipe"|"space"|"semicolon", header: boolean }
+ *                   separator: "tab"|"pipe"|"space"|"semicolon"|"space1",
+ *                   header: boolean }
  */
 export function detectTableBlock(lines, start = 0, { minRows = 2 } = {}) {
   if (!Array.isArray(lines) || start < 0 || start >= lines.length) return null;
   for (const kind of KINDS) {
-    const block = blockForKind(lines, start, kind, Math.max(2, RULES[kind].minRows, minRows));
+    const need = Math.max(2, RULES[kind].minRows, minRows);
+    const block =
+      kind === "space1"
+        ? blockForKindSingleSpace(lines, start, need)
+        : blockForKind(lines, start, kind, need);
     if (block) return block;
   }
   return null;

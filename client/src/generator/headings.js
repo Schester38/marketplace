@@ -6,10 +6,10 @@
 //   2. Collage intelligent : coller un texte BRUT d'au moins 3 lignes contenant
 //      des titres/listes/citations/tableaux applique la même détection que
 //      l'import TXT/Markdown (detectStructureHtml) — les tableaux copiés « à
-//      plat » (tabulations, « | », 2 espaces, « ; ») sont reconstruits en
-//      vrais tableaux. Un collage riche (HTML) garde le comportement natif de
-//      TipTap, sauf s'il ne contient aucun tableau alors que son texte brut,
-//      lui, en contient un (onglets).
+//      plat » (tabulations, « | », espaces — une seule comprise — « ; ») sont
+//      reconstruits en vrais tableaux. Un collage riche (HTML) garde le
+//      comportement natif de TipTap, sauf s'il ne contient aucun tableau alors
+//      que son texte brut, lui, en contient un (onglets ou barres verticales).
 //   3. Passe complète « 🧠 Détecter les titres » : formatHeadings() convertit
 //      tout le document et peut numéroter en continu les chapitres sans numéro.
 //      La passe « 🔳 Détecter les tableaux » (tables.js → formatTables) fait la
@@ -58,8 +58,8 @@ export const HeadingAutoDetect = Extension.create({
           // ── Collage d'un texte brut structuré (document, PDF copié) ───────
           // Un collage RICHE garde le rendu natif de TipTap — sauf s'il ne
           // contient aucun vrai tableau alors que son texte brut, lui,
-          // transporte un tableau tabulé (certains logiciels aplatissent les
-          // tableaux en HTML sans <table>).
+          // transporte un tableau tabulé ou à barres verticales (certains
+          // logiciels aplatissent les tableaux en HTML sans <table>).
           handlePaste(_view, event) {
             const cd = event.clipboardData;
             if (!cd) return false;
@@ -67,12 +67,12 @@ export const HeadingAutoDetect = Extension.create({
             const text = cd.getData("text/plain") || "";
             if (html) {
               if (/<table[\s>]/i.test(html)) return false; // vrai tableau → natif
-              const tabTable =
-                text.includes("\t") &&
+              const flatTable =
+                (text.includes("\t") || text.includes("|")) &&
                 planTableBlocks(text.split(/\r\n?|\n/), { minRows: 2 }).some(
-                  (b) => b.separator === "tab"
+                  (b) => b.separator === "tab" || b.separator === "pipe"
                 );
-              if (!tabTable) return false;
+              if (!flatTable) return false;
             }
             if (!looksStructured(text)) return false;
             event.preventDefault();
