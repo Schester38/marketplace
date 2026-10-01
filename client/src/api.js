@@ -564,4 +564,10 @@ export const api = {
   genDeleteProduct: (id) => generatorRequest(`/generator/documents/${id}/product`, { method: "DELETE" }),
   // Vérification PUBLIQUE d'authenticité (page /verifier/<référence>, QR du PDF).
   genVerify: (ref) => request(`/generator/verify/${encodeURIComponent(ref)}`),
+  // MboppiStudio (onglet admin) : outils créatifs IA. Le serveur détient les
+  // clés des fournisseurs (Gemini pour l'instant) — le client n'envoie que la
+  // consigne et ne reçoit que le texte généré.
+  studioStatus: () => adminRequest("/studio"),
+  studioHooks: (payload) =>
+    adminRequest("/studio/hooks", { method: "POST", body: JSON.stringify(payload) }),
 };

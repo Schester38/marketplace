@@ -11660,3 +11660,188 @@ a.step {
 
 
 
+/* ═══ MboppiStudio (onglet Admin) — outils créatifs IA ═══════════════════════
+   Adaptation de l'application « Studio IA » : identité sombre « studio »
+   VOLONTAIREMENT distincte du thème clair/sombre du panneau (c'est un outil
+   créatif), mais SCOPÉE sous .mstudio-root — aucune classe globale touchée.
+   Variables locales préfixées --ms- pour ne jamais entrer en collision. */
+.mstudio-root {
+  --ms-bg: #0a0a0f;
+  --ms-panel: #14141c;
+  --ms-panel-2: #1c1c28;
+  --ms-panel-3: #24243a;
+  --ms-border: #2a2a3e;
+  --ms-border-hi: #3a3a5e;
+  --ms-ink: #f0f0ff;
+  --ms-ink-dim: #8888aa;
+  --ms-accent: #7c5cff;
+  --ms-accent-2: #ff5c9c;
+  --ms-accent-3: #5cffe0;
+  --ms-success: #3ddc84;
+  --ms-error: #ff4757;
+  --ms-warn: #ffb547;
+  --ms-grad-1: linear-gradient(135deg, #7c5cff 0%, #ff5c9c 100%);
+  --ms-glow: 0 0 40px rgba(124, 92, 255, 0.25);
+  background: var(--ms-bg);
+  background-image:
+    radial-gradient(circle at 15% 5%, rgba(124, 92, 255, 0.14) 0%, transparent 42%),
+    radial-gradient(circle at 85% 95%, rgba(255, 92, 156, 0.1) 0%, transparent 42%);
+  color: var(--ms-ink);
+  border: 1px solid var(--ms-border);
+  border-radius: 18px;
+  padding: 1.1rem 1rem 1.4rem;
+  margin-bottom: 18px;
+}
+.mstudio-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem;
+}
+.mstudio-title {
+  margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.03em;
+  background: var(--ms-grad-1); -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent; background-clip: text;
+}
+.mstudio-sub { margin: 0.25rem 0 0; font-size: 0.74rem; color: var(--ms-ink-dim); max-width: 52ch; }
+.mstudio-pill {
+  display: inline-flex; align-items: center; padding: 0.32rem 0.7rem;
+  border-radius: 999px; font-size: 0.68rem; font-weight: 700;
+  border: 1px solid var(--ms-border-hi); background: var(--ms-panel-2); color: var(--ms-ink);
+}
+.mstudio-pill-ok { border-color: rgba(61, 220, 132, 0.55); color: var(--ms-success); }
+.mstudio-pill-warn { border-color: rgba(255, 181, 71, 0.55); color: var(--ms-warn); }
+
+/* Barre d'outils (scroll horizontal sur mobile, comme le prototype) */
+.mstudio-tabs {
+  display: flex; gap: 0.35rem; background: var(--ms-panel);
+  border: 1px solid var(--ms-border); border-radius: 14px; padding: 0.35rem;
+  overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+.mstudio-tabs::-webkit-scrollbar { display: none; }
+.mstudio-tab {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.6rem 0.8rem; border-radius: 10px; font-size: 0.74rem; font-weight: 600;
+  color: var(--ms-ink-dim); background: transparent; border: none; cursor: pointer;
+  font-family: inherit; white-space: nowrap; transition: all 0.18s;
+}
+.mstudio-tab:hover { color: var(--ms-ink); background: var(--ms-panel-2); }
+.mstudio-tab.active { background: var(--ms-grad-1); color: #fff; box-shadow: var(--ms-glow); }
+.mstudio-tab-emoji { font-size: 0.95rem; }
+.mstudio-tab-num {
+  font-size: 0.58rem; font-weight: 800; opacity: 0.7;
+  background: var(--ms-panel-3); border-radius: 8px; padding: 0.08rem 0.4rem;
+}
+.mstudio-tab.active .mstudio-tab-num { background: rgba(255, 255, 255, 0.18); }
+.mstudio-tab.soon { opacity: 0.72; }
+.mstudio-tab-soon {
+  font-size: 0.56rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--ms-warn); border: 1px solid rgba(255, 181, 71, 0.45);
+  border-radius: 8px; padding: 0.06rem 0.38rem;
+}
+
+/* Cartes et contrôles */
+.mstudio-card {
+  background: var(--ms-panel); border: 1px solid var(--ms-border);
+  border-radius: 16px; padding: 1.05rem; margin-bottom: 0.9rem;
+}
+.mstudio-card-title {
+  display: flex; align-items: center; gap: 0.5rem; font-size: 0.68rem;
+  text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700;
+  color: var(--ms-accent-3); margin-bottom: 0.8rem;
+}
+.mstudio-card-title-row { justify-content: space-between; }
+.mstudio-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 22px; height: 22px; padding: 0 0.35rem; border-radius: 11px;
+  background: var(--ms-panel-3); color: var(--ms-accent-3); font-size: 0.6rem; letter-spacing: 0;
+}
+.mstudio-label {
+  display: block; font-size: 0.68rem; text-transform: uppercase;
+  letter-spacing: 0.06em; font-weight: 600; color: var(--ms-ink-dim); margin-bottom: 0.35rem;
+}
+.mstudio-textarea, .mstudio-select {
+  width: 100%; padding: 0.7rem 0.9rem; border-radius: 10px;
+  border: 1px solid var(--ms-border); background: var(--ms-panel-2);
+  color: var(--ms-ink); font-family: inherit; font-size: 0.86rem;
+}
+.mstudio-textarea { min-height: 84px; resize: vertical; }
+.mstudio-textarea:focus, .mstudio-select:focus {
+  outline: none; border-color: var(--ms-accent); box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.2);
+}
+.mstudio-textarea::placeholder { color: var(--ms-ink-dim); }
+.mstudio-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; }
+@media (max-width: 640px) {
+  .mstudio-grid-3 { grid-template-columns: 1fr; }
+}
+/* Presets */
+.mstudio-presets { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+.mstudio-preset {
+  padding: 0.4rem 0.75rem; border-radius: 999px; border: 1px solid var(--ms-border);
+  background: var(--ms-panel-2); color: var(--ms-ink-dim); font-size: 0.7rem;
+  font-weight: 500; cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.mstudio-preset:hover { border-color: var(--ms-accent); color: var(--ms-ink); }
+
+/* Boutons */
+.mstudio-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
+  padding: 0.7rem 1.1rem; border-radius: 10px; font-size: 0.82rem; font-weight: 700;
+  font-family: inherit; cursor: pointer; border: 1px solid transparent; transition: all 0.18s;
+}
+.mstudio-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.mstudio-btn-primary {
+  background: var(--ms-grad-1); color: #fff; box-shadow: var(--ms-glow);
+  width: 100%; margin-bottom: 0.9rem;
+}
+.mstudio-btn-primary:not(:disabled):hover { filter: brightness(1.08); }
+.mstudio-btn-ghost {
+  background: var(--ms-panel-2); border-color: var(--ms-border-hi); color: var(--ms-accent-3);
+  padding: 0.35rem 0.7rem; font-size: 0.68rem; font-weight: 600; flex-shrink: 0;
+}
+.mstudio-btn-ghost:hover { border-color: var(--ms-accent); }
+
+/* Chargement / erreurs */
+.mstudio-loading {
+  display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0.9rem;
+  border-radius: 10px; background: var(--ms-panel-2); border: 1px solid var(--ms-border);
+  color: var(--ms-ink-dim); font-size: 0.76rem; margin-bottom: 0.9rem;
+}
+.mstudio-spinner {
+  width: 15px; height: 15px; border: 2px solid rgba(124, 92, 255, 0.3);
+  border-top-color: var(--ms-accent); border-radius: 50%;
+  animation: mstudio-spin 0.8s linear infinite; flex-shrink: 0;
+}
+@keyframes mstudio-spin { to { transform: rotate(360deg); } }
+.mstudio-error {
+  padding: 0.7rem 0.9rem; border-radius: 10px; border: 1px solid rgba(255, 71, 87, 0.55);
+  background: rgba(255, 71, 87, 0.08); color: #ff8f99; font-size: 0.78rem; margin-bottom: 0.9rem;
+}
+
+/* Liste des hooks */
+.mstudio-hooks { display: flex; flex-direction: column; gap: 0.5rem; }
+.mstudio-hook {
+  display: flex; align-items: flex-start; gap: 0.7rem; background: var(--ms-panel-2);
+  border: 1px solid var(--ms-border); border-radius: 12px; padding: 0.8rem 0.9rem;
+  transition: border-color 0.18s; position: relative;
+}
+.mstudio-hook:hover { border-color: var(--ms-accent); }
+.mstudio-hook-num {
+  flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--ms-panel-3); display: flex; align-items: center; justify-content: center;
+  font-size: 0.68rem; font-weight: 800; color: var(--ms-accent-3);
+}
+.mstudio-hook-text { flex: 1; min-width: 0; font-size: 0.84rem; line-height: 1.45; overflow-wrap: anywhere; }
+.mstudio-top {
+  position: absolute; top: -8px; right: 12px; background: var(--ms-grad-1); color: #fff;
+  font-size: 0.56rem; font-weight: 800; letter-spacing: 0.08em; border-radius: 8px; padding: 0.14rem 0.5rem;
+}
+
+/* Placeholder « Bientôt » (outils à venir) */
+.mstudio-placeholder { text-align: center; padding: 2rem 1.2rem; }
+.mstudio-placeholder-emoji { font-size: 2.4rem; margin-bottom: 0.5rem; }
+.mstudio-placeholder h3 { margin: 0 0 0.4rem; font-size: 1rem; color: var(--ms-ink); }
+.mstudio-placeholder p {
+  margin: 0 auto; max-width: 52ch; font-size: 0.78rem; color: var(--ms-ink-dim); line-height: 1.55;
+}
+
+
