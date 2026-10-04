@@ -5,7 +5,10 @@ const { Pool } = pg;
 // Une version de schéma doit être incrémentée uniquement lorsqu'une nouvelle
 // migration est ajoutée à initDb(). Sans ce garde-fou, chaque cold start Vercel
 // rejouait toutes les CREATE/ALTER/INDEX et produisait des logs PostgreSQL.
-const DB_INIT_VERSION = "2026-09-25-log-ingestion-v1";
+// Marqueur de schéma : à incrémenter à CHAQUE changement de structure, sinon
+// initDb() (marqueur déjà posé) ne rejoue pas les migrations sur une base en
+// service. 2026-10-03 : table familicash_orders (licences de l'application).
+const DB_INIT_VERSION = "2026-10-03-familicash-licences-v1";
 const DB_INIT_LOCK = "mboppi-db-init-v1";
 let initDbPromise = null;
 
@@ -740,6 +743,30 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_membership_payments_user ON membership_payments(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_provider ON payment_webhook_logs(provider, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_order ON payment_webhook_logs(provider_order_id);
+
+    -- FamiliCash : licences de l'application mobile. Le relais /familicash/api
+    -- crée une commande par achat, iKeePay confirme, puis la licence signée
+    -- (Ed25519) est stockée ici et vérifiable hors ligne par l'application.
+    -- Aucune FK vers users : un foyer FamiliCash existe sans compte Mboppi.
+    CREATE TABLE IF NOT EXISTS familicash_orders (
+      id BIGSERIAL PRIMARY KEY,
+      household_id TEXT NOT NULL,
+      plan TEXT NOT NULL CHECK (plan IN ('m', 'y')),
+      amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      external_reference TEXT NOT NULL UNIQUE,
+      provider_reference TEXT,
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed')),
+      license TEXT,
+      license_expires_at TIMESTAMPTZ,
+      email TEXT,
+      error TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_familicash_orders_household ON familicash_orders(household_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_familicash_orders_expires ON familicash_orders(license_expires_at DESC) WHERE license_expires_at IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS ux_familicash_orders_pending ON familicash_orders(household_id, plan) WHERE status = 'pending';
 
     -- Configuration plateforme (paiement) : mode manuel/automatique + clés iKeePay.
     -- En mode automatique, seuls les PAYIN (adhésion, don) passent par iKeePay ;

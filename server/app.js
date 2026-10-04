@@ -41,6 +41,7 @@ import usersRoutes from "./routes/users.js";
 import digitalRoutes from "./routes/digital.js";
 import generatorRoutes from "./routes/generator.js";
 import studioRoutes from "./routes/studio.js";
+import familicashRoutes from "./routes/familicash.js";
 import { authRequired } from "./auth.js";
 import { securityHeaders, originCheck, ALLOWED_ORIGINS } from "./security.js";
 import { isLegacyHost, canonicalUrl } from "./urls.js";
@@ -107,6 +108,13 @@ app.use("/api/ikeepay", webhookRouter);
 // Webhook du robot WhatsApp (Meta Cloud API) : même logique — Meta envoie ses
 // notifications depuis ses serveurs (pas de navigateur). Auth par verify_token.
 app.use("/api/whatsapp", whatsappBotRouter);
+
+// Relais de paiement FamiliCash (application mobile) : appelé par l'application
+// native (aucun header Origin) et, plus tard, par le webhook iKeePay — monté
+// AVANT originCheck comme les autres webhooks. Le relais se protège par son
+// propre jeton (voir server/routes/familicash.js). Le chemin public est
+// https://www.mboppishop.com/familicash/api/ (route ajoutée dans vercel.json).
+app.use("/familicash/api", familicashRoutes);
 
 app.use(originCheck);
 

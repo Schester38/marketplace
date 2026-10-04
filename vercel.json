@@ -17,6 +17,7 @@
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index" },
+    { "src": "/familicash/api(/.*)?", "dest": "/api/index" },
     { "src": "/p/(.*)", "dest": "/api/index" },
     { "src": "/produit/(\\d+)", "dest": "/api/index" },
     { "src": "/acheter/(\\d+)", "dest": "/api/index" },

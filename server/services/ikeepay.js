@@ -21,6 +21,7 @@ import { randomBytes } from "node:crypto";
 import { MEMBERSHIP_FEES } from "../fees.js";
 import { getMembershipGate } from "./membershipGate.js";
 import { notifyActivationReferralPaid } from "./activationReferral.js";
+import { confirmFcOrderPayment, isFcReference } from "./familicashOrders.js";
 import { notifyAdmins } from "./adminNotify.js";
 import { sendPush } from "../push.js";
 
@@ -682,6 +683,36 @@ async function handleWebhook(body, normalized) {
       await completeDonation(donation, providerRef);
     }
     result = { ok: true, kind: "donation", id: donation.id };
+    return result;
+  }
+
+  // FamiliCash ? (licence de l'application mobile) — les références MBP-FC sont
+  // créées par le relais /familicash/api. Le paiement est confronté à la
+  // commande enregistrée (montant exact + devise) et la licence signée est
+  // émise par familicashOrders.js. Ce bloc est placé AVANT la réconciliation
+  // par montant : sans cela, un paiement FamiliCash d'un montant égal à celui
+  // d'une adhésion pourrait être rattaché à tort à cette adhésion. Le jeton de
+  // licence n'est volontairement PAS renvoyé ici : le résultat est journalisé
+  // dans payment_webhook_logs, une licence utilisable n'a rien à y faire.
+  if (isFcReference(orderId)) {
+    const fc = await confirmFcOrderPayment({
+      reference: orderId,
+      amount,
+      currency,
+      providerRef,
+    });
+    if (fc.ok) {
+      result = {
+        ok: true,
+        kind: "familicash",
+        household_id: fc.household_id,
+        expiry: fc.expiry,
+        duplicate: Boolean(fc.duplicate),
+        renewed: Boolean(fc.renewed),
+      };
+      return result;
+    }
+    result = { ok: false, reason: `familicash:${fc.reason}` };
     return result;
   }
 
