@@ -32,7 +32,24 @@ async function balanceOf(userId) {
       [userId]
     ),
   ]);
-  const total = Number(earn[0]?.total || 0);
+  let total = Number(earn[0]?.total || 0);
+  if (total === 0) {
+    const fallback = (
+      await q(
+        `SELECT COALESCE(SUM(CASE
+            WHEN s.seller_id IS NOT NULL THEN GREATEST(0, s.total_price - s.commission - s.referral_commission)
+            ELSE s.total_price
+          END), 0)::float AS total
+           FROM sales s
+           JOIN products p ON p.id = s.product_id
+          WHERE p.shop_id = $1
+            AND (s.shop_confirmed_at IS NOT NULL OR s.paid_online_at IS NOT NULL OR s.status = 'delivered')
+            AND NOT ($1 = ANY(s.hidden_for))`,
+        [userId]
+      )
+    )[0];
+    total = Number(fallback?.total || 0);
+  }
   const locked = Number(wd[0]?.locked || 0);
   return {
     total: Math.round(total * 100) / 100,

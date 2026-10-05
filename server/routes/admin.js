@@ -198,7 +198,11 @@ router.get(
     );
     const [products] = await q("SELECT COUNT(*) AS total FROM products");
     const [sales] = await q(
-      "SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'pending') AS pending, COUNT(*) FILTER (WHERE status = 'delivered') AS delivered, COALESCE(SUM(total_price) FILTER (WHERE status = 'delivered'), 0) AS revenue FROM sales"
+      `SELECT COUNT(*) AS total,
+              COUNT(*) FILTER (WHERE status = 'pending') AS pending,
+              COUNT(*) FILTER (WHERE status IN ('delivered','confirmed','bought') OR shop_confirmed_at IS NOT NULL OR paid_online_at IS NOT NULL) AS delivered,
+              COALESCE(SUM(total_price) FILTER (WHERE status IN ('delivered','confirmed','bought') OR shop_confirmed_at IS NOT NULL OR paid_online_at IS NOT NULL), 0) AS revenue
+       FROM sales`
     );
     const [reviews] = await q(
       "SELECT COUNT(*) AS total, COALESCE(AVG(rating), 0)::numeric(3, 2) AS avg FROM reviews"
