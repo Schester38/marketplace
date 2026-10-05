@@ -14,12 +14,20 @@
 //   GET  ?action=ping    → vitals + catalogue des offres (aucun accès base)
 //   GET  ?action=cle     → clé PUBLIQUE Ed25519 (PEM + brut base64url) à graver
 //                          dans l'application
-//   POST ?action=payer    {id, plan, email?} → commande + URL de checkout
-//                          iKeePay. Le MONTANT n'est jamais lu du client : il
-//                          vient du catalogue serveur (une application modifiée
-//                          qui enverrait « amount: 1 » n'obtient rien).
+//   POST ?action=payer    {id, plan, jeton?, email?} → commande + URL de
+//                          checkout iKeePay. Le MONTANT n'est jamais lu du client :
+//                          il vient du catalogue serveur (une application modifiée
+//                          qui enverrait « amount: 1 » n'obtient rien). Le `jeton`
+//                          est la preuve du secret de réclamation : il est STOCKÉ
+//                          avec la commande, et sert à prouver plus tard qu'on est
+//                          bien le possesseur du foyer.
 //   GET  ?action=licence  {id, reference} → état + licence signée dès que le
-//                          paiement est confirmé (sondage après redirection)
+//                          paiement est confirmé (sondage après redirection) ;
+//                          {id, jeton} SANS reference → relit la licence du foyer
+//                          (réinstallation, changement d'appareil). Cette seconde
+//                          forme EXIGE le jeton : l'identifiant seul, devinable en
+//                          quelques secondes, ne doit jamais suffire à obtenir la
+//                          licence d'un autre.
 //   POST ?action=webhook  {k|<x-ikeepay-token>} → outil d'exploitation : rejoue
 //                          la confirmation d'un paiement (le vrai webhook
 //                          iKeePay arrive sur /api/ikeepay/webhook, qui route
@@ -258,6 +266,7 @@ router.post(
       plan: offer.code,
       reference,
       email: EMAIL_RE.test(email) ? email.toLowerCase() : "",
+      claimToken: paramOf(req, "jeton", "token", "claim"),
     });
     if (!created.ok) {
       if (created.reason === "invalid_household") {
@@ -345,7 +354,10 @@ router.all(
       });
     }
 
-    const licence = await getHouseholdLicense(householdId);
+    const licence = await getHouseholdLicense(
+      householdId,
+      paramOf(req, "jeton", "token", "claim")
+    );
     if (!licence.ok) {
       return refus(res, 404, "NO_LICENSE", "Aucune licence enregistrée pour ce foyer");
     }

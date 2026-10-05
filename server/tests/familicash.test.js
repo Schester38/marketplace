@@ -16,6 +16,7 @@ import {
   FC_HOUSEHOLD_RE,
   FC_PLANS,
   amountMatchesFc,
+  claimTokenMatches,
   currencyMatchesFc,
   expiryAfter,
   isFcReference,
@@ -299,6 +300,90 @@ suite("renouvellement (les jours déjà payés ne se perdent pas)", () => {
       renewalBase("n'importe quoi", maintenant).toISOString(),
       maintenant.toISOString(),
       "valeur invalide ignorée"
+    );
+  });
+});
+
+// ⚠️ LE JETON DE RÉCLAMATION : LA BARRIÈRE QUI PROTÈGE LES LICENCES
+// ------------------------------------------------------------------------
+// L'identifiant de foyer ne fait que 40 bits et il est PUBLIC. Sans preuve
+// supplémentaire, connaître un identifiant suffirait à récupérer la licence de
+// n'importe qui. Ces tests verrouillent la règle : le bon jeton ouvre, tout le
+// reste est refusé — y compris les cas « subtils » (casse, espaces, longueur).
+suite("jeton de réclamation", () => {
+  const jeton = "kM3nR7pQ2wX8yZ1aB4cD6eF9gH2jK5lM8nO1pQ4";
+
+  test("le bon jeton est accepte", () => {
+    assertTrue(
+      claimTokenMatches(jeton, jeton),
+      "jeton identique accepté"
+    );
+  });
+
+  test("un jeton différent est refuse", () => {
+    assertTrue(
+      !claimTokenMatches(
+        "AAAA3nR7pQ2wX8yZ1aB4cD6eF9gH2jK5lM8nO1pQ4",
+        jeton
+      ),
+      "jeton falsifié refusé"
+    );
+  });
+
+  test("aucun jeton n'est refusé face à un jeton attendu", () => {
+    // Le cas le plus important : c'est exactement ce que fait un attaquant qui
+    // connaît l'identifiant mais pas le secret.
+    assertTrue(
+      !claimTokenMatches("", jeton),
+      "jeton absent refusé"
+    );
+    assertTrue(
+      !claimTokenMatches(null, jeton),
+      "jeton null refusé"
+    );
+  });
+
+  test("les espaces de bord sont tolérés, pas le contenu", () => {
+    assertTrue(
+      claimTokenMatches(`  ${jeton}  `, jeton),
+      "espaces de bord tolérés (copier-coller depuis un papier)"
+    );
+  });
+
+  test("une longueur différente est refusée SANS lever d'exception", () => {
+    // timingSafeEqual lève si les tampons diffèrent : il faut donc vérifier la
+    // longueur AVANT, sinon un jeton tronqué ferait tomber le relais en 500.
+    assertTrue(
+      !claimTokenMatches(jeton.slice(0, 10), jeton),
+      "jeton tronqué refusé proprement"
+    );
+    assertTrue(
+      !claimTokenMatches(`${jeton}AAAA`, jeton),
+      "jeton allongé refusé proprement"
+    );
+  });
+
+  test("le jeton ne fuit JAMAIS dans la vue publique d'une commande", () => {
+    // Il finirait sinon dans un journal ou une capture d'écran.
+    const vue = orderView({
+      external_reference: "MBP-FC-1A2B3C",
+      household_id: "FC-AB2C-DE34",
+      plan: "y",
+      amount: "15000",
+      currency: "XAF",
+      status: "completed",
+      license: "FC1.aaa.bbb",
+      license_expires_at: new Date("2027-01-01T00:00:00Z"),
+      claim_token: jeton,
+      email: "quelquun@example.com",
+    });
+    assertTrue(
+      vue.claim_token === undefined,
+      "claim_token absent de la vue publique"
+    );
+    assertTrue(
+      !JSON.stringify(vue).includes(jeton),
+      "le jeton n'apparaît nulle part dans la vue"
     );
   });
 });

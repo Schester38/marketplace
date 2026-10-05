@@ -185,9 +185,8 @@ export default function SellerDashboard() {
     shareOrCopy(
       "sale-" + p.id,
       saleLink(p),
-      t("Commandez « {name} » sur MboppiShop avec le code vendeur {code}", {
+      t("Commandez « {name} » sur MboppiShop", {
         name: p.name,
-        code: sellerCode,
       }),
       firstProductImage(p)
     );

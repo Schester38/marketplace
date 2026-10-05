@@ -80,6 +80,12 @@ const MembershipPage = lazyRetry(() => import("./pages/MembershipPage.jsx"));
 
 const AuthGoogle = lazyRetry(() => import("./pages/AuthGoogle.jsx"));
 const About = lazyRetry(() => import("./pages/About.jsx"));
+// La page de telechargement de l'application. Elle est PUBLIQUE et hors du
+// bandeau : un utilisateur qui a deja installe l'application passe par le
+// bouton « Mise a jour », il ne cherche pas un lien dans la navigation.
+const FamiliCashDownload = lazyRetry(
+  () => import("./pages/FamiliCashDownload.jsx")
+);
 const Contact = lazyRetry(() => import("./pages/Contact.jsx"));
 const Privacy = lazyRetry(() => import("./pages/Privacy.jsx"));
 const MyAccount = lazyRetry(() => import("./pages/MyAccount.jsx"));
@@ -683,6 +689,10 @@ export default function App() {
               }
             />
             <Route path="/a-propos" element={<About />} />
+            <Route
+              path="/familicash"
+              element={<FamiliCashDownload />}
+            />
             <Route path="/contact" element={<Contact />} />
             <Route path="/donnees" element={<Privacy />} />
             <Route

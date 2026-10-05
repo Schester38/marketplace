@@ -11845,3 +11845,91 @@ a.step {
 }
 
 
+/* ==========================================================================
+   Page de téléchargement de l'application FamiliCash
+   --------------------------------------------------------------------------
+   Styles VOLONTAIREMENT SIMPLES et sans dépendance : une page de
+   téléchargement doit rester lisible même si le reste du site évolue. Elle
+   s'affiche sur un téléphone qui vient de sortir d'un téléchargement — donc
+   souvent en 3G, sur un petit écran, avec une connexion médiocre.
+   ========================================================================== */
+
+.fc-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 18px 64px;
+  line-height: 1.6;
+}
+
+.fc-page h1 {
+  font-size: 1.7rem;
+  margin-bottom: 0.4em;
+}
+
+.fc-lead {
+  font-size: 1.05rem;
+  opacity: 0.85;
+  margin-bottom: 2em;
+}
+
+.fc-bloc-telechargement {
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 14px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 2.5em;
+}
+
+.fc-bloc-telechargement h2 {
+  margin-top: 0;
+}
+
+/* Le bouton principal : assez grand pour un pouce, et assez contrasté pour
+   qu'on le voie sur un écran de faible luminosité. */
+.fc-bouton {
+  display: inline-block;
+  margin: 12px 0;
+  padding: 16px 32px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  background: #1f7a3f;
+  border-radius: 10px;
+  text-decoration: none;
+}
+
+.fc-bouton:hover,
+.fc-bouton:focus {
+  background: #17632f;
+}
+
+.fc-note {
+  font-size: 0.92rem;
+  opacity: 0.75;
+}
+
+.fc-bloc-etapes,
+.fc-bloc-questions {
+  margin-bottom: 2.5em;
+}
+
+.fc-bloc-etapes ol {
+  padding-left: 1.3em;
+}
+
+.fc-bloc-etapes li {
+  margin-bottom: 0.8em;
+}
+
+.fc-bloc-questions h3 {
+  font-size: 1rem;
+  margin-top: 1.6em;
+  margin-bottom: 0.3em;
+}
+
+.fc-bloc-pied {
+  padding-top: 1.5em;
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+  font-size: 0.92rem;
+}
+

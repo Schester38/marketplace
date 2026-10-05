@@ -1107,8 +1107,7 @@ const EN = {
   "Retrouvez les produits que vous avez aimés.": "Find again the products you liked.",
   "En attente de vente": "Awaiting sale",
   "Générez votre code vendeur pour vendre.": "Generate your seller code to sell.",
-  "Commandez « {name} » sur MboppiShop avec le code vendeur {code}":
-    "Order « {name} » on MboppiShop with seller code {code}",
+  "Commandez « {name} » sur MboppiShop": "Order « {name} » on MboppiShop",
   "Découvrez cet article sur MboppiShop : {name}": "Discover this item on MboppiShop: {name}",
   Localisation: "Location",
   "Mes moyens de paiement": "My payment methods",
@@ -2802,8 +2801,7 @@ const AR = {
   "Retrouvez les produits que vous avez aimés.": "جد مجدداً المنتجات التي أعجبتك.",
   "En attente de vente": "بانتظار البيع",
   "Générez votre code vendeur pour vendre.": "قم بإنشاء رمز البائع للبيع.",
-  "Commandez « {name} » sur MboppiShop avec le code vendeur {code}":
-    "اطلب « {name} » على مبوبي مع رمز البائع {code}",
+  "Commandez « {name} » sur MboppiShop": "اطلب « {name} » على مبوبي",
   "Découvrez cet article sur MboppiShop : {name}": "اكتشف هذا المنتج على مبوبي: {name}",
   Localisation: "الموقع",
   "Mes moyens de paiement": "وسائل الدفع الخاصة بي",
@@ -4427,8 +4425,7 @@ const ES = {
   "Retrouvez les produits que vous avez aimés.": "Encuentra los productos que te gustaron.",
   "En attente de vente": "Pendiente de venta",
   "Générez votre code vendeur pour vendre.": "Genera tu código de vendedor para vender.",
-  "Commandez « {name} » sur MboppiShop avec le code vendeur {code}":
-    "Pide « {name} » en MboppiShop con el código de vendedor {code}",
+  "Commandez « {name} » sur MboppiShop": "Pide « {name} » en MboppiShop",
   "Découvrez cet article sur MboppiShop : {name}": "Descubre este artículo en MboppiShop: {name}",
   Localisation: "Ubicación",
   "Mes moyens de paiement": "Mis medios de pago",

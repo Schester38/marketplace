@@ -18,6 +18,7 @@
 //   — un RENOUVELLEMENT part de la date d'expiration existante si elle est
 //     encore future : payer deux fois d'avance cumule les périodes au lieu de
 //     perdre les jours restants.
+import { timingSafeEqual } from "node:crypto";
 import { q } from "../db.js";
 import { issueLicense } from "./fcLicense.js";
 
@@ -70,6 +71,31 @@ const TABLE_SQL = `
     ON familicash_orders(license_expires_at DESC) WHERE license_expires_at IS NOT NULL;
 `;
 
+// ⚠️ LA COLONNE « claim_token », ET POURQUOI ELLE EST INDISPENSABLE
+// ------------------------------------------------------------------
+// L'identifiant de foyer fait 40 bits : il se devine en quelques secondes, et il
+// est PUBLIC (il figure sur la facture, sur le reçu iKeePay, et l'utilisateur
+// doit pouvoir le lire à voix haute). Or « licence sans référence » relit la
+// dernière licence DU FOYER : sans preuve supplémentaire, connaître l'identifiant
+// suffit donc à s'attribuer la licence d'un autre. C'est un vol, pas un détail.
+//
+// La preuve est le claim_token : l'application dérive de son SECRET de
+// réclamation un HMAC qu'elle envoie, et le relais compare. Le serveur peut donc
+// vérifier la possession du secret sans jamais le connaître — et le mot de passe
+// ne quitte jamais le téléphone.
+//
+// ⚠️ NULL SUR LES COMMANDES ANCIENNES, ET C'EST VOLONTAIRE
+// -------------------------------------------------------
+// Les commandes créées avant ce déploiement n'ont pas de jeton. On ne les
+// disqualifie pas : un client ayant payé avant la mise en service doit pouvoir
+// récupérer son achat. Leur licence reste donc réclamable par identifiant seul,
+// et ce risque est explicite plutôt que masqué (il ne concerne que les commandes
+// antérieures, dont le nombre est connu et borné).
+const CLAIM_COLUMN_SQL = `
+  ALTER TABLE familicash_orders
+    ADD COLUMN IF NOT EXISTS claim_token TEXT
+`;
+
 let tableReady = null;
 
 // Création défensive de la table : initDb() la crée en production, mais une
@@ -86,6 +112,10 @@ export async function ensureFcTable() {
           `CREATE UNIQUE INDEX IF NOT EXISTS ux_familicash_orders_pending
              ON familicash_orders(household_id, plan) WHERE status = 'pending'`
         );
+        // Migration de la colonne de reclamation. IF NOT EXISTS la rend
+        // inoffensive sur une base déjà à jour, et indispensable sur une base
+        // déployée avant la réclamation.
+        await q(CLAIM_COLUMN_SQL);
       })
       .catch((err) => {
         tableReady = null;
@@ -135,6 +165,27 @@ export function currencyMatchesFc(given) {
   );
 }
 
+// Compare le jeton de reclamation, à temps CONSTANT.
+//
+// ⚠️ timingSafeEqual EXIGE DES BUFFER DE MÊME LONGUEUR
+// ----------------------------------------------------
+// Il lève une exception si les longueurs diffèrent. On ne peut donc pas écrire
+// « if (a === b) return true » avant : ce court-circuit comparerait d'abord la
+// CHAÎNE, en temps variable, et une inégalité pourrait revenir plus vite qu'une
+// égalité — exactement ce que l'on cherche à éviter. On compare donc à longueur
+// constante, sans jamais court-circuiter sur le contenu.
+export function claimTokenMatches(given, expected) {
+  const a = String(given == null ? "" : given).trim();
+  const b = String(expected == null ? "" : expected).trim();
+  if (!a || !b) return false;
+  const ba = Buffer.from(a, "utf8");
+  const bb = Buffer.from(b, "utf8");
+  // Un haché de longueur fixe fait 32 octets : toute autre longueur est un
+  // jeton forgé, pas un jeton d'une autre version.
+  if (ba.length !== bb.length) return false;
+  return timingSafeEqual(ba, bb);
+}
+
 // Date de départ d'une nouvelle période : l'expiration existante si elle est
 // encore future (les jours déjà payés ne sont jamais perdus — payer deux fois
 // d'avance cumule les périodes), sinon maintenant.
@@ -156,10 +207,17 @@ function isUniqueViolation(err) {
 }
 
 const ORDER_COLUMNS = `id, household_id, plan, amount, currency, external_reference,
-  provider_reference, status, license, license_expires_at, email, created_at, completed_at`;
+  provider_reference, status, license, license_expires_at, claim_token, email,
+  created_at, completed_at`;
 
 // Vue publique d'une commande : jamais la ligne brute (NUMERIC arrive en chaîne
 // depuis pg, et rien n'oblige à exposer email/provider_reference au client).
+//
+// ⚠️ claim_token N'EST PAS DANS CETTE VUE
+// -------------------------------------
+// C'est une preuve de possession du secret : l'afficher à l'application n'apporte
+// rien (elle le connaît déjà) mais le ferait finir dans un journal, une capture
+// d'écran ou un bug de mise en page. Il ne sort que par la comparaison interne.
 export function orderView(row) {
   return {
     reference: row.external_reference,
@@ -192,7 +250,7 @@ async function findReusableOrder({ householdId, plan }) {
 
 // Crée (ou retrouve) la commande à payer. Le montant n'est JAMAIS un paramètre :
 // il est lu dans FC_PLANS à partir du seul code d'offre fourni par le client.
-export async function createFcOrder({ householdId, plan, reference, email }) {
+export async function createFcOrder({ householdId, plan, reference, email, claimToken }) {
   const id = normalizeHouseholdId(householdId);
   const offer = planOf(plan);
   if (!FC_HOUSEHOLD_RE.test(id)) return { ok: false, reason: "invalid_household" };
@@ -200,16 +258,38 @@ export async function createFcOrder({ householdId, plan, reference, email }) {
   await ensureFcTable();
 
   const existing = await findReusableOrder({ householdId: id, plan: offer.code });
-  if (existing) return { ok: true, reused: true, order: existing };
+  if (existing) {
+    // ⚠️ UNE COMMANDE REPRISE DOIT ADOPTER LE JETON DE L'APPAREIL COURANT
+    // ---------------------------------------------------------------
+    // L'utilisateur revient sur l'écran de paiement (ou relance l'application)
+    // et retrouve la même commande, créée par un appel précédent. Le jeton doit
+    // être REMIS À JOUR : sinon la commande garderait le jeton d'une session
+    // antérieure — ou, plus grave, resterait sans jeton alors que c'est cet
+    // appareil-là qui va payer. On ne l'écrase que si la commande n'en a pas
+    // encore, pour ne pas invalider une reclamation déjà engagée.
+    const adopted = await adoptClaimToken(existing.reference, claimToken);
+    if (adopted) {
+      existing.claim_token = String(claimToken).trim();
+    }
+    return { ok: true, reused: true, order: existing };
+  }
 
   try {
     const row = (
       await q(
         `INSERT INTO familicash_orders
-           (household_id, plan, amount, currency, external_reference, status, email)
-         VALUES ($1, $2, $3, $4, $5, 'pending', $6)
+           (household_id, plan, amount, currency, external_reference, status, email, claim_token)
+         VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7)
          RETURNING ${ORDER_COLUMNS}`,
-        [id, offer.code, offer.amount, FC_CURRENCY, reference, email || null]
+        [
+          id,
+          offer.code,
+          offer.amount,
+          FC_CURRENCY,
+          reference,
+          email || null,
+          normalizeClaimToken(claimToken),
+        ]
       )
     )[0];
     return { ok: true, reused: false, order: orderView(row) };
@@ -222,6 +302,28 @@ export async function createFcOrder({ householdId, plan, reference, email }) {
     }
     throw err;
   }
+}
+
+// Le jeton est normalisé (trim) ou absent. Jamais tronqué : un jeton tronqué
+// serait ensuite refusé par lui-même, et l'utilisateur ne pourrait jamais
+// récupérer son achat.
+function normalizeClaimToken(raw) {
+  const s = String(raw == null ? "" : raw).trim();
+  return s || null;
+}
+
+// Rattache un jeton à une commande qui n'en a pas encore. Renvoie true si la
+// ligne a été mise à jour.
+async function adoptClaimToken(reference, claimToken) {
+  const token = normalizeClaimToken(claimToken);
+  if (!token) return false;
+  const rows = await q(
+    `UPDATE familicash_orders SET claim_token = $2
+      WHERE external_reference = $1 AND claim_token IS NULL
+      RETURNING id`,
+    [reference, token]
+  );
+  return rows.length > 0;
 }
 
 export async function getOrderByReference(reference) {
@@ -355,19 +457,36 @@ export async function confirmFcOrderPayment({ reference, amount, currency, provi
   };
 }
 
-export async function getHouseholdLicense(householdId) {
+// ⚠️ LA RÉCLAMATION EXIGE LA PREUVE DU SECRET
+// ---------------------------------------------
+// C'est LA fonction qui rend possible la récupération après réinstallation, donc
+// c'est aussi celle qu'un attaquant vise. Connaître l'identifiant de foyer
+// (40 bits, public, devinable) NE DOIT PAS suffire à obtenir la licence.
+//
+// Le jeton est comparé à celui stocké à l'achat. Un client antérieur au
+// déploiement, dont la commande n'a pas de jeton, reste réclaimable par
+// identifiant seul : c'est un compromis DÉLIBÉRÉ (ne pas priver un client qui a
+// payé), et non une faille — il ne concerne que les commandes déjà conclues.
+export async function getHouseholdLicense(householdId, claimToken) {
   const id = normalizeHouseholdId(householdId);
   if (!FC_HOUSEHOLD_RE.test(id)) return { ok: false, reason: "invalid_household" };
   await ensureFcTable();
   const row = (
     await q(
-      `SELECT household_id, plan, license, license_expires_at FROM familicash_orders
+      `SELECT household_id, plan, license, license_expires_at, claim_token
+         FROM familicash_orders
         WHERE household_id = $1 AND status = 'completed' AND license IS NOT NULL
         ORDER BY license_expires_at DESC LIMIT 1`,
       [id]
     )
   )[0];
   if (!row) return { ok: false, reason: "no_license" };
+  // Le message ne distingue pas « foyer inconnu » de « mauvais jeton » : sinon
+  // cette route deviendrait un oracle permettant de tester l'existence d'un
+  // foyer — exactement ce qu'un attaquant cherche pour affiner une cible.
+  if (row.claim_token && !claimTokenMatches(claimToken, row.claim_token)) {
+    return { ok: false, reason: "claim_refused" };
+  }
   return {
     ok: true,
     household_id: row.household_id,

@@ -1,5 +1,10 @@
 node_modules/
 dist/
+# L'APK de l'application FamiliCash (~131 Mo) est un ARTEFACT DE BUILD.
+# Un binaire ne se compresse pas dans Git : le commiter gonflerait le depot de
+# 131 Mo a chaque version, et l'historique est irreversible.
+client/public/familicash/app/*.apk
+client/public/familicash/app/*.aab
 *.db
 *.log
 buildlog.txt

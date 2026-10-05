@@ -1,0 +1,12 @@
+{
+  "_commentaire": "Manifeste de mise a jour de l'application FamiliCash. Ce fichier est PUBLIC et ne contient AUCUNE donnee personnelle : l'application l'interroge au moment ou l'utilisateur cherche une mise a jour. A chaque publication : incrementer version_code ET buildNumber, copier l'APK dans ce dossier, puis remettre a jour apk_size et notes. Le fichier est sert par Vercel tel quel, donc il ne doit contenir aucun secret.",
+  "app": "Budget Familial",
+  "package": "com.familicash.familicash",
+  "version_code": 1,
+  "version_name": "0.1.0",
+  "apk_url": "https://www.mboppishop.com/familicash/app/familicash.apk",
+  "apk_size": 23301501,
+  "notes": "Premiere version publique. Vos donnees restent sur votre telephone : aucune n'est envoyee.",
+  "obligatoire": false,
+  "_empreinte_signature": "ca3786fc113dce4de146f710f09935da80c7e8eaa3e7c0307fbcd27874f72e4"
+}
