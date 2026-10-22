@@ -695,25 +695,29 @@ export default function Home() {
         description="Le marché de votre quartier en ligne : produits des boutiques, créations des créateurs, vente avec commissions, commande avec livraison."
       />
 
-      <RecentSales />
+      {!isBoutique && <RecentSales />}
 
-      {/* Refonte 2026 : carrousel promo, grille de catégories illustrée et badges de confiance */}
-      <Reveal>
-        <HeroCarousel onExplore={goToProducts} />
-      </Reveal>
+      {!isBoutique && (
+        <>
+          {/* Refonte 2026 : carrousel promo, grille de catégories illustrée et badges de confiance */}
+          <Reveal>
+            <HeroCarousel onExplore={goToProducts} />
+          </Reveal>
 
-      {/* Preuve sociale désactivée pour l'instant : compteurs trop faibles pour galvaniser.
-          Réactiver plus tard en décommentant (le composant et GET /api/metrics/public restent prêts) :
-      <Reveal delay={40}>
-        <SocialProof />
-      </Reveal>
-      */}
-      <Reveal delay={70}>
-        <CategoryGrid />
-      </Reveal>
-      <Reveal delay={140}>
-        <TrustBadges />
-      </Reveal>
+          {/* Preuve sociale désactivée pour l'instant : compteurs trop faibles pour galvaniser.
+              Réactiver plus tard en décommentant (le composant et GET /api/metrics/public restent prêts) :
+          <Reveal delay={40}>
+            <SocialProof />
+          </Reveal>
+          */}
+          <Reveal delay={70}>
+            <CategoryGrid />
+          </Reveal>
+          <Reveal delay={140}>
+            <TrustBadges />
+          </Reveal>
+        </>
+      )}
       {!isBoutique && (
       <Reveal delay={180}>
         <section className="section home-services" aria-label={t("Nos services")}>
@@ -822,7 +826,7 @@ export default function Home() {
       </Reveal>
       )}
 
-      {!user && (
+      {!isBoutique && !user && (
         <>
           <section className="hero vitrine-hero">
             <div className="hero-floats" aria-hidden="true">
@@ -850,81 +854,85 @@ export default function Home() {
               </Link>
             </div>
           </section>
-
-          <section className="section">
-            <div className="section-head">
-              <h2>{t("Comment ça marche ?")}</h2>
-              <p>{t("Un rôle pour chacun, une plateforme pour tous.")}</p>
-            </div>
-            <div className="steps">
-              <div className="step">
-                <div className="step-icon">🏪</div>
-                <div className="step-num">1</div>
-                <h3>{t("Boutique")}</h3>
-                <p>{t("Publiez vos produits et recevez les commandes.")}</p>
-              </div>
-              <div className="step">
-                <div className="step-icon">🎨</div>
-                <div className="step-num">2</div>
-                <h3>{t("Créateur")}</h3>
-                <p>{t("Exposez vos créations et touchez un public plus large.")}</p>
-              </div>
-              <div className="step">
-                <div className="step-icon">🛒</div>
-                <div className="step-num">3</div>
-                <h3>{t("Vendeur")}</h3>
-                <p>{t("Vendez en ligne et gagnez une commission sur chaque vente.")}</p>
-              </div>
-              <div className="step">
-                <div className="step-icon">
-                  <Logo className="logo-inline" />
-                </div>
-                <div className="step-num">4</div>
-                <h3>{t("Client")}</h3>
-                <p>{t("Commandez en un clic et recevez chez vous avec un livreur.")}</p>
-              </div>
-              <div className="step">
-                <div className="step-icon">🛵</div>
-                <div className="step-num">5</div>
-                <h3>{t("Livreur")}</h3>
-                <p>{t("Livrez les articles commandés et confirmez l'achat.")}</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="section">
-            <div className="section-head">
-              <h2>{t("Nos valeurs")}</h2>
-              <p>{t("Ce qui nous pousse chaque jour.")}</p>
-            </div>
-            <div className="steps">
-              <div className="step">
-                <div className="step-icon">🤝</div>
-                <h3>{t("La confiance")}</h3>
-                <p>{t("Des commandes simples, des contacts directs avec les vendeurs.")}</p>
-              </div>
-              <div className="step">
-                <div className="step-icon">📱</div>
-                <h3>{t("La proximité")}</h3>
-                <p>{t("Commander avec son téléphone, sans carte bancaire ni frais cachés.")}</p>
-              </div>
-              <div className="step">
-                <div className="step-icon">⚡</div>
-                <h3>{t("La rapidité")}</h3>
-                <p>{t("Une plateforme légère, qui s'affiche vite, même en 3G.")}</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="section cta-section">
-            <h2>{t("Prêt à rejoindre l'aventure ?")}</h2>
-            <p>{t("Créez votre compte gratuitement en moins d'une minute.")}</p>
-            <Link to="/register" className="btn btn-primary btn-xl">
-              {t("Créer mon compte")}
-            </Link>
-          </section>
         </>
       )}
+
+          {!isBoutique && (
+            <>
+              <section className="section">
+                <div className="section-head">
+                  <h2>{t("Comment ça marche ?")}</h2>
+                  <p>{t("Un rôle pour chacun, une plateforme pour tous.")}</p>
+                </div>
+                <div className="steps">
+                  <div className="step">
+                    <div className="step-icon">🏪</div>
+                    <div className="step-num">1</div>
+                    <h3>{t("Boutique")}</h3>
+                    <p>{t("Publiez vos produits et recevez les commandes.")}</p>
+                  </div>
+                  <div className="step">
+                    <div className="step-icon">🎨</div>
+                    <div className="step-num">2</div>
+                    <h3>{t("Créateur")}</h3>
+                    <p>{t("Exposez vos créations et touchez un public plus large.")}</p>
+                  </div>
+                  <div className="step">
+                    <div className="step-icon">🛒</div>
+                    <div className="step-num">3</div>
+                    <h3>{t("Vendeur")}</h3>
+                    <p>{t("Vendez en ligne et gagnez une commission sur chaque vente.")}</p>
+                  </div>
+                  <div className="step">
+                    <div className="step-icon">
+                      <Logo className="logo-inline" />
+                    </div>
+                    <div className="step-num">4</div>
+                    <h3>{t("Client")}</h3>
+                    <p>{t("Commandez en un clic et recevez chez vous avec un livreur.")}</p>
+                  </div>
+                  <div className="step">
+                    <div className="step-icon">🛵</div>
+                    <div className="step-num">5</div>
+                    <h3>{t("Livreur")}</h3>
+                    <p>{t("Livrez les articles commandés et confirmez l'achat.")}</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="section">
+                <div className="section-head">
+                  <h2>{t("Nos valeurs")}</h2>
+                  <p>{t("Ce qui nous pousse chaque jour.")}</p>
+                </div>
+                <div className="steps">
+                  <div className="step">
+                    <div className="step-icon">🤝</div>
+                    <h3>{t("La confiance")}</h3>
+                    <p>{t("Des commandes simples, des contacts directs avec les vendeurs.")}</p>
+                  </div>
+                  <div className="step">
+                    <div className="step-icon">📱</div>
+                    <h3>{t("La proximité")}</h3>
+                    <p>{t("Commander avec son téléphone, sans carte bancaire ni frais cachés.")}</p>
+                  </div>
+                  <div className="step">
+                    <div className="step-icon">⚡</div>
+                    <h3>{t("La rapidité")}</h3>
+                    <p>{t("Une plateforme légère, qui s'affiche vite, même en 3G.")}</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="section cta-section">
+                <h2>{t("Prêt à rejoindre l'aventure ?")}</h2>
+                <p>{t("Créez votre compte gratuitement en moins d'une minute.")}</p>
+                <Link to="/register" className="btn btn-primary btn-xl">
+                  {t("Créer mon compte")}
+                </Link>
+              </section>
+            </>
+          )}
 
 {!hideProducts && (
       <section ref={produitsRef} aria-label={t("Produits")} style={{ scrollMarginTop: 80 }}>
