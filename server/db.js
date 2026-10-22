@@ -14,9 +14,12 @@ let initDbPromise = null;
 
 const LOCAL_DEFAULT = "postgres://postgres:postgres@localhost:5432/marketplace";
 
-// PRIORITÉ : pooler Supabase ; DATABASE_URL reste le secours si son
-// authentification ou sa connexion échoue (notamment sur certains déploiements).
-const dbCandidates = [process.env.DATABASE_URL_POOLED, process.env.DATABASE_URL].filter(Boolean);
+// PRIORITÉ : DATABASE_URL (l'URL qui a toujours fonctionné en production).
+// DATABASE_URL_POOLED (PgBouncer) est gardé en secours uniquement : sa valeur
+// sur Vercel contient un mot de passe invalide (« password authentication
+// failed for user "postgres" ») — elle ne doit redevenir prioritaire qu'après
+// correction du mot de passe dans les réglages Vercel.
+const dbCandidates = [process.env.DATABASE_URL, process.env.DATABASE_URL_POOLED].filter(Boolean);
 if (!dbCandidates.length) dbCandidates.push(LOCAL_DEFAULT);
 
 function maskUrl(url) {
@@ -52,9 +55,11 @@ function createPool(url) {
   return p;
 }
 
-// Le pool démarre sur le premier candidat, puis la sélection est vérifiée
-// avant toute requête applicative. Cela évite que initDb() utilise une URL
-// rejetée pendant qu'une sonde en arrière-plan bascule ensuite vers le secours.
+// Pool initial : premier candidat (DATABASE_URL). La sélection définitive se
+// fait ci-dessous EN ARRIÈRE-PLAN (sans bloquer le chargement du module — des
+// tests importent db.js en cascade) : on sonde chaque URL avec une vraie
+// connexion et le pool est remplacé à chaud si une URL fonctionnelle est
+// trouvée (ex. mot de passe invalide sur la prioritaire).
 let currentUrl = dbCandidates[0];
 let pool = createPool(currentUrl);
 
@@ -71,18 +76,21 @@ async function probeDbUrl(url) {
   }
 }
 
-const dbPoolReady = (async () => {
-  let chosen = null;
+(async () => {
+  let chosen = dbCandidates[dbCandidates.length - 1];
+  let ok = false;
   for (const candidate of dbCandidates) {
     try {
       await probeDbUrl(candidate);
       chosen = candidate;
+      ok = true;
       break;
     } catch (err) {
       console.error(`[db] URL de base de données rejetée (${err.message}) : ${maskUrl(candidate)}`);
     }
   }
-  if (chosen && chosen !== currentUrl) {
+  if (!ok) return; // aucune URL fonctionnelle : on garde le pool initial (erreurs explicites côté requêtes)
+  if (chosen !== currentUrl) {
     const old = pool;
     currentUrl = chosen;
     pool = createPool(chosen);
@@ -96,8 +104,6 @@ export function getPool() {
 }
 
 export async function q(text, params = []) {
-  await dbPoolReady;
-  await dbPoolReady;
   const p = getPool();
   const res = await p.query(text, params);
   return res.rows;
@@ -114,7 +120,6 @@ export async function ensureColumn(table, column, definition) {
 }
 
 export async function withTransaction(fn) {
-  await dbPoolReady;
   const client = await getPool().connect();
   try {
     await client.query("BEGIN");
@@ -135,7 +140,6 @@ export async function withTransaction(fn) {
 }
 
 async function runInitDb() {
-  await dbPoolReady;
   await getPool().query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -871,7 +875,6 @@ async function runInitDb() {
 export async function initDb() {
   if (initDbPromise) return initDbPromise;
   initDbPromise = (async () => {
-    await dbPoolReady;
     const client = await getPool().connect();
     try {
       // Attendre le propriétaire éventuel du verrou est volontaire : une autre
