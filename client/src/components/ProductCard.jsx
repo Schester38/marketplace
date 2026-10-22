@@ -153,16 +153,18 @@ export default function ProductCard({
         )}
         {product.shop_name && (
           <p className="card-shop">
-            <Link
-              to={
-                // Un produit DIGITAL est publié par un CRÉATEUR : l'étiquette et
-                // le lien suivent la nature du produit, pas seulement le rôle du
-                // compte (un compte de service peut aussi publier du digital).
-                product.shop_role === "creator" || product.is_digital === true
-                  ? `/createur/${product.shop_id}`
-                  : `/boutique/${product.shop_id}`
-              }
-              onClick={(e) => e.stopPropagation()}
+            <button
+              type="button"
+              className="card-shop-link"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigate(
+                  product.shop_role === "creator" || product.is_digital === true
+                    ? `/createur/${product.shop_id}`
+                    : `/boutique/${product.shop_id}`
+                );
+              }}
             >
               {product.shop_avatar && (
                 <img
@@ -188,7 +190,7 @@ export default function ProductCard({
                   }
                 />
               )}
-            </Link>
+            </button>
           </p>
         )}
         <div className="price-box">

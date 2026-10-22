@@ -22,6 +22,7 @@ import { createProductSchema, productListQuerySchema, citiesQuerySchema } from "
 import { validate, validateQuery } from "../middlewares/validate.js";
 
 const router = Router();
+const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 // ─── Contenus PROTÉGÉS (vidéos YouTube non répertoriées) ────────────────────
 // Un produit digital de type "youtube" n'a AUCUN fichier : la vidéo est
@@ -400,7 +401,7 @@ const CAP_SORTS = {
   rating: "COALESCE(base_row.rating_avg, 0) DESC, base_row.created_at DESC",
 };
 
-router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
+router.get("/", validateQuery(productListQuerySchema), ah(async (req, res) => {
   // Le catalogue digital ne doit jamais être réutilisé depuis un ancien cache :
   // ses réponses doivent refléter immédiatement toute publication récente.
   if (req.query.type === "digital") {
@@ -566,9 +567,9 @@ router.get("/", validateQuery(productListQuerySchema), async (req, res) => {
   if (countryNorm) params.push(countryNorm);
   const products = (await q(fullSql, params)).map(productRow);
   res.json({ products });
-});
+}));
 
-router.get("/mine", authRequired, roleRequired(...OWNER_ROLES), async (req, res) => {
+router.get("/mine", authRequired, roleRequired(...OWNER_ROLES), ah(async (req, res) => {
   const products = (
     await q(
       SELECT_OWNER_PRODUCT +
@@ -579,9 +580,9 @@ router.get("/mine", authRequired, roleRequired(...OWNER_ROLES), async (req, res)
     )
   ).map((p) => productRow(p, "list", { ownerView: true }));
   res.json({ products });
-});
+}));
 
-router.get("/cities", validateQuery(citiesQuerySchema), async (req, res) => {
+router.get("/cities", validateQuery(citiesQuerySchema), ah(async (req, res) => {
   const { q: search } = req.query;
   const rows = await q(
     `SELECT DISTINCT
@@ -612,9 +613,9 @@ router.get("/cities", validateQuery(citiesQuerySchema), async (req, res) => {
       )
     : suggestions;
   res.json({ cities: filtered });
-});
+}));
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", ah(async (req, res) => {
   cachePublic(res, 120);
   const product = productRow(
     (await q(SELECT_PRODUCT + " WHERE p.id = $1", [Number(req.params.id)]))[0],
@@ -622,7 +623,7 @@ router.get("/:id", async (req, res) => {
   );
   if (!product) return res.status(404).json({ error: "Produit introuvable" });
   res.json({ product });
-});
+}));
 
 router.post(
   "/",

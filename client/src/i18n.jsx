@@ -54,6 +54,39 @@ const EN = {
   Accueil: "Home",
   Compte: "Account",
   "Tous droits réservés.": "All rights reserved.",
+  // Home services
+  "Nos services": "Our services",
+  "Nos services & expertise": "Our services & expertise",
+  "Au-delà du marché en ligne, MboppiShop vous accompagne pour grandir : formations, marketing digital, gestion de vos réseaux sociaux et bien plus. Des prestations claires, transparentes et adaptées à votre budget.":
+    "Beyond the online marketplace, MboppiShop helps you grow: training, digital marketing, social media management and more. Clear, transparent services tailored to your budget.",
+  Formations: "Training",
+  "Formations pratiques en présentiel et en ligne : commerce digital, vente en ligne, réseaux sociaux, création de contenu et entrepreneuriat. Pour débutants comme pour pros.":
+    "Practical in-person and online training: digital commerce, online selling, social media, content creation and entrepreneurship. For beginners and pros alike.",
+  "Demander le programme": "Request the program",
+  "SMM — Social Media Marketing": "SMM — Social Media Marketing",
+  "Stratégies marketing sur les réseaux sociaux : campagnes ciblées, publicités sponsorisées, optimisation de vos pages et suivi des résultats pour maximiser votre visibilité.":
+    "Social media marketing strategies: targeted campaigns, sponsored ads, page optimization and performance tracking to maximize your visibility.",
+  "Lancer une campagne": "Launch a campaign",
+  "Gestion des réseaux sociaux": "Social media management",
+  "Community management complet : publication régulière, animation de communauté, réponses aux messages, modération et reporting mensuel pour garder vos comptes vivants.":
+    "Full community management: regular posting, community engagement, message replies, moderation and monthly reporting to keep your accounts alive.",
+  "Confier mes réseaux": "Entrust my networks",
+  "Création de contenu": "Content creation",
+  "Contenus qui captent : posts, stories, reels, vidéos courtes, scripts et calendriers éditoriaux pensés pour votre audience et votre secteur.":
+    "Engaging content: posts, stories, reels, short videos, scripts and editorial calendars tailored to your audience and industry.",
+  "Créer du contenu": "Create content",
+  "Design graphique": "Graphic design",
+  "Identité visuelle, logos, flyers, affiches, bannières et visuels pour vos produits et campagnes. Des créations professionnelles qui renforcent votre image.":
+    "Visual identity, logos, flyers, posters, banners and visuals for your products and campaigns. Professional creations that strengthen your brand.",
+  "Demander un design": "Request a design",
+  "Conseil & accompagnement": "Consulting & support",
+  "Accompagnement personnalisé pour votre projet : stratégie digitale, positionnement, plan d'action et suivi. On avance ensemble, étape par étape.":
+    "Personalized support for your project: digital strategy, positioning, action plan and follow-up. We move forward together, step by step.",
+  "Prendre rendez-vous": "Book an appointment",
+  "Tarifs transparents, devis gratuit sous 24 h. Paiement mobile money, virement ou espèces. Contactez-nous pour une offre sur mesure.":
+    "Transparent pricing, free quote within 24 h. Mobile money, bank transfer or cash. Contact us for a custom offer.",
+  "Demander un devis gratuit": "Request a free quote",
+
 
   // Newsletter
   "Restez informé": "Stay informed",

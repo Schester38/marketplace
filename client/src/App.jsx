@@ -679,6 +679,7 @@ export default function App() {
         <Suspense fallback={<LoadingScreen />}>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/boutiques" element={<Home />} />
             <Route path="/panier" element={<Cart />} />
             <Route
               path="/favoris"

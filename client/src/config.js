@@ -258,7 +258,7 @@ export const PHYSICAL_CATEGORIES = [
 
 // Union historique (navbar, formulaires, grille de catégories) : physique +
 // digitale. Les volets de l'accueil utilisent les listes pures ci-dessus.
-export const PRODUCT_CATEGORIES = [...PHYSICAL_CATEGORIES, ...DIGITAL_CATEGORIES];
+export const PRODUCT_CATEGORIES = [...new Set([...PHYSICAL_CATEGORIES, ...DIGITAL_CATEGORIES])];
 
 export const OPERATORS_BY_COUNTRY = {
   Cameroun: ["ORANGE", "MTN"],

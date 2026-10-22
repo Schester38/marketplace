@@ -1,6 +1,6 @@
 import { storage, sessionStore } from "../storage";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import ProductCard, { formatMoney } from "../components/ProductCard.jsx";
 import ProductRail, { RailShell } from "../components/ProductRail.jsx";
@@ -45,6 +45,9 @@ export default function Home() {
   const { t } = useLang();
   const { user } = useAuth();
   const [params, setSearchParams] = useSearchParams();
+  const hideProducts = params.get("noprod") === "1";
+  const location = useLocation();
+  const isBoutique = location.pathname === "/boutiques";
   const mounted = useRef(true);
   // Chaque changement de filtre doit invalider la réponse précédente : sans ce
   // jeton, une requête « physiques » tardive peut écraser la réponse « digital »
@@ -711,6 +714,113 @@ export default function Home() {
       <Reveal delay={140}>
         <TrustBadges />
       </Reveal>
+      {!isBoutique && (
+      <Reveal delay={180}>
+        <section className="section home-services" aria-label={t("Nos services")}>
+          <div className="section-head" style={{ textAlign: "center", justifyContent: "center" }}>
+            <h2 className="section-title">
+              ✨ {t("Nos services & expertise")}
+            </h2>
+            <p>
+              {t(
+                "Au-delà du marché en ligne, MboppiShop vous accompagne pour grandir : formations, marketing digital, gestion de vos réseaux sociaux et bien plus. Des prestations claires, transparentes et adaptées à votre budget."
+              )}
+            </p>
+          </div>
+
+          <div className="home-services-grid">
+            {[
+              {
+                icon: "🎓",
+                title: t("Formations"),
+                desc: t(
+                  "Formations pratiques en présentiel et en ligne : commerce digital, vente en ligne, réseaux sociaux, création de contenu et entrepreneuriat. Pour débutants comme pour pros."
+                ),
+                cta: t("Demander le programme"),
+                href: "https://wa.me/237699486146?text=Bonjour%2C%20je%20souhaite%20des%20informations%20sur%20vos%20formations.",
+              },
+              {
+                icon: "📈",
+                title: t("SMM — Social Media Marketing"),
+                desc: t(
+                  "Stratégies marketing sur les réseaux sociaux : campagnes ciblées, publicités sponsorisées, optimisation de vos pages et suivi des résultats pour maximiser votre visibilité."
+                ),
+                cta: t("Lancer une campagne"),
+                href: "https://wa.me/237699486146?text=Bonjour%2C%20je%20souhaite%20lancer%20une%20campagne%20SMM.",
+              },
+              {
+                icon: "📱",
+                title: t("Gestion des réseaux sociaux"),
+                desc: t(
+                  "Community management complet : publication régulière, animation de communauté, réponses aux messages, modération et reporting mensuel pour garder vos comptes vivants."
+                ),
+                cta: t("Confier mes réseaux"),
+                href: "https://wa.me/237699486146?text=Bonjour%2C%20je%20souhaite%20confier%20la%20gestion%20de%20mes%20r%C3%A9seaux%20sociaux.",
+              },
+              {
+                icon: "🎬",
+                title: t("Création de contenu"),
+                desc: t(
+                  "Contenus qui captent : posts, stories, reels, vidéos courtes, scripts et calendriers éditoriaux pensés pour votre audience et votre secteur."
+                ),
+                cta: t("Créer du contenu"),
+                href: "https://wa.me/237699486146?text=Bonjour%2C%20je%20souhaite%20faire%20cr%C3%A9er%20du%20contenu.",
+              },
+              {
+                icon: "🎨",
+                title: t("Design graphique"),
+                desc: t(
+                  "Identité visuelle, logos, flyers, affiches, bannières et visuels pour vos produits et campagnes. Des créations professionnelles qui renforcent votre image."
+                ),
+                cta: t("Demander un design"),
+                href: "https://wa.me/237699486146?text=Bonjour%2C%20je%20souhaite%20un%20design%20graphique.",
+              },
+              {
+                icon: "🤝",
+                title: t("Conseil & accompagnement"),
+                desc: t(
+                  "Accompagnement personnalisé pour votre projet : stratégie digitale, positionnement, plan d'action et suivi. On avance ensemble, étape par étape."
+                ),
+                cta: t("Prendre rendez-vous"),
+                href: "https://wa.me/237699486146?text=Bonjour%2C%20je%20souhaite%20un%20accompagnement.",
+              },
+            ].map((s, i) => (
+              <div className="home-service-card" key={i}>
+                <div className="home-service-icon" aria-hidden="true">
+                  {s.icon}
+                </div>
+                <h3 className="home-service-title">{s.title}</h3>
+                <p className="home-service-desc">{s.desc}</p>
+                <a
+                  className="btn btn-outline home-service-cta"
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {s.cta} →
+                </a>
+              </div>
+            ))}
+          </div>
+
+          <div className="home-services-footer">
+            <p>
+              {t(
+                "Tarifs transparents, devis gratuit sous 24 h. Paiement mobile money, virement ou espèces. Contactez-nous pour une offre sur mesure."
+              )}
+            </p>
+            <a
+              className="btn btn-primary"
+              href="https://wa.me/237699486146?text=Bonjour%2C%20je%20souhaite%20un%20devis%20pour%20vos%20services."
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              💬 {t("Demander un devis gratuit")}
+            </a>
+          </div>
+        </section>
+      </Reveal>
+      )}
 
       {!user && (
         <>
@@ -816,6 +926,7 @@ export default function Home() {
         </>
       )}
 
+{!hideProducts && (
       <section ref={produitsRef} aria-label={t("Produits")} style={{ scrollMarginTop: 80 }}>
         <div className="section-head">
           <h2 className="section-title">
@@ -1318,6 +1429,7 @@ export default function Home() {
           </>
         )}
       </section>
+      )}
     </main>
   );
 }

@@ -3,6 +3,7 @@ import { q } from "../db.js";
 import { listPhotos } from "../photo.js";
 
 const router = Router();
+const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const MAX_BATCH = 50;
 const MAX_PATH = 200;
 
@@ -54,7 +55,7 @@ function throttleView(visitorId, type, id) {
   return false;
 }
 
-router.post("/views", async (req, res) => {
+router.post("/views", ah(async (req, res) => {
   // Bots ignorés (réponses identiques).
   if (isBotRequest(req)) return res.json({ ok: true, counted: 0, ignored: "bot" });
   const visitorId = String(req.get("X-Visitor-Id") || "").slice(0, 100);
@@ -81,9 +82,9 @@ router.post("/views", async (req, res) => {
     );
   }
   res.json({ ok: true, counted });
-});
+}));
 
-router.post("/visit", async (req, res) => {
+router.post("/visit", ah(async (req, res) => {
   // Bots ignorés (réponses identiques).
   if (isBotRequest(req)) return res.json({ ok: true, ignored: "bot" });
   const path = String((req.body && req.body.path) || req.path || "/").slice(0, MAX_PATH);
@@ -103,21 +104,21 @@ router.post("/visit", async (req, res) => {
     [visitorId, path, country]
   );
   res.json({ ok: true });
-});
+}));
 
 // Mesure d'ouverture des notifications push (envoyé par le service worker au
 // clic sur une notification) : journalisé dans client_logs pour mesurer
 // l'efficacité des campagnes (flash, digest, messages).
-router.post("/push-open", async (req, res) => {
+router.post("/push-open", ah(async (req, res) => {
   const tag = String((req.body && req.body.tag) || "").slice(0, 120);
   await q(`INSERT INTO client_logs (message, url) VALUES ($1, $2)`, [
     `push_open${tag ? `: ${tag}` : ""}`,
     "/",
   ]);
   res.json({ ok: true });
-});
+}));
 
-router.get("/trending", async (req, res) => {
+router.get("/trending", ah(async (req, res) => {
   const type = req.query.type === "digital" ? "digital" : req.query.type === "physical" ? "physical" : "";
   // Le catalogue digital doit être visible rapidement après publication, mais
   // reste mis en cache CDN 30 s : sinon chaque onglet déclenche quatre requêtes
@@ -173,7 +174,7 @@ router.get("/trending", async (req, res) => {
     }
   }
   res.json({ products });
-});
+}));
 
 // Compteurs publics (preuve sociale) pour l'accueil (boutiques actives,
 // vendeurs/créateurs, livreurs, commandes livrées, produits en stock). Lecture

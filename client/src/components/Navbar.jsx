@@ -1276,29 +1276,31 @@ export default function Navbar({ onLogout }) {
       {/* Category bar - Line 2 : barre statique cliquable + méga-menu + liens rapides */}
       <nav className="cat-bar" aria-label={t("Catégories")} role="navigation">
         <div className="cat-bar-inner">
-          <div className="cat-links" ref={catLinksRef} aria-label={t("Parcourir les catégories")}>
-            <Link
-              to="/"
-              onClick={close}
-              className={`cat-link cat-link-all${onAllCategories ? " cat-active" : ""}`}
-              role="tab"
-              aria-selected={false}
-            >
+          <div className="cat-links" ref={catLinksRef} aria-label={t("Navigation")}>
+            <Link to="/?noprod=1" onClick={close} className="cat-link">
               <span className="cat-icon" aria-hidden="true">
                 <IconGrid size={14} />
               </span>
-              <span className="cat-label">{t("Tous")}</span>
+              <span className="cat-label">{t("Accueil")}</span>
             </Link>
-            <MegaMenu
-              megaMenuItems={megaMenuItems}
-              megaMenuOpen={megaMenuOpen}
-              handleMegaMenuEnter={handleMegaMenuEnter}
-              handleMegaMenuLeave={handleMegaMenuLeave}
-              close={close}
-              closeMegaMenu={closeMegaMenu}
-              t={t}
-              activeCat={activeCat}
-            />
+            <Link to="/boutiques" onClick={close} className="cat-link">
+              <span className="cat-icon" aria-hidden="true">
+                <IconStore size={14} />
+              </span>
+              <span className="cat-label">{t("Boutique")}</span>
+            </Link>
+            <Link to="/formations" onClick={close} className="cat-link">
+              <span className="cat-icon" aria-hidden="true">
+                <IconBook size={14} />
+              </span>
+              <span className="cat-label">{t("Formations")}</span>
+            </Link>
+            <Link to="/smm" onClick={close} className="cat-link">
+              <span className="cat-icon" aria-hidden="true">
+                <IconWrench size={14} />
+              </span>
+              <span className="cat-label">{t("SMM")}</span>
+            </Link>
           </div>
           <div className="cat-quick" aria-label={t("Liens rapides")}>
             <Link to="/vendre" onClick={close} className="quick-link quick-accent">

@@ -5860,10 +5860,18 @@ a.step {
   font-size: 0.7rem;
   color: var(--muted);
 }
-.card-shop a {
+.card-shop a,
+.card-shop button.card-shop-link {
   color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
 }
-.card-shop a:hover {
+.card-shop a:hover,
+.card-shop button.card-shop-link:hover {
   text-decoration: underline;
 }
 .card-shop span {
@@ -11931,5 +11939,114 @@ a.step {
   padding-top: 1.5em;
   border-top: 1px solid rgba(128, 128, 128, 0.25);
   font-size: 0.92rem;
+}
+
+/* ===== Home services & expertise (glass) ===== */
+.home-services {
+  margin-top: 24px;
+}
+.home-services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  margin-top: 8px;
+}
+.home-service-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 20px;
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.55),
+    rgba(255, 255, 255, 0.25)
+  );
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 8px 32px rgba(15, 20, 26, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  overflow: hidden;
+}
+[data-theme="dark"] .home-service-card {
+  background: linear-gradient(
+    135deg,
+    rgba(30, 40, 55, 0.55),
+    rgba(20, 28, 40, 0.35)
+  );
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.home-service-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    120% 80% at 0% 0%,
+    rgba(238, 125, 0, 0.12),
+    transparent 60%
+  );
+  pointer-events: none;
+}
+.home-service-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary);
+  box-shadow:
+    0 14px 40px rgba(238, 125, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.home-service-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.15));
+}
+.home-service-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.home-service-desc {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  flex: 1;
+}
+.home-service-cta {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 0.88rem;
+  padding: 8px 14px;
+  border-radius: 999px;
+}
+.home-services-footer {
+  margin-top: 28px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.home-services-footer p {
+  max-width: 640px;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+}
+@media (max-width: 640px) {
+  .home-services-grid {
+    grid-template-columns: 1fr;
+  }
+  .home-service-card {
+    padding: 18px 16px;
+  }
 }
 
