@@ -66,6 +66,8 @@ export default function ProductDetail() {
   const [dBuy, setDBuy] = useState(null);
   const dBuyRef = useRef(null);
   const dPollRef = useRef(null);
+  const [directBusy, setDirectBusy] = useState(false);
+  const [directVideoSrc, setDirectVideoSrc] = useState(null);
 
   // Une navigation SPA conserve parfois le scroll de la page catalogue.
   // On remet la fiche produit en haut AVANT le premier rendu visible, sinon
@@ -289,6 +291,8 @@ export default function ProductDetail() {
   }
 
   const isOwner = user && Number(user.id) === Number(product.shop_id);
+  const isPrivilegedDigital =
+    !!user && (user.role === "admin" || Number(user.id) === Number(product.shop_id));
   const deliveryFee = Number(product.delivery_fee || 0);
   const symbol = countrySymbol(product?.shop_country);
   const inStock = product.is_digital ? 9999 : Number(product.quantity || 0);
@@ -384,6 +388,33 @@ export default function ProductDetail() {
       setDBuy((b) => ({ ...b, stage: "ready", err: e.message }));
     }
   };
+  // Accès DIRECT (admin / propriétaire) à un produit digital : pas de vente,
+  // pas de paiement, pas de quota ni de journalisation. Fichier → URL signée ;
+  // vidéo → iframe YouTube protégée.
+  const directDigitalAccess = async () => {
+    if (!product || !product.is_digital) return;
+    setDirectBusy(true);
+    setDirectVideoSrc(null);
+    try {
+      const d = await api.digitalProductAccess(product.id);
+      if (d.kind === "youtube") {
+        setDirectVideoSrc(d.embed_src);
+      } else {
+        const a = document.createElement("a");
+        a.href = d.url;
+        a.rel = "noopener";
+        if (d.name) a.download = d.name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    } catch (e) {
+      setError(e.message || String(e));
+    } finally {
+      setDirectBusy(false);
+    }
+  };
+
   // ------------------------------------------------------------------
   const oldPrice = Number(
     flash
@@ -692,7 +723,35 @@ export default function ProductDetail() {
               )}
             </ul>
 
-            {product.is_digital && !isOwner && (
+            {product.is_digital && isPrivilegedDigital && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-cart btn-block"
+                  onClick={directDigitalAccess}
+                  disabled={directBusy}
+                >
+                  {directBusy
+                    ? `⏳ ${t("Préparation…")}`
+                    : product.digital_kind === "youtube"
+                      ? `▶ ${t("Regarder la vidéo")}`
+                      : `⬇️ ${t("Télécharger")}`}
+                </button>
+                {directVideoSrc && (
+                  <div className="protected-video-frame" style={{ marginTop: 12 }}>
+                    <iframe
+                      src={directVideoSrc}
+                      title={product.name}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      referrerPolicy="strict-origin-when-cross-origin"
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+            {product.is_digital && !isPrivilegedDigital && (
               <>
                 <button
                   type="button"

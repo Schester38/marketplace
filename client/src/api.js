@@ -291,6 +291,8 @@ export const api = {
   // Gestion des accès d'une vidéo protégée (créateur propriétaire ou admin) :
   // liste des acheteurs + révocation/rétablissement + prolongation.
   // `data` : true/false (raccourci révocation) ou { revoked } / { extend_days }.
+  digitalProductAccess: (productId) =>
+    request(`/digital/product/${productId}/access`),
   digitalProductAccesses: (productId) =>
     request(`/digital/product/${productId}/accesses`),
   digitalAccessSet: (productId, saleId, data) =>
