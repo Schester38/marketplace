@@ -1,12 +1,12 @@
-import pg from "pg";
+﻿import pg from "pg";
 
 const { Pool } = pg;
 
-// Une version de schéma doit être incrémentée uniquement lorsqu'une nouvelle
-// migration est ajoutée à initDb(). Sans ce garde-fou, chaque cold start Vercel
+// Une version de schÃ©ma doit Ãªtre incrÃ©mentÃ©e uniquement lorsqu'une nouvelle
+// migration est ajoutÃ©e Ã  initDb(). Sans ce garde-fou, chaque cold start Vercel
 // rejouait toutes les CREATE/ALTER/INDEX et produisait des logs PostgreSQL.
-// Marqueur de schéma : à incrémenter à CHAQUE changement de structure, sinon
-// initDb() (marqueur déjà posé) ne rejoue pas les migrations sur une base en
+// Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
+// initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
 const DB_INIT_VERSION = "2026-10-24-mboppi-boost-services-v1";
 const DB_INIT_LOCK = "mboppi-db-init-v1";
@@ -14,11 +14,11 @@ let initDbPromise = null;
 
 const LOCAL_DEFAULT = "postgres://postgres:postgres@localhost:5432/marketplace";
 
-// PRIORITÉ : DATABASE_URL (l'URL qui a toujours fonctionné en production).
-// DATABASE_URL_POOLED (PgBouncer) est gardé en secours uniquement : sa valeur
-// sur Vercel contient un mot de passe invalide (« password authentication
-// failed for user "postgres" ») — elle ne doit redevenir prioritaire qu'après
-// correction du mot de passe dans les réglages Vercel.
+// PRIORITÃ‰ : DATABASE_URL (l'URL qui a toujours fonctionnÃ© en production).
+// DATABASE_URL_POOLED (PgBouncer) est gardÃ© en secours uniquement : sa valeur
+// sur Vercel contient un mot de passe invalide (Â« password authentication
+// failed for user "postgres" Â») â€” elle ne doit redevenir prioritaire qu'aprÃ¨s
+// correction du mot de passe dans les rÃ©glages Vercel.
 const dbCandidates = [process.env.DATABASE_URL, process.env.DATABASE_URL_POOLED].filter(Boolean);
 if (!dbCandidates.length) dbCandidates.push(LOCAL_DEFAULT);
 
@@ -31,21 +31,21 @@ function createPool(url) {
     connectionString: url,
     ssl: url !== LOCAL_DEFAULT ? { rejectUnauthorized: false } : undefined,
     // Robustesse serverless (Vercel) :
-    //  - max bas (2) : avec DATABASE_URL_POOLED (PgBouncer) les requêtes logiques
-    //    sont multiplexées sur un petit pool physique — pas besoin de beaucoup de
-    //    connexions par instance. Évite aussi de saturer PgBouncer lui-même.
+    //  - max bas (2) : avec DATABASE_URL_POOLED (PgBouncer) les requÃªtes logiques
+    //    sont multiplexÃ©es sur un petit pool physique â€” pas besoin de beaucoup de
+    //    connexions par instance. Ã‰vite aussi de saturer PgBouncer lui-mÃªme.
     //  - connectionTimeoutMillis : si le pool de l'instance est plein (rafale de
-    //    requêtes, ex. panneau admin qui poll en parallèle), les requêtes
-    //    attendent AVANT d'échouer (8 s) — évite des 500 en épingle.
-    //  - idleTimeoutMillis : libère les connexions inactives, réduit la pression.
+    //    requÃªtes, ex. panneau admin qui poll en parallÃ¨le), les requÃªtes
+    //    attendent AVANT d'Ã©chouer (8 s) â€” Ã©vite des 500 en Ã©pingle.
+    //  - idleTimeoutMillis : libÃ¨re les connexions inactives, rÃ©duit la pression.
     max: 2,
     connectionTimeoutMillis: 8000,
     idleTimeoutMillis: 10000,
   });
   // CRITIQUE : sans ce handler, quand Supabase ferme une connexion idle (timeout,
-  // redémarrage, coupure réseau), pg émet un événement 'error' NON géré sur le
-  // pool → crash de l'instance Node → « erreur interne de serveur » sur toutes
-  // les requêtes en vol. On capture et on loggie à la place.
+  // redÃ©marrage, coupure rÃ©seau), pg Ã©met un Ã©vÃ©nement 'error' NON gÃ©rÃ© sur le
+  // pool â†’ crash de l'instance Node â†’ Â« erreur interne de serveur Â» sur toutes
+  // les requÃªtes en vol. On capture et on loggie Ã  la place.
   p.on("error", (err) => {
     console.error("[db] erreur de connexion PostgreSQL (pool) :", err.message);
   });
@@ -55,11 +55,11 @@ function createPool(url) {
   return p;
 }
 
-// Pool initial : premier candidat (DATABASE_URL). La sélection définitive se
-// fait ci-dessous EN ARRIÈRE-PLAN (sans bloquer le chargement du module — des
+// Pool initial : premier candidat (DATABASE_URL). La sÃ©lection dÃ©finitive se
+// fait ci-dessous EN ARRIÃˆRE-PLAN (sans bloquer le chargement du module â€” des
 // tests importent db.js en cascade) : on sonde chaque URL avec une vraie
-// connexion et le pool est remplacé à chaud si une URL fonctionnelle est
-// trouvée (ex. mot de passe invalide sur la prioritaire).
+// connexion et le pool est remplacÃ© Ã  chaud si une URL fonctionnelle est
+// trouvÃ©e (ex. mot de passe invalide sur la prioritaire).
 let currentUrl = dbCandidates[0];
 let pool = createPool(currentUrl);
 
@@ -86,10 +86,10 @@ async function probeDbUrl(url) {
       ok = true;
       break;
     } catch (err) {
-      console.error(`[db] URL de base de données rejetée (${err.message}) : ${maskUrl(candidate)}`);
+      console.error(`[db] URL de base de donnÃ©es rejetÃ©e (${err.message}) : ${maskUrl(candidate)}`);
     }
   }
-  if (!ok) return; // aucune URL fonctionnelle : on garde le pool initial (erreurs explicites côté requêtes)
+  if (!ok) return; // aucune URL fonctionnelle : on garde le pool initial (erreurs explicites cÃ´tÃ© requÃªtes)
   if (chosen !== currentUrl) {
     const old = pool;
     currentUrl = chosen;
@@ -215,11 +215,11 @@ async function runInitDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
-    -- Origine (hôte) du service worker qui a créé l'abonnement : un push est
-    -- affiché par le SW de CETTE origine — un abonnement créé sur l'ancien
-    -- alias ou l'apex faisait donc apparaître l'ancienne URL sous la
+    -- Origine (hÃ´te) du service worker qui a crÃ©Ã© l'abonnement : un push est
+    -- affichÃ© par le SW de CETTE origine â€” un abonnement crÃ©Ã© sur l'ancien
+    -- alias ou l'apex faisait donc apparaÃ®tre l'ancienne URL sous la
     -- notification. Les envois ne visent que les origines officielles
-    -- (server/urls.js), les autres se réabonnent sur le domaine officiel.
+    -- (server/urls.js), les autres se rÃ©abonnent sur le domaine officiel.
     ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS origin TEXT;
 
     CREATE TABLE IF NOT EXISTS newsletter_subscribers (
@@ -252,10 +252,10 @@ async function runInitDb() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS verified BOOLEAN NOT NULL DEFAULT FALSE;
   `);
 
-  // admin_approved : backfill UNIQUEMENT à la création de la colonne.
-  // ⚠️ Ne JAMAIS resynchroniser admin_approved sur verified à chaque boot :
+  // admin_approved : backfill UNIQUEMENT Ã  la crÃ©ation de la colonne.
+  // âš ï¸ Ne JAMAIS resynchroniser admin_approved sur verified Ã  chaque boot :
   // l'admin ouvre les comptes (admin_approved = TRUE alors que verified reste
-  // FALSE) — une resynchronisation les refermerait à chaque cold start.
+  // FALSE) â€” une resynchronisation les refermerait Ã  chaque cold start.
   {
     const { rows: pre } = await pool.query(
       `SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'users' AND column_name = 'admin_approved') AS existed`
@@ -296,8 +296,8 @@ async function runInitDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_code TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_city TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_address TEXT;
-    -- E-mail de l'acheteur (facultatif, saisi à la commande) : reçu, suivi, et
-    -- invitation à laisser un avis Trustpilot après la livraison (BCC).
+    -- E-mail de l'acheteur (facultatif, saisi Ã  la commande) : reÃ§u, suivi, et
+    -- invitation Ã  laisser un avis Trustpilot aprÃ¨s la livraison (BCC).
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_email TEXT;
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS buyer_email TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivery_fee REAL NOT NULL DEFAULT 0;
@@ -305,28 +305,28 @@ async function runInitDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS confirm_code TEXT;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS delivered_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
-    -- Signature du client (PNG data URI) capturée par le livreur à la
-    -- livraison, réaffichée sur la facture PDF.
+    -- Signature du client (PNG data URI) capturÃ©e par le livreur Ã  la
+    -- livraison, rÃ©affichÃ©e sur la facture PDF.
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS signature TEXT;
-    -- Marquage « prise en charge par un livreur » — posé quand un livreur
-    -- authentifié consulte l'espace de la boutique (serve de preuve et
-    -- déclenche la confirmation automatique de la commande).
+    -- Marquage Â« prise en charge par un livreur Â» â€” posÃ© quand un livreur
+    -- authentifiÃ© consulte l'espace de la boutique (serve de preuve et
+    -- dÃ©clenche la confirmation automatique de la commande).
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_viewed_at TIMESTAMPTZ;
-    -- Suivi GPS temps réel d'une livraison : position actuelle du livreur +
-    -- trace (dernier ~60 points) + position GPS du client (partagée à la
-    -- commande). Masquées dès que la vente n'est plus pending/confirmed.
+    -- Suivi GPS temps rÃ©el d'une livraison : position actuelle du livreur +
+    -- trace (dernier ~60 points) + position GPS du client (partagÃ©e Ã  la
+    -- commande). MasquÃ©es dÃ¨s que la vente n'est plus pending/confirmed.
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_lat DOUBLE PRECISION;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_lng DOUBLE PRECISION;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_pos_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS livreur_track JSONB NOT NULL DEFAULT '[]'::jsonb;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_lat DOUBLE PRECISION;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_lng DOUBLE PRECISION;
-    -- Position GPS partagée volontairement par la boutique (carte de suivi).
+    -- Position GPS partagÃ©e volontairement par la boutique (carte de suivi).
     ALTER TABLE users ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;
-    -- Fraîcheur de la position : un livreur « disponible » met à jour cette
-    -- colonne à chaque ping → les cartes « à proximité » ne montrent que les
-    -- acteurs réellement en ligne (position < 10 min), pas les anciennes.
+    -- FraÃ®cheur de la position : un livreur Â« disponible Â» met Ã  jour cette
+    -- colonne Ã  chaque ping â†’ les cartes Â« Ã  proximitÃ© Â» ne montrent que les
+    -- acteurs rÃ©ellement en ligne (position < 10 min), pas les anciennes.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS position_updated_at TIMESTAMPTZ;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ;
@@ -369,11 +369,11 @@ async function runInitDb() {
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payout_initiated BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS payout_initiated_at TIMESTAMPTZ;
 
-    -- Email partagé : AUTORISÉ UNIQUEMENT entre un compte boutique (shop) et
+    -- Email partagÃ© : AUTORISÃ‰ UNIQUEMENT entre un compte boutique (shop) et
     -- un compte livreur. On remplace la contrainte globale UNIQUE (email) par
-    -- des index partiels. Cette partie est exécutée SEPAREMENT (ligne ci-dessous
-    -- en JS) avec try/catch : si la migration partielle échoue (ex. doublons
-    -- historiques), elle ne fait PAS échouer tout initDb.
+    -- des index partiels. Cette partie est exÃ©cutÃ©e SEPAREMENT (ligne ci-dessous
+    -- en JS) avec try/catch : si la migration partielle Ã©choue (ex. doublons
+    -- historiques), elle ne fait PAS Ã©chouer tout initDb.
     ALTER TABLE products ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'XAF';
@@ -406,13 +406,13 @@ async function runInitDb() {
     );
   `);
 
-  // ------------------------------------------------ MIGRATION EMAIL PARTAGÉ
-  // AUTORISÉ : boutique (shop) ↔ livreur uniquement. On remplace la
-  // contrainte globale UNIQUE(email) par des index partiels. EXÉCUTÉ
-  // SÉPARÉMENT avec try/catch : un échec ici ne doit PAS faire échouer le
+  // ------------------------------------------------ MIGRATION EMAIL PARTAGÃ‰
+  // AUTORISÃ‰ : boutique (shop) â†” livreur uniquement. On remplace la
+  // contrainte globale UNIQUE(email) par des index partiels. EXÃ‰CUTÃ‰
+  // SÃ‰PARÃ‰MENT avec try/catch : un Ã©chec ici ne doit PAS faire Ã©chouer le
   // reste de initDb (Ex : doublons historiques).
   try {
-    // 1) Retirer la contrainte globale UNIQUE(email) — quel que soit son nom réel.
+    // 1) Retirer la contrainte globale UNIQUE(email) â€” quel que soit son nom rÃ©el.
     const constraints = await pool.query(
       `SELECT conname FROM pg_constraint
        WHERE conrelid = 'users'::regclass AND contype = 'u'
@@ -424,7 +424,7 @@ async function runInitDb() {
     for (const row of constraints.rows) {
       await pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS "${row.conname}"`).catch(() => {});
     }
-    // 2) Index partiels (uniques) — le « one per email » se fait par rôle.
+    // 2) Index partiels (uniques) â€” le Â« one per email Â» se fait par rÃ´le.
     await pool
       .query(
         `CREATE UNIQUE INDEX IF NOT EXISTS users_email_shop_key ON users(email) WHERE role = 'shop'`
@@ -441,7 +441,7 @@ async function runInitDb() {
       )
       .catch(() => {});
   } catch (err) {
-    console.warn("[db] migration email partagé (boutique-livreur) ignorée :", err.message);
+    console.warn("[db] migration email partagÃ© (boutique-livreur) ignorÃ©e :", err.message);
   }
 
   await pool.query(`
@@ -457,11 +457,11 @@ async function runInitDb() {
     ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_external_reference TEXT;
   `);
 
-  // ------------------------------------- PRODUITS DIGITAUX (téléchargeables)
-  // Un produit digital n'est JAMAIS exposé par une URL publique : le fichier
-  // vit dans le bucket PRIVÉ `digital-products` (Supabase Storage) et n'est
-  // remis qu'en URL SIGNÉE à durée courte, après vérification du droit
-  // d'accès côté serveur (POST /api/digital/:saleId/download).
+  // ------------------------------------- PRODUITS DIGITAUX (tÃ©lÃ©chargeables)
+  // Un produit digital n'est JAMAIS exposÃ© par une URL publique : le fichier
+  // vit dans le bucket PRIVÃ‰ `digital-products` (Supabase Storage) et n'est
+  // remis qu'en URL SIGNÃ‰E Ã  durÃ©e courte, aprÃ¨s vÃ©rification du droit
+  // d'accÃ¨s cÃ´tÃ© serveur (POST /api/digital/:saleId/download).
   // `digital_downloads` sert de journal ET de compteur (quota par vente).
   await pool.query(`
     ALTER TABLE products ADD COLUMN IF NOT EXISTS is_digital BOOLEAN NOT NULL DEFAULT FALSE;
@@ -471,24 +471,24 @@ async function runInitDb() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_size BIGINT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_version INTEGER NOT NULL DEFAULT 1;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_download_limit INTEGER NOT NULL DEFAULT 5;
-    -- Contenus PROTÉGÉS (vidéos YouTube non répertoriées, expiration, révocation).
-    -- digital_kind : NULL/'file' = fichier téléchargeable (comportement historique),
-    -- 'youtube'    = vidéo hébergée sur YouTube (non répertoriée) — l'ID n'est
-    -- JAMAIS exposé publiquement (retiré par productRow) : il n'est remis qu'au
-    -- détenteur du droit, par GET /api/digital/:saleId/video.
-    -- access_days  : durée d'accès en jours après confirmation du paiement
-    --                (NULL = illimité, comportement historique).
+    -- Contenus PROTÃ‰GÃ‰S (vidÃ©os YouTube non rÃ©pertoriÃ©es, expiration, rÃ©vocation).
+    -- digital_kind : NULL/'file' = fichier tÃ©lÃ©chargeable (comportement historique),
+    -- 'youtube'    = vidÃ©o hÃ©bergÃ©e sur YouTube (non rÃ©pertoriÃ©e) â€” l'ID n'est
+    -- JAMAIS exposÃ© publiquement (retirÃ© par productRow) : il n'est remis qu'au
+    -- dÃ©tenteur du droit, par GET /api/digital/:saleId/video.
+    -- access_days  : durÃ©e d'accÃ¨s en jours aprÃ¨s confirmation du paiement
+    --                (NULL = illimitÃ©, comportement historique).
     ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_kind TEXT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS youtube_id TEXT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS access_days INTEGER;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS access_revoked BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS access_revoked_at TIMESTAMPTZ;
-    -- Prolongation d'accès PAR ACHETEUR : jours ajoutés à la durée du produit
+    -- Prolongation d'accÃ¨s PAR ACHETEUR : jours ajoutÃ©s Ã  la durÃ©e du produit
     -- (access_days) sans modifier la fiche produit ni les autres acheteurs.
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS access_days_extra INTEGER NOT NULL DEFAULT 0;
-    -- Journal enrichi : action = 'download' (historique, défaut) ou 'video'
-    -- (visionnage d'une vidéo protégée). Les visionnages ne consomment PAS le
-    -- quota de téléchargements (usedDownloads ne compte que 'download').
+    -- Journal enrichi : action = 'download' (historique, dÃ©faut) ou 'video'
+    -- (visionnage d'une vidÃ©o protÃ©gÃ©e). Les visionnages ne consomment PAS le
+    -- quota de tÃ©lÃ©chargements (usedDownloads ne compte que 'download').
     ALTER TABLE digital_downloads ADD COLUMN IF NOT EXISTS action TEXT NOT NULL DEFAULT 'download';
 
     ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_download_limit INTEGER NOT NULL DEFAULT 5;
@@ -504,9 +504,9 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_digital_downloads_sale ON digital_downloads(sale_id);
     CREATE INDEX IF NOT EXISTS idx_digital_downloads_user ON digital_downloads(user_id);
 
-    -- ACHATS DIGITAUX EN LIGNE (iKeePay) : paiement par vente + répartition
-    -- des gains par bénéficiaire (créateur / vendeur / parrain). Le
-    -- téléchargement s'ouvre quand sales.shop_confirmed_at est posé (webhook).
+    -- ACHATS DIGITAUX EN LIGNE (iKeePay) : paiement par vente + rÃ©partition
+    -- des gains par bÃ©nÃ©ficiaire (crÃ©ateur / vendeur / parrain). Le
+    -- tÃ©lÃ©chargement s'ouvre quand sales.shop_confirmed_at est posÃ© (webhook).
     CREATE TABLE IF NOT EXISTS digital_payments (
       id SERIAL PRIMARY KEY,
       sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
@@ -534,8 +534,8 @@ async function runInitDb() {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_online_earnings_sale_user ON online_earnings(sale_id, beneficiary_id, kind);
     CREATE INDEX IF NOT EXISTS idx_online_earnings_user ON online_earnings(beneficiary_id);
 
-    -- Demandes de retrait (créateur + vendeur) : même principe que les
-    -- retraits d'activation — l'admin paie manuellement (espèces/Mobile Money).
+    -- Demandes de retrait (crÃ©ateur + vendeur) : mÃªme principe que les
+    -- retraits d'activation â€” l'admin paie manuellement (espÃ¨ces/Mobile Money).
     CREATE TABLE IF NOT EXISTS online_withdrawals (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -555,12 +555,12 @@ async function runInitDb() {
   await pool
     .query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS paid_online_at TIMESTAMPTZ`)
     .catch((err) =>
-      console.warn("[db] colonne sales.paid_online_at ignorée :", err.message)
+      console.warn("[db] colonne sales.paid_online_at ignorÃ©e :", err.message)
     );
 
   // ------------------------------------- ACHATS DIGITAUX EN LIGNE (iKeePay)
-  // (tables déjà créées ci-dessus : digital_payments, online_earnings,
-  // online_withdrawals — ce bloc ne faisait que les dupliquer.)
+  // (tables dÃ©jÃ  crÃ©Ã©es ci-dessus : digital_payments, online_earnings,
+  // online_withdrawals â€” ce bloc ne faisait que les dupliquer.)
 
   await pool.query(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_seller_code ON users(seller_code) WHERE seller_code IS NOT NULL;
@@ -620,8 +620,8 @@ async function runInitDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_client_logs_created ON client_logs(created_at);
 
-    -- Préférences de notifications push par utilisateur (absence de ligne =
-    -- tout activé par défaut). L'utilisateur opt-out via Mon compte.
+    -- PrÃ©fÃ©rences de notifications push par utilisateur (absence de ligne =
+    -- tout activÃ© par dÃ©faut). L'utilisateur opt-out via Mon compte.
     CREATE TABLE IF NOT EXISTS push_prefs (
       user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       flash_ok BOOLEAN NOT NULL DEFAULT TRUE,
@@ -745,8 +745,8 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_payment_webhook_logs_order ON payment_webhook_logs(provider_order_id);
 
     -- FamiliCash : licences de l'application mobile. Le relais /familicash/api
-    -- crée une commande par achat, iKeePay confirme, puis la licence signée
-    -- (Ed25519) est stockée ici et vérifiable hors ligne par l'application.
+    -- crÃ©e une commande par achat, iKeePay confirme, puis la licence signÃ©e
+    -- (Ed25519) est stockÃ©e ici et vÃ©rifiable hors ligne par l'application.
     -- Aucune FK vers users : un foyer FamiliCash existe sans compte Mboppi.
     CREATE TABLE IF NOT EXISTS familicash_orders (
       id BIGSERIAL PRIMARY KEY,
@@ -768,8 +768,8 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_familicash_orders_expires ON familicash_orders(license_expires_at DESC) WHERE license_expires_at IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS ux_familicash_orders_pending ON familicash_orders(household_id, plan) WHERE status = 'pending';
 
-    -- Configuration plateforme (paiement) : mode manuel/automatique + clés iKeePay.
-    -- En mode automatique, seuls les PAYIN (adhésion, don) passent par iKeePay ;
+    -- Configuration plateforme (paiement) : mode manuel/automatique + clÃ©s iKeePay.
+    -- En mode automatique, seuls les PAYIN (adhÃ©sion, don) passent par iKeePay ;
     -- les versements vers vendeurs/parrains restent manuels.
     CREATE TABLE IF NOT EXISTS platform_settings (
       key TEXT PRIMARY KEY,
@@ -793,10 +793,10 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_users_city ON users(city);
   `);
 
-  // GÉNÉRATEUR DE DOCUMENTS (ebooks/PDF) — module isolé, tables ADDITIVES.
-  // owner_id n'a volontairement PAS de FK vers users : l'admin « virtuel »
+  // GÃ‰NÃ‰RATEUR DE DOCUMENTS (ebooks/PDF) â€” module isolÃ©, tables ADDITIVES.
+  // owner_id n'a volontairement PAS de FK vers users : l'admin Â« virtuel Â»
   // (id 0, connexion par mot de passe admin) n'existe pas dans la table users
-  // et doit pouvoir créer/sauvegarder des documents.
+  // et doit pouvoir crÃ©er/sauvegarder des documents.
   await pool.query(`
     CREATE TABLE IF NOT EXISTS gen_documents (
       id SERIAL PRIMARY KEY,
@@ -817,8 +817,8 @@ async function runInitDb() {
       back_cover JSONB NOT NULL DEFAULT '{}'::jsonb,
       protection JSONB NOT NULL DEFAULT '{}'::jsonb,
       content_hash TEXT NOT NULL DEFAULT '',
-      -- Produit digital publié depuis le Générateur (« Vendre sur MboppiShop ») :
-      -- une republication met à jour CE produit au lieu d'en créer un doublon.
+      -- Produit digital publiÃ© depuis le GÃ©nÃ©rateur (Â« Vendre sur MboppiShop Â») :
+      -- une republication met Ã  jour CE produit au lieu d'en crÃ©er un doublon.
       published_product_id INTEGER,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -839,8 +839,8 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_gen_versions_doc ON gen_versions(doc_id, created_at DESC);
   `);
 
-  // Migration additive (bases déjà créées par une version antérieure) : lien
-  // vers le produit digital publié. Un échec ne bloque pas le démarrage.
+  // Migration additive (bases dÃ©jÃ  crÃ©Ã©es par une version antÃ©rieure) : lien
+  // vers le produit digital publiÃ©. Un Ã©chec ne bloque pas le dÃ©marrage.
   try {
     await pool.query(
       `ALTER TABLE gen_documents ADD COLUMN IF NOT EXISTS published_product_id INTEGER`
@@ -849,9 +849,9 @@ async function runInitDb() {
     console.warn("[db] migration gen_documents.published_product_id :", err.message);
   }
 
-  // Migration additive (Studio d'édition page par page) : modèle structuré
-  // Page → éléments typés (JSONB). null = document jamais ouvert dans le
-  // Studio → le moteur historique (paginé) reste la seule source de vérité.
+  // Migration additive (Studio d'Ã©dition page par page) : modÃ¨le structurÃ©
+  // Page â†’ Ã©lÃ©ments typÃ©s (JSONB). null = document jamais ouvert dans le
+  // Studio â†’ le moteur historique (paginÃ©) reste la seule source de vÃ©ritÃ©.
   try {
     await pool.query(
       `ALTER TABLE gen_documents ADD COLUMN IF NOT EXISTS page_layout JSONB`
@@ -863,13 +863,13 @@ async function runInitDb() {
   try {
     await purgeOldTransactions();
   } catch {
-    /* purge best-effort : un échec ne doit pas bloquer le démarrage */
+    /* purge best-effort : un Ã©chec ne doit pas bloquer le dÃ©marrage */
   }
 
   // ===== MBOPPIBOOST : services de marketing digital =====
-  // Tables additives : catégories, services, fournisseurs, commandes, événements.
+  // Tables additives : catÃ©gories, services, fournisseurs, commandes, Ã©vÃ©nements.
   await pool.query(`
-    -- Catégories de services (audience, contenus, réseaux sociaux, publicité)
+    -- CatÃ©gories de services (audience, contenus, rÃ©seaux sociaux, publicitÃ©)
     CREATE TABLE IF NOT EXISTS smm_categories (
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
@@ -883,7 +883,7 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_smm_categories_slug ON smm_categories(slug);
     CREATE INDEX IF NOT EXISTS idx_smm_categories_active ON smm_categories(is_active);
 
-    -- Services de marketing digital (un service appartient à une catégorie)
+    -- Services de marketing digital (un service appartient Ã  une catÃ©gorie)
     CREATE TABLE IF NOT EXISTS smm_services (
       id SERIAL PRIMARY KEY,
       category_id INTEGER NOT NULL REFERENCES smm_categories(id) ON DELETE CASCADE,
@@ -908,7 +908,7 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_smm_services_category ON smm_services(category_id);
     CREATE INDEX IF NOT EXISTS idx_smm_services_status ON smm_services(status);
 
-    -- Fournisseurs SMM configurés (un seul actif à la fois)
+    -- Fournisseurs SMM configurÃ©s (un seul actif Ã  la fois)
     CREATE TABLE IF NOT EXISTS smm_providers (
       id SERIAL PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
@@ -921,7 +921,7 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_smm_providers_active ON smm_providers(is_active);
     CREATE INDEX IF NOT EXISTS idx_smm_providers_key ON smm_providers(provider_key);
 
-    -- Commandes MboppiBoost (passées par les clients)
+    -- Commandes MboppiBoost (passÃ©es par les clients)
     CREATE TABLE IF NOT EXISTS smm_orders (
       id BIGSERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
@@ -951,7 +951,7 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_smm_orders_idempotency ON smm_orders(idempotency_key) WHERE idempotency_key IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_smm_orders_external ON smm_orders(external_reference) WHERE external_reference IS NOT NULL;
 
-    -- Journal des événements de commande (traçabilité)
+    -- Journal des Ã©vÃ©nements de commande (traÃ§abilitÃ©)
     CREATE TABLE IF NOT EXISTS smm_order_events (
       id BIGSERIAL PRIMARY KEY,
       order_id BIGINT NOT NULL REFERENCES smm_orders(id) ON DELETE CASCADE,
@@ -964,7 +964,7 @@ async function runInitDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_smm_order_events_order ON smm_order_events(order_id, created_at DESC);
 
-    -- Mapping service interne ↔ service externe fournisseur
+    -- Mapping service interne â†” service externe fournisseur
     CREATE TABLE IF NOT EXISTS smm_provider_mappings (
       id SERIAL PRIMARY KEY,
       provider_id INTEGER NOT NULL REFERENCES smm_providers(id) ON DELETE CASCADE,
@@ -980,50 +980,50 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_smm_provider_mappings_provider ON smm_provider_mappings(provider_id);
     CREATE INDEX IF NOT EXISTS idx_smm_provider_mappings_service ON smm_provider_mappings(smm_service_id);
 
-    -- Données par défaut MboppiBoost (idempotent : ON CONFLICT DO NOTHING)
+    -- DonnÃ©es par dÃ©faut MboppiBoost (idempotent : ON CONFLICT DO NOTHING)
     INSERT INTO smm_categories (name, slug, description, icon, sort_order, is_active)
     VALUES
-      ('Développement de l\'audience', 'audience', 'Accroître votre visibilité numérique et développer votre communauté.', '📈', 1, TRUE),
-      ('Création de contenus', 'contenus', 'Contenus attractifs pour communiquer et promouvoir votre activité.', '🎨', 2, TRUE),
-      ('Gestion des réseaux sociaux', 'reseaux-sociaux', 'Animer votre communauté et développer une présence professionnelle.', '📱', 3, TRUE),
-      ('Publicité digitale', 'publicite', 'Préparer et optimiser vos campagnes publicitaires.', '💰', 4, TRUE)
+      ('DÃ©veloppement de l''audience', 'audience', 'AccroÃ®tre votre visibilitÃ© numÃ©rique et dÃ©velopper votre communautÃ©.', 'ðŸ“ˆ', 1, TRUE),
+      ('CrÃ©ation de contenus', 'contenus', 'Contenus attractifs pour communiquer et promouvoir votre activitÃ©.', 'ðŸŽ¨', 2, TRUE),
+      ('Gestion des rÃ©seaux sociaux', 'reseaux-sociaux', 'Animer votre communautÃ© et dÃ©velopper une prÃ©sence professionnelle.', 'ðŸ“±', 3, TRUE),
+      ('PublicitÃ© digitale', 'publicite', 'PrÃ©parer et optimiser vos campagnes publicitaires.', 'ðŸ’°', 4, TRUE)
     ON CONFLICT (slug) DO NOTHING;
 
     INSERT INTO smm_services (category_id, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order, created_at, updated_at)
     SELECT c.id, s.name, s.short_description, s.price, s.currency, s.billing_unit, s.status, s.is_automated, s.is_consulting, s.is_campaign, s.delivery_days, s.conditions, s.sort_order, now(), now()
     FROM (VALUES
-      ('audience', 'Conseil en stratégie de croissance', 'Accompagnement pour définir votre stratégie de croissance numérique.', 0, 'XAF', 'service', false, false, false, 30, NULL, 1),
-      ('audience', 'Optimisation des profils sociaux', 'Refonte et optimisation de vos profils sur les réseaux sociaux.', 0, 'XAF', 'service', false, false, false, 15, NULL, 2),
-      ('audience', 'Analyse de l\'audience', 'Analyse de votre audience actuelle et recommandations de ciblage.', 0, 'XAF', 'service', false, false, false, 7, NULL, 3),
-      ('contenus', 'Création d\'affiches publicitaires', 'Conception de visuels publicitaires pour vos campagnes.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
-      ('contenus', 'Création de vidéos courtes', 'Production de vidéos courtes (Reels, TikTok, Shorts) pour vos réseaux.', 0, 'XAF', 'article', false, false, false, 7, NULL, 2),
+      ('audience', 'Conseil en stratÃ©gie de croissance', 'Accompagnement pour dÃ©finir votre stratÃ©gie de croissance numÃ©rique.', 0, 'XAF', 'service', false, false, false, 30, NULL, 1),
+      ('audience', 'Optimisation des profils sociaux', 'Refonte et optimisation de vos profils sur les rÃ©seaux sociaux.', 0, 'XAF', 'service', false, false, false, 15, NULL, 2),
+      ('audience', 'Analyse de l''audience', 'Analyse de votre audience actuelle et recommandations de ciblage.', 0, 'XAF', 'service', false, false, false, 7, NULL, 3),
+      ('contenus', 'CrÃ©ation d''affiches publicitaires', 'Conception de visuels publicitaires pour vos campagnes.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
+      ('contenus', 'CrÃ©ation de vidÃ©os courtes', 'Production de vidÃ©os courtes (Reels, TikTok, Shorts) pour vos rÃ©seaux.', 0, 'XAF', 'article', false, false, false, 7, NULL, 2),
       ('contenus', 'Motion design', 'Animations graphiques et motion design pour vos contenus.', 0, 'XAF', 'article', false, false, false, 10, NULL, 3),
-      ('reseaux-sociaux', 'Gestion de pages professionnelles', 'Gestion complète de vos pages professionnelles sur les réseaux sociaux.', 0, 'XAF', 'mois', false, false, false, 30, NULL, 1),
-      ('reseaux-sociaux', 'Planification des publications', 'Calendrier éditorial et planification de vos publications.', 0, 'XAF', 'service', false, false, false, 5, NULL, 2),
-      ('reseaux-sociaux', 'Modération des commentaires', 'Modération et animation de votre communauté (commentaires, messages).', 0, 'XAF', 'mois', false, false, false, 30, NULL, 3),
-      ('publicite', 'Conception de publicités', 'Conception graphique de vos publicités digitales.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
-      ('publicite', 'Préparation de campagnes Meta Ads', 'Préparation et configuration de vos campagnes publicitaires Meta.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 2),
-      ('publicite', 'Préparation de campagnes TikTok Ads', 'Préparation et configuration de vos campagnes publicitaires TikTok.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 3)
+      ('reseaux-sociaux', 'Gestion de pages professionnelles', 'Gestion complÃ¨te de vos pages professionnelles sur les rÃ©seaux sociaux.', 0, 'XAF', 'mois', false, false, false, 30, NULL, 1),
+      ('reseaux-sociaux', 'Planification des publications', 'Calendrier Ã©ditorial et planification de vos publications.', 0, 'XAF', 'service', false, false, false, 5, NULL, 2),
+      ('reseaux-sociaux', 'ModÃ©ration des commentaires', 'ModÃ©ration et animation de votre communautÃ© (commentaires, messages).', 0, 'XAF', 'mois', false, false, false, 30, NULL, 3),
+      ('publicite', 'Conception de publicitÃ©s', 'Conception graphique de vos publicitÃ©s digitales.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
+      ('publicite', 'PrÃ©paration de campagnes Meta Ads', 'PrÃ©paration et configuration de vos campagnes publicitaires Meta.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 2),
+      ('publicite', 'PrÃ©paration de campagnes TikTok Ads', 'PrÃ©paration et configuration de vos campagnes publicitaires TikTok.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 3)
     ) AS s(cat_slug, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order)
     JOIN smm_categories c ON c.slug = s.cat_slug
     ON CONFLICT DO NOTHING;
   `);
 }
 
-// Lance le schéma une seule fois par version sur une base partagée. Le
-// marqueur est posé seulement après la réussite complète des migrations.
+// Lance le schÃ©ma une seule fois par version sur une base partagÃ©e. Le
+// marqueur est posÃ© seulement aprÃ¨s la rÃ©ussite complÃ¨te des migrations.
 // Une autre instance qui frappe pendant l'initialisation peut lire un ancien
-// marqueur et démarrer la même course : le verrou advisory PostgreSQL évite ce
-// doublon sans conserver d'état en mémoire entre fonctions Vercel.
+// marqueur et dÃ©marrer la mÃªme course : le verrou advisory PostgreSQL Ã©vite ce
+// doublon sans conserver d'Ã©tat en mÃ©moire entre fonctions Vercel.
 export async function initDb() {
   if (initDbPromise) return initDbPromise;
   initDbPromise = (async () => {
     const client = await getPool().connect();
     try {
-      // Attendre le propriétaire éventuel du verrou est volontaire : une autre
-      // instance doit lire le marqueur après la première, au lieu de believing
-      // que l'initialisation est terminée. Le verrou est de session et libéré
-      // dans le finally, même en cas d'erreur de migration.
+      // Attendre le propriÃ©taire Ã©ventuel du verrou est volontaire : une autre
+      // instance doit lire le marqueur aprÃ¨s la premiÃ¨re, au lieu de believing
+      // que l'initialisation est terminÃ©e. Le verrou est de session et libÃ©rÃ©
+      // dans le finally, mÃªme en cas d'erreur de migration.
       await client.query("SELECT pg_advisory_lock(hashtext($1))", [DB_INIT_LOCK]);
 
       let marker = null;
@@ -1034,7 +1034,7 @@ export async function initDb() {
           ])
         ).rows?.[0]?.value;
       } catch {
-        // Première installation : la table sera créée par runInitDb().
+        // PremiÃ¨re installation : la table sera crÃ©Ã©e par runInitDb().
       }
       if (marker === DB_INIT_VERSION) return;
 
@@ -1050,7 +1050,7 @@ export async function initDb() {
       client.release();
     }
   })().catch((err) => {
-    // Une instance suivante pourra réessayer si la migration a échoué.
+    // Une instance suivante pourra rÃ©essayer si la migration a Ã©chouÃ©.
     initDbPromise = null;
     throw err;
   });
@@ -1062,10 +1062,12 @@ const NOTIFICATION_RETENTION_DAYS = Number(process.env.NOTIFICATION_RETENTION_DA
 
 export async function purgeOldTransactions() {
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  // Les données financières sont conservées par défaut ~7 ans.
+  // Les donnÃ©es financiÃ¨res sont conservÃ©es par dÃ©faut ~7 ans.
   await getPool().query("DELETE FROM notifications WHERE created_at < $1", [
     new Date(Date.now() - NOTIFICATION_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
   ]);
   // Ne jamais supprimer automatiquement les ventes/commandes : elles constituent l'historique financier.
   void cutoff;
 }
+
+
