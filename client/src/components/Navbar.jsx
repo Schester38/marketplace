@@ -1077,7 +1077,7 @@ export default function Navbar({ onLogout }) {
 
   const navLinks = (
     <>
-      <Link to="/" onClick={close} className="drawer-link drawer-link-products">
+      <Link to="/boutiques" onClick={close} className="drawer-link drawer-link-products">
         <span className="dl-icon">
           <IconShoppingBag size={15} />
         </span>
@@ -1090,7 +1090,7 @@ export default function Navbar({ onLogout }) {
         <span className="dl-label">{t("Créateurs")}</span>
       </Link>
       <Link
-        to="/?type=physical"
+        to="/boutiques?type=physical"
         onClick={close}
         className="drawer-link drawer-link-learn"
       >
@@ -1277,25 +1277,25 @@ export default function Navbar({ onLogout }) {
       <nav className="cat-bar" aria-label={t("Catégories")} role="navigation">
         <div className="cat-bar-inner">
           <div className="cat-links" ref={catLinksRef} aria-label={t("Navigation")}>
-            <Link to="/?noprod=1" onClick={close} className="cat-link">
+            <Link to="/?noprod=1" onClick={close} className={`cat-link ${location.pathname === "/" ? "cat-active" : ""}`}>
               <span className="cat-icon" aria-hidden="true">
                 <IconGrid size={14} />
               </span>
               <span className="cat-label">{t("Accueil")}</span>
             </Link>
-            <Link to="/boutiques" onClick={close} className="cat-link">
+            <Link to="/boutiques" onClick={close} className={`cat-link ${location.pathname === "/boutiques" ? "cat-active" : ""}`}>
               <span className="cat-icon" aria-hidden="true">
                 <IconStore size={14} />
               </span>
               <span className="cat-label">{t("Boutique")}</span>
             </Link>
-            <Link to="/formations" onClick={close} className="cat-link">
+            <Link to="/formations" onClick={close} className={`cat-link ${location.pathname === "/formations" ? "cat-active" : ""}`}>
               <span className="cat-icon" aria-hidden="true">
                 <IconBook size={14} />
               </span>
               <span className="cat-label">{t("Formations")}</span>
             </Link>
-            <Link to="/smm" onClick={close} className="cat-link">
+            <Link to="/smm" onClick={close} className={`cat-link ${location.pathname === "/smm" ? "cat-active" : ""}`}>
               <span className="cat-icon" aria-hidden="true">
                 <IconWrench size={14} />
               </span>
