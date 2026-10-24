@@ -96,6 +96,7 @@ const Suivi = lazyRetry(() => import("./pages/Suivi.jsx"));
 const NotFound = lazyRetry(() => import("./pages/NotFound.jsx"));
 const Admin = lazyRetry(() => import("./pages/Admin.jsx"));
 const GeneratorPage = lazyRetry(() => import("./pages/GeneratorPage.jsx"));
+const MboppiBoost = lazyRetry(() => import("./pages/MboppiBoost.jsx"));
 const Cgv = lazyRetry(() => import("./pages/Cgv.jsx"));
 const Cgu = lazyRetry(() => import("./pages/Cgu.jsx"));
 const Faq = lazyRetry(() => import("./pages/Faq.jsx"));
@@ -680,6 +681,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/boutiques" element={<Home />} />
+            <Route path="/mboppi-boost" element={<MboppiBoost />} />
+            <Route path="/smm" element={<Navigate to="/mboppi-boost" replace />} />
             <Route path="/panier" element={<Cart />} />
             <Route
               path="/favoris"

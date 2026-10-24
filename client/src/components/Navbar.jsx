@@ -1099,6 +1099,12 @@ export default function Navbar({ onLogout }) {
         </span>
         <span className="dl-label">{t("Produits physiques")}</span>
       </Link>
+      <Link to="/mboppi-boost" onClick={close} className={`drawer-link ${location.pathname === "/mboppi-boost" || location.pathname === "/smm" ? "cat-active" : ""}`}>
+        <span className="dl-icon">
+          <IconWrench size={15} />
+        </span>
+        <span className="dl-label">MboppiBoost</span>
+      </Link>
       <Link to="/soutien" onClick={close} className="drawer-link drawer-link-support">
         <span className="dl-icon">
           <IconHeart size={15} />
@@ -1295,7 +1301,7 @@ export default function Navbar({ onLogout }) {
               </span>
               <span className="cat-label">{t("Formations")}</span>
             </Link>
-            <Link to="/smm" onClick={close} className={`cat-link ${location.pathname === "/smm" ? "cat-active" : ""}`}>
+            <Link to="/mboppi-boost" onClick={close} className={`cat-link ${location.pathname === "/mboppi-boost" || location.pathname === "/smm" ? "cat-active" : ""}`}>
               <span className="cat-icon" aria-hidden="true">
                 <IconWrench size={14} />
               </span>
