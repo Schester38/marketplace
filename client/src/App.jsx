@@ -97,6 +97,8 @@ const NotFound = lazyRetry(() => import("./pages/NotFound.jsx"));
 const Admin = lazyRetry(() => import("./pages/Admin.jsx"));
 const GeneratorPage = lazyRetry(() => import("./pages/GeneratorPage.jsx"));
 const MboppiBoost = lazyRetry(() => import("./pages/MboppiBoost.jsx"));
+const MboppiBoostOrder = lazyRetry(() => import("./pages/MboppiBoostOrder.jsx"));
+const MboppiBoostOrders = lazyRetry(() => import("./pages/MboppiBoostOrders.jsx"));
 const Cgv = lazyRetry(() => import("./pages/Cgv.jsx"));
 const Cgu = lazyRetry(() => import("./pages/Cgu.jsx"));
 const Faq = lazyRetry(() => import("./pages/Faq.jsx"));
@@ -682,6 +684,8 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/boutiques" element={<Home />} />
             <Route path="/mboppi-boost" element={<MboppiBoost />} />
+            <Route path="/mboppi-boost/commander/:serviceId" element={<MboppiBoostOrder />} />
+            <Route path="/mboppi-boost/mes-commandes" element={<MboppiBoostOrders />} />
             <Route path="/smm" element={<Navigate to="/mboppi-boost" replace />} />
             <Route path="/panier" element={<Cart />} />
             <Route

@@ -8,7 +8,7 @@ const { Pool } = pg;
 // Marqueur de schéma : à incrémenter à CHAQUE changement de structure, sinon
 // initDb() (marqueur déjà posé) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-10-03-familicash-licences-v1";
+const DB_INIT_VERSION = "2026-10-24-mboppi-boost-services-v1";
 const DB_INIT_LOCK = "mboppi-db-init-v1";
 let initDbPromise = null;
 
@@ -865,6 +865,149 @@ async function runInitDb() {
   } catch {
     /* purge best-effort : un échec ne doit pas bloquer le démarrage */
   }
+
+  // ===== MBOPPIBOOST : services de marketing digital =====
+  // Tables additives : catégories, services, fournisseurs, commandes, événements.
+  await pool.query(`
+    -- Catégories de services (audience, contenus, réseaux sociaux, publicité)
+    CREATE TABLE IF NOT EXISTS smm_categories (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      slug TEXT NOT NULL UNIQUE,
+      description TEXT,
+      icon TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_smm_categories_slug ON smm_categories(slug);
+    CREATE INDEX IF NOT EXISTS idx_smm_categories_active ON smm_categories(is_active);
+
+    -- Services de marketing digital (un service appartient à une catégorie)
+    CREATE TABLE IF NOT EXISTS smm_services (
+      id SERIAL PRIMARY KEY,
+      category_id INTEGER NOT NULL REFERENCES smm_categories(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      description TEXT,
+      short_description TEXT,
+      price NUMERIC(14,2) NOT NULL CHECK (price >= 0),
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      billing_unit TEXT NOT NULL DEFAULT 'service',
+      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'draft')),
+      is_automated BOOLEAN NOT NULL DEFAULT FALSE,
+      is_consulting BOOLEAN NOT NULL DEFAULT FALSE,
+      is_campaign BOOLEAN NOT NULL DEFAULT FALSE,
+      external_service_id TEXT,
+      delivery_days INTEGER,
+      conditions TEXT,
+      limits JSONB NOT NULL DEFAULT '{}'::jsonb,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_smm_services_category ON smm_services(category_id);
+    CREATE INDEX IF NOT EXISTS idx_smm_services_status ON smm_services(status);
+
+    -- Fournisseurs SMM configurés (un seul actif à la fois)
+    CREATE TABLE IF NOT EXISTS smm_providers (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      provider_key TEXT NOT NULL UNIQUE,
+      is_active BOOLEAN NOT NULL DEFAULT FALSE,
+      config JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_smm_providers_active ON smm_providers(is_active);
+    CREATE INDEX IF NOT EXISTS idx_smm_providers_key ON smm_providers(provider_key);
+
+    -- Commandes MboppiBoost (passées par les clients)
+    CREATE TABLE IF NOT EXISTS smm_orders (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      service_id INTEGER NOT NULL REFERENCES smm_services(id) ON DELETE RESTRICT,
+      service_name TEXT NOT NULL,
+      service_price NUMERIC(14,2) NOT NULL CHECK (service_price >= 0),
+      currency TEXT NOT NULL DEFAULT 'XAF',
+      quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity >= 1),
+      total NUMERIC(14,2) NOT NULL CHECK (total >= 0),
+      billing_unit TEXT NOT NULL DEFAULT 'service',
+      client_info JSONB NOT NULL DEFAULT '{}'::jsonb,
+      status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'pending_payment', 'paid', 'submitted', 'processing', 'completed', 'failed', 'cancelled', 'refund_pending', 'refunded')),
+      payment_status TEXT,
+      provider_status TEXT,
+      external_reference TEXT,
+      provider_reference TEXT,
+      idempotency_key TEXT UNIQUE,
+      payment_method TEXT,
+      payment_proof TEXT,
+      paid_at TIMESTAMPTZ,
+      completed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_smm_orders_user ON smm_orders(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_smm_orders_status ON smm_orders(status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_smm_orders_idempotency ON smm_orders(idempotency_key) WHERE idempotency_key IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_smm_orders_external ON smm_orders(external_reference) WHERE external_reference IS NOT NULL;
+
+    -- Journal des événements de commande (traçabilité)
+    CREATE TABLE IF NOT EXISTS smm_order_events (
+      id BIGSERIAL PRIMARY KEY,
+      order_id BIGINT NOT NULL REFERENCES smm_orders(id) ON DELETE CASCADE,
+      event_type TEXT NOT NULL,
+      old_status TEXT,
+      new_status TEXT,
+      message TEXT,
+      provider_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_smm_order_events_order ON smm_order_events(order_id, created_at DESC);
+
+    -- Mapping service interne ↔ service externe fournisseur
+    CREATE TABLE IF NOT EXISTS smm_provider_mappings (
+      id SERIAL PRIMARY KEY,
+      provider_id INTEGER NOT NULL REFERENCES smm_providers(id) ON DELETE CASCADE,
+      smm_service_id INTEGER NOT NULL REFERENCES smm_services(id) ON DELETE CASCADE,
+      external_service_id TEXT NOT NULL,
+      external_name TEXT,
+      external_price NUMERIC(14,2),
+      currency TEXT DEFAULT 'XAF',
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (provider_id, smm_service_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_smm_provider_mappings_provider ON smm_provider_mappings(provider_id);
+    CREATE INDEX IF NOT EXISTS idx_smm_provider_mappings_service ON smm_provider_mappings(smm_service_id);
+
+    -- Données par défaut MboppiBoost (idempotent : ON CONFLICT DO NOTHING)
+    INSERT INTO smm_categories (name, slug, description, icon, sort_order, is_active)
+    VALUES
+      ('Développement de l\'audience', 'audience', 'Accroître votre visibilité numérique et développer votre communauté.', '📈', 1, TRUE),
+      ('Création de contenus', 'contenus', 'Contenus attractifs pour communiquer et promouvoir votre activité.', '🎨', 2, TRUE),
+      ('Gestion des réseaux sociaux', 'reseaux-sociaux', 'Animer votre communauté et développer une présence professionnelle.', '📱', 3, TRUE),
+      ('Publicité digitale', 'publicite', 'Préparer et optimiser vos campagnes publicitaires.', '💰', 4, TRUE)
+    ON CONFLICT (slug) DO NOTHING;
+
+    INSERT INTO smm_services (category_id, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order, created_at, updated_at)
+    SELECT c.id, s.name, s.short_description, s.price, s.currency, s.billing_unit, s.status, s.is_automated, s.is_consulting, s.is_campaign, s.delivery_days, s.conditions, s.sort_order, now(), now()
+    FROM (VALUES
+      ('audience', 'Conseil en stratégie de croissance', 'Accompagnement pour définir votre stratégie de croissance numérique.', 0, 'XAF', 'service', false, false, false, 30, NULL, 1),
+      ('audience', 'Optimisation des profils sociaux', 'Refonte et optimisation de vos profils sur les réseaux sociaux.', 0, 'XAF', 'service', false, false, false, 15, NULL, 2),
+      ('audience', 'Analyse de l\'audience', 'Analyse de votre audience actuelle et recommandations de ciblage.', 0, 'XAF', 'service', false, false, false, 7, NULL, 3),
+      ('contenus', 'Création d\'affiches publicitaires', 'Conception de visuels publicitaires pour vos campagnes.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
+      ('contenus', 'Création de vidéos courtes', 'Production de vidéos courtes (Reels, TikTok, Shorts) pour vos réseaux.', 0, 'XAF', 'article', false, false, false, 7, NULL, 2),
+      ('contenus', 'Motion design', 'Animations graphiques et motion design pour vos contenus.', 0, 'XAF', 'article', false, false, false, 10, NULL, 3),
+      ('reseaux-sociaux', 'Gestion de pages professionnelles', 'Gestion complète de vos pages professionnelles sur les réseaux sociaux.', 0, 'XAF', 'mois', false, false, false, 30, NULL, 1),
+      ('reseaux-sociaux', 'Planification des publications', 'Calendrier éditorial et planification de vos publications.', 0, 'XAF', 'service', false, false, false, 5, NULL, 2),
+      ('reseaux-sociaux', 'Modération des commentaires', 'Modération et animation de votre communauté (commentaires, messages).', 0, 'XAF', 'mois', false, false, false, 30, NULL, 3),
+      ('publicite', 'Conception de publicités', 'Conception graphique de vos publicités digitales.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
+      ('publicite', 'Préparation de campagnes Meta Ads', 'Préparation et configuration de vos campagnes publicitaires Meta.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 2),
+      ('publicite', 'Préparation de campagnes TikTok Ads', 'Préparation et configuration de vos campagnes publicitaires TikTok.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 3)
+    ) AS s(cat_slug, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order)
+    JOIN smm_categories c ON c.slug = s.cat_slug
+    ON CONFLICT DO NOTHING;
+  `);
 }
 
 // Lance le schéma une seule fois par version sur une base partagée. Le

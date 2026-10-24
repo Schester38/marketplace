@@ -42,6 +42,7 @@ import digitalRoutes from "./routes/digital.js";
 import generatorRoutes from "./routes/generator.js";
 import studioRoutes from "./routes/studio.js";
 import familicashRoutes from "./routes/familicash.js";
+import smmRoutes from "./routes/smm.js";
 import { authRequired } from "./auth.js";
 import { securityHeaders, originCheck, ALLOWED_ORIGINS } from "./security.js";
 import { isLegacyHost, canonicalUrl } from "./urls.js";
@@ -215,6 +216,8 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/geo", limiter(60 * 1000, 30), geoRoutes);
 app.use("/api/logs", limiter(60 * 1000, 8));
 app.use("/api/logs", logRoutes);
+// MboppiBoost — services de marketing digital (catalogue, commande, suivi, admin)
+app.use("/api/smm", limiter(60 * 1000, 100), smmRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/cron", cronRoutes);
 app.use("/api/img", imageRouter);

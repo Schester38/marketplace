@@ -249,3 +249,58 @@ export const shopListQuerySchema = z.object({
 export const citiesQuerySchema = z.object({
   q: z.string().max(60).optional(),
 });
+
+// ===== MBOPPIBOOST : schémas de validation =====
+
+export const smmCategorySchema = z.object({
+  name: z.string().min(1, "Nom requis").max(100),
+  slug: z.string().min(1, "Slug requis").max(100).regex(/^[a-z0-9-]+$/, "Slug invalide (lettres, chiffres, tirets uniquement)"),
+  description: z.string().max(500).optional().nullable(),
+  icon: z.string().max(50).optional().nullable(),
+  sort_order: z.coerce.number().int().min(0).default(0),
+  is_active: z.boolean().default(true),
+});
+
+export const smmServiceSchema = z.object({
+  category_id: z.coerce.number().int().positive("Catégorie requise"),
+  name: z.string().min(1, "Nom requis").max(150),
+  description: z.string().max(2000).optional().nullable(),
+  short_description: z.string().max(300).optional().nullable(),
+  price: z.coerce.number().min(0, "Prix invalide"),
+  currency: z.string().min(1).max(10).default("XAF"),
+  billing_unit: z.enum(["service", "mois", "campagne", "article", "heure"]).default("service"),
+  status: z.enum(["active", "inactive", "draft"]).default("active"),
+  is_automated: z.boolean().default(false),
+  is_consulting: z.boolean().default(false),
+  is_campaign: z.boolean().default(false),
+  external_service_id: z.string().max(100).optional().nullable(),
+  delivery_days: z.coerce.number().int().min(1).max(365).optional().nullable(),
+  conditions: z.string().max(1000).optional().nullable(),
+  limits: z.record(z.string(), z.any()).default({}),
+  sort_order: z.coerce.number().int().min(0).default(0),
+});
+
+export const smmOrderSchema = z.object({
+  service_id: z.coerce.number().int().positive("Service requis"),
+  quantity: z.coerce.number().int().min(1, "Quantité minimale 1").default(1),
+  client_info: z.record(z.string(), z.any()).default({}),
+  payment_method: z.enum(["mobile_money", "virement", "espece", "manual"]).default("manual"),
+  idempotency_key: z.string().max(200).optional().nullable(),
+});
+
+export const smmOrderStatusSchema = z.object({
+  status: z.enum(["paid", "submitted", "processing", "completed", "failed", "cancelled", "refund_pending", "refunded"]),
+  provider_status: z.string().max(100).optional().nullable(),
+  provider_reference: z.string().max(200).optional().nullable(),
+  admin_note: z.string().max(500).optional().nullable(),
+});
+
+export const smmProviderConfigSchema = z.object({
+  smm_provider_enabled: z.boolean().default(false),
+  smm_provider_key: z.string().max(100).optional().nullable(),
+  smm_api_base_url: z.string().url("URL invalide").max(500).optional().nullable(),
+  smm_api_timeout: z.coerce.number().int().min(1000).max(120000).default(10000),
+  smm_provider_config: z.string().max(5000).optional().nullable(),
+  // Secrets : jamais retournés au client, stockés côté serveur uniquement
+  smm_api_key: z.string().max(500).optional().nullable(),
+});
