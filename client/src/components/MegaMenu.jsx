@@ -178,7 +178,7 @@ function MegaMenuTrigger({
       >
         <Link
           ref={triggerRef}
-          to={`/boutiques?type=physical&cat=${encodeURIComponent(mainTarget)}`}
+          to={categoryLink(mainTarget)}
           data-cat={mainTarget}
           className={`cat-link mega-link${activeCat === mainTarget ? " cat-active" : ""}`}
           role="tab"

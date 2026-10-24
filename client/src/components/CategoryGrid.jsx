@@ -2,10 +2,11 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useLang } from "../i18n.jsx";
 import { getCategoryIcon } from "./icons.jsx";
+import { categoryLink } from "../pages/homeCatalog.js";
 
 /**
  * Grille de catégories illustrées (icônes vectorielles, pas d'emoji),
- * façon page d'accueil Alibaba : 8 tuiles cliquables vers /boutiques?cat=…
+ * façon page d'accueil Alibaba : 8 tuiles cliquables vers /?cat=…
  */
 const TILES = [
   { label: "Téléphones & Tablettes" },
@@ -26,7 +27,7 @@ export default function CategoryGrid() {
         {TILES.map((tile, i) => (
           <Link
             key={tile.label}
-            to={`/boutiques?type=physical&cat=${encodeURIComponent(tile.label)}`}
+            to={categoryLink(tile.label)}
             className={`cat-tile ctone-${(i % 8) + 1}`}
             aria-label={t(tile.label)}
           >
