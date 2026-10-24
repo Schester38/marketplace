@@ -159,6 +159,14 @@ export default function Home() {
     applyTypeTransition(ptype);
   }, [ptype]);
 
+  // Quand on change de catégorie ou de volet sur /boutiques, remonter en haut
+  // pour que les produits apparaissent directement sous la barre de navigation.
+  useEffect(() => {
+    if (isBoutique) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [isBoutique, category, ptype]);
+
   // Lien « Promotions » du header : /?rail=promos ouvre directement le rail.
   useEffect(() => {
     const r = params.get("rail");

@@ -1299,7 +1299,7 @@ export default function Navbar({ onLogout }) {
               <span className="cat-icon" aria-hidden="true">
                 <IconWrench size={14} />
               </span>
-              <span className="cat-label">{t("SMM")}</span>
+              <span className="cat-label">MboppiBoost</span>
             </Link>
           </div>
           <div className="cat-quick" aria-label={t("Liens rapides")}>
