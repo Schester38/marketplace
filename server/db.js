@@ -1006,7 +1006,6 @@ async function runInitDb() {
       ('publicite', 'PrÃ©paration de campagnes TikTok Ads', 'PrÃ©paration et configuration de vos campagnes publicitaires TikTok.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 3)
     ) AS s(cat_slug, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order)
     JOIN smm_categories c ON c.slug = s.cat_slug
-    ON CONFLICT DO NOTHING;
   `);
 }
 
