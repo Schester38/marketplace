@@ -47,7 +47,7 @@ export default function Home() {
   const [params, setSearchParams] = useSearchParams();
   const hideProducts = params.get("noprod") === "1";
   const location = useLocation();
-  const isBoutique = location.pathname === "/boutiques";
+  const isBoutique = location.pathname === "/boutiques" || !!category;
   const mounted = useRef(true);
   // Chaque changement de filtre doit invalider la réponse précédente : sans ce
   // jeton, une requête « physiques » tardive peut écraser la réponse « digital »
