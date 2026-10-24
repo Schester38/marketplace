@@ -29,6 +29,30 @@ const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 router.get(
   "/categories",
   ah(async (req, res) => {
+    // Auto-réparation : créer les tables si initDb() n'a pas fonctionné
+    try {
+      await q(`
+        CREATE TABLE IF NOT EXISTS smm_categories (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL UNIQUE,
+          slug TEXT NOT NULL UNIQUE,
+          description TEXT,
+          icon TEXT,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          is_active BOOLEAN NOT NULL DEFAULT TRUE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+        INSERT INTO smm_categories (name, slug, description, icon, sort_order, is_active)
+        VALUES
+          ('Développement de l''audience', 'audience', 'Accroître votre visibilité numérique et développer votre communauté.', '📈', 1, TRUE),
+          ('Création de contenus', 'contenus', 'Contenus attractifs pour communiquer et promouvoir votre activité.', '🎨', 2, TRUE),
+          ('Gestion des réseaux sociaux', 'reseaux-sociaux', 'Animer votre communauté et développer une présence professionnelle.', '📱', 3, TRUE),
+          ('Publicité digitale', 'publicite', 'Préparer et optimiser vos campagnes publicitaires.', '💰', 4, TRUE)
+        ON CONFLICT (slug) DO NOTHING;
+      `);
+    } catch (initErr) {
+      // ignore, la requête SELECT renverra l'erreur si vraiment cassé
+    }
     const rows = await q(
       `SELECT id, name, slug, description, icon, sort_order, is_active, created_at
        FROM smm_categories
@@ -43,6 +67,44 @@ router.get(
 router.get(
   "/services",
   ah(async (req, res) => {
+    // Auto-réparation : créer les tables si initDb() n'a pas fonctionné
+    try {
+      await q(`
+        CREATE TABLE IF NOT EXISTS smm_categories (
+          id SERIAL PRIMARY KEY,
+          name TEXT NOT NULL UNIQUE,
+          slug TEXT NOT NULL UNIQUE,
+          description TEXT,
+          icon TEXT,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          is_active BOOLEAN NOT NULL DEFAULT TRUE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+        CREATE TABLE IF NOT EXISTS smm_services (
+          id SERIAL PRIMARY KEY,
+          category_id INTEGER NOT NULL REFERENCES smm_categories(id) ON DELETE CASCADE,
+          name TEXT NOT NULL,
+          description TEXT,
+          short_description TEXT,
+          price NUMERIC(14,2) NOT NULL CHECK (price >= 0),
+          currency TEXT NOT NULL DEFAULT 'XAF',
+          billing_unit TEXT NOT NULL DEFAULT 'service',
+          status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'draft')),
+          is_automated BOOLEAN NOT NULL DEFAULT FALSE,
+          is_consulting BOOLEAN NOT NULL DEFAULT FALSE,
+          is_campaign BOOLEAN NOT NULL DEFAULT FALSE,
+          external_service_id TEXT,
+          delivery_days INTEGER,
+          conditions TEXT,
+          limits JSONB NOT NULL DEFAULT '{}'::jsonb,
+          sort_order INTEGER NOT NULL DEFAULT 0,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+      `);
+    } catch {
+      /* ignore */
+    }
     const categoryId = req.query.category_id;
     let sql = `
       SELECT s.id, s.category_id, c.name AS category_name, c.slug AS category_slug,
