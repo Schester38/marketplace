@@ -268,7 +268,7 @@ export const smmServiceSchema = z.object({
   short_description: z.string().max(300).optional().nullable(),
   price: z.coerce.number().min(0, "Prix invalide"),
   currency: z.string().min(1).max(10).default("XAF"),
-  billing_unit: z.enum(["service", "mois", "campagne", "article", "heure"]).default("service"),
+  billing_unit: z.enum(["service", "mois", "campagne", "article", "heure", "1000"]).default("service"),
   status: z.enum(["active", "inactive", "draft"]).default("active"),
   is_automated: z.boolean().default(false),
   is_consulting: z.boolean().default(false),
