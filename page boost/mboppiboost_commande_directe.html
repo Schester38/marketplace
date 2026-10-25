@@ -167,9 +167,9 @@ $('orderBtn').addEventListener('click',()=>{
  const target=$('target').value.trim();
  const email=$('email').value.trim();
  const result=$('result');
- if(!target || !/^https?:\\/\\//i.test(target)){result.style.display='block';result.style.background='#fff7e6';result.style.borderColor='#f0dca9';result.style.color='#855100';result.textContent='Ajoutez un lien valide commençant par https:// ou http:// avant de continuer.';return;}
+ if(!target || !/^https?:\/\//i.test(target)){result.style.display='block';result.style.background='#fff7e6';result.style.borderColor='#f0dca9';result.style.color='#855100';result.textContent='Ajoutez un lien valide commençant par https:// ou http:// avant de continuer.';return;}
  if(!Number.isInteger(q)||q<1){result.style.display='block';result.textContent='Veuillez saisir une quantité valide.';return;}
- if(!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)){result.style.display='block';result.style.background='#fff7e6';result.style.borderColor='#f0dca9';result.style.color='#855100';result.textContent='Ajoutez un e-mail valide pour recevoir le suivi de la commande.';return;}
+ if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){result.style.display='block';result.style.background='#fff7e6';result.style.borderColor='#f0dca9';result.style.color='#855100';result.textContent='Ajoutez un e-mail valide pour recevoir le suivi de la commande.';return;}
  const order={service:selected.name,platform:$('platform').value,quantity:q,target,email,phone:$('phone').value.trim(),details:$('details').value.trim(),estimatedTotal:q*selected.unit};
  result.style.display='block';result.style.background='#eaf8f1';result.style.borderColor='#b7e5ce';result.style.color='#155c3c';
  result.textContent='Récapitulatif préparé (démo) : '+order.service+' · '+order.platform+' · '+q+' '+selected.unitLabel+' · '+money(order.estimatedTotal)+'. Aucun paiement n’a été effectué et aucune commande n’a été envoyée. Une intégration serveur est nécessaire pour confirmer la commande.';
