@@ -24,7 +24,7 @@ export default function MboppiBoost() {
       setCategories(catsResp.data?.categories || []);
       setServices(svcsResp.data?.services || []);
     } catch (err) {
-      // Les données par défaut seront utilisées si l'API est indisponible
+      console.error("[MboppiBoost] Erreur récupération données :", err.message);
     } finally {
       setLoading(false);
     }

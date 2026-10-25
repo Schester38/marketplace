@@ -43,14 +43,20 @@ export default function MboppiBoostOrder() {
   async function fetchService() {
     try {
       const resp = await api.get(`/smm/services/${serviceId}`);
-      setService(resp.data?.service || null);
+      const serviceData = resp.data?.service;
+      if (serviceData) {
+        setService(serviceData);
+      } else {
+        throw new Error("Service non trouvé dans la réponse");
+      }
     } catch (err) {
+      console.warn("[MboppiBoostOrder] API indisponible, fallback vers données locales:", err.message);
       // Fallback : utiliser les données par défaut si l'API est indisponible
       const fallback = DEFAULT_SERVICES.find((s) => s.id === Number(serviceId));
       if (fallback) {
         setService(fallback);
       } else {
-        setError("Impossible de charger le service.");
+        setError(`Service #${serviceId} introuvable. Veuillez revenir au catalogue.`);
       }
     } finally {
       setLoading(false);

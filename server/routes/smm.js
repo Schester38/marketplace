@@ -21,6 +21,13 @@ import { notifyAdmins } from "../services/adminNotify.js";
 const router = Router();
 
 // Données par défaut des services SMM (utilisées quand la base n'est pas encore peuplée)
+const DEFAULT_CATEGORIES = [
+  { id: 1, name: "Développement de l'audience", slug: "audience", description: "Accroître votre visibilité numérique et développer votre communauté.", icon: "📈", sort_order: 1, is_active: true },
+  { id: 2, name: "Création de contenus", slug: "contenus", description: "Contenus attractifs pour communiquer et promouvoir votre activité.", icon: "🎨", sort_order: 2, is_active: true },
+  { id: 3, name: "Gestion des réseaux sociaux", slug: "reseaux-sociaux", description: "Animer votre communauté et développer une présence professionnelle.", icon: "📱", sort_order: 3, is_active: true },
+  { id: 4, name: "Publicité digitale", slug: "publicite", description: "Préparer et optimiser vos campagnes publicitaires.", icon: "💰", sort_order: 4, is_active: true },
+];
+
 const DEFAULT_SERVICES = [
   { id: 1, category_id: 1, name: "Conseil en stratégie de croissance", short_description: "Accompagnement pour définir votre stratégie de croissance numérique.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 30, features: [], conditions: null },
   { id: 2, category_id: 1, name: "Optimisation des profils sociaux", short_description: "Refonte et optimisation de vos profils sur les réseaux sociaux.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 15, features: [], conditions: null },
@@ -67,60 +74,20 @@ router.get(
         ON CONFLICT (slug) DO NOTHING;
       `);
     } catch (initErr) {
-      // ignore, la requête SELECT renverra l'erreur si vraiment cassé
+      // ignore, on tentera de lire les données ci-dessous
     }
-    // Auto-réparation : insérer les services par défaut
     try {
-      await q(`
-        CREATE TABLE IF NOT EXISTS smm_services (
-          id SERIAL PRIMARY KEY,
-          category_id INTEGER NOT NULL REFERENCES smm_categories(id) ON DELETE CASCADE,
-          name TEXT NOT NULL,
-          description TEXT,
-          short_description TEXT,
-          price NUMERIC(14,2) NOT NULL CHECK (price >= 0),
-          currency TEXT NOT NULL DEFAULT 'XAF',
-          billing_unit TEXT NOT NULL DEFAULT 'service',
-          status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'draft')),
-          is_automated BOOLEAN NOT NULL DEFAULT FALSE,
-          is_consulting BOOLEAN NOT NULL DEFAULT FALSE,
-          is_campaign BOOLEAN NOT NULL DEFAULT FALSE,
-          external_service_id TEXT,
-          delivery_days INTEGER,
-          conditions TEXT,
-          limits JSONB NOT NULL DEFAULT '{}'::jsonb,
-          sort_order INTEGER NOT NULL DEFAULT 0,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        );
-        INSERT INTO smm_services (category_id, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order, created_at, updated_at)
-        SELECT c.id, s.name, s.short_description, s.price, s.currency, s.billing_unit, s.status, s.is_automated, s.is_consulting, s.is_campaign, s.delivery_days, s.conditions, s.sort_order, now(), now()
-        FROM (VALUES
-          ('audience', 'Conseil en stratégie de croissance', 'Accompagnement pour définir votre stratégie de croissance numérique.', 0, 'XAF', 'service', false, false, false, 30, NULL, 1),
-          ('audience', 'Optimisation des profils sociaux', 'Refonte et optimisation de vos profils sur les réseaux sociaux.', 0, 'XAF', 'service', false, false, false, 15, NULL, 2),
-          ('audience', 'Analyse de l''audience', 'Analyse de votre audience actuelle et recommandations de ciblage.', 0, 'XAF', 'service', false, false, false, 7, NULL, 3),
-          ('contenus', 'Création d''affiches publicitaires', 'Conception de visuels publicitaires pour vos campagnes.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
-          ('contenus', 'Création de vidéos courtes', 'Production de vidéos courtes (Reels, TikTok, Shorts) pour vos réseaux.', 0, 'XAF', 'article', false, false, false, 7, NULL, 2),
-          ('contenus', 'Motion design', 'Animations graphiques et motion design pour vos contenus.', 0, 'XAF', 'article', false, false, false, 10, NULL, 3),
-          ('reseaux-sociaux', 'Gestion de pages professionnelles', 'Gestion complète de vos pages professionnelles sur les réseaux sociaux.', 0, 'XAF', 'mois', false, false, false, 30, NULL, 1),
-          ('reseaux-sociaux', 'Planification des publications', 'Calendrier éditorial et planification de vos publications.', 0, 'XAF', 'service', false, false, false, 5, NULL, 2),
-          ('reseaux-sociaux', 'Modération des commentaires', 'Modération et animation de votre communauté (commentaires, messages).', 0, 'XAF', 'mois', false, false, false, 30, NULL, 3),
-          ('publicite', 'Conception de publicités', 'Conception graphique de vos publicités digitales.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
-          ('publicite', 'Préparation de campagnes Meta Ads', 'Préparation et configuration de vos campagnes publicitaires Meta.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 2),
-          ('publicite', 'Préparation de campagnes TikTok Ads', 'Préparation et configuration de vos campagnes publicitaires TikTok.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 3)
-        ) AS s(cat_slug, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order)
-        JOIN smm_categories c ON c.slug = s.cat_slug;
-      `);
-    } catch {
-      /* ignore */
+      const rows = await q(
+        `SELECT id, name, slug, description, icon, sort_order, is_active, created_at
+         FROM smm_categories
+         WHERE is_active = TRUE
+         ORDER BY sort_order ASC, name ASC`
+      );
+      res.json({ categories: rows });
+    } catch (selectErr) {
+      // Base de données non disponible : renvoyer les catégories par défaut
+      res.json({ categories: DEFAULT_CATEGORIES });
     }
-    const rows = await q(
-      `SELECT id, name, slug, description, icon, sort_order, is_active, created_at
-       FROM smm_categories
-       WHERE is_active = TRUE
-       ORDER BY sort_order ASC, name ASC`
-    );
-    res.json({ categories: rows });
   })
 );
 
@@ -212,7 +179,18 @@ router.get(
       sql += ` AND s.category_id = $${params.length}`;
     }
     sql += ` ORDER BY c.sort_order ASC, c.name ASC, s.sort_order ASC, s.name ASC`;
-    const rows = await q(sql, params);
+    let rows;
+    try {
+      rows = await q(sql, params);
+    } catch (dbErr) {
+      // Base de données indisponible : renvoyer les services par défaut
+      const defaultServicesWithCategories = DEFAULT_SERVICES.map((s) => ({
+        ...s,
+        category_name: DEFAULT_CATEGORIES.find((c) => c.id === s.category_id)?.name || "",
+        category_slug: DEFAULT_CATEGORIES.find((c) => c.id === s.category_id)?.slug || "",
+      }));
+      return res.json({ services: defaultServicesWithCategories });
+    }
     if (rows.length === 0) {
       return res.json({ services: DEFAULT_SERVICES });
     }
@@ -228,17 +206,36 @@ router.get(
     if (!Number.isFinite(id)) {
       return res.status(400).json({ error: "ID de service invalide" });
     }
-    const rows = await q(
-      `SELECT s.*, c.name AS category_name, c.slug AS category_slug
-       FROM smm_services s
-       JOIN smm_categories c ON c.id = s.category_id
-       WHERE s.id = $1`,
-      [id]
-    );
-    if (!rows.length) {
+    let service;
+    try {
+      const rows = await q(
+        `SELECT s.*, c.name AS category_name, c.slug AS category_slug
+         FROM smm_services s
+         JOIN smm_categories c ON c.id = s.category_id
+         WHERE s.id = $1`,
+        [id]
+      );
+      if (rows.length) {
+        service = rows[0];
+      }
+    } catch (dbErr) {
+      // Base de données indisponible : chercher dans les services par défaut
+      service = DEFAULT_SERVICES.find((s) => s.id === id);
+      if (service) {
+        const category = DEFAULT_CATEGORIES.find((c) => c.id === service.category_id);
+        return res.json({
+          service: {
+            ...service,
+            category_name: category?.name || "",
+            category_slug: category?.slug || "",
+          },
+        });
+      }
+    }
+    if (!service) {
       return res.status(404).json({ error: "Service introuvable" });
     }
-    res.json({ service: rows[0] });
+    res.json({ service });
   })
 );
 
