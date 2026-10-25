@@ -20,6 +20,22 @@ import { notifyAdmins } from "../services/adminNotify.js";
 
 const router = Router();
 
+// Données par défaut des services SMM (utilisées quand la base n'est pas encore peuplée)
+const DEFAULT_SERVICES = [
+  { id: 1, category_id: 1, name: "Conseil en stratégie de croissance", short_description: "Accompagnement pour définir votre stratégie de croissance numérique.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 30, features: [], conditions: null },
+  { id: 2, category_id: 1, name: "Optimisation des profils sociaux", short_description: "Refonte et optimisation de vos profils sur les réseaux sociaux.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 15, features: [], conditions: null },
+  { id: 3, category_id: 1, name: "Analyse de l'audience", short_description: "Analyse de votre audience actuelle et recommandations de ciblage.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 7, features: [], conditions: null },
+  { id: 4, category_id: 2, name: "Création d'affiches publicitaires", short_description: "Conception de visuels publicitaires pour vos campagnes.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 5, features: [], conditions: null },
+  { id: 5, category_id: 2, name: "Création de vidéos courtes", short_description: "Production de vidéos courtes (Reels, TikTok, Shorts) pour vos réseaux.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 7, features: [], conditions: null },
+  { id: 6, category_id: 2, name: "Motion design", short_description: "Animations graphiques et motion design pour vos contenus.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 10, features: [], conditions: null },
+  { id: 7, category_id: 3, name: "Gestion de pages professionnelles", short_description: "Gestion complète de vos pages professionnelles sur les réseaux sociaux.", price: 0, currency: "XAF", billing_unit: "mois", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 30, features: [], conditions: null },
+  { id: 8, category_id: 3, name: "Planification des publications", short_description: "Calendrier éditorial et planification de vos publications.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 5, features: [], conditions: null },
+  { id: 9, category_id: 3, name: "Modération des commentaires", short_description: "Modération et animation de votre communauté (commentaires, messages).", price: 0, currency: "XAF", billing_unit: "mois", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 30, features: [], conditions: null },
+  { id: 10, category_id: 4, name: "Conception de publicités", short_description: "Conception graphique de vos publicités digitales.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 5, features: [], conditions: null },
+  { id: 11, category_id: 4, name: "Préparation de campagnes Meta Ads", short_description: "Préparation et configuration de vos campagnes publicitaires Meta.", price: 0, currency: "XAF", billing_unit: "campagne", status: "active", is_automated: false, is_consulting: false, is_campaign: true, delivery_days: 7, features: [], conditions: null },
+  { id: 12, category_id: 4, name: "Préparation de campagnes TikTok Ads", short_description: "Préparation et configuration de vos campagnes publicitaires TikTok.", price: 0, currency: "XAF", billing_unit: "campagne", status: "active", is_automated: false, is_consulting: false, is_campaign: true, delivery_days: 7, features: [], conditions: null },
+];
+
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 /* ========================================================================
@@ -292,18 +308,28 @@ router.post(
       /* ignore */
     }
 
-    const serviceRows = await q(
-      `SELECT s.id, s.name, s.price, s.currency, s.billing_unit, s.is_automated, s.is_campaign,
-              c.name AS category_name
-       FROM smm_services s
-       JOIN smm_categories c ON c.id = s.category_id
-       WHERE s.id = $1 AND s.status = 'active' AND c.is_active = TRUE`,
-      [service_id]
-    );
-    if (!serviceRows.length) {
-      return res.status(404).json({ error: "Service introuvable ou inactif" });
+    let svc = null;
+    try {
+      const serviceRows = await q(
+        `SELECT s.id, s.name, s.price, s.currency, s.billing_unit, s.is_automated, s.is_campaign,
+                c.name AS category_name
+         FROM smm_services s
+         JOIN smm_categories c ON c.id = s.category_id
+         WHERE s.id = $1 AND s.status = 'active' AND c.is_active = TRUE`,
+        [service_id]
+      );
+      if (serviceRows.length) {
+        svc = serviceRows[0];
+      }
+    } catch {
+      /* base indisponible, on utilise le fallback */
     }
-    const svc = serviceRows[0];
+    if (!svc) {
+      svc = DEFAULT_SERVICES.find((s) => s.id === service_id);
+      if (!svc) {
+        return res.status(404).json({ error: "Service introuvable ou inactif" });
+      }
+    }
 
     const unitPrice = Number(svc.price);
     const qty = Number(quantity || 1);
