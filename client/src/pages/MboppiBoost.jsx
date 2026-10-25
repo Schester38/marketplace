@@ -1,192 +1,276 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
-
+import "../boost.css";
+const MONEY = (n) => new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(n) + " FCFA";
+const DEFAULT_CATALOG = [
+  { id: "visibility", cat: "social", icon: "�x�", name: "Campagne de visibilité", desc: "Promotion de contenu via une campagne à configurer.", unit: 5000, unitLabel: "campagne", step: 1, min: 1 },
+  { id: "content", cat: "content", icon: "�x}�", name: "Vidéo publicitaire courte", desc: "Conception d'une vidéo verticale pour les réseaux sociaux.", unit: 15000, unitLabel: "vidéo", step: 1, min: 1 },
+  { id: "page", cat: "management", icon: "�x️", name: "Gestion de page � 1 semaine", desc: "Planification et suivi éditorial à préciser avec votre offre.", unit: 25000, unitLabel: "semaine", step: 1, min: 1 },
+  { id: "design", cat: "content", icon: "�x}�", name: "Visuel publicitaire", desc: "Création d'un visuel promotionnel pour une publication.", unit: 7500, unitLabel: "visuel", step: 1, min: 1 },
+  { id: "ads", cat: "ads", icon: "�xa�", name: "Mise en place de publicité", desc: "Préparation d'une campagne. Budget publicitaire non inclus.", unit: 20000, unitLabel: "campagne", step: 1, min: 1 },
+  { id: "audit", cat: "management", icon: "�x`", name: "Audit de compte social", desc: "Analyse du profil et recommandations d'amélioration.", unit: 10000, unitLabel: "audit", step: 1, min: 1 },
+];
 export default function MboppiBoost() {
   const { t } = useLang();
   const [categories, setCategories] = useState([]);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [selectedId, setSelectedId] = useState(null);
+  const [platform, setPlatform] = useState("TikTok");
+  const [quantity, setQuantity] = useState(1);
+  const [target, setTarget] = useState("");
+  const [details, setDetails] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [result, setResult] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   useEffect(() => {
-    fetchData();
+    let cancelled = false;
+    (async () => {
+      try {
+        const [catsResp, svcsResp] = await Promise.all([
+          api.get("/smm/categories"),
+          api.get("/smm/services"),
+        ]);
+        if (cancelled) return;
+        const cats = catsResp.data?.categories || [];
+        const svcs = svcsResp.data?.services || [];
+        setCategories(cats.length ? cats : null);
+        setServices(svcs.length ? svcs : null);
+      } catch (err) {
+        console.error("[MboppiBoost] Erreur récupération données :", err?.message);
+        if (!cancelled) { setCategories(null); setServices(null); }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
-
-  async function fetchData() {
-    try {
-      const [catsResp, svcsResp] = await Promise.all([
-        api.get("/smm/categories"),
-        api.get("/smm/services"),
-      ]);
-      setCategories(catsResp.data?.categories || []);
-      setServices(svcsResp.data?.services || []);
-    } catch (err) {
-      console.error("[MboppiBoost] Erreur récupération données :", err.message);
-    } finally {
-      setLoading(false);
+  const useFallback = !services || services.length === 0;
+  const catOptions = useMemo(() => {
+    if (categories && categories.length) {
+      return [{ value: "all", label: "Tous les services" }].concat(
+        categories.map((c) => ({ value: String(c.id), label: c.name }))
+      );
     }
-  }
-
-  const DEFAULT_CATEGORIES = [
-    { id: 1, name: "Développement de l'audience", slug: "audience", description: "Accroître votre visibilité numérique et développer votre communauté.", icon: "📈", sort_order: 1, is_active: true },
-    { id: 2, name: "Création de contenus", slug: "contenus", description: "Contenus attractifs pour communiquer et promouvoir votre activité.", icon: "🎨", sort_order: 2, is_active: true },
-    { id: 3, name: "Gestion des réseaux sociaux", slug: "reseaux-sociaux", description: "Animer votre communauté et développer une présence professionnelle.", icon: "📱", sort_order: 3, is_active: true },
-    { id: 4, name: "Publicité digitale", slug: "publicite", description: "Préparer et optimiser vos campagnes publicitaires.", icon: "💰", sort_order: 4, is_active: true },
-  ];
-
-  const DEFAULT_SERVICES = [
-    { id: 1, category_id: 1, name: "Conseil en stratégie de croissance", short_description: "Accompagnement pour définir votre stratégie de croissance numérique.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 30, features: ["Conseil en stratégie de croissance.", "Optimisation des profils sociaux.", "Analyse de l'audience.", "Accompagnement dans le développement d'une communauté."] },
-    { id: 2, category_id: 1, name: "Optimisation des profils sociaux", short_description: "Refonte et optimisation de vos profils sur les réseaux sociaux.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 15, features: ["Optimisation des profils sociaux."] },
-    { id: 3, category_id: 1, name: "Analyse de l'audience", short_description: "Analyse de votre audience actuelle et recommandations de ciblage.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 7, features: ["Analyse de l'audience."] },
-    { id: 4, category_id: 2, name: "Création d'affiches publicitaires", short_description: "Conception de visuels publicitaires pour vos campagnes.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 5, features: ["Création d'affiches publicitaires."] },
-    { id: 5, category_id: 2, name: "Création de vidéos courtes", short_description: "Production de vidéos courtes (Reels, TikTok, Shorts) pour vos réseaux.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 7, features: ["Création de vidéos courtes."] },
-    { id: 6, category_id: 2, name: "Motion design", short_description: "Animations graphiques et motion design pour vos contenus.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 10, features: ["Motion design."] },
-    { id: 7, category_id: 3, name: "Gestion de pages professionnelles", short_description: "Gestion complète de vos pages professionnelles sur les réseaux sociaux.", price: 0, currency: "XAF", billing_unit: "mois", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 30, features: ["Gestion de pages professionnelles."] },
-    { id: 8, category_id: 3, name: "Planification des publications", short_description: "Calendrier éditorial et planification de vos publications.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 5, features: ["Planification des publications."] },
-    { id: 9, category_id: 3, name: "Modération des commentaires", short_description: "Modération et animation de votre communauté (commentaires, messages).", price: 0, currency: "XAF", billing_unit: "mois", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 30, features: ["Modération des commentaires."] },
-    { id: 10, category_id: 4, name: "Conception de publicités", short_description: "Conception graphique de vos publicités digitales.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 5, features: ["Conception de publicités."] },
-    { id: 11, category_id: 4, name: "Préparation de campagnes Meta Ads", short_description: "Préparation et configuration de vos campagnes publicitaires Meta.", price: 0, currency: "XAF", billing_unit: "campagne", status: "active", is_automated: false, is_consulting: false, is_campaign: true, delivery_days: 7, features: ["Préparation de campagnes Meta Ads."] },
-    { id: 12, category_id: 4, name: "Préparation de campagnes TikTok Ads", short_description: "Préparation et configuration de vos campagnes publicitaires TikTok.", price: 0, currency: "XAF", billing_unit: "campagne", status: "active", is_automated: false, is_consulting: false, is_campaign: true, delivery_days: 7, features: ["Préparation de campagnes TikTok Ads."] },
-  ];
-
-  const finalCategories = categories.length > 0 ? categories : DEFAULT_CATEGORIES;
-  const finalServices = services.length > 0 ? services : DEFAULT_SERVICES;
-
-  const servicesByCategory = finalCategories.map((cat) => ({
-    ...cat,
-    services: finalServices.filter((s) => s.category_id === cat.id),
-  }));
-
+    return [
+      { value: "all", label: "Tous les services" },
+      { value: "social", label: "Réseaux sociaux" },
+      { value: "content", label: "Création de contenu" },
+      { value: "management", label: "Gestion de pages" },
+      { value: "ads", label: "Publicité digitale" },
+    ];
+  }, [categories]);
+  const catalog = useMemo(() => {
+    if (!useFallback) {
+      return services.map((s) => ({
+        id: s.id,
+        cat: String(s.category_id),
+        icon: (categories || []).find((c) => c.id === s.category_id)?.icon || "�x9",
+        name: s.name,
+        desc: s.short_description || s.description || "",
+        unit: Number(s.price) || 0,
+        unitLabel: s.billing_unit || "service",
+        step: 1,
+        min: 1,
+      }));
+    }
+    return DEFAULT_CATALOG;
+  }, [useFallback, services, categories]);
+  const filtered = useMemo(() => {
+    if (categoryFilter === "all") return catalog;
+    return catalog.filter((s) => String(s.cat) === String(categoryFilter));
+  }, [catalog, categoryFilter]);
+  const selected = useMemo(() => {
+    const found = catalog.find((s) => String(s.id) === String(selectedId));
+    return found || (filtered.length ? filtered[0] : catalog[0]);
+  }, [catalog, selectedId, filtered]);
+  useEffect(() => {
+    if (!selectedId && catalog.length) setSelectedId(catalog[0].id);
+  }, [catalog, selectedId]);
+  useEffect(() => {
+    if (selected && !filtered.some((s) => String(s.id) === String(selected.id)) && filtered.length) {
+      setSelectedId(filtered[0].id);
+    }
+  }, [filtered, selected]);
+  useEffect(() => {
+    if (selected) setQuantity(selected.min || 1);
+  }, [selected?.id]);
+  const total = (selected ? (Number(quantity) || 0) * selected.unit : 0);
+  const onCategoryChange = (val) => {
+    setCategoryFilter(val);
+    const visible = catalog.filter((s) => val === "all" || String(s.cat) === String(val));
+    if (visible.length && !visible.some((s) => String(s.id) === String(selectedId))) {
+      setSelectedId(visible[0].id);
+    }
+  };
+  const handleSubmit = async () => {
+    setResult(null);
+    const q = Number.parseInt(quantity || "0", 10);
+    if (!target || !/^https?:\/\//i.test(target)) {
+      setResult({ type: "warn", message: "Ajoutez un lien valide commençant par https:// ou http:// avant de continuer." });
+      return;
+    }
+    if (!Number.isInteger(q) || q < 1) {
+      setResult({ type: "warn", message: "Veuillez saisir une quantité valide." });
+      return;
+    }
+    if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+      setResult({ type: "warn", message: "Ajoutez un e-mail valide pour recevoir le suivi de la commande." });
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const resp = await api.post("/smm/orders", {
+        service_id: Number(selected.id),
+        quantity: q,
+        client_info: { platform, target, details, email, phone },
+        payment_method: "manual",
+      });
+      const orderId = resp.data?.order_id || resp.data?.id;
+      setResult({
+        type: "ok",
+        message: "R�capitulatif pr�par� : " + selected.name + " � " + platform + " � " + q + " " + selected.unitLabel + " � " + MONEY(total) + ". Commande " + (orderId ? "#" + orderId + " " : "") + "enregistr�e. Aucun paiement n'a �t� effectu� ; le paiement et le suivi seront activ�s selon votre compte.",
+      });
+    } catch (err) {
+      setResult({ type: "err", message: err?.response?.data?.error || "Erreur lors de la préparation de la commande." });
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
-    <main className="container">
-      <Seo
-        title="MboppiBoost — Services de marketing digital et réseaux sociaux"
-        description="Découvrez MboppiBoost sur MboppiShop : création de contenus, gestion des réseaux sociaux, visibilité numérique et publicité digitale."
-      />
-      <section className="hero vitrine-hero">
-        <span className="hero-badge">⚡ MboppiBoost</span>
-        <h1>MboppiBoost</h1>
-        <p>Votre croissance numérique commence ici.</p>
-        <p>
-          Développez votre présence en ligne grâce à des services numériques adaptés à vos objectifs. Découvrez des solutions pour améliorer votre visibilité, créer des contenus attractifs, gérer vos réseaux sociaux et promouvoir votre activité.
-        </p>
-        <div className="hero-actions">
-          {loading ? (
-            <span className="btn btn-primary" style={{ opacity: 0.6 }}>
-              Chargement…
-            </span>
-          ) : (
-            <>
-              <Link to="/mboppi-boost/mes-commandes" className="btn btn-primary">
-                {t("Mes commandes")}
-              </Link>
-              <Link to="/contact" className="btn btn-outline">
-                {t("Demander des informations")}
-              </Link>
-            </>
-          )}
-        </div>
-      </section>
-
-      {!loading && servicesByCategory.length > 0 ? (
-        <>
-          <section id="services" className="section">
-            <div className="section-head">
-              <h2>{t("Nos services")}</h2>
-              <p>{t("Des solutions pour développer votre activité sur le numérique.")}</p>
-            </div>
-            {servicesByCategory.map((cat) => (
-              <div key={cat.id} className="service-category">
-                <h3>
-                  {cat.icon} {cat.name}
-                </h3>
-                <p>{cat.description}</p>
-                <div className="services-grid">
-                  {cat.services.map((s) => (
-                    <article key={s.id} className="card service-card">
-                      <div className="service-icon">
-                        {s.is_campaign ? "💰" : s.is_consulting ? "🤝" : s.is_automated ? "🤖" : "📋"}
-                      </div>
-                      <h3>{s.name}</h3>
-                      <p>{s.short_description || s.description}</p>
-                      {s.delivery_days && (
-                        <p className="service-meta">
-                          {t("Délai indicatif")} : {s.delivery_days} {t("jours")}
-                        </p>
-                      )}
-                      {s.price > 0 ? (
-                        <p className="service-price">
-                          {s.price} {s.currency} / {s.billing_unit}
-                        </p>
-                      ) : (
-                        <p className="service-price">{t("Tarif à définir")}</p>
-                      )}
-                      <ul className="service-list">
-                        {s.features?.slice(0, 4).map((f, i) => (
-                          <li key={i}>{f}</li>
-                        ))}
-                      </ul>
-                      <Link
-                        to={`/mboppi-boost/commander/${s.id}`}
-                        className="btn btn-outline"
-                      >
-                        {t("Commander")}
-                      </Link>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </section>
-
-          <section className="section advantages">
-            <div className="section-head">
-              <h2>{t("Pourquoi MboppiBoost ?")}</h2>
-              <p>{t("Des services conçus pour les entrepreneurs et les entreprises.")}</p>
-            </div>
-            <div className="advantages-grid">
-              <div className="advantage-card">
-                <h3>{t("Services adaptés")}</h3>
-                <p>{t("Des solutions pensées pour les entrepreneurs et les entreprises de toutes tailles.")}</p>
-              </div>
-              <div className="advantage-card">
-                <h3>{t("Interface simple")}</h3>
-                <p>{t("Une navigation claire et des catégories bien organisées.")}</p>
-              </div>
-              <div className="advantage-card">
-                <h3>{t("Accompagnement")}</h3>
-                <p>{t("Un suivi selon vos besoins, à votre rythme.")}</p>
-              </div>
-              <div className="advantage-card">
-                <h3>{t("Évolution progressive")}</h3>
-                <p>{t("De nouveaux services s'ajouteront selon vos retours et la demande.")}</p>
-              </div>
-            </div>
-          </section>
-
-          <section className="section cta-section">
-            <div className="cta-card">
-              <h2>{t("Prêt à développer votre présence en ligne ?")}</h2>
-              <p>{t("Découvrez les solutions MboppiBoost et choisissez les services adaptés à vos objectifs.")}</p>
-              <Link to="#services" className="btn btn-primary">
-                {t("Explorer MboppiBoost")}
-              </Link>
-            </div>
-          </section>
-        </>
-      ) : loading ? null : (
-        <section className="section">
-          <div className="card">
-            <p>{error || t("Aucun service disponible pour le moment.")}</p>
-            <Link to="/contact" className="btn btn-outline">
-              {t("Demander des informations")}
-            </Link>
+    <div className="boost-page">
+      <Seo title="MboppiBoost � Commandes de services digitaux" description="MboppiBoost : sélectionnez un service de marketing digital, configurez votre besoin et consultez le montant estimé avant validation." />
+      <header className="boost-top">
+        <div className="boost-brand">Mboppi<span>Boost</span></div>
+        <small>Votre croissance numérique commence ici.</small>
+      </header>
+      <main className="boost-wrap">
+        <section className="boost-hero">
+          <div>
+            <div className="boost-eyebrow">Services digitaux à la demande</div>
+            <h1>Choisissez. Configurez.<br />Commandez en ligne.</h1>
+            <p>Une interface simple pour sélectionner un service de marketing digital, préciser votre besoin et consulter le montant estimé avant validation.</p>
+            <span className="boost-pill">�S Parcours en libre-service</span>
+            <span className="boost-pill">�S Prix affiché avant commande</span>
+            <span className="boost-pill">�S Suivi prévu après connexion</span>
+          </div>
+          <div className="boost-hero-art">
+            <div className="boost-metric"><b>1. Choisissez un service</b><span>Catalogue</span></div>
+            <div className="boost-metric"><b>2. Ajoutez vos informations</b><span>Configuration</span></div>
+            <div className="boost-metric"><b>3. Validez la commande</b><span>Paiement à connecter</span></div>
           </div>
         </section>
-      )}
-    </main>
+        <div className="boost-section-head">
+          <div><h2>Créer une commande</h2><p>Tout se configure sur cette page, sans devoir contacter un commercial.</p></div>
+        </div>
+        <div className="boost-layout">
+          <section className="boost-panel">
+            <div className="boost-catalog-hint"><strong>Prototype de démonstration :</strong> les services et tarifs ci-dessous sont des exemples. Remplacez-les par le catalogue réel du fournisseur avant la mise en ligne.</div>
+            <div className="boost-field">
+              <label htmlFor="category">Type de service</label>
+              <select id="category" value={categoryFilter} onChange={(e) => onCategoryChange(e.target.value)}>
+                {catOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              </div>
+`
+            {loading ? (
+              <p>Chargement⬦</p>
+            ) : (
+              <div className="boost-service-list" id="services">
+                {filtered.map((s) => (
+                  <button
+                    type="button"
+                    key={s.id}
+                    className={`boost-service ${String(selected?.id) === String(s.id) ? "active" : ""}`}
+                    onClick={() => { setSelectedId(s.id); setQuantity(s.min || 1); }}
+                  >
+                    <span className="emoji">{s.icon}</span>
+                    <b>{s.name}</b>
+                    <small>{s.desc}</small>
+                    <span className="boost-price">{MONEY(s.unit)} / {s.unitLabel}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="boost-row2">
+              <div className="boost-field">
+                <label htmlFor="platform">Plateforme</label>
+                <select id="platform" value={platform} onChange={(e) => setPlatform(e.target.value)}>
+                  <option>TikTok</option><option>Facebook</option><option>Instagram</option><option>YouTube</option><option>LinkedIn</option><option>Autre</option>
+                </select>
+              </div>
+              <div className="boost-field">
+                <label htmlFor="quantity">Quantité / volume</label>
+                <input id="quantity" type="number" min={selected?.min || 1} step={selected?.step || 1} value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+                <small id="quantityHelp">Le volume dépend du service sélectionné.</small>
+              </div>
+            </div>
+            <div className="boost-field">
+              <label htmlFor="target">Lien de la page, du profil ou de la publication</label>
+              <input id="target" type="url" placeholder="https://..." autoComplete="url" value={target} onChange={(e) => setTarget(e.target.value)} />
+              <small>Utilisez un lien public et vérifiez qu'il est correct. Ne communiquez jamais votre mot de passe.</small>
+            </div>
+            <div className="boost-field">
+              <label htmlFor="details">Instructions complémentaires (facultatif)</label>
+              <textarea id="details" rows={3} placeholder="Décrivez votre objectif ou les éléments à prendre en compte⬦" value={details} onChange={(e) => setDetails(e.target.value)} />
+            </div>
+            <div className="boost-row2">
+              <div className="boost-field">
+                <label htmlFor="email">E-mail de suivi</label>
+                <input id="email" type="email" placeholder="vous@exemple.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+              <div className="boost-field">
+                <label htmlFor="phone">Téléphone (facultatif)</label>
+                <input id="phone" type="tel" placeholder="+237 ⬦" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </div>
+            </div>
+          </section>
+          <aside className="boost-panel">
+            <div className="boost-summary-title">
+              <h3>Récapitulatif</h3>
+              <span className="boost-demo-tag">Exemple</span>
+            </div>
+            <div className="boost-summary-line"><span>Service</span><strong>{selected?.name || "�"}</strong></div>
+            <div className="boost-summary-line"><span>Plateforme</span><strong>{platform}</strong></div>
+            <div className="boost-summary-line"><span>Tarif unitaire</span><strong>{selected ? MONEY(selected.unit) + " / " + selected.unitLabel : "�"}</strong></div>
+            <div className="boost-summary-line"><span>Quantité</span><strong>{quantity} {Number(quantity) === 1 ? selected?.unitLabel : (selected?.unitLabel || "") + "s"}</strong></div>
+            <div className="boost-summary-line"><span>Référence du lien</span><strong>{target.trim() || "À renseigner"}</strong></div>
+            <div className="boost-total"><span>Total estimé</span><strong>{MONEY(total)}</strong></div>
+            <button className="boost-btn" id="orderBtn" onClick={handleSubmit} disabled={submitting || loading || !selected}>
+              {submitting ? "Préparation⬦" : "Préparer ma commande"}
+            </button>
+            <p className="boost-notice"><strong>Important :</strong> ce prototype ne prélève aucun paiement et n'envoie pas encore de commande à un fournisseur. Pour activer les commandes réelles, le site doit être relié à un backend sécurisé, au catalogue/API d'un fournisseur et à un moyen de paiement (par exemple Mobile Money si disponible).</p>
+            {result && (
+              <div className={`boost-result show ${result.type === "ok" ? "ok" : result.type === "warn" ? "warn" : "err"}`} role="status" aria-live="polite">
+                {result.message}
+                {result.type === "ok" && (
+                  <div style={{ marginTop: 10 }}>
+                    <Link to="/mboppi-boost/mes-commandes" className="boost-btn" style={{ display: "inline-block", width: "auto", padding: "8px 14px", fontSize: 13 }}>
+                      Voir mes commandes
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+          </aside>
+        </div>
+        <div className="boost-section-head">
+          <div><h2>Comment ça marche ?</h2><p>Un parcours client direct, conçu pour être connecté à votre site existant.</p></div>
+        </div>
+        <section className="boost-steps">
+          <div className="boost-step"><i>1</i><b>Sélectionnez le service</b><p>Choisissez la prestation, la plateforme et le volume souhaité.</p></div>
+          <div className="boost-step"><i>2</i><b>Vérifiez le montant</b><p>Le récapitulatif et le total estimé se mettent à jour automatiquement.</p></div>
+          <div className="boost-step"><i>3</i><b>Paiement et suivi à activer</b><p>Après intégration, la commande pourra être payée, transmise au fournisseur et suivie dans votre compte.</p></div>
+        </section>
+      </main>
+      <footer className="boost-footer">MboppiBoost � Votre croissance numérique commence ici. · Prototype d'interface, non relié à un système de paiement.</footer>
+    </div>
   );
-}
+}
