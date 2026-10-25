@@ -213,6 +213,9 @@ router.get(
     }
     sql += ` ORDER BY c.sort_order ASC, c.name ASC, s.sort_order ASC, s.name ASC`;
     const rows = await q(sql, params);
+    if (rows.length === 0) {
+      return res.json({ services: DEFAULT_SERVICES });
+    }
     res.json({ services: rows });
   })
 );
