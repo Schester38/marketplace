@@ -14,15 +14,19 @@ export default function MboppiBoostOrders() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     fetchOrders();
-  }, []);
+  }, [user]);
 
   async function fetchOrders() {
     try {
-      const resp = await api.get("/smm/orders");
-      setOrders(resp.data?.orders || []);
+      const resp = await api.smmOrders();
+      setOrders(resp.orders || []);
     } catch (err) {
-      setError("Impossible de charger vos commandes.");
+      setError(err.message || "Impossible de charger vos commandes.");
     } finally {
       setLoading(false);
     }
@@ -66,7 +70,13 @@ export default function MboppiBoostOrders() {
           </div>
         )}
 
-        {orders.length === 0 && user && (
+        {error && user && (
+          <div className="card">
+            <p className="error-msg">{error}</p>
+          </div>
+        )}
+
+        {orders.length === 0 && user && !error && (
           <div className="card">
             <p>{t("Aucune commande pour le moment.")}</p>
             <Link to="/mboppi-boost" className="btn btn-primary">{t("Découvrir les services")}</Link>

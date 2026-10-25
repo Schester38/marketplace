@@ -572,4 +572,11 @@ export const api = {
   studioStatus: () => adminRequest("/studio"),
   studioHooks: (payload) =>
     adminRequest("/studio/hooks", { method: "POST", body: JSON.stringify(payload) }),
+  // MboppiBoost — catalogue public et commandes de services SMM.
+  smmCategories: () => request("/smm/categories"),
+  smmServices: () => request("/smm/services"),
+  smmService: (id) => request(`/smm/services/${encodeURIComponent(id)}`),
+  smmCreateOrder: (payload) =>
+    request("/smm/orders", { method: "POST", body: JSON.stringify(payload) }),
+  smmOrders: () => request("/smm/orders"),
 };

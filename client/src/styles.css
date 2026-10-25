@@ -12224,3 +12224,63 @@ a.step {
   }
 }
 
+/* MboppiBoost — mise en page responsive (/mboppi-boost) */
+.mboost-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 24px;
+  padding: 38px;
+}
+.mboost-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.8fr);
+  gap: 20px;
+}
+.mboost-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.mboost-services {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 8px 0 22px;
+}
+.mboost-layout > aside {
+  min-width: 0;
+}
+.mboost-layout > aside strong {
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .mboost-hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 28px 24px;
+  }
+}
+
+@media (max-width: 760px) {
+  .mboost-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .mboost-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mboost-hero {
+    padding: 24px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mboost-services {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+

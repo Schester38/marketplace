@@ -1,4 +1,5 @@
 ﻿import pg from "pg";
+import { SMM_CATEGORIES, SMM_SERVICES } from "./services/smmCatalog.js";
 
 const { Pool } = pg;
 
@@ -8,7 +9,7 @@ const { Pool } = pg;
 // Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-10-24-mboppi-boost-services-v1";
+const DB_INIT_VERSION = "2026-10-25-mboppi-boost-social-catalog-v1";
 const DB_INIT_LOCK = "mboppi-db-init-v1";
 let initDbPromise = null;
 
@@ -979,34 +980,76 @@ async function runInitDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_smm_provider_mappings_provider ON smm_provider_mappings(provider_id);
     CREATE INDEX IF NOT EXISTS idx_smm_provider_mappings_service ON smm_provider_mappings(smm_service_id);
-
-    -- DonnÃ©es par dÃ©faut MboppiBoost (idempotent : ON CONFLICT DO NOTHING)
-    INSERT INTO smm_categories (name, slug, description, icon, sort_order, is_active)
-    VALUES
-      ('DÃ©veloppement de l''audience', 'audience', 'AccroÃ®tre votre visibilitÃ© numÃ©rique et dÃ©velopper votre communautÃ©.', 'ðŸ“ˆ', 1, TRUE),
-      ('CrÃ©ation de contenus', 'contenus', 'Contenus attractifs pour communiquer et promouvoir votre activitÃ©.', 'ðŸŽ¨', 2, TRUE),
-      ('Gestion des rÃ©seaux sociaux', 'reseaux-sociaux', 'Animer votre communautÃ© et dÃ©velopper une prÃ©sence professionnelle.', 'ðŸ“±', 3, TRUE),
-      ('PublicitÃ© digitale', 'publicite', 'PrÃ©parer et optimiser vos campagnes publicitaires.', 'ðŸ’°', 4, TRUE)
-    ON CONFLICT (slug) DO NOTHING;
-
-    INSERT INTO smm_services (category_id, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order, created_at, updated_at)
-    SELECT c.id, s.name, s.short_description, s.price, s.currency, s.billing_unit, s.status, s.is_automated, s.is_consulting, s.is_campaign, s.delivery_days, s.conditions, s.sort_order, now(), now()
-    FROM (VALUES
-      ('audience', 'Conseil en stratÃ©gie de croissance', 'Accompagnement pour dÃ©finir votre stratÃ©gie de croissance numÃ©rique.', 0, 'XAF', 'service', false, false, false, 30, NULL, 1),
-      ('audience', 'Optimisation des profils sociaux', 'Refonte et optimisation de vos profils sur les rÃ©seaux sociaux.', 0, 'XAF', 'service', false, false, false, 15, NULL, 2),
-      ('audience', 'Analyse de l''audience', 'Analyse de votre audience actuelle et recommandations de ciblage.', 0, 'XAF', 'service', false, false, false, 7, NULL, 3),
-      ('contenus', 'CrÃ©ation d''affiches publicitaires', 'Conception de visuels publicitaires pour vos campagnes.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
-      ('contenus', 'CrÃ©ation de vidÃ©os courtes', 'Production de vidÃ©os courtes (Reels, TikTok, Shorts) pour vos rÃ©seaux.', 0, 'XAF', 'article', false, false, false, 7, NULL, 2),
-      ('contenus', 'Motion design', 'Animations graphiques et motion design pour vos contenus.', 0, 'XAF', 'article', false, false, false, 10, NULL, 3),
-      ('reseaux-sociaux', 'Gestion de pages professionnelles', 'Gestion complÃ¨te de vos pages professionnelles sur les rÃ©seaux sociaux.', 0, 'XAF', 'mois', false, false, false, 30, NULL, 1),
-      ('reseaux-sociaux', 'Planification des publications', 'Calendrier Ã©ditorial et planification de vos publications.', 0, 'XAF', 'service', false, false, false, 5, NULL, 2),
-      ('reseaux-sociaux', 'ModÃ©ration des commentaires', 'ModÃ©ration et animation de votre communautÃ© (commentaires, messages).', 0, 'XAF', 'mois', false, false, false, 30, NULL, 3),
-      ('publicite', 'Conception de publicitÃ©s', 'Conception graphique de vos publicitÃ©s digitales.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
-      ('publicite', 'PrÃ©paration de campagnes Meta Ads', 'PrÃ©paration et configuration de vos campagnes publicitaires Meta.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 2),
-      ('publicite', 'PrÃ©paration de campagnes TikTok Ads', 'PrÃ©paration et configuration de vos campagnes publicitaires TikTok.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 3)
-    ) AS s(cat_slug, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order)
-    JOIN smm_categories c ON c.slug = s.cat_slug
   `);
+
+  // Amorçage idempotent du catalogue MboppiBoost (7 plateformes, 34 services).
+  // Le catalogue visible vient de server/services/smmCatalog.js, jamais du client.
+  try {
+    const activeServices = (
+      await pool.query(`SELECT COUNT(*)::int AS n FROM smm_services WHERE status = 'active'`)
+    ).rows[0]?.n || 0;
+    if (!activeServices) {
+      await pool.query(
+        `UPDATE smm_categories SET is_active = FALSE
+         WHERE slug = ANY($1::text[])`,
+        [["audience", "contenus", "reseaux-sociaux", "publicite"]]
+      );
+    }
+    for (const category of SMM_CATEGORIES) {
+      await pool.query(
+        `INSERT INTO smm_categories (name, slug, description, icon, sort_order, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (slug) DO UPDATE
+           SET name = EXCLUDED.name,
+               description = EXCLUDED.description,
+               icon = EXCLUDED.icon,
+               sort_order = EXCLUDED.sort_order,
+               is_active = TRUE`,
+        [
+          category.name,
+          category.slug,
+          category.description,
+          category.icon,
+          category.sort_order,
+          category.is_active,
+        ]
+      );
+    }
+    const serviceCount = (
+      await pool.query(`SELECT COUNT(*)::int AS n FROM smm_services`)
+    ).rows[0]?.n || 0;
+    if (!serviceCount) {
+      for (const service of SMM_SERVICES) {
+        await pool.query(
+          `INSERT INTO smm_services
+             (category_id, name, short_description, description, price, currency, billing_unit,
+              status, is_automated, is_consulting, is_campaign, delivery_days, conditions, limits,
+              sort_order, created_at, updated_at)
+           SELECT c.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15, now(), now()
+           FROM smm_categories c WHERE c.slug = $1`,
+          [
+            service.categorySlug,
+            service.name,
+            service.short_description,
+            service.description,
+            service.price,
+            service.currency,
+            service.billing_unit,
+            service.status,
+            service.is_automated,
+            service.is_consulting,
+            service.is_campaign,
+            service.delivery_days,
+            service.conditions,
+            JSON.stringify(service.limits),
+            service.sort_order,
+          ]
+        );
+      }
+    }
+  } catch (err) {
+    console.warn("[db] amorçage MboppiBoost :", err.message);
+  }
 }
 
 // Lance le schÃ©ma une seule fois par version sur une base partagÃ©e. Le

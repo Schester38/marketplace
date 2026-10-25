@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { q } from "../db.js";
-import { authRequired, roleRequired } from "../auth.js";
+import { authRequired, authOptional, roleRequired } from "../auth.js";
 import { validate, validateQuery } from "../middlewares/validate.js";
 import {
   smmCategorySchema,
@@ -17,57 +17,13 @@ import {
   NoProviderAdapter,
 } from "../services/smmProvider.js";
 import { notifyAdmins } from "../services/adminNotify.js";
+import { SMM_CATEGORIES, SMM_SERVICES } from "../services/smmCatalog.js";
 
 const router = Router();
 
-// Données par défaut des services SMM (utilisées quand la base n'est pas encore peuplée)
-const DEFAULT_CATEGORIES = [
-  { id: 1, name: "Instagram", slug: "instagram", description: "Followers, likes, vues, commentaires, partages et enregistrements Instagram.", icon: "📸", sort_order: 1, is_active: true },
-  { id: 2, name: "TikTok", slug: "tiktok", description: "Followers, likes, vues, commentaires et partages TikTok.", icon: "🎵", sort_order: 2, is_active: true },
-  { id: 3, name: "YouTube", slug: "youtube", description: "Abonnés, vues, likes, commentaires et heures de visionnage YouTube.", icon: "▶️", sort_order: 3, is_active: true },
-  { id: 4, name: "Telegram", slug: "telegram", description: "Membres, vues et réactions Telegram.", icon: "✈️", sort_order: 4, is_active: true },
-  { id: 5, name: "Facebook", slug: "facebook", description: "Followers, likes, vues et commentaires Facebook.", icon: "👤", sort_order: 5, is_active: true },
-  { id: 6, name: "Twitter / X", slug: "twitter", description: "Followers, likes, vues, retweets et commentaires X.", icon: "🐦", sort_order: 6, is_active: true },
-  { id: 7, name: "Spotify", slug: "spotify", description: "Auditeurs mensuels, followers et écoutes Spotify.", icon: "🎧", sort_order: 7, is_active: true },
-];
-const S = (id, cid, name, desc, price, min, max, days = 1) => ({ id, category_id: cid, name, short_description: desc, price, currency: "XAF", billing_unit: "1000", status: "active", is_automated: true, is_consulting: false, is_campaign: false, delivery_days: days, features: [], conditions: null, limits: { min, max }, sort_order: id });
-
-const DEFAULT_SERVICES = [
-  S(1, 1, "Instagram Followers", "Augmentez le nombre de followers de votre profil Instagram.", 450, 10, 100000),
-  S(2, 1, "Instagram Likes", "Likes sur vos posts et reels Instagram.", 120, 10, 100000),
-  S(3, 1, "Instagram Views", "Vues sur vos vidéos et posts Instagram.", 8, 100, 2000000000),
-  S(4, 1, "Instagram Saves", "Enregistrements de vos publications Instagram.", 300, 10, 100000),
-  S(5, 1, "Instagram Shares", "Partages de vos publications Instagram.", 250, 10, 100000),
-  S(6, 1, "Instagram Story Views", "Vues sur vos stories Instagram.", 50, 100, 1000000),
-  S(7, 1, "Instagram Reach & Impressions", "Portée et impressions de vos publications.", 60, 100, 10000000),
-  S(8, 1, "Instagram Comments", "Commentaires personnalisés sur vos posts.", 4000, 5, 10000),
-  S(9, 1, "Instagram Reels Views", "Vues sur vos Reels Instagram.", 10, 100, 2000000000),
-  S(10, 2, "TikTok Followers", "Augmentez vos followers TikTok.", 500, 10, 100000),
-  S(11, 2, "TikTok Likes", "Likes sur vos vidéos TikTok.", 90, 10, 1000000),
-  S(12, 2, "TikTok Views", "Vues sur vos vidéos TikTok.", 5, 100, 2000000000),
-  S(13, 2, "TikTok Comments", "Commentaires sur vos vidéos TikTok.", 4500, 5, 10000),
-  S(14, 2, "TikTok Shares", "Partages de vos vidéos TikTok.", 300, 10, 100000),
-  S(15, 2, "TikTok Saves", "Enregistrements de vos vidéos TikTok.", 200, 10, 100000),
-  S(16, 3, "YouTube Subscribers", "Abonnés pour votre chaîne YouTube.", 1500, 10, 100000),
-  S(17, 3, "YouTube Views", "Vues sur vos vidéos YouTube.", 40, 100, 10000000),
-  S(18, 3, "YouTube Likes", "Likes sur vos vidéos YouTube.", 250, 10, 100000),
-  S(19, 3, "YouTube Comments", "Commentaires sur vos vidéos YouTube.", 5000, 5, 5000),
-  S(20, 3, "YouTube Watch Hours", "Heures de visionnage pour la monétisation.", 3000, 1, 4000),
-  S(21, 4, "Telegram Members", "Membres pour votre canal/groupe Telegram.", 600, 10, 100000),
-  S(22, 4, "Telegram Post Views", "Vues sur vos publications Telegram.", 30, 100, 10000000),
-  S(23, 4, "Telegram Reactions", "Réactions sur vos messages Telegram.", 200, 10, 100000),
-  S(24, 5, "Facebook Followers", "Followers pour votre page Facebook.", 400, 10, 100000),
-  S(25, 5, "Facebook Page Likes", "Likes de votre page Facebook.", 350, 10, 100000),
-  S(26, 5, "Facebook Post Likes", "Likes sur vos publications Facebook.", 150, 10, 100000),
-  S(27, 5, "Facebook Video Views", "Vues sur vos vidéos Facebook.", 15, 100, 10000000),
-  S(28, 6, "X Followers", "Followers pour votre compte X.", 700, 10, 100000),
-  S(29, 6, "X Likes", "Likes sur vos tweets.", 180, 10, 100000),
-  S(30, 6, "X Views", "Vues sur vos tweets.", 25, 100, 10000000),
-  S(31, 6, "X Retweets", "Retweets de vos publications.", 400, 10, 50000),
-  S(32, 7, "Spotify Followers", "Followers pour votre artiste Spotify.", 1200, 10, 50000),
-  S(33, 7, "Spotify Monthly Listeners", "Auditeurs mensuels Spotify.", 2000, 100, 100000),
-  S(34, 7, "Spotify Track Plays", "Écoutes sur vos titres Spotify.", 30, 100, 10000000),
-];
+// Catalogue public MboppiBoost (source partagée avec l'amorçage initDb).
+const DEFAULT_CATEGORIES = SMM_CATEGORIES;
+const DEFAULT_SERVICES = SMM_SERVICES;
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
@@ -78,38 +34,18 @@ const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch
 router.get(
   "/categories",
   ah(async (req, res) => {
-    // Auto-réparation : créer les tables si initDb() n'a pas fonctionné
-    try {
-      await q(`
-        CREATE TABLE IF NOT EXISTS smm_categories (
-          id SERIAL PRIMARY KEY,
-          name TEXT NOT NULL UNIQUE,
-          slug TEXT NOT NULL UNIQUE,
-          description TEXT,
-          icon TEXT,
-          sort_order INTEGER NOT NULL DEFAULT 0,
-          is_active BOOLEAN NOT NULL DEFAULT TRUE,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        );
-        INSERT INTO smm_categories (name, slug, description, icon, sort_order, is_active)
-        VALUES
-          ('Développement de l''audience', 'audience', 'Accroître votre visibilité numérique et développer votre communauté.', '📈', 1, TRUE),
-          ('Création de contenus', 'contenus', 'Contenus attractifs pour communiquer et promouvoir votre activité.', '🎨', 2, TRUE),
-          ('Gestion des réseaux sociaux', 'reseaux-sociaux', 'Animer votre communauté et développer une présence professionnelle.', '📱', 3, TRUE),
-          ('Publicité digitale', 'publicite', 'Préparer et optimiser vos campagnes publicitaires.', '💰', 4, TRUE)
-        ON CONFLICT (slug) DO NOTHING;
-      `);
-    } catch (initErr) {
-      // ignore, on tentera de lire les données ci-dessous
-    }
     try {
       const rows = await q(
-        `SELECT id, name, slug, description, icon, sort_order, is_active, created_at
-         FROM smm_categories
-         WHERE is_active = TRUE
-         ORDER BY sort_order ASC, name ASC`
+        `SELECT c.id, c.name, c.slug, c.description, c.icon, c.sort_order, c.is_active, c.created_at
+         FROM smm_categories c
+         WHERE c.is_active = TRUE
+           AND EXISTS (
+             SELECT 1 FROM smm_services s
+             WHERE s.category_id = c.id AND s.status = 'active'
+           )
+         ORDER BY c.sort_order ASC, c.name ASC`
       );
-      res.json({ categories: rows });
+      res.json({ categories: rows.length ? rows : DEFAULT_CATEGORIES });
     } catch (selectErr) {
       // Base de données non disponible : renvoyer les catégories par défaut
       res.json({ categories: DEFAULT_CATEGORIES });
@@ -121,74 +57,6 @@ router.get(
 router.get(
   "/services",
   ah(async (req, res) => {
-    // Auto-réparation : créer les tables si initDb() n'a pas fonctionné
-    try {
-      await q(`
-        CREATE TABLE IF NOT EXISTS smm_categories (
-          id SERIAL PRIMARY KEY,
-          name TEXT NOT NULL UNIQUE,
-          slug TEXT NOT NULL UNIQUE,
-          description TEXT,
-          icon TEXT,
-          sort_order INTEGER NOT NULL DEFAULT 0,
-          is_active BOOLEAN NOT NULL DEFAULT TRUE,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        );
-        CREATE TABLE IF NOT EXISTS smm_services (
-          id SERIAL PRIMARY KEY,
-          category_id INTEGER NOT NULL REFERENCES smm_categories(id) ON DELETE CASCADE,
-          name TEXT NOT NULL,
-          description TEXT,
-          short_description TEXT,
-          price NUMERIC(14,2) NOT NULL CHECK (price >= 0),
-          currency TEXT NOT NULL DEFAULT 'XAF',
-          billing_unit TEXT NOT NULL DEFAULT 'service',
-          status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'draft')),
-          is_automated BOOLEAN NOT NULL DEFAULT FALSE,
-          is_consulting BOOLEAN NOT NULL DEFAULT FALSE,
-          is_campaign BOOLEAN NOT NULL DEFAULT FALSE,
-          external_service_id TEXT,
-          delivery_days INTEGER,
-          conditions TEXT,
-          limits JSONB NOT NULL DEFAULT '{}'::jsonb,
-          sort_order INTEGER NOT NULL DEFAULT 0,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        );
-      `);
-      try {
-        await q(`
-          INSERT INTO smm_categories (name, slug, description, icon, sort_order, is_active)
-          VALUES
-            ('Développement de l''audience', 'audience', 'Accroître votre visibilité numérique et développer votre communauté.', '📈', 1, TRUE),
-            ('Création de contenus', 'contenus', 'Contenus attractifs pour communiquer et promouvoir votre activité.', '🎨', 2, TRUE),
-            ('Gestion des réseaux sociaux', 'reseaux-sociaux', 'Animer votre communauté et développer une présence professionnelle.', '📱', 3, TRUE),
-            ('Publicité digitale', 'publicite', 'Préparer et optimiser vos campagnes publicitaires.', '💰', 4, TRUE)
-          ON CONFLICT (slug) DO NOTHING;
-          INSERT INTO smm_services (category_id, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order, created_at, updated_at)
-          SELECT c.id, s.name, s.short_description, s.price, s.currency, s.billing_unit, s.status, s.is_automated, s.is_consulting, s.is_campaign, s.delivery_days, s.conditions, s.sort_order, now(), now()
-          FROM (VALUES
-            ('audience', 'Conseil en stratégie de croissance', 'Accompagnement pour définir votre stratégie de croissance numérique.', 0, 'XAF', 'service', false, false, false, 30, NULL, 1),
-            ('audience', 'Optimisation des profils sociaux', 'Refonte et optimisation de vos profils sur les réseaux sociaux.', 0, 'XAF', 'service', false, false, false, 15, NULL, 2),
-            ('audience', 'Analyse de l''audience', 'Analyse de votre audience actuelle et recommandations de ciblage.', 0, 'XAF', 'service', false, false, false, 7, NULL, 3),
-            ('contenus', 'Création d''affiches publicitaires', 'Conception de visuels publicitaires pour vos campagnes.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
-            ('contenus', 'Création de vidéos courtes', 'Production de vidéos courtes (Reels, TikTok, Shorts) pour vos réseaux.', 0, 'XAF', 'article', false, false, false, 7, NULL, 2),
-            ('contenus', 'Motion design', 'Animations graphiques et motion design pour vos contenus.', 0, 'XAF', 'article', false, false, false, 10, NULL, 3),
-            ('reseaux-sociaux', 'Gestion de pages professionnelles', 'Gestion complète de vos pages professionnelles sur les réseaux sociaux.', 0, 'XAF', 'mois', false, false, false, 30, NULL, 1),
-            ('reseaux-sociaux', 'Planification des publications', 'Calendrier éditorial et planification de vos publications.', 0, 'XAF', 'service', false, false, false, 5, NULL, 2),
-            ('reseaux-sociaux', 'Modération des commentaires', 'Modération et animation de votre communauté (commentaires, messages).', 0, 'XAF', 'mois', false, false, false, 30, NULL, 3),
-            ('publicite', 'Conception de publicités', 'Conception graphique de vos publicités digitales.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
-            ('publicite', 'Préparation de campagnes Meta Ads', 'Préparation et configuration de vos campagnes publicitaires Meta.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 2),
-            ('publicite', 'Préparation de campagnes TikTok Ads', 'Préparation et configuration de vos campagnes publicitaires TikTok.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 3)
-          ) AS s(cat_slug, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order)
-          JOIN smm_categories c ON c.slug = s.cat_slug;
-        `);
-      } catch {
-        /* ignore */
-      }
-    } catch {
-      /* ignore */
-    }
     const categoryId = req.query.category_id;
     let sql = `
       SELECT s.id, s.category_id, c.name AS category_name, c.slug AS category_slug,
@@ -205,20 +73,20 @@ router.get(
       sql += ` AND s.category_id = $${params.length}`;
     }
     sql += ` ORDER BY c.sort_order ASC, c.name ASC, s.sort_order ASC, s.name ASC`;
+    const defaultsWithCategories = DEFAULT_SERVICES.map((s) => ({
+      ...s,
+      category_name: DEFAULT_CATEGORIES.find((c) => c.id === s.category_id)?.name || "",
+      category_slug: DEFAULT_CATEGORIES.find((c) => c.id === s.category_id)?.slug || "",
+    }));
     let rows;
     try {
       rows = await q(sql, params);
     } catch (dbErr) {
       // Base de données indisponible : renvoyer les services par défaut
-      const defaultServicesWithCategories = DEFAULT_SERVICES.map((s) => ({
-        ...s,
-        category_name: DEFAULT_CATEGORIES.find((c) => c.id === s.category_id)?.name || "",
-        category_slug: DEFAULT_CATEGORIES.find((c) => c.id === s.category_id)?.slug || "",
-      }));
-      return res.json({ services: defaultServicesWithCategories });
+      return res.json({ services: defaultsWithCategories });
     }
     if (rows.length === 0) {
-      return res.json({ services: DEFAULT_SERVICES });
+      return res.json({ services: defaultsWithCategories });
     }
     res.json({ services: rows });
   })
@@ -268,71 +136,11 @@ router.get(
 /* POST /api/smm/orders — passer une commande (auth optionnelle) */
 router.post(
   "/orders",
+  authOptional,
   validate(smmOrderSchema),
   ah(async (req, res) => {
     const { service_id, quantity, client_info, payment_method, idempotency_key } = req.body;
     const userId = req.user?.id || null;
-
-    // Auto-réparation : créer les tables et insérer les données par défaut
-    try {
-      await q(`CREATE TABLE IF NOT EXISTS smm_categories (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL UNIQUE,
-        slug TEXT NOT NULL UNIQUE,
-        description TEXT,
-        icon TEXT,
-        sort_order INTEGER NOT NULL DEFAULT 0,
-        is_active BOOLEAN NOT NULL DEFAULT TRUE,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      )`);
-      await q(`CREATE TABLE IF NOT EXISTS smm_services (
-        id SERIAL PRIMARY KEY,
-        category_id INTEGER NOT NULL REFERENCES smm_categories(id) ON DELETE CASCADE,
-        name TEXT NOT NULL,
-        description TEXT,
-        short_description TEXT,
-        price NUMERIC(14,2) NOT NULL CHECK (price >= 0),
-        currency TEXT NOT NULL DEFAULT 'XAF',
-        billing_unit TEXT NOT NULL DEFAULT 'service',
-        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'draft')),
-        is_automated BOOLEAN NOT NULL DEFAULT FALSE,
-        is_consulting BOOLEAN NOT NULL DEFAULT FALSE,
-        is_campaign BOOLEAN NOT NULL DEFAULT FALSE,
-        external_service_id TEXT,
-        delivery_days INTEGER,
-        conditions TEXT,
-        limits JSONB NOT NULL DEFAULT '{}'::jsonb,
-        sort_order INTEGER NOT NULL DEFAULT 0,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      )`);
-      await q(`INSERT INTO smm_categories (name, slug, description, icon, sort_order, is_active)
-        VALUES
-          ('Développement de l''audience', 'audience', 'Accroître votre visibilité numérique et développer votre communauté.', '📈', 1, TRUE),
-          ('Création de contenus', 'contenus', 'Contenus attractifs pour communiquer et promouvoir votre activité.', '🎨', 2, TRUE),
-          ('Gestion des réseaux sociaux', 'reseaux-sociaux', 'Animer votre communauté et développer une présence professionnelle.', '📱', 3, TRUE),
-          ('Publicité digitale', 'publicite', 'Préparer et optimiser vos campagnes publicitaires.', '💰', 4, TRUE)
-        ON CONFLICT (slug) DO NOTHING`);
-      await q(`INSERT INTO smm_services (category_id, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order, created_at, updated_at)
-        SELECT c.id, s.name, s.short_description, s.price, s.currency, s.billing_unit, s.status, s.is_automated, s.is_consulting, s.is_campaign, s.delivery_days, s.conditions, s.sort_order, now(), now()
-        FROM (VALUES
-          ('audience', 'Conseil en stratégie de croissance', 'Accompagnement pour définir votre stratégie de croissance numérique.', 0, 'XAF', 'service', false, false, false, 30, NULL, 1),
-          ('audience', 'Optimisation des profils sociaux', 'Refonte et optimisation de vos profils sur les réseaux sociaux.', 0, 'XAF', 'service', false, false, false, 15, NULL, 2),
-          ('audience', 'Analyse de l''audience', 'Analyse de votre audience actuelle et recommandations de ciblage.', 0, 'XAF', 'service', false, false, false, 7, NULL, 3),
-          ('contenus', 'Création d''affiches publicitaires', 'Conception de visuels publicitaires pour vos campagnes.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
-          ('contenus', 'Création de vidéos courtes', 'Production de vidéos courtes (Reels, TikTok, Shorts) pour vos réseaux.', 0, 'XAF', 'article', false, false, false, 7, NULL, 2),
-          ('contenus', 'Motion design', 'Animations graphiques et motion design pour vos contenus.', 0, 'XAF', 'article', false, false, false, 10, NULL, 3),
-          ('reseaux-sociaux', 'Gestion de pages professionnelles', 'Gestion complète de vos pages professionnelles sur les réseaux sociaux.', 0, 'XAF', 'mois', false, false, false, 30, NULL, 1),
-          ('reseaux-sociaux', 'Planification des publications', 'Calendrier éditorial et planification de vos publications.', 0, 'XAF', 'service', false, false, false, 5, NULL, 2),
-          ('reseaux-sociaux', 'Modération des commentaires', 'Modération et animation de votre communauté (commentaires, messages).', 0, 'XAF', 'mois', false, false, false, 30, NULL, 3),
-          ('publicite', 'Conception de publicités', 'Conception graphique de vos publicités digitales.', 0, 'XAF', 'article', false, false, false, 5, NULL, 1),
-          ('publicite', 'Préparation de campagnes Meta Ads', 'Préparation et configuration de vos campagnes publicitaires Meta.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 2),
-          ('publicite', 'Préparation de campagnes TikTok Ads', 'Préparation et configuration de vos campagnes publicitaires TikTok.', 0, 'XAF', 'campagne', false, false, true, 7, NULL, 3)
-        ) AS s(cat_slug, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, sort_order)
-        JOIN smm_categories c ON c.slug = s.cat_slug`);
-    } catch {
-      /* ignore */
-    }
 
     let svc = null;
     try {
@@ -377,7 +185,7 @@ router.post(
       }
     }
 
-    const created = await q(
+    const created = (await q(
       `INSERT INTO smm_orders
         (user_id, service_id, service_name, service_price, currency, quantity,
          total, billing_unit, client_info, status, payment_method, idempotency_key,
@@ -397,7 +205,7 @@ router.post(
         payment_method,
         idemKey,
       ]
-    )[0];
+    ))[0];
 
     await q(
       `INSERT INTO smm_order_events (order_id, event_type, new_status, message, created_at)
@@ -503,12 +311,12 @@ router.post(
   ah(async (req, res) => {
     const { name, slug, description, icon, sort_order, is_active } = req.body;
     try {
-      const created = await q(
+      const created = (await q(
         `INSERT INTO smm_categories (name, slug, description, icon, sort_order, is_active, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, now())
          RETURNING id, name, slug, description, icon, sort_order, is_active, created_at`,
         [name, slug, description || null, icon || null, sort_order, is_active]
-      )[0];
+      ))[0];
       res.status(201).json({ category: created });
     } catch (err) {
       if (err.code === "23505") {
@@ -598,7 +406,7 @@ router.post(
       external_service_id, delivery_days, conditions, limits, sort_order,
     } = req.body;
     try {
-      const created = await q(
+      const created = (await q(
         `INSERT INTO smm_services
           (category_id, name, description, short_description, price, currency,
            billing_unit, status, is_automated, is_consulting, is_campaign,
@@ -612,7 +420,7 @@ router.post(
           is_campaign, external_service_id || null, delivery_days || null,
           conditions || null, JSON.stringify(limits || {}), sort_order,
         ]
-      )[0];
+      ))[0];
       res.status(201).json({ service_id: created.id });
     } catch (err) {
       if (err.code === "23505") {
