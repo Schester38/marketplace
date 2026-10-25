@@ -1,0 +1,20 @@
+⚠️  VAPID keys non configurées : les push notifications seront désactivées. Définissez VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY.
+Base de données PostgreSQL connectée
+API MboppiShop démarrée sur http://localhost:4000
+(node:10368) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Error: Connection terminated due to connection timeout
+    at C:\Users\EASYSTORE\marketplace\server\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async q (file:///C:/Users/EASYSTORE/marketplace/server/db.js:108:15)
+    at async file:///C:/Users/EASYSTORE/marketplace/server/routes/sales.js:202:18 {
+  [cause]: Error: Connection terminated unexpectedly
+      at Connection.<anonymous> (C:\Users\EASYSTORE\marketplace\server\node_modules\pg\lib\client.js:199:73)
+      at Object.onceWrapper (node:events:630:28)
+      at Connection.emit (node:events:509:28)
+      at Socket.<anonymous> (C:\Users\EASYSTORE\marketplace\server\node_modules\pg\lib\connection.js:63:12)
+      at Socket.emit (node:events:521:24)
+      at TCP.<anonymous> (node:net:355:12)
+}
+[ikeepay] lecture setting impossible : Connection terminated due to connection timeout
+[ikeepay] lecture setting impossible : Connection terminated due to connection timeout

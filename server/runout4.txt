@@ -1,0 +1,5 @@
+⚠️  VAPID keys non configurées : les push notifications seront désactivées. Définissez VAPID_PUBLIC_KEY et VAPID_PRIVATE_KEY.
+Base de données PostgreSQL connectée
+API MboppiShop démarrée sur http://localhost:4000
+(node:15632) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
