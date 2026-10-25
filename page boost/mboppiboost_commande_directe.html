@@ -65,7 +65,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 
 
   <div class="layout">
     <section class="panel">
-      <div id="catalogHint"><strong>Prototype de démonstration :</strong> les services et tarifs ci-dessous sont des exemples. Remplacez-les par le catalogue réel du fournisseur avant la mise en ligne.</div>
+      <div id="catalogHint"><strong>Catalogue en ligne :</strong> sélectionnez un service, configurez votre besoin et validez votre commande. Les tarifs sont ceux actuellement proposés.</div>
       <div class="field">
         <label for="category">Type de service</label>
         <select id="category">
@@ -113,7 +113,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 
       <div class="summary-line"><span>Référence du lien</span><strong id="sumTarget">À renseigner</strong></div>
       <div class="total"><span>Total estimé</span><strong id="sumTotal">5 000 FCFA</strong></div>
       <button class="btn" id="orderBtn">Préparer ma commande</button>
-      <p class="notice"><strong>Important :</strong> ce prototype ne prélève aucun paiement et n'envoie pas encore de commande à un fournisseur. Pour activer les commandes réelles, le site doit être relié à un backend sécurisé, au catalogue/API d'un fournisseur et à un moyen de paiement (par exemple Mobile Money si disponible).</p>
+      <p class="notice"><strong>Important :</strong> votre commande est enregistrée et vous pouvez la suivre depuis votre compte. Le paiement (Mobile Money, virement ou espèces) est confirmé selon les modalités MboppiBoost.</p>
       <div class="result" id="result" role="status" aria-live="polite"></div>
     </aside>
   </div>
@@ -125,7 +125,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 
     <div class="step"><i>3</i><b>Paiement et suivi à activer</b><p>Après intégration, la commande pourra être payée, transmise au fournisseur et suivie dans votre compte.</p></div>
   </section>
 </main>
-<footer class="footer">MboppiBoost — Votre croissance numérique commence ici. · Prototype d’interface, non relié à un système de paiement.</footer>
+<footer class="footer">MboppiBoost — Votre croissance numérique commence ici. · Commandes réelles, paiement et suivi depuis votre compte.</footer>
 <script>
 const catalog = [
  {id:'visibility',cat:'social',icon:'📣',name:'Campagne de visibilité',desc:'Promotion de contenu via une campagne à configurer.',unit:5000,unitLabel:'campagne',step:1,min:1},

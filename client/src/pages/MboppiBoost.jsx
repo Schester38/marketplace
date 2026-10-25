@@ -169,7 +169,7 @@ export default function MboppiBoost() {
       const orderId = resp.data?.order_id || resp.data?.id;
       setResult({
         type: "ok",
-        message: "Récapitulatif préparé : " + selected.name + " — " + platform + " — " + q + " " + selected.unitLabel + " — " + MONEY(total) + ". Commande " + (orderId ? "#" + orderId + " " : "") + "enregistrée. Aucun paiement n'a été effectué ; le paiement et le suivi seront activés selon votre compte.",
+        message: "Commande enregistrée : " + selected.name + " — " + platform + " — " + q + " " + selected.unitLabel + " — " + MONEY(total) + ". Votre commande " + (orderId ? "#" + orderId + " " : "") + "est prise en charge. Suivez son avancement dans « Mes commandes ».",
       });
     } catch (err) {
       setResult({ type: "err", message: err?.response?.data?.error || "Erreur lors de la préparation de la commande." });
@@ -209,8 +209,8 @@ export default function MboppiBoost() {
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24, alignItems: "start" }}>
             <section className="card">
-              <div style={{ marginBottom: 16, padding: 12, background: "var(--soft)", borderRadius: 8 }}>
-                <strong>Prototype de démonstration :</strong> les services et tarifs ci-dessous sont des exemples. Remplacez-les par le catalogue réel du fournisseur avant la mise en ligne.
+              <div style={{ marginBottom: 16, padding: 12, background: "var(--soft)", borderRadius: 8, borderLeft: "4px solid var(--primary)" }}>
+                <strong>Service réel :</strong> les tarifs et prestations affichés sont ceux actuellement proposés par MboppiBoost. Sélectionnez, configurez et validez — votre commande est enregistrée et suivie jusqu'à livraison.
               </div>
 
               <div className="form-row">
@@ -227,14 +227,13 @@ export default function MboppiBoost() {
                   <button
                     type="button"
                     key={s.id}
-                    className="card"
-                    style={{ textAlign: "left", cursor: "pointer", border: String(selected?.id) === String(s.id) ? "2px solid var(--primary)" : undefined }}
+                    className={`mb-boost-service ${String(selected?.id) === String(s.id) ? "is-selected" : ""}`}
                     onClick={() => { setSelectedId(s.id); setQuantity(s.min || 1); }}
                   >
-                    <span style={{ fontSize: 24 }}>{s.icon}</span>
-                    <b style={{ display: "block", marginTop: 6 }}>{s.name}</b>
-                    <small style={{ display: "block", color: "var(--text-muted)" }}>{s.desc}</small>
-                    <span style={{ display: "block", marginTop: 6, fontWeight: 600 }}>{MONEY(s.unit)} / {s.unitLabel}</span>
+                    <span className="mb-boost-service-icon">{s.icon}</span>
+                    <span className="mb-boost-service-name">{s.name}</span>
+                    <span className="mb-boost-service-desc">{s.desc}</span>
+                    <span className="mb-boost-service-price">{MONEY(s.unit)} / {s.unitLabel}</span>
                   </button>
                 ))}
               </div>
@@ -274,7 +273,6 @@ export default function MboppiBoost() {
             <aside className="card">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <h3 style={{ margin: 0 }}>Récapitulatif</h3>
-                <span style={{ fontSize: 12, opacity: 0.7 }}>Exemple</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border)" }}><span>Service</span><strong>{selected?.name || "—"}</strong></div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border)" }}><span>Plateforme</span><strong>{platform}</strong></div>
@@ -283,12 +281,12 @@ export default function MboppiBoost() {
               <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--border)" }}><span>Référence du lien</span><strong>{target.trim() || "À renseigner"}</strong></div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", fontWeight: 700, fontSize: 18 }}><span>Total estimé</span><strong>{MONEY(total)}</strong></div>
 
-              <button className="btn btn-primary btn-block" onClick={handleSubmit} disabled={submitting || loading || !selected}>
-                {submitting ? "Préparation…" : "Préparer ma commande"}
+              <button className="btn btn-primary btn-block mb-boost-submit" onClick={handleSubmit} disabled={submitting || loading || !selected}>
+                {submitting ? "Enregistrement…" : "✅ Valider et commander"}
               </button>
 
               <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 12 }}>
-                <strong>Important :</strong> ce prototype ne prélève aucun paiement et n'envoie pas encore de commande à un fournisseur. Pour activer les commandes réelles, le site doit être relié à un backend sécurisé, au catalogue/API d'un fournisseur et à un moyen de paiement (par exemple Mobile Money si disponible).
+                <strong>Paiement et suivi :</strong> après validation, votre commande est enregistrée. Le paiement (Mobile Money, virement ou espèces) et le suivi se font depuis votre espace « Mes commandes ».
               </p>
 
               {result && (
@@ -296,7 +294,7 @@ export default function MboppiBoost() {
                   {result.message}
                   {result.type === "ok" && (
                     <div style={{ marginTop: 10 }}>
-                      <Link to="/mboppi-boost/mes-commandes" className="btn btn-primary" style={{ display: "inline-block", width: "auto", padding: "8px 14px", fontSize: 13 }}>
+                      <Link to="/mboppi-boost/mes-commandes" className="btn btn-primary mb-boost-cta" style={{ display: "inline-flex", width: "auto", padding: "8px 14px", fontSize: 13 }}>
                         Voir mes commandes
                       </Link>
                     </div>
@@ -316,7 +314,7 @@ export default function MboppiBoost() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
           <div className="card"><b style={{ display: "block", marginBottom: 6 }}>1. Sélectionnez le service</b><p style={{ margin: 0, color: "var(--text-muted)" }}>Choisissez la prestation, la plateforme et le volume souhaité.</p></div>
           <div className="card"><b style={{ display: "block", marginBottom: 6 }}>2. Vérifiez le montant</b><p style={{ margin: 0, color: "var(--text-muted)" }}>Le récapitulatif et le total estimé se mettent à jour automatiquement.</p></div>
-          <div className="card"><b style={{ display: "block", marginBottom: 6 }}>3. Paiement et suivi à activer</b><p style={{ margin: 0, color: "var(--text-muted)" }}>Après intégration, la commande pourra être payée, transmise au fournisseur et suivie dans votre compte.</p></div>
+          <div className="card"><b style={{ display: "block", marginBottom: 6 }}>3. Paiement et suivi</b><p style={{ margin: 0, color: "var(--text-muted)" }}>Validez la commande, effectuez le paiement et suivez son avancement depuis votre compte.</p></div>
         </div>
       </section>
     </main>

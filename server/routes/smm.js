@@ -810,4 +810,98 @@ router.post(
   })
 );
 
+/* GET /api/admin/smm/balance — solde fournisseur (admin) */
+router.get(
+  "/admin/balance",
+  authRequired,
+  roleRequired("admin"),
+  ah(async (req, res) => {
+    try {
+      const { adapter, provider } = await getActiveProviderConfig();
+      if (provider !== "smm_africa" || !adapter) {
+        return res.status(400).json({ error: "Fournisseur SMM Africa non actif" });
+      }
+      const bal = await adapter.fetchBalance();
+      res.json({ ok: true, ...bal });
+    } catch (err) {
+      res.status(502).json({ error: err.message || "Erreur fournisseur" });
+    }
+  })
+);
+
+/* POST /api/admin/smm/import-catalog — importe le catalogue SMM Africa (admin) */
+router.post(
+  "/admin/import-catalog",
+  authRequired,
+  roleRequired("admin"),
+  ah(async (req, res) => {
+    try {
+      const { adapter, provider } = await getActiveProviderConfig();
+      if (provider !== "smm_africa" || !adapter) {
+        return res.status(400).json({ error: "Fournisseur SMM Africa non actif" });
+      }
+      const markup = Number(req.body?.markup) > 0 ? Number(req.body.markup) : 1;
+      const usdToXaf = Number(req.body?.usd_to_xaf) > 0 ? Number(req.body.usd_to_xaf) : 655.957;
+      const categoryId = req.body?.category_id ? Number(req.body.category_id) : null;
+
+      const items = await adapter.fetchCatalog();
+      let created = 0;
+      let updated = 0;
+      for (const it of items) {
+        if (!it.external_service_id) continue;
+        const rate = Number(it.rate);
+        const priceXaf = isFinite(rate) ? Math.round(rate * usdToXaf * markup * 100) / 100 : 0;
+
+        // existing mapping?
+        const provRows = await q(`SELECT id FROM smm_providers WHERE provider_key = $1`, ["smm_africa"]);
+        let providerId;
+        if (provRows.length) {
+          providerId = provRows[0].id;
+        } else {
+          const ins = await q(
+            `INSERT INTO smm_providers (name, provider_key, is_active, config) VALUES ($1,$2,TRUE,$3::jsonb) RETURNING id`,
+            ["SMM Africa", "smm_africa", "{}"]
+          );
+          providerId = ins[0].id;
+        }
+
+        // find mapping
+        const mapRows = await q(
+          `SELECT id, smm_service_id FROM smm_provider_mappings WHERE provider_id = $1 AND external_service_id = $2`,
+          [providerId, it.external_service_id]
+        );
+
+        let smmServiceId;
+        if (mapRows.length) {
+          smmServiceId = mapRows[0].smm_service_id;
+          await q(
+            `UPDATE smm_services SET name=$1, short_description=$2, price=$3, currency='XAF', limits=$4::jsonb, updated_at=now() WHERE id=$5`,
+            [it.name, it.type || null, priceXaf, JSON.stringify({ min: it.min, max: it.max }), smmServiceId]
+          );
+          updated++;
+        } else {
+          // create service (need category_id)
+          const cid = categoryId || 1;
+          const createdSvc = await q(
+            `INSERT INTO smm_services (category_id, name, short_description, price, currency, billing_unit, status, is_automated, is_consulting, is_campaign, delivery_days, conditions, limits, sort_order, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,'XAF','1000',TRUE,FALSE,FALSE,1,NULL,$5::jsonb,0,now(),now()) RETURNING id`,
+            [cid, it.name, it.type || null, priceXaf, JSON.stringify({ min: it.min, max: it.max })]
+          );
+          smmServiceId = createdSvc[0].id;
+          await q(
+            `INSERT INTO smm_provider_mappings (provider_id, smm_service_id, external_service_id, external_name, external_price, currency) VALUES ($1,$2,$3,$4,$5,'USD')`,
+            [providerId, smmServiceId, it.external_service_id, it.name, isFinite(rate) ? rate : null]
+          );
+          created++;
+        }
+      }
+
+      res.json({ ok: true, imported: items.length, created, updated });
+    } catch (err) {
+      console.error("[smm import-catalog]", err.message);
+      res.status(502).json({ error: err.message || "Erreur import catalogue" });
+    }
+  })
+);
+
 export default router;

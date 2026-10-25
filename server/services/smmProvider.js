@@ -4,20 +4,8 @@
    ======================================================================== */
 
 import { q } from "../db.js";
-
-export class SMMProviderInterface {
-  get name() { throw new Error("name doit être implémenté"); }
-  get providerKey() { throw new Error("providerKey doit être implémenté"); }
-  async fetchCatalog() { throw new Error("fetchCatalog doit être implémenté"); }
-  async placeOrder(order) { throw new Error("placeOrder doit être implémenté"); }
-  async checkOrderStatus(externalReference) {
-    throw new Error("checkOrderStatus doit être implémenté");
-  }
-  async fetchBalance() { return null; }
-  async cancelOrder(externalReference) {
-    return { ok: false, error: "Annulation non supportée" };
-  }
-}
+import { SMMProviderInterface } from "./smmProviderBase.js";
+export { SMMProviderInterface } from "./smmProviderBase.js";
 
 /* ========================================================================
    2. Mode "sans fournisseur"
@@ -75,10 +63,19 @@ export async function getActiveProviderConfig() {
     const config = {
       baseUrl: settings["smm_api_base_url"] || "",
       timeoutMs: Number(settings["smm_api_timeout"]) || 10000,
+      apiKey: settings["smm_api_key"] || process.env.SMM_AFRICA_API_KEY || process.env.SMM_API_KEY || null,
       ...(settings["smm_provider_config"] ? JSON.parse(settings["smm_provider_config"]) : {}),
     };
 
-    return { provider: providerKey, config, adapter: null };
+    let adapter = null;
+    if (providerKey === "smm_africa") {
+      const mod = await import("./smmAfrica.js");
+      adapter = new mod.SmmAfricaAdapter(config);
+    }
+    if (!adapter) {
+      return { provider: providerKey, config, adapter: new NoProviderAdapter() };
+    }
+    return { provider: providerKey, config, adapter };
   } catch (err) {
     console.error("[smmProvider] Erreur lecture config :", err.message);
     return { provider: null, config: {}, adapter: new NoProviderAdapter() };
