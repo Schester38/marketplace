@@ -5,6 +5,21 @@ import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
 
+const DEFAULT_SERVICES = [
+  { id: 1, category_id: 1, name: "Conseil en stratégie de croissance", short_description: "Accompagnement pour définir votre stratégie de croissance numérique.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 30, features: ["Conseil en stratégie de croissance."], conditions: null },
+  { id: 2, category_id: 1, name: "Optimisation des profils sociaux", short_description: "Refonte et optimisation de vos profils sur les réseaux sociaux.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 15, features: ["Optimisation des profils sociaux."], conditions: null },
+  { id: 3, category_id: 1, name: "Analyse de l'audience", short_description: "Analyse de votre audience actuelle et recommandations de ciblage.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 7, features: ["Analyse de l'audience."], conditions: null },
+  { id: 4, category_id: 2, name: "Création d'affiches publicitaires", short_description: "Conception de visuels publicitaires pour vos campagnes.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 5, features: ["Création d'affiches publicitaires."], conditions: null },
+  { id: 5, category_id: 2, name: "Création de vidéos courtes", short_description: "Production de vidéos courtes (Reels, TikTok, Shorts) pour vos réseaux.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 7, features: ["Création de vidéos courtes."], conditions: null },
+  { id: 6, category_id: 2, name: "Motion design", short_description: "Animations graphiques et motion design pour vos contenus.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 10, features: ["Motion design."], conditions: null },
+  { id: 7, category_id: 3, name: "Gestion de pages professionnelles", short_description: "Gestion complète de vos pages professionnelles sur les réseaux sociaux.", price: 0, currency: "XAF", billing_unit: "mois", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 30, features: ["Gestion de pages professionnelles."], conditions: null },
+  { id: 8, category_id: 3, name: "Planification des publications", short_description: "Calendrier éditorial et planification de vos publications.", price: 0, currency: "XAF", billing_unit: "service", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 5, features: ["Planification des publications."], conditions: null },
+  { id: 9, category_id: 3, name: "Modération des commentaires", short_description: "Modération et animation de votre communauté (commentaires, messages).", price: 0, currency: "XAF", billing_unit: "mois", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 30, features: ["Modération des commentaires."], conditions: null },
+  { id: 10, category_id: 4, name: "Conception de publicités", short_description: "Conception graphique de vos publicités digitales.", price: 0, currency: "XAF", billing_unit: "article", status: "active", is_automated: false, is_consulting: false, is_campaign: false, delivery_days: 5, features: ["Conception de publicités."], conditions: null },
+  { id: 11, category_id: 4, name: "Préparation de campagnes Meta Ads", short_description: "Préparation et configuration de vos campagnes publicitaires Meta.", price: 0, currency: "XAF", billing_unit: "campagne", status: "active", is_automated: false, is_consulting: false, is_campaign: true, delivery_days: 7, features: ["Préparation de campagnes Meta Ads."], conditions: null },
+  { id: 12, category_id: 4, name: "Préparation de campagnes TikTok Ads", short_description: "Préparation et configuration de vos campagnes publicitaires TikTok.", price: 0, currency: "XAF", billing_unit: "campagne", status: "active", is_automated: false, is_consulting: false, is_campaign: true, delivery_days: 7, features: ["Préparation de campagnes TikTok Ads."], conditions: null },
+];
+
 export default function MboppiBoostOrder() {
   const { t } = useLang();
   const { user, logout } = useAuth();
@@ -30,7 +45,13 @@ export default function MboppiBoostOrder() {
       const resp = await api.get(`/smm/services/${serviceId}`);
       setService(resp.data?.service || null);
     } catch (err) {
-      setError("Impossible de charger le service.");
+      // Fallback : utiliser les données par défaut si l'API est indisponible
+      const fallback = DEFAULT_SERVICES.find((s) => s.id === Number(serviceId));
+      if (fallback) {
+        setService(fallback);
+      } else {
+        setError("Impossible de charger le service.");
+      }
     } finally {
       setLoading(false);
     }
