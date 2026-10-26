@@ -395,6 +395,9 @@ function NotifBell() {
 
   const message = (n) => {
     const buyer = n.buyer_name || t("le client");
+    if (n.type === "smm_order") {
+      return n.body || t("Mise à jour de votre commande MboppiBoost.");
+    }
     if (n.type === "new_product") {
       return t("Nouveau produit « {name} » publié{from} — venez le découvrir !", {
         name: n.product_name,
@@ -636,6 +639,7 @@ function NotifBell() {
   };
 
   const linkFor = (n) => {
+    if (n.type === "smm_order") return "/mboppi-boost/mes-commandes";
     if (n.type === "new_product" || n.type === "flash_promo") {
       return n.product_id ? `/produit/${n.product_id}` : "/";
     }

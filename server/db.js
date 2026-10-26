@@ -9,7 +9,7 @@ const { Pool } = pg;
 // Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-10-25-mboppi-boost-social-catalog-v1";
+const DB_INIT_VERSION = "2026-10-26-mboppi-boost-platform-v1";
 const DB_INIT_LOCK = "mboppi-db-init-v1";
 let initDbPromise = null;
 
@@ -902,12 +902,22 @@ async function runInitDb() {
       delivery_days INTEGER,
       conditions TEXT,
       limits JSONB NOT NULL DEFAULT '{}'::jsonb,
+      platform TEXT,
       sort_order INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    ALTER TABLE smm_services ADD COLUMN IF NOT EXISTS platform TEXT;
     CREATE INDEX IF NOT EXISTS idx_smm_services_category ON smm_services(category_id);
     CREATE INDEX IF NOT EXISTS idx_smm_services_status ON smm_services(status);
+    CREATE INDEX IF NOT EXISTS idx_smm_services_platform ON smm_services(platform);
+    CREATE INDEX IF NOT EXISTS idx_smm_services_public ON smm_services(status, platform, category_id);
+    UPDATE smm_services s
+    SET platform = c.slug
+    FROM smm_categories c
+    WHERE s.category_id = c.id
+      AND s.platform IS NULL
+      AND c.slug IN ('instagram', 'tiktok', 'youtube', 'telegram', 'facebook', 'twitter', 'spotify');
 
     -- Fournisseurs SMM configurÃ©s (un seul actif Ã  la fois)
     CREATE TABLE IF NOT EXISTS smm_providers (
@@ -940,17 +950,24 @@ async function runInitDb() {
       external_reference TEXT,
       provider_reference TEXT,
       idempotency_key TEXT UNIQUE,
+      public_token TEXT,
       payment_method TEXT,
       payment_proof TEXT,
+      payment_reference TEXT,
+      payment_declared_at TIMESTAMPTZ,
       paid_at TIMESTAMPTZ,
       completed_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    ALTER TABLE smm_orders ADD COLUMN IF NOT EXISTS public_token TEXT;
+    ALTER TABLE smm_orders ADD COLUMN IF NOT EXISTS payment_reference TEXT;
+    ALTER TABLE smm_orders ADD COLUMN IF NOT EXISTS payment_declared_at TIMESTAMPTZ;
     CREATE INDEX IF NOT EXISTS idx_smm_orders_user ON smm_orders(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_smm_orders_status ON smm_orders(status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_smm_orders_idempotency ON smm_orders(idempotency_key) WHERE idempotency_key IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_smm_orders_external ON smm_orders(external_reference) WHERE external_reference IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_smm_orders_public_token ON smm_orders(public_token) WHERE public_token IS NOT NULL;
 
     -- Journal des Ã©vÃ©nements de commande (traÃ§abilitÃ©)
     CREATE TABLE IF NOT EXISTS smm_order_events (
@@ -1024,8 +1041,8 @@ async function runInitDb() {
           `INSERT INTO smm_services
              (category_id, name, short_description, description, price, currency, billing_unit,
               status, is_automated, is_consulting, is_campaign, delivery_days, conditions, limits,
-              sort_order, created_at, updated_at)
-           SELECT c.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15, now(), now()
+              platform, sort_order, created_at, updated_at)
+           SELECT c.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15, $16, now(), now()
            FROM smm_categories c WHERE c.slug = $1`,
           [
             service.categorySlug,
@@ -1042,6 +1059,7 @@ async function runInitDb() {
             service.delivery_days,
             service.conditions,
             JSON.stringify(service.limits),
+            service.categorySlug,
             service.sort_order,
           ]
         );

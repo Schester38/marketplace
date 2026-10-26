@@ -22,6 +22,10 @@ export const ALLOWED_ORIGINS = [
     [
       "http://localhost:5173",
       "http://localhost:4173",
+      "http://localhost:4000",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:4173",
+      "http://127.0.0.1:4000",
       process.env.ALLOWED_ORIGIN,
       // Domaine public (SITE_URL / PUBLIC_URL définis sur Vercel) : la bascule vers
       // un domaine personnalisé ne demande donc aucune modification du code.

@@ -289,10 +289,53 @@ export const smmOrderSchema = z.object({
 });
 
 export const smmOrderStatusSchema = z.object({
-  status: z.enum(["paid", "submitted", "processing", "completed", "failed", "cancelled", "refund_pending", "refunded"]),
+  status: z.enum([
+    "draft",
+    "pending_payment",
+    "paid",
+    "submitted",
+    "processing",
+    "completed",
+    "failed",
+    "cancelled",
+    "refund_pending",
+    "refunded",
+  ]),
   provider_status: z.string().max(100).optional().nullable(),
   provider_reference: z.string().max(200).optional().nullable(),
   admin_note: z.string().max(500).optional().nullable(),
+});
+
+export const smmPaymentDeclareSchema = z.object({
+  payment_reference: z.string().min(2, "Référence de paiement requise").max(200),
+  payment_method: z
+    .enum(["mobile_money", "virement", "espece", "manual", "moneyfusion"])
+    .default("mobile_money"),
+  phone: z.string().max(40).optional().nullable(),
+  token: z.string().max(200).optional().nullable(),
+});
+
+export const smmPaymentConfirmSchema = z.object({
+  payment_reference: z.string().max(200).optional().nullable(),
+  admin_note: z.string().max(500).optional().nullable(),
+  dispatch: z.boolean().default(true),
+});
+
+export const smmPaymentInfoSchema = z
+  .object({
+    orange_money: z.string().max(500),
+    mtn_mobile_money: z.string().max(500),
+    moneyfusion_phone: z.string().max(500),
+    account_name: z.string().max(500),
+    whatsapp: z.string().max(500),
+    note: z.string().max(1000),
+  })
+  .partial();
+
+export const smmImportCatalogSchema = z.object({
+  markup: z.coerce.number().min(1).max(10).default(1),
+  usd_to_xaf: z.coerce.number().min(1).max(10000).default(655.957),
+  category_id: z.coerce.number().int().positive().optional().nullable(),
 });
 
 export const smmProviderConfigSchema = z.object({

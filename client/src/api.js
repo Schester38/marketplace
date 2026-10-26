@@ -574,9 +574,59 @@ export const api = {
     adminRequest("/studio/hooks", { method: "POST", body: JSON.stringify(payload) }),
   // MboppiBoost — catalogue public et commandes de services SMM.
   smmCategories: () => request("/smm/categories"),
-  smmServices: () => request("/smm/services"),
+  smmServices: (params = {}) => {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
+    }
+    const query = search.toString();
+    return request(`/smm/services${query ? `?${query}` : ""}`);
+  },
   smmService: (id) => request(`/smm/services/${encodeURIComponent(id)}`),
+  smmPaymentInfo: () => request("/smm/payment-info"),
   smmCreateOrder: (payload) =>
     request("/smm/orders", { method: "POST", body: JSON.stringify(payload) }),
   smmOrders: () => request("/smm/orders"),
+  smmOrder: (id, token) =>
+    request(`/smm/orders/${encodeURIComponent(id)}${token ? `?token=${encodeURIComponent(token)}` : ""}`),
+  smmDeclarePayment: (id, payload) =>
+    request(`/smm/orders/${encodeURIComponent(id)}/payment`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  // Administration MboppiBoost (onglet Boost).
+  adminSmmOrders: (limit = 100) => adminRequest(`/smm/admin/orders?limit=${limit}`),
+  adminSmmUpdateOrder: (id, payload) =>
+    adminRequest(`/smm/admin/orders/${id}/status`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  adminSmmConfirmPayment: (id, payload) =>
+    adminRequest(`/smm/admin/orders/${id}/confirm-payment`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    }),
+  adminSmmDispatch: (id) =>
+    adminRequest(`/smm/admin/orders/${id}/dispatch`, { method: "POST" }),
+  adminSmmSync: () => adminRequest("/smm/admin/sync", { method: "POST" }),
+  adminSmmPaymentInfo: () => adminRequest("/smm/admin/payment-info"),
+  adminSmmSavePaymentInfo: (payload) =>
+    adminRequest("/smm/admin/payment-info", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  adminSmmProvider: () => adminRequest("/smm/admin/providers"),
+  adminSmmSaveProvider: (payload) =>
+    adminRequest("/smm/admin/providers", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  adminSmmBalance: () => adminRequest("/smm/admin/balance"),
+  adminSmmImportCatalog: (payload) =>
+    adminRequest("/smm/admin/import-catalog", {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    }),
+  adminSmmCategories: () => adminRequest("/smm/admin/categories"),
+  adminSmmServices: () => adminRequest("/smm/admin/services"),
 };

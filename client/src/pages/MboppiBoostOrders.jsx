@@ -4,6 +4,27 @@ import Seo from "../components/Seo.jsx";
 import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
+import { listLocalBoostOrders, removeLocalBoostOrder } from "../boostOrders.js";
+
+const STATUS_LABELS = {
+  draft: "Brouillon",
+  pending_payment: "Paiement en attente",
+  paid: "Payé",
+  submitted: "Transmise au prestataire",
+  processing: "En cours de traitement",
+  completed: "Terminée",
+  failed: "Échouée",
+  cancelled: "Annulée",
+  refund_pending: "Remboursement en attente",
+  refunded: "Remboursée",
+};
+
+const METHOD_OPTIONS = [
+  { value: "mobile_money", label: "Mobile Money" },
+  { value: "moneyfusion", label: "MoneyFusion" },
+  { value: "virement", label: "Virement bancaire" },
+  { value: "espece", label: "Espèces" },
+];
 
 export default function MboppiBoostOrders() {
   const { t } = useLang();
@@ -12,38 +33,82 @@ export default function MboppiBoostOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [declareId, setDeclareId] = useState(null);
+  const [reference, setReference] = useState("");
+  const [method, setMethod] = useState("mobile_money");
+  const [declaring, setDeclaring] = useState(false);
+  const [declareError, setDeclareError] = useState("");
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
     fetchOrders();
   }, [user]);
 
   async function fetchOrders() {
-    try {
-      const resp = await api.smmOrders();
-      setOrders(resp.orders || []);
-    } catch (err) {
-      setError(err.message || "Impossible de charger vos commandes.");
-    } finally {
-      setLoading(false);
+    setLoading(true);
+    setError("");
+    const merged = new Map();
+
+    if (user) {
+      try {
+        const resp = await api.smmOrders();
+        for (const order of resp.orders || []) merged.set(Number(order.id), { ...order, _token: null });
+      } catch (err) {
+        setError(err.message || "Impossible de charger vos commandes.");
+      }
     }
+
+    const locals = listLocalBoostOrders();
+    for (const local of locals) {
+      if (merged.has(Number(local.id))) {
+        merged.get(Number(local.id))._token = local.token;
+        continue;
+      }
+      try {
+        const resp = await api.smmOrder(local.id, local.token);
+        if (resp.order) merged.set(Number(resp.order.id), { ...resp.order, _token: local.token });
+      } catch (err) {
+        if (err?.status === 404) removeLocalBoostOrder(local.id);
+      }
+    }
+
+    setOrders(
+      [...merged.values()].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+    );
+    setLoading(false);
   }
 
-  const statusLabels = {
-    draft: "Brouillon",
-    pending_payment: "Paiement en attente",
-    paid: "Payé",
-    submitted: "Soumise au prestataire",
-    processing: "En cours de traitement",
-    completed: "Terminée",
-    failed: "Échouée",
-    cancelled: "Annulée",
-    refund_pending: "Remboursement en attente",
-    refunded: "Remboursée",
-  };
+  async function declarePayment(order) {
+    if (!reference.trim()) return;
+    setDeclaring(true);
+    setDeclareError("");
+    try {
+      const resp = await api.smmDeclarePayment(order.id, {
+        payment_reference: reference.trim(),
+        payment_method: method,
+        phone: order.client_info?.phone || "",
+        token: order._token || undefined,
+      });
+      if (resp?.ok) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            Number(o.id) === Number(order.id)
+              ? { ...o, status: "pending_payment", payment_status: "declared", payment_reference: reference.trim() }
+              : o
+          )
+        );
+        setNotice(
+          `Paiement déclaré pour la commande #${order.id}. Notre équipe le vérifie puis transmet la commande au prestataire.`
+        );
+        setDeclareId(null);
+        setReference("");
+      }
+    } catch (err) {
+      setDeclareError(err.message || "Impossible de déclarer le paiement.");
+    } finally {
+      setDeclaring(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -63,23 +128,28 @@ export default function MboppiBoostOrders() {
           <p>{t("Suivez l'état de vos commandes de services marketing digital.")}</p>
         </div>
 
-        {!user && (
-          <div className="card">
-            <p>{t("Connectez-vous pour accéder à vos commandes.")}</p>
-            <Link to="/login" className="btn btn-primary">{t("Se connecter")}</Link>
+        {notice && (
+          <div className="card" style={{ borderColor: "var(--primary)" }}>
+            <p>✅ {notice}</p>
           </div>
         )}
 
-        {error && user && (
+        {error && (
           <div className="card">
             <p className="error-msg">{error}</p>
           </div>
         )}
 
-        {orders.length === 0 && user && !error && (
+        {orders.length === 0 && !error && (
           <div className="card">
-            <p>{t("Aucune commande pour le moment.")}</p>
-            <Link to="/mboppi-boost" className="btn btn-primary">{t("Découvrir les services")}</Link>
+            <p>
+              {t(
+                "Aucune commande pour le moment. Les commandes créées sur cet appareil apparaissent aussi ici."
+              )}
+            </p>
+            <Link to="/mboppi-boost" className="btn btn-primary">
+              {t("Découvrir les services")}
+            </Link>
           </div>
         )}
 
@@ -92,7 +162,9 @@ export default function MboppiBoostOrders() {
                   <th>{t("Service")}</th>
                   <th>{t("Total")}</th>
                   <th>{t("Statut")}</th>
+                  <th>{t("Paiement")}</th>
                   <th>{t("Date")}</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -100,15 +172,82 @@ export default function MboppiBoostOrders() {
                   <tr key={o.id}>
                     <td>#{o.id}</td>
                     <td>{o.service_name}</td>
-                    <td>{o.total} {o.currency}</td>
                     <td>
-                      <span className={`badge badge-${o.status}`}>{statusLabels[o.status] || o.status}</span>
+                      {o.total} {o.currency}
+                    </td>
+                    <td>
+                      <span className={`badge badge-${o.status}`}>
+                        {t(STATUS_LABELS[o.status] || o.status)}
+                      </span>
+                    </td>
+                    <td>
+                      {o.payment_status === "paid"
+                        ? t("Confirmé")
+                        : o.payment_status === "declared"
+                          ? t("Déclaré — vérification")
+                          : t("Non payé")}
+                      {o.payment_reference ? <div className="hint">Réf. {o.payment_reference}</div> : null}
                     </td>
                     <td>{new Date(o.created_at).toLocaleDateString("fr-FR")}</td>
+                    <td>
+                      {["draft", "pending_payment"].includes(o.status) && o.payment_status !== "declared" && (
+                        <button
+                          type="button"
+                          className="btn btn-small"
+                          onClick={() => {
+                            setDeclareId(declareId === o.id ? null : o.id);
+                            setReference("");
+                            setDeclareError("");
+                          }}
+                        >
+                          {t("J'ai payé")}
+                        </button>
+                      )}
+                      {declareId === o.id && (
+                        <div className="boost-declare">
+                          <input
+                            type="text"
+                            value={reference}
+                            onChange={(e) => setReference(e.target.value)}
+                            placeholder={t("Référence de transaction")}
+                            maxLength={200}
+                          />
+                          <select value={method} onChange={(e) => setMethod(e.target.value)}>
+                            {METHOD_OPTIONS.map((m) => (
+                              <option key={m.value} value={m.value}>
+                                {t(m.label)}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            className="btn btn-primary btn-small"
+                            disabled={declaring || !reference.trim()}
+                            onClick={() => declarePayment(o)}
+                          >
+                            {declaring ? t("Envoi…") : t("Envoyer")}
+                          </button>
+                          {declareError && <p className="error-msg">{declareError}</p>}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {!user && (
+          <div className="card" style={{ marginTop: 16 }}>
+            <p>
+              {t(
+                "Les commandes passées sans compte restent visibles sur cet appareil. Connectez-vous pour les retrouver partout."
+              )}
+            </p>
+            <Link to="/login" className="btn btn-outline">
+              {t("Se connecter")}
+            </Link>
           </div>
         )}
       </section>

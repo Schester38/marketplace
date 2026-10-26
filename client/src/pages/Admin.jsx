@@ -16,6 +16,7 @@ import PasswordInput from "../components/PasswordInput.jsx";
 import TrackMap from "../components/TrackMap.jsx";
 import GeneratorPanel from "./Generator.jsx";
 import MboppiStudio from "./MboppiStudio.jsx";
+import BoostAdmin from "./BoostAdmin.jsx";
 
 const VISIT_RANGES = [
   { days: 1, label: "1 jour" },
@@ -33,6 +34,7 @@ const ADMIN_TABS = [
   { id: "users", emoji: "👥", label: "Utilisateurs" },
   { id: "withdrawals", emoji: "💸", label: "Retraits d'activation" },
   { id: "products", emoji: "🛍️", label: "Produits" },
+  { id: "boost", emoji: "🚀", label: "MboppiBoost" },
   { id: "generator", emoji: "📚", label: "Générateur" },
   { id: "studio", emoji: "🎬", label: "MboppiStudio" },
   { id: "system", emoji: "⚙️", label: "Système" },
@@ -3650,6 +3652,7 @@ export default function Admin() {
       )}
 
       {/* ═══ Onglet « Générateur » : ebooks/PDF (module isolé, tables gen_*) ═══ */}
+      {adminTab === "boost" && <BoostAdmin />}
       {adminTab === "generator" && <GeneratorPanel variant="admin" />}
 
       {/* ═══ Onglet « MboppiStudio » : outils créatifs IA (hooks, tendances…) —

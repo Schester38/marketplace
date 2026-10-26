@@ -1,29 +1,65 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
+import { saveLocalBoostOrder } from "../boostOrders.js";
+
+const PAYMENT_METHODS = [
+  { value: "mobile_money", label: "Mobile Money" },
+  { value: "moneyfusion", label: "MoneyFusion" },
+  { value: "virement", label: "Virement bancaire" },
+  { value: "espece", label: "Espèces" },
+];
+
+const formatAmount = (value) =>
+  new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(Number(value) || 0);
 
 export default function MboppiBoostOrder() {
   const { t } = useLang();
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const { serviceId } = useParams();
+  const [searchParams] = useSearchParams();
 
   const [service, setService] = useState(null);
+  const [paymentInfo, setPaymentInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [clientInfo, setClientInfo] = useState({});
+  const [clientInfo, setClientInfo] = useState({
+    name: user?.name || "",
+    phone: searchParams.get("phone") || user?.phone || "",
+    email: searchParams.get("email") || user?.email || "",
+    profile_url: searchParams.get("target") || "",
+    objectif: searchParams.get("details") || "",
+  });
   const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState("manual");
+  const [paymentMethod, setPaymentMethod] = useState("mobile_money");
   const [orderCreated, setOrderCreated] = useState(null);
+  const [paymentReference, setPaymentReference] = useState("");
+  const [declaring, setDeclaring] = useState(false);
+  const [declared, setDeclared] = useState(false);
+  const [declareError, setDeclareError] = useState("");
 
   useEffect(() => {
     if (!serviceId) return;
     fetchService();
+    api
+      .smmPaymentInfo()
+      .then((resp) => setPaymentInfo(resp.payment_info || null))
+      .catch(() => {});
   }, [serviceId]);
+
+  useEffect(() => {
+    if (!user) return;
+    setClientInfo((prev) => ({
+      ...prev,
+      name: prev.name || user.name || "",
+      phone: prev.phone || user.phone || "",
+      email: prev.email || user.email || "",
+    }));
+  }, [user]);
 
   async function fetchService() {
     try {
@@ -31,6 +67,16 @@ export default function MboppiBoostOrder() {
       const serviceData = resp.service;
       if (!serviceData) throw new Error("Service introuvable");
       setService(serviceData);
+      const providerMin = Number(serviceData.limits?.min);
+      const minimumTotalQty = Number(serviceData.min_total_quantity);
+      const min = Math.max(
+        Number.isFinite(providerMin) && providerMin > 0 ? providerMin : 1,
+        Number.isFinite(minimumTotalQty) && minimumTotalQty > 0 ? minimumTotalQty : 1
+      );
+      const max = Number(serviceData.limits?.max);
+      const requested = Number(searchParams.get("quantity"));
+      const initial = Number.isFinite(requested) && requested >= min ? requested : min;
+      setQuantity(Number.isFinite(max) && max > 0 ? Math.min(initial, max) : initial);
     } catch (err) {
       setError(err.message || `Service #${serviceId} introuvable. Veuillez revenir au catalogue.`);
     } finally {
@@ -57,6 +103,14 @@ export default function MboppiBoostOrder() {
       });
       if (resp?.ok) {
         setOrderCreated(resp);
+        saveLocalBoostOrder({
+          id: resp.order_id,
+          token: resp.public_token,
+          service_name: resp.service,
+          total: resp.total,
+          currency: resp.currency,
+          created_at: new Date().toISOString(),
+        });
       } else {
         setError("Échec de la création de la commande.");
       }
@@ -64,6 +118,29 @@ export default function MboppiBoostOrder() {
       setError(err.message || "Erreur lors de la création de la commande.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function declarePayment(e) {
+    e.preventDefault();
+    setDeclaring(true);
+    setDeclareError("");
+    try {
+      const resp = await api.smmDeclarePayment(orderCreated.order_id, {
+        payment_reference: paymentReference.trim(),
+        payment_method: paymentMethod,
+        phone: clientInfo.phone || "",
+        token: orderCreated.public_token,
+      });
+      if (resp?.ok) {
+        setDeclared(true);
+      } else {
+        setDeclareError("Paiement non enregistré. Réessayez ou contactez le support.");
+      }
+    } catch (err) {
+      setDeclareError(err.message || "Impossible de déclarer le paiement.");
+    } finally {
+      setDeclaring(false);
     }
   }
 
@@ -88,19 +165,150 @@ export default function MboppiBoostOrder() {
     );
   }
 
-  const total = Math.round((Number(service.price || 0) * Number(quantity)) * 100) / 100;
+  const billingUnit = Number(service.billing_unit) > 0 ? Number(service.billing_unit) : 1000;
+  const unitPrice = Number(service.price || 0);
+  const total = Math.round(((unitPrice * Number(quantity)) / billingUnit) * 100) / 100;
+  const providerMin = Number(service.limits?.min);
+  const minimumTotalQty = Number(service.min_total_quantity);
+  const minQty = Math.max(
+    Number.isFinite(providerMin) && providerMin > 0 ? providerMin : 1,
+    Number.isFinite(minimumTotalQty) && minimumTotalQty > 0 ? minimumTotalQty : 1
+  );
+  const maxQty = Number(service.limits?.max);
+  const minimumTotal = Math.round(((unitPrice * minQty) / billingUnit) * 100) / 100;
 
   if (orderCreated) {
+    const whatsapp = paymentInfo?.whatsapp?.replace(/[^\d]/g, "");
     return (
       <main className="container">
-        <Seo title="Commande enregistrée — MboppiBoost" description="Votre commande MboppiBoost a été créée avec succès." />
+        <Seo
+          title="Commande enregistrée — MboppiBoost"
+          description="Votre commande MboppiBoost a été créée avec succès."
+        />
         <section className="section">
           <div className="cta-card">
             <h2>{t("Commande enregistrée")}</h2>
-            <p>{t("Votre commande a été créée avec succès.")} ({orderCreated.total} {orderCreated.currency})</p>
-            <p>{t("Numéro de commande")} : #{orderCreated.order_id}</p>
-            <Link to="/mboppi-boost/mes-commandes" className="btn btn-primary">{t("Voir mes commandes")}</Link>
-            <Link to="/mboppi-boost" className="btn btn-outline">{t("Retour aux services")}</Link>
+            <p>
+              {t("Votre commande a été créée avec succès.")} ({formatAmount(orderCreated.total)}{" "}
+              {orderCreated.currency})
+            </p>
+            <p>
+              {t("Numéro de commande")} : <strong>#{orderCreated.order_id}</strong>
+            </p>
+            <p className="hint">
+              {t(
+                "Conservez ce numéro : il vous permet de déclarer votre paiement et de suivre la commande."
+              )}
+            </p>
+
+            {declared ? (
+              <div className="card" style={{ marginTop: 16 }}>
+                <h3>✅ {t("Paiement déclaré")}</h3>
+                <p>
+                  {t(
+                    "Votre paiement est en cours de vérification. La commande sera transmise au prestataire dès validation."
+                  )}
+                </p>
+                <Link to="/mboppi-boost/mes-commandes" className="btn btn-primary">
+                  {t("Voir mes commandes")}
+                </Link>
+              </div>
+            ) : (
+              <>
+                <div className="card" style={{ marginTop: 16 }}>
+                  <h3>💳 {t("Payer votre commande")}</h3>
+                  <p>
+                    {t("Montant à régler")} :{" "}
+                    <strong>
+                      {formatAmount(orderCreated.total)} {orderCreated.currency}
+                    </strong>
+                  </p>
+                  {paymentInfo ? (
+                    <ul style={{ lineHeight: 1.8 }}>
+                      <li>
+                        🟠 Orange Money : <strong>{paymentInfo.orange_money}</strong>
+                      </li>
+                      <li>
+                        🟡 MTN Mobile Money : <strong>{paymentInfo.mtn_mobile_money}</strong>
+                      </li>
+                      <li>
+                        📱 MoneyFusion : <strong>{paymentInfo.moneyfusion_phone}</strong>
+                      </li>
+                      <li>
+                        {t("Nom du compte")} : <strong>{paymentInfo.account_name}</strong>
+                      </li>
+                    </ul>
+                  ) : (
+                    <p>
+                      {t("Contactez le support pour recevoir les coordonnées de paiement.")}{" "}
+                      <Link to="/contact">{t("Contact")}</Link>
+                    </p>
+                  )}
+                  {paymentInfo?.note && <p className="hint">{paymentInfo.note}</p>}
+                  {whatsapp && (
+                    <a
+                      className="btn btn-outline"
+                      href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(
+                        `Bonjour, je viens de créer la commande MboppiBoost #${orderCreated.order_id} (${orderCreated.service} — ${formatAmount(orderCreated.total)} ${orderCreated.currency}).`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Envoyer la preuve sur WhatsApp
+                    </a>
+                  )}
+                </div>
+
+                <div className="card" style={{ marginTop: 16 }}>
+                  <h3>{t("J'ai payé")}</h3>
+                  <p className="hint">
+                    {t(
+                      "Indiquez la référence de votre transaction (ID Orange Money, MTN MoMo, MoneyFusion ou virement)."
+                    )}
+                  </p>
+                  <form onSubmit={declarePayment} className="order-form">
+                    <div className="form-row">
+                      <label>{t("Référence de paiement")}</label>
+                      <input
+                        type="text"
+                        value={paymentReference}
+                        onChange={(e) => setPaymentReference(e.target.value)}
+                        placeholder="Ex: OM-123456789"
+                        required
+                        minLength={2}
+                        maxLength={200}
+                      />
+                    </div>
+                    <div className="form-row">
+                      <label>{t("Moyen utilisé")}</label>
+                      <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                        {PAYMENT_METHODS.map((m) => (
+                          <option key={m.value} value={m.value}>
+                            {t(m.label)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button type="submit" disabled={declaring} className="btn btn-primary btn-block">
+                      {declaring ? t("Envoi…") : t("Déclarer mon paiement")}
+                    </button>
+                    {declareError && <p className="error-msg">{declareError}</p>}
+                  </form>
+                </div>
+              </>
+            )}
+
+            {!user && (
+              <p className="hint" style={{ marginTop: 12 }}>
+                {t("Astuce : connectez-vous pour retrouver toutes vos commandes dans votre espace.")}
+              </p>
+            )}
+            <Link to="/mboppi-boost/mes-commandes" className="btn btn-outline" style={{ marginTop: 12 }}>
+              {t("Suivre ma commande")}
+            </Link>
+            <Link to="/mboppi-boost" className="btn btn-outline" style={{ marginTop: 12 }}>
+              {t("Retour aux services")}
+            </Link>
           </div>
         </section>
       </main>
@@ -109,13 +317,24 @@ export default function MboppiBoostOrder() {
 
   return (
     <main className="container">
-      <Seo title={`Commander : ${service.name} — MboppiBoost`} description={`Commander le service ${service.name} sur MboppiBoost.`} />
+      <Seo
+        title={`Commander : ${service.name} — MboppiBoost`}
+        description={`Commander le service ${service.name} sur MboppiBoost.`}
+      />
       <section className="hero vitrine-hero">
         <span className="hero-badge">⚡ MboppiBoost</span>
         <h1>{service.name}</h1>
         <p>{service.short_description || service.description}</p>
-        <p>{service.price > 0 ? `${service.price} ${service.currency} / ${service.billing_unit}` : t("Tarif à définir — contacter MboppiBoost")}</p>
-        {service.delivery_days && <p>{t("Délai indicatif")} : {service.delivery_days} {t("jours")}</p>}
+        <p>
+          {service.price > 0
+            ? `${formatAmount(service.price)} ${service.currency} / ${service.billing_unit || 1000}`
+            : t("Tarif à définir — contacter MboppiBoost")}
+        </p>
+        {service.delivery_days && (
+          <p>
+            {t("Délai indicatif")} : {service.delivery_days} {t("jours")}
+          </p>
+        )}
       </section>
 
       <section className="section">
@@ -125,40 +344,119 @@ export default function MboppiBoostOrder() {
         </div>
         <div className="card service-order-card">
           {service.conditions && (
-            <div className="service-conditions"><strong>{t("Conditions")} :</strong> {service.conditions}</div>
+            <div className="service-conditions">
+              <strong>{t("Conditions")} :</strong> {service.conditions}
+            </div>
           )}
           <form onSubmit={handleSubmit} className="order-form">
             <div className="form-row">
               <label>{t("Quantité")}</label>
-              <input type="number" min="1" value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))} required />
-              <span className="unit-price">{service.price > 0 ? `${service.price} ${service.currency}` : t("Sur devis")}</span>
+              <input
+                type="number"
+                min={minQty}
+                max={Number.isFinite(maxQty) && maxQty > 0 ? maxQty : undefined}
+                value={quantity}
+                onChange={(e) => setQuantity(Math.max(minQty, Number(e.target.value) || minQty))}
+                required
+              />
+              <span className="unit-price">
+                {service.price > 0
+                  ? `${formatAmount(service.price)} ${service.currency} / ${service.billing_unit || 1000}`
+                  : t("Sur devis")}
+              </span>
+            </div>
+            <p className="hint">
+              {Number.isFinite(maxQty) && maxQty > 0
+                ? `Quantité entre ${minQty} et ${maxQty}.`
+                : `Quantité minimale : ${minQty}.`}{" "}
+              {unitPrice > 0 &&
+                `Montant minimum : ${formatAmount(minimumTotal)} ${service.currency}.`}
+            </p>
+
+            <h3>{t("Vos coordonnées")}</h3>
+            <div className="form-row">
+              <label>{t("Nom complet")}</label>
+              <input
+                type="text"
+                value={clientInfo.name || ""}
+                onChange={(e) => handleInfoChange("name", e.target.value)}
+                required
+                maxLength={120}
+              />
+            </div>
+            <div className="form-row">
+              <label>{t("Téléphone (WhatsApp de préférence)")}</label>
+              <input
+                type="tel"
+                value={clientInfo.phone || ""}
+                onChange={(e) => handleInfoChange("phone", e.target.value)}
+                placeholder="Ex: +237 6XX XXX XXX"
+                required
+                maxLength={40}
+              />
+            </div>
+            <div className="form-row">
+              <label>{t("E-mail (optionnel)")}</label>
+              <input
+                type="email"
+                value={clientInfo.email || ""}
+                onChange={(e) => handleInfoChange("email", e.target.value)}
+                maxLength={160}
+              />
             </div>
 
             <h3>{t("Informations pour la prestation")}</h3>
-            <p className="form-hint">{t("Ces informations seront transmises au prestataire pour exécuter votre commande.")}</p>
+            <p className="form-hint">
+              {t("Ces informations seront transmises au prestataire pour exécuter votre commande.")}
+            </p>
             <div className="form-row">
-              <label>{t("URL ou compte concerné (optionnel)")}</label>
-              <input type="text" placeholder="Ex: https://instagram.com/votre_compte ou @votre_pseudo" value={clientInfo.profile_url || ""} onChange={(e) => handleInfoChange("profile_url", e.target.value)} />
+              <label>
+                {service.is_automated
+                  ? t("Lien ou compte cible (obligatoire)")
+                  : t("URL ou compte concerné (optionnel)")}
+              </label>
+              <input
+                type="text"
+                placeholder="Ex: https://instagram.com/votre_compte ou @votre_pseudo"
+                value={clientInfo.profile_url || ""}
+                onChange={(e) => handleInfoChange("profile_url", e.target.value)}
+                required={!!service.is_automated}
+                maxLength={300}
+              />
             </div>
             <div className="form-row">
               <label>{t("Objectif ou précision (optionnel)")}</label>
-              <textarea rows={3} placeholder="Précisez votre besoin, votre cible, vos objectifs…" value={clientInfo.objectif || ""} onChange={(e) => handleInfoChange("objectif", e.target.value)} />
+              <textarea
+                rows={3}
+                placeholder="Précisez votre besoin, votre cible, vos objectifs…"
+                value={clientInfo.objectif || ""}
+                onChange={(e) => handleInfoChange("objectif", e.target.value)}
+                maxLength={1000}
+              />
             </div>
 
             <h3>{t("Paiement")}</h3>
             <div className="form-row">
               <label>{t("Moyen de paiement")}</label>
               <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                <option value="manual">{t("Paiement manuel (espèce / Mobile Money / virement)")}</option>
-                <option value="mobile_money">{t("Mobile Money")}</option>
-                <option value="virement">{t("Virement bancaire")}</option>
-                <option value="espece">{t("Espèces")}</option>
+                {PAYMENT_METHODS.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {t(m.label)}
+                  </option>
+                ))}
               </select>
             </div>
 
-            <div className="form-total"><strong>{t("Total")} :</strong> {service.price > 0 ? `${total} ${service.currency}` : t("Sur devis")}</div>
+            <div className="form-total">
+              <strong>{t("Total")} :</strong>{" "}
+              {service.price > 0
+                ? `${formatAmount(total)} ${service.currency}`
+                : t("Sur devis")}
+            </div>
 
-            <button type="submit" disabled={submitting} className="btn btn-primary btn-block">{submitting ? t("Enregistrement…") : t("Confirmer la commande")}</button>
+            <button type="submit" disabled={submitting} className="btn btn-primary btn-block">
+              {submitting ? t("Enregistrement…") : t("Confirmer la commande")}
+            </button>
             {error && <p className="error-msg">{error}</p>}
           </form>
         </div>
@@ -166,7 +464,12 @@ export default function MboppiBoostOrder() {
 
       {!user && (
         <section className="section">
-          <div className="card"><p>{t("Connectez-vous pour retrouver vos commandes dans votre espace.")}</p><Link to="/login" className="btn btn-outline">{t("Se connecter")}</Link></div>
+          <div className="card">
+            <p>{t("Connectez-vous pour retrouver vos commandes dans votre espace.")}</p>
+            <Link to="/login" className="btn btn-outline">
+              {t("Se connecter")}
+            </Link>
+          </div>
         </section>
       )}
     </main>

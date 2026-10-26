@@ -63,20 +63,34 @@ export class SmmAfricaAdapter extends SMMProviderInterface {
       refill: !!(s.refill ?? s.refill_supported),
       cancel: !!(s.cancel ?? s.cancel_supported),
       dripfeed: !!(s.dripfeed ?? s.drip_feed),
+      description: s.description || "",
+      start_time: s.start_time || s.start || null,
+      speed: s.speed || null,
+      drop_rate: s.drop_rate ?? s.dropRate ?? null,
+      reliability: s.reliability ?? null,
       raw: s,
     }));
   }
 
   async placeOrder(order) {
+    const rawService = order.external_service_id ?? order.service_id;
+    const numericService = Number(rawService);
     const body = {
       action: "add",
-      service: order.external_service_id || order.service_id,
+      service:
+        String(rawService ?? "").trim() !== "" && Number.isFinite(numericService)
+          ? numericService
+          : rawService,
       link: order.link,
-      quantity: order.quantity,
+      quantity: Number(order.quantity),
     };
     if (order.comments) body.comments = order.comments;
     if (order.username) body.username = order.username;
     if (order.idempotency_key) body.idempotency_key = order.idempotency_key;
+    const maxCharge = order.max_charge ?? order.maxCharge;
+    if (Number.isFinite(Number(maxCharge)) && Number(maxCharge) > 0) {
+      body.max_charge = Number(maxCharge);
+    }
     if (order.extra && typeof order.extra === "object") Object.assign(body, order.extra);
     const data = await this._request(body);
     const ref = data.order ?? data.order_id ?? data.id ?? null;
@@ -91,13 +105,21 @@ export class SmmAfricaAdapter extends SMMProviderInterface {
 
   async checkOrderStatus(externalReference) {
     const data = await this._request({ action: "status", order: externalReference });
-    const status = data.status || (data.orders && data.orders[externalReference] && data.orders[externalReference].status) || null;
+    const orders = data.orders;
+    let match = null;
+    if (Array.isArray(orders)) {
+      match = orders.find((o) => String(o.order ?? o.id ?? "") === String(externalReference)) || null;
+    } else if (orders && typeof orders === "object") {
+      match = orders[externalReference] || orders[String(externalReference)] || null;
+    }
+    const status = data.status || match?.status || null;
     return {
       ok: true,
       external_reference: externalReference,
       status,
-      charge: data.charge ?? null,
-      remains: data.remains ?? null,
+      charge: match?.charge ?? data.charge ?? null,
+      remains: match?.remains ?? data.remains ?? null,
+      start_count: match?.start_count ?? null,
       rawResponse: data,
     };
   }
