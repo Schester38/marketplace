@@ -174,21 +174,37 @@ export async function completeSmmPayment(orderId, providerRef = null, note = nul
 }
 
 /**
- * Transmet au fournisseur les commandes payées qui n'ont pas encore de
- * référence externe. Appelé par le cron, jamais depuis le webhook.
+ * Transmet immédiatement une commande qui vient d'être payée.
+ * Ne lève jamais : un échec de dispatch ne doit pas faire échouer le webhook.
+ * Le cron reste le filet de sécurité pour les commandes restées en attente.
+ */
+export async function dispatchSmmOrderNow(orderId) {
+  try {
+    return await dispatchSmmOrder(orderId);
+  } catch (err) {
+    console.error(`[smm] dispatch immédiat #${orderId} impossible :`, err.message);
+    return { ok: false, error: err.message || "dispatch_error" };
+  }
+}
+
+/**
+ * Filet de sécurité : transmet les commandes payées qui n'ont pas encore de
+ * référence externe. Le webhook, lui, appelle `dispatchSmmOrderNow` tout de suite.
  */
 export async function dispatchPaidSmmOrders(limit = 5) {
   const max = Math.min(Math.max(Number(limit) || 5, 1), 20);
   const rows = await q(
     `SELECT id FROM smm_orders
-      WHERE status = 'paid' AND external_reference IS NULL
+      WHERE status = 'paid' AND payment_status = 'paid' AND external_reference IS NULL
+        AND (provider_status IS DISTINCT FROM 'dispatching'
+             OR updated_at < now() - interval '10 minutes')
       ORDER BY paid_at ASC NULLS LAST, created_at ASC
       LIMIT $1`,
     [max]
   );
   const results = [];
   for (const row of rows) {
-    results.push({ order_id: row.id, ...(await dispatchSmmOrder(row.id)) });
+    results.push({ order_id: row.id, ...(await dispatchSmmOrderNow(row.id)) });
   }
   return { checked: rows.length, dispatched: results.filter((r) => r.ok).length, results };
 }
@@ -253,6 +269,19 @@ export async function dispatchSmmOrder(orderId) {
   if (order.external_reference) {
     return { ok: true, already_sent: true, external_reference: order.external_reference };
   }
+  if (order.provider_status === "submitted") {
+    return { ok: true, already_sent: true };
+  }
+
+  if (!["paid", "submitted", "processing"].includes(order.status)) {
+    return {
+      ok: false,
+      error: `La commande n'est pas éligible à une transmission (statut ${order.status}).`,
+    };
+  }
+  if (order.payment_status !== "paid") {
+    return { ok: false, error: "Le paiement de cette commande n'est pas confirmé." };
+  }
 
   const { provider, adapter } = await getActiveProviderConfig();
   if (!provider || !adapter || adapter instanceof NoProviderAdapter) {
@@ -271,6 +300,40 @@ export async function dispatchSmmOrder(orderId) {
   const link = clientInfo.profile_url || clientInfo.link || clientInfo.target || "";
   if (!link) {
     return { ok: false, error: "Le client n'a pas fourni de lien ou de compte cible." };
+  }
+
+  // Verrou atomique : le webhook, le polling et le cron peuvent confirmer le
+  // même paiement en parallèle. Un seul appelant transmet la commande.
+  const claimed = await q(
+    `UPDATE smm_orders
+        SET provider_status = 'dispatching', updated_at = now()
+      WHERE id = $1
+        AND status IN ('paid', 'submitted', 'processing')
+        AND payment_status = 'paid'
+        AND external_reference IS NULL
+        AND (provider_status IS DISTINCT FROM 'dispatching'
+             OR updated_at < now() - interval '10 minutes')
+      RETURNING id`,
+    [order.id]
+  );
+  if (!claimed.length) {
+    const current = (
+      await q(
+        `SELECT external_reference, provider_status, status FROM smm_orders WHERE id = $1`,
+        [order.id]
+      )
+    )[0];
+    if (current?.external_reference) {
+      return { ok: true, already_sent: true, external_reference: current.external_reference };
+    }
+    return {
+      ok: false,
+      already_in_progress: current?.provider_status === "dispatching",
+      error:
+        current?.provider_status === "dispatching"
+          ? "La transmission de cette commande est déjà en cours."
+          : `La commande n'est plus éligible à une transmission (statut ${current?.status || order.status}).`,
+    };
   }
 
   try {
@@ -293,7 +356,7 @@ export async function dispatchSmmOrder(orderId) {
       `UPDATE smm_orders
        SET status = 'submitted', provider_status = 'submitted',
            external_reference = $1, provider_reference = $1, updated_at = now()
-       WHERE id = $2`,
+       WHERE id = $2 AND external_reference IS NULL`,
       [reference, order.id]
     );
     await addEvent(
@@ -320,7 +383,8 @@ export async function dispatchSmmOrder(orderId) {
     return { ok: true, external_reference: reference, provider };
   } catch (err) {
     await q(
-      `UPDATE smm_orders SET provider_status = 'dispatch_error', updated_at = now() WHERE id = $1`,
+      `UPDATE smm_orders SET provider_status = 'dispatch_error', updated_at = now()
+        WHERE id = $1 AND external_reference IS NULL`,
       [order.id]
     );
     await addEvent(order.id, "provider_error", order.status, order.status, `Échec fournisseur : ${err.message}`, {

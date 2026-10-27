@@ -7,6 +7,7 @@ import { LangProvider } from "./i18n.jsx";
 import { StoreProvider } from "./store.jsx";
 import { BASE_URL } from "./config.js";
 import "./styles.css";
+import "./boost.css";
 
 import * as Sentry from "@sentry/react";
 

@@ -20,6 +20,7 @@ import { getSmmPaymentInfo, setSmmPaymentInfo } from "../services/smmPayment.js"
 import {
   generatePublicToken,
   dispatchSmmOrder,
+  dispatchSmmOrderNow,
   syncSmmOrders,
   addEvent,
   notifySmmUser,
@@ -1152,7 +1153,7 @@ router.post(
 
     let dispatch = null;
     if (req.body.dispatch !== false) {
-      dispatch = await dispatchSmmOrder(id);
+      dispatch = await dispatchSmmOrderNow(id);
     }
 
     const finalRows = await q(`SELECT status, provider_status, external_reference FROM smm_orders WHERE id = $1`, [

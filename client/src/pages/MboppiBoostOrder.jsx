@@ -7,8 +7,7 @@ import { useAuth } from "../App.jsx";
 import { saveLocalBoostOrder } from "../boostOrders.js";
 import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 
-const PAYMENT_METHODS = [
-  { value: "ikeepay", label: "Paiement en ligne (iKeePay)" },
+const MANUAL_PAYMENT_METHODS = [
   { value: "mobile_money", label: "Mobile Money" },
   { value: "moneyfusion", label: "MoneyFusion" },
   { value: "virement", label: "Virement bancaire" },
@@ -17,6 +16,14 @@ const PAYMENT_METHODS = [
 
 const formatAmount = (value) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(Number(value) || 0);
+
+function BoostPage({ children }) {
+  return (
+    <main className="boost-page">
+      <div className="boost-shell">{children}</div>
+    </main>
+  );
+}
 
 export default function MboppiBoostOrder() {
   const { t } = useLang();
@@ -37,7 +44,7 @@ export default function MboppiBoostOrder() {
     objectif: searchParams.get("details") || "",
   });
   const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState("ikeepay");
+  const [manualMethod, setManualMethod] = useState("mobile_money");
   const [onlineEnabled, setOnlineEnabled] = useState(null);
   const [orderCreated, setOrderCreated] = useState(null);
   const [checkoutUrl, setCheckoutUrl] = useState("");
@@ -57,9 +64,7 @@ export default function MboppiBoostOrder() {
       .smmPaymentInfo()
       .then((resp) => {
         setPaymentInfo(resp.payment_info || null);
-        const enabled = Boolean(resp.online_payment?.enabled);
-        setOnlineEnabled(enabled);
-        if (!enabled) setPaymentMethod("mobile_money");
+        setOnlineEnabled(Boolean(resp.online_payment?.enabled));
       })
       .catch(() => {});
   }, [serviceId]);
@@ -132,7 +137,6 @@ export default function MboppiBoostOrder() {
         setCheckoutUrl(resp.checkout_url);
       } else {
         setManualOpen(true);
-        setPaymentMethod((prev) => (prev === "ikeepay" ? "mobile_money" : prev));
         setOrderCreated((prev) => ({
           ...prev,
           online_payment: { online: false, reason: resp?.reason || "online_unavailable" },
@@ -142,7 +146,6 @@ export default function MboppiBoostOrder() {
     } catch (err) {
       setDeclareError(err.message || "Impossible d'ouvrir le paiement en ligne.");
       setManualOpen(true);
-      setPaymentMethod((prev) => (prev === "ikeepay" ? "mobile_money" : prev));
     }
   }
 
@@ -183,7 +186,7 @@ export default function MboppiBoostOrder() {
         service_id: Number(serviceId),
         quantity: Number(quantity),
         client_info: clientInfo,
-        payment_method: paymentMethod,
+        payment_method: onlineEnabled === false ? "manual" : "ikeepay",
         idempotency_key: idempotencyKey,
       });
       if (resp?.ok) {
@@ -217,7 +220,7 @@ export default function MboppiBoostOrder() {
     try {
       const resp = await api.smmDeclarePayment(orderCreated.order_id, {
         payment_reference: paymentReference.trim(),
-        payment_method: paymentMethod,
+        payment_method: manualMethod,
         phone: clientInfo.phone || "",
         token: orderCreated.public_token,
       });
@@ -235,22 +238,29 @@ export default function MboppiBoostOrder() {
 
   if (loading) {
     return (
-      <main className="container">
+      <BoostPage>
         <Seo title="Chargement… — MboppiBoost" />
-        <p>{t("Chargement…")}</p>
-      </main>
+        <div className="boost-card boost-card-pad boost-order-state">
+          <span className="boost-skeleton tw-h-5 tw-w-48" />
+          <p className="boost-muted tw-mt-4">{t("Chargement…")}</p>
+        </div>
+      </BoostPage>
     );
   }
 
   if (!service) {
     return (
-      <main className="container">
+      <BoostPage>
         <Seo title="Service introuvable — MboppiBoost" />
-        <p>{error || "Ce service n'existe pas."}</p>
-        <Link to="/mboppi-boost" className="btn btn-primary">
-          Retour aux services
-        </Link>
-      </main>
+        <div className="boost-card boost-card-pad boost-order-state">
+          <span className="boost-empty-icon">🔎</span>
+          <h1 className="boost-section-title">{t("Service introuvable")}</h1>
+          <p className="boost-section-lead">{error || "Ce service n'existe pas."}</p>
+          <Link to="/mboppi-boost" className="boost-btn boost-btn-primary">
+            {t("Retour aux services")}
+          </Link>
+        </div>
+      </BoostPage>
     );
   }
 
@@ -269,29 +279,40 @@ export default function MboppiBoostOrder() {
   if (orderCreated) {
     const whatsapp = paymentInfo?.whatsapp?.replace(/[^\d]/g, "");
     return (
-      <main className="container">
+      <BoostPage>
         <Seo
           title="Commande enregistrée — MboppiBoost"
           description="Votre commande MboppiBoost a été créée avec succès."
         />
-        <section className="section">
-          <div className="cta-card">
-            <h2>{t("Commande enregistrée")}</h2>
-            <p>
+        <section className="boost-order-done">
+          <div className="boost-card boost-card-pad boost-order-done-card">
+            <span className="boost-done-icon">✅</span>
+            <p className="boost-kicker">MboppiBoost</p>
+            <h1 className="boost-section-title">{t("Commande enregistrée")}</h1>
+            <p className="boost-section-lead">
               {t("Votre commande a été créée avec succès.")} ({formatAmount(orderCreated.total)}{" "}
               {orderCreated.currency})
             </p>
-            <p>
-              {t("Numéro de commande")} : <strong>#{orderCreated.order_id}</strong>
-            </p>
-            <p className="hint">
+            <div className="boost-order-done-rows">
+              <div className="boost-summary-row">
+                <span>{t("Numéro de commande")}</span>
+                <strong>#{orderCreated.order_id}</strong>
+              </div>
+              <div className="boost-summary-row">
+                <span>{t("Total")}</span>
+                <strong>
+                  {formatAmount(orderCreated.total)} {orderCreated.currency}
+                </strong>
+              </div>
+            </div>
+            <p className="boost-hint">
               {t(
                 "Conservez ce numéro : il vous permet de déclarer votre paiement et de suivre la commande."
               )}
             </p>
 
             {paid ? (
-              <div className="card mboost-paid-card" style={{ marginTop: 16 }}>
+              <div className="boost-card boost-card-pad boost-payment-panel" style={{ marginTop: 16 }}>
                 <h3>{refundPending ? `↩️ ${t("Remboursement en cours")}` : `✅ ${t("Paiement confirmé")}`}</h3>
                 <p>
                   {refundPending
@@ -299,15 +320,15 @@ export default function MboppiBoostOrder() {
                         "Votre paiement a été reçu après l'annulation de la commande. Un remboursement est en cours de traitement."
                       )
                     : t(
-                        "Votre paiement a été confirmé. La commande va être transmise au prestataire."
+                        "Votre paiement a été confirmé. La transmission de la commande au prestataire a été lancée."
                       )}
                 </p>
-                <Link to="/mboppi-boost/mes-commandes" className="btn btn-primary">
+                <Link to="/mboppi-boost/mes-commandes" className="boost-btn boost-btn-primary">
                   {refundPending ? t("Voir mes commandes") : t("Suivre ma commande")}
                 </Link>
               </div>
             ) : orderCreated.online_payment?.online ? (
-              <div className="card mboost-online-card" style={{ marginTop: 16 }}>
+              <div className="boost-card boost-card-pad boost-payment-panel" style={{ marginTop: 16 }}>
                 <div className="mboost-online-head">
                   <div>
                     <h3>💳 {t("Paiement en ligne sécurisé")}</h3>
@@ -318,17 +339,14 @@ export default function MboppiBoostOrder() {
                   </div>
                   <span className="mboost-secure-badge">🔒 iKeePay</span>
                 </div>
-                <button type="button" className="btn btn-primary btn-block" onClick={openCheckout}>
+                <button type="button" className="boost-btn boost-btn-primary boost-btn-block" onClick={openCheckout}>
                   {t("Payer maintenant")}
                 </button>
                 <button
                   type="button"
-                  className="btn btn-outline btn-block"
+                  className="boost-btn boost-btn-secondary boost-btn-block"
                   style={{ marginTop: 8 }}
-                  onClick={() => {
-                    setManualOpen(true);
-                    setPaymentMethod((prev) => (prev === "ikeepay" ? "mobile_money" : prev));
-                  }}
+                  onClick={() => setManualOpen(true)}
                 >
                   {t("Payer autrement (mobile money / virement)")}
                 </button>
@@ -338,20 +356,20 @@ export default function MboppiBoostOrder() {
             ) : null}
 
             {declared ? (
-              <div className="card" style={{ marginTop: 16 }}>
+              <div className="boost-card boost-card-pad boost-payment-panel" style={{ marginTop: 16 }}>
                 <h3>✅ {t("Paiement déclaré")}</h3>
                 <p>
                   {t(
                     "Votre paiement est en cours de vérification. La commande sera transmise au prestataire dès validation."
                   )}
                 </p>
-                <Link to="/mboppi-boost/mes-commandes" className="btn btn-primary">
+                <Link to="/mboppi-boost/mes-commandes" className="boost-btn boost-btn-primary">
                   {t("Voir mes commandes")}
                 </Link>
               </div>
             ) : manualOpen || !orderCreated.online_payment?.online ? (
               <>
-                <div className="card" style={{ marginTop: 16 }}>
+                <div className="boost-card boost-card-pad boost-payment-panel" style={{ marginTop: 16 }}>
                   <h3>💳 {t("Payer votre commande")}</h3>
                   <p>
                     {t("Montant à régler")} :{" "}
@@ -360,7 +378,7 @@ export default function MboppiBoostOrder() {
                     </strong>
                   </p>
                   {paymentInfo ? (
-                    <ul style={{ lineHeight: 1.8 }}>
+                    <ul className="boost-payment-list">
                       <li>
                         🟠 Orange Money : <strong>{paymentInfo.orange_money}</strong>
                       </li>
@@ -383,7 +401,7 @@ export default function MboppiBoostOrder() {
                   {paymentInfo?.note && <p className="hint">{paymentInfo.note}</p>}
                   {whatsapp && (
                     <a
-                      className="btn btn-outline"
+                      className="boost-btn boost-btn-secondary"
                       href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(
                         `Bonjour, je viens de créer la commande MboppiBoost #${orderCreated.order_id} (${orderCreated.service} — ${formatAmount(orderCreated.total)} ${orderCreated.currency}).`
                       )}`}
@@ -395,14 +413,14 @@ export default function MboppiBoostOrder() {
                   )}
                 </div>
 
-                <div className="card" style={{ marginTop: 16 }}>
+                <div className="boost-card boost-card-pad boost-payment-panel" style={{ marginTop: 16 }}>
                   <h3>{t("J'ai payé")}</h3>
                   <p className="hint">
                     {t(
                       "Indiquez la référence de votre transaction (ID Orange Money, MTN MoMo, MoneyFusion ou virement)."
                     )}
                   </p>
-                  <form onSubmit={declarePayment} className="order-form">
+                  <form onSubmit={declarePayment} className="order-form boost-order-form">
                     <div className="form-row">
                       <label>{t("Référence de paiement")}</label>
                       <input
@@ -417,15 +435,18 @@ export default function MboppiBoostOrder() {
                     </div>
                     <div className="form-row">
                       <label>{t("Moyen utilisé")}</label>
-                      <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                        {PAYMENT_METHODS.filter((m) => m.value !== "ikeepay").map((m) => (
+                      <select
+                        value={manualMethod}
+                        onChange={(e) => setManualMethod(e.target.value)}
+                      >
+                        {MANUAL_PAYMENT_METHODS.map((m) => (
                           <option key={m.value} value={m.value}>
                             {t(m.label)}
                           </option>
                         ))}
                       </select>
                     </div>
-                    <button type="submit" disabled={declaring} className="btn btn-primary btn-block">
+                    <button type="submit" disabled={declaring} className="boost-btn boost-btn-primary boost-btn-block">
                       {declaring ? t("Envoi…") : t("Déclarer mon paiement")}
                     </button>
                     {declareError && <p className="error-msg">{declareError}</p>}
@@ -439,12 +460,14 @@ export default function MboppiBoostOrder() {
                 {t("Astuce : connectez-vous pour retrouver toutes vos commandes dans votre espace.")}
               </p>
             )}
-            <Link to="/mboppi-boost/mes-commandes" className="btn btn-outline" style={{ marginTop: 12 }}>
-              {t("Suivre ma commande")}
-            </Link>
-            <Link to="/mboppi-boost" className="btn btn-outline" style={{ marginTop: 12 }}>
-              {t("Retour aux services")}
-            </Link>
+            <div className="boost-order-done-actions">
+              <Link to="/mboppi-boost/mes-commandes" className="boost-btn boost-btn-primary">
+                {t("Suivre ma commande")}
+              </Link>
+              <Link to="/mboppi-boost" className="boost-btn boost-btn-secondary">
+                {t("Retour aux services")}
+              </Link>
+            </div>
           </div>
         </section>
         {checkoutUrl && (
@@ -457,44 +480,65 @@ export default function MboppiBoostOrder() {
             onClose={() => setCheckoutUrl("")}
           />
         )}
-      </main>
+      </BoostPage>
     );
   }
 
   return (
-    <main className="container">
+    <BoostPage>
       <Seo
         title={`Commander : ${service.name} — MboppiBoost`}
         description={`Commander le service ${service.name} sur MboppiBoost.`}
       />
-      <section className="hero vitrine-hero">
-        <span className="hero-badge">⚡ MboppiBoost</span>
-        <h1>{service.name}</h1>
-        <p>{service.short_description || service.description}</p>
-        <p>
-          {service.price > 0
-            ? `${formatAmount(service.price)} ${service.currency} / ${service.billing_unit || 1000}`
-            : t("Tarif à définir — contacter MboppiBoost")}
-        </p>
-        {service.delivery_days && (
-          <p>
-            {t("Délai indicatif")} : {service.delivery_days} {t("jours")}
-          </p>
-        )}
+      <section className="boost-hero boost-order-hero">
+        <div className="boost-hero-grid tw-absolute tw-inset-0" aria-hidden="true" />
+        <span className="boost-orb boost-orb-a" aria-hidden="true" />
+        <span className="boost-orb boost-orb-b" aria-hidden="true" />
+        <div className="boost-order-hero-inner">
+          <Link to="/mboppi-boost" className="boost-back">
+            ← {t("Tous les services")}
+          </Link>
+          <span className="boost-eyebrow">⚡ MboppiBoost</span>
+          <h1 className="boost-order-title">{service.name}</h1>
+          {(service.short_description || service.description) && (
+            <p className="boost-lead">{service.short_description || service.description}</p>
+          )}
+          <div className="boost-order-hero-meta">
+            <span className="boost-chip">
+              {service.price > 0
+                ? `${formatAmount(service.price)} ${service.currency} / ${service.billing_unit || 1000}`
+                : t("Tarif à définir — contacter MboppiBoost")}
+            </span>
+            {service.delivery_days && (
+              <span className="boost-chip">
+                ⏱ {t("Délai indicatif")} : {service.delivery_days} {t("jours")}
+              </span>
+            )}
+            {service.platform && <span className="boost-chip">{service.platform}</span>}
+          </div>
+        </div>
       </section>
 
-      <section className="section">
-        <div className="section-head">
-          <h2>{t("Détails du service")}</h2>
-          <p>{t("Précisez les informations nécessaires à la prestation.")}</p>
-        </div>
-        <div className="card service-order-card">
+      <div className="boost-order-grid">
+        <section className="boost-card boost-card-pad boost-order-form-card">
+          <div className="boost-order-form-head">
+            <div>
+              <p className="boost-kicker">{t("Détails du service")}</p>
+              <h2 className="boost-section-title">{t("Configurez votre commande")}</h2>
+            </div>
+            <span className="boost-trust-pill">🔒 {t("Commande sécurisée")}</span>
+          </div>
+          <p className="boost-section-lead">
+            {t("Précisez les informations nécessaires à la prestation.")}
+          </p>
+
           {service.conditions && (
-            <div className="service-conditions">
+            <div className="boost-order-note">
               <strong>{t("Conditions")} :</strong> {service.conditions}
             </div>
           )}
-          <form onSubmit={handleSubmit} className="order-form">
+
+          <form onSubmit={handleSubmit} className="order-form boost-order-form">
             <div className="form-row">
               <label>{t("Quantité")}</label>
               <input
@@ -586,25 +630,15 @@ export default function MboppiBoostOrder() {
             </div>
 
             <h3>{t("Paiement")}</h3>
-            <div className="form-row">
-              <label>{t("Moyen de paiement")}</label>
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                {PAYMENT_METHODS.filter(
-                  (m) => m.value !== "ikeepay" || onlineEnabled !== false
-                ).map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {t(m.label)}
-                  </option>
-                ))}
-              </select>
-              {paymentMethod === "ikeepay" && (
-                <p className="form-hint">
-                  {t(
-                    "Vous serez redirigé vers le tunnel sécurisé iKeePay (carte bancaire ou mobile money)."
+            <p className="form-hint">
+              {onlineEnabled === false
+                ? t(
+                    "Le paiement en ligne est indisponible. Les instructions de paiement mobile money ou virement s'afficheront après validation."
+                  )
+                : t(
+                    "Paiement sécurisé via iKeePay (carte bancaire ou Mobile Money). Le tunnel de paiement s'ouvrira après validation."
                   )}
-                </p>
-              )}
-            </div>
+            </p>
 
             <div className="form-total">
               <strong>{t("Total")} :</strong>{" "}
@@ -613,24 +647,82 @@ export default function MboppiBoostOrder() {
                 : t("Sur devis")}
             </div>
 
-            <button type="submit" disabled={submitting} className="btn btn-primary btn-block">
-              {submitting ? t("Enregistrement…") : t("Confirmer la commande")}
+            <button type="submit" disabled={submitting} className="boost-btn boost-btn-primary boost-btn-block">
+              {submitting
+                ? t("Enregistrement…")
+                : onlineEnabled === false
+                  ? t("Confirmer la commande")
+                  : t("Confirmer et payer avec iKeePay")}
             </button>
             {error && <p className="error-msg">{error}</p>}
           </form>
-        </div>
-      </section>
+        </section>
+
+        <aside className="boost-order-aside">
+          <div className="boost-summary boost-order-summary">
+            <div className="boost-summary-head">
+              <p className="boost-summary-kicker">{t("Récapitulatif")}</p>
+              <h2 className="boost-summary-title">{t("Votre commande")}</h2>
+            </div>
+            <div className="boost-order-summary-body">
+              <div className="boost-summary-row">
+                <span>{t("Service")}</span>
+                <strong>{service.name}</strong>
+              </div>
+              <div className="boost-summary-row">
+                <span>{t("Quantité")}</span>
+                <strong>{quantity}</strong>
+              </div>
+              <div className="boost-summary-row">
+                <span>{t("Prix unitaire")}</span>
+                <strong>
+                  {service.price > 0
+                    ? `${formatAmount(service.price)} ${service.currency} / ${service.billing_unit || 1000}`
+                    : t("Sur devis")}
+                </strong>
+              </div>
+              <div className="boost-summary-total">
+                <div>
+                  <p className="boost-summary-kicker">{t("Total estimé")}</p>
+                  <p className="boost-total">
+                    {service.price > 0
+                      ? `${formatAmount(total)} ${service.currency}`
+                      : t("Sur devis")}
+                  </p>
+                </div>
+                <span className="boost-total-note">{service.currency}</span>
+              </div>
+              <div className="boost-summary-secure">
+                {onlineEnabled === false
+                  ? `💳 ${t("Mobile Money / virement")}`
+                  : `🔒 ${t("Paiement sécurisé via iKeePay")}`}
+              </div>
+              <Link
+                to="/mboppi-boost/mes-commandes"
+                className="boost-btn boost-btn-secondary boost-btn-block boost-order-summary-link"
+              >
+                {t("Suivre ma commande")}
+              </Link>
+            </div>
+          </div>
+          <p className="boost-hint boost-order-aside-note">
+            {t(
+              "Le montant est calculé automatiquement selon la quantité et le tarif du service."
+            )}
+          </p>
+        </aside>
+      </div>
 
       {!user && (
-        <section className="section">
-          <div className="card">
-            <p>{t("Connectez-vous pour retrouver vos commandes dans votre espace.")}</p>
-            <Link to="/login" className="btn btn-outline">
-              {t("Se connecter")}
-            </Link>
-          </div>
+        <section className="boost-card boost-card-pad boost-order-login">
+          <p className="boost-strong">
+            {t("Connectez-vous pour retrouver vos commandes dans votre espace.")}
+          </p>
+          <Link to="/login" className="boost-btn boost-btn-secondary">
+            {t("Se connecter")}
+          </Link>
         </section>
       )}
-    </main>
+    </BoostPage>
   );
 }

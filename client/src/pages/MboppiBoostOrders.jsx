@@ -27,12 +27,21 @@ const METHOD_OPTIONS = [
   { value: "espece", label: "Espèces" },
 ];
 
+function BoostPage({ children }) {
+  return (
+    <main className="boost-page">
+      <div className="boost-shell">{children}</div>
+    </main>
+  );
+}
+
 export default function MboppiBoostOrders() {
   const { t } = useLang();
   const { user } = useAuth();
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [declareId, setDeclareId] = useState(null);
   const [reference, setReference] = useState("");
@@ -41,44 +50,50 @@ export default function MboppiBoostOrders() {
   const [declareError, setDeclareError] = useState("");
   const [notice, setNotice] = useState("");
   const [payingId, setPayingId] = useState(null);
+  const [verifyingId, setVerifyingId] = useState(null);
   const [checkout, setCheckout] = useState(null);
 
   useEffect(() => {
     fetchOrders();
   }, [user]);
 
-  async function fetchOrders() {
-    setLoading(true);
+  async function fetchOrders({ silent = false } = {}) {
+    if (silent) setRefreshing(true);
+    else setLoading(true);
     setError("");
     const merged = new Map();
 
-    if (user) {
-      try {
-        const resp = await api.smmOrders();
-        for (const order of resp.orders || []) merged.set(Number(order.id), { ...order, _token: null });
-      } catch (err) {
-        setError(err.message || "Impossible de charger vos commandes.");
+    try {
+      if (user) {
+        try {
+          const resp = await api.smmOrders();
+          for (const order of resp.orders || []) merged.set(Number(order.id), { ...order, _token: null });
+        } catch (err) {
+          setError(err.message || "Impossible de charger vos commandes.");
+        }
       }
-    }
 
-    const locals = listLocalBoostOrders();
-    for (const local of locals) {
-      if (merged.has(Number(local.id))) {
-        merged.get(Number(local.id))._token = local.token;
-        continue;
+      const locals = listLocalBoostOrders();
+      for (const local of locals) {
+        if (merged.has(Number(local.id))) {
+          merged.get(Number(local.id))._token = local.token;
+          continue;
+        }
+        try {
+          const resp = await api.smmOrder(local.id, local.token);
+          if (resp.order) merged.set(Number(resp.order.id), { ...resp.order, _token: local.token });
+        } catch (err) {
+          if (err?.status === 404) removeLocalBoostOrder(local.id);
+        }
       }
-      try {
-        const resp = await api.smmOrder(local.id, local.token);
-        if (resp.order) merged.set(Number(resp.order.id), { ...resp.order, _token: local.token });
-      } catch (err) {
-        if (err?.status === 404) removeLocalBoostOrder(local.id);
-      }
-    }
 
-    setOrders(
-      [...merged.values()].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-    );
-    setLoading(false);
+      setOrders(
+        [...merged.values()].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+      );
+    } finally {
+      if (silent) setRefreshing(false);
+      else setLoading(false);
+    }
   }
 
   async function startOnlinePayment(order) {
@@ -106,11 +121,22 @@ export default function MboppiBoostOrders() {
 
   async function confirmOnlinePayment(orderId, token) {
     setCheckout(null);
-    for (let attempt = 0; attempt < 10; attempt += 1) {
+    setVerifyingId(orderId);
+    setNotice(t("Vérification du paiement en cours…"));
+    for (let attempt = 0; attempt < 90; attempt += 1) {
       try {
         const resp = await api.smmPaymentStatus(orderId, token || undefined);
         if (resp?.paid) {
-          const status = resp.status === "refund_pending" ? "refund_pending" : "paid";
+          const status = [
+            "paid",
+            "submitted",
+            "processing",
+            "completed",
+            "refund_pending",
+            "refunded",
+          ].includes(resp.status)
+            ? resp.status
+            : "paid";
           setOrders((prev) =>
             prev.map((o) =>
               Number(o.id) === Number(orderId)
@@ -119,17 +145,23 @@ export default function MboppiBoostOrders() {
             )
           );
           setNotice(
-            status === "refund_pending"
-              ? `Paiement reçu pour la commande #${orderId}. Elle avait été annulée : un remboursement est en cours.`
-              : `Paiement confirmé pour la commande #${orderId}. Merci !`
+            ["refund_pending", "refunded"].includes(status)
+              ? `Paiement reçu pour la commande #${orderId}. Elle avait été annulée : ${
+                  status === "refunded" ? "elle a été remboursée." : "un remboursement est en cours."
+                }`
+              : ["submitted", "processing", "completed"].includes(status)
+                ? `Paiement confirmé pour la commande #${orderId}. Elle a été transmise au prestataire.`
+                : `Paiement confirmé pour la commande #${orderId}. Transmission au prestataire en cours.`
           );
+          setVerifyingId(null);
           return;
         }
       } catch {
         /* on réessaie */
       }
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 4000));
     }
+    setVerifyingId(null);
     fetchOrders();
   }
 
@@ -165,163 +197,240 @@ export default function MboppiBoostOrders() {
     }
   }
 
+  const activeCount = orders.filter((o) =>
+    ["draft", "pending_payment", "paid", "submitted", "processing"].includes(o.status)
+  ).length;
+
   if (loading) {
     return (
-      <main className="container">
+      <BoostPage>
         <Seo title="Mes commandes — MboppiBoost" />
-        <p>{t("Chargement…")}</p>
-      </main>
+        <section className="boost-card boost-card-pad boost-order-state boost-fade-up">
+          <span className="boost-loader" aria-hidden="true" />
+          <p className="boost-strong">{t("Chargement…")}</p>
+        </section>
+      </BoostPage>
     );
   }
 
   return (
-    <main className="container">
+    <BoostPage>
       <Seo title="Mes commandes — MboppiBoost" description="Suivez vos commandes MboppiBoost." />
-      <section className="section">
-        <div className="section-head">
-          <h2>{t("Mes commandes MboppiBoost")}</h2>
-          <p>{t("Suivez l'état de vos commandes de services marketing digital.")}</p>
-        </div>
 
+      <section className="boost-hero boost-orders-hero">
+        <div className="boost-hero-grid tw-absolute tw-inset-0" aria-hidden="true" />
+        <span className="boost-orb boost-orb-a" aria-hidden="true" />
+        <span className="boost-orb boost-orb-b" aria-hidden="true" />
+        <div className="boost-order-hero-inner">
+          <Link to="/mboppi-boost" className="boost-back">
+            ← {t("Tous les services")}
+          </Link>
+          <span className="boost-eyebrow">⚡ MboppiBoost</span>
+          <h1 className="boost-order-title">{t("Mes commandes MboppiBoost")}</h1>
+          <p className="boost-lead">
+            {t("Suivez l'état de vos commandes de services marketing digital.")}
+          </p>
+          <div className="boost-order-hero-meta">
+            <span className="boost-chip">
+              {orders.length} {orders.length > 1 ? t("commandes") : t("commande")}
+            </span>
+            {activeCount > 0 && (
+              <span className="boost-chip">
+                {activeCount} {t("en cours")}
+              </span>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="boost-orders-body">
         {notice && (
-          <div className="card" style={{ borderColor: "var(--primary)" }}>
-            <p>✅ {notice}</p>
+          <div className="boost-alert boost-alert-success boost-fade-up" role="status">
+            ✅ {notice}
           </div>
         )}
 
         {error && (
-          <div className="card">
-            <p className="error-msg">{error}</p>
+          <div className="boost-alert boost-alert-error" role="alert">
+            ⚠️ {error}
+          </div>
+        )}
+
+        {orders.length > 0 && (
+          <div className="boost-orders-toolbar">
+            <button
+              type="button"
+              className="boost-page-btn"
+              onClick={() => fetchOrders({ silent: true })}
+              disabled={refreshing}
+              aria-busy={refreshing}
+            >
+              ↻ {refreshing ? t("Chargement…") : t("Actualiser")}
+            </button>
           </div>
         )}
 
         {orders.length === 0 && !error && (
-          <div className="card">
-            <p>
-              {t(
-                "Aucune commande pour le moment. Les commandes créées sur cet appareil apparaissent aussi ici."
-              )}
+          <div className="boost-empty boost-fade-up">
+            <span className="boost-empty-icon" aria-hidden="true">
+              🛍️
+            </span>
+            <h2 className="boost-empty-title">{t("Aucune commande pour le moment")}</h2>
+            <p className="boost-empty-text">
+              {t("Les commandes créées sur cet appareil apparaissent aussi ici.")}
             </p>
-            <Link to="/mboppi-boost" className="btn btn-primary">
+            <Link to="/mboppi-boost" className="boost-btn boost-btn-primary">
               {t("Découvrir les services")}
             </Link>
           </div>
         )}
 
         {orders.length > 0 && (
-          <div className="orders-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t("N°")}</th>
-                  <th>{t("Service")}</th>
-                  <th>{t("Total")}</th>
-                  <th>{t("Statut")}</th>
-                  <th>{t("Paiement")}</th>
-                  <th>{t("Date")}</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id}>
-                    <td>#{o.id}</td>
-                    <td>{o.service_name}</td>
-                    <td>
-                      {o.total} {o.currency}
-                    </td>
-                    <td>
-                      <span className={`badge badge-${o.status}`}>
-                        {t(STATUS_LABELS[o.status] || o.status)}
-                      </span>
-                    </td>
-                    <td>
-                      {o.status === "refund_pending"
-                        ? t("Remboursement en attente")
-                        : o.status === "refunded" || o.payment_status === "refunded"
-                        ? t("Remboursé")
-                        : o.payment_status === "refund_pending"
-                          ? t("Remboursement en attente")
-                          : o.payment_status === "paid"
-                            ? t("Confirmé")
-                            : o.payment_status === "declared"
-                              ? t("Déclaré — vérification")
-                              : t("Non payé")}
-                      {o.payment_reference ? <div className="hint">Réf. {o.payment_reference}</div> : null}
-                    </td>
-                    <td>{new Date(o.created_at).toLocaleDateString("fr-FR")}</td>
-                    <td>
-                      {["draft", "pending_payment"].includes(o.status) && o.payment_status !== "declared" && (
-                        <>
-                          <button
-                            type="button"
-                            className="btn btn-small btn-primary"
-                            disabled={payingId === o.id}
-                            onClick={() => startOnlinePayment(o)}
-                          >
-                            {payingId === o.id ? t("Ouverture…") : t("Payer en ligne")}
-                          </button>{" "}
-                          <button
-                            type="button"
-                            className="btn btn-small"
-                            onClick={() => {
-                              setDeclareId(declareId === o.id ? null : o.id);
-                              setReference("");
-                              setDeclareError("");
-                            }}
-                          >
-                            {t("J'ai payǸ")}
-                          </button>
-                        </>
-                      )}
-                      {declareId === o.id && (
-                        <div className="boost-declare">
-                          <input
-                            type="text"
-                            value={reference}
-                            onChange={(e) => setReference(e.target.value)}
-                            placeholder={t("Référence de transaction")}
-                            maxLength={200}
-                          />
-                          <select value={method} onChange={(e) => setMethod(e.target.value)}>
-                            {METHOD_OPTIONS.map((m) => (
-                              <option key={m.value} value={m.value}>
-                                {t(m.label)}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            className="btn btn-primary btn-small"
-                            disabled={declaring || !reference.trim()}
-                            onClick={() => declarePayment(o)}
-                          >
-                            {declaring ? t("Envoi…") : t("Envoyer")}
-                          </button>
-                          {declareError && <p className="error-msg">{declareError}</p>}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="boost-orders-list">
+            {orders.map((o) => {
+              const createdLabel = new Date(o.created_at).toLocaleDateString("fr-FR");
+              const isRefunding =
+                o.status === "refund_pending" || o.payment_status === "refund_pending";
+              const isRefunded = o.status === "refunded" || o.payment_status === "refunded";
+              const isPaid = o.payment_status === "paid";
+              const isDeclared = o.payment_status === "declared";
+              const canPay =
+                ["draft", "pending_payment"].includes(o.status) && o.payment_status !== "declared";
+              const paymentLabel = o.status === "refund_pending"
+                ? t("Remboursement en attente")
+                : isRefunded
+                  ? t("Remboursé")
+                  : isRefunding
+                    ? t("Remboursement en attente")
+                    : isPaid
+                      ? t("Confirmé")
+                      : isDeclared
+                        ? t("Déclaré — vérification")
+                        : t("Non payé");
+              const paymentTone = isRefunded || isRefunding
+                ? "boost-pay-danger"
+                : isPaid
+                  ? "boost-pay-ok"
+                  : isDeclared
+                    ? "boost-pay-warn"
+                    : "boost-pay-muted";
+
+              return (
+                <article key={o.id} className="boost-order-item boost-fade-up">
+                  <div className="boost-order-item-head">
+                    <div className="boost-order-identity">
+                      <span className="boost-order-ref">#{o.id}</span>
+                      <div>
+                        <h3 className="boost-order-service">{o.service_name}</h3>
+                        <p className="boost-order-date">{createdLabel}</p>
+                      </div>
+                    </div>
+                    <span className={`boost-status boost-status-${o.status}`}>
+                      {t(STATUS_LABELS[o.status] || o.status)}
+                    </span>
+                  </div>
+
+                  <div className="boost-order-meta-grid">
+                    <div className="boost-order-meta">
+                      <span>{t("Total")}</span>
+                      <strong>
+                        {o.total} {o.currency}
+                      </strong>
+                    </div>
+                    <div className="boost-order-meta">
+                      <span>{t("Paiement")}</span>
+                      <strong className={paymentTone}>{paymentLabel}</strong>
+                      {o.payment_reference ? (
+                        <small className="boost-order-ref-line">Réf. {o.payment_reference}</small>
+                      ) : null}
+                    </div>
+                    <div className="boost-order-meta">
+                      <span>{t("Quantité")}</span>
+                      <strong>{o.quantity ?? "—"}</strong>
+                    </div>
+                  </div>
+
+                  {canPay && (
+                    <div className="boost-order-actions">
+                      <button
+                        type="button"
+                        className="boost-btn boost-btn-primary boost-btn-sm"
+                        disabled={payingId === o.id || verifyingId === o.id}
+                        onClick={() => startOnlinePayment(o)}
+                      >
+                        {verifyingId === o.id
+                          ? t("Vérification du paiement…")
+                          : payingId === o.id
+                            ? t("Ouverture…")
+                            : t("Payer avec iKeePay")}
+                      </button>
+                      <button
+                        type="button"
+                        className="boost-btn boost-btn-secondary boost-btn-sm"
+                        onClick={() => {
+                          setDeclareId(declareId === o.id ? null : o.id);
+                          setReference("");
+                          setDeclareError("");
+                        }}
+                      >
+                        {t("J'ai payé")}
+                      </button>
+                    </div>
+                  )}
+
+                  {declareId === o.id && (
+                    <div className="boost-declare">
+                      <p className="boost-declare-title">{t("Déclarer un paiement hors ligne")}</p>
+                      <input
+                        type="text"
+                        value={reference}
+                        onChange={(e) => setReference(e.target.value)}
+                        placeholder={t("Référence de transaction")}
+                        maxLength={200}
+                        className="boost-input"
+                      />
+                      <select
+                        value={method}
+                        onChange={(e) => setMethod(e.target.value)}
+                        className="boost-input"
+                      >
+                        {METHOD_OPTIONS.map((m) => (
+                          <option key={m.value} value={m.value}>
+                            {t(m.label)}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="boost-btn boost-btn-primary boost-btn-sm"
+                        disabled={declaring || !reference.trim()}
+                        onClick={() => declarePayment(o)}
+                      >
+                        {declaring ? t("Envoi…") : t("Envoyer")}
+                      </button>
+                      {declareError && <p className="error-msg">{declareError}</p>}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </div>
         )}
 
         {!user && (
-          <div className="card" style={{ marginTop: 16 }}>
+          <div className="boost-card boost-card-pad boost-order-login">
             <p>
               {t(
                 "Les commandes passées sans compte restent visibles sur cet appareil. Connectez-vous pour les retrouver partout."
               )}
             </p>
-            <Link to="/login" className="btn btn-outline">
+            <Link to="/login" className="boost-btn boost-btn-secondary">
               {t("Se connecter")}
             </Link>
           </div>
         )}
       </section>
+
       {checkout && (
         <IkeepayCheckout
           checkoutUrl={checkout.url}
@@ -329,6 +438,6 @@ export default function MboppiBoostOrders() {
           onClose={() => setCheckout(null)}
         />
       )}
-    </main>
+    </BoostPage>
   );
 }

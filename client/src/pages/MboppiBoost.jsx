@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
@@ -45,6 +45,48 @@ const PLATFORM_LABELS = {
   snapchat: "Snapchat",
   pinterest: "Pinterest",
   other: "Autres",
+};
+
+const PLATFORM_EMOJI = {
+  instagram: "📸",
+  tiktok: "🎵",
+  youtube: "▶️",
+  telegram: "✈️",
+  facebook: "👤",
+  twitter: "🐦",
+  spotify: "🎧",
+  soundcloud: "🎶",
+  twitch: "🎮",
+  shopee: "🛍️",
+  linkedin: "💼",
+  reddit: "👽",
+  discord: "💬",
+  threads: "🧵",
+  bluesky: "🦋",
+  snapchat: "👻",
+  pinterest: "📌",
+  other: "🎯",
+};
+
+const PLATFORM_ACCENTS = {
+  instagram: "tw-from-fuchsia-500 tw-via-pink-500 tw-to-orange-400",
+  tiktok: "tw-from-slate-900 tw-via-slate-700 tw-to-cyan-400",
+  youtube: "tw-from-red-600 tw-to-rose-500",
+  telegram: "tw-from-sky-500 tw-to-blue-600",
+  facebook: "tw-from-blue-600 tw-to-indigo-600",
+  twitter: "tw-from-slate-800 tw-to-slate-600",
+  spotify: "tw-from-emerald-500 tw-to-green-600",
+  soundcloud: "tw-from-orange-500 tw-to-rose-500",
+  twitch: "tw-from-violet-600 tw-to-purple-500",
+  shopee: "tw-from-orange-500 tw-to-amber-400",
+  linkedin: "tw-from-sky-600 tw-to-blue-700",
+  reddit: "tw-from-orange-600 tw-to-red-500",
+  discord: "tw-from-indigo-500 tw-to-violet-600",
+  threads: "tw-from-slate-900 tw-to-slate-600",
+  bluesky: "tw-from-sky-400 tw-to-blue-500",
+  snapchat: "tw-from-yellow-400 tw-to-amber-500",
+  pinterest: "tw-from-red-600 tw-to-rose-600",
+  other: "tw-from-violet-500 tw-to-indigo-600",
 };
 
 const PAGE_SIZE = 24;
@@ -99,8 +141,53 @@ const DEFAULT_CATALOG = [
   S(33,7,"🎧","Spotify Monthly Listeners","Auditeurs mensuels Spotify.",2000,100),
   S(34,7,"🎧","Spotify Track Plays","Écoutes sur vos titres Spotify.",30,100),
 ];
+
+function IconSearch({ className = "tw-h-4 tw-w-4" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconArrowRight({ className = "tw-h-4 tw-w-4" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconShield({ className = "tw-h-4 tw-w-4" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M12 3l7 3v5c0 4.5-2.8 8.2-7 10-4.2-1.8-7-5.5-7-10V6l7-3Z" strokeLinejoin="round" />
+      <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconCheck({ className = "tw-h-4 tw-w-4" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+      <path d="m5 12 4 4L19 6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconSpark({ className = "tw-h-4 tw-w-4" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 2.5 13.7 9l6.3 1.7-6.3 1.6L12 19l-1.7-6.7L4 10.7 10.3 9 12 2.5Z" />
+      <path d="M19 16.5 19.8 19l2.2.8-2.2.7-.8 2.5-.7-2.5-2.3-.7 2.3-.8.7-2.5Z" opacity=".7" />
+    </svg>
+  );
+}
+
 export default function MboppiBoost() {
   const navigate = useNavigate();
+  const configRef = useRef(null);
   const [categories, setCategories] = useState(null);
   const [services, setServices] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -357,234 +444,453 @@ export default function MboppiBoost() {
     setCategoryFilter("all");
     setPage(1);
   };
+
+  const resetFilters = () => {
+    setSearchInput("");
+    setSearch("");
+    setCategoryFilter("all");
+    setPlatformFilter("all");
+    setPage(1);
+  };
+
+  const scrollToConfig = () => {
+    configRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const selectedAccent = PLATFORM_ACCENTS[selected?.platform] || PLATFORM_ACCENTS.other;
+  const activeFilterCount =
+    (search ? 1 : 0) +
+    (categoryFilter !== "all" ? 1 : 0) +
+    (platformFilter !== "all" ? 1 : 0);
+
   return (
-    <main style={{ background: "#f5f8fc", color: "#10213b", minHeight: "100vh", fontFamily: "Inter, Segoe UI, Arial, sans-serif" }}>
+    <main className="boost-page">
       <Seo title="MboppiBoost — Commandes de services digitaux" description="MboppiBoost : sélectionnez un service de marketing digital, configurez votre besoin et consultez le montant estimé avant validation." />
 
-      <div style={{ maxWidth: 1160, margin: "auto", padding: "30px 20px 60px" }}>
-        <section className="mboost-hero" style={{ background: "linear-gradient(120deg,#102344,#174fc2 65%,#287ee8)", borderRadius: 24, color: "white", alignItems: "center", boxShadow: "0 12px 32px rgba(16,33,59,.08)" }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "1.7px", textTransform: "uppercase", color: "#c7e1ff" }}>MboppiBoost</div>
-            <h1 style={{ fontSize: "clamp(30px,4vw,47px)", lineHeight: 1.08, margin: "12px 0" }}>Commandes de services digitaux</h1>
-            <p style={{ color: "#e4efff", lineHeight: 1.65, maxWidth: 650, marginBottom: 22 }}>
-              Sélectionnez un service, configurez votre besoin et consultez le montant estimé avant validation. Le paiement et le suivi se font ensuite depuis votre espace.
-            </p>
-            <span style={{ display: "inline-flex", border: "1px solid #ffffff55", borderRadius: 999, padding: "9px 13px", fontSize: 12, margin: "4px 5px 0 0", background: "#ffffff12" }}>Services digitaux</span>
-            <span style={{ display: "inline-flex", border: "1px solid #ffffff55", borderRadius: 999, padding: "9px 13px", fontSize: 12, margin: "4px 5px 0 0", background: "#ffffff12" }}>Suivi en temps réel</span>
-            <span style={{ display: "inline-flex", border: "1px solid #ffffff55", borderRadius: 999, padding: "9px 13px", fontSize: 12, margin: "4px 5px 0 0", background: "#ffffff12" }}>Paiement manuel</span>
-          </div>
-          <div style={{ border: "1px solid #ffffff30", background: "#ffffff10", borderRadius: 20, padding: 22, minHeight: 190, display: "flex", flexDirection: "column", justifyContent: "center", gap: 13 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", padding: "12px 14px", background: "#ffffff12", borderRadius: 12 }}>
-              <b style={{ fontSize: 14 }}>Services disponibles</b>
-              <span style={{ fontSize: 12, color: "#d8e9ff" }}>{displayTotal}</span>
+      <div className="boost-shell">
+        <section className="boost-hero boost-fade-up">
+          <div className="boost-hero-grid tw-absolute tw-inset-0" aria-hidden="true" />
+          <span className="boost-orb boost-orb-a" aria-hidden="true" />
+          <span className="boost-orb boost-orb-b" aria-hidden="true" />
+          <div className="boost-hero-inner">
+            <div>
+              <span className="boost-eyebrow">
+                <IconSpark className="tw-h-3.5 tw-w-3.5 tw-text-cyan-300" />
+                MboppiBoost
+              </span>
+              <h1 className="boost-title">
+                Faites décoller <span className="boost-title-accent">votre présence digitale.</span>
+              </h1>
+              <p className="boost-lead">
+                Des services de croissance pour Instagram, TikTok, YouTube et bien plus.
+                Choisissez votre offre, configurez votre commande et payez en ligne en toute
+                sécurité.
+              </p>
+              <div className="tw-mt-6 tw-flex tw-flex-wrap tw-gap-2">
+                <span className="boost-chip">📸 Instagram</span>
+                <span className="boost-chip">🎵 TikTok</span>
+                <span className="boost-chip">▶️ YouTube</span>
+                <span className="boost-chip">🐦 X / Twitter</span>
+              </div>
+              <div className="tw-mt-8 tw-flex tw-flex-col tw-gap-3 sm:tw-flex-row">
+                <button type="button" onClick={scrollToConfig} className="boost-btn boost-btn-light">
+                  Configurer ma commande
+                  <IconArrowRight />
+                </button>
+                <Link to="/mboppi-boost/mes-commandes" className="boost-btn boost-btn-ghost">
+                  Suivre une commande
+                </Link>
+              </div>
+              <div className="tw-mt-7 tw-flex tw-flex-wrap tw-gap-x-5 tw-gap-y-3">
+                <span className="boost-hero-note"><IconCheck className="tw-h-3.5 tw-w-3.5 tw-text-emerald-300" /> Paiement sécurisé</span>
+                <span className="boost-hero-note"><IconCheck className="tw-h-3.5 tw-w-3.5 tw-text-emerald-300" /> Suivi en temps réel</span>
+                <span className="boost-hero-note"><IconCheck className="tw-h-3.5 tw-w-3.5 tw-text-emerald-300" /> Support dédié</span>
+              </div>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", padding: "12px 14px", background: "#ffffff12", borderRadius: 12 }}>
-              <b style={{ fontSize: 14 }}>Catégories</b>
-              <span style={{ fontSize: 12, color: "#d8e9ff" }}>{catalogCategoryCount}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", padding: "12px 14px", background: "#ffffff12", borderRadius: 12 }}>
-              <b style={{ fontSize: 14 }}>Total estimé</b>
-              <span style={{ fontSize: 12, color: "#d8e9ff" }}>{MONEY(orderTotal)}</span>
+
+            <div className="boost-glass">
+              <div className="tw-flex tw-items-start tw-justify-between tw-gap-3">
+                <div>
+                  <p className="boost-stat-label">Aperçu de la commande</p>
+                  <p className="tw-mt-1 tw-text-sm tw-font-semibold tw-text-slate-200">Votre sélection</p>
+                </div>
+                <span className="boost-glass-badge">En ligne</span>
+              </div>
+              <div className="tw-mt-5 tw-space-y-2.5">
+                <div className="boost-stat">
+                  <span className="boost-stat-label">Services disponibles</span>
+                  <span className="boost-stat-value">{displayTotal}</span>
+                </div>
+                <div className="boost-stat">
+                  <span className="boost-stat-label">Catégories</span>
+                  <span className="boost-stat-value">{catalogCategoryCount}</span>
+                </div>
+                <div className="boost-stat">
+                  <span className="boost-stat-label">Total estimé</span>
+                  <span className="boost-stat-value">{MONEY(orderTotal)}</span>
+                </div>
+              </div>
+              <div className="tw-mt-4 tw-rounded-2xl tw-border tw-border-white/10 tw-bg-slate-950/40 tw-p-3">
+                <div className="tw-flex tw-items-center tw-gap-3">
+                  <span className={`tw-flex tw-h-10 tw-w-10 tw-flex-none tw-items-center tw-justify-center tw-rounded-xl tw-bg-gradient-to-br tw-text-lg tw-text-white tw-shadow-sm ${selectedAccent}`}>
+                    {selected?.icon || "⚡"}
+                  </span>
+                  <div className="tw-min-w-0">
+                    <p className="tw-truncate tw-text-xs tw-font-bold tw-text-white">
+                      {selected?.name || "Sélectionnez un service"}
+                    </p>
+                    <p className="tw-truncate tw-text-[11px] tw-text-slate-400">
+                      {selected
+                        ? `${selected.platformLabel} · ${MONEY(selected.unit)} / ${selected.unitLabel}`
+                        : "Choisissez une offre dans le catalogue"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="tw-mt-4 tw-flex tw-items-center tw-gap-2 tw-text-[10px] tw-font-semibold tw-text-slate-400">
+                <IconShield className="tw-h-3.5 tw-w-3.5 tw-text-emerald-300" />
+                Paiement protégé par iKeePay
+              </div>
             </div>
           </div>
         </section>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", gap: 15, flexWrap: "wrap", margin: "32px 0 17px" }}>
-          <div>
-            <h2 style={{ fontSize: 25, margin: "0 0 5px" }}>Configurer votre commande</h2>
-            <p style={{ margin: 0, color: "#66758c", fontSize: 14 }}>Choisissez un service, renseignez vos informations et validez la commande.</p>
+        <section ref={configRef} id="boost-config" className="tw-mt-12 tw-scroll-mt-24">
+          <div className="tw-flex tw-flex-col tw-gap-4 sm:tw-flex-row sm:tw-items-end sm:tw-justify-between">
+            <div>
+              <p className="boost-kicker">Catalogue MboppiBoost</p>
+              <h2 className="boost-section-title">Configurez votre commande</h2>
+              <p className="boost-section-lead">
+                Choisissez un service, indiquez votre cible et vos coordonnées. Le montant se met à
+                jour automatiquement avant validation.
+              </p>
+            </div>
+            <div className="boost-trust-pill">
+              <IconShield className="tw-h-3.5 tw-w-3.5" />
+              Commande sécurisée
+            </div>
           </div>
-        </div>
 
-        {loading ? (
-          <div style={{ textAlign: "center", padding: 40, color: "#66758c" }}>Chargement des services…</div>
-        ) : (
-          <div className="mboost-layout" style={{ alignItems: "start" }}>
-            <div style={{ background: "white", border: "1px solid #e4eaf2", borderRadius: 18, padding: 22, boxShadow: "0 12px 32px rgba(16,33,59,.08)" }}>
-              <div className="mboost-fields" style={{ marginBottom: 16 }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 7, gridColumn: "1 / -1" }}>
-                  <label style={{ fontSize: 13, fontWeight: 750 }}>Rechercher un service</label>
+          <div className="tw-mt-6 tw-grid tw-gap-6 lg:tw-grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)] lg:tw-items-start">
+            <div className="tw-space-y-5">
+              <div className="boost-card boost-card-pad">
+            <div className="tw-grid tw-gap-4 lg:tw-grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+              <div>
+                <label htmlFor="boost-search" className="boost-label">Rechercher un service</label>
+                <div className="tw-relative">
+                  <span className="boost-search-icon">
+                    <IconSearch />
+                  </span>
                   <input
+                    id="boost-search"
                     type="search"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
                     placeholder="Ex. followers, vues, likes, abonnés..."
-                    style={{ font: "inherit", border: "1px solid #d5deea", borderRadius: 10, padding: "12px 13px", width: "100%", background: "#fff", color: "#10213b", outline: "none" }}
+                    className="boost-input boost-input-search"
                   />
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  <label style={{ fontSize: 13, fontWeight: 750 }}>Catégorie</label>
-                  <select value={categoryFilter} onChange={(e) => onCategoryChange(e.target.value)} style={{ font: "inherit", border: "1px solid #d5deea", borderRadius: 10, padding: "12px 13px", width: "100%", background: "#fff", color: "#10213b", outline: "none" }}>
-                    {catOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                  <label style={{ fontSize: 13, fontWeight: 750 }}>Plateforme</label>
-                  <select value={platformFilter} onChange={(e) => onPlatformChange(e.target.value)} style={{ font: "inherit", border: "1px solid #d5deea", borderRadius: 10, padding: "12px 13px", width: "100%", background: "#fff", color: "#10213b", outline: "none" }}>
-                    {platformOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
-                </div>
               </div>
+              <div>
+                <label htmlFor="boost-category" className="boost-label">Catégorie</label>
+                <select
+                  id="boost-category"
+                  value={categoryFilter}
+                  onChange={(e) => onCategoryChange(e.target.value)}
+                  className="boost-input boost-select"
+                >
+                  {catOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
 
-              {displayCatalog.length === 0 ? (
-                <div style={{ padding: "26px 16px", margin: "8px 0 22px", textAlign: "center", color: "#66758c", background: "#f7faff", border: "1px dashed #d5deea", borderRadius: 13 }}>
+            <div className="tw-mt-4">
+              <div className="tw-flex tw-items-center tw-justify-between tw-gap-3">
+                <span className="boost-label tw-mb-0">Plateformes</span>
+                {activeFilterCount > 0 && (
+                  <button type="button" onClick={resetFilters} className="boost-link">
+                    Réinitialiser
+                  </button>
+                )}
+              </div>
+              <div className="tw-mt-2 tw-flex tw-flex-wrap tw-gap-2">
+                {platformOptions.map((o) => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => onPlatformChange(o.value)}
+                    className={`boost-pill ${platformFilter === o.value ? "boost-pill-active" : ""}`}
+                    aria-pressed={platformFilter === o.value}
+                  >
+                    {o.value !== "all" && <span aria-hidden="true">{PLATFORM_EMOJI[o.value] || "🎯"}</span>}
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="boost-card boost-card-pad">
+            <div className="tw-flex tw-items-start tw-justify-between tw-gap-3">
+              <div>
+                <h3 className="boost-card-title">Choisissez un service</h3>
+                <p className="boost-hint tw-mt-1">Sélectionnez l'offre qui correspond à votre objectif.</p>
+              </div>
+              <span className="boost-count">{displayTotal}</span>
+            </div>
+
+            {loading ? (
+              <div className="tw-mt-4 tw-grid tw-gap-3 sm:tw-grid-cols-2 xl:tw-grid-cols-3" aria-busy="true">
+                {Array.from({ length: 6 }, (_, index) => (
+                  <div key={index} className="boost-skeleton" />
+                ))}
+              </div>
+            ) : displayCatalog.length === 0 ? (
+              <div className="boost-empty">
+                <span className="boost-empty-icon" aria-hidden="true">🔎</span>
+                <p className="boost-empty-title">
                   {servicesLoading ? "Chargement des services…" : "Aucun service ne correspond à votre recherche."}
-                </div>
-              ) : (
-                <div className="mboost-services" aria-busy={servicesLoading} style={{ opacity: servicesLoading ? 0.55 : 1, transition: "opacity .15s" }}>
-                  {displayCatalog.map((s) => (
+                </p>
+                <p className="boost-hint">Essayez un autre mot-clé ou réinitialisez les filtres.</p>
+                <button type="button" onClick={resetFilters} className="boost-btn boost-btn-secondary tw-mt-4">
+                  Effacer les filtres
+                </button>
+              </div>
+            ) : (
+              <div
+                className={`tw-mt-4 tw-grid tw-gap-3 sm:tw-grid-cols-2 xl:tw-grid-cols-3 ${servicesLoading ? "boost-is-loading" : ""}`}
+                aria-busy={servicesLoading}
+              >
+                {displayCatalog.map((s) => {
+                  const isActive = String(selected?.id) === String(s.id);
+                  const accent = PLATFORM_ACCENTS[s.platform] || PLATFORM_ACCENTS.other;
+                  return (
                     <button
                       key={s.id}
                       type="button"
                       onClick={() => { setSelectedId(s.id); setQuantity(s.min || 1); }}
-                      style={{
-                        border: String(selected?.id) === String(s.id) ? "2px solid #1459d9" : "1px solid #e4eaf2",
-                        borderRadius: 13,
-                        padding: String(selected?.id) === String(s.id) ? 13 : 14,
-                        textAlign: "left",
-                        background: String(selected?.id) === String(s.id) ? "#f0f6ff" : "white",
-                        cursor: "pointer",
-                        color: "#10213b",
-                        transition: ".15s",
-                      }}
+                      className={`boost-service ${isActive ? "boost-service-active" : ""}`}
+                      aria-pressed={isActive}
                     >
-                      <span style={{ fontSize: 23 }}>{s.icon}</span>
-                      <b style={{ display: "block", margin: "7px 0 4px", fontSize: 14 }}>{s.name}</b>
-                      <small style={{ color: "#66758c", lineHeight: 1.4, display: "block" }}>{s.desc}</small>
-                      <span style={{ fontSize: 12, fontWeight: 800, color: "#1459d9", marginTop: 9, display: "block" }}>{MONEY(s.unit)} / {s.unitLabel}</span>
+                      <span className="tw-flex tw-w-full tw-items-start tw-justify-between tw-gap-3">
+                        <span className={`boost-service-icon tw-bg-gradient-to-br ${accent}`} aria-hidden="true">
+                          {s.icon}
+                        </span>
+                        <span className={`boost-service-check ${isActive ? "boost-service-check-active" : ""}`} aria-hidden="true">
+                          {isActive ? "✓" : "→"}
+                        </span>
+                      </span>
+                      <span className="boost-service-name">{s.name}</span>
+                      <span className="boost-service-desc">{s.desc}</span>
+                      <span className="tw-mt-3 tw-flex tw-items-baseline tw-gap-1">
+                        <span className="boost-price tw-text-sm tw-font-black">{MONEY(s.unit)}</span>
+                        <span className="boost-muted tw-text-[11px]">/ {s.unitLabel}</span>
+                      </span>
                     </button>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", margin: "0 0 22px" }}>
-                <button
-                  type="button"
-                  onClick={() => setPage((current) => Math.max(1, current - 1))}
-                  disabled={page <= 1 || servicesLoading}
-                  style={{ font: "inherit", border: "1px solid #d5deea", borderRadius: 9, padding: "9px 13px", background: "#fff", color: "#10213b", fontWeight: 700, cursor: page <= 1 || servicesLoading ? "not-allowed" : "pointer", opacity: page <= 1 || servicesLoading ? 0.45 : 1 }}
-                >
-                  ← Précédent
-                </button>
-                <span style={{ fontSize: 12, color: "#66758c" }}>
-                  Page {Math.min(page, displayTotalPages)} sur {displayTotalPages} · {displayTotal} service(s)
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setPage((current) => Math.min(displayTotalPages, current + 1))}
-                  disabled={page >= displayTotalPages || servicesLoading}
-                  style={{ font: "inherit", border: "1px solid #d5deea", borderRadius: 9, padding: "9px 13px", background: "#fff", color: "#10213b", fontWeight: 700, cursor: page >= displayTotalPages || servicesLoading ? "not-allowed" : "pointer", opacity: page >= displayTotalPages || servicesLoading ? 0.45 : 1 }}
-                >
-                  Suivant →
-                </button>
+                  );
+                })}
               </div>
+            )}
 
-              <div className="mboost-fields">
-                <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
-                  <label style={{ fontSize: 13, fontWeight: 750 }}>Quantité</label>
-                  <input
-                    type="number"
-                    min={selected?.min || 1}
-                    max={selected?.max || undefined}
-                    step={selected?.step || 1}
-                    value={quantity}
-                    onChange={(e) =>
-                      setQuantity(
-                        Math.max(
-                          Number(selected?.min) || 1,
-                          Number(e.target.value) || Number(selected?.min) || 1
-                        )
+            <div className="tw-mt-5 tw-flex tw-flex-col tw-items-center tw-justify-between tw-gap-3 sm:tw-flex-row">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                disabled={page <= 1 || servicesLoading}
+                className="boost-page-btn"
+              >
+                ← Précédent
+              </button>
+              <span className="boost-muted tw-text-[11px] tw-font-semibold">
+                Page {Math.min(page, displayTotalPages)} sur {displayTotalPages} · {displayTotal} service(s)
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.min(displayTotalPages, current + 1))}
+                disabled={page >= displayTotalPages || servicesLoading}
+                className="boost-page-btn"
+              >
+                Suivant →
+              </button>
+            </div>
+          </div>
+
+          <div className="boost-card boost-card-pad">
+            <div>
+              <p className="boost-kicker">Finalisation</p>
+              <h3 className="boost-card-title tw-mt-1">Vos informations</h3>
+              <p className="boost-hint tw-mt-1">
+                Ces informations servent à préparer et suivre votre commande.
+              </p>
+            </div>
+
+            <div className="tw-mt-5 tw-grid tw-gap-4 sm:tw-grid-cols-2">
+              <div>
+                <label htmlFor="boost-quantity" className="boost-label">Quantité</label>
+                <input
+                  id="boost-quantity"
+                  type="number"
+                  min={selected?.min || 1}
+                  max={selected?.max || undefined}
+                  step={selected?.step || 1}
+                  value={quantity}
+                  onChange={(e) =>
+                    setQuantity(
+                      Math.max(
+                        Number(selected?.min) || 1,
+                        Number(e.target.value) || Number(selected?.min) || 1
                       )
-                    }
-                    style={{ font: "inherit", border: "1px solid #d5deea", borderRadius: 10, padding: "12px 13px", width: "100%", background: "#fff", color: "#10213b", outline: "none" }}
-                  />
-                  <small style={{ fontSize: 12, color: "#66758c", lineHeight: 1.45 }}>
-                    Quantité minimale : {selected?.min || 1}. Tarif pour {selected?.unitLabel || "1000"} unités.
-                  </small>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
-                  <label style={{ fontSize: 13, fontWeight: 750 }}>Lien / cible</label>
-                  <input
-                    type="text"
-                    value={target}
-                    onChange={(e) => setTarget(e.target.value)}
-                    placeholder="https://... ou @pseudo"
-                    style={{ font: "inherit", border: "1px solid #d5deea", borderRadius: 10, padding: "12px 13px", width: "100%", background: "#fff", color: "#10213b", outline: "none" }}
-                  />
-                  <small style={{ fontSize: 12, color: "#66758c", lineHeight: 1.45 }}>Lien de votre profil, page ou publication.</small>
-                </div>
+                    )
+                  }
+                  className="boost-input"
+                />
+                <p className="boost-hint">
+                  Quantité minimale : {selected?.min || 1}. Tarif pour {selected?.unitLabel || "1000"} unités.
+                </p>
               </div>
-
-              <div className="mboost-fields">
-                <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
-                  <label style={{ fontSize: 13, fontWeight: 750 }}>E-mail</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="vous@exemple.com"
-                    style={{ font: "inherit", border: "1px solid #d5deea", borderRadius: 10, padding: "12px 13px", width: "100%", background: "#fff", color: "#10213b", outline: "none" }}
-                  />
-                  <small style={{ fontSize: 12, color: "#66758c", lineHeight: 1.45 }}>Pour recevoir le suivi de la commande.</small>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
-                  <label style={{ fontSize: 13, fontWeight: 750 }}>Téléphone</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+237..."
-                    style={{ font: "inherit", border: "1px solid #d5deea", borderRadius: 10, padding: "12px 13px", width: "100%", background: "#fff", color: "#10213b", outline: "none" }}
-                  />
-                  <small style={{ fontSize: 12, color: "#66758c", lineHeight: 1.45 }}>Optionnel, pour le contact.</small>
-                </div>
+              <div>
+                <label htmlFor="boost-email" className="boost-label">E-mail</label>
+                <input
+                  id="boost-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="vous@exemple.com"
+                  className="boost-input"
+                />
+                <p className="boost-hint">Pour recevoir le suivi de la commande.</p>
               </div>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
-                <label style={{ fontSize: 13, fontWeight: 750 }}>Détails</label>
+              <div className="sm:tw-col-span-2">
+                <label htmlFor="boost-target" className="boost-label">Lien / cible</label>
+                <input
+                  id="boost-target"
+                  type="text"
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  placeholder="https://... ou @pseudo"
+                  className="boost-input"
+                />
+                <p className="boost-hint">Lien de votre profil, page ou publication.</p>
+              </div>
+              <div>
+                <label htmlFor="boost-phone" className="boost-label">Téléphone</label>
+                <input
+                  id="boost-phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+237..."
+                  className="boost-input"
+                />
+                <p className="boost-hint">Optionnel, pour le contact.</p>
+              </div>
+              <div>
+                <label htmlFor="boost-details" className="boost-label">Détails</label>
                 <textarea
+                  id="boost-details"
                   rows={3}
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
                   placeholder="Précisions supplémentaires..."
-                  style={{ font: "inherit", border: "1px solid #d5deea", borderRadius: 10, padding: "12px 13px", width: "100%", background: "#fff", color: "#10213b", outline: "none", resize: "vertical" }}
+                  className="boost-input boost-textarea"
                 />
               </div>
             </div>
+          </div>
+            </div>
+          <aside className="boost-summary lg:tw-sticky lg:tw-top-24">
+            <div className="boost-summary-head">
+              <div className="tw-flex tw-items-start tw-justify-between tw-gap-3">
+                <div>
+                  <p className="boost-summary-kicker">Récapitulatif</p>
+                  <h3 className="boost-summary-title">Votre commande</h3>
+                </div>
+                <span className="boost-glass-badge">Sécurisé</span>
+              </div>
+              <div className="tw-mt-4 tw-rounded-2xl tw-border tw-border-white/10 tw-bg-white/[0.06] tw-p-3">
+                <div className="tw-flex tw-items-center tw-gap-3">
+                  <span className={`tw-flex tw-h-10 tw-w-10 tw-flex-none tw-items-center tw-justify-center tw-rounded-xl tw-bg-gradient-to-br tw-text-lg tw-text-white ${selectedAccent}`}>
+                    {selected?.icon || "⚡"}
+                  </span>
+                  <div className="tw-min-w-0">
+                    <p className="tw-truncate tw-text-xs tw-font-bold tw-text-white">
+                      {selected?.name || "Sélectionnez un service"}
+                    </p>
+                    <p className="tw-truncate tw-text-[11px] tw-text-slate-400">
+                      {selected?.platformLabel || "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-            <aside style={{ background: "white", border: "1px solid #e4eaf2", borderRadius: 18, padding: 22, boxShadow: "0 12px 32px rgba(16,33,59,.08)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 17 }}>
-                <h3 style={{ margin: 0, fontSize: 19 }}>Récapitulatif</h3>
-                <span style={{ fontSize: 10, letterSpacing: ".5px", textTransform: "uppercase", borderRadius: 5, padding: "5px 7px", background: "#fff1d5", color: "#855100", fontWeight: 800 }}>Commande</span>
+            <div className="tw-p-6">
+              <div className="boost-summary-row">
+                <span>Service</span>
+                <strong>{selected?.name || "—"}</strong>
+              </div>
+              <div className="boost-summary-row">
+                <span>Plateforme</span>
+                <strong>{selected?.platformLabel || "—"}</strong>
+              </div>
+              <div className="boost-summary-row">
+                <span>Tarif unitaire</span>
+                <strong>{selected ? `${MONEY(selected.unit)} / ${selected.unitLabel}` : "—"}</strong>
+              </div>
+              <div className="boost-summary-row">
+                <span>Quantité</span>
+                <strong>{quantity}</strong>
+              </div>
+              <div className="boost-summary-row">
+                <span>Cible</span>
+                <strong title={target.trim() || undefined}>{target.trim() || "À renseigner"}</strong>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 15, padding: "12px 0", borderBottom: "1px solid #e4eaf2", fontSize: 13 }}><span>Service</span><strong>{selected?.name || "—"}</strong></div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 15, padding: "12px 0", borderBottom: "1px solid #e4eaf2", fontSize: 13 }}><span>Plateforme</span><strong>{selected?.platformLabel || "—"}</strong></div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 15, padding: "12px 0", borderBottom: "1px solid #e4eaf2", fontSize: 13 }}><span>Tarif unitaire</span><strong>{selected ? MONEY(selected.unit) + " / " + selected.unitLabel : "—"}</strong></div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 15, padding: "12px 0", borderBottom: "1px solid #e4eaf2", fontSize: 13 }}><span>Quantité</span><strong>{quantity} {Number(quantity) === 1 ? selected?.unitLabel : (selected?.unitLabel || "") + "s"}</strong></div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 15, padding: "12px 0", borderBottom: "1px solid #e4eaf2", fontSize: 13 }}><span>Référence du lien</span><strong>{target.trim() || "À renseigner"}</strong></div>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 15, padding: "10px 0", fontWeight: 700, fontSize: 18 }}><span>Total estimé</span><strong>{MONEY(orderTotal)}</strong></div>
+              <div className="boost-summary-total">
+                <div>
+                  <p className="boost-summary-kicker tw-text-slate-400">Total estimé</p>
+                  <p className="boost-total">{MONEY(orderTotal)}</p>
+                </div>
+                <span className="boost-total-note">
+                  {selected?.unitLabel ? `Tarif / ${selected.unitLabel}` : "FCFA"}
+                </span>
+              </div>
 
-              <button onClick={handleSubmit} disabled={loading || servicesLoading || !selected} style={{ width: "100%", border: 0, borderRadius: 10, padding: "12px 13px", background: "#1459d9", color: "white", fontWeight: 750, cursor: loading || servicesLoading || !selected ? "not-allowed" : "pointer", opacity: loading || servicesLoading || !selected ? 0.6 : 1, marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading || servicesLoading || !selected}
+                className="boost-btn boost-btn-primary boost-btn-block tw-mt-5"
+              >
                 Continuer la commande
+                <IconArrowRight />
               </button>
 
-              <p style={{ fontSize: 12, color: "#66758c", marginTop: 12 }}>
-                <strong>Paiement et suivi :</strong> vous serez redirigé vers la page de commande pour confirmer vos coordonnées, déclarer votre paiement et suivre son traitement.
+              <p className="boost-hint tw-mt-3">
+                <strong className="boost-strong">Paiement et suivi :</strong> vous serez redirigé vers
+                la page de commande pour confirmer vos coordonnées, payer en ligne via iKeePay (ou
+                déclarer un paiement manuel) et suivre son traitement.
               </p>
 
-              <Link to="/mboppi-boost/mes-commandes" style={{ display: "inline-block", fontSize: 12, color: "#1459d9", marginTop: 8 }}>
+              <Link to="/mboppi-boost/mes-commandes" className="boost-link tw-mt-4">
                 Suivre une commande existante
+                <IconArrowRight className="tw-h-3.5 tw-w-3.5" />
               </Link>
 
+              <div className="boost-summary-secure">
+                <IconShield className="tw-h-4 tw-w-4" />
+                Paiement protégé · iKeePay
+              </div>
+
               {result && (
-                <div role="status" aria-live="polite" style={{ marginTop: 12, padding: 12, borderRadius: 8, background: "#fff7e6", border: "1px solid #f0dca9", color: "#855100" }}>
+                <div role="status" aria-live="polite" className="boost-alert boost-alert-warn">
                   {result.message}
                 </div>
               )}
-            </aside>
+            </div>
+          </aside>
           </div>
-        )}
+        </section>
       </div>
     </main>
   );

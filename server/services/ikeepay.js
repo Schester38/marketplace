@@ -22,7 +22,7 @@ import { MEMBERSHIP_FEES } from "../fees.js";
 import { getMembershipGate } from "./membershipGate.js";
 import { notifyActivationReferralPaid } from "./activationReferral.js";
 import { confirmFcOrderPayment, isFcReference } from "./familicashOrders.js";
-import { completeSmmPayment } from "./smmFulfillment.js";
+import { completeSmmPayment, dispatchSmmOrderNow } from "./smmFulfillment.js";
 import { notifyAdmins } from "./adminNotify.js";
 import { sendPush } from "../push.js";
 
@@ -595,12 +595,35 @@ export async function reconcileSmmOrderPayment(orderId) {
     const n = normalizeWebhook(body);
     if (!n || n.orderId !== order.payment_external_reference) continue;
     if (!amountMatches(n.amount, order.total) || !currencyMatches(n.currency, order.currency)) continue;
-    await completeSmmPayment(order.id, n.providerRef || null, "Paiement en ligne iKeePay (réconciliation)");
+    const completed = await completeSmmPayment(
+      order.id,
+      n.providerRef || null,
+      "Paiement en ligne iKeePay (réconciliation)"
+    );
+    let dispatch = null;
+    if (
+      completed.ok &&
+      !completed.refund_required &&
+      ["paid", "submitted", "processing"].includes(completed.order?.status)
+    ) {
+      dispatch = await dispatchSmmOrderNow(order.id);
+      if (!dispatch.ok && !dispatch.already_in_progress) {
+        console.warn(
+          `[ikeepay] commande Boost #${order.id} réconciliée mais non transmise :`,
+          dispatch.error
+        );
+      }
+    }
     await q(`UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1`, [log.id]).catch(() => {});
     const refreshed = (
       await q(`SELECT status FROM smm_orders WHERE id = $1`, [order.id])
     )[0];
-    return { ok: true, status: refreshed?.status || "paid", reconciled: true };
+    return {
+      ok: true,
+      status: refreshed?.status || "paid",
+      reconciled: true,
+      dispatched: Boolean(dispatch?.ok),
+    };
   }
   return { ok: false, reason: "no_unmatched_webhook" };
 }
@@ -700,8 +723,9 @@ async function handleWebhook(body, normalized) {
 
   // Commande MboppiBoost payée en ligne (MBP-BST) ? La référence est unique et
   // créée avec le checkout. On valide montant + devise, puis on marque la
-  // commande payée. Le dispatch fournisseur est laissé au cron : le webhook
-  // répond vite même si SMM Africa est lent.
+  // commande payée et on la transmet immédiatement au fournisseur. Un échec de
+  // dispatch n'échoue jamais le webhook : la commande reste payée et le cron
+  // la reprendra.
   const smmOrder = (
     await q(
       `SELECT id, user_id, service_name, total, currency, status, payment_status
@@ -719,11 +743,29 @@ async function handleWebhook(body, normalized) {
       return result;
     }
     const completed = await completeSmmPayment(smmOrder.id, providerRef, "Paiement en ligne iKeePay");
+    let dispatch = null;
+    if (
+      completed.ok &&
+      !completed.refund_required &&
+      ["paid", "submitted", "processing"].includes(completed.order?.status)
+    ) {
+      dispatch = await dispatchSmmOrderNow(smmOrder.id);
+      if (!dispatch.ok && !dispatch.already_in_progress) {
+        console.warn(
+          `[ikeepay] commande Boost #${smmOrder.id} payée mais non transmise :`,
+          dispatch.error
+        );
+      }
+    }
+    const finalStatus = dispatch?.ok
+      ? (await q(`SELECT status FROM smm_orders WHERE id = $1`, [smmOrder.id]))[0]?.status ||
+        "submitted"
+      : completed.order?.status || smmOrder.status;
     result = {
       ok: completed.ok,
       kind: "smm_boost",
       id: smmOrder.id,
-      status: completed.order?.status || smmOrder.status,
+      status: finalStatus,
     };
     return result;
   }
