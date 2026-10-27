@@ -267,6 +267,9 @@ export default function MboppiBoostOrders() {
             >
               ↻ {refreshing ? t("Chargement…") : t("Actualiser")}
             </button>
+            <Link to="/mboppi-boost/portefeuille" className="boost-page-btn">
+              👛 {t("Portefeuille Boost")}
+            </Link>
           </div>
         )}
 
@@ -340,6 +343,11 @@ export default function MboppiBoostOrders() {
                     <div className="boost-order-meta">
                       <span>{t("Paiement")}</span>
                       <strong className={paymentTone}>{paymentLabel}</strong>
+                      {o.payment_provider === "boost_wallet" || o.payment_method === "wallet" ? (
+                        <small className="boost-order-ref-line">
+                          👛 {t("Portefeuille Boost")}
+                        </small>
+                      ) : null}
                       {o.payment_reference ? (
                         <small className="boost-order-ref-line">Réf. {o.payment_reference}</small>
                       ) : null}

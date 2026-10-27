@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { q } from "../db.js";
+import { q, withTransaction } from "../db.js";
 import { authRequired, authOptional, roleRequired } from "../auth.js";
 import { validate, validateQuery } from "../middlewares/validate.js";
 import {
@@ -12,6 +12,8 @@ import {
   smmPaymentInfoSchema,
   smmImportCatalogSchema,
   smmProviderConfigSchema,
+  boostWalletTopupSchema,
+  boostAdminWalletCreditSchema,
 } from "../validators.js";
 import { getActiveProviderConfig, logSmmCall, generateIdempotencyKey } from "../services/smmProvider.js";
 import { notifyAdmins } from "../services/adminNotify.js";
@@ -34,7 +36,27 @@ import {
   getPaymentMode,
   PAYMENT_MODE_AUTO,
   reconcileSmmOrderPayment,
+  reconcileBoostWalletTopup,
 } from "../services/ikeepay.js";
+import {
+  BOOST_MAX_TOPUP_USD,
+  BOOST_MIN_TOPUP_USD,
+  adminCreditBoostWallet,
+  createBoostWalletTopup,
+  debitBoostWalletTx,
+  getBoostWallet,
+  getBoostWalletSummary,
+  getBoostWalletTopup,
+} from "../services/boostWallet.js";
+import {
+  CURRENCY_DECIMALS,
+  TOPUP_CURRENCIES,
+  convertAmount,
+  getUsdRates,
+  normalizeCurrency,
+  roundMoney,
+  usableTopupCurrencies,
+} from "../services/fxRates.js";
 import {
   importProviderCatalog,
   previewProviderCatalogImport,
@@ -394,6 +416,179 @@ async function buildSmmCheckout(orderId) {
   };
 }
 
+/* GET /api/smm/fx-rates — taux USD utilisés pour les conversions Boost */
+router.get(
+  "/fx-rates",
+  ah(async (req, res) => {
+    const rates = await getUsdRates({ force: req.query.refresh === "1" });
+    res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+    res.json(rates);
+  })
+);
+
+/* GET /api/smm/wallet — solde Boost, historique et conditions de recharge */
+router.get(
+  "/wallet",
+  authRequired,
+  ah(async (req, res) => {
+    const [wallet, config] = await Promise.all([
+      getBoostWalletSummary(req.user.id, 50),
+      smmOnlinePaymentConfig(),
+    ]);
+    let ratesPayload = null;
+    try {
+      ratesPayload = await getUsdRates();
+    } catch (err) {
+      console.warn("[smm wallet] taux indisponibles :", err.message);
+    }
+    const rates = ratesPayload?.rates || null;
+    const available = new Set(usableTopupCurrencies(rates));
+    const topupCurrencies = TOPUP_CURRENCIES.map((code) => {
+      const rate = code === "USD" ? 1 : Number(rates?.[code]);
+      return {
+        code,
+        decimals: CURRENCY_DECIMALS[code] ?? 2,
+        usd_rate: Number.isFinite(rate) && rate > 0 ? rate : null,
+        min_amount: rate > 0 ? roundMoney(BOOST_MIN_TOPUP_USD * rate, code) : null,
+        max_amount: rate > 0 ? roundMoney(BOOST_MAX_TOPUP_USD * rate, code) : null,
+        enabled: available.has(code),
+      };
+    });
+    res.set("Cache-Control", "no-store");
+    res.json({
+      wallet: {
+        balance_usd: wallet.balance_usd,
+        transactions: wallet.transactions,
+        updated_at: wallet.updated_at,
+      },
+      fx: ratesPayload
+        ? {
+            available: true,
+            base: ratesPayload.base,
+            rates,
+            stale: Boolean(ratesPayload.stale),
+            fetched_at: ratesPayload.fetched_at,
+            source: ratesPayload.source,
+          }
+        : { available: false, rates: null },
+      topup: {
+        enabled: Boolean(config.enabled && ratesPayload),
+        reason: config.enabled ? (ratesPayload ? null : "fx_unavailable") : "online_unavailable",
+        mode: config.mode,
+        provider: "ikeepay",
+        currencies: topupCurrencies,
+        default_currency: "USD",
+        min_usd: BOOST_MIN_TOPUP_USD,
+        max_usd: BOOST_MAX_TOPUP_USD,
+      },
+    });
+  })
+);
+
+/* POST /api/smm/wallet/topup — ouvrir le checkout iKeePay d'une recharge */
+router.post(
+  "/wallet/topup",
+  authRequired,
+  validate(boostWalletTopupSchema),
+  ah(async (req, res) => {
+    const config = await smmOnlinePaymentConfig();
+    if (!config.enabled) {
+      return res.status(409).json({
+        error: "La recharge en ligne est indisponible. Passez par le paiement manuel.",
+        code: "TOPUP_UNAVAILABLE",
+      });
+    }
+    const currency = normalizeCurrency(req.body.currency);
+    if (!TOPUP_CURRENCIES.includes(currency)) {
+      return res.status(400).json({ error: "Devise non prise en charge.", code: "UNSUPPORTED_CURRENCY" });
+    }
+    const ratesPayload = await getUsdRates();
+    const rate = currency === "USD" ? 1 : Number(ratesPayload.rates[currency]);
+    if (!(rate > 0)) {
+      return res.status(400).json({ error: "Devise non prise en charge.", code: "UNSUPPORTED_CURRENCY" });
+    }
+    const amount = roundMoney(req.body.amount, currency);
+    const creditUsd = roundMoney(amount / rate, "USD");
+    if (creditUsd < BOOST_MIN_TOPUP_USD) {
+      return res.status(400).json({
+        error: `Montant minimum : ${roundMoney(BOOST_MIN_TOPUP_USD * rate, currency)} ${currency}.`,
+        code: "TOPUP_TOO_SMALL",
+        min_amount: roundMoney(BOOST_MIN_TOPUP_USD * rate, currency),
+      });
+    }
+    if (creditUsd > BOOST_MAX_TOPUP_USD) {
+      return res.status(400).json({
+        error: `Montant maximum : ${roundMoney(BOOST_MAX_TOPUP_USD * rate, currency)} ${currency}.`,
+        code: "TOPUP_TOO_LARGE",
+        max_amount: roundMoney(BOOST_MAX_TOPUP_USD * rate, currency),
+      });
+    }
+    const topup = await createBoostWalletTopup({
+      userId: req.user.id,
+      amount,
+      currency,
+      fxRate: rate,
+      creditUsd,
+    });
+    const checkoutUrl = addPublicKey(
+      buildInlineCheckoutUrl({
+        amount: topup.amount,
+        currency: topup.currency,
+        orderId: topup.external_reference,
+        email: req.user.email || "",
+      }),
+      config.publicKey
+    );
+    res.status(201).json({
+      ok: true,
+      reference: topup.external_reference,
+      amount: Number(topup.amount),
+      currency: topup.currency,
+      fx_rate: Number(topup.fx_rate),
+      credit_usd: Number(topup.credit_usd),
+      checkout_url: String(checkoutUrl),
+      provider: "ikeepay",
+    });
+  })
+);
+
+/* GET /api/smm/wallet/topups/:reference — statut d'une recharge (polling) */
+router.get(
+  "/wallet/topups/:reference",
+  authRequired,
+  ah(async (req, res) => {
+    const reference = String(req.params.reference || "").trim();
+    const topup = await getBoostWalletTopup(req.user.id, reference);
+    if (!topup) return res.status(404).json({ error: "Recharge introuvable." });
+    let reconciliation = null;
+    if (!["completed", "failed"].includes(topup.status)) {
+      reconciliation = await reconcileBoostWalletTopup(reference).catch((err) => ({
+        ok: false,
+        reason: err.message,
+      }));
+    }
+    const [fresh, wallet] = await Promise.all([
+      getBoostWalletTopup(req.user.id, reference),
+      getBoostWallet(req.user.id),
+    ]);
+    res.set("Cache-Control", "no-store");
+    res.json({
+      reference,
+      status: fresh.status,
+      amount: Number(fresh.amount),
+      currency: fresh.currency,
+      credit_usd: Number(fresh.credit_usd),
+      created_at: fresh.created_at,
+      completed_at: fresh.completed_at,
+      balance_usd:
+        reconciliation?.ok && reconciliation.balance_usd != null
+          ? reconciliation.balance_usd
+          : wallet.balance_usd,
+      reconciled: Boolean(reconciliation?.reconciled),
+    });
+  })
+);
+
 router.post(
   "/orders",
   authOptional,
@@ -482,6 +677,13 @@ router.post(
     const billingUnit = smmBillingUnit(svc.billing_unit);
     const total = computeSmmTotal(unitPrice, qty, billingUnit);
     const idemKey = idempotency_key || generateIdempotencyKey();
+    const wantsWallet = payment_method === "wallet";
+    if (wantsWallet && !userId) {
+      return res.status(401).json({
+        error: "Connectez-vous pour payer avec votre portefeuille Boost.",
+        code: "AUTH_REQUIRED",
+      });
+    }
     const wantsOnline = payment_method === "ikeepay";
     const onlineConfig = wantsOnline ? await smmOnlinePaymentConfig() : { enabled: false };
     const storedPaymentMethod = wantsOnline && onlineConfig.enabled ? "ikeepay" : (
@@ -504,6 +706,124 @@ router.post(
     }
 
     const publicToken = generatePublicToken();
+
+    if (wantsWallet) {
+      const ratesPayload = await getUsdRates();
+      const walletDebitUsd = convertAmount(total, svc.currency, "USD", ratesPayload.rates);
+      if (!(walletDebitUsd > 0)) {
+        return res.status(400).json({
+          error: "Le montant de cette commande ne peut pas être payé avec le portefeuille.",
+          code: "INVALID_WALLET_AMOUNT",
+        });
+      }
+      let createdWalletOrder;
+      try {
+        createdWalletOrder = await withTransaction(async (tx) => {
+          const [order] = await tx.query(
+            `INSERT INTO smm_orders
+              (user_id, service_id, service_name, service_price, currency, quantity,
+               total, billing_unit, client_info, status, payment_status, payment_method,
+               payment_provider, idempotency_key, public_token, paid_at, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'paid', 'paid', 'wallet',
+                     'boost_wallet', $10, $11, now(), now(), now())
+             RETURNING id`,
+            [
+              userId,
+              service_id,
+              svc.name,
+              unitPrice,
+              svc.currency,
+              qty,
+              total,
+              svc.billing_unit,
+              JSON.stringify(info),
+              idemKey,
+              publicToken,
+            ]
+          );
+          const debit = await debitBoostWalletTx(tx, {
+            userId,
+            amountUsd: walletDebitUsd,
+            referenceType: "smm_order",
+            referenceId: order.id,
+            description: `Commande Boost #${order.id} — ${svc.name}`,
+          });
+          return { id: order.id, balance_usd: debit.balance_usd };
+        });
+      } catch (err) {
+        if (err?.statusCode) {
+          return res.status(err.statusCode).json({
+            error: err.message,
+            code: err.code,
+            ...(err.details || {}),
+          });
+        }
+        throw err;
+      }
+
+      await addEvent(
+        createdWalletOrder.id,
+        "created",
+        null,
+        "paid",
+        `Commande créée — payée avec le solde Boost (${walletDebitUsd} USD)`,
+        { payment_method: "wallet", debit_usd: walletDebitUsd }
+      ).catch(() => {});
+
+      notifyAdmins({
+        title: "Commande MboppiBoost payée par wallet",
+        body: `Commande #${createdWalletOrder.id} — ${svc.name} — ${total} ${svc.currency} (${walletDebitUsd} USD)`,
+        amount: total,
+      }).catch(() => {});
+      notifySmmUser(
+        userId,
+        "Commande MboppiBoost payée",
+        `Votre commande #${createdWalletOrder.id} (${svc.name}) a été payée avec votre portefeuille Boost (${walletDebitUsd} USD).`,
+        { orderId: createdWalletOrder.id }
+      ).catch(() => {});
+
+      const dispatch = await dispatchSmmOrderNow(createdWalletOrder.id).catch((err) => ({
+        ok: false,
+        error: err.message,
+      }));
+      if (!dispatch.ok && !dispatch.already_in_progress) {
+        console.warn(
+          `[smm wallet] commande #${createdWalletOrder.id} payée mais non transmise :`,
+          dispatch.error
+        );
+      }
+      const finalStatus = (
+        await q(`SELECT status FROM smm_orders WHERE id = $1`, [createdWalletOrder.id])
+      )[0]?.status || "paid";
+
+      return res.status(201).json({
+        ok: true,
+        order_id: createdWalletOrder.id,
+        public_token: publicToken,
+        status: finalStatus,
+        paid: true,
+        payment_status: "paid",
+        service: svc.name,
+        unit_price: unitPrice,
+        quantity: qty,
+        total,
+        currency: svc.currency,
+        billing_unit: billingUnit,
+        minimum_quantity: minimumQuantity,
+        minimum_total: SMM_MIN_ORDER_TOTAL_XAF,
+        payment_method: "wallet",
+        payment_provider: "boost_wallet",
+        online_payment: { online: false, paid_with_wallet: true },
+        checkout_url: null,
+        payment_reference: null,
+        payment_info: null,
+        wallet_debit_usd: walletDebitUsd,
+        wallet_balance_after_usd: createdWalletOrder.balance_usd,
+        dispatched: Boolean(dispatch.ok),
+        message: "Commande payée avec votre portefeuille Boost. Le traitement démarre immédiatement.",
+      });
+    }
+
     const created = (
       await q(
         `INSERT INTO smm_orders
@@ -1007,6 +1327,57 @@ router.delete(
       return res.status(404).json({ error: "Service introuvable" });
     }
     res.json({ ok: true });
+  })
+);
+
+/* GET /api/admin/smm/wallet/:userId — portefeuille Boost d'un utilisateur */
+router.get(
+  "/admin/wallet/:userId",
+  authRequired,
+  roleRequired("admin"),
+  ah(async (req, res) => {
+    const userId = Number(req.params.userId);
+    if (!Number.isFinite(userId) || userId <= 0) {
+      return res.status(400).json({ error: "Utilisateur invalide." });
+    }
+    const [user] = await q(
+      `SELECT id, name, email, phone, role FROM users WHERE id = $1`,
+      [userId]
+    );
+    if (!user) return res.status(404).json({ error: "Utilisateur introuvable." });
+    const wallet = await getBoostWalletSummary(userId, 100);
+    res.set("Cache-Control", "no-store");
+    res.json({ user, wallet });
+  })
+);
+
+/* POST /api/admin/smm/wallet/credit — créditer ou rembourser un portefeuille */
+router.post(
+  "/admin/wallet/credit",
+  authRequired,
+  roleRequired("admin"),
+  validate(boostAdminWalletCreditSchema),
+  ah(async (req, res) => {
+    const { user_id, amount_usd, note, transaction_type } = req.body;
+    const result = await adminCreditBoostWallet({
+      userId: Number(user_id),
+      amountUsd: Number(amount_usd),
+      note: note || null,
+      createdBy: req.user.id > 0 ? req.user.id : null,
+      transactionType: transaction_type,
+    });
+    await notifySmmUser(
+      Number(user_id),
+      transaction_type === "refund" ? "Remboursement Boost reçu" : "Crédit Boost reçu",
+      `${Number(amount_usd)} USD ont été ajoutés à votre portefeuille Boost.`,
+      { orderId: null }
+    ).catch(() => {});
+    res.status(201).json({
+      ok: true,
+      user_id: Number(user_id),
+      balance_usd: result.balance_usd,
+      transaction: result.transaction,
+    });
   })
 );
 

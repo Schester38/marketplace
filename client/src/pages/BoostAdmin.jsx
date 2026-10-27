@@ -31,6 +31,17 @@ function money(value, currency = "XAF") {
   return `${Number.isFinite(n) ? n.toLocaleString("fr-FR") : value} ${currency || ""}`.trim();
 }
 
+const usd = (value) =>
+  `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0)}`;
+
+const WALLET_TX_LABELS = {
+  topup: "Recharge",
+  order_payment: "Commande Boost",
+  admin_credit: "Crédit administrateur",
+  refund: "Remboursement",
+  adjustment: "Ajustement",
+};
+
 export default function BoostAdmin() {
   const { t } = useLang();
 
@@ -71,6 +82,18 @@ export default function BoostAdmin() {
   const [paymentForm, setPaymentForm] = useState({});
   const [savingInfo, setSavingInfo] = useState(false);
   const [infoMessage, setInfoMessage] = useState("");
+
+  const [walletSearch, setWalletSearch] = useState("");
+  const [walletUsers, setWalletUsers] = useState([]);
+  const [walletUser, setWalletUser] = useState(null);
+  const [walletData, setWalletData] = useState(null);
+  const [walletBusy, setWalletBusy] = useState(false);
+  const [walletMessage, setWalletMessage] = useState("");
+  const [walletForm, setWalletForm] = useState({
+    amount_usd: "",
+    note: "",
+    transaction_type: "admin_credit",
+  });
 
   useEffect(() => {
     loadOrders();
@@ -118,6 +141,66 @@ export default function BoostAdmin() {
       setPaymentForm(resp.payment_info || {});
     } catch {
       /* pas bloquant */
+    }
+  }
+
+  async function searchWalletUsers(e) {
+    e?.preventDefault();
+    const query = walletSearch.trim();
+    if (query.length < 2) {
+      setWalletMessage("Saisissez au moins 2 caractères (nom, e-mail ou référence).");
+      return;
+    }
+    setWalletBusy(true);
+    setWalletMessage("");
+    try {
+      const resp = await api.adminUsers(query);
+      const users = (resp.users || []).slice(0, 8);
+      setWalletUsers(users);
+      if (!users.length) setWalletMessage("Aucun utilisateur trouvé.");
+    } catch (err) {
+      setWalletMessage(err.message || "Recherche impossible.");
+    } finally {
+      setWalletBusy(false);
+    }
+  }
+
+  async function openWalletUser(user) {
+    setWalletBusy(true);
+    setWalletMessage("");
+    try {
+      const resp = await api.adminSmmWallet(user.id);
+      setWalletUser(resp.user);
+      setWalletData(resp.wallet);
+      setWalletUsers([]);
+      setWalletForm({ amount_usd: "", note: "", transaction_type: "admin_credit" });
+    } catch (err) {
+      setWalletMessage(err.message || "Impossible de charger le portefeuille.");
+    } finally {
+      setWalletBusy(false);
+    }
+  }
+
+  async function creditWallet(e) {
+    e.preventDefault();
+    if (!walletUser) return;
+    setWalletBusy(true);
+    setWalletMessage("");
+    try {
+      const resp = await api.adminSmmCreditWallet({
+        user_id: walletUser.id,
+        amount_usd: Number(walletForm.amount_usd),
+        note: walletForm.note || null,
+        transaction_type: walletForm.transaction_type,
+      });
+      const message = `Portefeuille crédité. Nouveau solde : $${Number(resp.balance_usd).toFixed(2)}`;
+      setWalletForm((f) => ({ ...f, amount_usd: "", note: "" }));
+      await openWalletUser(walletUser);
+      setWalletMessage(message);
+    } catch (err) {
+      setWalletMessage(err.message || "Crédit impossible.");
+    } finally {
+      setWalletBusy(false);
     }
   }
 
@@ -440,6 +523,147 @@ export default function BoostAdmin() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+        <h2 className="section-title" style={{ marginTop: 0 }}>
+          👛 {t("Portefeuille Boost")}
+        </h2>
+        <p className="hint">
+          {t(
+            "Recherchez un utilisateur pour consulter son solde ou le créditer (remboursement, geste commercial)."
+          )}
+        </p>
+        <form onSubmit={searchWalletUsers} style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+          <input
+            className="input"
+            style={{ flex: "1 1 260px", minWidth: 0 }}
+            value={walletSearch}
+            onChange={(e) => setWalletSearch(e.target.value)}
+            placeholder={t("Nom, e-mail ou référence")}
+          />
+          <button className="btn btn-outline btn-small" type="submit" disabled={walletBusy}>
+            {walletBusy ? "…" : t("Rechercher")}
+          </button>
+        </form>
+        {walletMessage && <p className="hint" style={{ marginTop: 8 }}>{walletMessage}</p>}
+        {walletUsers.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+            {walletUsers.map((user) => (
+              <button
+                key={user.id}
+                type="button"
+                className="btn btn-outline btn-small"
+                style={{ justifyContent: "flex-start", textAlign: "left" }}
+                onClick={() => openWalletUser(user)}
+              >
+                {user.name || user.email || `#${user.id}`}
+                {user.email ? ` · ${user.email}` : ""}
+                {user.role ? ` · ${user.role}` : ""}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {walletUser && walletData && (
+          <div className="boost-admin-grid" style={{ marginTop: 14 }}>
+            <div>
+              <p className="hint">
+                <strong>{walletUser.name || walletUser.email || `#${walletUser.id}`}</strong>
+                {walletUser.email ? ` · ${walletUser.email}` : ""}
+              </p>
+              <p style={{ fontSize: 24, fontWeight: 800, margin: "6px 0" }}>
+                {usd(walletData.balance_usd)}
+              </p>
+              <p className="hint">
+                {t("Dernière mise à jour")} :{" "}
+                {walletData.updated_at
+                  ? new Date(walletData.updated_at).toLocaleString("fr-FR")
+                  : "—"}
+              </p>
+              <form onSubmit={creditWallet} style={{ marginTop: 10 }}>
+                <div className="form-row">
+                  <label>{t("Montant en USD")}</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min="0.01"
+                    max="10000"
+                    step="0.01"
+                    value={walletForm.amount_usd}
+                    onChange={(e) =>
+                      setWalletForm((f) => ({ ...f, amount_usd: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                <div className="form-row">
+                  <label>{t("Type d'opération")}</label>
+                  <select
+                    className="input"
+                    value={walletForm.transaction_type}
+                    onChange={(e) =>
+                      setWalletForm((f) => ({ ...f, transaction_type: e.target.value }))
+                    }
+                  >
+                    <option value="admin_credit">{t("Crédit administrateur")}</option>
+                    <option value="refund">{t("Remboursement")}</option>
+                    <option value="adjustment">{t("Ajustement")}</option>
+                  </select>
+                </div>
+                <div className="form-row">
+                  <label>{t("Note (optionnel)")}</label>
+                  <input
+                    className="input"
+                    value={walletForm.note}
+                    onChange={(e) => setWalletForm((f) => ({ ...f, note: e.target.value }))}
+                    maxLength={300}
+                  />
+                </div>
+                <button className="btn btn-primary btn-small" type="submit" disabled={walletBusy}>
+                  {walletBusy ? "…" : t("Créditer le portefeuille")}
+                </button>
+              </form>
+            </div>
+            <div>
+              <h3 style={{ marginTop: 0 }}>{t("Dernières opérations")}</h3>
+              {walletData.transactions?.length ? (
+                <div style={{ overflowX: "auto" }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>{t("Date")}</th>
+                        <th>{t("Type")}</th>
+                        <th>{t("Montant")}</th>
+                        <th>{t("Solde")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {walletData.transactions.map((tx) => (
+                        <tr key={tx.id}>
+                          <td className="hint">
+                            {new Date(tx.created_at).toLocaleString("fr-FR")}
+                          </td>
+                          <td>
+                            {t(WALLET_TX_LABELS[tx.transaction_type] || tx.transaction_type)}
+                            {tx.description && <div className="hint">{tx.description}</div>}
+                          </td>
+                          <td style={{ color: Number(tx.amount_usd) >= 0 ? "#059669" : "#dc2626", fontWeight: 700 }}>
+                            {Number(tx.amount_usd) > 0 ? "+" : ""}
+                            {usd(tx.amount_usd)}
+                          </td>
+                          <td>{usd(tx.balance_after_usd)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="hint">{t("Aucune opération.")}</p>
+              )}
+            </div>
           </div>
         )}
       </div>

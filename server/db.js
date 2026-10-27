@@ -9,7 +9,7 @@ const { Pool } = pg;
 // Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-10-26-mboppi-boost-payments-v2";
+const DB_INIT_VERSION = "2026-10-27-mboppi-boost-wallet-v1";
 const DB_INIT_LOCK = "mboppi-db-init-v1";
 let initDbPromise = null;
 
@@ -1004,6 +1004,47 @@ async function runInitDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_smm_provider_mappings_provider ON smm_provider_mappings(provider_id);
     CREATE INDEX IF NOT EXISTS idx_smm_provider_mappings_service ON smm_provider_mappings(smm_service_id);
+
+    -- Portefeuille MboppiBoost (solde en USD, distinct du wallet vendeur)
+    CREATE TABLE IF NOT EXISTS boost_wallets (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      balance_usd NUMERIC(14,2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS boost_wallet_transactions (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      amount_usd NUMERIC(14,2) NOT NULL CHECK (amount_usd <> 0),
+      balance_after_usd NUMERIC(14,2) NOT NULL,
+      transaction_type TEXT NOT NULL CHECK (transaction_type IN ('topup', 'order_payment', 'admin_credit', 'refund', 'adjustment')),
+      reference_type TEXT,
+      reference_id TEXT,
+      description TEXT,
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_boost_wallet_tx_user ON boost_wallet_transactions(user_id, created_at DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_boost_wallet_tx_reference
+      ON boost_wallet_transactions(reference_type, reference_id)
+      WHERE reference_type IS NOT NULL AND reference_id IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS boost_wallet_topups (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      external_reference TEXT NOT NULL UNIQUE,
+      amount NUMERIC(14,2) NOT NULL CHECK (amount > 0),
+      currency TEXT NOT NULL,
+      fx_rate NUMERIC(20,8) NOT NULL CHECK (fx_rate > 0),
+      credit_usd NUMERIC(14,2) NOT NULL CHECK (credit_usd > 0),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'expired', 'failed')),
+      provider_reference TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      completed_at TIMESTAMPTZ
+    );
+    CREATE INDEX IF NOT EXISTS idx_boost_wallet_topups_user ON boost_wallet_topups(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_boost_wallet_topups_pending ON boost_wallet_topups(created_at) WHERE status = 'pending';
   `);
 
   // Amorçage idempotent du catalogue MboppiBoost (7 plateformes, 34 services).

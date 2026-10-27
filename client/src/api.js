@@ -584,6 +584,12 @@ export const api = {
   },
   smmService: (id) => request(`/smm/services/${encodeURIComponent(id)}`),
   smmPaymentInfo: () => request("/smm/payment-info"),
+  smmFxRates: () => request("/smm/fx-rates"),
+  smmWallet: () => request("/smm/wallet"),
+  smmWalletTopup: (payload) =>
+    request("/smm/wallet/topup", { method: "POST", body: JSON.stringify(payload) }),
+  smmWalletTopupStatus: (reference) =>
+    request(`/smm/wallet/topups/${encodeURIComponent(reference)}`),
   smmCreateOrder: (payload) =>
     request("/smm/orders", { method: "POST", body: JSON.stringify(payload) }),
   smmOrders: () => request("/smm/orders"),
@@ -605,6 +611,12 @@ export const api = {
     }),
   // Administration MboppiBoost (onglet Boost).
   adminSmmOrders: (limit = 100) => adminRequest(`/smm/admin/orders?limit=${limit}`),
+  adminSmmWallet: (userId) => adminRequest(`/smm/admin/wallet/${encodeURIComponent(userId)}`),
+  adminSmmCreditWallet: (payload) =>
+    adminRequest("/smm/admin/wallet/credit", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   adminSmmUpdateOrder: (id, payload) =>
     adminRequest(`/smm/admin/orders/${id}/status`, {
       method: "PUT",

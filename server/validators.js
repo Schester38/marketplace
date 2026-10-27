@@ -285,9 +285,21 @@ export const smmOrderSchema = z.object({
   quantity: z.coerce.number().int().min(1, "Quantité minimale 1").default(1),
   client_info: z.record(z.string(), z.any()).default({}),
   payment_method: z
-    .enum(["ikeepay", "mobile_money", "moneyfusion", "virement", "espece", "manual"])
+    .enum(["ikeepay", "wallet", "mobile_money", "moneyfusion", "virement", "espece", "manual"])
     .default("ikeepay"),
   idempotency_key: z.string().max(200).optional().nullable(),
+});
+
+export const boostWalletTopupSchema = z.object({
+  amount: z.coerce.number().positive("Montant requis").max(10_000_000),
+  currency: z.enum(["USD", "EUR", "GBP", "CAD", "XAF", "XOF"]).default("USD"),
+});
+
+export const boostAdminWalletCreditSchema = z.object({
+  user_id: z.coerce.number().int().positive("Utilisateur requis"),
+  amount_usd: z.coerce.number().positive("Montant requis").max(10_000),
+  note: z.string().trim().max(300).optional().nullable(),
+  transaction_type: z.enum(["admin_credit", "refund", "adjustment"]).default("admin_credit"),
 });
 
 export const smmOrderStatusSchema = z.object({

@@ -43,6 +43,7 @@ import {
   IconTruck,
   IconShield,
   IconPhone,
+  IconWallet,
 } from "./icons.jsx";
 
 // Groupes de la barre de catégories statique : chaque groupe ouvre un
@@ -1108,6 +1109,16 @@ export default function Navbar({ onLogout }) {
           <IconWrench size={15} />
         </span>
         <span className="dl-label">MboppiBoost</span>
+      </Link>
+      <Link
+        to="/mboppi-boost/portefeuille"
+        onClick={close}
+        className={`drawer-link ${location.pathname === "/mboppi-boost/portefeuille" ? "cat-active" : ""}`}
+      >
+        <span className="dl-icon">
+          <IconWallet size={15} />
+        </span>
+        <span className="dl-label">{t("Portefeuille Boost")}</span>
       </Link>
       <Link to="/soutien" onClick={close} className="drawer-link drawer-link-support">
         <span className="dl-icon">

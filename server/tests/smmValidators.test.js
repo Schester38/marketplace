@@ -3,6 +3,8 @@ import {
   smmOrderSchema,
   smmPaymentDeclareSchema,
   smmOrderStatusSchema,
+  boostWalletTopupSchema,
+  boostAdminWalletCreditSchema,
 } from "../validators.js";
 
 function assert(condition, label) {
@@ -76,6 +78,51 @@ test("import : plus de 10 types refuse", () => {
   const types = Array.from({ length: 11 }, (_, i) => `type${i}`);
   const result = smmImportCatalogSchema.safeParse({ types });
   assert(result.success === false, "11 types acceptes");
+});
+
+test("commande : paiement wallet accepte", () => {
+  const parsed = smmOrderSchema.parse({ service_id: 1, payment_method: "wallet" });
+  assert(parsed.payment_method === "wallet", "wallet");
+});
+
+test("recharge wallet : devise USD par defaut", () => {
+  const parsed = boostWalletTopupSchema.parse({ amount: 10 });
+  assert(parsed.currency === "USD", "USD par defaut");
+  assert(parsed.amount === 10, "montant");
+});
+
+test("recharge wallet : XOF accepte et devise inconnue refusee", () => {
+  assert(boostWalletTopupSchema.parse({ amount: 5000, currency: "XOF" }).currency === "XOF", "XOF");
+  assert(
+    boostWalletTopupSchema.safeParse({ amount: 10, currency: "BTC" }).success === false,
+    "BTC accepte"
+  );
+});
+
+test("recharge wallet : montant nul refuse", () => {
+  assert(boostWalletTopupSchema.safeParse({ amount: 0 }).success === false, "0 accepte");
+  assert(boostWalletTopupSchema.safeParse({ amount: -1 }).success === false, "-1 accepte");
+});
+
+test("credit admin wallet : remboursement et plafond", () => {
+  const parsed = boostAdminWalletCreditSchema.parse({
+    user_id: 12,
+    amount_usd: 25,
+    transaction_type: "refund",
+  });
+  assert(parsed.transaction_type === "refund", "refund");
+  assert(
+    boostAdminWalletCreditSchema.safeParse({ user_id: 12, amount_usd: 10001 }).success === false,
+    "plafond 10000 depasse"
+  );
+  assert(
+    boostAdminWalletCreditSchema.safeParse({
+      user_id: 12,
+      amount_usd: 10,
+      transaction_type: "topup",
+    }).success === false,
+    "type topup accepte en admin"
+  );
 });
 
 if (process.exitCode) {

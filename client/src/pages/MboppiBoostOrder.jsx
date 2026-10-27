@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams, Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { useLang } from "../i18n.jsx";
@@ -16,6 +16,18 @@ const MANUAL_PAYMENT_METHODS = [
 
 const formatAmount = (value) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(Number(value) || 0);
+
+const formatUsd = (value) =>
+  `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value) || 0)}`;
+
+function convertToUsd(amount, currency, rates) {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return null;
+  const code = String(currency || "").toUpperCase();
+  const rate = code === "USD" ? 1 : Number(rates?.[code]);
+  if (!(rate > 0)) return null;
+  return Math.round((value / rate) * 100) / 100;
+}
 
 function BoostPage({ children }) {
   return (
@@ -52,6 +64,10 @@ export default function MboppiBoostOrder() {
   const [refundPending, setRefundPending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [wallet, setWallet] = useState(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [paymentChoice, setPaymentChoice] = useState("ikeepay");
+  const paymentTouched = useRef(false);
   const [paymentReference, setPaymentReference] = useState("");
   const [declaring, setDeclaring] = useState(false);
   const [declared, setDeclared] = useState(false);
@@ -78,6 +94,45 @@ export default function MboppiBoostOrder() {
       email: prev.email || user.email || "",
     }));
   }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setWallet(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setWalletLoading(true);
+    api
+      .smmWallet()
+      .then((resp) => {
+        if (!cancelled) setWallet(resp);
+      })
+      .catch(() => {
+        if (!cancelled) setWallet(null);
+      })
+      .finally(() => {
+        if (!cancelled) setWalletLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !service || !wallet || paymentTouched.current) return;
+    const unit = Number(service.price || 0);
+    const unitSize = Number(service.billing_unit) > 0 ? Number(service.billing_unit) : 1000;
+    const estimate = Math.round(((unit * Number(quantity)) / unitSize) * 100) / 100;
+    const estimateUsd = convertToUsd(estimate, service.currency, wallet.fx?.rates);
+    const balance = Number(wallet.wallet?.balance_usd) || 0;
+    if (estimateUsd != null && balance + 0.001 >= estimateUsd) {
+      setPaymentChoice("wallet");
+    } else if (onlineEnabled === false) {
+      setPaymentChoice("manual");
+    } else {
+      setPaymentChoice("ikeepay");
+    }
+  }, [user, service, wallet, quantity, onlineEnabled]);
 
   async function verifyPayment(order = orderCreated) {
     if (!order?.order_id) return false;
@@ -182,18 +237,25 @@ export default function MboppiBoostOrder() {
     setError("");
     try {
       const idempotencyKey = `smm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const method =
+        paymentChoice === "wallet"
+          ? "wallet"
+          : paymentChoice === "manual" || onlineEnabled === false
+            ? "manual"
+            : "ikeepay";
       const resp = await api.smmCreateOrder({
         service_id: Number(serviceId),
         quantity: Number(quantity),
         client_info: clientInfo,
-        payment_method: onlineEnabled === false ? "manual" : "ikeepay",
+        payment_method: method,
         idempotency_key: idempotencyKey,
       });
       if (resp?.ok) {
+        const paidWithWallet = resp.payment_method === "wallet" || resp.paid === true;
         setOrderCreated(resp);
-        setPaid(false);
+        setPaid(paidWithWallet);
         setRefundPending(false);
-        setManualOpen(!resp.checkout_url);
+        setManualOpen(!paidWithWallet && !resp.checkout_url);
         if (resp.checkout_url) setCheckoutUrl(resp.checkout_url);
         saveLocalBoostOrder({
           id: resp.order_id,
@@ -275,6 +337,13 @@ export default function MboppiBoostOrder() {
   );
   const maxQty = Number(service.limits?.max);
   const minimumTotal = Math.round(((unitPrice * minQty) / billingUnit) * 100) / 100;
+  const walletBalance = Number(wallet?.wallet?.balance_usd) || 0;
+  const walletEstimate = convertToUsd(total, service.currency, wallet?.fx?.rates);
+  const canPayWithWallet =
+    Boolean(user) &&
+    walletEstimate != null &&
+    total > 0 &&
+    walletBalance + 0.001 >= walletEstimate;
 
   if (orderCreated) {
     const whatsapp = paymentInfo?.whatsapp?.replace(/[^\d]/g, "");
@@ -319,10 +388,22 @@ export default function MboppiBoostOrder() {
                     ? t(
                         "Votre paiement a été reçu après l'annulation de la commande. Un remboursement est en cours de traitement."
                       )
-                    : t(
-                        "Votre paiement a été confirmé. La transmission de la commande au prestataire a été lancée."
-                      )}
+                    : orderCreated.payment_method === "wallet"
+                      ? t(
+                          "Votre commande a été payée avec votre portefeuille Boost. Le traitement a démarré immédiatement."
+                        )
+                      : t(
+                          "Votre paiement a été confirmé. La transmission de la commande au prestataire a été lancée."
+                        )}
                 </p>
+                {orderCreated.payment_method === "wallet" && (
+                  <p className="boost-hint">
+                    {t("Nouveau solde")} : {formatUsd(orderCreated.wallet_balance_after_usd)}
+                    {orderCreated.wallet_debit_usd != null && (
+                      <> · {t("Débit")} : {formatUsd(orderCreated.wallet_debit_usd)}</>
+                    )}
+                  </p>
+                )}
                 <Link to="/mboppi-boost/mes-commandes" className="boost-btn boost-btn-primary">
                   {refundPending ? t("Voir mes commandes") : t("Suivre ma commande")}
                 </Link>
@@ -367,7 +448,7 @@ export default function MboppiBoostOrder() {
                   {t("Voir mes commandes")}
                 </Link>
               </div>
-            ) : manualOpen || !orderCreated.online_payment?.online ? (
+            ) : !paid && (manualOpen || !orderCreated.online_payment?.online) ? (
               <>
                 <div className="boost-card boost-card-pad boost-payment-panel" style={{ marginTop: 16 }}>
                   <h3>💳 {t("Payer votre commande")}</h3>
@@ -630,15 +711,105 @@ export default function MboppiBoostOrder() {
             </div>
 
             <h3>{t("Paiement")}</h3>
-            <p className="form-hint">
-              {onlineEnabled === false
-                ? t(
-                    "Le paiement en ligne est indisponible. Les instructions de paiement mobile money ou virement s'afficheront après validation."
-                  )
-                : t(
-                    "Paiement sécurisé via iKeePay (carte bancaire ou Mobile Money). Le tunnel de paiement s'ouvrira après validation."
-                  )}
-            </p>
+            {user ? (
+              <div className="boost-pay-choice">
+                <label
+                  className={`boost-pay-option ${paymentChoice === "wallet" ? "is-selected" : ""} ${!canPayWithWallet ? "is-disabled" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="boost-payment"
+                    value="wallet"
+                    checked={paymentChoice === "wallet"}
+                    disabled={!canPayWithWallet}
+                    onChange={() => {
+                      paymentTouched.current = true;
+                      setPaymentChoice("wallet");
+                    }}
+                  />
+                  <span className="boost-pay-option-main">
+                    <span className="boost-pay-option-title">
+                      👛 {t("Solde Boost")} <strong>{formatUsd(walletBalance)}</strong>
+                    </span>
+                    <span className="boost-pay-option-sub">
+                      {walletLoading
+                        ? t("Chargement du portefeuille…")
+                        : walletEstimate == null
+                          ? t("Taux de change indisponibles.")
+                          : canPayWithWallet
+                            ? `${t("Débit estimé")} : ${formatUsd(walletEstimate)}`
+                            : `${t("Solde insuffisant")} · ${t("requis")} ${formatUsd(walletEstimate)}`}
+                    </span>
+                  </span>
+                </label>
+                {walletEstimate != null && !canPayWithWallet && (
+                  <p className="boost-pay-wallet-link">
+                    <Link to="/mboppi-boost/portefeuille">
+                      {t("Recharger mon portefeuille Boost")}
+                    </Link>
+                  </p>
+                )}
+
+                {onlineEnabled !== false && (
+                  <label
+                    className={`boost-pay-option ${paymentChoice === "ikeepay" ? "is-selected" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name="boost-payment"
+                      value="ikeepay"
+                      checked={paymentChoice === "ikeepay"}
+                      onChange={() => {
+                        paymentTouched.current = true;
+                        setPaymentChoice("ikeepay");
+                      }}
+                    />
+                    <span className="boost-pay-option-main">
+                      <span className="boost-pay-option-title">
+                        💳 {t("Carte bancaire / Mobile Money")}
+                      </span>
+                      <span className="boost-pay-option-sub">
+                        {t("Paiement sécurisé via iKeePay")}
+                      </span>
+                    </span>
+                  </label>
+                )}
+
+                <label
+                  className={`boost-pay-option ${paymentChoice === "manual" ? "is-selected" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="boost-payment"
+                    value="manual"
+                    checked={paymentChoice === "manual"}
+                    onChange={() => {
+                      paymentTouched.current = true;
+                      setPaymentChoice("manual");
+                    }}
+                  />
+                  <span className="boost-pay-option-main">
+                    <span className="boost-pay-option-title">
+                      📱 {t("Mobile Money / virement direct")}
+                    </span>
+                    <span className="boost-pay-option-sub">
+                      {t("Les instructions s'affichent après validation.")}
+                    </span>
+                  </span>
+                </label>
+              </div>
+            ) : (
+              <p className="form-hint">
+                {onlineEnabled === false
+                  ? t(
+                      "Le paiement en ligne est indisponible. Les instructions de paiement mobile money ou virement s'afficheront après validation."
+                    )
+                  : t(
+                      "Paiement sécurisé via iKeePay (carte bancaire ou Mobile Money). Le tunnel de paiement s'ouvrira après validation."
+                    )}{" "}
+                {t("Connectez-vous pour payer avec votre solde Boost.")}
+              </p>
+            )}
 
             <div className="form-total">
               <strong>{t("Total")} :</strong>{" "}
@@ -650,9 +821,11 @@ export default function MboppiBoostOrder() {
             <button type="submit" disabled={submitting} className="boost-btn boost-btn-primary boost-btn-block">
               {submitting
                 ? t("Enregistrement…")
-                : onlineEnabled === false
-                  ? t("Confirmer la commande")
-                  : t("Confirmer et payer avec iKeePay")}
+                : paymentChoice === "wallet"
+                  ? `${t("Payer")} ${formatUsd(walletEstimate || 0)} ${t("avec mon solde")}`
+                  : paymentChoice === "manual" || onlineEnabled === false
+                    ? t("Confirmer la commande")
+                    : t("Confirmer et payer avec iKeePay")}
             </button>
             {error && <p className="error-msg">{error}</p>}
           </form>
@@ -693,9 +866,11 @@ export default function MboppiBoostOrder() {
                 <span className="boost-total-note">{service.currency}</span>
               </div>
               <div className="boost-summary-secure">
-                {onlineEnabled === false
-                  ? `💳 ${t("Mobile Money / virement")}`
-                  : `🔒 ${t("Paiement sécurisé via iKeePay")}`}
+                {paymentChoice === "wallet"
+                  ? `👛 ${t("Solde Boost")} · ${formatUsd(walletEstimate || 0)}`
+                  : onlineEnabled === false || paymentChoice === "manual"
+                    ? `💳 ${t("Mobile Money / virement")}`
+                    : `🔒 ${t("Paiement sécurisé via iKeePay")}`}
               </div>
               <Link
                 to="/mboppi-boost/mes-commandes"

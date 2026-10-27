@@ -473,9 +473,9 @@ export default function MboppiBoost() {
           <span className="boost-orb boost-orb-a" aria-hidden="true" />
           <span className="boost-orb boost-orb-b" aria-hidden="true" />
           <div className="boost-hero-inner">
-            <div>
+            <div className="tw-min-w-0">
               <span className="boost-eyebrow">
-                <IconSpark className="tw-h-3.5 tw-w-3.5 tw-text-cyan-300" />
+                <IconSpark className="tw-h-3.5 tw-w-3.5 tw-flex-none tw-text-cyan-300" />
                 MboppiBoost
               </span>
               <h1 className="boost-title">
@@ -497,6 +497,9 @@ export default function MboppiBoost() {
                   Configurer ma commande
                   <IconArrowRight />
                 </button>
+                <Link to="/mboppi-boost/portefeuille" className="boost-btn boost-btn-ghost">
+                  Mon portefeuille
+                </Link>
                 <Link to="/mboppi-boost/mes-commandes" className="boost-btn boost-btn-ghost">
                   Suivre une commande
                 </Link>

@@ -23,6 +23,11 @@ import { getMembershipGate } from "./membershipGate.js";
 import { notifyActivationReferralPaid } from "./activationReferral.js";
 import { confirmFcOrderPayment, isFcReference } from "./familicashOrders.js";
 import { completeSmmPayment, dispatchSmmOrderNow } from "./smmFulfillment.js";
+import {
+  confirmBoostWalletTopup,
+  getBoostWalletTopupByReference,
+  isBoostWalletReference,
+} from "./boostWallet.js";
 import { notifyAdmins } from "./adminNotify.js";
 import { sendPush } from "../push.js";
 
@@ -628,6 +633,61 @@ export async function reconcileSmmOrderPayment(orderId) {
   return { ok: false, reason: "no_unmatched_webhook" };
 }
 
+const boostWalletReconcileState = { lastRun: 0 };
+export async function reconcileBoostWalletTopup(reference) {
+  const topup = await getBoostWalletTopupByReference(reference);
+  if (!topup) return { ok: false, reason: "not_found" };
+  if (topup.status === "completed") {
+    return { ok: true, status: "completed", already: true };
+  }
+  if (topup.status === "failed") {
+    return { ok: false, status: topup.status, reason: "failed" };
+  }
+  const now = Date.now();
+  if (now - boostWalletReconcileState.lastRun < 5000) {
+    return { ok: false, reason: "cooldown" };
+  }
+  boostWalletReconcileState.lastRun = now;
+
+  const startedAt = Date.now();
+  const logs = await q(
+    `SELECT id, payload FROM payment_webhook_logs
+      WHERE handled = FALSE AND created_at >= now() - interval '24 hours'
+      ORDER BY created_at DESC LIMIT 30`
+  );
+  for (const log of logs) {
+    if (Date.now() - startedAt > 4000) break;
+    let body = log.payload;
+    if (typeof body === "string") {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        continue;
+      }
+    }
+    const n = normalizeWebhook(body);
+    if (!n || n.orderId !== reference) continue;
+    const confirmed = await confirmBoostWalletTopup({
+      reference,
+      amount: n.amount,
+      currency: n.currency,
+      providerReference: n.providerRef || null,
+    });
+    if (!confirmed.ok) {
+      return { ok: false, status: topup.status, reason: confirmed.reason };
+    }
+    await q(`UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1`, [log.id]).catch(() => {});
+    return {
+      ok: true,
+      status: "completed",
+      reconciled: true,
+      balance_usd: confirmed.balance_usd,
+      duplicate: Boolean(confirmed.duplicate),
+    };
+  }
+  return { ok: false, status: topup.status, reason: "no_unmatched_webhook" };
+}
+
 async function logWebhookStart({ body, normalized }) {
   try {
     const rows = await q(
@@ -698,6 +758,31 @@ async function handleWebhook(body, normalized) {
   const { orderId, amount, currency, providerRef, email } = normalized;
   if (!orderId) {
     result = { ok: false, reason: "missing_reference" };
+    return result;
+  }
+
+  // Recharge du portefeuille MboppiBoost (MBP-WAL) ? Vérifiée AVANT les
+  // adhésions et la réconciliation par montant : une recharge du même montant
+  // ne doit jamais activer un compte ni être rattachée à une autre commande.
+  if (isBoostWalletReference(orderId)) {
+    const walletTopup = await confirmBoostWalletTopup({
+      reference: orderId,
+      amount,
+      currency,
+      providerReference: providerRef || null,
+    });
+    if (walletTopup.ok) {
+      result = {
+        ok: true,
+        kind: "boost_wallet",
+        id: walletTopup.topup?.id,
+        reference: orderId,
+        duplicate: Boolean(walletTopup.duplicate),
+        balance_usd: walletTopup.balance_usd,
+      };
+      return result;
+    }
+    result = { ok: false, reason: `boost_wallet:${walletTopup.reason}` };
     return result;
   }
 

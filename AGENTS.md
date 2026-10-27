@@ -6,7 +6,7 @@ Contexte de travail pour toute session IA sur ce dépôt. Lire ce fichier avant 
 
 Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiques, vendeurs indépendants, créateurs, livreurs, commandes par téléphone/WhatsApp et paiement mobile.
 
-- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.57.164`.
+- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.57.165`.
 - **Serveur** : Express 4 (`server/`, port 4000), PostgreSQL via Supabase (`server/db.js` : `DATABASE_URL_POOLED`, fallback `DATABASE_URL`, `ssl rejectUnauthorized: false` ; exports `q()`, `withTransaction()`, `initDb()`).
 - **Finance** : `server/services/payouts.js` — `computeRedistribution`, `normalizeWalletPrimary`, seuils de commission. Il n'existe **pas** de `server/finance.js`.
 - **Déploiement** : Vercel, entrée serverless `api/index.js` → `server/app.js` + `initDb()`. `vercel.json` route `/api/*`, `/produit/:id`, `/boutique/:id`, `/createur/:id`, `/ville/:x`, `/offre/:id`, `/sitemap.xml`, `/` vers l'API, le reste vers le SPA.
@@ -191,7 +191,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 ## Conventions de dev (IMPORTANT)
 
 1. **Ne jamais committer sans demande explicite.** Quand le user demande « deployer » / « mettre en ligne » : bump + commit + push.
-2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.57.164 / mboppi-v394**.
+2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.57.165 / mboppi-v395**.
 3. **Build** : `npm run build` dans `client/` (le hash du JS local diffère de celui de Vercel pour des raisons d'environnement ; vérifier le déploiement via le CSS hash ou en cherchant une chaîne caractéristique du nouveau code dans le JS servi).
 4. **Vérifier le déploiement** : attendre ~75–90 s après push, puis `curl` sur `https://mboppi-mboppi.vercel.app/` (header `Accept: text/html` pour le HTML SEO) et chercher le hash CSS/JS du build local ; tester les API concernées.
 5. Commandes utiles : `node --check server/routes/*.js` pour la syntaxe serveur.
@@ -212,7 +212,9 @@ Pilotés par l'environnement : `client/src/config.js` (`BASE_URL` ← `VITE_SITE
 Restent en dur **volontairement** : `.github/workflows/keepalive.yml` (ping sur l'alias `vercel.app`, toujours valide). Le lien Trustpilot du footer (`Footer.jsx`) pointe depuis 1.57.93 vers le **profil revendiqué du nouveau domaine** (`https://fr.trustpilot.com/review/mboppishop.com`).
 
 ## Historique récent des modifications
-(Changelog partiel — version courante **1.57.164** / cache PWA **mboppi-v394**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+(Changelog partiel — version courante **1.57.165** / cache PWA **mboppi-v395**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+
+- **1.57.165** : **MboppiBoost — portefeuille USD, recharge iKeePay et paiement des commandes par solde** — nouveau wallet Boost distinct du wallet XAF (`boost_wallets`, `boost_wallet_transactions`, `boost_wallet_topups`), crédit/débit atomiques via `withTransaction`, recharge multi-devises (USD par défaut, EUR/GBP/CAD/XAF/XOF) avec taux USD (Coinbase + replis, cache 60 s / stale 30 min), checkout iKeePay, webhook `MBP-WAL` traité **avant** les adhésions et la réconciliation par montant, réconciliation 24 h, page `/mboppi-boost/portefeuille`, choix du wallet dans le tunnel de commande, administration 👛 (recherche utilisateur, solde, crédit/remboursement) et `DB_INIT_VERSION = "2026-10-27-mboppi-boost-wallet-v1"`. Correctifs : `client/tailwind.config.js` inclut `MboppiBoostWallet.jsx` et `BoostAdmin.jsx` (sans quoi les règles wallet de `@layer components` étaient purgées) et `min-w-0` sur les lignes d'historique pour les descriptions longues. Validé : 10 suites serveur ✓, ESLint 0 erreur, build Vite ✓, page wallet testée en CDP mocké 360/390 px sans overflow. Cache PWA v395.
 
 - **1.57.164** : **MboppiBoost — tunnel de commande et suivi modernisés + transmission immédiate après paiement** — **(1) design** : Tailwind 3 ajouté au client (préfixe `tw-`, preflight désactivé) et `client/src/boost.css` ; `MboppiBoost.jsx` refondu, `MboppiBoostOrder.jsx` et `MboppiBoostOrders.jsx` réécrits (hero, formulaire, récapitulatif sticky, cartes de commande, statuts, déclaration hors ligne, états succès/chargement/vide, dark mode, mobile). La page de suivi actualise désormais sans masquer la liste (bouton `Chargement…` désactivé) et le formulaire « J'ai payé » est intégré aux cartes. **(2) paiement** : après confirmation iKeePay, `dispatchSmmOrderNow()` transmet immédiatement la commande au fournisseur (verrou atomique `provider_status='dispatching'`, reprise par le cron en cas d'échec) ; webhook et réconciliation ne bloquent jamais la réponse. **(3) vérifications** : ESLint 0, build Vite ✓, états succès/déclaration/refresh testés via CDP desktop et mobile, clair et sombre. Cache PWA v394.
 

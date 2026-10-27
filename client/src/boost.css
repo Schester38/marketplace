@@ -87,7 +87,11 @@
   }
 
   .boost-hero-inner {
-    @apply tw-relative tw-grid tw-gap-10 tw-px-6 tw-py-10 sm:tw-px-10 lg:tw-grid-cols-[1.35fr_0.65fr] lg:tw-items-center lg:tw-px-14 lg:tw-py-14;
+    @apply tw-relative tw-grid tw-min-w-0 tw-grid-cols-1 tw-gap-10 tw-px-6 tw-py-10 sm:tw-px-10 lg:tw-grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)] lg:tw-items-center lg:tw-px-14 lg:tw-py-14;
+  }
+
+  .boost-hero-inner > * {
+    min-width: 0;
   }
 
   .boost-eyebrow {
@@ -95,7 +99,7 @@
   }
 
   .boost-title {
-    @apply tw-mt-6 tw-text-[2.35rem] tw-font-black tw-leading-[1.02] tw-tracking-[-0.045em] sm:tw-text-5xl lg:tw-text-[4.15rem];
+    @apply tw-mt-6 tw-break-words tw-text-[2.08rem] tw-font-black tw-leading-[1.04] tw-tracking-[-0.045em] sm:tw-text-5xl lg:tw-text-[4.15rem];
   }
 
   .boost-title-accent {
@@ -582,6 +586,55 @@
     @apply tw-mt-3;
   }
 
+  .boost-pay-choice {
+    @apply tw-grid tw-gap-2;
+  }
+
+  .boost-order-form .boost-pay-option {
+    @apply tw-mb-0 tw-flex tw-cursor-pointer tw-items-start tw-gap-3 tw-rounded-xl tw-border tw-px-3.5 tw-py-3 tw-text-left tw-normal-case tw-tracking-normal;
+    border-color: var(--boost-border);
+    background: var(--boost-surface-soft);
+    color: var(--boost-text);
+  }
+
+  .boost-pay-option.is-selected {
+    border-color: var(--boost-blue);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+
+  .boost-pay-option.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+  }
+
+  .boost-pay-option input[type="radio"] {
+    @apply tw-mt-1 tw-h-4 tw-w-4 tw-flex-none tw-accent-blue-600;
+  }
+
+  .boost-pay-option-main {
+    @apply tw-flex tw-min-w-0 tw-flex-col tw-gap-1;
+  }
+
+  .boost-pay-option-title {
+    @apply tw-text-sm tw-font-bold;
+    color: var(--boost-text);
+  }
+
+  .boost-pay-option-title strong {
+    @apply tw-ml-1 tw-font-black;
+    color: var(--boost-blue);
+  }
+
+  .boost-pay-option-sub {
+    @apply tw-text-[11px] tw-leading-5;
+    color: var(--boost-muted);
+  }
+
+  .boost-pay-wallet-link {
+    @apply tw-m-0 tw-px-1 tw-text-[11px] tw-font-bold;
+    color: var(--boost-blue);
+  }
+
   .boost-order-aside {
     @apply tw-flex tw-flex-col tw-gap-3;
   }
@@ -930,8 +983,226 @@
     color: #fca5a5;
   }
 
+  .boost-wallet-hero {
+    @apply tw-relative tw-overflow-hidden tw-rounded-[32px] tw-bg-[#07101f] tw-text-white;
+    box-shadow: 0 30px 80px -40px rgba(8, 18, 37, 0.9);
+  }
+
+  .boost-wallet-hero-inner {
+    @apply tw-relative tw-z-10 tw-grid tw-min-w-0 tw-grid-cols-1 tw-gap-8 tw-px-6 tw-py-10 sm:tw-px-10 lg:tw-grid-cols-[minmax(0,1fr)_minmax(280px,340px)] lg:tw-items-center lg:tw-px-14 lg:tw-py-14;
+  }
+
+  .boost-wallet-hero-inner > * {
+    min-width: 0;
+  }
+
+  .boost-wallet-balance-card {
+    @apply tw-rounded-3xl tw-border tw-border-white/10 tw-bg-white/[0.07] tw-p-5 tw-backdrop-blur-xl;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .boost-wallet-balance {
+    @apply tw-mt-2 tw-break-words tw-text-3xl tw-font-black tw-leading-tight tw-text-white sm:tw-text-4xl;
+  }
+
+  .boost-wallet-balance-usd {
+    @apply tw-mt-1 tw-text-xs tw-font-semibold tw-text-slate-400;
+  }
+
+  .boost-wallet-currency {
+    @apply tw-mt-5 tw-flex tw-items-center tw-justify-between tw-gap-3 tw-rounded-xl tw-border tw-border-white/10 tw-bg-slate-950/30 tw-px-3 tw-py-2;
+  }
+
+  .boost-wallet-currency span {
+    @apply tw-text-[10px] tw-font-bold tw-uppercase tw-tracking-[0.12em] tw-text-slate-400;
+  }
+
+  .boost-wallet-currency select {
+    @apply tw-min-w-0 tw-rounded-lg tw-border tw-border-white/10 tw-bg-white/10 tw-px-2 tw-py-1.5 tw-text-xs tw-font-bold tw-text-white tw-outline-none;
+  }
+
+  .boost-wallet-grid {
+    @apply tw-mt-6 tw-grid tw-gap-6 lg:tw-grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)];
+  }
+
+  .boost-wallet-topup-form {
+    @apply tw-mt-5 tw-grid tw-gap-3;
+  }
+
+  .boost-wallet-topup-form > label > span {
+    @apply tw-mb-2 tw-block tw-text-[10px] tw-font-extrabold tw-uppercase tw-tracking-[0.14em];
+    color: var(--boost-muted);
+  }
+
+  .boost-wallet-amount {
+    @apply tw-flex tw-items-center tw-rounded-xl tw-border tw-px-4 tw-py-1 tw-shadow-sm;
+    border-color: var(--boost-border);
+    background: var(--boost-surface-soft);
+  }
+
+  .boost-wallet-amount:focus-within {
+    border-color: var(--boost-blue);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  }
+
+  .boost-wallet-amount input {
+    @apply tw-min-w-0 tw-flex-1 tw-border-0 tw-bg-transparent tw-py-2.5 tw-text-lg tw-font-black tw-outline-none;
+    color: var(--boost-text);
+  }
+
+  .boost-wallet-amount span {
+    @apply tw-text-xs tw-font-black;
+    color: var(--boost-muted);
+  }
+
+  .boost-wallet-quick {
+    @apply tw-flex tw-flex-wrap tw-gap-2;
+  }
+
+  .boost-wallet-quick button {
+    @apply tw-flex-1 tw-rounded-lg tw-border tw-px-2 tw-py-2 tw-text-[11px] tw-font-bold tw-transition;
+    border-color: var(--boost-border);
+    background: var(--boost-surface-soft);
+    color: var(--boost-muted);
+  }
+
+  .boost-wallet-quick button:hover,
+  .boost-wallet-quick button.is-active {
+    border-color: var(--boost-blue);
+    color: var(--boost-blue);
+  }
+
+  .boost-wallet-quote {
+    @apply tw-flex tw-items-center tw-justify-between tw-gap-3 tw-rounded-xl tw-border tw-px-4 tw-py-3;
+    border-color: var(--boost-border);
+    background: var(--boost-blue-soft);
+  }
+
+  .boost-wallet-quote span {
+    @apply tw-text-xs tw-font-semibold;
+    color: var(--boost-muted);
+  }
+
+  .boost-wallet-quote strong {
+    @apply tw-text-base tw-font-black;
+    color: var(--boost-blue);
+  }
+
+  .boost-wallet-unavailable {
+    @apply tw-mt-5 tw-rounded-xl tw-border tw-px-4 tw-py-4 tw-text-sm;
+    border-color: #fcd34d;
+    background: rgba(245, 158, 11, 0.08);
+    color: #92400e;
+  }
+
+  [data-theme="dark"] .boost-wallet-unavailable {
+    border-color: rgba(245, 158, 11, 0.35);
+    color: #fcd34d;
+  }
+
+  .boost-wallet-unavailable p {
+    @apply tw-mt-2 tw-text-xs tw-leading-6;
+  }
+
+  .boost-wallet-success {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
+  }
+
+  [data-theme="dark"] .boost-wallet-success {
+    border-color: rgba(52, 211, 153, 0.3);
+    background: rgba(16, 185, 129, 0.1);
+    color: #6ee7b7;
+  }
+
+  .boost-wallet-success p {
+    @apply tw-mt-1 tw-text-xs tw-leading-6;
+  }
+
+  .boost-wallet-tx {
+    @apply tw-mt-5 tw-grid tw-min-w-0;
+  }
+
+  .boost-wallet-tx li {
+    @apply tw-flex tw-min-w-0 tw-items-start tw-justify-between tw-gap-4 tw-py-3;
+    border-top: 1px solid var(--boost-border);
+  }
+
+  .boost-wallet-tx li:first-child {
+    border-top: 0;
+  }
+
+  .boost-wallet-tx li > div {
+    @apply tw-flex tw-min-w-0 tw-flex-col tw-gap-1;
+  }
+
+  .boost-wallet-tx li > div:last-child {
+    @apply tw-flex-none tw-items-end tw-text-right;
+  }
+
+  .boost-wallet-tx strong {
+    @apply tw-break-words tw-text-xs tw-font-bold;
+    color: var(--boost-text);
+  }
+
+  .boost-wallet-tx span {
+    @apply tw-break-words tw-text-[10px] tw-leading-5;
+    color: var(--boost-muted);
+  }
+
+  .boost-wallet-tx .is-credit strong {
+    color: #059669;
+  }
+
+  .boost-wallet-tx .is-debit strong {
+    color: #dc2626;
+  }
+
+  [data-theme="dark"] .boost-wallet-tx .is-credit strong {
+    color: #34d399;
+  }
+
+  [data-theme="dark"] .boost-wallet-tx .is-debit strong {
+    color: #f87171;
+  }
+
+  .boost-wallet-empty {
+    @apply tw-mt-6 tw-flex tw-flex-col tw-items-center tw-gap-2 tw-rounded-xl tw-border tw-border-dashed tw-px-4 tw-py-8 tw-text-center;
+    border-color: var(--boost-border);
+    color: var(--boost-muted);
+  }
+
+  .boost-wallet-empty span {
+    @apply tw-text-3xl;
+  }
+
+  .boost-wallet-empty p {
+    @apply tw-text-xs;
+  }
+
+  .boost-wallet-actions {
+    @apply tw-mt-6 tw-flex tw-flex-wrap tw-gap-2;
+  }
+
   .boost-fade-up {
     animation: boost-fade-up 0.55s ease both;
+  }
+
+  @media (max-width: 639px) {
+    .boost-wallet-hero-inner {
+      padding-left: 1.1rem;
+      padding-right: 1.1rem;
+    }
+
+    .boost-wallet-actions .boost-btn {
+      flex: 1 1 100%;
+      justify-content: center;
+    }
+
+    .boost-wallet-tx li {
+      gap: 0.65rem;
+    }
   }
 
   @media (min-width: 1024px) {
