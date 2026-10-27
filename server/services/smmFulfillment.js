@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
 import { q } from "../db.js";
+import { mailConfigured, sendMail } from "../mailer.js";
+import { SITE_URL } from "../urls.js";
+import { sendWhatsAppText } from "./whatsapp.js";
 import { getActiveProviderConfig, logSmmCall, NoProviderAdapter } from "./smmProvider.js";
+import { notifyAdmins } from "./adminNotify.js";
 
 export function generatePublicToken() {
   return crypto.randomBytes(16).toString("hex");
@@ -19,17 +23,49 @@ export function providerStatusToOrderStatus(raw) {
   return null;
 }
 
-export async function notifySmmUser(userId, title, body) {
-  if (!userId) return;
-  try {
-    await q(
-      `INSERT INTO notifications (user_id, type, body) VALUES ($1, 'smm_order', $2)`,
-      [userId, String(body).slice(0, 500)]
-    );
-    const { sendPush } = await import("../push.js");
-    sendPush(userId, { title, body, url: "/mboppi-boost/mes-commandes" }).catch(() => {});
-  } catch {
-    /* notification best-effort : ne jamais bloquer le traitement de la commande */
+export async function notifySmmUser(userId, title, body, options = {}) {
+  const orderId = Number(options.orderId) || null;
+  let email = String(options.email || "").trim();
+  let phone = String(options.phone || "").trim();
+
+  if (orderId && (!email || !phone)) {
+    try {
+      const rows = await q(
+        `SELECT o.client_info, u.email AS user_email, u.phone AS user_phone
+           FROM smm_orders o
+           LEFT JOIN users u ON u.id = o.user_id
+          WHERE o.id = $1`,
+        [orderId]
+      );
+      const row = rows[0];
+      const info = row?.client_info && typeof row.client_info === "object" ? row.client_info : {};
+      email = email || String(info.email || row?.user_email || "").trim();
+      phone = phone || String(info.phone || row?.user_phone || "").trim();
+    } catch {
+      /* contact best-effort */
+    }
+  }
+
+  if (userId) {
+    try {
+      await q(
+        `INSERT INTO notifications (user_id, type, body) VALUES ($1, 'smm_order', $2)`,
+        [userId, String(body).slice(0, 500)]
+      );
+      const { sendPush } = await import("../push.js");
+      sendPush(userId, { title, body, url: "/mboppi-boost/mes-commandes" }).catch(() => {});
+    } catch {
+      /* notification best-effort : ne jamais bloquer le traitement de la commande */
+    }
+  }
+
+  if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && mailConfigured()) {
+    const suffix = orderId ? `\n\nSuivi : ${SITE_URL}/mboppi-boost/mes-commandes` : "";
+    sendMail({ to: email, subject: title, text: `${body}${suffix}` }).catch(() => {});
+  }
+
+  if (phone && phone.replace(/\D/g, "").length >= 8) {
+    sendWhatsAppText(phone, `${title}\n\n${body}`).catch(() => {});
   }
 }
 
@@ -43,6 +79,156 @@ async function addEvent(orderId, eventType, oldStatus, newStatus, message, paylo
   } catch {
     /* journal best-effort */
   }
+}
+
+/**
+ * Marque une commande comme payée, de manière idempotente.
+ * Utilisé par le webhook iKeePay et par la validation manuelle admin.
+ */
+export async function completeSmmPayment(orderId, providerRef = null, note = null) {
+  const rows = await q(
+    `UPDATE smm_orders
+        SET status = 'paid', payment_status = 'paid',
+            payment_reference = COALESCE(payment_reference, $2),
+            paid_at = COALESCE(paid_at, now()), updated_at = now()
+      WHERE id = $1
+        AND status IN ('draft', 'pending_payment')
+        AND payment_status <> 'paid'
+      RETURNING id, user_id, service_name, total, currency, status`,
+    [orderId, providerRef || null]
+  );
+
+  if (!rows.length) {
+    const existing = (
+      await q(
+        `SELECT id, user_id, service_name, total, currency, status, payment_status
+           FROM smm_orders WHERE id = $1`,
+        [orderId]
+      )
+    )[0];
+    if (!existing) return { ok: false, reason: "not_found" };
+    if (existing.status === "refund_pending") {
+      return { ok: true, already: true, refund_required: true, order: existing };
+    }
+    if (existing.payment_status === "paid") {
+      return { ok: true, already: true, order: existing };
+    }
+    if (["cancelled", "failed"].includes(existing.status)) {
+      const refunded = await q(
+        `UPDATE smm_orders
+            SET status = 'refund_pending', payment_status = 'paid',
+                payment_reference = COALESCE(payment_reference, $2),
+                paid_at = COALESCE(paid_at, now()), updated_at = now()
+          WHERE id = $1 AND status IN ('cancelled', 'failed')
+            AND payment_status IS DISTINCT FROM 'refunded'
+          RETURNING id, user_id, service_name, total, currency, status, payment_status`,
+        [orderId, providerRef || null]
+      );
+      if (refunded.length) {
+        const order = refunded[0];
+        await addEvent(
+          order.id,
+          "payment_after_cancel",
+          existing.status,
+          "refund_pending",
+          `Paiement recu apres ${existing.status === "failed" ? "echec" : "annulation"} - remboursement requis`,
+          { provider_reference: providerRef || null }
+        );
+        await notifySmmUser(
+          order.user_id,
+          "Paiement recu apres annulation MboppiBoost",
+          `Votre paiement pour la commande #${order.id} a ete recu alors que la commande etait ${existing.status === "failed" ? "en echec" : "annulee"}. Un remboursement est en cours de traitement.`,
+          { orderId: order.id }
+        );
+        notifyAdmins({
+          title: "MboppiBoost - remboursement requis",
+          body: `Paiement recu apres ${existing.status === "failed" ? "echec" : "annulation"} : commande #${order.id} (${order.service_name}) - ${order.total} ${order.currency}.`,
+          amount: Number(order.total),
+        }).catch(() => {});
+        return { ok: true, refund_required: true, order };
+      }
+    }
+    return {
+      ok: existing.payment_status === "paid" || existing.status !== "pending_payment",
+      already: true,
+      order: existing,
+    };
+  }
+
+  const order = rows[0];
+  await addEvent(
+    order.id,
+    "payment_confirmed",
+    "pending_payment",
+    "paid",
+    note || "Paiement confirmé",
+    { provider_reference: providerRef || null, source: note ? "admin" : "ikeepay" }
+  );
+  await notifySmmUser(
+    order.user_id,
+    "Paiement MboppiBoost confirmé",
+    `Votre paiement pour la commande #${order.id} (${order.service_name}) est confirmé. Nous préparons sa transmission.`,
+    { orderId: order.id }
+  );
+  return { ok: true, order };
+}
+
+/**
+ * Transmet au fournisseur les commandes payées qui n'ont pas encore de
+ * référence externe. Appelé par le cron, jamais depuis le webhook.
+ */
+export async function dispatchPaidSmmOrders(limit = 5) {
+  const max = Math.min(Math.max(Number(limit) || 5, 1), 20);
+  const rows = await q(
+    `SELECT id FROM smm_orders
+      WHERE status = 'paid' AND external_reference IS NULL
+      ORDER BY paid_at ASC NULLS LAST, created_at ASC
+      LIMIT $1`,
+    [max]
+  );
+  const results = [];
+  for (const row of rows) {
+    results.push({ order_id: row.id, ...(await dispatchSmmOrder(row.id)) });
+  }
+  return { checked: rows.length, dispatched: results.filter((r) => r.ok).length, results };
+}
+
+/**
+ * Annule les commandes impayées trop anciennes. Les commandes payées ne sont
+ * jamais touchées (historique financier).
+ */
+export async function cleanupSmmOrders({ olderThanHours = 48, dryRun = false, limit = 200 } = {}) {
+  const hours = Math.min(Math.max(Number(olderThanHours) || 48, 1), 24 * 90);
+  const max = Math.min(Math.max(Number(limit) || 200, 1), 500);
+  const rows = await q(
+    `SELECT id, status FROM smm_orders
+      WHERE status IN ('draft', 'pending_payment')
+        AND COALESCE(payment_status, 'unpaid') = 'unpaid'
+        AND payment_declared_at IS NULL
+        AND created_at < now() - ($1::text || ' hours')::interval
+      ORDER BY created_at ASC
+      LIMIT $2`,
+    [hours, max]
+  );
+  if (dryRun) return { dry_run: true, would_cancel: rows.length, order_ids: rows.map((r) => r.id) };
+
+  for (const row of rows) {
+    await q(
+      `UPDATE smm_orders
+          SET status = 'cancelled', payment_status = 'cancelled', updated_at = now()
+        WHERE id = $1 AND status IN ('draft', 'pending_payment')`,
+      [row.id]
+    );
+    await addEvent(
+      row.id,
+      "auto_cancelled",
+      row.status,
+      "cancelled",
+      `Commande impayée annulée automatiquement après ${hours} h`,
+      {}
+    );
+  }
+  return { dry_run: false, cancelled: rows.length, order_ids: rows.map((r) => r.id) };
 }
 
 /**
@@ -127,8 +313,9 @@ export async function dispatchSmmOrder(orderId) {
     });
     await notifySmmUser(
       order.user_id,
-      "Commande MboppiBoost transmise 🚀",
-      `Votre commande #${order.id} (${order.service_name}) est en cours de traitement.`
+      "Commande MboppiBoost transmise",
+      `Votre commande #${order.id} (${order.service_name}) est en cours de traitement.`,
+      { orderId: order.id }
     );
     return { ok: true, external_reference: reference, provider };
   } catch (err) {
@@ -199,14 +386,16 @@ export async function syncSmmOrders(limit = 20) {
         if (nextStatus === "completed") {
           await notifySmmUser(
             order.user_id,
-            "Commande MboppiBoost terminée ✅",
-            `Votre commande #${order.id} (${order.service_name}) est terminée.`
+            "Commande MboppiBoost terminée",
+            `Votre commande #${order.id} (${order.service_name}) est terminée.`,
+            { orderId: order.id }
           );
         } else if (nextStatus === "failed" || nextStatus === "cancelled") {
           await notifySmmUser(
             order.user_id,
             "Commande MboppiBoost interrompue",
-            `Votre commande #${order.id} (${order.service_name}) est ${nextStatus === "failed" ? "échouée" : "annulée"}. Contactez le support.`
+            `Votre commande #${order.id} (${order.service_name}) est ${nextStatus === "failed" ? "échouée" : "annulée"}. Contactez le support.`,
+            { orderId: order.id }
           );
         }
         updated++;

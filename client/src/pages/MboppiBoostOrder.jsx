@@ -5,8 +5,10 @@ import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
 import { saveLocalBoostOrder } from "../boostOrders.js";
+import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 
 const PAYMENT_METHODS = [
+  { value: "ikeepay", label: "Paiement en ligne (iKeePay)" },
   { value: "mobile_money", label: "Mobile Money" },
   { value: "moneyfusion", label: "MoneyFusion" },
   { value: "virement", label: "Virement bancaire" },
@@ -35,8 +37,14 @@ export default function MboppiBoostOrder() {
     objectif: searchParams.get("details") || "",
   });
   const [quantity, setQuantity] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState("mobile_money");
+  const [paymentMethod, setPaymentMethod] = useState("ikeepay");
+  const [onlineEnabled, setOnlineEnabled] = useState(null);
   const [orderCreated, setOrderCreated] = useState(null);
+  const [checkoutUrl, setCheckoutUrl] = useState("");
+  const [paid, setPaid] = useState(false);
+  const [refundPending, setRefundPending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const [paymentReference, setPaymentReference] = useState("");
   const [declaring, setDeclaring] = useState(false);
   const [declared, setDeclared] = useState(false);
@@ -47,7 +55,12 @@ export default function MboppiBoostOrder() {
     fetchService();
     api
       .smmPaymentInfo()
-      .then((resp) => setPaymentInfo(resp.payment_info || null))
+      .then((resp) => {
+        setPaymentInfo(resp.payment_info || null);
+        const enabled = Boolean(resp.online_payment?.enabled);
+        setOnlineEnabled(enabled);
+        if (!enabled) setPaymentMethod("mobile_money");
+      })
       .catch(() => {});
   }, [serviceId]);
 
@@ -60,6 +73,78 @@ export default function MboppiBoostOrder() {
       email: prev.email || user.email || "",
     }));
   }, [user]);
+
+  async function verifyPayment(order = orderCreated) {
+    if (!order?.order_id) return false;
+    setVerifying(true);
+    try {
+      const resp = await api.smmPaymentStatus(order.order_id, order.public_token);
+      if (resp?.paid) {
+        setPaid(true);
+        setRefundPending(resp.status === "refund_pending" || resp.status === "refunded");
+        setCheckoutUrl("");
+        return true;
+      }
+    } catch {
+      /* le prochain sondage réessaiera */
+    } finally {
+      setVerifying(false);
+    }
+    return false;
+  }
+
+  useEffect(() => {
+    if (!orderCreated || paid || !orderCreated.online_payment?.online) return undefined;
+    let cancelled = false;
+    let attempts = 0;
+    const tick = async () => {
+      attempts += 1;
+      if (cancelled) return;
+      try {
+        const resp = await api.smmPaymentStatus(orderCreated.order_id, orderCreated.public_token);
+        if (!cancelled && resp?.paid) {
+          setPaid(true);
+          setRefundPending(resp.status === "refund_pending" || resp.status === "refunded");
+          setCheckoutUrl("");
+        }
+      } catch {
+        /* silencieux : nouvelle tentative dans 4 s */
+      }
+      if (attempts >= 90) clearInterval(id);
+    };
+    const id = setInterval(tick, 4000);
+    tick();
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [orderCreated, paid]);
+
+  async function openCheckout() {
+    if (!orderCreated) return;
+    if (orderCreated.checkout_url) {
+      setCheckoutUrl(orderCreated.checkout_url);
+      return;
+    }
+    try {
+      const resp = await api.smmCreateCheckout(orderCreated.order_id, orderCreated.public_token);
+      if (resp?.checkout_url) {
+        setCheckoutUrl(resp.checkout_url);
+      } else {
+        setManualOpen(true);
+        setPaymentMethod((prev) => (prev === "ikeepay" ? "mobile_money" : prev));
+        setOrderCreated((prev) => ({
+          ...prev,
+          online_payment: { online: false, reason: resp?.reason || "online_unavailable" },
+          payment_info: resp?.payment_info || prev.payment_info,
+        }));
+      }
+    } catch (err) {
+      setDeclareError(err.message || "Impossible d'ouvrir le paiement en ligne.");
+      setManualOpen(true);
+      setPaymentMethod((prev) => (prev === "ikeepay" ? "mobile_money" : prev));
+    }
+  }
 
   async function fetchService() {
     try {
@@ -103,6 +188,10 @@ export default function MboppiBoostOrder() {
       });
       if (resp?.ok) {
         setOrderCreated(resp);
+        setPaid(false);
+        setRefundPending(false);
+        setManualOpen(!resp.checkout_url);
+        if (resp.checkout_url) setCheckoutUrl(resp.checkout_url);
         saveLocalBoostOrder({
           id: resp.order_id,
           token: resp.public_token,
@@ -201,6 +290,53 @@ export default function MboppiBoostOrder() {
               )}
             </p>
 
+            {paid ? (
+              <div className="card mboost-paid-card" style={{ marginTop: 16 }}>
+                <h3>{refundPending ? `↩️ ${t("Remboursement en cours")}` : `✅ ${t("Paiement confirmé")}`}</h3>
+                <p>
+                  {refundPending
+                    ? t(
+                        "Votre paiement a été reçu après l'annulation de la commande. Un remboursement est en cours de traitement."
+                      )
+                    : t(
+                        "Votre paiement a été confirmé. La commande va être transmise au prestataire."
+                      )}
+                </p>
+                <Link to="/mboppi-boost/mes-commandes" className="btn btn-primary">
+                  {refundPending ? t("Voir mes commandes") : t("Suivre ma commande")}
+                </Link>
+              </div>
+            ) : orderCreated.online_payment?.online ? (
+              <div className="card mboost-online-card" style={{ marginTop: 16 }}>
+                <div className="mboost-online-head">
+                  <div>
+                    <h3>💳 {t("Paiement en ligne sécurisé")}</h3>
+                    <p>
+                      {formatAmount(orderCreated.total)} {orderCreated.currency} ·{" "}
+                      {t("Carte bancaire ou Mobile Money via iKeePay")}
+                    </p>
+                  </div>
+                  <span className="mboost-secure-badge">🔒 iKeePay</span>
+                </div>
+                <button type="button" className="btn btn-primary btn-block" onClick={openCheckout}>
+                  {t("Payer maintenant")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-block"
+                  style={{ marginTop: 8 }}
+                  onClick={() => {
+                    setManualOpen(true);
+                    setPaymentMethod((prev) => (prev === "ikeepay" ? "mobile_money" : prev));
+                  }}
+                >
+                  {t("Payer autrement (mobile money / virement)")}
+                </button>
+                {verifying && <p className="hint">{t("Vérification du paiement…")}</p>}
+                {declareError && <p className="error-msg">{declareError}</p>}
+              </div>
+            ) : null}
+
             {declared ? (
               <div className="card" style={{ marginTop: 16 }}>
                 <h3>✅ {t("Paiement déclaré")}</h3>
@@ -213,7 +349,7 @@ export default function MboppiBoostOrder() {
                   {t("Voir mes commandes")}
                 </Link>
               </div>
-            ) : (
+            ) : manualOpen || !orderCreated.online_payment?.online ? (
               <>
                 <div className="card" style={{ marginTop: 16 }}>
                   <h3>💳 {t("Payer votre commande")}</h3>
@@ -282,7 +418,7 @@ export default function MboppiBoostOrder() {
                     <div className="form-row">
                       <label>{t("Moyen utilisé")}</label>
                       <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                        {PAYMENT_METHODS.map((m) => (
+                        {PAYMENT_METHODS.filter((m) => m.value !== "ikeepay").map((m) => (
                           <option key={m.value} value={m.value}>
                             {t(m.label)}
                           </option>
@@ -296,7 +432,7 @@ export default function MboppiBoostOrder() {
                   </form>
                 </div>
               </>
-            )}
+            ) : null}
 
             {!user && (
               <p className="hint" style={{ marginTop: 12 }}>
@@ -311,6 +447,16 @@ export default function MboppiBoostOrder() {
             </Link>
           </div>
         </section>
+        {checkoutUrl && (
+          <IkeepayCheckout
+            checkoutUrl={checkoutUrl}
+            onSuccess={() => {
+              setCheckoutUrl("");
+              verifyPayment();
+            }}
+            onClose={() => setCheckoutUrl("")}
+          />
+        )}
       </main>
     );
   }
@@ -396,13 +542,17 @@ export default function MboppiBoostOrder() {
               />
             </div>
             <div className="form-row">
-              <label>{t("E-mail (optionnel)")}</label>
+              <label>{t("E-mail")}</label>
               <input
                 type="email"
                 value={clientInfo.email || ""}
                 onChange={(e) => handleInfoChange("email", e.target.value)}
+                required
                 maxLength={160}
               />
+              <p className="form-hint">
+                {t("Utilisé pour recevoir la confirmation et le suivi de votre commande.")}
+              </p>
             </div>
 
             <h3>{t("Informations pour la prestation")}</h3>
@@ -439,12 +589,21 @@ export default function MboppiBoostOrder() {
             <div className="form-row">
               <label>{t("Moyen de paiement")}</label>
               <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                {PAYMENT_METHODS.map((m) => (
+                {PAYMENT_METHODS.filter(
+                  (m) => m.value !== "ikeepay" || onlineEnabled !== false
+                ).map((m) => (
                   <option key={m.value} value={m.value}>
                     {t(m.label)}
                   </option>
                 ))}
               </select>
+              {paymentMethod === "ikeepay" && (
+                <p className="form-hint">
+                  {t(
+                    "Vous serez redirigé vers le tunnel sécurisé iKeePay (carte bancaire ou mobile money)."
+                  )}
+                </p>
+              )}
             </div>
 
             <div className="form-total">

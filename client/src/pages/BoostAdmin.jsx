@@ -15,7 +15,16 @@ const STATUS_LABELS = {
   refunded: "Remboursée",
 };
 
-const WORKFLOW_STATUSES = ["paid", "submitted", "processing", "completed", "failed", "cancelled", "refunded"];
+const WORKFLOW_STATUSES = [
+  "paid",
+  "submitted",
+  "processing",
+  "completed",
+  "failed",
+  "cancelled",
+  "refund_pending",
+  "refunded",
+];
 
 function money(value, currency = "XAF") {
   const n = Number(value);
@@ -47,7 +56,14 @@ export default function BoostAdmin() {
   const [balanceBusy, setBalanceBusy] = useState(false);
 
   const [categories, setCategories] = useState([]);
-  const [importForm, setImportForm] = useState({ markup: 1.5, usd_to_xaf: 655.957, category_id: "" });
+  const [importForm, setImportForm] = useState({
+    markup: 1.5,
+    usd_to_xaf: 655.957,
+    category_id: "",
+    types: "default",
+    limit: 0,
+    dry_run: false,
+  });
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
 
@@ -145,10 +161,17 @@ export default function BoostAdmin() {
     setImportResult(null);
     setProviderMessage("");
     try {
+      const types = String(importForm.types || "default")
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean);
       const resp = await api.adminSmmImportCatalog({
         markup: Number(importForm.markup) || 1,
         usd_to_xaf: Number(importForm.usd_to_xaf) || 655.957,
         category_id: importForm.category_id ? Number(importForm.category_id) : null,
+        types: types.length ? types : ["default"],
+        limit: Number(importForm.limit) || 0,
+        dry_run: Boolean(importForm.dry_run),
       });
       setImportResult(resp);
     } catch (err) {
@@ -334,16 +357,23 @@ export default function BoostAdmin() {
                       <td>{money(order.total, order.currency)}</td>
                       <td>
                         <span className="hint">
-                          {order.payment_status === "paid"
+                          {order.status === "refund_pending"
+                            ? t("Remboursement en cours")
+                            : order.status === "refunded" || order.payment_status === "refunded"
+                              ? t("Remboursé")
+                              : order.payment_status === "paid"
                             ? t("Confirmé")
                             : order.payment_status === "declared"
                               ? t("Déclaré")
                               : t("Non payé")}
                         </span>
-                        {order.payment_reference && (
+                        {(order.payment_reference || order.payment_external_reference) && (
                           <div className="hint" style={{ overflowWrap: "anywhere" }}>
-                            Réf. {order.payment_reference}
+                            Réf. {order.payment_reference || order.payment_external_reference}
                           </div>
+                        )}
+                        {order.payment_provider && (
+                          <div className="hint">{order.payment_provider}</div>
                         )}
                       </td>
                       <td>
@@ -548,22 +578,72 @@ export default function BoostAdmin() {
                 ))}
             </select>
           </div>
+          <div className="form-row">
+            <label>{t("Types de services (séparés par virgule)")}</label>
+            <input
+              className="input"
+              type="text"
+              value={importForm.types}
+              onChange={(e) => setImportForm((f) => ({ ...f, types: e.target.value }))}
+              placeholder="default"
+            />
+            <p className="hint">
+              {t("« default » couvre les services standards. Ajoutez d'autres types séparés par une virgule si nécessaire.")}
+            </p>
+          </div>
+          <div className="form-row">
+            <label>{t("Limite (0 = tout importer)")}</label>
+            <input
+              className="input"
+              type="number"
+              min="0"
+              max="20000"
+              step="1"
+              value={importForm.limit}
+              onChange={(e) => setImportForm((f) => ({ ...f, limit: e.target.value }))}
+            />
+          </div>
+          <div className="form-row">
+            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={Boolean(importForm.dry_run)}
+                onChange={(e) => setImportForm((f) => ({ ...f, dry_run: e.target.checked }))}
+              />
+              {t("Simulation (aucun changement en base)")}
+            </label>
+          </div>
           <button
             className="btn btn-primary btn-small"
             type="button"
             onClick={runImport}
             disabled={importing || !provider?.enabled}
           >
-            {importing ? t("Import en cours…") : t("Importer le catalogue")}
+            {importing
+              ? t("Import en cours…")
+              : importForm.dry_run
+                ? t("Simuler l'import")
+                : t("Importer le catalogue")}
           </button>
           {!provider?.enabled && (
             <p className="hint">{t("Activez d'abord le fournisseur et enregistrez sa clé API.")}</p>
           )}
           {importResult && (
             <p className="hint">
-              {t("Importés")} : {importResult.imported} · {t("créés")} : {importResult.created} ·{" "}
-              {t("mis à jour")} : {importResult.updated}
-              {importResult.skipped ? ` · ${t("ignorés")} : ${importResult.skipped}` : ""}
+              {importResult.dry_run ? (
+                <>
+                  {t("Simulation")} : {importResult.would_import ?? 0} {t("services seraient importés")} ·{" "}
+                  {importResult.would_activate ?? 0} {t("activés")} · {importResult.would_hide ?? 0}{" "}
+                  {t("masqués")}
+                  {importResult.skipped ? ` · ${t("ignorés")} : ${importResult.skipped}` : ""}
+                </>
+              ) : (
+                <>
+                  {t("Importés")} : {importResult.imported} · {t("créés")} : {importResult.created} ·{" "}
+                  {t("mis à jour")} : {importResult.updated}
+                  {importResult.skipped ? ` · ${t("ignorés")} : ${importResult.skipped}` : ""}
+                </>
+              )}
             </p>
           )}
         </div>

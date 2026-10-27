@@ -22,6 +22,7 @@ import { MEMBERSHIP_FEES } from "../fees.js";
 import { getMembershipGate } from "./membershipGate.js";
 import { notifyActivationReferralPaid } from "./activationReferral.js";
 import { confirmFcOrderPayment, isFcReference } from "./familicashOrders.js";
+import { completeSmmPayment } from "./smmFulfillment.js";
 import { notifyAdmins } from "./adminNotify.js";
 import { sendPush } from "../push.js";
 
@@ -548,6 +549,62 @@ export async function reconcileDigitalSale(saleId) {
 // Insère d'abord la trace du webhook AVANT tout traitement : même si le
 // traitement échoue ou dépasse le timeout serverless, on garde ce qu'iKeePay
 // a envoyé (c'était l'angle mort : un webhook non journalisé = invisible).
+// Filet de rattrapage MboppiBoost : si le webhook a été perdu, le client sonde
+// le statut de sa commande et on recherche la référence exacte dans les logs
+// non rattachés des dernières 24 h. Aucune réconciliation floue par montant.
+const smmReconcileState = { lastRun: 0 };
+export async function reconcileSmmOrderPayment(orderId) {
+  const order = (
+    await q(
+      `SELECT id, total, currency, status, payment_status, payment_external_reference
+         FROM smm_orders WHERE id = $1`,
+      [orderId]
+    )
+  )[0];
+  if (!order) return { ok: false, reason: "not_found" };
+  if (
+    order.payment_status === "paid" ||
+    !["pending_payment", "cancelled", "failed"].includes(order.status)
+  ) {
+    return { ok: true, status: order.status, already: true };
+  }
+  if (!order.payment_external_reference) return { ok: false, reason: "no_reference" };
+
+  const now = Date.now();
+  if (now - smmReconcileState.lastRun < 5000) {
+    return { ok: false, reason: "cooldown" };
+  }
+  smmReconcileState.lastRun = now;
+
+  const startedAt = Date.now();
+  const logs = await q(
+    `SELECT id, payload FROM payment_webhook_logs
+      WHERE handled = FALSE AND created_at >= now() - interval '24 hours'
+      ORDER BY created_at DESC LIMIT 30`
+  );
+  for (const log of logs) {
+    if (Date.now() - startedAt > 4000) break;
+    let body = log.payload;
+    if (typeof body === "string") {
+      try {
+        body = JSON.parse(body);
+      } catch {
+        continue;
+      }
+    }
+    const n = normalizeWebhook(body);
+    if (!n || n.orderId !== order.payment_external_reference) continue;
+    if (!amountMatches(n.amount, order.total) || !currencyMatches(n.currency, order.currency)) continue;
+    await completeSmmPayment(order.id, n.providerRef || null, "Paiement en ligne iKeePay (réconciliation)");
+    await q(`UPDATE payment_webhook_logs SET handled = TRUE WHERE id = $1`, [log.id]).catch(() => {});
+    const refreshed = (
+      await q(`SELECT status FROM smm_orders WHERE id = $1`, [order.id])
+    )[0];
+    return { ok: true, status: refreshed?.status || "paid", reconciled: true };
+  }
+  return { ok: false, reason: "no_unmatched_webhook" };
+}
+
 async function logWebhookStart({ body, normalized }) {
   try {
     const rows = await q(
@@ -638,6 +695,36 @@ async function handleWebhook(body, normalized) {
       await completeMembershipPayment(membership, providerRef);
     }
     result = { ok: true, kind: "membership", id: membership.id };
+    return result;
+  }
+
+  // Commande MboppiBoost payée en ligne (MBP-BST) ? La référence est unique et
+  // créée avec le checkout. On valide montant + devise, puis on marque la
+  // commande payée. Le dispatch fournisseur est laissé au cron : le webhook
+  // répond vite même si SMM Africa est lent.
+  const smmOrder = (
+    await q(
+      `SELECT id, user_id, service_name, total, currency, status, payment_status
+         FROM smm_orders
+        WHERE payment_external_reference = $1`,
+      [orderId]
+    )
+  )[0];
+  if (smmOrder) {
+    if (
+      !amountMatches(amount, smmOrder.total) ||
+      !currencyMatches(currency, smmOrder.currency)
+    ) {
+      result = { ok: false, reason: "mismatch" };
+      return result;
+    }
+    const completed = await completeSmmPayment(smmOrder.id, providerRef, "Paiement en ligne iKeePay");
+    result = {
+      ok: completed.ok,
+      kind: "smm_boost",
+      id: smmOrder.id,
+      status: completed.order?.status || smmOrder.status,
+    };
     return result;
   }
 

@@ -9,7 +9,7 @@ const { Pool } = pg;
 // Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-10-26-mboppi-boost-platform-v1";
+const DB_INIT_VERSION = "2026-10-26-mboppi-boost-payments-v2";
 const DB_INIT_LOCK = "mboppi-db-init-v1";
 let initDbPromise = null;
 
@@ -963,11 +963,18 @@ async function runInitDb() {
     ALTER TABLE smm_orders ADD COLUMN IF NOT EXISTS public_token TEXT;
     ALTER TABLE smm_orders ADD COLUMN IF NOT EXISTS payment_reference TEXT;
     ALTER TABLE smm_orders ADD COLUMN IF NOT EXISTS payment_declared_at TIMESTAMPTZ;
+    ALTER TABLE smm_orders ADD COLUMN IF NOT EXISTS payment_external_reference TEXT;
+    ALTER TABLE smm_orders ADD COLUMN IF NOT EXISTS payment_provider TEXT;
+    ALTER TABLE smm_orders ADD COLUMN IF NOT EXISTS payment_fallback_at TIMESTAMPTZ;
     CREATE INDEX IF NOT EXISTS idx_smm_orders_user ON smm_orders(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_smm_orders_status ON smm_orders(status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_smm_orders_idempotency ON smm_orders(idempotency_key) WHERE idempotency_key IS NOT NULL;
     CREATE INDEX IF NOT EXISTS idx_smm_orders_external ON smm_orders(external_reference) WHERE external_reference IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_smm_orders_public_token ON smm_orders(public_token) WHERE public_token IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_smm_orders_payment_external
+      ON smm_orders(payment_external_reference) WHERE payment_external_reference IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_smm_orders_pending_payment
+      ON smm_orders(created_at) WHERE status = 'pending_payment';
 
     -- Journal des Ã©vÃ©nements de commande (traÃ§abilitÃ©)
     CREATE TABLE IF NOT EXISTS smm_order_events (

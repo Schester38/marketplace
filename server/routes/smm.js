@@ -23,8 +23,21 @@ import {
   syncSmmOrders,
   addEvent,
   notifySmmUser,
+  completeSmmPayment,
 } from "../services/smmFulfillment.js";
-import { importProviderCatalog } from "../services/smmCatalogImport.js";
+import {
+  addPublicKey,
+  buildInlineCheckoutUrl,
+  genExternalRef,
+  getIkeepayKeys,
+  getPaymentMode,
+  PAYMENT_MODE_AUTO,
+  reconcileSmmOrderPayment,
+} from "../services/ikeepay.js";
+import {
+  importProviderCatalog,
+  previewProviderCatalogImport,
+} from "../services/smmCatalogImport.js";
 import { detectSmmPlatform, SMM_PLATFORM_KEYS } from "../services/smmPlatforms.js";
 import {
   computeSmmTotal,
@@ -284,12 +297,102 @@ router.get(
 router.get(
   "/payment-info",
   ah(async (req, res) => {
-    const instructions = await getSmmPaymentInfo();
-    res.json({ payment_info: instructions });
+    const [instructions, online] = await Promise.all([
+      getSmmPaymentInfo(),
+      smmOnlinePaymentConfig(),
+    ]);
+    res.json({
+      payment_info: instructions,
+      online_payment: {
+        enabled: online.enabled,
+        provider: online.provider,
+        mode: online.mode,
+      },
+    });
   })
 );
 
 /* POST /api/smm/orders — passer une commande (auth optionnelle) */
+const SMM_PAYMENT_REF_PREFIX = "MBP-BST";
+
+async function smmOnlinePaymentConfig() {
+  const [mode, { publicKey }] = await Promise.all([getPaymentMode(), getIkeepayKeys()]);
+  return {
+    mode,
+    publicKey,
+    provider: "ikeepay",
+    enabled: mode === PAYMENT_MODE_AUTO && Boolean(publicKey),
+  };
+}
+
+async function buildSmmCheckout(orderId) {
+  const config = await smmOnlinePaymentConfig();
+  if (!config.enabled) return { online: false, provider: "ikeepay", reason: "online_unavailable" };
+
+  const order = (
+    await q(
+      `SELECT id, total, currency, status, payment_status, payment_external_reference,
+              payment_provider, client_info
+         FROM smm_orders WHERE id = $1`,
+      [orderId]
+    )
+  )[0];
+  if (!order) return { online: false, reason: "not_found" };
+  if (order.payment_status === "paid" || order.status !== "pending_payment") {
+    return { online: true, reason: "already_final", status: order.status };
+  }
+
+  let reference = order.payment_external_reference;
+  if (!reference) {
+    reference = genExternalRef(SMM_PAYMENT_REF_PREFIX);
+    const updated = await q(
+      `UPDATE smm_orders
+          SET payment_external_reference = $1,
+              payment_provider = 'ikeepay',
+              payment_method = 'ikeepay',
+              updated_at = now()
+        WHERE id = $2 AND status = 'pending_payment'
+          AND payment_external_reference IS NULL
+        RETURNING id`,
+      [reference, orderId]
+    );
+    if (!updated.length) {
+      const current = (
+        await q(`SELECT payment_external_reference FROM smm_orders WHERE id = $1`, [orderId])
+      )[0];
+      reference = current?.payment_external_reference || null;
+    } else {
+      await addEvent(
+        orderId,
+        "checkout_created",
+        "pending_payment",
+        "pending_payment",
+        "Checkout iKeePay créé",
+        { provider: "ikeepay", reference }
+      );
+    }
+  }
+  if (!reference) return { online: false, reason: "reference_unavailable" };
+
+  const info = order.client_info && typeof order.client_info === "object" ? order.client_info : {};
+  const checkoutUrl = addPublicKey(
+    buildInlineCheckoutUrl({
+      amount: order.total,
+      currency: order.currency,
+      orderId: reference,
+      email: String(info.email || ""),
+    }),
+    config.publicKey
+  );
+
+  return {
+    online: true,
+    provider: "ikeepay",
+    reference,
+    checkout_url: String(checkoutUrl),
+  };
+}
+
 router.post(
   "/orders",
   authOptional,
@@ -363,11 +466,26 @@ router.post(
     if (!String(info.phone || "").trim() && !userId) {
       return res.status(400).json({ error: "Votre numéro de téléphone est requis." });
     }
+    if (!info.email && req.user?.email) info.email = req.user.email;
+    if (!info.phone && req.user?.phone) info.phone = req.user.phone;
+    const infoEmail = String(info.email || "").trim().toLowerCase();
+    if (!infoEmail) {
+      return res.status(400).json({ error: "Votre adresse e-mail est requise pour le suivi." });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(infoEmail)) {
+      return res.status(400).json({ error: "L'adresse e-mail saisie n'est pas valide." });
+    }
+    info.email = infoEmail;
 
     const unitPrice = Number(svc.price);
     const billingUnit = smmBillingUnit(svc.billing_unit);
     const total = computeSmmTotal(unitPrice, qty, billingUnit);
     const idemKey = idempotency_key || generateIdempotencyKey();
+    const wantsOnline = payment_method === "ikeepay";
+    const onlineConfig = wantsOnline ? await smmOnlinePaymentConfig() : { enabled: false };
+    const storedPaymentMethod = wantsOnline && onlineConfig.enabled ? "ikeepay" : (
+      wantsOnline ? "manual" : payment_method
+    );
 
     if (idempotency_key) {
       const existing = await q(
@@ -403,12 +521,37 @@ router.post(
           total,
           svc.billing_unit,
           JSON.stringify(info),
-          payment_method,
+          storedPaymentMethod,
           idemKey,
           publicToken,
         ]
       )
     )[0];
+
+    if (wantsOnline && !onlineConfig.enabled) {
+      await q(
+        `UPDATE smm_orders SET payment_fallback_at = now(), updated_at = now() WHERE id = $1`,
+        [created.id]
+      );
+    }
+
+    let checkout = null;
+    if (storedPaymentMethod === "ikeepay") {
+      try {
+        checkout = await buildSmmCheckout(created.id);
+      } catch (err) {
+        console.error("[smm checkout]", err.message);
+      }
+      if (!checkout?.online) {
+        await q(
+          `UPDATE smm_orders
+              SET payment_method = 'manual', payment_fallback_at = now(), updated_at = now()
+            WHERE id = $1`,
+          [created.id]
+        );
+        checkout = { online: false, provider: "ikeepay", reason: "checkout_error" };
+      }
+    }
 
     await addEvent(
       created.id,
@@ -425,6 +568,16 @@ router.post(
       amount: total,
     }).catch(() => {});
 
+    notifySmmUser(
+      userId,
+      "Commande MboppiBoost enregistrée",
+      `Votre commande #${created.id} (${svc.name}) a bien été enregistrée. Montant : ${total} ${svc.currency}.`,
+      { orderId: created.id }
+    ).catch(() => {});
+
+    const online = Boolean(checkout?.online && checkout?.checkout_url);
+    const paymentInfo = online ? null : await getSmmPaymentInfo();
+
     res.status(201).json({
       ok: true,
       order_id: created.id,
@@ -438,8 +591,15 @@ router.post(
       billing_unit: billingUnit,
       minimum_quantity: minimumQuantity,
       minimum_total: SMM_MIN_ORDER_TOTAL_XAF,
-      message:
-        "Commande enregistrée. Effectuez le paiement puis déclarez-le avec votre référence de transaction.",
+      payment_method: online ? "ikeepay" : "manual",
+      payment_provider: "ikeepay",
+      online_payment: checkout || { online: false, reason: "manual_selected" },
+      checkout_url: online ? checkout.checkout_url : null,
+      payment_reference: online ? checkout.reference : null,
+      payment_info: paymentInfo,
+      message: online
+        ? "Commande enregistrée. Finalisez le paiement en ligne pour lancer le traitement."
+        : "Commande enregistrée. Effectuez le paiement manuel puis déclarez votre référence de transaction.",
     });
   })
 );
@@ -455,6 +615,7 @@ router.get(
       `SELECT o.id, o.service_id, o.service_name, o.service_price, o.currency,
               o.quantity, o.total, o.billing_unit, o.status, o.payment_status,
               o.provider_status, o.external_reference, o.payment_method,
+              o.payment_provider, o.payment_external_reference, o.paid_at,
               o.created_at, o.updated_at, o.completed_at,
               c.name AS category_name
        FROM smm_orders o
@@ -516,6 +677,75 @@ router.get(
 );
 
 /* POST /api/smm/orders/:id/payment — déclarer un paiement (propriétaire ou token invité) */
+router.post(
+  "/orders/:id/checkout",
+  authOptional,
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ error: "ID de commande invalide" });
+    }
+    const rows = await q(
+      `SELECT id, user_id, status, payment_status FROM smm_orders WHERE id = $1`,
+      [id]
+    );
+    if (!rows.length || !canAccessSmmOrder(req, rows[0])) {
+      return res.status(404).json({ error: "Commande introuvable" });
+    }
+    if (rows[0].payment_status === "paid" || rows[0].status !== "pending_payment") {
+      return res.status(409).json({
+        error: "Cette commande n'attend plus de paiement.",
+        status: rows[0].status,
+      });
+    }
+    const checkout = await buildSmmCheckout(id);
+    if (!checkout.online) {
+      return res.status(200).json({
+        ok: true,
+        online: false,
+        payment_info: await getSmmPaymentInfo(),
+      });
+    }
+    res.json({ ok: true, online: true, ...checkout });
+  })
+);
+
+router.get(
+  "/orders/:id/payment-status",
+  authOptional,
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ error: "ID de commande invalide" });
+    }
+    const rows = await q(`SELECT * FROM smm_orders WHERE id = $1`, [id]);
+    if (!rows.length || !canAccessSmmOrder(req, rows[0])) {
+      return res.status(404).json({ error: "Commande introuvable" });
+    }
+    let order = rows[0];
+    let reconciled = null;
+    if (
+      order.payment_status !== "paid" &&
+      ["pending_payment", "cancelled", "failed"].includes(order.status)
+    ) {
+      reconciled = await reconcileSmmOrderPayment(id).catch(() => null);
+      if (reconciled?.ok) {
+        order = (await q(`SELECT * FROM smm_orders WHERE id = $1`, [id]))[0] || order;
+      }
+    }
+    const settled = order.payment_status === "paid" ||
+      ["paid", "submitted", "processing", "completed", "refund_pending", "refunded"].includes(order.status);
+    res.json({
+      ok: true,
+      order_id: id,
+      status: order.status,
+      payment_status: order.payment_status,
+      paid: settled,
+      reconciled: Boolean(reconciled?.reconciled),
+    });
+  })
+);
+
 router.post(
   "/orders/:id/payment",
   authOptional,
@@ -793,6 +1023,7 @@ router.get(
               o.total, o.billing_unit, o.status, o.payment_status, o.provider_status,
               o.external_reference, o.provider_reference, o.payment_method,
               o.payment_reference, o.payment_declared_at, o.paid_at,
+              o.payment_external_reference, o.payment_provider, o.payment_fallback_at,
               o.client_info, o.created_at, o.updated_at, o.completed_at
        FROM smm_orders o
        LEFT JOIN users u ON u.id = o.user_id
@@ -830,7 +1061,12 @@ router.put(
       `UPDATE smm_orders
        SET status = $1, provider_status = COALESCE($2, provider_status),
            provider_reference = COALESCE($3, provider_reference),
-           payment_status = CASE WHEN $1 = 'paid' THEN 'paid' ELSE payment_status END,
+           payment_status = CASE
+             WHEN $1 = 'paid' THEN 'paid'
+             WHEN $1 = 'refund_pending' THEN 'refund_pending'
+             WHEN $1 = 'refunded' THEN 'refunded'
+             ELSE payment_status
+           END,
            paid_at = CASE WHEN $1 = 'paid' THEN COALESCE(paid_at, now()) ELSE paid_at END,
            updated_at = now(),
            completed_at = CASE WHEN $1 IN ('completed','refunded','cancelled')
@@ -863,8 +1099,9 @@ router.put(
       const label = labels[status] || status;
       await notifySmmUser(
         orderRows[0].user_id,
-        status === "completed" ? "Commande MboppiBoost terminée ✅" : "Mise à jour de votre commande MboppiBoost",
-        `Votre commande #${id} (${orderRows[0].service_name}) est ${label}.`
+        status === "completed" ? "Commande MboppiBoost terminée" : "Mise à jour de votre commande MboppiBoost",
+        `Votre commande #${id} (${orderRows[0].service_name}) est ${label}.`,
+        { orderId: id }
       );
     }
 
@@ -901,27 +1138,17 @@ router.post(
       return res.status(409).json({ error: `Commande ${order.status} : paiement impossible.` });
     }
 
-    await q(
-      `UPDATE smm_orders
-       SET status = 'paid', payment_status = 'paid',
-           payment_reference = COALESCE($1, payment_reference),
-           paid_at = COALESCE(paid_at, now()), updated_at = now()
-       WHERE id = $2`,
-      [req.body.payment_reference || null, id]
-    );
-    await addEvent(
+    const payment = await completeSmmPayment(
       id,
-      "payment_confirmed",
-      order.status,
-      "paid",
-      req.body.admin_note || "Paiement confirmé par l'administration",
-      {}
+      req.body.payment_reference || null,
+      req.body.admin_note || "Paiement confirmé par l'administration"
     );
-    await notifySmmUser(
-      order.user_id,
-      "Paiement MboppiBoost confirmé ✅",
-      `Votre paiement pour la commande #${id} (${order.service_name}) est confirmé.`
-    );
+    if (!payment.ok) {
+      return res.status(409).json({
+        error: "Le paiement de cette commande ne peut plus être confirmé.",
+        status: payment.order?.status || order.status,
+      });
+    }
 
     let dispatch = null;
     if (req.body.dispatch !== false) {
@@ -1095,15 +1322,23 @@ router.post(
       const markup = Number(req.body?.markup) > 0 ? Number(req.body.markup) : 1;
       const usdToXaf = Number(req.body?.usd_to_xaf) > 0 ? Number(req.body.usd_to_xaf) : 655.957;
       const categoryId = req.body?.category_id ? Number(req.body.category_id) : null;
-
-      const items = await adapter.fetchCatalog();
-      const result = await importProviderCatalog(items, {
+      const types = req.body?.types?.length ? req.body.types : ["default"];
+      const limit = Number(req.body?.limit) || 0;
+      const dryRun = req.body?.dry_run === true;
+      const options = {
         markup,
         usdToXaf,
         categoryId,
+        types,
         providerKey: provider,
         providerName: adapter.name || "SMM Africa",
-      });
+      };
+
+      const catalog = await adapter.fetchCatalog();
+      const items = limit > 0 ? catalog.slice(0, limit) : catalog;
+      const result = dryRun
+        ? previewProviderCatalogImport(items, options)
+        : await importProviderCatalog(items, options);
 
       res.json({ ok: true, ...result });
     } catch (err) {

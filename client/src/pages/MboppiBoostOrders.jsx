@@ -5,6 +5,7 @@ import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
 import { listLocalBoostOrders, removeLocalBoostOrder } from "../boostOrders.js";
+import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 
 const STATUS_LABELS = {
   draft: "Brouillon",
@@ -39,6 +40,8 @@ export default function MboppiBoostOrders() {
   const [declaring, setDeclaring] = useState(false);
   const [declareError, setDeclareError] = useState("");
   const [notice, setNotice] = useState("");
+  const [payingId, setPayingId] = useState(null);
+  const [checkout, setCheckout] = useState(null);
 
   useEffect(() => {
     fetchOrders();
@@ -76,6 +79,58 @@ export default function MboppiBoostOrders() {
       [...merged.values()].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
     );
     setLoading(false);
+  }
+
+  async function startOnlinePayment(order) {
+    setPayingId(order.id);
+    setDeclareError("");
+    setNotice("");
+    try {
+      const resp = await api.smmCreateCheckout(order.id, order._token || undefined);
+      if (resp?.online && resp.checkout_url) {
+        setCheckout({ orderId: order.id, token: order._token || null, url: resp.checkout_url });
+      } else {
+        setDeclareId(order.id);
+        setNotice(
+          t(
+            "Le paiement en ligne n'est pas disponible pour cette commande. Déclarez votre paiement mobile money ou contactez le support."
+          )
+        );
+      }
+    } catch (err) {
+      setDeclareError(err.message || "Impossible d'ouvrir le paiement en ligne.");
+    } finally {
+      setPayingId(null);
+    }
+  }
+
+  async function confirmOnlinePayment(orderId, token) {
+    setCheckout(null);
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      try {
+        const resp = await api.smmPaymentStatus(orderId, token || undefined);
+        if (resp?.paid) {
+          const status = resp.status === "refund_pending" ? "refund_pending" : "paid";
+          setOrders((prev) =>
+            prev.map((o) =>
+              Number(o.id) === Number(orderId)
+                ? { ...o, status, payment_status: "paid", paid_at: new Date().toISOString() }
+                : o
+            )
+          );
+          setNotice(
+            status === "refund_pending"
+              ? `Paiement reçu pour la commande #${orderId}. Elle avait été annulée : un remboursement est en cours.`
+              : `Paiement confirmé pour la commande #${orderId}. Merci !`
+          );
+          return;
+        }
+      } catch {
+        /* on réessaie */
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    fetchOrders();
   }
 
   async function declarePayment(order) {
@@ -181,27 +236,43 @@ export default function MboppiBoostOrders() {
                       </span>
                     </td>
                     <td>
-                      {o.payment_status === "paid"
-                        ? t("Confirmé")
-                        : o.payment_status === "declared"
-                          ? t("Déclaré — vérification")
-                          : t("Non payé")}
+                      {o.status === "refund_pending"
+                        ? t("Remboursement en attente")
+                        : o.status === "refunded" || o.payment_status === "refunded"
+                        ? t("Remboursé")
+                        : o.payment_status === "refund_pending"
+                          ? t("Remboursement en attente")
+                          : o.payment_status === "paid"
+                            ? t("Confirmé")
+                            : o.payment_status === "declared"
+                              ? t("Déclaré — vérification")
+                              : t("Non payé")}
                       {o.payment_reference ? <div className="hint">Réf. {o.payment_reference}</div> : null}
                     </td>
                     <td>{new Date(o.created_at).toLocaleDateString("fr-FR")}</td>
                     <td>
                       {["draft", "pending_payment"].includes(o.status) && o.payment_status !== "declared" && (
-                        <button
-                          type="button"
-                          className="btn btn-small"
-                          onClick={() => {
-                            setDeclareId(declareId === o.id ? null : o.id);
-                            setReference("");
-                            setDeclareError("");
-                          }}
-                        >
-                          {t("J'ai payé")}
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="btn btn-small btn-primary"
+                            disabled={payingId === o.id}
+                            onClick={() => startOnlinePayment(o)}
+                          >
+                            {payingId === o.id ? t("Ouverture…") : t("Payer en ligne")}
+                          </button>{" "}
+                          <button
+                            type="button"
+                            className="btn btn-small"
+                            onClick={() => {
+                              setDeclareId(declareId === o.id ? null : o.id);
+                              setReference("");
+                              setDeclareError("");
+                            }}
+                          >
+                            {t("J'ai payǸ")}
+                          </button>
+                        </>
                       )}
                       {declareId === o.id && (
                         <div className="boost-declare">
@@ -251,6 +322,13 @@ export default function MboppiBoostOrders() {
           </div>
         )}
       </section>
+      {checkout && (
+        <IkeepayCheckout
+          checkoutUrl={checkout.url}
+          onSuccess={() => confirmOnlinePayment(checkout.orderId, checkout.token)}
+          onClose={() => setCheckout(null)}
+        />
+      )}
     </main>
   );
 }

@@ -284,7 +284,9 @@ export const smmOrderSchema = z.object({
   service_id: z.coerce.number().int().positive("Service requis"),
   quantity: z.coerce.number().int().min(1, "Quantité minimale 1").default(1),
   client_info: z.record(z.string(), z.any()).default({}),
-  payment_method: z.enum(["mobile_money", "virement", "espece", "manual"]).default("manual"),
+  payment_method: z
+    .enum(["ikeepay", "mobile_money", "moneyfusion", "virement", "espece", "manual"])
+    .default("ikeepay"),
   idempotency_key: z.string().max(200).optional().nullable(),
 });
 
@@ -336,6 +338,13 @@ export const smmImportCatalogSchema = z.object({
   markup: z.coerce.number().min(1).max(10).default(1),
   usd_to_xaf: z.coerce.number().min(1).max(10000).default(655.957),
   category_id: z.coerce.number().int().positive().optional().nullable(),
+  types: z
+    .array(z.string().trim().min(1).max(40))
+    .max(10)
+    .optional()
+    .default(["default"]),
+  limit: z.coerce.number().int().min(0).max(20000).default(0),
+  dry_run: z.boolean().default(false),
 });
 
 export const smmProviderConfigSchema = z.object({

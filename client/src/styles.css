@@ -12255,6 +12255,48 @@ a.step {
   text-align: right;
   overflow-wrap: anywhere;
 }
+.mboost-online-card {
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 7%, var(--card)),
+    var(--card)
+  );
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.07);
+}
+.mboost-online-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.mboost-online-head h3 {
+  margin: 0 0 4px;
+}
+.mboost-online-head p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+.mboost-secure-badge {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.mboost-paid-card {
+  border: 1px solid color-mix(in srgb, #16a34a 35%, var(--border));
+  background: color-mix(in srgb, #16a34a 6%, var(--card));
+}
+@media (max-width: 480px) {
+  .mboost-online-head {
+    flex-direction: column;
+  }
+}
 
 @media (max-width: 900px) {
   .mboost-hero {

@@ -13,6 +13,14 @@
     {
       "path": "/api/cron/campaigns",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/smm-sync",
+      "schedule": "15 4 * * *"
+    },
+    {
+      "path": "/api/cron/smm-cleanup",
+      "schedule": "45 4 * * *"
     }
   ],
   "routes": [

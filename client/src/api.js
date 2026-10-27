@@ -589,6 +589,15 @@ export const api = {
   smmOrders: () => request("/smm/orders"),
   smmOrder: (id, token) =>
     request(`/smm/orders/${encodeURIComponent(id)}${token ? `?token=${encodeURIComponent(token)}` : ""}`),
+  smmCreateCheckout: (id, token) =>
+    request(
+      `/smm/orders/${encodeURIComponent(id)}/checkout${token ? `?token=${encodeURIComponent(token)}` : ""}`,
+      { method: "POST", body: JSON.stringify({ token }) }
+    ),
+  smmPaymentStatus: (id, token) =>
+    request(
+      `/smm/orders/${encodeURIComponent(id)}/payment-status${token ? `?token=${encodeURIComponent(token)}` : ""}`
+    ),
   smmDeclarePayment: (id, payload) =>
     request(`/smm/orders/${encodeURIComponent(id)}/payment`, {
       method: "POST",

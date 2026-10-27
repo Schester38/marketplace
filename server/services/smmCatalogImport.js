@@ -79,6 +79,19 @@ function normalizeItems(items, options) {
   return { rows, skipped, total: (items || []).length };
 }
 
+export function previewProviderCatalogImport(items, options = {}) {
+  const { rows, skipped, total } = normalizeItems(items, options);
+  return {
+    dry_run: true,
+    imported: 0,
+    would_import: rows.length,
+    would_activate: rows.filter((row) => row.status === "active").length,
+    would_hide: rows.filter((row) => row.status !== "active").length,
+    skipped,
+    source_total: total,
+  };
+}
+
 async function ensureProvider(tx, providerKey, providerName) {
   const rows = await tx.query(`SELECT id FROM smm_providers WHERE provider_key = $1`, [providerKey]);
   if (rows.length) return rows[0].id;
