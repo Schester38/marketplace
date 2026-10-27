@@ -24,7 +24,9 @@ async function cronAuthorized(req, res) {
   const envSecret = process.env.CRON_SECRET;
   if (envSecret && cronTokenOk(provided, envSecret)) return true;
   try {
-    return cronTokenOk(provided, await getCronSecret());
+    const ok = cronTokenOk(provided, await getCronSecret());
+    if (!ok) res.status(403).json({ error: "invalid_cron_token" });
+    return ok;
   } catch (err) {
     console.error("[cron] lecture du secret impossible :", err.message);
     res.status(503).json({ error: "cron_secret_unavailable" });
