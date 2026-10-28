@@ -60,6 +60,7 @@ export default function BoostAdmin() {
     baseUrl: "https://smm.africa/api/v3",
     timeoutMs: 30000,
     apiKey: "",
+    marginPercent: 50,
   });
   const [savingProvider, setSavingProvider] = useState(false);
   const [providerMessage, setProviderMessage] = useState("");
@@ -128,7 +129,9 @@ export default function BoostAdmin() {
         baseUrl: resp.config?.baseUrl || "https://smm.africa/api/v3",
         timeoutMs: Number(resp.config?.timeoutMs) || 30000,
         apiKey: "",
+        marginPercent: Math.round(((Number(resp.markup) || 1.5) - 1) * 100),
       });
+      setImportForm((f) => ({ ...f, markup: Number(resp.markup) || f.markup }));
     } catch (err) {
       setProviderMessage(err.message || "Configuration fournisseur indisponible.");
     }
@@ -214,6 +217,7 @@ export default function BoostAdmin() {
         smm_provider_key: providerForm.key,
         smm_api_base_url: providerForm.baseUrl,
         smm_api_timeout: Number(providerForm.timeoutMs) || 30000,
+        smm_markup: 1 + (Number(providerForm.marginPercent) || 0) / 100,
         ...(providerForm.apiKey ? { smm_api_key: providerForm.apiKey } : {}),
       });
       setProviderMessage("Configuration fournisseur enregistrée.");
@@ -731,6 +735,20 @@ export default function BoostAdmin() {
                 placeholder={provider?.has_api_key ? "••••••••" : t("Clé fournisseur")}
               />
             </div>
+            <div className="form-row">
+              <label>{t("Marge (%)")}</label>
+              <input
+                className="input"
+                type="number"
+                min="0"
+                max="900"
+                step="1"
+                value={providerForm.marginPercent}
+                onChange={(e) =>
+                  setProviderForm((f) => ({ ...f, marginPercent: e.target.value }))
+                }
+              />
+            </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="btn btn-primary btn-small" type="submit" disabled={savingProvider}>
                 {savingProvider ? t("Enregistrement…") : t("Enregistrer")}
@@ -747,6 +765,16 @@ export default function BoostAdmin() {
             {balance && (
               <p className="hint" style={{ marginTop: 8 }}>
                 {t("Solde fournisseur")} : <strong>{balance.balance}</strong> {balance.currency}
+                {" · "}
+                {t("Marge")} : <strong>{Number(providerForm.marginPercent) || 0}%</strong>
+                {" · "}
+                {t("Gain")} :{" "}
+                <strong>
+                  {usd(
+                    (Number(balance.balance) || 0) *
+                      ((Number(providerForm.marginPercent) || 0) / 100)
+                  )}
+                </strong>
               </p>
             )}
             {providerMessage && <p className="hint">{providerMessage}</p>}
