@@ -607,6 +607,8 @@ export const api = {
     return request(`/smm/orders${qs ? `?${qs}` : ""}`);
   },
 
+  smmSyncMine: (limit = 20) =>
+    request("/smm/orders/sync-mine", { method: "POST", body: JSON.stringify({ limit }) }),
   smmOrder: (id, token) =>
     request(`/smm/orders/${encodeURIComponent(id)}${token ? `?token=${encodeURIComponent(token)}` : ""}`),
   smmCreateCheckout: (id, token) =>

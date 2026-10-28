@@ -405,21 +405,28 @@ export async function dispatchSmmOrder(orderId) {
  * Met à jour les commandes en cours depuis le fournisseur SMM.
  * Limité aux commandes déjà transmises et possédant une référence externe.
  */
-export async function syncSmmOrders(limit = 20) {
+export async function syncSmmOrders(limit = 20, userId = null) {
   const { provider, adapter } = await getActiveProviderConfig();
   if (!provider || !adapter || adapter instanceof NoProviderAdapter) {
     return { ok: false, error: "Aucun fournisseur SMM configuré.", checked: 0, updated: 0 };
   }
 
   const max = Math.min(Math.max(Number(limit) || 20, 1), 50);
+  const params = [max];
+  let userFilter = "";
+  if (userId) {
+    params.push(Number(userId));
+    userFilter = `AND user_id = $${params.length}`;
+  }
   const rows = await q(
     `SELECT id, user_id, service_name, status, provider_status, external_reference
      FROM smm_orders
      WHERE status IN ('submitted', 'processing')
        AND external_reference IS NOT NULL
+       ${userFilter}
      ORDER BY updated_at ASC
      LIMIT $1`,
-    [max]
+    params
   );
 
   let updated = 0;

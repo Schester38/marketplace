@@ -72,6 +72,24 @@ export default function MboppiBoostOrders() {
 
   useEffect(() => {
     fetchOrders();
+    if (!user) return;
+    let cancelled = false;
+    const tick = async () => {
+      try {
+        const res = await api.smmSyncMine(20);
+        if (cancelled) return;
+        if (res && (res.updated || 0) > 0) {
+          fetchOrders({ silent: true, reset: true });
+        }
+      } catch {
+        /* best-effort */
+      }
+    };
+    const id = setInterval(tick, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -342,7 +360,7 @@ export default function MboppiBoostOrders() {
           <input type="number" value={minAmount} onChange={(e)=>setMinAmount(e.target.value)} className="boost-input" placeholder="Montant min" />
           <input type="number" value={maxAmount} onChange={(e)=>setMaxAmount(e.target.value)} className="boost-input" placeholder="Montant max" />
           <select value={sortOrder} onChange={(e)=>setSortOrder(e.target.value)} className="boost-input">
-            <option value="date_desc">Date (récent)</option>
+            <option value="date_desc">Date (rï¿½cent)</option>
             <option value="date_asc">Date (ancien)</option>
             <option value="total_desc">Montant (desc)</option>
             <option value="total_asc">Montant (asc)</option>
@@ -548,7 +566,7 @@ export default function MboppiBoostOrders() {
             })}
           {hasMore && (
             <button type="button" className="boost-page-btn" onClick={() => fetchOrders({ reset: false, silent: true })} disabled={loadingMore}>
-              {loadingMore ? t("Chargement…") : t("Charger la suite")}
+              {loadingMore ? t("Chargementï¿½") : t("Charger la suite")}
             </button>
           )}
           </div>

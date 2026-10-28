@@ -935,6 +935,22 @@ router.get(
 );
 
 
+/* POST /api/smm/orders/sync-mine */
+router.post(
+  "/orders/sync-mine",
+  authRequired,
+  ah(async (req, res) => {
+    const userId = req.user.id;
+    const limit = Math.min(Math.max(Number(req.body?.limit) || 20, 1), 50);
+    try {
+      const { syncSmmOrders } = await import("../services/smmFulfillment.js");
+      const result = await syncSmmOrders(limit, userId);
+      res.json({ ok: true, ...result });
+    } catch (err) {
+      res.status(500).json({ ok: false, error: err.message || "sync_failed" });
+    }
+  })
+);
 /* GET /api/smm/orders/:id — détail d'une commande (propriétaire ou token invité) */
 router.get(
   "/orders/:id",
