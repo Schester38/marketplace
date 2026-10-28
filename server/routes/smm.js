@@ -826,13 +826,86 @@ router.post(
   })
 );
 
-/* GET /api/smm/orders — mes commandes (auth requise) */
+﻿/* GET /api/smm/orders — mes commandes (auth requise) */
 router.get(
   "/orders",
   authRequired,
   ah(async (req, res) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
+    const status = (req.query.status || "").toString().trim();
+    const from = (req.query.from || "").toString().trim();
+    const to = (req.query.to || "").toString().trim();
+    const minTotal = (req.query.min_total || req.query.min_amount || "").toString().trim();
+    const maxTotal = (req.query.max_total || req.query.max_amount || "").toString().trim();
+    const sort = (req.query.sort || "date_desc").toString().trim();
+    const cursorRaw = (req.query.cursor || "").toString().trim();
+
+    const where = ["o.user_id = $1"];
+    const params = [req.user.id];
+    const add = (sql, val) => { params.push(val); where.push(sql.replace("?", `$${params.length}`)); };
+
+    if (status && status !== "all") add("o.status = ?", status);
+    if (from) add("o.created_at >= ?::timestamptz", from);
+    if (to) {
+      const toVal = /^\d{4}-\d{2}-\d{2}$/.test(to) ? `${to} 23:59:59.999` : to;
+      add("o.created_at <= ?::timestamptz", toVal);
+    }
+    if (minTotal && !isNaN(Number(minTotal))) add("o.total >= ?", Number(minTotal));
+    if (maxTotal && !isNaN(Number(maxTotal))) add("o.total <= ?", Number(maxTotal));
+
+    let useCursor = false;
+    let cursorTs = null;
+    let cursorId = null;
+    if (cursorRaw) {
+      try {
+        const decoded = Buffer.from(cursorRaw, "base64").toString("utf8");
+        const parts = decoded.split("|");
+        if (parts.length === 2) {
+          cursorTs = parts[0];
+          cursorId = Number(parts[1]);
+          if (Number.isFinite(cursorId)) useCursor = true;
+        }
+      } catch {}
+    }
+    if (useCursor) {
+      params.push(cursorTs, cursorId);
+      const tsIdx = params.length - 1;
+      const idIdx = params.length;
+      where.push(`(o.created_at < $${tsIdx}::timestamptz OR (o.created_at = $${tsIdx}::timestamptz AND o.id < $${idIdx}))`);
+    }
+
+    const orderBy =
+      sort === "date_asc" ? "o.created_at ASC, o.id ASC" :
+      sort === "total_desc" ? "o.total DESC, o.id DESC" :
+      sort === "total_asc" ? "o.total ASC, o.id ASC" :
+      "o.created_at DESC, o.id DESC";
+
+    const whereSql = `WHERE ${where.join(" AND ")}`;
+
+    const countParams = [req.user.id];
+    const countWhere = ["o.user_id = $1"];
+    const addC = (sql, val) => { countParams.push(val); countWhere.push(sql.replace("?", `$${countParams.length}`)); };
+    if (status && status !== "all") addC("o.status = ?", status);
+    if (from) addC("o.created_at >= ?::timestamptz", from);
+    if (to) {
+      const toVal = /^\d{4}-\d{2}-\d{2}$/.test(to) ? `${to} 23:59:59.999` : to;
+      addC("o.created_at <= ?::timestamptz", toVal);
+    }
+    if (minTotal && !isNaN(Number(minTotal))) addC("o.total >= ?", Number(minTotal));
+    if (maxTotal && !isNaN(Number(maxTotal))) addC("o.total <= ?", Number(maxTotal));
+    const countRows = await q(`SELECT COUNT(*)::int AS c FROM smm_orders o ${countWhere.length ? "WHERE " + countWhere.join(" AND ") : ""}`, countParams);
+    const total = countRows[0]?.c || 0;
+
+    const fetchLimit = limit + 1;
+    const mainParams = [...params];
+    let paginationSql = `LIMIT $${mainParams.length + 1}`;
+    mainParams.push(fetchLimit);
+    if (!useCursor) {
+      mainParams.push(offset);
+      paginationSql += ` OFFSET $${mainParams.length}`;
+    }
+
     const rows = await q(
       `SELECT o.id, o.service_id, o.service_name, o.service_price, o.currency,
               o.quantity, o.total, o.billing_unit, o.status, o.payment_status,
@@ -843,27 +916,24 @@ router.get(
        FROM smm_orders o
        LEFT JOIN smm_services s ON s.id = o.service_id
        LEFT JOIN smm_categories c ON c.id = s.category_id
-       WHERE o.user_id = $1
-       ORDER BY o.created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [req.user.id, limit, offset]
+       ${whereSql}
+       ORDER BY ${orderBy}
+       ${paginationSql}`,
+      mainParams
     );
-    res.json({ orders: rows, limit, offset });
+
+    const hasMore = rows.length > limit;
+    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+    let nextCursor = null;
+    if (hasMore && pageRows.length) {
+      const last = pageRows[pageRows.length - 1];
+      nextCursor = Buffer.from(`${last.created_at}|${last.id}`).toString("base64");
+    }
+
+    res.json({ orders: pageRows, limit, offset: useCursor ? null : offset, total, has_more: hasMore, next_cursor: nextCursor });
   })
 );
 
-function smmCallerToken(req) {
-  return (
-    String(req.query?.token || req.body?.token || req.headers["x-smm-token"] || "").trim() || null
-  );
-}
-
-function canAccessSmmOrder(req, order) {
-  if (!order) return false;
-  if (req.user?.id && Number(order.user_id) === Number(req.user.id)) return true;
-  const token = smmCallerToken(req);
-  return !!(token && order.public_token && token === order.public_token);
-}
 
 /* GET /api/smm/orders/:id — détail d'une commande (propriétaire ou token invité) */
 router.get(

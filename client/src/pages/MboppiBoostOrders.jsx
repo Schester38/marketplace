@@ -56,9 +56,28 @@ export default function MboppiBoostOrders() {
   const [orderDetails, setOrderDetails] = useState({});
   const [detailLoadingId, setDetailLoadingId] = useState(null);
 
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
+  const [sortOrder, setSortOrder] = useState("date_desc");
+  const [serverOrders, setServerOrders] = useState([]);
+  const [localOrders, setLocalOrders] = useState([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [cursor, setCursor] = useState(null);
+  const [total, setTotal] = useState(0);
+  const [offset, setOffset] = useState(0);
+
   useEffect(() => {
     fetchOrders();
   }, [user]);
+
+  useEffect(() => {
+    fetchOrders({ reset: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, dateFrom, dateTo, minAmount, maxAmount, sortOrder]);
 
   async function toggleDetail(order) {
     if (expandedId === order.id) {
@@ -80,42 +99,59 @@ export default function MboppiBoostOrders() {
   }
 
 
-  async function fetchOrders({ silent = false } = {}) {
+  async function fetchOrders({ silent = false, reset = true } = {}) {
     if (silent) setRefreshing(true);
-    else setLoading(true);
+    else if (reset) setLoading(true);
+    else setLoadingMore(true);
     setError("");
-    const merged = new Map();
-
+    const params = {
+      limit: 20,
+      status: statusFilter,
+      from: dateFrom,
+      to: dateTo,
+      min_total: minAmount,
+      max_total: maxAmount,
+      sort: sortOrder,
+    };
+    if (!reset) params.offset = offset;
     try {
+      const merged = new Map();
       if (user) {
         try {
-          const resp = await api.smmOrders();
+          const resp = await api.smmOrders(params);
           for (const order of resp.orders || []) merged.set(Number(order.id), { ...order, _token: null });
+          setHasMore(!!resp.has_more);
+          setTotal(resp.total || 0);
+          setOffset((resp.offset != null ? resp.offset : 0) + (resp.orders || []).length);
+          setCursor(resp.next_cursor || null);
         } catch (err) {
           setError(err.message || "Impossible de charger vos commandes.");
         }
       }
-
-      const locals = listLocalBoostOrders();
-      for (const local of locals) {
-        if (merged.has(Number(local.id))) {
-          merged.get(Number(local.id))._token = local.token;
-          continue;
-        }
-        try {
-          const resp = await api.smmOrder(local.id, local.token);
-          if (resp.order) merged.set(Number(resp.order.id), { ...resp.order, _token: local.token });
-        } catch (err) {
-          if (err?.status === 404) removeLocalBoostOrder(local.id);
+      if (reset) {
+        const locals = listLocalBoostOrders();
+        for (const local of locals) {
+          try {
+            const resp = await api.smmOrder(local.id, local.token);
+            if (resp.order) {
+              const o = { ...resp.order, _token: local.token };
+              if (!merged.has(Number(o.id))) merged.set(Number(o.id), o);
+            }
+          } catch (err) {
+            if (err?.status === 404) removeLocalBoostOrder(local.id);
+          }
         }
       }
-
-      setOrders(
-        [...merged.values()].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-      );
+      const list = [...merged.values()];
+      if (reset) {
+        setOrders(list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+      } else {
+        setOrders((prev) => [...prev, ...list].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
+      }
     } finally {
       if (silent) setRefreshing(false);
-      else setLoading(false);
+      else if (reset) setLoading(false);
+      else setLoadingMore(false);
     }
   }
 
@@ -295,6 +331,23 @@ export default function MboppiBoostOrders() {
             </Link>
           </div>
         )}
+
+        <div className="boost-orders-filters" style={{display:"flex",flexWrap:"wrap",gap:"8px",marginBottom:"12px"}}>
+          <select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} className="boost-input">
+            <option value="all">Tous les statuts</option>
+            {Object.keys(STATUS_LABELS).map((s)=>(<option key={s} value={s}>{STATUS_LABELS[s]}</option>))}
+          </select>
+          <input type="date" value={dateFrom} onChange={(e)=>setDateFrom(e.target.value)} className="boost-input" placeholder="Du" />
+          <input type="date" value={dateTo} onChange={(e)=>setDateTo(e.target.value)} className="boost-input" placeholder="Au" />
+          <input type="number" value={minAmount} onChange={(e)=>setMinAmount(e.target.value)} className="boost-input" placeholder="Montant min" />
+          <input type="number" value={maxAmount} onChange={(e)=>setMaxAmount(e.target.value)} className="boost-input" placeholder="Montant max" />
+          <select value={sortOrder} onChange={(e)=>setSortOrder(e.target.value)} className="boost-input">
+            <option value="date_desc">Date (récent)</option>
+            <option value="date_asc">Date (ancien)</option>
+            <option value="total_desc">Montant (desc)</option>
+            <option value="total_asc">Montant (asc)</option>
+          </select>
+        </div>
 
         {orders.length === 0 && !error && (
           <div className="boost-empty boost-fade-up">
@@ -493,6 +546,11 @@ export default function MboppiBoostOrders() {
                 </article>
               );
             })}
+          {hasMore && (
+            <button type="button" className="boost-page-btn" onClick={() => fetchOrders({ reset: false, silent: true })} disabled={loadingMore}>
+              {loadingMore ? t("Chargement…") : t("Charger la suite")}
+            </button>
+          )}
           </div>
         )}
 

@@ -592,7 +592,21 @@ export const api = {
     request(`/smm/wallet/topups/${encodeURIComponent(reference)}`),
   smmCreateOrder: (payload) =>
     request("/smm/orders", { method: "POST", body: JSON.stringify(payload) }),
-  smmOrders: () => request("/smm/orders"),
+  smmOrders: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.limit) q.set("limit", params.limit);
+    if (params.offset != null) q.set("offset", params.offset);
+    if (params.status && params.status !== "all") q.set("status", params.status);
+    if (params.from) q.set("from", params.from);
+    if (params.to) q.set("to", params.to);
+    if (params.min_total != null && params.min_total !== "") q.set("min_total", params.min_total);
+    if (params.max_total != null && params.max_total !== "") q.set("max_total", params.max_total);
+    if (params.sort) q.set("sort", params.sort);
+    if (params.cursor) q.set("cursor", params.cursor);
+    const qs = q.toString();
+    return request(`/smm/orders${qs ? `?${qs}` : ""}`);
+  },
+
   smmOrder: (id, token) =>
     request(`/smm/orders/${encodeURIComponent(id)}${token ? `?token=${encodeURIComponent(token)}` : ""}`),
   smmCreateCheckout: (id, token) =>
