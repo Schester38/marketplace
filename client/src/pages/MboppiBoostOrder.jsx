@@ -339,7 +339,15 @@ export default function MboppiBoostOrder() {
                   type="number"
                   min={minQty}
                   value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value) || minQty)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setQuantity("");
+                    } else {
+                      const num = Number(val);
+                      if (!isNaN(num)) setQuantity(num);
+                    }
+                  }}
                   required
                 />
                 <span className="unit-price">
