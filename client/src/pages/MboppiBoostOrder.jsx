@@ -4,6 +4,8 @@ import Seo from "../components/Seo.jsx";
 import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
+import { saveLocalBoostOrder } from "../boostOrders.js";
+import { BASE_URL } from "../config.js";
 
 const formatAmount = (value) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(Number(value) || 0);
@@ -135,6 +137,14 @@ export default function MboppiBoostOrder() {
       });
       if (resp?.ok && resp?.paid) {
         setOrderCreated(resp);
+        saveLocalBoostOrder({
+          id: resp.order_id,
+          token: resp.public_token,
+          service_name: service?.name,
+          total: resp.total,
+          currency: resp.currency,
+          created_at: new Date().toISOString(),
+        });
       } else {
         setError(resp?.message || "Le paiement n'a pas été confirmé. Veuillez réessayer.");
       }
@@ -238,6 +248,11 @@ export default function MboppiBoostOrder() {
                 </div>
               )}
             </div>
+            {orderCreated.public_token && (
+              <p className="boost-hint" style={{ overflowWrap: "anywhere" }}>
+                {BASE_URL}/mboppi-boost/suivi/{orderCreated.order_id}?token={orderCreated.public_token}
+              </p>
+            )}
             <p className="boost-hint">
               {t("Retrouvez le suivi de votre commande dans votre espace MboppiBoost.")}
             </p>

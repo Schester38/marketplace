@@ -4,6 +4,7 @@ export default {
     "./src/pages/MboppiBoost.jsx",
     "./src/pages/MboppiBoostOrder.jsx",
     "./src/pages/MboppiBoostOrders.jsx",
+    "./src/pages/MboppiBoostTrack.jsx",
     "./src/pages/MboppiBoostWallet.jsx",
     "./src/pages/BoostAdmin.jsx",
     "./src/components/IkeepayCheckout.jsx",

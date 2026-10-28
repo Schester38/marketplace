@@ -982,6 +982,9 @@ router.get(
       return res.status(404).json({ error: "Commande introuvable" });
     }
     const order = { ...rows[0] };
+    const isOwner = !!(req?.user?.id && order.user_id && Number(req.user.id) === Number(order.user_id));
+    const isAdmin = req?.user?.role === "admin";
+    if (isOwner || isAdmin) order.tracking_token = rows[0].public_token;
     delete order.public_token;
     const events = await q(
       `SELECT event_type, old_status, new_status, message, created_at, provider_payload

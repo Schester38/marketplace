@@ -4,6 +4,7 @@ import Seo from "../components/Seo.jsx";
 import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
+import { BASE_URL } from "../config.js";
 import { listLocalBoostOrders, removeLocalBoostOrder } from "../boostOrders.js";
 import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
 
@@ -509,6 +510,30 @@ export default function MboppiBoostOrders() {
                       <strong>{o.quantity ?? "—"}</strong>
                     </div>
                   </div>
+
+                  {(() => {
+                    const shareToken = o._token || orderDetails[o.id]?.order?.tracking_token || orderDetails[o.id]?.tracking_token;
+                    const shareUrl = shareToken
+                      ? `${BASE_URL}/mboppi-boost/suivi/${o.id}?token=${encodeURIComponent(shareToken)}`
+                      : "";
+                    return shareUrl ? (
+                      <button
+                        type="button"
+                        className="boost-btn boost-btn-secondary boost-btn-sm"
+                        style={{ marginTop: 8, marginRight: 8 }}
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(shareUrl);
+                            setNotice(t("Lien de suivi copié."));
+                          } catch {
+                            setNotice(shareUrl);
+                          }
+                        }}
+                      >
+                        {t("Copier le lien de suivi")}
+                      </button>
+                    ) : null;
+                  })()}
 
                   <button
                     type="button"
