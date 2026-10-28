@@ -683,30 +683,12 @@ router.post(
     }
 
     const qty = Number(quantity || 1);
-    const limits = svc.limits && typeof svc.limits === "object" ? svc.limits : {};
-    const minQty = Number(limits.min);
-    const maxQty = Number(limits.max);
-    if (Number.isFinite(minQty) && minQty > 0 && qty < minQty) {
-      return res.status(400).json({ error: `Quantité minimale : ${minQty}` });
-    }
-    if (Number.isFinite(maxQty) && maxQty > 0 && qty > maxQty) {
-      return res.status(400).json({ error: `Quantité maximale : ${maxQty}` });
-    }
+    // Quantité libre : minimum 1, maximum illimité (quel que soit le service).
+    const minQty = 1;
+    const maxQty = Infinity;
 
-    const minimumQuantity = minimumSmmQuantity({
-      price: svc.price,
-      billingUnit: svc.billing_unit,
-      min: minQty,
-      currency: svc.currency,
-    });
-    if (minimumQuantity > qty) {
-      return res.status(400).json({
-        error: `Montant minimum de commande : ${SMM_MIN_ORDER_TOTAL_XAF} ${svc.currency}. Quantité minimale : ${minimumQuantity}.`,
-        minimum_quantity: minimumQuantity,
-        minimum_total: SMM_MIN_ORDER_TOTAL_XAF,
-        currency: svc.currency,
-      });
-    }
+    // Quantité minimale de commande désactivée : la quantité est libre (min 1, max infini).
+    const minimumQuantity = 1;
 
     if (svc.is_automated && !String(info.profile_url || info.link || "").trim()) {
       return res.status(400).json({

@@ -853,8 +853,7 @@ export default function MboppiBoost() {
                 <input
                   id="boost-quantity"
                   type="number"
-                  min={selected?.min || 1}
-                  max={selected?.max || undefined}
+                  min={1}
                   step={selected?.step || 1}
                   value={quantity}
                   onChange={(e) => {

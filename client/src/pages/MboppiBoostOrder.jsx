@@ -194,13 +194,8 @@ export default function MboppiBoostOrder() {
   const billingUnit = Number(service.billing_unit) > 0 ? Number(service.billing_unit) : 1000;
   const unitPrice = Number(service.price || 0);
   const total = Math.round(((unitPrice * Number(quantity)) / billingUnit) * 100) / 100;
-  const providerMin = Number(service.limits?.min);
-  const minimumTotalQty = Number(service.min_total_quantity);
-  const minQty = Math.max(
-    Number.isFinite(providerMin) && providerMin > 0 ? providerMin : 1,
-    Number.isFinite(minimumTotalQty) && minimumTotalQty > 0 ? minimumTotalQty : 1
-  );
-  const maxQty = Number(service.limits?.max);
+  const minQty = 1;
+  const maxQty = Infinity;
   const minimumTotal = Math.round(((unitPrice * minQty) / billingUnit) * 100) / 100;
   const walletBalance = Number(wallet?.wallet?.balance_usd) || 0;
   const walletEstimate = convertToUsd(total, service.currency, wallet?.fx?.rates);
