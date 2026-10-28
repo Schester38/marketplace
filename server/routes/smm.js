@@ -148,7 +148,7 @@ function fallbackCategories() {
   }));
 }
 
-function fallbackServicesPage({ categoryId, platform, search, page, limit }) {
+function fallbackServicesPage({ categoryId, platform, search, minPrice, maxPrice, page, limit }) {
   const needle = search.toLowerCase();
   const filtered = DEFAULT_SERVICES_WITH_CATEGORIES.filter((service) => {
     if (categoryId && Number(service.category_id) !== Number(categoryId)) return false;
@@ -161,6 +161,9 @@ function fallbackServicesPage({ categoryId, platform, search, page, limit }) {
     ) {
       return false;
     }
+    const price = Number(service.price);
+    if (Number.isFinite(minPrice) && price < Number(minPrice)) return false;
+    if (Number.isFinite(maxPrice) && price > Number(maxPrice)) return false;
     return true;
   });
   const total = filtered.length;
@@ -172,7 +175,7 @@ function fallbackServicesPage({ categoryId, platform, search, page, limit }) {
   };
 }
 
-function publicServiceWhere({ categoryId, platform, search }) {
+function publicServiceWhere({ categoryId, platform, search, minPrice, maxPrice }) {
   const where = [
     "s.status = 'active'",
     "c.is_active = TRUE",
@@ -190,8 +193,18 @@ function publicServiceWhere({ categoryId, platform, search }) {
   if (search) {
     params.push(`%${search}%`);
     where.push(
-      `(s.name ILIKE $${params.length} OR c.name ILIKE $${params.length} OR COALESCE(s.short_description, '') ILIKE $${params.length})`
+      `(s.name ILIKE $${params.length} OR c.name ILIKE $${params.length} OR COALESCE(s.short_description, '') ILIKE $${params.length} OR COALESCE(s.description, '') ILIKE $${params.length})`
     );
+  }
+  const minP = Number(minPrice);
+  if (Number.isFinite(minP) && minP >= 0) {
+    params.push(minP);
+    where.push(`s.price >= $${params.length}`);
+  }
+  const maxP = Number(maxPrice);
+  if (Number.isFinite(maxP) && maxP >= 0) {
+    params.push(maxP);
+    where.push(`s.price <= $${params.length}`);
   }
   return { where: where.join(" AND "), params };
 }
@@ -241,7 +254,11 @@ router.get(
       Number.isFinite(rawCategoryId) && rawCategoryId > 0 ? Math.trunc(rawCategoryId) : null;
     const rawPlatform = String(req.query.platform || "").trim().toLowerCase();
     const platform = SMM_PLATFORM_KEYS.includes(rawPlatform) ? rawPlatform : null;
-    const filters = { categoryId, platform, search, page, limit };
+    const minPriceRaw = Number(req.query.min_price);
+    const maxPriceRaw = Number(req.query.max_price);
+    const minPrice = Number.isFinite(minPriceRaw) && minPriceRaw >= 0 ? minPriceRaw : undefined;
+    const maxPrice = Number.isFinite(maxPriceRaw) && maxPriceRaw >= 0 ? maxPriceRaw : undefined;
+    const filters = { categoryId, platform, search, minPrice, maxPrice, page, limit };
     const { where, params } = publicServiceWhere(filters);
 
     try {

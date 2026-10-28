@@ -199,6 +199,15 @@ export default function MboppiBoost() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [favorites, setFavorites] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("mboppi_boost_favorites") || "[]"); } catch { return []; }
+  });
+  const [recentIds, setRecentIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("mboppi_boost_recent") || "[]"); } catch { return []; }
+  });
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [target, setTarget] = useState("");
@@ -243,6 +252,8 @@ export default function MboppiBoost() {
         search,
         category_id: categoryFilter !== "all" ? categoryFilter : undefined,
         platform: platformFilter !== "all" ? platformFilter : undefined,
+        min_price: minPrice ? Number(minPrice) : undefined,
+        max_price: maxPrice ? Number(maxPrice) : undefined,
       })
       .then((resp) => {
         if (cancelled) return;
@@ -268,7 +279,7 @@ export default function MboppiBoost() {
     return () => {
       cancelled = true;
     };
-  }, [page, search, categoryFilter, platformFilter]);
+  }, [page, search, categoryFilter, platformFilter, minPrice, maxPrice]);
 
   const useFallback = services === null;
   const fallbackCategorySource = useMemo(() => {
@@ -350,6 +361,11 @@ export default function MboppiBoost() {
       if (platformFilter !== "all" && platform !== platformFilter) return false;
       if (categoryFilter !== "all" && String(service.cat) !== String(categoryFilter)) return false;
       if (needle && !`${service.name} ${service.desc}`.toLowerCase().includes(needle)) return false;
+      const mn = Number(minPrice);
+      const mx = Number(maxPrice);
+      if (Number.isFinite(mn) && mn >= 0 && service.unit < mn) return false;
+      if (Number.isFinite(mx) && mx >= 0 && service.unit > mx) return false;
+      if (favoritesOnly && !favorites.includes(service.id)) return false;
       return true;
     }).map((service) => {
       const platform = PLATFORM_KEY_BY_CATEGORY[service.cat] || "other";
@@ -365,9 +381,12 @@ export default function MboppiBoost() {
     page,
     Math.max(1, Math.ceil(fallbackFiltered.length / PAGE_SIZE))
   );
-  const displayCatalog = useFallback
+  const baseCatalog = useFallback
     ? fallbackFiltered.slice((fallbackPage - 1) * PAGE_SIZE, fallbackPage * PAGE_SIZE)
     : catalog;
+  const displayCatalog = favoritesOnly
+    ? baseCatalog.filter((s) => favorites.some((f) => String(f) === String(s.id)))
+    : baseCatalog;
   const displayTotal = useFallback ? fallbackFiltered.length : catalogTotal;
   const displayTotalPages = useFallback
     ? Math.max(1, Math.ceil(fallbackFiltered.length / PAGE_SIZE))
@@ -450,7 +469,29 @@ export default function MboppiBoost() {
     setSearch("");
     setCategoryFilter("all");
     setPlatformFilter("all");
+    setMinPrice("");
+    setMaxPrice("");
+    setFavoritesOnly(false);
     setPage(1);
+  };
+
+  const toggleFavorite = (id) => {
+    setFavorites((prev) => {
+      const next = prev.some((f) => String(f) === String(id))
+        ? prev.filter((f) => String(f) !== String(id))
+        : [...prev, id];
+      try { localStorage.setItem("mboppi_boost_favorites", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const trackRecent = (id) => {
+    setRecentIds((prev) => {
+      const filtered = prev.filter((f) => String(f) !== String(id));
+      const next = [id, ...filtered].slice(0, 8);
+      try { localStorage.setItem("mboppi_boost_recent", JSON.stringify(next)); } catch {}
+      return next;
+    });
   };
 
   const scrollToConfig = () => {
@@ -461,7 +502,10 @@ export default function MboppiBoost() {
   const activeFilterCount =
     (search ? 1 : 0) +
     (categoryFilter !== "all" ? 1 : 0) +
-    (platformFilter !== "all" ? 1 : 0);
+    (platformFilter !== "all" ? 1 : 0) +
+    (minPrice ? 1 : 0) +
+    (maxPrice ? 1 : 0) +
+    (favoritesOnly ? 1 : 0);
 
   return (
     <main className="boost-page">
@@ -631,6 +675,68 @@ export default function MboppiBoost() {
                 ))}
               </div>
             </div>
+
+            <div className="tw-mt-4 tw-grid tw-gap-3 sm:tw-grid-cols-2">
+              <div>
+                <label htmlFor="boost-min-price" className="boost-label">Prix min (FCFA)</label>
+                <input
+                  id="boost-min-price"
+                  type="number"
+                  min="0"
+                  value={minPrice}
+                  onChange={(e) => { setMinPrice(e.target.value); setPage(1); }}
+                  placeholder="0"
+                  className="boost-input"
+                />
+              </div>
+              <div>
+                <label htmlFor="boost-max-price" className="boost-label">Prix max (FCFA)</label>
+                <input
+                  id="boost-max-price"
+                  type="number"
+                  min="0"
+                  value={maxPrice}
+                  onChange={(e) => { setMaxPrice(e.target.value); setPage(1); }}
+                  placeholder="∞"
+                  className="boost-input"
+                />
+              </div>
+            </div>
+
+            <div className="tw-mt-4 tw-flex tw-flex-wrap tw-gap-2">
+              <button
+                type="button"
+                onClick={() => { setFavoritesOnly((v) => !v); setPage(1); }}
+                className={`boost-pill ${favoritesOnly ? "boost-pill-active" : ""}`}
+                aria-pressed={favoritesOnly}
+              >
+                ★ Favoris {favorites.length ? `(${favorites.length})` : ""}
+              </button>
+              {recentIds.length > 0 && (
+                <span className="boost-muted tw-text-[11px] tw-self-center">
+                  Récents : {recentIds.length}
+                </span>
+              )}
+            </div>
+
+            {recentIds.length > 0 && (
+              <div className="tw-mt-3 tw-flex tw-flex-wrap tw-gap-2">
+                {recentIds.map((rid) => {
+                  const svc = baseCatalog.find((s) => String(s.id) === String(rid));
+                  if (!svc) return null;
+                  return (
+                    <button
+                      key={rid}
+                      type="button"
+                      onClick={() => { setSelectedId(svc.id); setQuantity(svc.min || 1); }}
+                      className="boost-pill"
+                    >
+                      {svc.icon} {svc.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="boost-card boost-card-pad">
@@ -671,7 +777,7 @@ export default function MboppiBoost() {
                     <button
                       key={s.id}
                       type="button"
-                      onClick={() => { setSelectedId(s.id); setQuantity(s.min || 1); }}
+                      onClick={() => { setSelectedId(s.id); setQuantity(s.min || 1); trackRecent(s.id); }}
                       className={`boost-service ${isActive ? "boost-service-active" : ""}`}
                       aria-pressed={isActive}
                     >
@@ -682,6 +788,17 @@ export default function MboppiBoost() {
                         <span className={`boost-service-check ${isActive ? "boost-service-check-active" : ""}`} aria-hidden="true">
                           {isActive ? "✓" : "→"}
                         </span>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => { e.stopPropagation(); toggleFavorite(s.id); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggleFavorite(s.id); } }}
+                        className={`boost-fav ${favorites.some((f) => String(f) === String(s.id)) ? "boost-fav-active" : ""}`}
+                        aria-label={favorites.some((f) => String(f) === String(s.id)) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                        aria-pressed={favorites.some((f) => String(f) === String(s.id))}
+                      >
+                        {favorites.some((f) => String(f) === String(s.id)) ? "★" : "☆"}
+                      </span>
                       </span>
                       <span className="boost-service-name">{s.name}</span>
                       <span className="boost-service-desc">{s.desc}</span>

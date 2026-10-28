@@ -1275,3 +1275,7 @@
     transition: none;
   }
 }
+.boost-fav { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; font-size: 14px; line-height: 1; color: #94a3b8; cursor: pointer; user-select: none; }
+.boost-fav:hover { color: #f59e0b; }
+.boost-fav-active { color: #f59e0b; }
+
