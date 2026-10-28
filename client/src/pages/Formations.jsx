@@ -82,7 +82,7 @@ function FormationsPage() {
             )}
             <div className="tw-grid tw-gap-4 sm:tw-grid-cols-2 lg:tw-grid-cols-3" style={{ marginTop: 16 }}>
               {filtered.map((p) => (
-                <ProductCard key={p.id} product={p} />
+                <ProductCard key={p.id} product={p} linkTo={`/formations/${p.id}`} />
               ))}
             </div>
           </section>

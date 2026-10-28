@@ -49,6 +49,7 @@ export default function ProductCard({
   hideShare = false,
   badge,
   extraAction,
+  linkTo,
 }) {
   const { t } = useLang();
   const { user } = useAuth();
@@ -64,7 +65,7 @@ export default function ProductCard({
   const sold = Number(product.sold || 0);
   const flash = product.flash_promo || null;
   const commission = Number(flash ? flash.commission : product.commission || 0);
-  const flashOld = flash ? Number(product.price) : null;
+const cardLink = linkTo || `/produit/${product.id}`;
   const oldPrice = Number(
     flashOld ??
       (product.old_price === null || product.old_price === undefined ? null : product.old_price)
@@ -89,7 +90,7 @@ export default function ProductCard({
 
   return (
     <div className="card product-card">
-      <Link to={`/produit/${product.id}`} className="product-link" aria-label={product.name}>
+      <Link to={cardLink} className="product-link" aria-label={product.name}>
         <div className="product-thumb">
           {photo ? (
             <img src={photo} alt={product.name} loading="lazy" decoding="async" />
@@ -141,7 +142,7 @@ export default function ProductCard({
         </span>
       )}
       {badge && <span className={`badge ${badge.cls}`}>{badge.text}</span>}
-      <Link to={`/produit/${product.id}`} className="product-body">
+      <Link to={cardLink} className="product-body">
         <h3>{product.name}</h3>
         {product.review_count > 0 && (
           <p className="card-rating">
