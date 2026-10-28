@@ -366,6 +366,7 @@ export const smmProviderConfigSchema = z.object({
   smm_api_timeout: z.coerce.number().int().min(1000).max(120000).default(10000),
   smm_provider_config: z.string().max(5000).optional().nullable(),
   smm_markup: z.coerce.number().min(1).max(10).optional(),
+  smm_usd_to_xaf: z.coerce.number().min(1).max(10000).optional(),
   // Secrets : jamais retournés au client, stockés côté serveur uniquement
   smm_api_key: z.string().max(500).optional().nullable(),
 });

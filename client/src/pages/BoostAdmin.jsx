@@ -61,6 +61,7 @@ export default function BoostAdmin() {
     timeoutMs: 30000,
     apiKey: "",
     marginPercent: 50,
+    usdToXaf: 655.957,
   });
   const [savingProvider, setSavingProvider] = useState(false);
   const [providerMessage, setProviderMessage] = useState("");
@@ -130,8 +131,13 @@ export default function BoostAdmin() {
         timeoutMs: Number(resp.config?.timeoutMs) || 30000,
         apiKey: "",
         marginPercent: Math.round(((Number(resp.markup) || 1.5) - 1) * 100),
+        usdToXaf: Number(resp.usd_to_xaf) || 655.957,
       });
-      setImportForm((f) => ({ ...f, markup: Number(resp.markup) || f.markup }));
+      setImportForm((f) => ({
+        ...f,
+        markup: Number(resp.markup) || f.markup,
+        usd_to_xaf: Number(resp.usd_to_xaf) || f.usd_to_xaf,
+      }));
     } catch (err) {
       setProviderMessage(err.message || "Configuration fournisseur indisponible.");
     }
@@ -218,10 +224,16 @@ export default function BoostAdmin() {
         smm_api_base_url: providerForm.baseUrl,
         smm_api_timeout: Number(providerForm.timeoutMs) || 30000,
         smm_markup: 1 + (Number(providerForm.marginPercent) || 0) / 100,
+        smm_usd_to_xaf: Number(providerForm.usdToXaf) || 655.957,
         ...(providerForm.apiKey ? { smm_api_key: providerForm.apiKey } : {}),
       });
       setProviderMessage("Configuration fournisseur enregistrée.");
       setProviderForm((f) => ({ ...f, apiKey: "" }));
+      setImportForm((f) => ({
+        ...f,
+        markup: 1 + (Number(providerForm.marginPercent) || 0) / 100,
+        usd_to_xaf: Number(providerForm.usdToXaf) || f.usd_to_xaf,
+      }));
       await loadProvider();
     } catch (err) {
       setProviderMessage(err.message || "Erreur d'enregistrement.");
@@ -749,6 +761,20 @@ export default function BoostAdmin() {
                 }
               />
             </div>
+            <div className="form-row">
+              <label>{t("Taux USD → XAF")}</label>
+              <input
+                className="input"
+                type="number"
+                min="1"
+                max="10000"
+                step="0.001"
+                value={providerForm.usdToXaf}
+                onChange={(e) =>
+                  setProviderForm((f) => ({ ...f, usdToXaf: e.target.value }))
+                }
+              />
+            </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="btn btn-primary btn-small" type="submit" disabled={savingProvider}>
                 {savingProvider ? t("Enregistrement…") : t("Enregistrer")}
@@ -765,6 +791,14 @@ export default function BoostAdmin() {
             {balance && (
               <p className="hint" style={{ marginTop: 8 }}>
                 {t("Solde fournisseur")} : <strong>{balance.balance}</strong> {balance.currency}
+                {balance.reserved_balance !== undefined &&
+                  balance.reserved_balance !== null && (
+                    <>
+                      {" · "}
+                      {t("Réservé")} : <strong>{balance.reserved_balance}</strong>{" "}
+                      {balance.currency}
+                    </>
+                  )}
                 {" · "}
                 {t("Marge")} : <strong>{Number(providerForm.marginPercent) || 0}%</strong>
                 {" · "}

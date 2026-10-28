@@ -1520,6 +1520,7 @@ router.get(
         timeoutMs: Number(settings["smm_api_timeout"]) || 30000,
       },
       markup: Number(settings["smm_markup"]) || 1.5,
+      usd_to_xaf: Number(settings["smm_usd_to_xaf"]) || 655.957,
     });
   })
 );
@@ -1538,6 +1539,7 @@ router.post(
       smm_api_timeout,
       smm_provider_config,
       smm_markup,
+      smm_usd_to_xaf,
       smm_api_key,
     } = req.body;
 
@@ -1555,6 +1557,7 @@ router.post(
     if (smm_api_timeout !== undefined) await upsert("smm_api_timeout", String(smm_api_timeout));
     if (smm_provider_config !== undefined) await upsert("smm_provider_config", smm_provider_config || "");
     if (smm_markup !== undefined) await upsert("smm_markup", String(smm_markup));
+    if (smm_usd_to_xaf !== undefined) await upsert("smm_usd_to_xaf", String(smm_usd_to_xaf));
     if (smm_api_key !== undefined) await upsert("smm_api_key", smm_api_key || "");
 
     res.json({ ok: true, message: "Configuration fournisseur enregistrée" });
