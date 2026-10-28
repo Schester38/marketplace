@@ -620,6 +620,9 @@ export const api = {
     request(
       `/smm/orders/${encodeURIComponent(id)}/payment-status${token ? `?token=${encodeURIComponent(token)}` : ""}`
     ),
+  smmCancelOrder: (id) =>
+    request(`/smm/orders/${encodeURIComponent(id)}/cancel`, { method: "POST" }),
+
   smmDeclarePayment: (id, payload) =>
     request(`/smm/orders/${encodeURIComponent(id)}/payment`, {
       method: "POST",

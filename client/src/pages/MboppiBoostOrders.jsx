@@ -51,6 +51,7 @@ export default function MboppiBoostOrders() {
   const [notice, setNotice] = useState("");
   const [payingId, setPayingId] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
+  const [cancellingId, setCancellingId] = useState(null);
   const [checkout, setCheckout] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [orderDetails, setOrderDetails] = useState({});
@@ -271,6 +272,35 @@ export default function MboppiBoostOrders() {
       setDeclareError(err.message || "Impossible de déclarer le paiement.");
     } finally {
       setDeclaring(false);
+    }
+  }
+
+  async function cancelOrder(order) {
+    if (!order?.id) return;
+    if (!window.confirm(t("Annuler cette commande ? Le montant sera remboursé sur votre portefeuille Boost si elle a été payée."))) return;
+    setCancellingId(order.id);
+    setNotice("");
+    setError("");
+    try {
+      const resp = await api.smmCancelOrder(order.id);
+      if (resp?.ok) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            Number(o.id) === Number(order.id)
+              ? { ...o, status: "cancelled", payment_status: "cancelled" }
+              : o
+          )
+        );
+        setNotice(
+          resp.refunded_usd
+            ? `Commande #${order.id} annulée : ${resp.refunded_usd} USD remboursés.`
+            : `Commande #${order.id} annulée.`
+        );
+      }
+    } catch (err) {
+      setError(err.message || "Impossible d'annuler la commande.");
+    } finally {
+      setCancellingId(null);
     }
   }
 
@@ -524,6 +554,19 @@ export default function MboppiBoostOrders() {
                         }}
                       >
                         {t("J'ai payé")}
+                      </button>
+                    </div>
+                  )}
+
+                  {["pending_payment", "paid"].includes(o.status) && !o.external_reference && (
+                    <div className="boost-order-actions">
+                      <button
+                        type="button"
+                        className="boost-btn boost-btn-secondary boost-btn-sm"
+                        disabled={cancellingId === o.id}
+                        onClick={() => cancelOrder(o)}
+                      >
+                        {cancellingId === o.id ? t("Annulation…") : t("Annuler la commande")}
                       </button>
                     </div>
                   )}

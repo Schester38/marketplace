@@ -94,6 +94,16 @@ const DEFAULT_SERVICES_WITH_CATEGORIES = DEFAULT_SERVICES.map((service) => {
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
+function canAccessSmmOrder(req, order) {
+  if (!order) return false;
+  if (req?.user?.id && order.user_id && Number(req.user.id) === Number(order.user_id)) return true;
+  if (req?.user?.role === "admin") return true;
+  const token = req?.query?.token || req?.body?.token;
+  if (token && order.public_token && String(token) === String(order.public_token)) return true;
+  return false;
+}
+
+
 function pageParam(value, fallback, max) {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isFinite(parsed) || parsed < 1) return fallback;
@@ -2242,6 +2252,100 @@ router.post(
       console.error("[smm import-catalog]", err.message);
       res.status(502).json({ error: err.message || "Erreur import catalogue" });
     }
+  })
+);
+
+/* POST /api/smm/orders/:id/cancel — annulation par l'utilisateur (commande non transmise) + remboursement auto */
+router.post(
+  "/orders/:id/cancel",
+  authRequired,
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: "ID invalide" });
+
+    const rows = await q(`SELECT * FROM smm_orders WHERE id = $1`, [id]);
+    if (!rows.length || !canAccessSmmOrder(req, rows[0])) {
+      return res.status(404).json({ error: "Commande introuvable" });
+    }
+    const order = rows[0];
+
+    if (!order.user_id || Number(order.user_id) !== Number(req.user.id)) {
+      return res.status(403).json({ error: "Action réservée au propriétaire de la commande." });
+    }
+    if (!["pending_payment", "paid"].includes(order.status)) {
+      return res.status(409).json({
+        error: "Cette commande ne peut plus être annulée.",
+        status: order.status,
+      });
+    }
+    if (order.external_reference) {
+      return res.status(409).json({
+        error: "Commande déjà transmise au fournisseur : annulation impossible.",
+        status: order.status,
+      });
+    }
+
+    let refundUsd = null;
+    const debitRows = await q(
+      `SELECT amount_usd FROM boost_wallet_transactions
+        WHERE reference_type = 'smm_order' AND reference_id = $1 AND transaction_type = 'order_payment'
+        ORDER BY id DESC LIMIT 1`,
+      [id]
+    );
+    if (debitRows.length) refundUsd = Number(debitRows[0].amount_usd);
+
+    const result = await withTransaction(async (tx) => {
+      let credit = null;
+      if (refundUsd && refundUsd > 0) {
+        credit = await creditBoostWalletTx(tx, {
+          userId: Number(order.user_id),
+          amountUsd: refundUsd,
+          transactionType: "refund",
+          referenceType: "smm_order_refund",
+          referenceId: id,
+          description: `Annulation par l'utilisateur — commande Boost #${id} — ${order.service_name}`,
+          createdBy: req.user.id > 0 ? req.user.id : null,
+        });
+      }
+      const updated = await tx.query(
+        `UPDATE smm_orders
+            SET status = 'cancelled', payment_status = 'cancelled', updated_at = now(),
+                completed_at = COALESCE(completed_at, now())
+          WHERE id = $1 AND status IN ('pending_payment', 'paid') AND external_reference IS NULL
+          RETURNING id, status`,
+        [id]
+      );
+      if (!updated.length) {
+        const err = new Error("Commande déjà annulée ou transmise.");
+        err.statusCode = 409;
+        throw err;
+      }
+      return { credit, updated: updated[0] };
+    });
+
+    await addEvent(
+      id,
+      "cancelled",
+      order.status,
+      "cancelled",
+      "Annulation par l'utilisateur",
+      { amount_usd: refundUsd }
+    ).catch(() => {});
+
+    await notifySmmUser(
+      Number(order.user_id),
+      "Commande MboppiBoost annulée",
+      `Votre commande #${id} (${order.service_name}) a été annulée${refundUsd ? ` : ${refundUsd} USD remboursés sur votre portefeuille Boost.` : "."}`,
+      { orderId: id }
+    ).catch(() => {});
+
+    res.json({
+      ok: true,
+      order_id: id,
+      status: "cancelled",
+      refunded_usd: refundUsd,
+      balance_usd: result.credit?.balance_usd ?? null,
+    });
   })
 );
 
