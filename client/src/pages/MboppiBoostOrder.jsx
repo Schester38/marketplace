@@ -338,9 +338,8 @@ export default function MboppiBoostOrder() {
                 <input
                   type="number"
                   min={minQty}
-                  max={Number.isFinite(maxQty) && maxQty > 0 ? maxQty : undefined}
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(minQty, Number(e.target.value) || minQty))}
+                  onChange={(e) => setQuantity(Number(e.target.value) || minQty)}
                   required
                 />
                 <span className="unit-price">
