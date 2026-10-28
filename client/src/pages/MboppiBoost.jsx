@@ -806,6 +806,9 @@ export default function MboppiBoost() {
                         <span className="boost-price tw-text-sm tw-font-black">{MONEY(s.unit)}</span>
                         <span className="boost-muted tw-text-[11px]">/ {s.unitLabel}</span>
                       </span>
+                      <span className="boost-muted tw-mt-1 tw-block tw-text-[10px]">
+                        Quantité : min {s.min}{s.max > 0 ? ` · max ${s.max}` : ""}
+                      </span>
                     </button>
                   );
                 })}

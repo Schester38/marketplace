@@ -353,6 +353,7 @@ export default function MboppiBoostOrder() {
                 <input
                   type="number"
                   min={minQty}
+                  max={Number.isFinite(maxQty) && maxQty > 0 ? maxQty : undefined}
                   defaultValue={quantity}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -372,9 +373,10 @@ export default function MboppiBoostOrder() {
                 </span>
               </div>
               <p className="hint">
+                <strong>Bornes :</strong>{" "}
                 {Number.isFinite(maxQty) && maxQty > 0
-                  ? `Quantité entre ${minQty} et ${maxQty}.`
-                  : `Quantité minimale : ${minQty}.`}{" "}
+                  ? `minimum ${minQty}, maximum ${maxQty}.`
+                  : `minimum ${minQty} (pas de maximum).`}{" "}
                 {unitPrice > 0 &&
                   `Montant minimum : ${formatAmount(minimumTotal)} ${service.currency}.`}
               </p>
