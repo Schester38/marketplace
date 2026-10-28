@@ -8,14 +8,14 @@ import { BASE_URL } from "../config.js";
 const STATUS_LABELS = {
   draft: "Brouillon",
   pending_payment: "Paiement en attente",
-  paid: "Payé",
+  paid: "Payï¿½",
   submitted: "Transmise au prestataire",
   processing: "En cours de traitement",
-  completed: "Terminée",
-  failed: "Échouée",
-  cancelled: "Annulée",
+  completed: "Terminï¿½e",
+  failed: "ï¿½chouï¿½e",
+  cancelled: "Annulï¿½e",
   refund_pending: "Remboursement en attente",
-  refunded: "Remboursée",
+  refunded: "Remboursï¿½e",
 };
 
 function BoostPage({ children }) {
@@ -52,6 +52,15 @@ export default function MboppiBoostTrack() {
       setLoading(false);
     }
   };
+  const fetchOrderSilent = async (id, tok) => {
+    if (!id) return;
+    try {
+      const resp = await api.smmOrder(id, (tok || "").trim() || undefined);
+      setData(resp);
+    } catch {
+      /* noop */
+    }
+  };
 
   useEffect(() => {
     const urlToken = searchParams.get("token") || "";
@@ -62,6 +71,13 @@ export default function MboppiBoostTrack() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idParam, searchParams]);
+  useEffect(() => {
+    if (!order || !trackingToken) return;
+    const terminal = new Set(["completed", "failed", "cancelled", "refunded", "refund_pending"]);
+    if (terminal.has(order.status)) return;
+    const iv = setInterval(() => fetchOrderSilent(order.id, trackingToken), 8000);
+    return () => clearInterval(iv);
+  }, [order?.id, order?.status, trackingToken]);
 
   const submit = async (e) => {
     e?.preventDefault?.();
@@ -92,14 +108,14 @@ export default function MboppiBoostTrack() {
       <div className="boost-card boost-card-pad">
         <h1 className="boost-section-title">{t("Suivi d'une commande MboppiBoost")}</h1>
         <p className="boost-section-lead">
-          {t("Entrez le numéro de commande et le jeton de suivi pour consulter son état.")}
+          {t("Entrez le numï¿½ro de commande et le jeton de suivi pour consulter son ï¿½tat.")}
         </p>
 
         <form onSubmit={submit} style={{ display: "grid", gap: 10, marginTop: 12 }}>
-          <input className="boost-input" placeholder={t("Numéro de commande")} value={orderId} onChange={(e) => setOrderId(e.target.value)} />
+          <input className="boost-input" placeholder={t("Numï¿½ro de commande")} value={orderId} onChange={(e) => setOrderId(e.target.value)} />
           <input className="boost-input" placeholder={t("Jeton de suivi (token)")} value={token} onChange={(e) => setToken(e.target.value)} />
           <button type="submit" className="boost-btn boost-btn-primary" disabled={loading || !orderId.trim()}>
-            {loading ? t("Chargement…") : t("Suivre")}
+            {loading ? t("Chargementï¿½") : t("Suivre")}
           </button>
         </form>
 
@@ -110,18 +126,37 @@ export default function MboppiBoostTrack() {
             <div className="boost-order-meta"><span>{t("Commande")}</span><strong>#{order.id}</strong></div>
             <div className="boost-order-meta"><span>{t("Service")}</span><strong>{order.service_name}</strong></div>
             <div className="boost-order-meta"><span>{t("Statut")}</span><strong>{t(STATUS_LABELS[order.status] || order.status)}</strong></div>
-            <div className="boost-order-meta"><span>{t("Quantité")}</span><strong>{order.quantity ?? "—"}</strong></div>
+            <div className="boost-order-meta"><span>{t("Quantitï¿½")}</span><strong>{order.quantity ?? "ï¿½"}</strong></div>
             <div className="boost-order-meta"><span>{t("Total")}</span><strong>{order.total} {order.currency}</strong></div>
             {order.created_at && (
-              <div className="boost-order-meta"><span>{t("Créée le")}</span><strong>{new Date(order.created_at).toLocaleString("fr-FR")}</strong></div>
+              <div className="boost-order-meta"><span>{t("Crï¿½ï¿½e le")}</span><strong>{new Date(order.created_at).toLocaleString("fr-FR")}</strong></div>
             )}
+            {(() => {
+              const total = Number(order.quantity) || 0;
+              const remains = data?.final_outcome?.remains ?? data?.remains;
+              if (total <= 0 || remains == null) return null;
+              const delivered = Math.max(0, total - Number(remains));
+              const pct = Math.min(100, Math.round((delivered / total) * 100));
+              return (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                    <span>Progression</span>
+                    <strong>{delivered} / {total}</strong>
+                  </div>
+                  <div style={{ height: 8, background: "var(--border,#eee)", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ width: pct + "%", height: "100%", background: "var(--primary,#0ea5e9)", transition: "width .4s" }} />
+                  </div>
+                  <div className="hint" style={{ marginTop: 4 }}>{pct}% livre</div>
+                </div>
+              );
+            })()}
 
             {data?.final_outcome && (
               <p style={{ marginTop: 10 }}>
-                <strong>{t("Résultat final")} :</strong>{" "}
+                <strong>{t("Rï¿½sultat final")} :</strong>{" "}
                 {t(STATUS_LABELS[data.final_outcome.status] || data.final_outcome.status)}
-                {data.final_outcome.remains != null && (<> · {t("Restant")} : {data.final_outcome.remains}</>)}
-                {data.final_outcome.charge != null && (<> · {t("Charge")} : {data.final_outcome.charge}</>)}
+                {data.final_outcome.remains != null && (<> ï¿½ {t("Restant")} : {data.final_outcome.remains}</>)}
+                {data.final_outcome.charge != null && (<> ï¿½ {t("Charge")} : {data.final_outcome.charge}</>)}
               </p>
             )}
 
@@ -129,7 +164,7 @@ export default function MboppiBoostTrack() {
               <div style={{ marginTop: 12 }}>
                 <p className="hint" style={{ overflowWrap: "anywhere" }}>{shareUrl}</p>
                 <button type="button" className="boost-btn boost-btn-secondary boost-btn-sm" onClick={copyLink}>
-                  {copied ? t("Copié !") : t("Copier le lien de suivi")}
+                  {copied ? t("Copiï¿½ !") : t("Copier le lien de suivi")}
                 </button>
               </div>
             )}
@@ -142,7 +177,7 @@ export default function MboppiBoostTrack() {
                       <strong>{ev.event_type}</strong>
                       <span className="hint">{new Date(ev.created_at).toLocaleString("fr-FR")}</span>
                     </div>
-                    {(ev.old_status || ev.new_status) && (<div className="hint">{ev.old_status || "—"} ? {ev.new_status || "—"}</div>)}
+                    {(ev.old_status || ev.new_status) && (<div className="hint">{ev.old_status || "ï¿½"} ? {ev.new_status || "ï¿½"}</div>)}
                     {ev.message && <div className="hint" style={{ overflowWrap: "anywhere" }}>{ev.message}</div>}
                   </li>
                 ))}
@@ -153,7 +188,7 @@ export default function MboppiBoostTrack() {
 
         <p style={{ marginTop: 16 }}>
           <Link to="/mboppi-boost" className="boost-btn boost-btn-secondary boost-btn-sm">
-            {t("Retour à MboppiBoost")}
+            {t("Retour ï¿½ MboppiBoost")}
           </Link>
         </p>
       </div>
