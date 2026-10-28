@@ -3,7 +3,8 @@ import { q, withTransaction } from "../db.js";
 import { roundMoney, normalizeCurrency, CURRENCY_DECIMALS } from "./fxRates.js";
 
 export const BOOST_WALLET_REF_PREFIX = "MBP-WAL";
-export const BOOST_MIN_TOPUP_USD = 1;
+export const BOOST_MIN_TOPUP_XAF = 1000;
+export const BOOST_MIN_TOPUP_USD = BOOST_MIN_TOPUP_XAF / 600;
 export const BOOST_MAX_TOPUP_USD = 5_000;
 export const BOOST_MAX_ADMIN_CREDIT_USD = 10_000;
 

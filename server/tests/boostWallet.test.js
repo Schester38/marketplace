@@ -1,7 +1,7 @@
 import {
   BOOST_MAX_ADMIN_CREDIT_USD,
   BOOST_MAX_TOPUP_USD,
-  BOOST_MIN_TOPUP_USD,
+  BOOST_MIN_TOPUP_XAF,
   BOOST_WALLET_REF_PREFIX,
   BoostWalletError,
   amountsMatch,
@@ -46,7 +46,7 @@ test("montants : tolérance selon les décimales de la devise", () => {
 });
 
 test("constantes : bornes de recharge et de crédit admin", () => {
-  assert(BOOST_MIN_TOPUP_USD === 1, "minimum recharge");
+  assert(BOOST_MIN_TOPUP_XAF === 1000, "minimum recharge XAF");
   assert(BOOST_MAX_TOPUP_USD === 5000, "maximum recharge");
   assert(BOOST_MAX_ADMIN_CREDIT_USD === 10000, "maximum crédit admin");
 });
