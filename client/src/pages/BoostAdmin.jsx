@@ -602,6 +602,23 @@ export default function BoostAdmin() {
   }
 
 
+  async function syncStatuses() {
+    setSyncing(true);
+    setNotice("");
+    try {
+      const resp = await api.adminSmmSync();
+      const parts = [`${resp.checked || 0} commande(s) verifiee(s)`, `${resp.updated || 0} mise(s) a jour`];
+      if (resp.errors?.length) parts.push(`${resp.errors.length} erreur(s)`);
+      setNotice(parts.join(" - "));
+      await loadOrders();
+    } catch (err) {
+      setNotice(err.message || "Synchronisation impossible.");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+
   const visibleOrders = orders;
   const pendingCount = orders.filter((order) => ["draft", "pending_payment"].includes(order.status)).length;
 
