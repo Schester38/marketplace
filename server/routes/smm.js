@@ -2255,6 +2255,48 @@ router.post(
   })
 );
 
+/* POST /api/smm/orders/:id/report — signaler un problème sur une commande (utilisateur) */
+router.post(
+  "/orders/:id/report",
+  authRequired,
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: "ID invalide" });
+
+    const rows = await q(`SELECT * FROM smm_orders WHERE id = $1`, [id]);
+    if (!rows.length || !canAccessSmmOrder(req, rows[0])) {
+      return res.status(404).json({ error: "Commande introuvable" });
+    }
+    const order = rows[0];
+
+    if (!order.user_id || Number(order.user_id) !== Number(req.user.id)) {
+      return res.status(403).json({ error: "Action réservée au propriétaire de la commande." });
+    }
+
+    const note = String(req.body?.message || req.body?.note || "").trim().slice(0, 1000);
+    const reporterName = String(req.user?.name || req.user?.email || `utilisateur #${req.user.id}`).trim();
+
+    await addEvent(id, "problem_reported", order.status, order.status, note || "Problème signalé par l'utilisateur", {
+      reporter_id: req.user.id,
+      reporter_name: reporterName,
+    }).catch(() => {});
+
+    notifyAdmins({
+      title: "Problème signalé — commande MboppiBoost",
+      body: `${reporterName} signale un problème sur la commande #${id} (${order.service_name})${note ? ` — ${note.slice(0, 180)}` : ""}.`,
+      url: "/admin",
+      type: "smm_problem",
+      amount: Number(order.total),
+    }).catch(() => {});
+
+    try {
+      await logAudit(req.user.id, "smm.order_problem_reported", `#${id} ${order.service_name}${note ? ` — ${note.slice(0, 120)}` : ""}`, req.ip);
+    } catch {}
+
+    res.json({ ok: true, order_id: id });
+  })
+);
+
 /* POST /api/smm/orders/:id/cancel — annulation par l'utilisateur (commande non transmise) + remboursement auto */
 router.post(
   "/orders/:id/cancel",

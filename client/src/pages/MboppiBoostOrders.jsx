@@ -47,6 +47,10 @@ export default function MboppiBoostOrders() {
   const [reference, setReference] = useState("");
   const [method, setMethod] = useState("mobile_money");
   const [declaring, setDeclaring] = useState(false);
+  const [reportingId, setReportingId] = useState(null);
+  const [reportMessage, setReportMessage] = useState("");
+  const [reporting, setReporting] = useState(false);
+  const [reportError, setReportError] = useState("");
   const [declareError, setDeclareError] = useState("");
   const [notice, setNotice] = useState("");
   const [payingId, setPayingId] = useState(null);
@@ -301,6 +305,30 @@ export default function MboppiBoostOrders() {
       setError(err.message || "Impossible d'annuler la commande.");
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  async function reportProblem(order) {
+    if (!order?.id) return;
+    setReportingId(order.id);
+    setReportMessage("");
+    setReportError("");
+    setNotice("");
+  }
+
+  async function submitReport(order) {
+    if (!order?.id) return;
+    setReporting(true);
+    setReportError("");
+    try {
+      await api.smmReportProblem(order.id, { message: reportMessage.trim() });
+      setNotice(t("Problème signalé à l'administration. Nous vous recontacterons rapidement."));
+      setReportingId(null);
+      setReportMessage("");
+    } catch (err) {
+      setReportError(err.message || t("Impossible de signaler le problème."));
+    } finally {
+      setReporting(false);
     }
   }
 
@@ -571,7 +599,54 @@ export default function MboppiBoostOrders() {
                     </div>
                   )}
 
+                  <div className="boost-order-actions">
+                    <button
+                      type="button"
+                      className="boost-btn boost-btn-secondary boost-btn-sm"
+                      onClick={() => reportProblem(o)}
+                    >
+                      {t("Signaler un problème")}
+                    </button>
+                  </div>
+
+                  {reportingId === o.id && (
+                    <div className="boost-declare">
+                      <p className="boost-declare-title">{t("Décrire le problème (optionnel)")}</p>
+                      <textarea
+                        value={reportMessage}
+                        onChange={(e) => setReportMessage(e.target.value)}
+                        placeholder={t("Décrivez le problème rencontré avec cette commande…")}
+                        maxLength={1000}
+                        className="boost-input"
+                        rows={3}
+                      />
+                      {reportError && <p className="error-msg">{reportError}</p>}
+                      <div className="boost-order-actions">
+                        <button
+                          type="button"
+                          className="boost-btn boost-btn-primary boost-btn-sm"
+                          disabled={reporting}
+                          onClick={() => submitReport(o)}
+                        >
+                          {reporting ? t("Envoi…") : t("Envoyer")}
+                        </button>
+                        <button
+                          type="button"
+                          className="boost-btn boost-btn-secondary boost-btn-sm"
+                          disabled={reporting}
+                          onClick={() => {
+                            setReportingId(null);
+                            setReportMessage("");
+                            setReportError("");
+                          }}
+                        >
+                          {t("Annuler")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {declareId === o.id && (
+
                     <div className="boost-declare">
                       <p className="boost-declare-title">{t("Déclarer un paiement hors ligne")}</p>
                       <input

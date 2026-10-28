@@ -1,6 +1,6 @@
 {
   "name": "marketplace",
-  "version": "1.57.176",
+  "version": "1.57.177",
   "private": true,
   "type": "module",
   "scripts": {
