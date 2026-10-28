@@ -57,6 +57,9 @@ export default function BoostAdmin() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsDays, setStatsDays] = useState(30);
   const [busyId, setBusyId] = useState(null);
   const [detailOrder, setDetailOrder] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -133,6 +136,7 @@ export default function BoostAdmin() {
   useEffect(() => {
     loadOrders();
     loadProvider();
+    loadStats();
     loadPaymentInfo();
     loadServices();
     api
@@ -161,6 +165,19 @@ export default function BoostAdmin() {
       setError(err.message || "Impossible de charger les commandes Boost.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadStats(days) {
+    const d = days || statsDays;
+    setStatsLoading(true);
+    try {
+      const resp = await api.adminSmmStats({ days: d });
+      setStats(resp);
+    } catch (err) {
+      // ignore
+    } finally {
+      setStatsLoading(false);
     }
   }
 
@@ -589,6 +606,108 @@ export default function BoostAdmin() {
   return (
     <div className="boost-admin">
       {notice && <p className="success">{notice}</p>}
+
+﻿      <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+        <div className="boost-admin-head">
+          <h2 className="section-title" style={{ margin: 0 }}>
+            📊 {t("Statistiques Boost")}
+          </h2>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <select
+              className="input"
+              value={statsDays}
+              onChange={(e) => { const d = Number(e.target.value); setStatsDays(d); loadStats(d); }}
+              style={{ width: 120 }}
+            >
+              <option value={7}>{t("7 jours")}</option>
+              <option value={30}>{t("30 jours")}</option>
+              <option value={90}>{t("90 jours")}</option>
+            </select>
+            <button className="btn btn-outline btn-small" onClick={() => loadStats()} disabled={statsLoading}>
+              {statsLoading ? "…" : t("Actualiser")}
+            </button>
+          </div>
+        </div>
+        {statsLoading && !stats && <p className="hint">{t("Chargement…")}</p>}
+        {stats && (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginTop: 12 }}>
+              <div className="card" style={{ padding: 12 }}>
+                <div className="hint">{t("CA total (USD)")}</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>{usd(stats.revenue_usd)}</div>
+              </div>
+              <div className="card" style={{ padding: 12 }}>
+                <div className="hint">{t("CA période (USD)")}</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>{usd(stats.period_revenue_usd)}</div>
+              </div>
+              <div className="card" style={{ padding: 12 }}>
+                <div className="hint">{t("Commandes")}</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>{stats.total_orders}</div>
+              </div>
+              <div className="card" style={{ padding: 12 }}>
+                <div className="hint">{t("Payées")}</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>{stats.paid_count}</div>
+              </div>
+              <div className="card" style={{ padding: 12 }}>
+                <div className="hint">{t("Taux de réussite")}</div>
+                <div style={{ fontSize: 20, fontWeight: 700 }}>{Math.round((stats.success_rate || 0) * 100)}%</div>
+              </div>
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <h4 style={{ margin: "0 0 8px" }}>{t("Commandes par statut")}</h4>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {Object.entries(stats.by_status || {}).map(([st, c]) => (
+                  <span key={st} className="badge" style={{ padding: "4px 8px" }}>
+                    {t(STATUS_LABELS[st] || st)}: {c}
+                  </span>
+                ))}
+              </div>
+            </div>
+            {stats.top_services && stats.top_services.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <h4 style={{ margin: "0 0 8px" }}>{t("Top services")}</h4>
+                <table className="table" style={{ width: "100%" }}>
+                  <thead>
+                    <tr>
+                      <th>{t("Service")}</th>
+                      <th>{t("Commandes")}</th>
+                      <th>{t("CA (USD)")}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.top_services.map((s, i) => (
+                      <tr key={i}>
+                        <td>{s.service_name}</td>
+                        <td>{s.count}</td>
+                        <td>{usd(s.revenue_usd)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {stats.daily && stats.daily.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <h4 style={{ margin: "0 0 8px" }}>{t("Évolution")}</h4>
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 80, overflowX: "auto" }}>
+                  {stats.daily.map((d) => {
+                    const max = Math.max(...stats.daily.map((x) => x.count), 1);
+                    const h = Math.round((d.count / max) * 70);
+                    return (
+                      <div key={d.date} title={d.date + " : " + d.count} style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 14 }}>
+                        <div style={{ width: 10, height: h, background: "var(--primary)", borderRadius: 2 }} />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="hint" style={{ marginTop: 4 }}>
+                  {t("Commandes par jour sur la période")}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       <div className="card" style={{ marginBottom: 20, padding: 18 }}>
         <div className="boost-admin-head">

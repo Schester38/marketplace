@@ -660,6 +660,13 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   adminSmmBalance: () => adminRequest("/smm/admin/balance"),
+  adminSmmStats: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.days) q.set("days", String(params.days));
+    const qs = q.toString();
+    const path = qs ? "/smm/admin/stats?" + qs : "/smm/admin/stats";
+    return adminRequest(path);
+  },
   adminSmmImportCatalog: (payload) =>
     adminRequest("/smm/admin/import-catalog", {
       method: "POST",

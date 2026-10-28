@@ -1371,6 +1371,138 @@ router.post(
   })
 );
 
+﻿/* GET /api/admin/smm/stats — tableau de bord MboppiBoost (admin) */
+router.get(
+  "/admin/stats",
+  authRequired,
+  roleRequired("admin"),
+  ah(async (req, res) => {
+    const days = Math.min(Math.max(Number(req.query.days) || 30, 1), 90);
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    let usdToXaf = 655.957;
+    try {
+      const settingsRows = await q(`SELECT value FROM platform_settings WHERE key = 'smm_usd_to_xaf'`);
+      const v = Number(settingsRows?.[0]?.value);
+      if (Number.isFinite(v) && v > 0) usdToXaf = v;
+    } catch {}
+
+    let rates = null;
+    try {
+      const payload = await getUsdRates();
+      rates = payload?.rates || null;
+    } catch {}
+
+    const toUsd = (amount, currency) => {
+      const cur = normalizeCurrency(currency || "XAF");
+      const val = Number(amount) || 0;
+      if (cur === "USD") return val;
+      if (cur === "XAF" || cur === "XOF") return val / usdToXaf;
+      try {
+        return convertAmount(val, cur, "USD", rates || {});
+      } catch {
+        return 0;
+      }
+    };
+
+    const statusRows = await q(`SELECT status, COUNT(*)::int AS c FROM smm_orders GROUP BY status`);
+    const byStatus = {};
+    let totalOrders = 0;
+    for (const r of statusRows || []) {
+      byStatus[r.status] = Number(r.c) || 0;
+      totalOrders += Number(r.c) || 0;
+    }
+
+    const revRows = await q(
+      `SELECT currency, COALESCE(SUM(total), 0)::numeric AS s
+         FROM smm_orders
+        WHERE status NOT IN ('draft', 'cancelled', 'refund_pending', 'refunded')
+        GROUP BY currency`
+    );
+    let revenueUsd = 0;
+    for (const r of revRows || []) revenueUsd += toUsd(r.s, r.currency);
+
+    const completed = byStatus.completed || 0;
+    const failed = byStatus.failed || 0;
+    const cancelled = byStatus.cancelled || 0;
+    const denom = completed + failed + cancelled;
+    const successRate = denom > 0 ? completed / denom : 0;
+
+    const topRows = await q(
+      `SELECT service_name, COUNT(*)::int AS c, COALESCE(SUM(total), 0)::numeric AS revenue, currency
+         FROM smm_orders
+        GROUP BY service_name, currency
+        ORDER BY c DESC
+        LIMIT 50`
+    );
+    const topMap = new Map();
+    for (const r of topRows || []) {
+      const name = r.service_name || "—";
+      const entry = topMap.get(name) || { service_name: name, count: 0, revenue_usd: 0 };
+      entry.count += Number(r.c) || 0;
+      entry.revenue_usd += toUsd(r.revenue, r.currency);
+      topMap.set(name, entry);
+    }
+    const topServices = Array.from(topMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+      .map((s) => ({ service_name: s.service_name, count: s.count, revenue_usd: Math.round(s.revenue_usd * 100) / 100 }));
+
+    const dailyRows = await q(
+      `SELECT date_trunc('day', created_at)::date AS d,
+              COUNT(*)::int AS c,
+              COALESCE(SUM(total), 0)::numeric AS revenue,
+              currency
+         FROM smm_orders
+        WHERE created_at >= $1::timestamptz
+        GROUP BY d, currency
+        ORDER BY d`,
+      [since]
+    );
+    const dailyMap = new Map();
+    for (const r of dailyRows || []) {
+      const key = String(r.d).slice(0, 10);
+      const entry = dailyMap.get(key) || { date: key, count: 0, revenue_usd: 0 };
+      entry.count += Number(r.c) || 0;
+      entry.revenue_usd += toUsd(r.revenue, r.currency);
+      dailyMap.set(key, entry);
+    }
+    const daily = [];
+    const cursor = new Date(since);
+    cursor.setUTCHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setUTCHours(0, 0, 0, 0);
+    for (let d = new Date(cursor); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+      const key = d.toISOString().slice(0, 10);
+      const e = dailyMap.get(key) || { date: key, count: 0, revenue_usd: 0 };
+      daily.push({ date: key, count: e.count, revenue_usd: Math.round(e.revenue_usd * 100) / 100 });
+    }
+
+    let periodRevenueUsd = 0;
+    for (const e of daily) periodRevenueUsd += e.revenue_usd;
+
+    const paidRows = await q(
+      `SELECT COUNT(*)::int AS c FROM smm_orders WHERE payment_status = 'paid' AND created_at >= $1::timestamptz`,
+      [since]
+    );
+    const paidCount = Number(paidRows?.[0]?.c) || 0;
+
+    res.json({
+      ok: true,
+      days,
+      total_orders: totalOrders,
+      by_status: byStatus,
+      revenue_usd: Math.round(revenueUsd * 100) / 100,
+      period_revenue_usd: Math.round(periodRevenueUsd * 100) / 100,
+      success_rate: Math.round(successRate * 1000) / 1000,
+      paid_count: paidCount,
+      top_services: topServices,
+      daily,
+    });
+  })
+);
+
+
 /* GET /api/admin/smm/orders — toutes les commandes (admin) */
 router.get(
   "/admin/orders",
