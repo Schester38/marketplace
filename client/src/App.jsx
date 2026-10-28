@@ -106,6 +106,7 @@ const Cgu = lazyRetry(() => import("./pages/Cgu.jsx"));
 const Faq = lazyRetry(() => import("./pages/Faq.jsx"));
 const MentionsLegales = lazyRetry(() => import("./pages/MentionsLegales.jsx"));
 const Support = lazyRetry(() => import("./pages/Support.jsx"));
+const Formations = lazyRetry(() => import("./pages/Formations.jsx"));
 const CookiesBanner = lazyRetry(() => import("./components/CookiesBanner.jsx"));
 import OfflinePage from "./pages/OfflinePage.jsx";
 import AdminMessagePopup from "./components/AdminMessagePopup.jsx";
@@ -834,6 +835,7 @@ export default function App() {
             <Route path="/faq" element={<Faq />} />
             <Route path="/mentions-legales" element={<MentionsLegales />} />
             <Route path="/soutien" element={<Support />} />
+            <Route path="/formations" element={<Formations />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/verifier" element={<VerifyDoc />} />
             <Route path="/verifier/:ref" element={<VerifyDoc />} />
