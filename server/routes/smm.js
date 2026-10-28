@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { q, withTransaction } from "../db.js";
+import { rateLimit } from "express-rate-limit";
 import { logAudit } from "../security.js";
 import { authRequired, authOptional, roleRequired } from "../auth.js";
 import { validate, validateQuery } from "../middlewares/validate.js";
@@ -75,6 +76,31 @@ import {
 } from "../services/smmPricing.js";
 
 const router = Router();
+
+// Limiteurs dédiés par utilisateur (anti-spam de commandes MboppiBoost).
+// Clé = id utilisateur si authentifié, sinon IP (pour les endpoints authOptional).
+function smmUserKey(req) {
+  if (req?.user?.id) return `u:${req.user.id}`;
+  return `ip:${req?.ip || req?.socket?.remoteAddress || "unknown"}`;
+}
+const smmOrderCreateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: smmUserKey,
+  validate: { keyGeneratorIpFallback: false },
+  message: { error: "Trop de commandes créées, réessayez dans une minute" },
+});
+const smmOrderCheckoutLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: smmUserKey,
+  validate: { keyGeneratorIpFallback: false },
+  message: { error: "Trop de tentatives de paiement, réessayez dans une minute" },
+});
 
 // Catalogue public MboppiBoost (source partagée avec l'amorçage initDb).
 const DEFAULT_CATEGORIES = SMM_CATEGORIES;
@@ -605,6 +631,7 @@ router.get(
 router.post(
   "/orders",
   authRequired,
+  smmOrderCreateLimiter,
   validate(smmOrderSchema),
   ah(async (req, res) => {
     const { service_id, quantity, client_info, payment_method, idempotency_key } = req.body;
@@ -1030,6 +1057,7 @@ router.get(
 router.post(
   "/orders/:id/checkout",
   authOptional,
+  smmOrderCheckoutLimiter,
   ah(async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) {
