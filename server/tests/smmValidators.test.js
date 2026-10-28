@@ -21,9 +21,9 @@ function test(name, fn) {
   }
 }
 
-test("commande : methode iKeePay par defaut", () => {
+test("commande : methode wallet par defaut", () => {
   const parsed = smmOrderSchema.parse({ service_id: 1 });
-  assert(parsed.payment_method === "ikeepay", "methode par defaut");
+  assert(parsed.payment_method === "wallet", "methode par defaut");
 });
 
 test("commande : moneyfusion accepte", () => {

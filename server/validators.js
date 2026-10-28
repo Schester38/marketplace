@@ -286,7 +286,7 @@ export const smmOrderSchema = z.object({
   client_info: z.record(z.string(), z.any()).default({}),
   payment_method: z
     .enum(["ikeepay", "wallet", "mobile_money", "moneyfusion", "virement", "espece", "manual"])
-    .default("ikeepay"),
+    .default("wallet"),
   idempotency_key: z.string().max(200).optional().nullable(),
 });
 

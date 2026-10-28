@@ -1,18 +1,9 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams, useSearchParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useSearchParams, useLocation, Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { useLang } from "../i18n.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
-import { saveLocalBoostOrder } from "../boostOrders.js";
-import IkeepayCheckout from "../components/IkeepayCheckout.jsx";
-
-const MANUAL_PAYMENT_METHODS = [
-  { value: "mobile_money", label: "Mobile Money" },
-  { value: "moneyfusion", label: "MoneyFusion" },
-  { value: "virement", label: "Virement bancaire" },
-  { value: "espece", label: "Espèces" },
-];
 
 const formatAmount = (value) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(Number(value) || 0);
@@ -42,9 +33,9 @@ export default function MboppiBoostOrder() {
   const { user } = useAuth();
   const { serviceId } = useParams();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
 
   const [service, setService] = useState(null);
-  const [paymentInfo, setPaymentInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -56,33 +47,13 @@ export default function MboppiBoostOrder() {
     objectif: searchParams.get("details") || "",
   });
   const [quantity, setQuantity] = useState(1);
-  const [manualMethod, setManualMethod] = useState("mobile_money");
-  const [onlineEnabled, setOnlineEnabled] = useState(null);
   const [orderCreated, setOrderCreated] = useState(null);
-  const [checkoutUrl, setCheckoutUrl] = useState("");
-  const [paid, setPaid] = useState(false);
-  const [refundPending, setRefundPending] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [manualOpen, setManualOpen] = useState(false);
   const [wallet, setWallet] = useState(null);
   const [walletLoading, setWalletLoading] = useState(false);
-  const [paymentChoice, setPaymentChoice] = useState("ikeepay");
-  const paymentTouched = useRef(false);
-  const [paymentReference, setPaymentReference] = useState("");
-  const [declaring, setDeclaring] = useState(false);
-  const [declared, setDeclared] = useState(false);
-  const [declareError, setDeclareError] = useState("");
 
   useEffect(() => {
     if (!serviceId) return;
     fetchService();
-    api
-      .smmPaymentInfo()
-      .then((resp) => {
-        setPaymentInfo(resp.payment_info || null);
-        setOnlineEnabled(Boolean(resp.online_payment?.enabled));
-      })
-      .catch(() => {});
   }, [serviceId]);
 
   useEffect(() => {
@@ -118,92 +89,6 @@ export default function MboppiBoostOrder() {
     };
   }, [user]);
 
-  useEffect(() => {
-    if (!user || !service || !wallet || paymentTouched.current) return;
-    const unit = Number(service.price || 0);
-    const unitSize = Number(service.billing_unit) > 0 ? Number(service.billing_unit) : 1000;
-    const estimate = Math.round(((unit * Number(quantity)) / unitSize) * 100) / 100;
-    const estimateUsd = convertToUsd(estimate, service.currency, wallet.fx?.rates);
-    const balance = Number(wallet.wallet?.balance_usd) || 0;
-    if (estimateUsd != null && balance + 0.001 >= estimateUsd) {
-      setPaymentChoice("wallet");
-    } else if (onlineEnabled === false) {
-      setPaymentChoice("manual");
-    } else {
-      setPaymentChoice("ikeepay");
-    }
-  }, [user, service, wallet, quantity, onlineEnabled]);
-
-  async function verifyPayment(order = orderCreated) {
-    if (!order?.order_id) return false;
-    setVerifying(true);
-    try {
-      const resp = await api.smmPaymentStatus(order.order_id, order.public_token);
-      if (resp?.paid) {
-        setPaid(true);
-        setRefundPending(resp.status === "refund_pending" || resp.status === "refunded");
-        setCheckoutUrl("");
-        return true;
-      }
-    } catch {
-      /* le prochain sondage réessaiera */
-    } finally {
-      setVerifying(false);
-    }
-    return false;
-  }
-
-  useEffect(() => {
-    if (!orderCreated || paid || !orderCreated.online_payment?.online) return undefined;
-    let cancelled = false;
-    let attempts = 0;
-    const tick = async () => {
-      attempts += 1;
-      if (cancelled) return;
-      try {
-        const resp = await api.smmPaymentStatus(orderCreated.order_id, orderCreated.public_token);
-        if (!cancelled && resp?.paid) {
-          setPaid(true);
-          setRefundPending(resp.status === "refund_pending" || resp.status === "refunded");
-          setCheckoutUrl("");
-        }
-      } catch {
-        /* silencieux : nouvelle tentative dans 4 s */
-      }
-      if (attempts >= 90) clearInterval(id);
-    };
-    const id = setInterval(tick, 4000);
-    tick();
-    return () => {
-      cancelled = true;
-      clearInterval(id);
-    };
-  }, [orderCreated, paid]);
-
-  async function openCheckout() {
-    if (!orderCreated) return;
-    if (orderCreated.checkout_url) {
-      setCheckoutUrl(orderCreated.checkout_url);
-      return;
-    }
-    try {
-      const resp = await api.smmCreateCheckout(orderCreated.order_id, orderCreated.public_token);
-      if (resp?.checkout_url) {
-        setCheckoutUrl(resp.checkout_url);
-      } else {
-        setManualOpen(true);
-        setOrderCreated((prev) => ({
-          ...prev,
-          online_payment: { online: false, reason: resp?.reason || "online_unavailable" },
-          payment_info: resp?.payment_info || prev.payment_info,
-        }));
-      }
-    } catch (err) {
-      setDeclareError(err.message || "Impossible d'ouvrir le paiement en ligne.");
-      setManualOpen(true);
-    }
-  }
-
   async function fetchService() {
     try {
       const resp = await api.smmService(serviceId);
@@ -233,68 +118,38 @@ export default function MboppiBoostOrder() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!user) {
+      setError("Connectez-vous pour commander avec votre portefeuille Boost.");
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
       const idempotencyKey = `smm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      const method =
-        paymentChoice === "wallet"
-          ? "wallet"
-          : paymentChoice === "manual" || onlineEnabled === false
-            ? "manual"
-            : "ikeepay";
       const resp = await api.smmCreateOrder({
         service_id: Number(serviceId),
         quantity: Number(quantity),
         client_info: clientInfo,
-        payment_method: method,
+        payment_method: "wallet",
         idempotency_key: idempotencyKey,
       });
-      if (resp?.ok) {
-        const paidWithWallet = resp.payment_method === "wallet" || resp.paid === true;
+      if (resp?.ok && resp?.paid) {
         setOrderCreated(resp);
-        setPaid(paidWithWallet);
-        setRefundPending(false);
-        setManualOpen(!paidWithWallet && !resp.checkout_url);
-        if (resp.checkout_url) setCheckoutUrl(resp.checkout_url);
-        saveLocalBoostOrder({
-          id: resp.order_id,
-          token: resp.public_token,
-          service_name: resp.service,
-          total: resp.total,
-          currency: resp.currency,
-          created_at: new Date().toISOString(),
-        });
       } else {
-        setError("Échec de la création de la commande.");
+        setError(resp?.message || "Le paiement n'a pas été confirmé. Veuillez réessayer.");
       }
     } catch (err) {
-      setError(err.message || "Erreur lors de la création de la commande.");
+      if (err?.code === "INSUFFICIENT_BOOST_FUNDS" || err?.status === 402) {
+        setError(
+          "Votre solde Boost est insuffisant. Rechargez votre portefeuille avant de commander."
+        );
+      } else if (err?.code === "AUTH_REQUIRED" || err?.status === 401) {
+        setError("Votre session a expiré. Reconnectez-vous pour commander.");
+      } else {
+        setError(err.message || "Erreur lors de la création de la commande.");
+      }
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function declarePayment(e) {
-    e.preventDefault();
-    setDeclaring(true);
-    setDeclareError("");
-    try {
-      const resp = await api.smmDeclarePayment(orderCreated.order_id, {
-        payment_reference: paymentReference.trim(),
-        payment_method: manualMethod,
-        phone: clientInfo.phone || "",
-        token: orderCreated.public_token,
-      });
-      if (resp?.ok) {
-        setDeclared(true);
-      } else {
-        setDeclareError("Paiement non enregistré. Réessayez ou contactez le support.");
-      }
-    } catch (err) {
-      setDeclareError(err.message || "Impossible de déclarer le paiement.");
-    } finally {
-      setDeclaring(false);
     }
   }
 
@@ -340,27 +195,24 @@ export default function MboppiBoostOrder() {
   const walletBalance = Number(wallet?.wallet?.balance_usd) || 0;
   const walletEstimate = convertToUsd(total, service.currency, wallet?.fx?.rates);
   const canPayWithWallet =
-    Boolean(user) &&
-    walletEstimate != null &&
-    total > 0 &&
-    walletBalance + 0.001 >= walletEstimate;
+    Boolean(user) && walletEstimate != null && total > 0 && walletBalance + 0.001 >= walletEstimate;
 
   if (orderCreated) {
-    const whatsapp = paymentInfo?.whatsapp?.replace(/[^\d]/g, "");
     return (
       <BoostPage>
         <Seo
-          title="Commande enregistrée — MboppiBoost"
-          description="Votre commande MboppiBoost a été créée avec succès."
+          title="Commande payée — MboppiBoost"
+          description="Votre commande MboppiBoost a été payée avec votre portefeuille Boost."
         />
         <section className="boost-order-done">
           <div className="boost-card boost-card-pad boost-order-done-card">
             <span className="boost-done-icon">✅</span>
             <p className="boost-kicker">MboppiBoost</p>
-            <h1 className="boost-section-title">{t("Commande enregistrée")}</h1>
+            <h1 className="boost-section-title">{t("Commande payée")}</h1>
             <p className="boost-section-lead">
-              {t("Votre commande a été créée avec succès.")} ({formatAmount(orderCreated.total)}{" "}
-              {orderCreated.currency})
+              {t(
+                "Votre commande a été payée avec votre portefeuille Boost. Le traitement a démarré immédiatement."
+              )}
             </p>
             <div className="boost-order-done-rows">
               <div className="boost-summary-row">
@@ -373,174 +225,22 @@ export default function MboppiBoostOrder() {
                   {formatAmount(orderCreated.total)} {orderCreated.currency}
                 </strong>
               </div>
+              {orderCreated.wallet_debit_usd != null && (
+                <div className="boost-summary-row">
+                  <span>{t("Débit")}</span>
+                  <strong>{formatUsd(orderCreated.wallet_debit_usd)}</strong>
+                </div>
+              )}
+              {orderCreated.wallet_balance_after_usd != null && (
+                <div className="boost-summary-row">
+                  <span>{t("Nouveau solde")}</span>
+                  <strong>{formatUsd(orderCreated.wallet_balance_after_usd)}</strong>
+                </div>
+              )}
             </div>
             <p className="boost-hint">
-              {t(
-                "Conservez ce numéro : il vous permet de déclarer votre paiement et de suivre la commande."
-              )}
+              {t("Retrouvez le suivi de votre commande dans votre espace MboppiBoost.")}
             </p>
-
-            {paid ? (
-              <div className="boost-card boost-card-pad boost-payment-panel" style={{ marginTop: 16 }}>
-                <h3>{refundPending ? `↩️ ${t("Remboursement en cours")}` : `✅ ${t("Paiement confirmé")}`}</h3>
-                <p>
-                  {refundPending
-                    ? t(
-                        "Votre paiement a été reçu après l'annulation de la commande. Un remboursement est en cours de traitement."
-                      )
-                    : orderCreated.payment_method === "wallet"
-                      ? t(
-                          "Votre commande a été payée avec votre portefeuille Boost. Le traitement a démarré immédiatement."
-                        )
-                      : t(
-                          "Votre paiement a été confirmé. La transmission de la commande au prestataire a été lancée."
-                        )}
-                </p>
-                {orderCreated.payment_method === "wallet" && (
-                  <p className="boost-hint">
-                    {t("Nouveau solde")} : {formatUsd(orderCreated.wallet_balance_after_usd)}
-                    {orderCreated.wallet_debit_usd != null && (
-                      <> · {t("Débit")} : {formatUsd(orderCreated.wallet_debit_usd)}</>
-                    )}
-                  </p>
-                )}
-                <Link to="/mboppi-boost/mes-commandes" className="boost-btn boost-btn-primary">
-                  {refundPending ? t("Voir mes commandes") : t("Suivre ma commande")}
-                </Link>
-              </div>
-            ) : orderCreated.online_payment?.online ? (
-              <div className="boost-card boost-card-pad boost-payment-panel" style={{ marginTop: 16 }}>
-                <div className="mboost-online-head">
-                  <div>
-                    <h3>💳 {t("Paiement en ligne sécurisé")}</h3>
-                    <p>
-                      {formatAmount(orderCreated.total)} {orderCreated.currency} ·{" "}
-                      {t("Carte bancaire ou Mobile Money via iKeePay")}
-                    </p>
-                  </div>
-                  <span className="mboost-secure-badge">🔒 iKeePay</span>
-                </div>
-                <button type="button" className="boost-btn boost-btn-primary boost-btn-block" onClick={openCheckout}>
-                  {t("Payer maintenant")}
-                </button>
-                <button
-                  type="button"
-                  className="boost-btn boost-btn-secondary boost-btn-block"
-                  style={{ marginTop: 8 }}
-                  onClick={() => setManualOpen(true)}
-                >
-                  {t("Payer autrement (mobile money / virement)")}
-                </button>
-                {verifying && <p className="hint">{t("Vérification du paiement…")}</p>}
-                {declareError && <p className="error-msg">{declareError}</p>}
-              </div>
-            ) : null}
-
-            {declared ? (
-              <div className="boost-card boost-card-pad boost-payment-panel" style={{ marginTop: 16 }}>
-                <h3>✅ {t("Paiement déclaré")}</h3>
-                <p>
-                  {t(
-                    "Votre paiement est en cours de vérification. La commande sera transmise au prestataire dès validation."
-                  )}
-                </p>
-                <Link to="/mboppi-boost/mes-commandes" className="boost-btn boost-btn-primary">
-                  {t("Voir mes commandes")}
-                </Link>
-              </div>
-            ) : !paid && (manualOpen || !orderCreated.online_payment?.online) ? (
-              <>
-                <div className="boost-card boost-card-pad boost-payment-panel" style={{ marginTop: 16 }}>
-                  <h3>💳 {t("Payer votre commande")}</h3>
-                  <p>
-                    {t("Montant à régler")} :{" "}
-                    <strong>
-                      {formatAmount(orderCreated.total)} {orderCreated.currency}
-                    </strong>
-                  </p>
-                  {paymentInfo ? (
-                    <ul className="boost-payment-list">
-                      <li>
-                        🟠 Orange Money : <strong>{paymentInfo.orange_money}</strong>
-                      </li>
-                      <li>
-                        🟡 MTN Mobile Money : <strong>{paymentInfo.mtn_mobile_money}</strong>
-                      </li>
-                      <li>
-                        📱 MoneyFusion : <strong>{paymentInfo.moneyfusion_phone}</strong>
-                      </li>
-                      <li>
-                        {t("Nom du compte")} : <strong>{paymentInfo.account_name}</strong>
-                      </li>
-                    </ul>
-                  ) : (
-                    <p>
-                      {t("Contactez le support pour recevoir les coordonnées de paiement.")}{" "}
-                      <Link to="/contact">{t("Contact")}</Link>
-                    </p>
-                  )}
-                  {paymentInfo?.note && <p className="hint">{paymentInfo.note}</p>}
-                  {whatsapp && (
-                    <a
-                      className="boost-btn boost-btn-secondary"
-                      href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(
-                        `Bonjour, je viens de créer la commande MboppiBoost #${orderCreated.order_id} (${orderCreated.service} — ${formatAmount(orderCreated.total)} ${orderCreated.currency}).`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Envoyer la preuve sur WhatsApp
-                    </a>
-                  )}
-                </div>
-
-                <div className="boost-card boost-card-pad boost-payment-panel" style={{ marginTop: 16 }}>
-                  <h3>{t("J'ai payé")}</h3>
-                  <p className="hint">
-                    {t(
-                      "Indiquez la référence de votre transaction (ID Orange Money, MTN MoMo, MoneyFusion ou virement)."
-                    )}
-                  </p>
-                  <form onSubmit={declarePayment} className="order-form boost-order-form">
-                    <div className="form-row">
-                      <label>{t("Référence de paiement")}</label>
-                      <input
-                        type="text"
-                        value={paymentReference}
-                        onChange={(e) => setPaymentReference(e.target.value)}
-                        placeholder="Ex: OM-123456789"
-                        required
-                        minLength={2}
-                        maxLength={200}
-                      />
-                    </div>
-                    <div className="form-row">
-                      <label>{t("Moyen utilisé")}</label>
-                      <select
-                        value={manualMethod}
-                        onChange={(e) => setManualMethod(e.target.value)}
-                      >
-                        {MANUAL_PAYMENT_METHODS.map((m) => (
-                          <option key={m.value} value={m.value}>
-                            {t(m.label)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <button type="submit" disabled={declaring} className="boost-btn boost-btn-primary boost-btn-block">
-                      {declaring ? t("Envoi…") : t("Déclarer mon paiement")}
-                    </button>
-                    {declareError && <p className="error-msg">{declareError}</p>}
-                  </form>
-                </div>
-              </>
-            ) : null}
-
-            {!user && (
-              <p className="hint" style={{ marginTop: 12 }}>
-                {t("Astuce : connectez-vous pour retrouver toutes vos commandes dans votre espace.")}
-              </p>
-            )}
             <div className="boost-order-done-actions">
               <Link to="/mboppi-boost/mes-commandes" className="boost-btn boost-btn-primary">
                 {t("Suivre ma commande")}
@@ -551,16 +251,6 @@ export default function MboppiBoostOrder() {
             </div>
           </div>
         </section>
-        {checkoutUrl && (
-          <IkeepayCheckout
-            checkoutUrl={checkoutUrl}
-            onSuccess={() => {
-              setCheckoutUrl("");
-              verifyPayment();
-            }}
-            onClose={() => setCheckoutUrl("")}
-          />
-        )}
       </BoostPage>
     );
   }
@@ -619,114 +309,127 @@ export default function MboppiBoostOrder() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="order-form boost-order-form">
-            <div className="form-row">
-              <label>{t("Quantité")}</label>
-              <input
-                type="number"
-                min={minQty}
-                max={Number.isFinite(maxQty) && maxQty > 0 ? maxQty : undefined}
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(minQty, Number(e.target.value) || minQty))}
-                required
-              />
-              <span className="unit-price">
-                {service.price > 0
-                  ? `${formatAmount(service.price)} ${service.currency} / ${service.billing_unit || 1000}`
-                  : t("Sur devis")}
-              </span>
-            </div>
-            <p className="hint">
-              {Number.isFinite(maxQty) && maxQty > 0
-                ? `Quantité entre ${minQty} et ${maxQty}.`
-                : `Quantité minimale : ${minQty}.`}{" "}
-              {unitPrice > 0 &&
-                `Montant minimum : ${formatAmount(minimumTotal)} ${service.currency}.`}
-            </p>
-
-            <h3>{t("Vos coordonnées")}</h3>
-            <div className="form-row">
-              <label>{t("Nom complet")}</label>
-              <input
-                type="text"
-                value={clientInfo.name || ""}
-                onChange={(e) => handleInfoChange("name", e.target.value)}
-                required
-                maxLength={120}
-              />
-            </div>
-            <div className="form-row">
-              <label>{t("Téléphone (WhatsApp de préférence)")}</label>
-              <input
-                type="tel"
-                value={clientInfo.phone || ""}
-                onChange={(e) => handleInfoChange("phone", e.target.value)}
-                placeholder="Ex: +237 6XX XXX XXX"
-                required
-                maxLength={40}
-              />
-            </div>
-            <div className="form-row">
-              <label>{t("E-mail")}</label>
-              <input
-                type="email"
-                value={clientInfo.email || ""}
-                onChange={(e) => handleInfoChange("email", e.target.value)}
-                required
-                maxLength={160}
-              />
-              <p className="form-hint">
-                {t("Utilisé pour recevoir la confirmation et le suivi de votre commande.")}
+          {!user ? (
+            <div className="boost-order-login-gate">
+              <span className="boost-empty-icon">🔐</span>
+              <h2 className="boost-section-title">{t("Connectez-vous pour commander")}</h2>
+              <p className="boost-empty-text">
+                {t(
+                  "Les commandes MboppiBoost sont réservées aux membres connectés et se paient avec le portefeuille Boost."
+                )}
               </p>
-            </div>
-
-            <h3>{t("Informations pour la prestation")}</h3>
-            <p className="form-hint">
-              {t("Ces informations seront transmises au prestataire pour exécuter votre commande.")}
-            </p>
-            <div className="form-row">
-              <label>
-                {service.is_automated
-                  ? t("Lien ou compte cible (obligatoire)")
-                  : t("URL ou compte concerné (optionnel)")}
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: https://instagram.com/votre_compte ou @votre_pseudo"
-                value={clientInfo.profile_url || ""}
-                onChange={(e) => handleInfoChange("profile_url", e.target.value)}
-                required={!!service.is_automated}
-                maxLength={300}
-              />
-            </div>
-            <div className="form-row">
-              <label>{t("Objectif ou précision (optionnel)")}</label>
-              <textarea
-                rows={3}
-                placeholder="Précisez votre besoin, votre cible, vos objectifs…"
-                value={clientInfo.objectif || ""}
-                onChange={(e) => handleInfoChange("objectif", e.target.value)}
-                maxLength={1000}
-              />
-            </div>
-
-            <h3>{t("Paiement")}</h3>
-            {user ? (
-              <div className="boost-pay-choice">
-                <label
-                  className={`boost-pay-option ${paymentChoice === "wallet" ? "is-selected" : ""} ${!canPayWithWallet ? "is-disabled" : ""}`}
+              <div className="boost-order-login-actions">
+                <Link
+                  to="/login"
+                  state={{ from: `${location.pathname}${location.search}` }}
+                  className="boost-btn boost-btn-primary"
                 >
-                  <input
-                    type="radio"
-                    name="boost-payment"
-                    value="wallet"
-                    checked={paymentChoice === "wallet"}
-                    disabled={!canPayWithWallet}
-                    onChange={() => {
-                      paymentTouched.current = true;
-                      setPaymentChoice("wallet");
-                    }}
-                  />
+                  {t("Se connecter")}
+                </Link>
+                <Link to="/register" className="boost-btn boost-btn-secondary">
+                  {t("Créer un compte")}
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="order-form boost-order-form">
+              <div className="form-row">
+                <label>{t("Quantité")}</label>
+                <input
+                  type="number"
+                  min={minQty}
+                  max={Number.isFinite(maxQty) && maxQty > 0 ? maxQty : undefined}
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(minQty, Number(e.target.value) || minQty))}
+                  required
+                />
+                <span className="unit-price">
+                  {service.price > 0
+                    ? `${formatAmount(service.price)} ${service.currency} / ${service.billing_unit || 1000}`
+                    : t("Sur devis")}
+                </span>
+              </div>
+              <p className="hint">
+                {Number.isFinite(maxQty) && maxQty > 0
+                  ? `Quantité entre ${minQty} et ${maxQty}.`
+                  : `Quantité minimale : ${minQty}.`}{" "}
+                {unitPrice > 0 &&
+                  `Montant minimum : ${formatAmount(minimumTotal)} ${service.currency}.`}
+              </p>
+
+              <h3>{t("Vos coordonnées")}</h3>
+              <div className="form-row">
+                <label>{t("Nom complet")}</label>
+                <input
+                  type="text"
+                  value={clientInfo.name || ""}
+                  onChange={(e) => handleInfoChange("name", e.target.value)}
+                  required
+                  maxLength={120}
+                />
+              </div>
+              <div className="form-row">
+                <label>{t("Téléphone (WhatsApp de préférence)")}</label>
+                <input
+                  type="tel"
+                  value={clientInfo.phone || ""}
+                  onChange={(e) => handleInfoChange("phone", e.target.value)}
+                  placeholder="Ex: +237 6XX XXX XXX"
+                  required
+                  maxLength={40}
+                />
+              </div>
+              <div className="form-row">
+                <label>{t("E-mail")}</label>
+                <input
+                  type="email"
+                  value={clientInfo.email || ""}
+                  onChange={(e) => handleInfoChange("email", e.target.value)}
+                  required
+                  maxLength={160}
+                />
+                <p className="form-hint">
+                  {t("Utilisé pour recevoir la confirmation et le suivi de votre commande.")}
+                </p>
+              </div>
+
+              <h3>{t("Informations pour la prestation")}</h3>
+              <p className="form-hint">
+                {t(
+                  "Ces informations seront transmises au prestataire pour exécuter votre commande."
+                )}
+              </p>
+              <div className="form-row">
+                <label>
+                  {service.is_automated
+                    ? t("Lien ou compte cible (obligatoire)")
+                    : t("URL ou compte concerné (optionnel)")}
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: https://instagram.com/votre_compte ou @votre_pseudo"
+                  value={clientInfo.profile_url || ""}
+                  onChange={(e) => handleInfoChange("profile_url", e.target.value)}
+                  required={!!service.is_automated}
+                  maxLength={300}
+                />
+              </div>
+              <div className="form-row">
+                <label>{t("Objectif ou précision (optionnel)")}</label>
+                <textarea
+                  rows={3}
+                  placeholder="Précisez votre besoin, votre cible, vos objectifs…"
+                  value={clientInfo.objectif || ""}
+                  onChange={(e) => handleInfoChange("objectif", e.target.value)}
+                  maxLength={1000}
+                />
+              </div>
+
+              <h3>{t("Paiement")}</h3>
+              <div className="boost-pay-choice">
+                <div
+                  className={`boost-pay-option ${canPayWithWallet ? "is-selected" : "is-disabled"}`}
+                >
                   <span className="boost-pay-option-main">
                     <span className="boost-pay-option-title">
                       👛 {t("Solde Boost")} <strong>{formatUsd(walletBalance)}</strong>
@@ -741,94 +444,44 @@ export default function MboppiBoostOrder() {
                             : `${t("Solde insuffisant")} · ${t("requis")} ${formatUsd(walletEstimate)}`}
                     </span>
                   </span>
-                </label>
-                {walletEstimate != null && !canPayWithWallet && (
+                </div>
+                {!walletLoading && !canPayWithWallet && (
                   <p className="boost-pay-wallet-link">
                     <Link to="/mboppi-boost/portefeuille">
                       {t("Recharger mon portefeuille Boost")}
                     </Link>
                   </p>
                 )}
-
-                {onlineEnabled !== false && (
-                  <label
-                    className={`boost-pay-option ${paymentChoice === "ikeepay" ? "is-selected" : ""}`}
-                  >
-                    <input
-                      type="radio"
-                      name="boost-payment"
-                      value="ikeepay"
-                      checked={paymentChoice === "ikeepay"}
-                      onChange={() => {
-                        paymentTouched.current = true;
-                        setPaymentChoice("ikeepay");
-                      }}
-                    />
-                    <span className="boost-pay-option-main">
-                      <span className="boost-pay-option-title">
-                        💳 {t("Carte bancaire / Mobile Money")}
-                      </span>
-                      <span className="boost-pay-option-sub">
-                        {t("Paiement sécurisé via iKeePay")}
-                      </span>
-                    </span>
-                  </label>
-                )}
-
-                <label
-                  className={`boost-pay-option ${paymentChoice === "manual" ? "is-selected" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="boost-payment"
-                    value="manual"
-                    checked={paymentChoice === "manual"}
-                    onChange={() => {
-                      paymentTouched.current = true;
-                      setPaymentChoice("manual");
-                    }}
-                  />
-                  <span className="boost-pay-option-main">
-                    <span className="boost-pay-option-title">
-                      📱 {t("Mobile Money / virement direct")}
-                    </span>
-                    <span className="boost-pay-option-sub">
-                      {t("Les instructions s'affichent après validation.")}
-                    </span>
-                  </span>
-                </label>
               </div>
-            ) : (
-              <p className="form-hint">
-                {onlineEnabled === false
-                  ? t(
-                      "Le paiement en ligne est indisponible. Les instructions de paiement mobile money ou virement s'afficheront après validation."
-                    )
-                  : t(
-                      "Paiement sécurisé via iKeePay (carte bancaire ou Mobile Money). Le tunnel de paiement s'ouvrira après validation."
-                    )}{" "}
-                {t("Connectez-vous pour payer avec votre solde Boost.")}
-              </p>
-            )}
 
-            <div className="form-total">
-              <strong>{t("Total")} :</strong>{" "}
-              {service.price > 0
-                ? `${formatAmount(total)} ${service.currency}`
-                : t("Sur devis")}
-            </div>
+              <div className="form-total">
+                <strong>{t("Total")} :</strong>{" "}
+                {service.price > 0 ? `${formatAmount(total)} ${service.currency}` : t("Sur devis")}
+              </div>
 
-            <button type="submit" disabled={submitting} className="boost-btn boost-btn-primary boost-btn-block">
-              {submitting
-                ? t("Enregistrement…")
-                : paymentChoice === "wallet"
-                  ? `${t("Payer")} ${formatUsd(walletEstimate || 0)} ${t("avec mon solde")}`
-                  : paymentChoice === "manual" || onlineEnabled === false
-                    ? t("Confirmer la commande")
-                    : t("Confirmer et payer avec iKeePay")}
-            </button>
-            {error && <p className="error-msg">{error}</p>}
-          </form>
+              {walletLoading ? (
+                <p className="hint">{t("Chargement du portefeuille…")}</p>
+              ) : canPayWithWallet ? (
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="boost-btn boost-btn-primary boost-btn-block"
+                >
+                  {submitting
+                    ? t("Paiement en cours…")
+                    : `${t("Payer")} ${formatUsd(walletEstimate || 0)} ${t("avec mon solde")}`}
+                </button>
+              ) : (
+                <Link
+                  to="/mboppi-boost/portefeuille"
+                  className="boost-btn boost-btn-primary boost-btn-block"
+                >
+                  {t("Recharger mon portefeuille Boost")}
+                </Link>
+              )}
+              {error && <p className="error-msg">{error}</p>}
+            </form>
+          )}
         </section>
 
         <aside className="boost-order-aside">
@@ -866,11 +519,9 @@ export default function MboppiBoostOrder() {
                 <span className="boost-total-note">{service.currency}</span>
               </div>
               <div className="boost-summary-secure">
-                {paymentChoice === "wallet"
-                  ? `👛 ${t("Solde Boost")} · ${formatUsd(walletEstimate || 0)}`
-                  : onlineEnabled === false || paymentChoice === "manual"
-                    ? `💳 ${t("Mobile Money / virement")}`
-                    : `🔒 ${t("Paiement sécurisé via iKeePay")}`}
+                {user
+                  ? `👛 ${t("Solde Boost")} · ${formatUsd(walletBalance)}`
+                  : `🔐 ${t("Connexion requise pour commander")}`}
               </div>
               <Link
                 to="/mboppi-boost/mes-commandes"
@@ -881,23 +532,10 @@ export default function MboppiBoostOrder() {
             </div>
           </div>
           <p className="boost-hint boost-order-aside-note">
-            {t(
-              "Le montant est calculé automatiquement selon la quantité et le tarif du service."
-            )}
+            {t("Le montant est calculé automatiquement selon la quantité et le tarif du service.")}
           </p>
         </aside>
       </div>
-
-      {!user && (
-        <section className="boost-card boost-card-pad boost-order-login">
-          <p className="boost-strong">
-            {t("Connectez-vous pour retrouver vos commandes dans votre espace.")}
-          </p>
-          <Link to="/login" className="boost-btn boost-btn-secondary">
-            {t("Se connecter")}
-          </Link>
-        </section>
-      )}
     </BoostPage>
   );
 }

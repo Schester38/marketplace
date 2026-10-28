@@ -959,6 +959,20 @@
     color: var(--boost-muted);
   }
 
+  .boost-order-login-gate {
+    @apply tw-mt-4 tw-flex tw-flex-col tw-items-center tw-gap-3 tw-rounded-2xl tw-border tw-border-dashed tw-px-5 tw-py-8 tw-text-center;
+    border-color: var(--boost-border);
+    background: var(--boost-surface-soft);
+  }
+
+  .boost-order-login-gate .boost-empty-text {
+    @apply tw-mt-0;
+  }
+
+  .boost-order-login-actions {
+    @apply tw-mt-2 tw-flex tw-flex-wrap tw-items-center tw-justify-center tw-gap-2;
+  }
+
   .boost-alert-success {
     border-color: #bbf7d0;
     background: #f0fdf4;

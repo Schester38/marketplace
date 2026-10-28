@@ -591,11 +591,11 @@ router.get(
 
 router.post(
   "/orders",
-  authOptional,
+  authRequired,
   validate(smmOrderSchema),
   ah(async (req, res) => {
     const { service_id, quantity, client_info, payment_method, idempotency_key } = req.body;
-    const userId = req.user?.id || null;
+    const userId = req.user.id;
     const info = client_info && typeof client_info === "object" ? { ...client_info } : {};
 
     let svc = null;
@@ -662,6 +662,7 @@ router.post(
     if (!String(info.phone || "").trim() && !userId) {
       return res.status(400).json({ error: "Votre numéro de téléphone est requis." });
     }
+    if (!info.name && req.user?.name) info.name = req.user.name;
     if (!info.email && req.user?.email) info.email = req.user.email;
     if (!info.phone && req.user?.phone) info.phone = req.user.phone;
     const infoEmail = String(info.email || "").trim().toLowerCase();
@@ -677,19 +678,14 @@ router.post(
     const billingUnit = smmBillingUnit(svc.billing_unit);
     const total = computeSmmTotal(unitPrice, qty, billingUnit);
     const idemKey = idempotency_key || generateIdempotencyKey();
-    const wantsWallet = payment_method === "wallet";
-    if (wantsWallet && !userId) {
-      return res.status(401).json({
-        error: "Connectez-vous pour payer avec votre portefeuille Boost.",
-        code: "AUTH_REQUIRED",
+    if (payment_method !== "wallet") {
+      return res.status(400).json({
+        error:
+          "Les commandes MboppiBoost se paient uniquement avec votre portefeuille Boost. Rechargez votre solde avant de commander.",
+        code: "WALLET_ONLY",
+        topup_url: "/mboppi-boost/portefeuille",
       });
     }
-    const wantsOnline = payment_method === "ikeepay";
-    const onlineConfig = wantsOnline ? await smmOnlinePaymentConfig() : { enabled: false };
-    const storedPaymentMethod = wantsOnline && onlineConfig.enabled ? "ikeepay" : (
-      wantsOnline ? "manual" : payment_method
-    );
-
     if (idempotency_key) {
       const existing = await q(
         `SELECT id, status, public_token FROM smm_orders WHERE idempotency_key = $1`,
@@ -707,7 +703,7 @@ router.post(
 
     const publicToken = generatePublicToken();
 
-    if (wantsWallet) {
+    if (payment_method === "wallet") {
       const ratesPayload = await getUsdRates();
       const walletDebitUsd = convertAmount(total, svc.currency, "USD", ratesPayload.rates);
       if (!(walletDebitUsd > 0)) {
@@ -824,104 +820,6 @@ router.post(
       });
     }
 
-    const created = (
-      await q(
-        `INSERT INTO smm_orders
-          (user_id, service_id, service_name, service_price, currency, quantity,
-           total, billing_unit, client_info, status, payment_status, payment_method,
-           idempotency_key, public_token, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending_payment', 'unpaid', $10, $11, $12, now(), now())
-         RETURNING id`,
-        [
-          userId,
-          service_id,
-          svc.name,
-          unitPrice,
-          svc.currency,
-          qty,
-          total,
-          svc.billing_unit,
-          JSON.stringify(info),
-          storedPaymentMethod,
-          idemKey,
-          publicToken,
-        ]
-      )
-    )[0];
-
-    if (wantsOnline && !onlineConfig.enabled) {
-      await q(
-        `UPDATE smm_orders SET payment_fallback_at = now(), updated_at = now() WHERE id = $1`,
-        [created.id]
-      );
-    }
-
-    let checkout = null;
-    if (storedPaymentMethod === "ikeepay") {
-      try {
-        checkout = await buildSmmCheckout(created.id);
-      } catch (err) {
-        console.error("[smm checkout]", err.message);
-      }
-      if (!checkout?.online) {
-        await q(
-          `UPDATE smm_orders
-              SET payment_method = 'manual', payment_fallback_at = now(), updated_at = now()
-            WHERE id = $1`,
-          [created.id]
-        );
-        checkout = { online: false, provider: "ikeepay", reason: "checkout_error" };
-      }
-    }
-
-    await addEvent(
-      created.id,
-      "created",
-      null,
-      "pending_payment",
-      "Commande créée — paiement en attente",
-      {}
-    );
-
-    notifyAdmins({
-      title: "Nouvelle commande MboppiBoost",
-      body: `Commande #${created.id} — ${svc.name} — ${total} ${svc.currency}`,
-      amount: total,
-    }).catch(() => {});
-
-    notifySmmUser(
-      userId,
-      "Commande MboppiBoost enregistrée",
-      `Votre commande #${created.id} (${svc.name}) a bien été enregistrée. Montant : ${total} ${svc.currency}.`,
-      { orderId: created.id }
-    ).catch(() => {});
-
-    const online = Boolean(checkout?.online && checkout?.checkout_url);
-    const paymentInfo = online ? null : await getSmmPaymentInfo();
-
-    res.status(201).json({
-      ok: true,
-      order_id: created.id,
-      public_token: publicToken,
-      status: "pending_payment",
-      service: svc.name,
-      unit_price: unitPrice,
-      quantity: qty,
-      total,
-      currency: svc.currency,
-      billing_unit: billingUnit,
-      minimum_quantity: minimumQuantity,
-      minimum_total: SMM_MIN_ORDER_TOTAL_XAF,
-      payment_method: online ? "ikeepay" : "manual",
-      payment_provider: "ikeepay",
-      online_payment: checkout || { online: false, reason: "manual_selected" },
-      checkout_url: online ? checkout.checkout_url : null,
-      payment_reference: online ? checkout.reference : null,
-      payment_info: paymentInfo,
-      message: online
-        ? "Commande enregistrée. Finalisez le paiement en ligne pour lancer le traitement."
-        : "Commande enregistrée. Effectuez le paiement manuel puis déclarez votre référence de transaction.",
-    });
   })
 );
 
