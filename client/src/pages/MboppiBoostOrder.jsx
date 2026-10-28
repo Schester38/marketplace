@@ -338,7 +338,7 @@ export default function MboppiBoostOrder() {
                 <input
                   type="number"
                   min={minQty}
-                  value={quantity}
+                  defaultValue={quantity}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (val === "") {
