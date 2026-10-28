@@ -1,18 +1,18 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
 
 const STATUS_LABELS = {
   draft: "Brouillon",
   pending_payment: "Paiement en attente",
-  paid: "PayÃ©",
+  paid: "Payé",
   submitted: "Transmise au prestataire",
   processing: "En cours",
-  completed: "TerminÃ©e",
-  failed: "Ã‰chouÃ©e",
-  cancelled: "AnnulÃ©e",
+  completed: "Terminée",
+  failed: "Échouée",
+  cancelled: "Annulée",
   refund_pending: "Remboursement en attente",
-  refunded: "RemboursÃ©e",
+  refunded: "Remboursée",
 };
 
 const WORKFLOW_STATUSES = [
@@ -37,7 +37,7 @@ const usd = (value) =>
 const WALLET_TX_LABELS = {
   topup: "Recharge",
   order_payment: "Commande Boost",
-  admin_credit: "CrÃ©dit administrateur",
+  admin_credit: "Crédit administrateur",
   refund: "Remboursement",
   adjustment: "Ajustement",
 };
@@ -208,7 +208,7 @@ export default function BoostAdmin() {
       const resp = await api.adminSmmOrder(order.id);
       setDetailOrder(resp);
     } catch (err) {
-      setDetailError(err.message || "Impossible de charger le dÃ©tail de la commande.");
+      setDetailError(err.message || "Impossible de charger le détail de la commande.");
     } finally {
       setDetailLoading(false);
     }
@@ -323,10 +323,10 @@ export default function BoostAdmin() {
     try {
       if (editingService.id) {
         await api.adminSmmUpdateService(editingService.id, payload);
-        setServiceNotice("Service mis Ã  jour.");
+        setServiceNotice("Service mis à jour.");
       } else {
         await api.adminSmmCreateService(payload);
-        setServiceNotice("Service crÃ©Ã©.");
+        setServiceNotice("Service créé.");
       }
       setEditingService(null);
       await loadServices();
@@ -343,15 +343,15 @@ export default function BoostAdmin() {
       await api.adminSmmPatchService(svc.id, { status: next });
       await loadServices();
     } catch (err) {
-      setServiceNotice(err.message || "Mise Ã  jour impossible.");
+      setServiceNotice(err.message || "Mise à jour impossible.");
     }
   }
 
   async function deleteService(svc) {
-    if (!window.confirm(`Supprimer le service Â« ${svc.name} Â» ?`)) return;
+    if (!window.confirm(`Supprimer le service « ${svc.name} » ?`)) return;
     try {
       await api.adminSmmDeleteService(svc.id);
-      setServiceNotice("Service supprimÃ©.");
+      setServiceNotice("Service supprimé.");
       await loadServices();
     } catch (err) {
       setServiceNotice(err.message || "Suppression impossible.");
@@ -371,7 +371,7 @@ export default function BoostAdmin() {
     e?.preventDefault();
     const query = walletSearch.trim();
     if (query.length < 2) {
-      setWalletMessage("Saisissez au moins 2 caractÃ¨res (nom, e-mail ou rÃ©fÃ©rence).");
+      setWalletMessage("Saisissez au moins 2 caractères (nom, e-mail ou référence).");
       return;
     }
     setWalletBusy(true);
@@ -380,7 +380,7 @@ export default function BoostAdmin() {
       const resp = await api.adminUsers(query);
       const users = (resp.users || []).slice(0, 8);
       setWalletUsers(users);
-      if (!users.length) setWalletMessage("Aucun utilisateur trouvÃ©.");
+      if (!users.length) setWalletMessage("Aucun utilisateur trouvé.");
     } catch (err) {
       setWalletMessage(err.message || "Recherche impossible.");
     } finally {
@@ -416,12 +416,12 @@ export default function BoostAdmin() {
         note: walletForm.note || null,
         transaction_type: walletForm.transaction_type,
       });
-      const message = `Portefeuille crÃ©ditÃ©. Nouveau solde : $${Number(resp.balance_usd).toFixed(2)}`;
+      const message = `Portefeuille crédité. Nouveau solde : $${Number(resp.balance_usd).toFixed(2)}`;
       setWalletForm((f) => ({ ...f, amount_usd: "", note: "" }));
       await openWalletUser(walletUser);
       setWalletMessage(message);
     } catch (err) {
-      setWalletMessage(err.message || "CrÃ©dit impossible.");
+      setWalletMessage(err.message || "Crédit impossible.");
     } finally {
       setWalletBusy(false);
     }
@@ -441,7 +441,7 @@ export default function BoostAdmin() {
         smm_usd_to_xaf: Number(providerForm.usdToXaf) || 655.957,
         ...(providerForm.apiKey ? { smm_api_key: providerForm.apiKey } : {}),
       });
-      setProviderMessage("Configuration fournisseur enregistrÃ©e.");
+      setProviderMessage("Configuration fournisseur enregistrée.");
       setProviderForm((f) => ({ ...f, apiKey: "" }));
       setImportForm((f) => ({
         ...f,
@@ -502,7 +502,7 @@ export default function BoostAdmin() {
       const resp = await api.adminSmmSavePaymentInfo(paymentForm);
       setPaymentInfo(resp.payment_info || paymentForm);
       setPaymentForm(resp.payment_info || paymentForm);
-      setInfoMessage("Instructions de paiement enregistrÃ©es.");
+      setInfoMessage("Instructions de paiement enregistrées.");
     } catch (err) {
       setInfoMessage(err.message || "Erreur d'enregistrement.");
     } finally {
@@ -515,9 +515,9 @@ export default function BoostAdmin() {
     setNotice("");
     try {
       const resp = await api.adminSmmConfirmPayment(order.id, { dispatch: true });
-      const dispatchError = resp.dispatch && !resp.dispatch.ok ? ` â€” ${resp.dispatch.error}` : "";
+      const dispatchError = resp.dispatch && !resp.dispatch.ok ? ` — ${resp.dispatch.error}` : "";
       setNotice(
-        `Paiement #${order.id} confirmÃ© (statut : ${STATUS_LABELS[resp.status] || resp.status})${dispatchError}`
+        `Paiement #${order.id} confirmé (statut : ${STATUS_LABELS[resp.status] || resp.status})${dispatchError}`
       );
       await loadOrders();
     } catch (err) {
@@ -533,7 +533,7 @@ export default function BoostAdmin() {
     try {
       const resp = await api.adminSmmDispatch(order.id);
       setNotice(
-        `Commande #${order.id} transmise au fournisseur${resp.external_reference ? ` (rÃ©f. ${resp.external_reference})` : ""}.`
+        `Commande #${order.id} transmise au fournisseur${resp.external_reference ? ` (réf. ${resp.external_reference})` : ""}.`
       );
       await loadOrders();
     } catch (err) {
@@ -545,7 +545,7 @@ export default function BoostAdmin() {
 
   async function refundOrder(order) {
     const amount = window.prompt(
-      `Montant Ã  rembourser en USD (laisser vide pour rembourser le dÃ©bit original) pour la commande #${order.id} :`,
+      `Montant à rembourser en USD (laisser vide pour rembourser le débit original) pour la commande #${order.id} :`,
       ""
     );
     if (amount === null) return;
@@ -555,7 +555,7 @@ export default function BoostAdmin() {
       const payload = amount.trim() ? { amount_usd: Number(amount) } : {};
       const resp = await api.adminSmmRefund(order.id, payload);
       setNotice(
-        `Commande #${order.id} remboursÃ©e${resp.refunded_usd ? ` (${resp.refunded_usd} USD)` : ""}.`
+        `Commande #${order.id} remboursée${resp.refunded_usd ? ` (${resp.refunded_usd} USD)` : ""}.`
       );
       await loadOrders();
     } catch (err) {
@@ -621,10 +621,10 @@ export default function BoostAdmin() {
     <div className="boost-admin">
       {notice && <p className="success">{notice}</p>}
 
-ï»¿      <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+﻿      <div className="card" style={{ marginBottom: 20, padding: 18 }}>
         <div className="boost-admin-head">
           <h2 className="section-title" style={{ margin: 0 }}>
-            ðŸ“Š {t("Statistiques Boost")}
+            📊 {t("Statistiques Boost")}
           </h2>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <select
@@ -638,11 +638,11 @@ export default function BoostAdmin() {
               <option value={90}>{t("90 jours")}</option>
             </select>
             <button className="btn btn-outline btn-small" onClick={() => loadStats()} disabled={statsLoading}>
-              {statsLoading ? "â€¦" : t("Actualiser")}
+              {statsLoading ? "…" : t("Actualiser")}
             </button>
           </div>
         </div>
-        {statsLoading && !stats && <p className="hint">{t("Chargementâ€¦")}</p>}
+        {statsLoading && !stats && <p className="hint">{t("Chargement…")}</p>}
         {stats && (
           <>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginTop: 12 }}>
@@ -651,7 +651,7 @@ export default function BoostAdmin() {
                 <div style={{ fontSize: 20, fontWeight: 700 }}>{usd(stats.revenue_usd)}</div>
               </div>
               <div className="card" style={{ padding: 12 }}>
-                <div className="hint">{t("CA pÃ©riode (USD)")}</div>
+                <div className="hint">{t("CA période (USD)")}</div>
                 <div style={{ fontSize: 20, fontWeight: 700 }}>{usd(stats.period_revenue_usd)}</div>
               </div>
               <div className="card" style={{ padding: 12 }}>
@@ -659,11 +659,11 @@ export default function BoostAdmin() {
                 <div style={{ fontSize: 20, fontWeight: 700 }}>{stats.total_orders}</div>
               </div>
               <div className="card" style={{ padding: 12 }}>
-                <div className="hint">{t("PayÃ©es")}</div>
+                <div className="hint">{t("Payées")}</div>
                 <div style={{ fontSize: 20, fontWeight: 700 }}>{stats.paid_count}</div>
               </div>
               <div className="card" style={{ padding: 12 }}>
-                <div className="hint">{t("Taux de rÃ©ussite")}</div>
+                <div className="hint">{t("Taux de réussite")}</div>
                 <div style={{ fontSize: 20, fontWeight: 700 }}>{Math.round((stats.success_rate || 0) * 100)}%</div>
               </div>
             </div>
@@ -704,7 +704,7 @@ export default function BoostAdmin() {
             )}
             {stats.daily && stats.daily.length > 0 && (
               <div style={{ marginTop: 16 }}>
-                <h4 style={{ margin: "0 0 8px" }}>{t("Ã‰volution")}</h4>
+                <h4 style={{ margin: "0 0 8px" }}>{t("Évolution")}</h4>
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 80, overflowX: "auto" }}>
                   {stats.daily.map((d) => {
                     const max = Math.max(...stats.daily.map((x) => x.count), 1);
@@ -717,7 +717,7 @@ export default function BoostAdmin() {
                   })}
                 </div>
                 <div className="hint" style={{ marginTop: 4 }}>
-                  {t("Commandes par jour sur la pÃ©riode")}
+                  {t("Commandes par jour sur la période")}
                 </div>
               </div>
             )}
@@ -728,21 +728,21 @@ export default function BoostAdmin() {
       <div className="card" style={{ marginBottom: 20, padding: 18 }}>
         <div className="boost-admin-head">
           <h2 className="section-title" style={{ margin: 0 }}>
-            ðŸš€ {t("MboppiBoost â€” commandes")}
+            🚀 {t("MboppiBoost — commandes")}
             {pendingCount > 0 && <span className="boost-admin-count">{pendingCount}</span>}
           </h2>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button className="btn btn-outline btn-small" onClick={loadOrders} disabled={loading}>
-              {loading ? "â€¦" : t("Actualiser")}
+              {loading ? "…" : t("Actualiser")}
             </button>
             <button className="btn btn-outline btn-small" onClick={syncStatuses} disabled={syncing}>
-              {syncing ? t("Synchronisationâ€¦") : t("Synchroniser les statuts")}
+              {syncing ? t("Synchronisation…") : t("Synchroniser les statuts")}
             </button>
           </div>
         </div>
         <p className="hint" style={{ marginTop: 8 }}>
           {t(
-            "Confirmez le paiement reÃ§u, puis la commande est transmise automatiquement au fournisseur configurÃ©. Sans fournisseur, traitez-la manuellement."
+            "Confirmez le paiement reçu, puis la commande est transmise automatiquement au fournisseur configuré. Sans fournisseur, traitez-la manuellement."
           )}
         </p>
         {error && <p className="error">{error}</p>}
@@ -766,7 +766,7 @@ export default function BoostAdmin() {
           </select>
           <input
             className="input"
-            placeholder={t("Recherche (rÃ©f, client, email, service)")}
+            placeholder={t("Recherche (réf, client, email, service)")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -793,7 +793,7 @@ export default function BoostAdmin() {
             }}
           />
           <button className="btn btn-outline btn-small" onClick={() => loadOrders()} disabled={loading}>
-            {loading ? "â€¦" : t("Appliquer")}
+            {loading ? "…" : t("Appliquer")}
           </button>
           <span className="hint">
             {visibleOrders.length} / {total || orders.length}
@@ -803,7 +803,7 @@ export default function BoostAdmin() {
         {hasMore && (
           <div style={{ margin: "8px 0" }}>
             <button className="btn btn-outline btn-small" onClick={loadMore} disabled={loadingMore}>
-              {loadingMore ? t("Chargementâ€¦") : t("Charger la suite")}
+              {loadingMore ? t("Chargement…") : t("Charger la suite")}
             </button>
           </div>
         )}
@@ -815,10 +815,10 @@ export default function BoostAdmin() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>{t("NÂ°")}</th>
+                  <th>{t("N°")}</th>
                   <th>{t("Client")}</th>
                   <th>{t("Service")}</th>
-                  <th>{t("QtÃ©")}</th>
+                  <th>{t("Qté")}</th>
                   <th>{t("Total")}</th>
                   <th>{t("Paiement")}</th>
                   <th>{t("Statut")}</th>
@@ -831,7 +831,7 @@ export default function BoostAdmin() {
                   const info = order.client_info || {};
                   const contact = [info.name || order.user_name, info.phone || order.user_phone, info.email || order.user_email]
                     .filter(Boolean)
-                    .join(" Â· ");
+                    .join(" · ");
                   const target = info.profile_url || info.link || "";
                   return (
                     <tr key={order.id}>
@@ -840,7 +840,7 @@ export default function BoostAdmin() {
                         <div className="hint">{new Date(order.created_at).toLocaleDateString("fr-FR")}</div>
                       </td>
                       <td style={{ maxWidth: 220 }}>
-                        {contact || "â€”"}
+                        {contact || "—"}
                         {target && (
                           <div className="hint" style={{ overflowWrap: "anywhere" }}>
                             <a href={target} target="_blank" rel="noopener noreferrer">
@@ -852,7 +852,7 @@ export default function BoostAdmin() {
                       <td>
                         {order.service_name}
                         <div className="hint">
-                          {order.quantity} Ã— {money(order.service_price, order.currency)}
+                          {order.quantity} × {money(order.service_price, order.currency)}
                         </div>
                       </td>
                       <td>{order.quantity}</td>
@@ -862,16 +862,16 @@ export default function BoostAdmin() {
                           {order.status === "refund_pending"
                             ? t("Remboursement en cours")
                             : order.status === "refunded" || order.payment_status === "refunded"
-                              ? t("RemboursÃ©")
+                              ? t("Remboursé")
                               : order.payment_status === "paid"
-                            ? t("ConfirmÃ©")
+                            ? t("Confirmé")
                             : order.payment_status === "declared"
-                              ? t("DÃ©clarÃ©")
-                              : t("Non payÃ©")}
+                              ? t("Déclaré")
+                              : t("Non payé")}
                         </span>
                         {(order.payment_reference || order.payment_external_reference) && (
                           <div className="hint" style={{ overflowWrap: "anywhere" }}>
-                            RÃ©f. {order.payment_reference || order.payment_external_reference}
+                            Réf. {order.payment_reference || order.payment_external_reference}
                           </div>
                         )}
                         {order.payment_provider && (
@@ -885,17 +885,17 @@ export default function BoostAdmin() {
                         {order.provider_status && (
                           <div className="hint">
                             {order.provider_status}
-                            {order.external_reference ? ` Â· ${order.external_reference}` : ""}
+                            {order.external_reference ? ` · ${order.external_reference}` : ""}
                           </div>
                         )}
                       </td>
                       <td>
                         {order.provider_status === "dispatch_error" ? (
-                          <span className="error-msg">{t("Ã‰chec d'envoi")}</span>
+                          <span className="error-msg">{t("Échec d'envoi")}</span>
                         ) : order.external_reference ? (
-                          t("EnvoyÃ©e")
+                          t("Envoyée")
                         ) : (
-                          "â€”"
+                          "—"
                         )}
                       </td>
                       <td>
@@ -904,7 +904,7 @@ export default function BoostAdmin() {
                             className="btn btn-outline btn-small"
                             onClick={() => openOrderDetail(order)}
                           >
-                            {t("DÃ©tail / progression")}
+                            {t("Détail / progression")}
                           </button>
                           {["draft", "pending_payment"].includes(order.status) && (
                             <button
@@ -930,7 +930,7 @@ export default function BoostAdmin() {
                               disabled={busyId === order.id}
                               onClick={() => dispatchOrder(order)}
                             >
-                              {t("RÃ©essayer la transmission")}
+                              {t("Réessayer la transmission")}
                             </button>
                           )}
                           {order.status === "paid" && !order.external_reference && (
@@ -953,7 +953,7 @@ export default function BoostAdmin() {
                           )}
                           {order.status === "paid" &&
                             order.provider_status === "dispatch_error" && (
-                              <span className="hint">{t("VÃ©rifiez la configuration fournisseur.")}</span>
+                              <span className="hint">{t("Vérifiez la configuration fournisseur.")}</span>
                             )}
                           <select
                             className="input boost-admin-status"
@@ -961,7 +961,7 @@ export default function BoostAdmin() {
                             disabled={busyId === order.id}
                             onChange={(e) => changeStatus(order, e.target.value)}
                           >
-                            <option value="">{t("Changer le statutâ€¦")}</option>
+                            <option value="">{t("Changer le statut…")}</option>
                             {WORKFLOW_STATUSES.filter((status) => status !== order.status).map((status) => (
                               <option key={status} value={status}>
                                 {t(STATUS_LABELS[status])}
@@ -981,11 +981,11 @@ export default function BoostAdmin() {
 
       <div className="card" style={{ marginBottom: 20, padding: 18 }}>
         <h2 className="section-title" style={{ marginTop: 0 }}>
-          ðŸ‘› {t("Portefeuille Boost")}
+          👛 {t("Portefeuille Boost")}
         </h2>
         <p className="hint">
           {t(
-            "Recherchez un utilisateur pour consulter son solde ou le crÃ©diter (remboursement, geste commercial)."
+            "Recherchez un utilisateur pour consulter son solde ou le créditer (remboursement, geste commercial)."
           )}
         </p>
         <form onSubmit={searchWalletUsers} style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
@@ -994,10 +994,10 @@ export default function BoostAdmin() {
             style={{ flex: "1 1 260px", minWidth: 0 }}
             value={walletSearch}
             onChange={(e) => setWalletSearch(e.target.value)}
-            placeholder={t("Nom, e-mail ou rÃ©fÃ©rence")}
+            placeholder={t("Nom, e-mail ou référence")}
           />
           <button className="btn btn-outline btn-small" type="submit" disabled={walletBusy}>
-            {walletBusy ? "â€¦" : t("Rechercher")}
+            {walletBusy ? "…" : t("Rechercher")}
           </button>
         </form>
         {walletMessage && <p className="hint" style={{ marginTop: 8 }}>{walletMessage}</p>}
@@ -1012,8 +1012,8 @@ export default function BoostAdmin() {
                 onClick={() => openWalletUser(user)}
               >
                 {user.name || user.email || `#${user.id}`}
-                {user.email ? ` Â· ${user.email}` : ""}
-                {user.role ? ` Â· ${user.role}` : ""}
+                {user.email ? ` · ${user.email}` : ""}
+                {user.role ? ` · ${user.role}` : ""}
               </button>
             ))}
           </div>
@@ -1024,16 +1024,16 @@ export default function BoostAdmin() {
             <div>
               <p className="hint">
                 <strong>{walletUser.name || walletUser.email || `#${walletUser.id}`}</strong>
-                {walletUser.email ? ` Â· ${walletUser.email}` : ""}
+                {walletUser.email ? ` · ${walletUser.email}` : ""}
               </p>
               <p style={{ fontSize: 24, fontWeight: 800, margin: "6px 0" }}>
                 {usd(walletData.balance_usd)}
               </p>
               <p className="hint">
-                {t("DerniÃ¨re mise Ã  jour")} :{" "}
+                {t("Dernière mise à jour")} :{" "}
                 {walletData.updated_at
                   ? new Date(walletData.updated_at).toLocaleString("fr-FR")
-                  : "â€”"}
+                  : "—"}
               </p>
               <form onSubmit={creditWallet} style={{ marginTop: 10 }}>
                 <div className="form-row">
@@ -1052,7 +1052,7 @@ export default function BoostAdmin() {
                   />
                 </div>
                 <div className="form-row">
-                  <label>{t("Type d'opÃ©ration")}</label>
+                  <label>{t("Type d'opération")}</label>
                   <select
                     className="input"
                     value={walletForm.transaction_type}
@@ -1060,7 +1060,7 @@ export default function BoostAdmin() {
                       setWalletForm((f) => ({ ...f, transaction_type: e.target.value }))
                     }
                   >
-                    <option value="admin_credit">{t("CrÃ©dit administrateur")}</option>
+                    <option value="admin_credit">{t("Crédit administrateur")}</option>
                     <option value="refund">{t("Remboursement")}</option>
                     <option value="adjustment">{t("Ajustement")}</option>
                   </select>
@@ -1075,12 +1075,12 @@ export default function BoostAdmin() {
                   />
                 </div>
                 <button className="btn btn-primary btn-small" type="submit" disabled={walletBusy}>
-                  {walletBusy ? "â€¦" : t("CrÃ©diter le portefeuille")}
+                  {walletBusy ? "…" : t("Créditer le portefeuille")}
                 </button>
               </form>
             </div>
             <div>
-              <h3 style={{ marginTop: 0 }}>{t("DerniÃ¨res opÃ©rations")}</h3>
+              <h3 style={{ marginTop: 0 }}>{t("Dernières opérations")}</h3>
               {walletData.transactions?.length ? (
                 <div style={{ overflowX: "auto" }}>
                   <table className="table">
@@ -1113,7 +1113,7 @@ export default function BoostAdmin() {
                   </table>
                 </div>
               ) : (
-                <p className="hint">{t("Aucune opÃ©ration.")}</p>
+                <p className="hint">{t("Aucune opération.")}</p>
               )}
             </div>
           </div>
@@ -1123,14 +1123,14 @@ export default function BoostAdmin() {
       <div className="boost-admin-grid">
         <div className="card" style={{ padding: 18 }}>
           <h2 className="section-title" style={{ marginTop: 0 }}>
-            ðŸ”Œ {t("Fournisseur SMM")}
+            🔌 {t("Fournisseur SMM")}
           </h2>
           <p className="hint">
             {provider?.enabled
-              ? `âœ… ${t("Fournisseur actif")} : ${provider.provider || "smm_africa"}${
-                  provider.has_api_key ? " Â· clÃ© enregistrÃ©e" : " Â· aucune clÃ©"
+              ? `✅ ${t("Fournisseur actif")} : ${provider.provider || "smm_africa"}${
+                  provider.has_api_key ? " · clé enregistrée" : " · aucune clé"
                 }`
-              : t("Aucun fournisseur actif : les commandes payÃ©es restent Ã  traiter manuellement.")}
+              : t("Aucun fournisseur actif : les commandes payées restent à traiter manuellement.")}
           </p>
           <form onSubmit={saveProvider}>
             <label className="boost-admin-check">
@@ -1162,7 +1162,7 @@ export default function BoostAdmin() {
               />
             </div>
             <div className="form-row">
-              <label>{t("DÃ©lai (ms)")}</label>
+              <label>{t("Délai (ms)")}</label>
               <input
                 className="input"
                 type="number"
@@ -1173,14 +1173,14 @@ export default function BoostAdmin() {
               />
             </div>
             <div className="form-row">
-              <label>{t("ClÃ© API (laisser vide pour conserver)")}</label>
+              <label>{t("Clé API (laisser vide pour conserver)")}</label>
               <input
                 className="input"
                 type="password"
                 autoComplete="new-password"
                 value={providerForm.apiKey}
                 onChange={(e) => setProviderForm((f) => ({ ...f, apiKey: e.target.value }))}
-                placeholder={provider?.has_api_key ? "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" : t("ClÃ© fournisseur")}
+                placeholder={provider?.has_api_key ? "••••••••" : t("Clé fournisseur")}
               />
             </div>
             <div className="form-row">
@@ -1198,7 +1198,7 @@ export default function BoostAdmin() {
               />
             </div>
             <div className="form-row">
-              <label>{t("Taux USD â†’ XAF")}</label>
+              <label>{t("Taux USD → XAF")}</label>
               <input
                 className="input"
                 type="number"
@@ -1213,7 +1213,7 @@ export default function BoostAdmin() {
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="btn btn-primary btn-small" type="submit" disabled={savingProvider}>
-                {savingProvider ? t("Enregistrementâ€¦") : t("Enregistrer")}
+                {savingProvider ? t("Enregistrement…") : t("Enregistrer")}
               </button>
               <button
                 className="btn btn-outline btn-small"
@@ -1221,7 +1221,7 @@ export default function BoostAdmin() {
                 onClick={checkBalance}
                 disabled={balanceBusy || !provider?.enabled}
               >
-                {balanceBusy ? "â€¦" : t("VÃ©rifier le solde")}
+                {balanceBusy ? "…" : t("Vérifier le solde")}
               </button>
             </div>
             {balance && (
@@ -1230,14 +1230,14 @@ export default function BoostAdmin() {
                 {balance.reserved_balance !== undefined &&
                   balance.reserved_balance !== null && (
                     <>
-                      {" Â· "}
-                      {t("RÃ©servÃ©")} : <strong>{balance.reserved_balance}</strong>{" "}
+                      {" · "}
+                      {t("Réservé")} : <strong>{balance.reserved_balance}</strong>{" "}
                       {balance.currency}
                     </>
                   )}
-                {" Â· "}
+                {" · "}
                 {t("Marge")} : <strong>{Number(providerForm.marginPercent) || 0}%</strong>
-                {" Â· "}
+                {" · "}
                 {t("Gain")} :{" "}
                 <strong>
                   {usd(
@@ -1253,11 +1253,11 @@ export default function BoostAdmin() {
 
         <div className="card" style={{ padding: 18 }}>
           <h2 className="section-title" style={{ marginTop: 0 }}>
-            ðŸ“¥ {t("Importer le catalogue fournisseur")}
+            📥 {t("Importer le catalogue fournisseur")}
           </h2>
           <p className="hint">
             {t(
-              "Le prix de vente = taux fournisseur (USD / 1000) Ã— taux XAF Ã— marge. Les services sont crÃ©Ã©s ou mis Ã  jour, puis associÃ©s au fournisseur."
+              "Le prix de vente = taux fournisseur (USD / 1000) × taux XAF × marge. Les services sont créés ou mis à jour, puis associés au fournisseur."
             )}
           </p>
           <div className="form-row">
@@ -1273,7 +1273,7 @@ export default function BoostAdmin() {
             />
           </div>
           <div className="form-row">
-            <label>{t("Taux USD â†’ XAF")}</label>
+            <label>{t("Taux USD → XAF")}</label>
             <input
               className="input"
               type="number"
@@ -1284,13 +1284,13 @@ export default function BoostAdmin() {
             />
           </div>
           <div className="form-row">
-            <label>{t("Forcer une catÃ©gorie (optionnel)")}</label>
+            <label>{t("Forcer une catégorie (optionnel)")}</label>
             <select
               className="input"
               value={importForm.category_id}
               onChange={(e) => setImportForm((f) => ({ ...f, category_id: e.target.value }))}
             >
-              <option value="">{t("CatÃ©gories du fournisseur")}</option>
+              <option value="">{t("Catégories du fournisseur")}</option>
               {categories
                 .filter((category) => category.is_active)
                 .map((category) => (
@@ -1301,7 +1301,7 @@ export default function BoostAdmin() {
             </select>
           </div>
           <div className="form-row">
-            <label>{t("Types de services (sÃ©parÃ©s par virgule)")}</label>
+            <label>{t("Types de services (séparés par virgule)")}</label>
             <input
               className="input"
               type="text"
@@ -1310,7 +1310,7 @@ export default function BoostAdmin() {
               placeholder="default"
             />
             <p className="hint">
-              {t("Â« default Â» couvre les services standards. Ajoutez d'autres types sÃ©parÃ©s par une virgule si nÃ©cessaire.")}
+              {t("« default » couvre les services standards. Ajoutez d'autres types séparés par une virgule si nécessaire.")}
             </p>
           </div>
           <div className="form-row">
@@ -1342,28 +1342,28 @@ export default function BoostAdmin() {
             disabled={importing || !provider?.enabled}
           >
             {importing
-              ? t("Import en coursâ€¦")
+              ? t("Import en cours…")
               : importForm.dry_run
                 ? t("Simuler l'import")
                 : t("Importer le catalogue")}
           </button>
           {!provider?.enabled && (
-            <p className="hint">{t("Activez d'abord le fournisseur et enregistrez sa clÃ© API.")}</p>
+            <p className="hint">{t("Activez d'abord le fournisseur et enregistrez sa clé API.")}</p>
           )}
           {importResult && (
             <p className="hint">
               {importResult.dry_run ? (
                 <>
-                  {t("Simulation")} : {importResult.would_import ?? 0} {t("services seraient importÃ©s")} Â·{" "}
-                  {importResult.would_activate ?? 0} {t("activÃ©s")} Â· {importResult.would_hide ?? 0}{" "}
-                  {t("masquÃ©s")}
-                  {importResult.skipped ? ` Â· ${t("ignorÃ©s")} : ${importResult.skipped}` : ""}
+                  {t("Simulation")} : {importResult.would_import ?? 0} {t("services seraient importés")} ·{" "}
+                  {importResult.would_activate ?? 0} {t("activés")} · {importResult.would_hide ?? 0}{" "}
+                  {t("masqués")}
+                  {importResult.skipped ? ` · ${t("ignorés")} : ${importResult.skipped}` : ""}
                 </>
               ) : (
                 <>
-                  {t("ImportÃ©s")} : {importResult.imported} Â· {t("crÃ©Ã©s")} : {importResult.created} Â·{" "}
-                  {t("mis Ã  jour")} : {importResult.updated}
-                  {importResult.skipped ? ` Â· ${t("ignorÃ©s")} : ${importResult.skipped}` : ""}
+                  {t("Importés")} : {importResult.imported} · {t("créés")} : {importResult.created} ·{" "}
+                  {t("mis à jour")} : {importResult.updated}
+                  {importResult.skipped ? ` · ${t("ignorés")} : ${importResult.skipped}` : ""}
                 </>
               )}
             </p>
@@ -1373,11 +1373,11 @@ export default function BoostAdmin() {
 
       <div className="card" style={{ padding: 18, marginTop: 20 }}>
         <h2 className="section-title" style={{ marginTop: 0 }}>
-          ðŸ’³ {t("Instructions de paiement Boost")}
+          💳 {t("Instructions de paiement Boost")}
         </h2>
         <p className="hint">
           {t(
-            "Ces coordonnÃ©es sont affichÃ©es au client aprÃ¨s la crÃ©ation de sa commande. Il dÃ©clare ensuite sa rÃ©fÃ©rence de transaction, que vous validez."
+            "Ces coordonnées sont affichées au client après la création de sa commande. Il déclare ensuite sa référence de transaction, que vous validez."
           )}
         </p>
         <form onSubmit={savePaymentInfo}>
@@ -1424,7 +1424,7 @@ export default function BoostAdmin() {
             </div>
           </div>
           <div className="form-row">
-            <label>{t("Note affichÃ©e au client")}</label>
+            <label>{t("Note affichée au client")}</label>
             <textarea
               className="input"
               rows={2}
@@ -1433,12 +1433,12 @@ export default function BoostAdmin() {
             />
           </div>
           <button className="btn btn-primary btn-small" type="submit" disabled={savingInfo}>
-            {savingInfo ? t("Enregistrementâ€¦") : t("Enregistrer les instructions")}
+            {savingInfo ? t("Enregistrement…") : t("Enregistrer les instructions")}
           </button>
           {infoMessage && <p className="hint">{infoMessage}</p>}
           {paymentInfo && !infoMessage && (
             <p className="hint">
-              {t("NumÃ©ros actuels")} : {paymentInfo.orange_money} (Orange) Â· {paymentInfo.mtn_mobile_money} (MTN)
+              {t("Numéros actuels")} : {paymentInfo.orange_money} (Orange) · {paymentInfo.mtn_mobile_money} (MTN)
             </p>
           )}
         </form>
@@ -1446,7 +1446,7 @@ export default function BoostAdmin() {
       {detailLoading && (
         <div className="modal-overlay" onClick={() => !detailLoading && setDetailOrder(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <p className="hint">{t("Chargementâ€¦")}</p>
+            <p className="hint">{t("Chargement…")}</p>
           </div>
         </div>
       )}
@@ -1473,7 +1473,7 @@ export default function BoostAdmin() {
             </div>
             {detailOrder.final_outcome && (
               <div className="card" style={{ padding: 12, marginBottom: 12 }}>
-                <strong>{t("RÃ©sultat final")} :</strong>{" "}
+                <strong>{t("Résultat final")} :</strong>{" "}
                 <span className={`badge badge-${detailOrder.final_outcome.status}`}>
                   {t(STATUS_LABELS[detailOrder.final_outcome.status] || detailOrder.final_outcome.status)}
                 </span>
@@ -1489,7 +1489,7 @@ export default function BoostAdmin() {
                 )}
                 {detailOrder.final_outcome.completed_at && (
                   <div className="hint">
-                    {t("TerminÃ©e le")} : {new Date(detailOrder.final_outcome.completed_at).toLocaleString("fr-FR")}
+                    {t("Terminée le")} : {new Date(detailOrder.final_outcome.completed_at).toLocaleString("fr-FR")}
                   </div>
                 )}
               </div>
@@ -1497,7 +1497,7 @@ export default function BoostAdmin() {
             <h4 style={{ marginTop: 8 }}>{t("Progression")}</h4>
             <div style={{ maxHeight: 360, overflowY: "auto" }}>
               {(detailOrder.events || []).length === 0 ? (
-                <p className="hint">{t("Aucun Ã©vÃ©nement.")}</p>
+                <p className="hint">{t("Aucun événement.")}</p>
               ) : (
                 <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                   {(detailOrder.events || []).map((ev) => (
@@ -1508,7 +1508,7 @@ export default function BoostAdmin() {
                       </div>
                       {(ev.old_status || ev.new_status) && (
                         <div className="hint">
-                          {ev.old_status || "â€”"} â†’ {ev.new_status || "â€”"}
+                          {ev.old_status || "—"} → {ev.new_status || "—"}
                         </div>
                       )}
                       {ev.message && <div className="hint" style={{ overflowWrap: "anywhere" }}>{ev.message}</div>}
