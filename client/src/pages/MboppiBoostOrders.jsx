@@ -52,10 +52,33 @@ export default function MboppiBoostOrders() {
   const [payingId, setPayingId] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
   const [checkout, setCheckout] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
+  const [orderDetails, setOrderDetails] = useState({});
+  const [detailLoadingId, setDetailLoadingId] = useState(null);
 
   useEffect(() => {
     fetchOrders();
   }, [user]);
+
+  async function toggleDetail(order) {
+    if (expandedId === order.id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(order.id);
+    if (orderDetails[order.id]) return;
+    setDetailLoadingId(order.id);
+    try {
+      const token = order._token || undefined;
+      const resp = await api.smmOrder(order.id, token);
+      setOrderDetails((prev) => ({ ...prev, [order.id]: resp }));
+    } catch (err) {
+      setOrderDetails((prev) => ({ ...prev, [order.id]: { error: err.message } }));
+    } finally {
+      setDetailLoadingId(null);
+    }
+  }
+
 
   async function fetchOrders({ silent = false } = {}) {
     if (silent) setRefreshing(true);
@@ -357,6 +380,54 @@ export default function MboppiBoostOrders() {
                       <strong>{o.quantity ?? "—"}</strong>
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    className="boost-btn boost-btn-secondary boost-btn-sm"
+                    onClick={() => toggleDetail(o)}
+                    style={{ marginTop: 8 }}
+                  >
+                    {expandedId === o.id ? t("Masquer la progression") : t("Voir la progression")}
+                  </button>
+
+                  {expandedId === o.id && (
+                    <div className="boost-order-detail" style={{ marginTop: 10 }}>
+                      {detailLoadingId === o.id && <p className="hint">{t("Chargement…")}</p>}
+                      {orderDetails[o.id]?.error && (
+                        <p className="error-msg">{orderDetails[o.id].error}</p>
+                      )}
+                      {orderDetails[o.id] && !orderDetails[o.id].error && (
+                        <>
+                          {orderDetails[o.id].final_outcome && (
+                            <p>
+                              <strong>{t("Résultat final")} :</strong>{" "}
+                              {t(STATUS_LABELS[orderDetails[o.id].final_outcome.status] || orderDetails[o.id].final_outcome.status)}
+                              {orderDetails[o.id].final_outcome.remains != null && (
+                                <> · {t("Restant")} : {orderDetails[o.id].final_outcome.remains}</>
+                              )}
+                              {orderDetails[o.id].final_outcome.charge != null && (
+                                <> · {t("Charge")} : {orderDetails[o.id].final_outcome.charge}</>
+                              )}
+                            </p>
+                          )}
+                          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                            {(orderDetails[o.id].events || []).map((ev, idx) => (
+                              <li key={idx} style={{ padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                                  <strong>{ev.event_type}</strong>
+                                  <span className="hint">{new Date(ev.created_at).toLocaleString("fr-FR")}</span>
+                                </div>
+                                {(ev.old_status || ev.new_status) && (
+                                  <div className="hint">{ev.old_status || "—"} → {ev.new_status || "—"}</div>
+                                )}
+                                {ev.message && <div className="hint" style={{ overflowWrap: "anywhere" }}>{ev.message}</div>}
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                    </div>
+                  )}
 
                   {canPay && (
                     <div className="boost-order-actions">

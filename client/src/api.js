@@ -610,7 +610,19 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   // Administration MboppiBoost (onglet Boost).
-  adminSmmOrders: (limit = 100) => adminRequest(`/smm/admin/orders?limit=${limit}`),
+  adminSmmOrders: (params = {}) => {
+    const q = new URLSearchParams();
+    if (params.limit) q.set("limit", params.limit);
+    if (params.offset != null) q.set("offset", params.offset);
+    if (params.status && params.status !== "all") q.set("status", params.status);
+    if (params.q) q.set("q", params.q);
+    if (params.from) q.set("from", params.from);
+    if (params.to) q.set("to", params.to);
+    if (params.cursor) q.set("cursor", params.cursor);
+    const qs = q.toString();
+    return adminRequest(`/smm/admin/orders${qs ? `?${qs}` : ""}`);
+  },
+  adminSmmOrder: (id) => adminRequest(`/smm/admin/orders/${encodeURIComponent(id)}`),
   adminSmmWallet: (userId) => adminRequest(`/smm/admin/wallet/${encodeURIComponent(userId)}`),
   adminSmmCreditWallet: (payload) =>
     adminRequest("/smm/admin/wallet/credit", {
@@ -629,6 +641,11 @@ export const api = {
     }),
   adminSmmDispatch: (id) =>
     adminRequest(`/smm/admin/orders/${id}/dispatch`, { method: "POST" }),
+  adminSmmRefund: (id, payload) =>
+    adminRequest(`/smm/admin/orders/${id}/refund`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    }),
   adminSmmSync: () => adminRequest("/smm/admin/sync", { method: "POST" }),
   adminSmmPaymentInfo: () => adminRequest("/smm/admin/payment-info"),
   adminSmmSavePaymentInfo: (payload) =>
@@ -650,4 +667,23 @@ export const api = {
     }),
   adminSmmCategories: () => adminRequest("/smm/admin/categories"),
   adminSmmServices: () => adminRequest("/smm/admin/services"),
+  adminSmmCreateService: (payload) =>
+    adminRequest("/smm/admin/services", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  adminSmmUpdateService: (id, payload) =>
+    adminRequest(`/smm/admin/services/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  adminSmmPatchService: (id, payload) =>
+    adminRequest(`/smm/admin/services/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  adminSmmDeleteService: (id) =>
+    adminRequest(`/smm/admin/services/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }),
 };

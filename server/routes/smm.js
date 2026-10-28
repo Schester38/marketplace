@@ -5,6 +5,7 @@ import { validate, validateQuery } from "../middlewares/validate.js";
 import {
   smmCategorySchema,
   smmServiceSchema,
+  smmServiceUpdateSchema,
   smmOrderSchema,
   smmOrderStatusSchema,
   smmPaymentDeclareSchema,
@@ -42,6 +43,7 @@ import {
   BOOST_MAX_TOPUP_USD,
   BOOST_MIN_TOPUP_USD,
   adminCreditBoostWallet,
+  creditBoostWalletTx,
   createBoostWalletTopup,
   debitBoostWalletTx,
   getBoostWallet,
@@ -885,13 +887,42 @@ router.get(
     const order = { ...rows[0] };
     delete order.public_token;
     const events = await q(
-      `SELECT event_type, old_status, new_status, message, created_at
+      `SELECT event_type, old_status, new_status, message, created_at, provider_payload
        FROM smm_order_events
        WHERE order_id = $1
-       ORDER BY created_at DESC`,
+       ORDER BY created_at ASC`,
       [id]
     );
-    res.json({ order, events });
+
+    const TERMINAL = new Set(["completed", "failed", "cancelled", "refunded", "refund_pending"]);
+    let terminalEvent = null;
+    for (let i = events.length - 1; i >= 0; i--) {
+      const ev = events[i];
+      const status = ev.new_status || ev.event_type;
+      if (TERMINAL.has(status) || TERMINAL.has(ev.event_type)) {
+        terminalEvent = ev;
+        break;
+      }
+    }
+    let remains = null;
+    let charge = null;
+    for (let i = events.length - 1; i >= 0; i--) {
+      const p = events[i].provider_payload || {};
+      if (remains === null && p.remains !== undefined && p.remains !== null) remains = p.remains;
+      if (charge === null && p.charge !== undefined && p.charge !== null) charge = p.charge;
+      if (remains !== null && charge !== null) break;
+    }
+    const finalOutcome = {
+      status: terminalEvent
+        ? (terminalEvent.new_status || terminalEvent.event_type)
+        : order.status,
+      remains,
+      charge,
+      completed_at: order.completed_at || null,
+      is_terminal: TERMINAL.has(order.status) || !!terminalEvent,
+    };
+
+    res.json({ order, events, final_outcome: finalOutcome });
   })
 );
 
@@ -1211,6 +1242,60 @@ router.put(
   })
 );
 
+router.patch(
+  "/admin/services/:id",
+  authRequired,
+  roleRequired("admin"),
+  validate(smmServiceUpdateSchema),
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ error: "ID invalide" });
+    }
+    const fields = req.body || {};
+    const allowed = [
+      "category_id",
+      "name",
+      "description",
+      "short_description",
+      "price",
+      "currency",
+      "billing_unit",
+      "status",
+      "is_automated",
+      "is_consulting",
+      "is_campaign",
+      "external_service_id",
+      "delivery_days",
+      "conditions",
+      "limits",
+      "sort_order",
+    ];
+    const sets = [];
+    const values = [];
+    let idx = 1;
+    for (const key of allowed) {
+      if (Object.prototype.hasOwnProperty.call(fields, key)) {
+        sets.push(`${key} = $${idx++}`);
+        values.push(key === "limits" ? JSON.stringify(fields[key] || {}) : fields[key]);
+      }
+    }
+    if (!sets.length) {
+      return res.status(400).json({ error: "Aucun champ à mettre à jour" });
+    }
+    sets.push("updated_at = now()");
+    values.push(id);
+    const updated = await q(
+      `UPDATE smm_services SET ${sets.join(", ")} WHERE id = $${idx} RETURNING id`,
+      values
+    );
+    if (!updated.length) {
+      return res.status(404).json({ error: "Service introuvable" });
+    }
+    res.json({ service_id: updated[0].id });
+  })
+);
+
 router.delete(
   "/admin/services/:id",
   authRequired,
@@ -1220,11 +1305,18 @@ router.delete(
     if (!Number.isFinite(id)) {
       return res.status(400).json({ error: "ID invalide" });
     }
-    const deleted = await q(`DELETE FROM smm_services WHERE id = $1 RETURNING id`, [id]);
-    if (!deleted.length) {
-      return res.status(404).json({ error: "Service introuvable" });
+    try {
+      const deleted = await q(`DELETE FROM smm_services WHERE id = $1 RETURNING id`, [id]);
+      if (!deleted.length) {
+        return res.status(404).json({ error: "Service introuvable" });
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      if (err.code === "23503") {
+        return res.status(409).json({ error: "Impossible : des commandes utilisent ce service" });
+      }
+      throw err;
     }
-    res.json({ ok: true });
   })
 );
 
@@ -1287,6 +1379,85 @@ router.get(
   ah(async (req, res) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
+    const status = (req.query.status || "").toString().trim();
+    const qterm = (req.query.q || "").toString().trim();
+    const from = (req.query.from || "").toString().trim();
+    const to = (req.query.to || "").toString().trim();
+    const cursorRaw = (req.query.cursor || "").toString().trim();
+
+    const where = [];
+    const params = [];
+    const add = (sql, val) => { params.push(val); where.push(sql.replace("?", `$${params.length}`)); };
+
+    if (status && status !== "all") {
+      add("o.status = ?", status);
+    }
+    if (qterm) {
+      const like = `%${qterm}%`;
+      const base = params.length;
+      params.push(like, like, like, like, like, like, like);
+      where.push(
+        `(o.id::text ILIKE $${base + 1} OR o.external_reference ILIKE $${base + 2} OR o.payment_reference ILIKE $${base + 3} OR o.payment_external_reference ILIKE $${base + 4} OR o.service_name ILIKE $${base + 5} OR u.name ILIKE $${base + 6} OR u.email ILIKE $${base + 7})`
+      );
+    }
+    if (from) {
+      add("o.created_at >= ?::timestamptz", from);
+    }
+    if (to) {
+      const toVal = /^\\d{4}-\\d{2}-\\d{2}$/.test(to) ? `${to} 23:59:59.999` : to;
+      add("o.created_at <= ?::timestamptz", toVal);
+    }
+
+    let useCursor = false;
+    let cursorTs = null;
+    let cursorId = null;
+    if (cursorRaw) {
+      try {
+        const decoded = Buffer.from(cursorRaw, "base64").toString("utf8");
+        const parts = decoded.split("|");
+        if (parts.length === 2) {
+          cursorTs = parts[0];
+          cursorId = Number(parts[1]);
+          if (Number.isFinite(cursorId)) useCursor = true;
+        }
+      } catch {}
+    }
+    if (useCursor) {
+      params.push(cursorTs, cursorId);
+      const tsIdx = params.length - 1;
+      const idIdx = params.length;
+      where.push(`(o.created_at < $${tsIdx}::timestamptz OR (o.created_at = $${tsIdx}::timestamptz AND o.id < $${idIdx}))`);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+
+    const cp = [];
+    const cw = [];
+    const addC2 = (sql, val) => { cp.push(val); cw.push(sql.replace("?", `$${cp.length}`)); };
+    if (status && status !== "all") addC2("o.status = ?", status);
+    if (qterm) {
+      const like = `%${qterm}%`;
+      const base = cp.length;
+      cp.push(like, like, like, like, like, like, like);
+      cw.push(`(o.id::text ILIKE $${base + 1} OR o.external_reference ILIKE $${base + 2} OR o.payment_reference ILIKE $${base + 3} OR o.payment_external_reference ILIKE $${base + 4} OR o.service_name ILIKE $${base + 5} OR u.name ILIKE $${base + 6} OR u.email ILIKE $${base + 7})`);
+    }
+    if (from) addC2("o.created_at >= ?::timestamptz", from);
+    if (to) {
+      const toVal = /^\\d{4}-\\d{2}-\\d{2}$/.test(to) ? `${to} 23:59:59.999` : to;
+      addC2("o.created_at <= ?::timestamptz", toVal);
+    }
+    const countRows = await q(`SELECT COUNT(*)::int AS c FROM smm_orders o LEFT JOIN users u ON u.id = o.user_id ${cw.length ? "WHERE " + cw.join(" AND ") : ""}`, cp);
+    const total = countRows[0]?.c || 0;
+
+    const fetchLimit = limit + 1;
+    const mainParams = [...params];
+    let paginationSql = `LIMIT $${mainParams.length + 1}`;
+    mainParams.push(fetchLimit);
+    if (!useCursor) {
+      mainParams.push(offset);
+      paginationSql += ` OFFSET $${mainParams.length}`;
+    }
+
     const rows = await q(
       `SELECT o.id, o.user_id, u.name AS user_name, u.email AS user_email, u.phone AS user_phone,
               o.service_id, o.service_name, o.service_price, o.currency, o.quantity,
@@ -1297,11 +1468,100 @@ router.get(
               o.client_info, o.created_at, o.updated_at, o.completed_at
        FROM smm_orders o
        LEFT JOIN users u ON u.id = o.user_id
-       ORDER BY o.created_at DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
+       ${whereSql}
+       ORDER BY o.created_at DESC, o.id DESC
+       ${paginationSql}`,
+      mainParams
     );
-    res.json({ orders: rows, limit, offset });
+
+    const hasMore = rows.length > limit;
+    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+    let nextCursor = null;
+    if (hasMore && pageRows.length) {
+      const last = pageRows[pageRows.length - 1];
+      nextCursor = Buffer.from(`${last.created_at}|${last.id}`).toString("base64");
+    }
+
+    res.json({
+      orders: pageRows,
+      limit,
+      offset: useCursor ? null : offset,
+      total,
+      has_more: hasMore,
+      next_cursor: nextCursor,
+    });
+  })
+);
+
+/* GET /api/admin/smm/orders/:id — détail complet d'une commande (admin) : commande, timeline, résultat final */
+router.get(
+  "/admin/orders/:id",
+  authRequired,
+  roleRequired("admin"),
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ error: "ID de commande invalide" });
+    }
+    const rows = await q(
+      `SELECT o.*, u.name AS user_name, u.email AS user_email, u.phone AS user_phone,
+              c.name AS category_name
+       FROM smm_orders o
+       LEFT JOIN users u ON u.id = o.user_id
+       LEFT JOIN smm_services s ON s.id = o.service_id
+       LEFT JOIN smm_categories c ON c.id = s.category_id
+       WHERE o.id = $1`,
+      [id]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ error: "Commande introuvable" });
+    }
+    const order = { ...rows[0] };
+    delete order.public_token;
+
+    const events = await q(
+      `SELECT id, event_type, old_status, new_status, message, provider_payload, created_at
+       FROM smm_order_events
+       WHERE order_id = $1
+       ORDER BY created_at ASC`,
+      [id]
+    );
+
+    // Résultat final : dernier événement terminal + payload fournisseur consolidé.
+    const TERMINAL = new Set(["completed", "failed", "cancelled", "refunded", "refund_pending"]);
+    let terminalEvent = null;
+    for (let i = events.length - 1; i >= 0; i--) {
+      const ev = events[i];
+      const status = ev.new_status || ev.event_type;
+      if (TERMINAL.has(status) || TERMINAL.has(ev.event_type)) {
+        terminalEvent = ev;
+        break;
+      }
+    }
+    // Consolidation du payload fournisseur (remains, charge) : dernier événement qui les porte.
+    let remains = null;
+    let charge = null;
+    let providerStatus = order.provider_status || null;
+    for (let i = events.length - 1; i >= 0; i--) {
+      const p = events[i].provider_payload || {};
+      if (remains === null && p.remains !== undefined && p.remains !== null) remains = p.remains;
+      if (charge === null && p.charge !== undefined && p.charge !== null) charge = p.charge;
+      if (remains !== null && charge !== null) break;
+    }
+
+    const finalOutcome = {
+      status: terminalEvent
+        ? (terminalEvent.new_status || terminalEvent.event_type)
+        : order.status,
+      terminal_event: terminalEvent || null,
+      remains,
+      charge,
+      provider_status: providerStatus,
+      completed_at: order.completed_at || null,
+      is_terminal: TERMINAL.has(order.status) || !!terminalEvent,
+    };
+
+    res.json({ order, events, final_outcome: finalOutcome });
   })
 );
 
@@ -1463,6 +1723,124 @@ router.post(
     res.json({ ok: true, order_id: id, ...result });
   })
 );
+/* POST /api/admin/smm/orders/:id/refund — remboursement atomique (wallet + statut + événement + audit + notifs) */
+router.post(
+  "/admin/orders/:id/refund",
+  authRequired,
+  roleRequired("admin"),
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: "ID invalide" });
+
+    const amountUsdRaw = req.body?.amount_usd;
+    const note = String(req.body?.note || "").trim().slice(0, 300) || null;
+    const forceAmount = amountUsdRaw !== undefined && amountUsdRaw !== null && amountUsdRaw !== "";
+
+    const orderRows = await q(
+      `SELECT id, user_id, service_name, total, currency, status, payment_method, payment_status FROM smm_orders WHERE id = $1`,
+      [id]
+    );
+    if (!orderRows.length) return res.status(404).json({ error: "Commande introuvable" });
+    const order = orderRows[0];
+
+    if (!order.user_id) {
+      return res.status(409).json({ error: "Commande sans utilisateur : remboursement manuel hors plateforme." });
+    }
+    if (["refunded", "cancelled"].includes(order.status)) {
+      return res.status(409).json({ error: `Commande déjà ${order.status}.` });
+    }
+
+    // Montant USD à créditer : override explicite ou montant débité à l'origine.
+    let refundUsd = null;
+    if (forceAmount) {
+      const n = Number(amountUsdRaw);
+      if (!Number.isFinite(n) || n <= 0) {
+        return res.status(400).json({ error: "Montant de remboursement invalide." });
+      }
+      refundUsd = n;
+    } else {
+      const debitRows = await q(
+        `SELECT amount_usd FROM boost_wallet_transactions
+          WHERE reference_type = 'smm_order' AND reference_id = $1 AND transaction_type = 'order_payment'
+          ORDER BY id DESC LIMIT 1`,
+        [id]
+      );
+      if (debitRows.length) {
+        refundUsd = Number(debitRows[0].amount_usd);
+      }
+    }
+
+    const result = await withTransaction(async (tx) => {
+      // 1. Crédit wallet (si montant disponible)
+      let credit = null;
+      if (refundUsd && refundUsd > 0) {
+        credit = await creditBoostWalletTx(tx, {
+          userId: Number(order.user_id),
+          amountUsd: refundUsd,
+          transactionType: "refund",
+          referenceType: "smm_order_refund",
+          referenceId: id,
+          description: note || `Remboursement commande Boost #${id} — ${order.service_name}`,
+          createdBy: req.user.id > 0 ? req.user.id : null,
+        });
+      }
+      // 2. Statut commande (garde atomique contre les remboursements concurrents)
+      const updated = await tx.query(
+        `UPDATE smm_orders
+            SET status = 'refunded', payment_status = 'refunded', updated_at = now(),
+                completed_at = COALESCE(completed_at, now())
+          WHERE id = $1 AND status NOT IN ('refunded', 'cancelled')
+          RETURNING id, status`,
+        [id]
+      );
+      if (!updated.length) {
+        const err = new Error("Commande déjà remboursée ou annulée.");
+        err.statusCode = 409;
+        throw err;
+      }
+      return { credit, updated: updated[0] };
+    });
+
+    // 3. Événement
+    await addEvent(
+      id,
+      "refund",
+      order.status,
+      "refunded",
+      note || `Remboursement administrateur${refundUsd ? ` (${refundUsd} USD)` : ""}`,
+      { amount_usd: refundUsd, note }
+    ).catch(() => {});
+
+    // 4. Audit
+    try {
+      const { logAudit } = await import("../security.js");
+      logAudit(req.user.id, "smm.order_refunded", `#${id} ${order.service_name}${refundUsd ? ` (${refundUsd} USD)` : ""}`, req.ip);
+    } catch { /* best-effort */ }
+
+    // 5. Notifications
+    await notifySmmUser(
+      Number(order.user_id),
+      "Remboursement Boost reçu",
+      `Votre commande #${id} (${order.service_name}) a été remboursée${refundUsd ? ` : ${refundUsd} USD crédités sur votre portefeuille Boost.` : "."}`,
+      { orderId: id }
+    ).catch(() => {});
+    notifyAdmins({
+      title: "Remboursement Boost effectué",
+      body: `Commande #${id} — ${order.service_name} — ${refundUsd || 0} USD remboursés`,
+      amount: refundUsd || 0,
+    }).catch(() => {});
+
+    res.json({
+      ok: true,
+      order_id: id,
+      status: "refunded",
+      refunded_usd: refundUsd,
+      balance_usd: result.credit?.balance_usd ?? null,
+    });
+  })
+);
+
+
 
 /* POST /api/admin/smm/sync — synchroniser les statuts fournisseur */
 router.post(

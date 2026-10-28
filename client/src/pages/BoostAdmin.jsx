@@ -50,7 +50,18 @@ export default function BoostAdmin() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [filter, setFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [cursor, setCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [total, setTotal] = useState(0);
   const [busyId, setBusyId] = useState(null);
+  const [detailOrder, setDetailOrder] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+
   const [syncing, setSyncing] = useState(false);
 
   const [provider, setProvider] = useState(null);
@@ -68,6 +79,28 @@ export default function BoostAdmin() {
   const [balance, setBalance] = useState(null);
   const [balanceBusy, setBalanceBusy] = useState(false);
 
+  const [services, setServices] = useState([]);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [serviceNotice, setServiceNotice] = useState("");
+  const [editingService, setEditingService] = useState(null);
+  const [serviceForm, setServiceForm] = useState({
+    category_id: "",
+    name: "",
+    description: "",
+    short_description: "",
+    price: "",
+    currency: "XAF",
+    billing_unit: "service",
+    status: "active",
+    is_automated: false,
+    is_consulting: false,
+    is_campaign: false,
+    external_service_id: "",
+    delivery_days: "",
+    conditions: "",
+    sort_order: 0,
+  });
+  const [savingService, setSavingService] = useState(false);
   const [categories, setCategories] = useState([]);
   const [importForm, setImportForm] = useState({
     markup: 1.5,
@@ -101,22 +134,71 @@ export default function BoostAdmin() {
     loadOrders();
     loadProvider();
     loadPaymentInfo();
+    loadServices();
     api
       .adminSmmCategories()
       .then((resp) => setCategories(resp.categories || []))
       .catch(() => {});
   }, []);
 
-  async function loadOrders() {
+  async function loadOrders(override = {}) {
+    const params = {
+      limit: 50,
+      status: override.status !== undefined ? override.status : filter,
+      q: override.q !== undefined ? override.q : searchQuery,
+      from: override.from !== undefined ? override.from : fromDate,
+      to: override.to !== undefined ? override.to : toDate,
+    };
     setLoading(true);
     try {
-      const resp = await api.adminSmmOrders(200);
+      const resp = await api.adminSmmOrders(params);
       setOrders(resp.orders || []);
+      setCursor(resp.next_cursor || null);
+      setHasMore(!!resp.has_more);
+      setTotal(resp.total || 0);
       setError("");
     } catch (err) {
       setError(err.message || "Impossible de charger les commandes Boost.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadMore() {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const params = {
+        limit: 50,
+        status: filter,
+        q: searchQuery,
+        from: fromDate,
+        to: toDate,
+        cursor: cursor,
+      };
+      const resp = await api.adminSmmOrders(params);
+      setOrders((prev) => [...prev, ...(resp.orders || [])]);
+      setCursor(resp.next_cursor || null);
+      setHasMore(!!resp.has_more);
+      setTotal(resp.total || total);
+    } catch (err) {
+      setError(err.message || "Impossible de charger la suite.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  async function openOrderDetail(order) {
+    setDetailLoading(true);
+    setDetailError("");
+    setDetailOrder(null);
+    try {
+      const resp = await api.adminSmmOrder(order.id);
+      setDetailOrder(resp);
+    } catch (err) {
+      setDetailError(err.message || "Impossible de charger le détail de la commande.");
+    } finally {
+      setDetailLoading(false);
     }
   }
 
@@ -143,6 +225,126 @@ export default function BoostAdmin() {
     }
   }
 
+  async function loadServices() {
+    setServicesLoading(true);
+    try {
+      const resp = await api.adminSmmServices();
+      setServices(resp.services || []);
+    } catch (err) {
+      setServiceNotice(err.message || "Impossible de charger les services.");
+    } finally {
+      setServicesLoading(false);
+    }
+  }
+
+  function startNewService() {
+    setEditingService({ id: null });
+    setServiceForm({
+      category_id: categories[0]?.id || "",
+      name: "",
+      description: "",
+      short_description: "",
+      price: "",
+      currency: "XAF",
+      billing_unit: "service",
+      status: "active",
+      is_automated: false,
+      is_consulting: false,
+      is_campaign: false,
+      external_service_id: "",
+      delivery_days: "",
+      conditions: "",
+      sort_order: 0,
+    });
+    setServiceNotice("");
+  }
+
+  function startEditService(svc) {
+    setEditingService(svc);
+    setServiceForm({
+      category_id: svc.category_id || "",
+      name: svc.name || "",
+      description: svc.description || "",
+      short_description: svc.short_description || "",
+      price: svc.price ?? "",
+      currency: svc.currency || "XAF",
+      billing_unit: svc.billing_unit || "service",
+      status: svc.status || "active",
+      is_automated: !!svc.is_automated,
+      is_consulting: !!svc.is_consulting,
+      is_campaign: !!svc.is_campaign,
+      external_service_id: svc.external_service_id || "",
+      delivery_days: svc.delivery_days || "",
+      conditions: svc.conditions || "",
+      sort_order: svc.sort_order ?? 0,
+    });
+    setServiceNotice("");
+  }
+
+  function cancelServiceEdit() {
+    setEditingService(null);
+    setServiceNotice("");
+  }
+
+  async function saveService(e) {
+    e?.preventDefault();
+    if (!editingService) return;
+    setSavingService(true);
+    setServiceNotice("");
+    const payload = {
+      category_id: Number(serviceForm.category_id),
+      name: serviceForm.name,
+      description: serviceForm.description || null,
+      short_description: serviceForm.short_description || null,
+      price: Number(serviceForm.price),
+      currency: serviceForm.currency,
+      billing_unit: serviceForm.billing_unit,
+      status: serviceForm.status,
+      is_automated: !!serviceForm.is_automated,
+      is_consulting: !!serviceForm.is_consulting,
+      is_campaign: !!serviceForm.is_campaign,
+      external_service_id: serviceForm.external_service_id || null,
+      delivery_days: serviceForm.delivery_days ? Number(serviceForm.delivery_days) : null,
+      conditions: serviceForm.conditions || null,
+      sort_order: Number(serviceForm.sort_order) || 0,
+    };
+    try {
+      if (editingService.id) {
+        await api.adminSmmUpdateService(editingService.id, payload);
+        setServiceNotice("Service mis à jour.");
+      } else {
+        await api.adminSmmCreateService(payload);
+        setServiceNotice("Service créé.");
+      }
+      setEditingService(null);
+      await loadServices();
+    } catch (err) {
+      setServiceNotice(err.message || "Enregistrement impossible.");
+    } finally {
+      setSavingService(false);
+    }
+  }
+
+  async function toggleServiceStatus(svc) {
+    const next = svc.status === "active" ? "inactive" : "active";
+    try {
+      await api.adminSmmPatchService(svc.id, { status: next });
+      await loadServices();
+    } catch (err) {
+      setServiceNotice(err.message || "Mise à jour impossible.");
+    }
+  }
+
+  async function deleteService(svc) {
+    if (!window.confirm(`Supprimer le service « ${svc.name} » ?`)) return;
+    try {
+      await api.adminSmmDeleteService(svc.id);
+      setServiceNotice("Service supprimé.");
+      await loadServices();
+    } catch (err) {
+      setServiceNotice(err.message || "Suppression impossible.");
+    }
+  }
   async function loadPaymentInfo() {
     try {
       const resp = await api.adminSmmPaymentInfo();
@@ -329,6 +531,27 @@ export default function BoostAdmin() {
     }
   }
 
+  async function refundOrder(order) {
+    const amount = window.prompt(
+      `Montant à rembourser en USD (laisser vide pour rembourser le débit original) pour la commande #${order.id} :`,
+      ""
+    );
+    if (amount === null) return;
+    setBusyId(order.id);
+    setNotice("");
+    try {
+      const payload = amount.trim() ? { amount_usd: Number(amount) } : {};
+      const resp = await api.adminSmmRefund(order.id, payload);
+      setNotice(
+        `Commande #${order.id} remboursée${resp.refunded_usd ? ` (${resp.refunded_usd} USD)` : ""}.`
+      );
+      await loadOrders();
+    } catch (err) {
+      setNotice(err.message || "Remboursement impossible.");
+    } finally {
+      setBusyId(null);
+    }
+  }
   async function changeStatus(order, status) {
     if (!status || status === order.status) return;
     setBusyId(order.id);
@@ -360,8 +583,7 @@ export default function BoostAdmin() {
     }
   }
 
-  const visibleOrders =
-    filter === "all" ? orders : orders.filter((order) => order.status === filter);
+  const visibleOrders = orders;
   const pendingCount = orders.filter((order) => ["draft", "pending_payment"].includes(order.status)).length;
 
   return (
@@ -392,7 +614,14 @@ export default function BoostAdmin() {
 
         <div style={{ display: "flex", gap: 8, alignItems: "center", margin: "12px 0", flexWrap: "wrap" }}>
           <label className="label">{t("Filtrer")}</label>
-          <select className="input" value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <select
+            className="input"
+            value={filter}
+            onChange={(e) => {
+              setFilter(e.target.value);
+              loadOrders({ status: e.target.value });
+            }}
+          >
             <option value="all">{t("Toutes les commandes")}</option>
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
@@ -400,10 +629,49 @@ export default function BoostAdmin() {
               </option>
             ))}
           </select>
+          <input
+            className="input"
+            placeholder={t("Recherche (réf, client, email, service)")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") loadOrders({ q: searchQuery });
+            }}
+            style={{ minWidth: 220 }}
+          />
+          <input
+            className="input"
+            type="date"
+            value={fromDate}
+            onChange={(e) => {
+              setFromDate(e.target.value);
+              loadOrders({ from: e.target.value });
+            }}
+          />
+          <input
+            className="input"
+            type="date"
+            value={toDate}
+            onChange={(e) => {
+              setToDate(e.target.value);
+              loadOrders({ to: e.target.value });
+            }}
+          />
+          <button className="btn btn-outline btn-small" onClick={() => loadOrders()} disabled={loading}>
+            {loading ? "…" : t("Appliquer")}
+          </button>
           <span className="hint">
-            {visibleOrders.length} / {orders.length}
+            {visibleOrders.length} / {total || orders.length}
           </span>
         </div>
+
+        {hasMore && (
+          <div style={{ margin: "8px 0" }}>
+            <button className="btn btn-outline btn-small" onClick={loadMore} disabled={loadingMore}>
+              {loadingMore ? t("Chargement…") : t("Charger la suite")}
+            </button>
+          </div>
+        )}
 
         {visibleOrders.length === 0 ? (
           <p className="hint">{t("Aucune commande dans ce filtre.")}</p>
@@ -497,6 +765,12 @@ export default function BoostAdmin() {
                       </td>
                       <td>
                         <div className="boost-admin-actions">
+                          <button
+                            className="btn btn-outline btn-small"
+                            onClick={() => openOrderDetail(order)}
+                          >
+                            {t("Détail / progression")}
+                          </button>
                           {["draft", "pending_payment"].includes(order.status) && (
                             <button
                               className="btn btn-primary btn-small"
@@ -513,6 +787,15 @@ export default function BoostAdmin() {
                               onClick={() => dispatchOrder(order)}
                             >
                               {t("Envoyer au fournisseur")}
+                            </button>
+                          )}
+                          {!["refunded", "cancelled"].includes(order.status) && (
+                            <button
+                              className="btn btn-outline btn-small"
+                              disabled={busyId === order.id}
+                              onClick={() => refundOrder(order)}
+                            >
+                              {t("Rembourser")}
                             </button>
                           )}
                           {order.status === "paid" &&
@@ -937,6 +1220,149 @@ export default function BoostAdmin() {
 
       <div className="card" style={{ padding: 18, marginTop: 20 }}>
         <h2 className="section-title" style={{ marginTop: 0 }}>
+          🛠️ {t("Gestion des services Boost")}
+        </h2>
+        <p className="hint">
+          {t("Créez, modifiez le prix, le statut ou supprimez un service individuellement (sans ré-import complet).")}
+        </p>
+        {serviceNotice && <p className="hint">{serviceNotice}</p>}
+        <button className="btn btn-primary btn-small" type="button" onClick={startNewService} style={{ marginBottom: 12 }}>
+          + {t("Nouveau service")}
+        </button>
+
+        {editingService && (
+          <form onSubmit={saveService} style={{ marginBottom: 16, padding: 12, border: "1px solid var(--border, #ddd)", borderRadius: 8 }}>
+            <div className="boost-admin-grid">
+              <div className="form-row">
+                <label>{t("Catégorie")}</label>
+                <select className="input" value={serviceForm.category_id} onChange={(e) => setServiceForm((f) => ({ ...f, category_id: e.target.value }))}>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-row">
+                <label>{t("Nom")}</label>
+                <input className="input" value={serviceForm.name} onChange={(e) => setServiceForm((f) => ({ ...f, name: e.target.value }))} required />
+              </div>
+              <div className="form-row">
+                <label>{t("Prix")}</label>
+                <input className="input" type="number" min="0" step="0.01" value={serviceForm.price} onChange={(e) => setServiceForm((f) => ({ ...f, price: e.target.value }))} required />
+              </div>
+              <div className="form-row">
+                <label>{t("Devise")}</label>
+                <input className="input" value={serviceForm.currency} onChange={(e) => setServiceForm((f) => ({ ...f, currency: e.target.value }))} />
+              </div>
+              <div className="form-row">
+                <label>{t("Unité de facturation")}</label>
+                <select className="input" value={serviceForm.billing_unit} onChange={(e) => setServiceForm((f) => ({ ...f, billing_unit: e.target.value }))}>
+                  {["service", "mois", "campagne", "article", "heure", "1000"].map((u) => (
+                    <option key={u} value={u}>{u}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-row">
+                <label>{t("Statut")}</label>
+                <select className="input" value={serviceForm.status} onChange={(e) => setServiceForm((f) => ({ ...f, status: e.target.value }))}>
+                  <option value="active">{t("Actif")}</option>
+                  <option value="inactive">{t("Inactif")}</option>
+                  <option value="draft">{t("Brouillon")}</option>
+                </select>
+              </div>
+              <div className="form-row">
+                <label>{t("ID service fournisseur")}</label>
+                <input className="input" value={serviceForm.external_service_id} onChange={(e) => setServiceForm((f) => ({ ...f, external_service_id: e.target.value }))} />
+              </div>
+              <div className="form-row">
+                <label>{t("Délai (jours)")}</label>
+                <input className="input" type="number" min="1" max="365" value={serviceForm.delivery_days} onChange={(e) => setServiceForm((f) => ({ ...f, delivery_days: e.target.value }))} />
+              </div>
+              <div className="form-row">
+                <label>{t("Ordre")}</label>
+                <input className="input" type="number" min="0" value={serviceForm.sort_order} onChange={(e) => setServiceForm((f) => ({ ...f, sort_order: e.target.value }))} />
+              </div>
+            </div>
+            <div className="form-row">
+              <label>{t("Description courte")}</label>
+              <input className="input" value={serviceForm.short_description} onChange={(e) => setServiceForm((f) => ({ ...f, short_description: e.target.value }))} />
+            </div>
+            <div className="form-row">
+              <label>{t("Description")}</label>
+              <textarea className="input" rows={3} value={serviceForm.description} onChange={(e) => setServiceForm((f) => ({ ...f, description: e.target.value }))} />
+            </div>
+            <div className="form-row" style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input type="checkbox" checked={serviceForm.is_automated} onChange={(e) => setServiceForm((f) => ({ ...f, is_automated: e.target.checked }))} />
+                {t("Automatisé")}
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input type="checkbox" checked={serviceForm.is_consulting} onChange={(e) => setServiceForm((f) => ({ ...f, is_consulting: e.target.checked }))} />
+                {t("Consulting")}
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input type="checkbox" checked={serviceForm.is_campaign} onChange={(e) => setServiceForm((f) => ({ ...f, is_campaign: e.target.checked }))} />
+                {t("Campagne")}
+              </label>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button className="btn btn-primary btn-small" type="submit" disabled={savingService}>
+                {savingService ? t("Enregistrement…") : t("Enregistrer")}
+              </button>
+              <button className="btn btn-outline btn-small" type="button" onClick={cancelServiceEdit}>
+                {t("Annuler")}
+              </button>
+            </div>
+          </form>
+        )}
+
+
+        {servicesLoading ? (
+          <p className="hint">{t("Chargement…")}</p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left", padding: 6 }}>{t("Nom")}</th>
+                  <th style={{ textAlign: "left", padding: 6 }}>{t("Catégorie")}</th>
+                  <th style={{ textAlign: "right", padding: 6 }}>{t("Prix")}</th>
+                  <th style={{ textAlign: "left", padding: 6 }}>{t("Statut")}</th>
+                  <th style={{ textAlign: "left", padding: 6 }}>{t("Actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {services.map((svc) => (
+                  <tr key={svc.id} style={{ borderTop: "1px solid var(--border, #eee)" }}>
+                    <td style={{ padding: 6 }}>{svc.name}</td>
+                    <td style={{ padding: 6 }}>{svc.category_name || svc.category_slug}</td>
+                    <td style={{ padding: 6, textAlign: "right" }}>{money(svc.price, svc.currency)}</td>
+                    <td style={{ padding: 6 }}>
+                      <button className="btn btn-outline btn-small" onClick={() => toggleServiceStatus(svc)}>
+                        {svc.status === "active" ? "✅" : "⛔"} {svc.status}
+                      </button>
+                    </td>
+                    <td style={{ padding: 6, display: "flex", gap: 6 }}>
+                      <button className="btn btn-outline btn-small" onClick={() => startEditService(svc)}>{t("Modifier")}</button>
+                      <button className="btn btn-outline btn-small" onClick={() => deleteService(svc)}>{t("Supprimer")}</button>
+                    </td>
+                  </tr>
+                ))}
+                {!services.length && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: 12, textAlign: "center" }} className="hint">
+                      {t("Aucun service.")}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+
+      <div className="card" style={{ padding: 18, marginTop: 20 }}>
+        <h2 className="section-title" style={{ marginTop: 0 }}>
           💳 {t("Instructions de paiement Boost")}
         </h2>
         <p className="hint">
@@ -1007,6 +1433,88 @@ export default function BoostAdmin() {
           )}
         </form>
       </div>
+      {detailLoading && (
+        <div className="modal-overlay" onClick={() => !detailLoading && setDetailOrder(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <p className="hint">{t("Chargement…")}</p>
+          </div>
+        </div>
+      )}
+      {detailError && (
+        <div className="modal-overlay" onClick={() => setDetailError("")}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <p className="error">{detailError}</p>
+            <button className="btn btn-outline btn-small" onClick={() => setDetailError("")}>
+              {t("Fermer")}
+            </button>
+          </div>
+        </div>
+      )}
+      {detailOrder && (
+        <div className="modal-overlay" onClick={() => setDetailOrder(null)}>
+          <div className="modal" style={{ maxWidth: 720, width: "95vw" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h3 style={{ margin: 0 }}>
+                {t("Commande")} #{detailOrder.order?.id}
+              </h3>
+              <button className="btn btn-outline btn-small" onClick={() => setDetailOrder(null)}>
+                {t("Fermer")}
+              </button>
+            </div>
+            {detailOrder.final_outcome && (
+              <div className="card" style={{ padding: 12, marginBottom: 12 }}>
+                <strong>{t("Résultat final")} :</strong>{" "}
+                <span className={`badge badge-${detailOrder.final_outcome.status}`}>
+                  {t(STATUS_LABELS[detailOrder.final_outcome.status] || detailOrder.final_outcome.status)}
+                </span>
+                {detailOrder.final_outcome.remains != null && (
+                  <div className="hint">
+                    {t("Restant")} : {detailOrder.final_outcome.remains}
+                  </div>
+                )}
+                {detailOrder.final_outcome.charge != null && (
+                  <div className="hint">
+                    {t("Charge")} : {detailOrder.final_outcome.charge}
+                  </div>
+                )}
+                {detailOrder.final_outcome.completed_at && (
+                  <div className="hint">
+                    {t("Terminée le")} : {new Date(detailOrder.final_outcome.completed_at).toLocaleString("fr-FR")}
+                  </div>
+                )}
+              </div>
+            )}
+            <h4 style={{ marginTop: 8 }}>{t("Progression")}</h4>
+            <div style={{ maxHeight: 360, overflowY: "auto" }}>
+              {(detailOrder.events || []).length === 0 ? (
+                <p className="hint">{t("Aucun événement.")}</p>
+              ) : (
+                <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {(detailOrder.events || []).map((ev) => (
+                    <li key={ev.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+                        <strong>{ev.event_type}</strong>
+                        <span className="hint">{new Date(ev.created_at).toLocaleString("fr-FR")}</span>
+                      </div>
+                      {(ev.old_status || ev.new_status) && (
+                        <div className="hint">
+                          {ev.old_status || "—"} → {ev.new_status || "—"}
+                        </div>
+                      )}
+                      {ev.message && <div className="hint" style={{ overflowWrap: "anywhere" }}>{ev.message}</div>}
+                      {ev.provider_payload && Object.keys(ev.provider_payload).length > 0 && (
+                        <pre style={{ fontSize: 11, whiteSpace: "pre-wrap", margin: "4px 0 0" }}>
+                          {JSON.stringify(ev.provider_payload)}
+                        </pre>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

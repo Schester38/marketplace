@@ -280,6 +280,25 @@ export const smmServiceSchema = z.object({
   sort_order: z.coerce.number().int().min(0).default(0),
 });
 
+export const smmServiceUpdateSchema = z.object({
+  category_id: z.coerce.number().int().positive("Catégorie requise").optional(),
+  name: z.string().min(1, "Nom requis").max(150).optional(),
+  description: z.string().max(2000).optional().nullable(),
+  short_description: z.string().max(300).optional().nullable(),
+  price: z.coerce.number().min(0, "Prix invalide").optional(),
+  currency: z.string().min(1).max(10).optional(),
+  billing_unit: z.enum(["service", "mois", "campagne", "article", "heure", "1000"]).optional(),
+  status: z.enum(["active", "inactive", "draft"]).optional(),
+  is_automated: z.boolean().optional(),
+  is_consulting: z.boolean().optional(),
+  is_campaign: z.boolean().optional(),
+  external_service_id: z.string().max(100).optional().nullable(),
+  delivery_days: z.coerce.number().int().min(1).max(365).optional().nullable(),
+  conditions: z.string().max(1000).optional().nullable(),
+  limits: z.record(z.string(), z.any()).optional(),
+  sort_order: z.coerce.number().int().min(0).optional(),
+});
+
 export const smmOrderSchema = z.object({
   service_id: z.coerce.number().int().positive("Service requis"),
   quantity: z.coerce.number().int().min(1, "Quantité minimale 1").default(1),
