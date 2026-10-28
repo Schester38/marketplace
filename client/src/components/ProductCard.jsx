@@ -66,6 +66,7 @@ export default function ProductCard({
   const flash = product.flash_promo || null;
   const commission = Number(flash ? flash.commission : product.commission || 0);
 const cardLink = linkTo || `/produit/${product.id}`;
+  const flashOld = flash ? Number(product.price) : null;
   const oldPrice = Number(
     flashOld ??
       (product.old_price === null || product.old_price === undefined ? null : product.old_price)
