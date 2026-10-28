@@ -569,36 +569,38 @@ export default function BoostAdmin() {
       setBusyId(null);
     }
   }
+  async function cancelOrder(order) {
+    if (!window.confirm(`Annuler la commande #${order.id} et rembourser automatiquement ?`)) return;
+    setBusyId(order.id);
+    setNotice("");
+    try {
+      const resp = await api.adminSmmCancel(order.id, {});
+      setNotice(
+        `Commande #${order.id} annulee${resp.refunded_usd ? ` (${resp.refunded_usd} USD rembourses)` : ""}.`
+      );
+      await loadOrders();
+    } catch (err) {
+      setNotice(err.message || "Annulation impossible.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function changeStatus(order, status) {
     if (!status || status === order.status) return;
     setBusyId(order.id);
     setNotice("");
     try {
       await api.adminSmmUpdateOrder(order.id, { status });
-      setNotice(`Commande #${order.id} mise à jour : ${STATUS_LABELS[status] || status}.`);
+      setNotice(`Commande #${order.id} mise a jour : ${STATUS_LABELS[status] || status}.`);
       await loadOrders();
     } catch (err) {
-      setNotice(err.message || "Mise à jour impossible.");
+      setNotice(err.message || "Mise a jour impossible.");
     } finally {
       setBusyId(null);
     }
   }
 
-  async function syncStatuses() {
-    setSyncing(true);
-    setNotice("");
-    try {
-      const resp = await api.adminSmmSync();
-      const parts = [`${resp.checked || 0} commande(s) vérifiée(s)`, `${resp.updated || 0} mise(s) à jour`];
-      if (resp.errors?.length) parts.push(`${resp.errors.length} erreur(s)`);
-      setNotice(parts.join(" · "));
-      await loadOrders();
-    } catch (err) {
-      setNotice(err.message || "Synchronisation impossible.");
-    } finally {
-      setSyncing(false);
-    }
-  }
 
   const visibleOrders = orders;
   const pendingCount = orders.filter((order) => ["draft", "pending_payment"].includes(order.status)).length;
@@ -906,6 +908,24 @@ export default function BoostAdmin() {
                               onClick={() => dispatchOrder(order)}
                             >
                               {t("Envoyer au fournisseur")}
+                            </button>
+                          )}
+                          {["failed", "cancelled"].includes(order.status) && (
+                            <button
+                              className="btn btn-primary btn-small"
+                              disabled={busyId === order.id}
+                              onClick={() => dispatchOrder(order)}
+                            >
+                              {t("Réessayer la transmission")}
+                            </button>
+                          )}
+                          {order.status === "paid" && !order.external_reference && (
+                            <button
+                              className="btn btn-outline btn-small"
+                              disabled={busyId === order.id}
+                              onClick={() => cancelOrder(order)}
+                            >
+                              {t("Annuler")}
                             </button>
                           )}
                           {!["refunded", "cancelled"].includes(order.status) && (

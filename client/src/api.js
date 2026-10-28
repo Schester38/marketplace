@@ -646,6 +646,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload || {}),
     }),
+  adminSmmCancel: (id, payload) =>
+    adminRequest(`/smm/admin/orders/${id}/cancel`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    }),
   adminSmmSync: () => adminRequest("/smm/admin/sync", { method: "POST" }),
   adminSmmPaymentInfo: () => adminRequest("/smm/admin/payment-info"),
   adminSmmSavePaymentInfo: (payload) =>

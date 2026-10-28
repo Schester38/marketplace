@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { q, withTransaction } from "../db.js";
+import { logAudit } from "../security.js";
 import { authRequired, authOptional, roleRequired } from "../auth.js";
 import { validate, validateQuery } from "../middlewares/validate.js";
 import {
@@ -1091,6 +1092,7 @@ router.post(
         [name, slug, description || null, icon || null, sort_order, is_active]
       ))[0];
       res.status(201).json({ category: created });
+      logAudit(req.user.id, "smm.category_created", `#${created.id} ${name}`, req.ip);
     } catch (err) {
       if (err.code === "23505") {
         return res.status(409).json({ error: "Une catégorie avec ce nom ou ce slug existe déjà" });
@@ -1121,6 +1123,7 @@ router.put(
     if (!updated.length) {
       return res.status(404).json({ error: "Catégorie introuvable" });
     }
+logAudit(req.user.id, "smm.category_updated", `#${id} ${name}`, req.ip);
     res.json({ category: updated[0] });
   })
 );
@@ -1145,6 +1148,7 @@ router.delete(
     if (!deleted.length) {
       return res.status(404).json({ error: "Catégorie introuvable" });
     }
+    logAudit(req.user.id, "smm.category_deleted", `#${id}`, req.ip);
     res.json({ ok: true });
   })
 );
@@ -1194,6 +1198,7 @@ router.post(
           conditions || null, JSON.stringify(limits || {}), sort_order,
         ]
       ))[0];
+logAudit(req.user.id, "smm.service_created", `#${created.id} ${name || ""}`, req.ip);
       res.status(201).json({ service_id: created.id });
     } catch (err) {
       if (err.code === "23505") {
@@ -1238,6 +1243,7 @@ router.put(
     if (!updated.length) {
       return res.status(404).json({ error: "Service introuvable" });
     }
+    logAudit(req.user.id, "smm.service_updated", `#${id}`, req.ip);
     res.json({ service_id: updated[0].id });
   })
 );
@@ -1292,6 +1298,7 @@ router.patch(
     if (!updated.length) {
       return res.status(404).json({ error: "Service introuvable" });
     }
+    logAudit(req.user.id, "smm.service_updated", `#${id}`, req.ip);
     res.json({ service_id: updated[0].id });
   })
 );
@@ -1310,6 +1317,7 @@ router.delete(
       if (!deleted.length) {
         return res.status(404).json({ error: "Service introuvable" });
       }
+      logAudit(req.user.id, "smm.service_deleted", `#${id}`, req.ip);
       res.json({ ok: true });
     } catch (err) {
       if (err.code === "23503") {
@@ -1362,9 +1370,8 @@ router.post(
       `${Number(amount_usd)} USD ont été ajoutés à votre portefeuille Boost.`,
       { orderId: null }
     ).catch(() => {});
+    logAudit(req.user.id, "smm.wallet_credited", `user #${user_id} ${amount_usd} USD (${transaction_type})`, req.ip);
     res.status(201).json({
-      ok: true,
-      user_id: Number(user_id),
       balance_usd: result.balance_usd,
       transaction: result.transaction,
     });
@@ -1775,6 +1782,7 @@ router.put(
       }).catch(() => {});
     }
 
+    logAudit(req.user.id, "smm.order_status_changed", `#${id} ${oldStatus} -> ${status}`, req.ip);
     res.json({ order_id: updated[0].id, status: updated[0].status });
   })
 );
@@ -1821,6 +1829,7 @@ router.post(
       id,
     ]);
 
+    logAudit(req.user.id, "smm.order_payment_confirmed", `#${id}`, req.ip);
     res.json({
       ok: true,
       order_id: id,
@@ -1840,18 +1849,33 @@ router.post(
   ah(async (req, res) => {
     const id = Number(req.params.id);
     if (!Number.isFinite(id)) return res.status(400).json({ error: "ID invalide" });
-    const rows = await q(`SELECT id, status, user_id, service_name FROM smm_orders WHERE id = $1`, [id]);
+    const rows = await q(`SELECT id, status, payment_status, user_id, service_name FROM smm_orders WHERE id = $1`, [id]);
     if (!rows.length) return res.status(404).json({ error: "Commande introuvable" });
-    if (!["paid", "submitted", "processing"].includes(rows[0].status)) {
+    const order = rows[0];
+    if (!["paid", "submitted", "processing", "failed", "cancelled"].includes(order.status)) {
       return res.status(409).json({
         error: "Confirmez d'abord le paiement avant de transmettre la commande.",
-        status: rows[0].status,
+        status: order.status,
       });
+    }
+    if (order.payment_status !== "paid") {
+      return res.status(409).json({ error: "Le paiement de cette commande n'est pas confirmé.", status: order.status });
+    }
+    if (["failed", "cancelled"].includes(order.status)) {
+      await q(
+        `UPDATE smm_orders
+            SET status = 'paid', provider_status = NULL, external_reference = NULL,
+                provider_reference = NULL, updated_at = now()
+          WHERE id = $1`,
+        [id]
+      );
+      await addEvent(id, "retry_dispatch", order.status, "paid", "Réessai de transmission demandé par l'administration", {}).catch(() => {});
     }
     const result = await dispatchSmmOrder(id);
     if (!result.ok) {
       return res.status(502).json({ error: result.error, order_id: id });
     }
+    logAudit(req.user.id, "smm.order_dispatched", `#${id}`, req.ip);
     res.json({ ok: true, order_id: id, ...result });
   })
 );
@@ -1944,10 +1968,7 @@ router.post(
     ).catch(() => {});
 
     // 4. Audit
-    try {
-      const { logAudit } = await import("../security.js");
       logAudit(req.user.id, "smm.order_refunded", `#${id} ${order.service_name}${refundUsd ? ` (${refundUsd} USD)` : ""}`, req.ip);
-    } catch { /* best-effort */ }
 
     // 5. Notifications
     await notifySmmUser(
@@ -1983,6 +2004,7 @@ router.post(
     const limit = Number(req.body?.limit) || 20;
     const result = await syncSmmOrders(limit);
     if (!result.ok) return res.status(400).json({ error: result.error });
+    logAudit(req.user.id, "smm.sync", `limit ${limit}`, req.ip);
     res.json(result);
   })
 );
@@ -2006,6 +2028,7 @@ router.post(
   ah(async (req, res) => {
     const current = await getSmmPaymentInfo();
     const saved = await setSmmPaymentInfo({ ...current, ...req.body });
+    logAudit(req.user.id, "smm.payment_info_updated", null, req.ip);
     res.json({ ok: true, payment_info: saved });
   })
 );
@@ -2070,6 +2093,7 @@ router.post(
     if (smm_usd_to_xaf !== undefined) await upsert("smm_usd_to_xaf", String(smm_usd_to_xaf));
     if (smm_api_key !== undefined) await upsert("smm_api_key", smm_api_key || "");
 
+    logAudit(req.user.id, "smm.provider_configured", null, req.ip);
     res.json({ ok: true, message: "Configuration fournisseur enregistrée" });
   })
 );
@@ -2126,11 +2150,105 @@ router.post(
         ? previewProviderCatalogImport(items, options)
         : await importProviderCatalog(items, options);
 
+      if (!dryRun) logAudit(req.user.id, "smm.catalog_imported", `items=${items.length} markup=${markup}`, req.ip);
       res.json({ ok: true, ...result });
     } catch (err) {
       console.error("[smm import-catalog]", err.message);
       res.status(502).json({ error: err.message || "Erreur import catalogue" });
     }
+  })
+);
+
+/* POST /api/admin/smm/orders/:id/cancel — annuler une commande payée non transmise + remboursement auto */
+router.post(
+  "/admin/orders/:id/cancel",
+  authRequired,
+  roleRequired("admin"),
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: "ID invalide" });
+
+    const orderRows = await q(
+      `SELECT id, user_id, service_name, total, currency, status, payment_status, external_reference FROM smm_orders WHERE id = $1`,
+      [id]
+    );
+    if (!orderRows.length) return res.status(404).json({ error: "Commande introuvable" });
+    const order = orderRows[0];
+
+    if (order.external_reference) {
+      return res.status(409).json({
+        error: "Commande déjà transmise au fournisseur : utilisez le remboursement manuel.",
+        status: order.status,
+      });
+    }
+    if (order.status !== "paid") {
+      return res.status(409).json({
+        error: "Seules les commandes payées non transmises peuvent être annulées.",
+        status: order.status,
+      });
+    }
+    if (!order.user_id) {
+      return res.status(409).json({ error: "Commande sans utilisateur : annulation manuelle hors plateforme." });
+    }
+
+    const note = String(req.body?.note || "").trim().slice(0, 300) || null;
+
+    let refundUsd = null;
+    const debitRows = await q(
+      `SELECT amount_usd FROM boost_wallet_transactions
+        WHERE reference_type = 'smm_order' AND reference_id = $1 AND transaction_type = 'order_payment'
+        ORDER BY id DESC LIMIT 1`,
+      [id]
+    );
+    if (debitRows.length) refundUsd = Number(debitRows[0].amount_usd);
+
+    const result = await withTransaction(async (tx) => {
+      let credit = null;
+      if (refundUsd && refundUsd > 0) {
+        credit = await creditBoostWalletTx(tx, {
+          userId: Number(order.user_id),
+          amountUsd: refundUsd,
+          transactionType: "refund",
+          referenceType: "smm_order_refund",
+          referenceId: id,
+          description: note || `Annulation commande Boost #${id} — ${order.service_name}`,
+          createdBy: req.user.id > 0 ? req.user.id : null,
+        });
+      }
+      const updated = await tx.query(
+        `UPDATE smm_orders
+            SET status = 'cancelled', payment_status = 'cancelled', updated_at = now(),
+                completed_at = COALESCE(completed_at, now())
+          WHERE id = $1 AND status = 'paid' AND external_reference IS NULL
+          RETURNING id, status`,
+        [id]
+      );
+      if (!updated.length) {
+        const err = new Error("Commande déjà annulée ou transmise.");
+        err.statusCode = 409;
+        throw err;
+      }
+      return { credit, updated: updated[0] };
+    });
+
+    await addEvent(id, "cancelled", order.status, "cancelled", note || "Annulation par l'administration (remboursement auto)", { amount_usd: refundUsd }).catch(() => {});
+
+      logAudit(req.user.id, "smm.order_cancelled", `#${id} ${order.service_name}${refundUsd ? ` (${refundUsd} USD)` : ""}`, req.ip);
+
+    await notifySmmUser(
+      Number(order.user_id),
+      "Commande MboppiBoost annulée",
+      `Votre commande #${id} (${order.service_name}) a été annulée${refundUsd ? ` : ${refundUsd} USD remboursés sur votre portefeuille Boost.` : "."}`,
+      { orderId: id }
+    ).catch(() => {});
+
+    res.json({
+      ok: true,
+      order_id: id,
+      status: "cancelled",
+      refunded_usd: refundUsd,
+      balance_usd: result.credit?.balance_usd ?? null,
+    });
   })
 );
 
