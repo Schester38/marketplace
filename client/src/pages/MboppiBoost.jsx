@@ -737,14 +737,15 @@ export default function MboppiBoost() {
                   max={selected?.max || undefined}
                   step={selected?.step || 1}
                   value={quantity}
-                  onChange={(e) =>
-                    setQuantity(
-                      Math.max(
-                        Number(selected?.min) || 1,
-                        Number(e.target.value) || Number(selected?.min) || 1
-                      )
-                    )
-                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") {
+                      setQuantity("");
+                    } else {
+                      const num = Number(val);
+                      if (!isNaN(num)) setQuantity(num);
+                    }
+                  }}
                   className="boost-input"
                 />
                 <p className="boost-hint">
