@@ -3,7 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
-import ProductCard, { formatMoney } from "../components/ProductCard.jsx";
 
 function FormationDetail() {
   const { id } = useParams();
@@ -99,7 +98,7 @@ function FormationDetail() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                   <div>
                     <div style={{ fontSize: 24, fontWeight: 800 }}>
-                      {formatMoney ? formatMoney(product.price, product.currency) : `${product.price} ${product.currency}`}
+                      {Number(product.price || 0).toLocaleString("fr-FR") + " " + (product.currency || "XAF")}
                     </div>
                     <p className="hint" style={{ margin: "4px 0 0" }}>Accès immédiat après paiement</p>
                   </div>
