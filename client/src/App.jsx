@@ -107,6 +107,8 @@ const Faq = lazyRetry(() => import("./pages/Faq.jsx"));
 const MentionsLegales = lazyRetry(() => import("./pages/MentionsLegales.jsx"));
 const Support = lazyRetry(() => import("./pages/Support.jsx"));
 const Formations = lazyRetry(() => import("./pages/Formations.jsx"));
+const MesFormations = lazyRetry(() => import("./pages/MesFormations.jsx"));
+const DevenirFormateur = lazyRetry(() => import("./pages/DevenirFormateur.jsx"));
 const CookiesBanner = lazyRetry(() => import("./components/CookiesBanner.jsx"));
 import OfflinePage from "./pages/OfflinePage.jsx";
 import AdminMessagePopup from "./components/AdminMessagePopup.jsx";
@@ -836,6 +838,8 @@ export default function App() {
             <Route path="/mentions-legales" element={<MentionsLegales />} />
             <Route path="/soutien" element={<Support />} />
             <Route path="/formations" element={<Formations />} />
+            <Route path="/mes-formations" element={<MesFormations />} />
+            <Route path="/devenir-formateur" element={<DevenirFormateur />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/verifier" element={<VerifyDoc />} />
             <Route path="/verifier/:ref" element={<VerifyDoc />} />

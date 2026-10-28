@@ -5,6 +5,8 @@ import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
 import ProductCard from "../components/ProductCard.jsx";
 
+const CATEGORIES = ["Toutes", "Developpement personnel", "Business", "Technologie", "Sante", "Langues", "Design"];
+
 function FormationsPage() {
   const { t } = useLang();
   const [products, setProducts] = useState([]);
@@ -63,8 +65,11 @@ function FormationsPage() {
                 onChange={(e) => setQuery(e.target.value)}
                 style={{ maxWidth: 360 }}
               />
-              <Link to="/mboppi-boost" className="boost-btn boost-btn-secondary">
+              <Link to="/devenir-formateur" className="boost-btn boost-btn-secondary">
                 Devenir formateur
+              </Link>
+              <Link to="/mes-formations" className="boost-btn boost-btn-secondary">
+                Mes formations
               </Link>
             </div>
           </section>
