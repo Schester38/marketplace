@@ -3,35 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Pas de connexion internet — MboppiShop</title>
-  <link rel="stylesheet" href="/assets/index.css" />
+  <title>Hors connexion — MboppiShop</title>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
-    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
-    .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
-    .page-center { text-align: center; }
-    .notfound-icon { font-size: 48px; display: block; margin-bottom: 8px; }
-    .hint { color: #666; margin: 8px 0 16px; }
-    .notfound-actions { margin-top: 16px; }
-    .btn { display: inline-block; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 16px; }
-    .btn-primary { background: #0ea5e9; color: #fff; }
-    .btn-primary:hover { background: #0284c7; }
+    body { font-family: system-ui, -apple-system, sans-serif; }
   </style>
 </head>
-<body>
-  <main class="container">
-    <div class="card page-center">
-      <span class="notfound-icon">📡</span>
-      <h1>Pas de connexion internet</h1>
-      <p class="hint">
-        Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100 flex items-center justify-center px-6">
+  <div class="max-w-md w-full text-center space-y-6">
+    <div class="text-7xl">📡</div>
+    <h1 class="text-3xl font-extrabold tracking-tight">Pas de connexion internet</h1>
+    <p class="text-slate-400 text-base leading-relaxed">
+      Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.
+    </p>
+    <button
+      onclick="window.location.reload()"
+      class="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-sky-500 hover:bg-sky-400 active:bg-sky-600 text-white font-semibold text-base transition-all duration-200 shadow-lg shadow-sky-500/30 hover:shadow-sky-400/40 hover:scale-105"
+    >
+      🔄 Réessayer
+    </button>
+    <div class="pt-8 border-t border-slate-700/50">
+      <p class="text-slate-500 text-sm">
+        MboppiShop — votre marché en ligne
       </p>
-      <div class="notfound-actions">
-        <button type="button" class="btn btn-primary" onclick="window.location.reload()">
-          🔄 Réessayer
-        </button>
-      </div>
     </div>
-  </main>
+  </div>
 </body>
 </html>
