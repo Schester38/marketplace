@@ -20,22 +20,22 @@ export default function OfflinePage() {
   if (online) return null;
 
   return (
-    <main className="container">
+    <main className="tw-min-h-screen tw-flex tw-items-center tw-justify-center tw-px-6 tw-bg-slate-900 tw-text-slate-100">
       <Seo
         title={t("Pas de connexion internet") + " — MboppiShop"}
         description={t("Pas de connexion internet")}
         noindex
       />
-      <div className="card page-center">
-        <span className="notfound-icon">📡</span>
+      <div className="tw-max-w-md tw-w-full tw-text-center">
+        <span className="tw-text-6xl tw-mb-4">📡</span>
         <h1>{t("Pas de connexion internet")}</h1>
-        <p className="hint">
+        <p className="tw-text-slate-400 tw-mb-6">
           {t("Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.")}
         </p>
-        <div className="notfound-actions">
+        <div className="tw-mt-2">
           <button
             type="button"
-            className="btn btn-primary"
+            className="tw-inline-flex tw-items-center tw-gap-2 tw-px-6 tw-py-3 tw-rounded-full tw-bg-sky-500 hover:tw-bg-sky-400 tw-text-white tw-font-semibold tw-transition tw-shadow-lg tw-shadow-sky-500/30"
             onClick={() => window.location.reload()}
           >
             🔄 {t("Réessayer")}
