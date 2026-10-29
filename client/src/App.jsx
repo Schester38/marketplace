@@ -107,6 +107,7 @@ const Faq = lazyRetry(() => import("./pages/Faq.jsx"));
 const MentionsLegales = lazyRetry(() => import("./pages/MentionsLegales.jsx"));
 const Support = lazyRetry(() => import("./pages/Support.jsx"));
 const Formations = lazyRetry(() => import("./pages/Formations.jsx"));
+const EspaceFormateur = lazyRetry(() => import("./pages/EspaceFormateur.jsx"));
 const FormationDetail = lazyRetry(() => import("./pages/FormationDetail.jsx"));
 const MesFormations = lazyRetry(() => import("./pages/MesFormations.jsx"));
 const DevenirFormateur = lazyRetry(() => import("./pages/DevenirFormateur.jsx"));
@@ -839,6 +840,7 @@ export default function App() {
             <Route path="/mentions-legales" element={<MentionsLegales />} />
             <Route path="/soutien" element={<Support />} />
             <Route path="/formations" element={<Formations />} />
+            <Route path="/espace-formateur" element={<EspaceFormateur />} />
             <Route path="/formations/:id" element={<FormationDetail />} />
             <Route path="/mes-formations" element={<MesFormations />} />
             <Route path="/devenir-formateur" element={<DevenirFormateur />} />
