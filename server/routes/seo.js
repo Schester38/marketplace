@@ -687,6 +687,10 @@ const STATIC_PAGES = {
     title: "Protection des données — MboppiShop",
     description: "Découvrez comment MboppiShop protège vos données personnelles et votre vie privée.",
   },
+  "/formations": {
+    title: "Formations en ligne — MboppiShop",
+    description: "Découvrez des formations pratiques en ligne sur MboppiShop. Développez vos compétences avec des formateurs passionnés.",
+  },
   "/soutien": {
     title: "Soutenir MboppiShop — Faire un don",
     description: "Soutenez MboppiShop par un don pour aider le marché de votre quartier à grandir.",
