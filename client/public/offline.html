@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pas de connexion internet — MboppiShop</title>
+  <link rel="stylesheet" href="/assets/index.css" />
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+    .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+    .page-center { text-align: center; }
+    .notfound-icon { font-size: 48px; display: block; margin-bottom: 8px; }
+    .hint { color: #666; margin: 8px 0 16px; }
+    .notfound-actions { margin-top: 16px; }
+    .btn { display: inline-block; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 16px; }
+    .btn-primary { background: #0ea5e9; color: #fff; }
+    .btn-primary:hover { background: #0284c7; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <div class="card page-center">
+      <span class="notfound-icon">📡</span>
+      <h1>Pas de connexion internet</h1>
+      <p class="hint">
+        Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.
+      </p>
+      <div class="notfound-actions">
+        <button type="button" class="btn btn-primary" onclick="window.location.reload()">
+          🔄 Réessayer
+        </button>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
