@@ -18,7 +18,15 @@ import {
   boostWalletTopupSchema,
   boostAdminWalletCreditSchema,
 } from "../validators.js";
-import { getActiveProviderConfig, logSmmCall, generateIdempotencyKey } from "../services/smmProvider.js";
+import {
+  getActiveProviderConfig,
+  logSmmCall,
+  generateIdempotencyKey,
+  NoProviderAdapter,
+  SMM_PROVIDERS,
+  resolveSmmBaseUrl,
+  resolveSmmApiKey,
+} from "../services/smmProvider.js";
 import { notifyAdmins } from "../services/adminNotify.js";
 import { SMM_CATEGORIES, SMM_SERVICES } from "../services/smmCatalog.js";
 import { getSmmPaymentInfo, setSmmPaymentInfo } from "../services/smmPayment.js";
@@ -2169,13 +2177,21 @@ router.get(
     const settings = {};
     for (const row of rows) settings[row.key] = row.value;
     const providerKey = settings["smm_provider_key"] || "";
+    const activeProvider = SMM_PROVIDERS.find((provider) => provider.key === providerKey) || null;
     res.json({
       provider: providerKey || null,
       provider_key: providerKey,
+      provider_name: activeProvider?.name || null,
       enabled: settings["smm_provider_enabled"] === "true" && !!providerKey,
-      has_api_key: !!settings["smm_api_key"],
+      has_api_key: !!resolveSmmApiKey(settings, providerKey),
+      providers: SMM_PROVIDERS.map((provider) => ({
+        key: provider.key,
+        name: provider.name,
+        default_base_url: provider.baseUrl,
+        has_api_key: !!resolveSmmApiKey(settings, provider.key),
+      })),
       config: {
-        baseUrl: settings["smm_api_base_url"] || "",
+        baseUrl: resolveSmmBaseUrl(settings, providerKey),
         timeoutMs: Number(settings["smm_api_timeout"]) || 30000,
       },
       markup: Number(settings["smm_markup"]) || 1.5,
@@ -2210,14 +2226,27 @@ router.post(
         [key, value]
       );
 
+    const currentRows = await q(`SELECT key, value FROM platform_settings WHERE key LIKE 'smm_%'`);
+    const current = {};
+    for (const row of currentRows) current[row.key] = row.value;
+    const targetKey = smm_provider_key || current["smm_provider_key"] || "smm_africa";
+
     await upsert("smm_provider_enabled", String(!!smm_provider_enabled));
     if (smm_provider_key !== undefined) await upsert("smm_provider_key", smm_provider_key || "");
-    if (smm_api_base_url !== undefined) await upsert("smm_api_base_url", smm_api_base_url || "");
+    // URL et clé sont mémorisées PAR fournisseur : basculer de l'un à l'autre
+    // ne réutilise jamais la clé de l'autre (risque d'envoyer la mauvaise clé).
+    if (smm_api_base_url !== undefined) {
+      await upsert(`smm_api_base_url:${targetKey}`, smm_api_base_url || "");
+      if (targetKey === "smm_africa") await upsert("smm_api_base_url", smm_api_base_url || "");
+    }
     if (smm_api_timeout !== undefined) await upsert("smm_api_timeout", String(smm_api_timeout));
     if (smm_provider_config !== undefined) await upsert("smm_provider_config", smm_provider_config || "");
     if (smm_markup !== undefined) await upsert("smm_markup", String(smm_markup));
     if (smm_usd_to_xaf !== undefined) await upsert("smm_usd_to_xaf", String(smm_usd_to_xaf));
-    if (smm_api_key !== undefined) await upsert("smm_api_key", smm_api_key || "");
+    if (smm_api_key !== undefined) {
+      await upsert(`smm_api_key:${targetKey}`, smm_api_key || "");
+      if (targetKey === "smm_africa") await upsert("smm_api_key", smm_api_key || "");
+    }
 
     logAudit(req.user.id, "smm.provider_configured", null, req.ip);
     res.json({ ok: true, message: "Configuration fournisseur enregistrée" });
@@ -2232,11 +2261,11 @@ router.get(
   ah(async (req, res) => {
     try {
       const { adapter, provider } = await getActiveProviderConfig();
-      if (provider !== "smm_africa" || !adapter) {
-        return res.status(400).json({ error: "Fournisseur SMM Africa non actif" });
+      if (!provider || !adapter || adapter instanceof NoProviderAdapter) {
+        return res.status(400).json({ error: "Aucun fournisseur SMM actif" });
       }
       const bal = await adapter.fetchBalance();
-      res.json({ ok: true, ...bal });
+      res.json({ ok: true, provider, ...bal });
     } catch (err) {
       res.status(502).json({ error: err.message || "Erreur fournisseur" });
     }
@@ -2252,8 +2281,8 @@ router.post(
   ah(async (req, res) => {
     try {
       const { adapter, provider } = await getActiveProviderConfig();
-      if (provider !== "smm_africa" || !adapter) {
-        return res.status(400).json({ error: "Fournisseur SMM Africa non actif" });
+      if (!provider || !adapter || adapter instanceof NoProviderAdapter) {
+        return res.status(400).json({ error: "Aucun fournisseur SMM actif" });
       }
       const markup = Number(req.body?.markup) > 0 ? Number(req.body.markup) : 1;
       const usdToXaf = Number(req.body?.usd_to_xaf) > 0 ? Number(req.body.usd_to_xaf) : 655.957;
@@ -2267,7 +2296,7 @@ router.post(
         categoryId,
         types,
         providerKey: provider,
-        providerName: adapter.name || "SMM Africa",
+        providerName: adapter.name || provider,
       };
 
       const catalog = await adapter.fetchCatalog();

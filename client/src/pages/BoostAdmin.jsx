@@ -42,6 +42,15 @@ const WALLET_TX_LABELS = {
   adjustment: "Ajustement",
 };
 
+const PROVIDER_DEFAULTS = {
+  smm_africa: { name: "SMM Africa", baseUrl: "https://smm.africa/api/v3" },
+  prm4u: { name: "PRM4U", baseUrl: "https://prm4u.com/api/v2" },
+};
+
+function providerBaseUrl(key, fallback = "") {
+  return PROVIDER_DEFAULTS[key]?.baseUrl || fallback || "";
+}
+
 export default function BoostAdmin() {
   const { t } = useLang();
 
@@ -221,7 +230,7 @@ export default function BoostAdmin() {
       setProviderForm({
         enabled: !!resp.enabled,
         key: resp.provider_key || "smm_africa",
-        baseUrl: resp.config?.baseUrl || "https://smm.africa/api/v3",
+        baseUrl: resp.config?.baseUrl || providerBaseUrl(resp.provider_key),
         timeoutMs: Number(resp.config?.timeoutMs) || 30000,
         apiKey: "",
         marginPercent: Math.round(((Number(resp.markup) || 1.5) - 1) * 100),
@@ -1127,7 +1136,7 @@ export default function BoostAdmin() {
           </h2>
           <p className="hint">
             {provider?.enabled
-              ? `✅ ${t("Fournisseur actif")} : ${provider.provider || "smm_africa"}${
+              ? `✅ ${t("Fournisseur actif")} : ${provider.provider_name || provider.provider || "smm_africa"}${
                   provider.has_api_key ? " · clé enregistrée" : " · aucune clé"
                 }`
               : t("Aucun fournisseur actif : les commandes payées restent à traiter manuellement.")}
@@ -1146,9 +1155,23 @@ export default function BoostAdmin() {
               <select
                 className="input"
                 value={providerForm.key}
-                onChange={(e) => setProviderForm((f) => ({ ...f, key: e.target.value }))}
+                onChange={(e) => {
+                  const key = e.target.value;
+                  setProviderForm((f) => ({ ...f, key, baseUrl: providerBaseUrl(key, f.baseUrl) }));
+                }}
               >
-                <option value="smm_africa">SMM Africa</option>
+                {(provider?.providers?.length
+                  ? provider.providers
+                  : Object.entries(PROVIDER_DEFAULTS).map(([key, value]) => ({
+                      key,
+                      name: value.name,
+                      default_base_url: value.baseUrl,
+                    }))
+                ).map((item) => (
+                  <option key={item.key} value={item.key}>
+                    {item.name}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="form-row">
@@ -1180,7 +1203,12 @@ export default function BoostAdmin() {
                 autoComplete="new-password"
                 value={providerForm.apiKey}
                 onChange={(e) => setProviderForm((f) => ({ ...f, apiKey: e.target.value }))}
-                placeholder={provider?.has_api_key ? "••••••••" : t("Clé fournisseur")}
+                placeholder={
+                  (provider?.providers?.find((item) => item.key === providerForm.key)?.has_api_key ??
+                    (providerForm.key === provider?.provider_key && provider?.has_api_key))
+                    ? "••••••••"
+                    : t("Clé fournisseur")
+                }
               />
             </div>
             <div className="form-row">

@@ -8,6 +8,69 @@ import { SMMProviderInterface } from "./smmProviderBase.js";
 export { SMMProviderInterface } from "./smmProviderBase.js";
 
 /* ========================================================================
+   1. Catalogue des fournisseurs supportés
+   ======================================================================== */
+
+export const SMM_PROVIDERS = [
+  {
+    key: "smm_africa",
+    name: "SMM Africa",
+    baseUrl: "https://smm.africa/api/v3",
+    envKeys: ["SMM_AFRICA_API_KEY", "SMM_API_KEY"],
+  },
+  {
+    key: "prm4u",
+    name: "PRM4U",
+    baseUrl: "https://prm4u.com/api/v2",
+    envKeys: ["PRM4U_API_KEY"],
+  },
+];
+
+export function findSmmProvider(providerKey) {
+  return SMM_PROVIDERS.find((provider) => provider.key === providerKey) || null;
+}
+
+function envApiKey(providerKey) {
+  const provider = findSmmProvider(providerKey);
+  for (const name of provider?.envKeys || []) {
+    if (process.env[name]) return process.env[name];
+  }
+  return null;
+}
+
+/**
+ * URL de base effective d'un fournisseur.
+ * Une URL dédiée (smm_api_base_url:<clé>) est prioritaire ; l'ancienne clé
+ * globale reste lue pour SMM Africa afin de ne rien casser.
+ */
+export function resolveSmmBaseUrl(settings, providerKey) {
+  const provider = findSmmProvider(providerKey);
+  return (
+    settings[`smm_api_base_url:${providerKey}`] ||
+    (providerKey === "smm_africa" ? settings["smm_api_base_url"] : "") ||
+    provider?.baseUrl ||
+    ""
+  );
+}
+
+/** Clé API effective d'un fournisseur (stockée par fournisseur, sinon env). */
+export function resolveSmmApiKey(settings, providerKey) {
+  return (
+    settings[`smm_api_key:${providerKey}`] ||
+    (providerKey === "smm_africa" ? settings["smm_api_key"] : "") ||
+    envApiKey(providerKey) ||
+    null
+  );
+}
+
+async function readSmmSettings() {
+  const rows = await q(`SELECT key, value FROM platform_settings WHERE key LIKE 'smm_%'`, []);
+  const settings = {};
+  for (const row of rows) settings[row.key] = row.value;
+  return settings;
+}
+
+/* ========================================================================
    2. Mode "sans fournisseur"
    ======================================================================== */
 
@@ -47,11 +110,30 @@ export class NoProviderAdapter extends SMMProviderInterface {
    3. Gestion de la configuration fournisseur (clés côté serveur uniquement)
    ======================================================================== */
 
+async function instantiateAdapter(providerKey, config) {
+  if (providerKey === "smm_africa") {
+    const mod = await import("./smmAfrica.js");
+    return new mod.SmmAfricaAdapter(config);
+  }
+  if (providerKey === "prm4u") {
+    const mod = await import("./prm4u.js");
+    return new mod.Prm4uAdapter(config);
+  }
+  return null;
+}
+
+function buildConfig(settings, providerKey) {
+  return {
+    baseUrl: resolveSmmBaseUrl(settings, providerKey),
+    timeoutMs: Number(settings["smm_api_timeout"]) || 10000,
+    apiKey: resolveSmmApiKey(settings, providerKey),
+    ...(settings["smm_provider_config"] ? JSON.parse(settings["smm_provider_config"]) : {}),
+  };
+}
+
 export async function getActiveProviderConfig() {
   try {
-    const rows = await q(`SELECT key, value FROM platform_settings WHERE key LIKE 'smm_%'`, []);
-    const settings = {};
-    for (const row of rows) settings[row.key] = row.value;
+    const settings = await readSmmSettings();
 
     const providerKey = settings["smm_provider_key"] || "none";
     const isEnabled = settings["smm_provider_enabled"] === "true";
@@ -60,18 +142,8 @@ export async function getActiveProviderConfig() {
       return { provider: null, config: {}, adapter: new NoProviderAdapter() };
     }
 
-    const config = {
-      baseUrl: settings["smm_api_base_url"] || "",
-      timeoutMs: Number(settings["smm_api_timeout"]) || 10000,
-      apiKey: settings["smm_api_key"] || process.env.SMM_AFRICA_API_KEY || process.env.SMM_API_KEY || null,
-      ...(settings["smm_provider_config"] ? JSON.parse(settings["smm_provider_config"]) : {}),
-    };
-
-    let adapter = null;
-    if (providerKey === "smm_africa") {
-      const mod = await import("./smmAfrica.js");
-      adapter = new mod.SmmAfricaAdapter(config);
-    }
+    const config = buildConfig(settings, providerKey);
+    const adapter = await instantiateAdapter(providerKey, config);
     if (!adapter) {
       return { provider: providerKey, config, adapter: new NoProviderAdapter() };
     }
@@ -79,6 +151,25 @@ export async function getActiveProviderConfig() {
   } catch (err) {
     console.error("[smmProvider] Erreur lecture config :", err.message);
     return { provider: null, config: {}, adapter: new NoProviderAdapter() };
+  }
+}
+
+/**
+ * Adaptateur d'un fournisseur précis, même s'il n'est pas le fournisseur actif.
+ * Utilisé pour suivre les commandes déjà transmises avant une bascule.
+ */
+export async function getProviderConfig(providerKey) {
+  try {
+    if (!providerKey || providerKey === "none") {
+      return { provider: null, config: {}, adapter: new NoProviderAdapter() };
+    }
+    const settings = await readSmmSettings();
+    const config = buildConfig(settings, providerKey);
+    const adapter = await instantiateAdapter(providerKey, config);
+    return { provider: providerKey, config, adapter: adapter || new NoProviderAdapter() };
+  } catch (err) {
+    console.error("[smmProvider] Erreur lecture config fournisseur :", err.message);
+    return { provider: providerKey, config: {}, adapter: new NoProviderAdapter() };
   }
 }
 

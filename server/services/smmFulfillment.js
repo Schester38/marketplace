@@ -3,7 +3,7 @@ import { q } from "../db.js";
 import { mailConfigured, sendMail } from "../mailer.js";
 import { SITE_URL } from "../urls.js";
 import { sendWhatsAppText } from "./whatsapp.js";
-import { getActiveProviderConfig, logSmmCall, NoProviderAdapter } from "./smmProvider.js";
+import { getActiveProviderConfig, getProviderConfig, logSmmCall, NoProviderAdapter } from "./smmProvider.js";
 import { notifyAdmins } from "./adminNotify.js";
 
 export function generatePublicToken() {
@@ -253,13 +253,9 @@ export async function cleanupSmmOrders({ olderThanHours = 48, dryRun = false, li
  */
 export async function dispatchSmmOrder(orderId) {
   const rows = await q(
-    `SELECT o.*, s.external_service_id AS service_external_id,
-            m.external_service_id AS mapping_external_id
+    `SELECT o.*, s.external_service_id AS service_external_id
      FROM smm_orders o
      JOIN smm_services s ON s.id = o.service_id
-     LEFT JOIN smm_providers p ON p.provider_key = 'smm_africa' AND p.is_active = TRUE
-     LEFT JOIN smm_provider_mappings m
-       ON m.smm_service_id = o.service_id AND m.provider_id = p.id AND m.is_active = TRUE
      WHERE o.id = $1`,
     [orderId]
   );
@@ -288,11 +284,23 @@ export async function dispatchSmmOrder(orderId) {
     return { ok: false, error: "Aucun fournisseur SMM configuré. La commande reste payée et sera traitée manuellement." };
   }
 
-  const externalServiceId = order.mapping_external_id || order.service_external_id;
+  // Correspondance du service chez le fournisseur ACTIF uniquement. Le champ
+  // smm_services.external_service_id n'est qu'un repli pour les services
+  // historiques qui n'ont encore aucune correspondance fournisseur.
+  const mappings = await q(
+    `SELECT p.provider_key, m.external_service_id
+       FROM smm_provider_mappings m
+       JOIN smm_providers p ON p.id = m.provider_id
+      WHERE m.smm_service_id = $1 AND m.is_active = TRUE`,
+    [order.service_id]
+  );
+  const activeMapping = mappings.find((row) => row.provider_key === provider);
+  const externalServiceId =
+    activeMapping?.external_service_id || (mappings.length === 0 ? order.service_external_id : null);
   if (!externalServiceId) {
     return {
       ok: false,
-      error: "Ce service n'a pas de correspondance chez le fournisseur. Importez le catalogue ou associez le service.",
+      error: `Ce service n'a pas de correspondance chez le fournisseur actif (${provider}). Importez son catalogue ou associez le service.`,
     };
   }
 
@@ -306,7 +314,7 @@ export async function dispatchSmmOrder(orderId) {
   // même paiement en parallèle. Un seul appelant transmet la commande.
   const claimed = await q(
     `UPDATE smm_orders
-        SET provider_status = 'dispatching', updated_at = now()
+        SET provider_status = 'dispatching', provider_key = $2, updated_at = now()
       WHERE id = $1
         AND status IN ('paid', 'submitted', 'processing')
         AND payment_status = 'paid'
@@ -314,7 +322,7 @@ export async function dispatchSmmOrder(orderId) {
         AND (provider_status IS DISTINCT FROM 'dispatching'
              OR updated_at < now() - interval '10 minutes')
       RETURNING id`,
-    [order.id]
+    [order.id, provider]
   );
   if (!claimed.length) {
     const current = (
@@ -354,10 +362,10 @@ export async function dispatchSmmOrder(orderId) {
     const reference = result.external_reference || result.provider_reference || null;
     await q(
       `UPDATE smm_orders
-       SET status = 'submitted', provider_status = 'submitted',
+       SET status = 'submitted', provider_status = 'submitted', provider_key = $3,
            external_reference = $1, provider_reference = $1, updated_at = now()
        WHERE id = $2 AND external_reference IS NULL`,
-      [reference, order.id]
+      [reference, order.id, provider]
     );
     await addEvent(
       order.id,
@@ -406,10 +414,7 @@ export async function dispatchSmmOrder(orderId) {
  * Limité aux commandes déjà transmises et possédant une référence externe.
  */
 export async function syncSmmOrders(limit = 20, userId = null) {
-  const { provider, adapter } = await getActiveProviderConfig();
-  if (!provider || !adapter || adapter instanceof NoProviderAdapter) {
-    return { ok: false, error: "Aucun fournisseur SMM configuré.", checked: 0, updated: 0 };
-  }
+  const active = await getActiveProviderConfig();
 
   const max = Math.min(Math.max(Number(limit) || 20, 1), 50);
   const params = [max];
@@ -419,7 +424,7 @@ export async function syncSmmOrders(limit = 20, userId = null) {
     userFilter = `AND user_id = $${params.length}`;
   }
   const rows = await q(
-    `SELECT id, user_id, service_name, status, provider_status, external_reference
+    `SELECT id, user_id, service_name, status, provider_status, external_reference, provider_key
      FROM smm_orders
      WHERE status IN ('submitted', 'processing')
        AND external_reference IS NOT NULL
@@ -429,9 +434,31 @@ export async function syncSmmOrders(limit = 20, userId = null) {
     params
   );
 
+  // Les commandes déjà transmises gardent leur fournisseur d'origine, même
+  // après une bascule du fournisseur actif dans le panneau d'administration.
+  const adapters = new Map();
+  if (active.provider && active.adapter && !(active.adapter instanceof NoProviderAdapter)) {
+    adapters.set(active.provider, active.adapter);
+  }
+  async function adapterFor(providerKey) {
+    if (!providerKey) return null;
+    if (!adapters.has(providerKey)) {
+      const resolved = providerKey === active.provider ? active : await getProviderConfig(providerKey);
+      adapters.set(providerKey, resolved.adapter || null);
+    }
+    const adapter = adapters.get(providerKey);
+    return adapter instanceof NoProviderAdapter ? null : adapter;
+  }
+
   let updated = 0;
   const errors = [];
   for (const order of rows) {
+    const provider = order.provider_key || active.provider;
+    const adapter = await adapterFor(provider);
+    if (!provider || !adapter) {
+      errors.push({ order_id: order.id, error: "Fournisseur de la commande non configuré." });
+      continue;
+    }
     try {
       const result = await adapter.checkOrderStatus(order.external_reference);
       const nextStatus = providerStatusToOrderStatus(result.status);
