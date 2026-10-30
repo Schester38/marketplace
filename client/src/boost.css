@@ -1451,3 +1451,34 @@
 .boost-fav:hover { color: #f59e0b; }
 .boost-fav-active { color: #f59e0b; }
 
+/* Mobile hardening : évite tout débordement horizontal sur /mboppi-boost */
+@media (max-width: 639px) {
+  .boost-shell {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .boost-hero {
+    border-radius: 20px;
+  }
+  .boost-hero-inner {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  .boost-title {
+    font-size: 1.75rem !important;
+  }
+  .boost-orb-a,
+  .boost-orb-b {
+    filter: blur(48px);
+  }
+}
+.boost-page img,
+.boost-page svg,
+.boost-page video,
+.boost-page canvas,
+.boost-page iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+

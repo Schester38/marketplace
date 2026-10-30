@@ -6,5 +6,12 @@
       "fileMatch": ["package.json"],
       "url": "./package.schema.json"
     }
-  ]
+  ],
+  // Tailwind CSS : les directives @tailwind / @apply / @layer sont valides
+  // (traitées par PostCSS) mais inconnues du linter CSS par défaut de VS Code.
+  // On les ignore pour éviter les faux positifs « Unknown at rule ».
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore",
+  "less.lint.unknownAtRules": "ignore",
+  "css.validate": true
 }

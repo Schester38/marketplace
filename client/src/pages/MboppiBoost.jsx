@@ -766,8 +766,8 @@ export default function MboppiBoost() {
             </div>
           </div>
 
-          <div className="tw-mt-6 tw-grid tw-gap-6 lg:tw-grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)] lg:tw-items-start">
-            <div className="tw-space-y-5">
+          <div className="tw-mt-6 tw-grid tw-grid-cols-1 tw-gap-6 lg:tw-grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)] lg:tw-items-start">
+            <div className="tw-min-w-0 tw-space-y-5">
               <div className="boost-card boost-card-pad">
             <div className="tw-grid tw-gap-4 lg:tw-grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
               <div>
@@ -957,19 +957,33 @@ export default function MboppiBoost() {
                         {option.service.platformLabel} · {MONEY(option.service.unit)} / {option.service.unitLabel}
                       </span>
                     </span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleFavorite(option.service.id);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          toggleFavorite(option.service.id);
+                        }
+                      }}
+                      className={`boost-dropdown-fav ${favorites.some((f) => String(f) === String(option.service.id)) ? "boost-dropdown-fav-active" : ""}`}
+                      aria-label={favorites.some((f) => String(f) === String(option.service.id)) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                      aria-pressed={favorites.some((f) => String(f) === String(option.service.id))}
+                    >
+                      {favorites.some((f) => String(f) === String(option.service.id)) ? "★" : "☆"}
+                    </span>
                     {isActive && <span className="boost-dropdown-tick" aria-hidden="true">✓</span>}
                   </span>
                 )}
               />
             </div>
 
-            {loading ? (
-              <div className="tw-mt-4 tw-grid tw-gap-3 sm:tw-grid-cols-2 xl:tw-grid-cols-3" aria-busy="true">
-                {Array.from({ length: 6 }, (_, index) => (
-                  <div key={index} className="boost-skeleton" />
-                ))}
-              </div>
-            ) : displayCatalog.length === 0 ? (
+            {!loading && displayCatalog.length === 0 && (
               <div className="boost-empty">
                 <span className="boost-empty-icon" aria-hidden="true">🔎</span>
                 <p className="boost-empty-title">
@@ -979,54 +993,6 @@ export default function MboppiBoost() {
                 <button type="button" onClick={resetFilters} className="boost-btn boost-btn-secondary tw-mt-4">
                   Effacer les filtres
                 </button>
-              </div>
-            ) : (
-              <div
-                className={`tw-mt-4 tw-grid tw-gap-3 sm:tw-grid-cols-2 xl:tw-grid-cols-3 ${servicesLoading ? "boost-is-loading" : ""}`}
-                aria-busy={servicesLoading}
-              >
-                {displayCatalog.map((s) => {
-                  const isActive = String(selected?.id) === String(s.id);
-                  const accent = PLATFORM_ACCENTS[s.platform] || PLATFORM_ACCENTS.other;
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => { setSelectedId(s.id); setQuantity(s.min || 1); trackRecent(s.id); }}
-                      className={`boost-service ${isActive ? "boost-service-active" : ""}`}
-                      aria-pressed={isActive}
-                    >
-                      <span className="tw-flex tw-w-full tw-items-start tw-justify-between tw-gap-3">
-                        <span className={`boost-service-icon tw-bg-gradient-to-br ${accent}`} aria-hidden="true">
-                          {s.icon}
-                        </span>
-                        <span className={`boost-service-check ${isActive ? "boost-service-check-active" : ""}`} aria-hidden="true">
-                          {isActive ? "✓" : "→"}
-                        </span>
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(s.id); }}
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggleFavorite(s.id); } }}
-                        className={`boost-fav ${favorites.some((f) => String(f) === String(s.id)) ? "boost-fav-active" : ""}`}
-                        aria-label={favorites.some((f) => String(f) === String(s.id)) ? "Retirer des favoris" : "Ajouter aux favoris"}
-                        aria-pressed={favorites.some((f) => String(f) === String(s.id))}
-                      >
-                        {favorites.some((f) => String(f) === String(s.id)) ? "★" : "☆"}
-                      </span>
-                      </span>
-                      <span className="boost-service-name">{s.name}</span>
-                      <span className="boost-service-desc">{s.desc}</span>
-                      <span className="tw-mt-3 tw-flex tw-items-baseline tw-gap-1">
-                        <span className="boost-price tw-text-sm tw-font-black">{MONEY(s.unit)}</span>
-                        <span className="boost-muted tw-text-[11px]">/ {s.unitLabel}</span>
-                      </span>
-                      <span className="boost-muted tw-mt-1 tw-block tw-text-[10px]">
-                        Quantité : min {s.min}{s.max > 0 ? ` · max ${s.max}` : ""}
-                      </span>
-                    </button>
-                  );
-                })}
               </div>
             )}
 

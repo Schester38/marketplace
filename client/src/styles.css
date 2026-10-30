@@ -12332,7 +12332,8 @@ a.step {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 8px;
-  min-width: 200px;
+  min-width: 0;
+  max-width: 100%;
 }
 .boost-declare input,
 .boost-declare select {
@@ -12376,7 +12377,8 @@ a.step {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 170px;
+  min-width: 0;
+  max-width: 100%;
 }
 .boost-admin-status {
   min-width: 0;
