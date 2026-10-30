@@ -62,9 +62,6 @@ export default function BoostAdmin() {
   const [searchQuery, setSearchQuery] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [cursor, setCursor] = useState(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(false);
@@ -151,7 +148,7 @@ export default function BoostAdmin() {
 
   async function loadOrders(override = {}) {
     const params = {
-      limit: 50,
+      limit: 5,
       status: override.status !== undefined ? override.status : filter,
       q: override.q !== undefined ? override.q : searchQuery,
       from: override.from !== undefined ? override.from : fromDate,
@@ -160,9 +157,7 @@ export default function BoostAdmin() {
     setLoading(true);
     try {
       const resp = await api.adminSmmOrders(params);
-      setOrders(resp.orders || []);
-      setCursor(resp.next_cursor || null);
-      setHasMore(!!resp.has_more);
+      setOrders((resp.orders || []).slice(0, 5));
       setTotal(resp.total || 0);
       setError("");
     } catch (err) {
@@ -182,30 +177,6 @@ export default function BoostAdmin() {
       // ignore
     } finally {
       setStatsLoading(false);
-    }
-  }
-
-  async function loadMore() {
-    if (!hasMore || loadingMore) return;
-    setLoadingMore(true);
-    try {
-      const params = {
-        limit: 50,
-        status: filter,
-        q: searchQuery,
-        from: fromDate,
-        to: toDate,
-        cursor: cursor,
-      };
-      const resp = await api.adminSmmOrders(params);
-      setOrders((prev) => [...prev, ...(resp.orders || [])]);
-      setCursor(resp.next_cursor || null);
-      setHasMore(!!resp.has_more);
-      setTotal(resp.total || total);
-    } catch (err) {
-      setError(err.message || "Impossible de charger la suite.");
-    } finally {
-      setLoadingMore(false);
     }
   }
 
@@ -590,6 +561,26 @@ export default function BoostAdmin() {
     }
   }
 
+  async function deleteOrder(order) {
+    if (
+      !window.confirm(
+        `Masquer la commande terminée #${order.id} du panneau admin ? L'historique du client est conservé.`
+      )
+    )
+      return;
+    setBusyId(order.id);
+    setNotice("");
+    try {
+      await api.adminSmmDeleteOrder(order.id);
+      setNotice(`Commande #${order.id} masquée du panneau admin (historique client conservé).`);
+      await loadOrders();
+    } catch (err) {
+      setNotice(err.message || "Suppression impossible.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function changeStatus(order, status) {
     if (!status || status === order.status) return;
     setBusyId(order.id);
@@ -686,50 +677,6 @@ export default function BoostAdmin() {
                 ))}
               </div>
             </div>
-            {stats.top_services && stats.top_services.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <h4 style={{ margin: "0 0 8px" }}>{t("Top services")}</h4>
-                <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-                  <table className="table" style={{ width: "100%", minWidth: 320 }}>
-                    <thead>
-                      <tr>
-                        <th style={{ textAlign: "left" }}>{t("Service")}</th>
-                        <th style={{ textAlign: "center", whiteSpace: "nowrap" }}>{t("Commandes")}</th>
-                        <th style={{ textAlign: "right", whiteSpace: "nowrap" }}>{t("CA (USD)")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stats.top_services.map((s, i) => (
-                        <tr key={i}>
-                          <td style={{ wordBreak: "break-word", overflowWrap: "anywhere", whiteSpace: "normal" }}>{s.service_name}</td>
-                          <td style={{ textAlign: "center", whiteSpace: "nowrap" }}>{s.count}</td>
-                          <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>{usd(s.revenue_usd)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-            {stats.daily && stats.daily.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <h4 style={{ margin: "0 0 8px" }}>{t("Évolution")}</h4>
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 80, overflowX: "auto" }}>
-                  {stats.daily.map((d) => {
-                    const max = Math.max(...stats.daily.map((x) => x.count), 1);
-                    const h = Math.round((d.count / max) * 70);
-                    return (
-                      <div key={d.date} title={d.date + " : " + d.count} style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 14 }}>
-                        <div style={{ width: 10, height: h, background: "var(--primary)", borderRadius: 2 }} />
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="hint" style={{ marginTop: 4 }}>
-                  {t("Commandes par jour sur la période")}
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>
@@ -808,14 +755,6 @@ export default function BoostAdmin() {
             {visibleOrders.length} / {total || orders.length}
           </span>
         </div>
-
-        {hasMore && (
-          <div style={{ margin: "8px 0" }}>
-            <button className="btn btn-outline btn-small" onClick={loadMore} disabled={loadingMore}>
-              {loadingMore ? t("Chargement…") : t("Charger la suite")}
-            </button>
-          </div>
-        )}
 
         {visibleOrders.length === 0 ? (
           <p className="hint">{t("Aucune commande dans ce filtre.")}</p>
@@ -958,6 +897,15 @@ export default function BoostAdmin() {
                               onClick={() => refundOrder(order)}
                             >
                               {t("Rembourser")}
+                            </button>
+                          )}
+                          {order.status === "completed" && (
+                            <button
+                              className="btn btn-danger btn-small"
+                              disabled={busyId === order.id}
+                              onClick={() => deleteOrder(order)}
+                            >
+                              {t("Supprimer")}
                             </button>
                           )}
                           {order.status === "paid" &&

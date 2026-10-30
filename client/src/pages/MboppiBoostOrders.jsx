@@ -57,6 +57,7 @@ export default function MboppiBoostOrders() {
   const [payingId, setPayingId] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [checkout, setCheckout] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [orderDetails, setOrderDetails] = useState({});
@@ -306,6 +307,23 @@ export default function MboppiBoostOrders() {
       setError(err.message || "Impossible d'annuler la commande.");
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  async function deleteOrder(order) {
+    if (!order?.id) return;
+    if (!window.confirm(t("Supprimer cette commande terminée de votre historique ?"))) return;
+    setDeletingId(order.id);
+    setNotice("");
+    setError("");
+    try {
+      await api.smmDeleteOrder(order.id);
+      setOrders((prev) => prev.filter((o) => Number(o.id) !== Number(order.id)));
+      setNotice(`Commande #${order.id} supprimée de votre historique.`);
+    } catch (err) {
+      setError(err.message || "Impossible de supprimer la commande.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -620,6 +638,19 @@ export default function MboppiBoostOrders() {
                         onClick={() => cancelOrder(o)}
                       >
                         {cancellingId === o.id ? t("Annulation…") : t("Annuler la commande")}
+                      </button>
+                    </div>
+                  )}
+
+                  {o.status === "completed" && user && !o._token && (
+                    <div className="boost-order-actions">
+                      <button
+                        type="button"
+                        className="boost-btn boost-btn-secondary boost-btn-sm"
+                        disabled={deletingId === o.id}
+                        onClick={() => deleteOrder(o)}
+                      >
+                        {deletingId === o.id ? t("Suppression…") : t("Supprimer")}
                       </button>
                     </div>
                   )}

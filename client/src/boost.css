@@ -213,6 +213,155 @@
     resize: vertical;
   }
 
+  .boost-dropdown {
+    @apply tw-relative tw-w-full;
+  }
+
+  .boost-dropdown-toggle {
+    @apply tw-flex tw-w-full tw-items-center tw-justify-between tw-gap-3 tw-rounded-xl tw-border tw-px-4 tw-py-3 tw-text-sm tw-font-semibold tw-shadow-sm tw-outline-none tw-transition;
+    border-color: var(--boost-border);
+    background: var(--boost-surface);
+    color: var(--boost-text);
+    text-align: left;
+  }
+
+  .boost-dropdown-toggle:hover {
+    border-color: #93c5fd;
+  }
+
+  .boost-dropdown-toggle:focus-visible,
+  .boost-dropdown-open .boost-dropdown-toggle {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+  }
+
+  .boost-dropdown-toggle:disabled {
+    @apply tw-cursor-not-allowed tw-opacity-60;
+  }
+
+  .boost-dropdown-value {
+    @apply tw-min-w-0 tw-flex-1 tw-truncate;
+  }
+
+  .boost-dropdown-placeholder {
+    color: var(--boost-muted);
+  }
+
+  .boost-dropdown-chevron {
+    @apply tw-h-4 tw-w-4 tw-flex-none tw-text-slate-400 tw-transition-transform tw-duration-200;
+  }
+
+  .boost-dropdown-open .boost-dropdown-chevron {
+    transform: rotate(180deg);
+  }
+
+  .boost-dropdown-panel {
+    @apply tw-absolute tw-left-0 tw-right-0 tw-z-40 tw-mt-2 tw-max-h-72 tw-overflow-y-auto tw-rounded-2xl tw-border tw-p-1.5;
+    border-color: var(--boost-border);
+    background: var(--boost-surface);
+    box-shadow: 0 28px 60px -28px rgba(15, 23, 42, 0.5), 0 12px 26px -20px rgba(15, 23, 42, 0.35);
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  [data-theme="dark"] .boost-dropdown-panel {
+    box-shadow: 0 28px 60px -18px rgba(0, 0, 0, 0.85), 0 12px 26px -18px rgba(0, 0, 0, 0.6);
+  }
+
+  .boost-dropdown-option {
+    @apply tw-flex tw-w-full tw-items-center tw-gap-2 tw-rounded-xl tw-px-3 tw-py-2.5 tw-text-left tw-text-sm tw-font-semibold tw-transition;
+    background: transparent;
+    color: var(--boost-text);
+  }
+
+  .boost-dropdown-option:hover,
+  .boost-dropdown-option:focus-visible {
+    background: var(--boost-surface-soft);
+    outline: none;
+  }
+
+  .boost-dropdown-option.is-active {
+    background: var(--boost-blue-soft);
+    color: var(--boost-blue);
+  }
+
+  .boost-dropdown-empty {
+    @apply tw-px-3 tw-py-3 tw-text-center tw-text-xs;
+    color: var(--boost-muted);
+  }
+
+  .boost-dropdown-value-main,
+  .boost-dropdown-option-main {
+    @apply tw-flex tw-min-w-0 tw-w-full tw-items-center tw-gap-3;
+  }
+
+  .boost-dropdown-value-icon,
+  .boost-dropdown-option-icon {
+    @apply tw-flex tw-h-8 tw-w-8 tw-flex-none tw-items-center tw-justify-center tw-rounded-lg tw-text-base tw-text-white tw-shadow-sm;
+  }
+
+  .boost-dropdown-value-text,
+  .boost-dropdown-option-text {
+    @apply tw-flex tw-min-w-0 tw-flex-1 tw-flex-col;
+  }
+
+  .boost-dropdown-value-name,
+  .boost-dropdown-option-name {
+    @apply tw-truncate tw-text-xs tw-font-bold;
+    color: var(--boost-text);
+  }
+
+  .boost-dropdown-value-meta,
+  .boost-dropdown-option-meta {
+    @apply tw-truncate tw-text-[10px];
+    color: var(--boost-muted);
+  }
+
+  .boost-dropdown-option.is-active .boost-dropdown-option-name {
+    color: var(--boost-blue);
+  }
+
+  .boost-dropdown-tick {
+    @apply tw-flex-none tw-text-[11px] tw-font-black;
+    color: var(--boost-blue);
+  }
+
+  .boost-prefill {
+    @apply tw-mt-4 tw-flex tw-items-start tw-gap-3 tw-rounded-2xl tw-border tw-px-4 tw-py-3;
+    border-color: #bfdbfe;
+    background: var(--boost-blue-soft);
+  }
+
+  [data-theme="dark"] .boost-prefill {
+    border-color: rgba(59, 130, 246, 0.28);
+  }
+
+  .boost-prefill-icon {
+    @apply tw-flex tw-h-9 tw-w-9 tw-flex-none tw-items-center tw-justify-center tw-rounded-xl tw-bg-white tw-text-lg tw-shadow-sm;
+  }
+
+  [data-theme="dark"] .boost-prefill-icon {
+    background: rgba(148, 163, 184, 0.12);
+  }
+
+  .boost-prefill-text {
+    @apply tw-min-w-0 tw-flex-1;
+  }
+
+  .boost-prefill-title {
+    @apply tw-text-xs tw-font-extrabold;
+    color: var(--boost-text);
+  }
+
+  .boost-prefill-note {
+    @apply tw-mt-0.5 tw-text-[11px] tw-leading-5;
+    color: var(--boost-muted);
+  }
+
+  .boost-prefill-badge {
+    @apply tw-flex-none tw-rounded-full tw-bg-blue-600 tw-px-2 tw-py-0.5 tw-text-[9px] tw-font-black tw-uppercase tw-tracking-[0.08em] tw-text-white;
+  }
+
   .boost-hint {
     @apply tw-mt-1.5 tw-text-[11px] tw-leading-5;
     color: var(--boost-muted);

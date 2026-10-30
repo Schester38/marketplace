@@ -627,6 +627,8 @@ export const api = {
     }),
   smmCancelOrder: (id) =>
     request(`/smm/orders/${encodeURIComponent(id)}/cancel`, { method: "POST" }),
+  smmDeleteOrder: (id) =>
+    request(`/smm/orders/${encodeURIComponent(id)}`, { method: "DELETE" }),
 
   smmDeclarePayment: (id, payload) =>
     request(`/smm/orders/${encodeURIComponent(id)}/payment`, {
@@ -675,6 +677,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload || {}),
     }),
+  adminSmmDeleteOrder: (id) =>
+    adminRequest(`/smm/admin/orders/${id}`, { method: "DELETE" }),
   adminSmmSync: () => adminRequest("/smm/admin/sync", { method: "POST" }),
   adminSmmPaymentInfo: () => adminRequest("/smm/admin/payment-info"),
   adminSmmSavePaymentInfo: (payload) =>

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
+import { useAuth } from "../App.jsx";
 
 const MONEY = (n) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(Number(n) || 0) + " FCFA";
@@ -185,8 +186,149 @@ function IconSpark({ className = "tw-h-4 tw-w-4" }) {
   );
 }
 
+function IconChevron({ className = "tw-h-4 tw-w-4" }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+      <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BoostSelect({
+  id,
+  value,
+  options = [],
+  onChange,
+  placeholder = "Sélectionner…",
+  ariaLabel,
+  disabled = false,
+  renderValue,
+  renderOption,
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const toggleRef = useRef(null);
+  const optionRefs = useRef([]);
+  const selectedIndex = options.findIndex((option) => String(option.value) === String(value));
+  const selected = selectedIndex >= 0 ? options[selectedIndex] : null;
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointerDown = (event) => {
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const target = selectedIndex >= 0 ? selectedIndex : 0;
+    const frame = requestAnimationFrame(() => optionRefs.current[target]?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open, selectedIndex]);
+
+  const focusOption = (index) => {
+    const count = options.length;
+    if (!count) return;
+    const next = ((index % count) + count) % count;
+    optionRefs.current[next]?.focus();
+  };
+
+  const choose = (nextValue) => {
+    setOpen(false);
+    onChange(nextValue);
+    toggleRef.current?.focus();
+  };
+
+  return (
+    <div ref={rootRef} className={`boost-dropdown ${open ? "boost-dropdown-open" : ""}`}>
+      <button
+        type="button"
+        id={id}
+        ref={toggleRef}
+        className="boost-dropdown-toggle"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        disabled={disabled}
+        onClick={() => setOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            setOpen(true);
+          }
+        }}
+      >
+        <span className={`boost-dropdown-value ${selected ? "" : "boost-dropdown-placeholder"}`}>
+          {selected ? (renderValue ? renderValue(selected) : selected.label) : placeholder}
+        </span>
+        <IconChevron className="boost-dropdown-chevron" />
+      </button>
+
+      {open && (
+        <ul role="listbox" className="boost-dropdown-panel" aria-label={ariaLabel}>
+          {options.length === 0 ? (
+            <li className="boost-dropdown-empty">{placeholder}</li>
+          ) : (
+            options.map((option, index) => {
+              const isActive = String(option.value) === String(value);
+              return (
+                <li key={option.value} role="presentation">
+                  <button
+                    type="button"
+                    ref={(node) => {
+                      optionRefs.current[index] = node;
+                    }}
+                    role="option"
+                    aria-selected={isActive}
+                    className={`boost-dropdown-option ${isActive ? "is-active" : ""}`}
+                    onClick={() => choose(option.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "ArrowDown") {
+                        event.preventDefault();
+                        focusOption(index + 1);
+                      } else if (event.key === "ArrowUp") {
+                        event.preventDefault();
+                        focusOption(index - 1);
+                      } else if (event.key === "Home") {
+                        event.preventDefault();
+                        focusOption(0);
+                      } else if (event.key === "End") {
+                        event.preventDefault();
+                        focusOption(options.length - 1);
+                      } else if (event.key === "Escape") {
+                        event.preventDefault();
+                        setOpen(false);
+                        toggleRef.current?.focus();
+                      }
+                    }}
+                  >
+                    {renderOption ? renderOption(option, isActive) : option.label}
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function MboppiBoost() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const configRef = useRef(null);
   const [categories, setCategories] = useState(null);
   const [services, setServices] = useState(null);
@@ -212,9 +354,15 @@ export default function MboppiBoost() {
   const [quantity, setQuantity] = useState(1);
   const [target, setTarget] = useState("");
   const [details, setDetails] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState(() => user?.email || "");
+  const [phone, setPhone] = useState(() => user?.phone || "");
   const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    if (!user) return;
+    setEmail((current) => current || user.email || "");
+    setPhone((current) => current || user.phone || "");
+  }, [user]);
 
   useEffect(() => {
     let cancelled = false;
@@ -639,15 +787,26 @@ export default function MboppiBoost() {
                 </div>
               </div>
               <div>
-                <label htmlFor="boost-category" className="boost-label">Catégorie</label>
+                <label htmlFor="boost-category" className="boost-label tw-hidden sm:tw-flex">Catégorie</label>
+                <label htmlFor="boost-category-mobile" className="boost-label sm:tw-hidden">Catégorie</label>
                 <select
                   id="boost-category"
+                  aria-label="Catégorie"
                   value={categoryFilter}
                   onChange={(e) => onCategoryChange(e.target.value)}
-                  className="boost-input boost-select"
+                  className="boost-input boost-select tw-hidden sm:tw-block"
                 >
                   {catOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
+                <div className="sm:tw-hidden">
+                  <BoostSelect
+                    id="boost-category-mobile"
+                    value={categoryFilter}
+                    options={catOptions}
+                    onChange={onCategoryChange}
+                    ariaLabel="Catégorie"
+                  />
+                </div>
               </div>
             </div>
 
@@ -748,6 +907,62 @@ export default function MboppiBoost() {
               <span className="boost-count">{displayTotal}</span>
             </div>
 
+            <div className="tw-mt-4">
+              <label htmlFor="boost-service-select" className="boost-label">Service</label>
+              <BoostSelect
+                id="boost-service-select"
+                value={selected?.id ?? ""}
+                options={displayCatalog.map((service) => ({
+                  value: service.id,
+                  label: service.name,
+                  service,
+                }))}
+                onChange={(value) => {
+                  const service = displayCatalog.find((item) => String(item.id) === String(value));
+                  if (!service) return;
+                  setSelectedId(service.id);
+                  setQuantity(service.min || 1);
+                  trackRecent(service.id);
+                }}
+                placeholder={servicesLoading ? "Chargement des services…" : "Choisissez un service…"}
+                disabled={loading || servicesLoading || displayCatalog.length === 0}
+                ariaLabel="Choisissez un service"
+                renderValue={(option) => (
+                  <span className="boost-dropdown-value-main">
+                    <span
+                      className={`boost-dropdown-value-icon tw-bg-gradient-to-br ${PLATFORM_ACCENTS[option.service.platform] || PLATFORM_ACCENTS.other}`}
+                      aria-hidden="true"
+                    >
+                      {option.service.icon}
+                    </span>
+                    <span className="boost-dropdown-value-text">
+                      <span className="boost-dropdown-value-name">{option.service.name}</span>
+                      <span className="boost-dropdown-value-meta">
+                        {option.service.platformLabel} · {MONEY(option.service.unit)} / {option.service.unitLabel}
+                      </span>
+                    </span>
+                  </span>
+                )}
+                renderOption={(option, isActive) => (
+                  <span className="boost-dropdown-option-main">
+                    <span
+                      className={`boost-dropdown-option-icon tw-bg-gradient-to-br ${PLATFORM_ACCENTS[option.service.platform] || PLATFORM_ACCENTS.other}`}
+                      aria-hidden="true"
+                    >
+                      {option.service.icon}
+                    </span>
+                    <span className="boost-dropdown-option-text">
+                      <span className="boost-dropdown-option-name">{option.service.name}</span>
+                      <span className="boost-dropdown-option-meta">
+                        {option.service.platformLabel} · {MONEY(option.service.unit)} / {option.service.unitLabel}
+                      </span>
+                    </span>
+                    {isActive && <span className="boost-dropdown-tick" aria-hidden="true">✓</span>}
+                  </span>
+                )}
+              />
+            </div>
+
             {loading ? (
               <div className="tw-mt-4 tw-grid tw-gap-3 sm:tw-grid-cols-2 xl:tw-grid-cols-3" aria-busy="true">
                 {Array.from({ length: 6 }, (_, index) => (
@@ -846,6 +1061,21 @@ export default function MboppiBoost() {
                 Ces informations servent à préparer et suivre votre commande.
               </p>
             </div>
+
+            {user && (
+              <div className="boost-prefill">
+                <span className="boost-prefill-icon" aria-hidden="true">👤</span>
+                <div className="boost-prefill-text">
+                  <p className="boost-prefill-title">
+                    {user.name ? `Bonjour ${user.name}` : "Coordonnées de votre compte"}
+                  </p>
+                  <p className="boost-prefill-note">
+                    Votre e-mail et votre téléphone sont préremplis depuis votre compte. Vous pouvez les modifier.
+                  </p>
+                </div>
+                <span className="boost-prefill-badge">Prérempli</span>
+              </div>
+            )}
 
             <div className="tw-mt-5 tw-grid tw-gap-4 sm:tw-grid-cols-2">
               <div>

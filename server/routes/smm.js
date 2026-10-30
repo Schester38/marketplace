@@ -885,7 +885,7 @@ router.get(
     const sort = (req.query.sort || "date_desc").toString().trim();
     const cursorRaw = (req.query.cursor || "").toString().trim();
 
-    const where = ["o.user_id = $1"];
+    const where = ["o.user_id = $1", "o.user_hidden_at IS NULL"];
     const params = [req.user.id];
     const add = (sql, val) => { params.push(val); where.push(sql.replace("?", `$${params.length}`)); };
 
@@ -928,7 +928,7 @@ router.get(
     const whereSql = `WHERE ${where.join(" AND ")}`;
 
     const countParams = [req.user.id];
-    const countWhere = ["o.user_id = $1"];
+    const countWhere = ["o.user_id = $1", "o.user_hidden_at IS NULL"];
     const addC = (sql, val) => { countParams.push(val); countWhere.push(sql.replace("?", `$${countParams.length}`)); };
     if (status && status !== "all") addC("o.status = ?", status);
     if (from) addC("o.created_at >= ?::timestamptz", from);
@@ -1658,7 +1658,7 @@ router.get(
     const to = (req.query.to || "").toString().trim();
     const cursorRaw = (req.query.cursor || "").toString().trim();
 
-    const where = [];
+    const where = ["o.admin_hidden_at IS NULL"];
     const params = [];
     const add = (sql, val) => { params.push(val); where.push(sql.replace("?", `$${params.length}`)); };
 
@@ -1705,7 +1705,7 @@ router.get(
     const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
     const cp = [];
-    const cw = [];
+    const cw = ["o.admin_hidden_at IS NULL"];
     const addC2 = (sql, val) => { cp.push(val); cw.push(sql.replace("?", `$${cp.length}`)); };
     if (status && status !== "all") addC2("o.status = ?", status);
     if (qterm) {
@@ -2450,6 +2450,42 @@ router.post(
   })
 );
 
+/* DELETE /api/smm/orders/:id — masquer une commande TERMINÉE de l'historique du client.
+   Suppression douce : la commande et ses événements restent en base, l'admin la
+   voit toujours (l'admin masque de son côté avec admin_hidden_at). */
+router.delete(
+  "/orders/:id",
+  authRequired,
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: "ID invalide" });
+
+    const rows = await q(
+      `SELECT id, user_id, status FROM smm_orders WHERE id = $1`,
+      [id]
+    );
+    if (!rows.length || Number(rows[0].user_id) !== Number(req.user.id)) {
+      return res.status(404).json({ error: "Commande introuvable" });
+    }
+    if (rows[0].status !== "completed") {
+      return res.status(409).json({
+        error: "Seules les commandes terminées peuvent être supprimées de votre historique.",
+        status: rows[0].status,
+      });
+    }
+
+    await q(
+      `UPDATE smm_orders
+          SET user_hidden_at = now(), updated_at = now()
+        WHERE id = $1 AND user_id = $2 AND status = 'completed'`,
+      [id, req.user.id]
+    );
+    logAudit(req.user.id, "smm.order_hidden_user", `#${id}`, req.ip);
+
+    res.json({ ok: true, hidden_id: id });
+  })
+);
+
 /* POST /api/admin/smm/orders/:id/cancel — annuler une commande payée non transmise + remboursement auto */
 router.post(
   "/admin/orders/:id/cancel",
@@ -2540,6 +2576,46 @@ router.post(
       refunded_usd: refundUsd,
       balance_usd: result.credit?.balance_usd ?? null,
     });
+  })
+);
+
+/* DELETE /api/admin/smm/orders/:id — masquer une commande terminée du panneau admin.
+   Suppression DOUCE : l'historique du client reste intact (exigence métier). */
+router.delete(
+  "/admin/orders/:id",
+  authRequired,
+  roleRequired("admin"),
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: "ID invalide" });
+
+    const orderRows = await q(
+      `SELECT id, user_id, service_name, status FROM smm_orders WHERE id = $1`,
+      [id]
+    );
+    if (!orderRows.length) return res.status(404).json({ error: "Commande introuvable" });
+    const order = orderRows[0];
+    if (order.status !== "completed") {
+      return res.status(409).json({
+        error: "Seules les commandes terminées peuvent être supprimées.",
+        status: order.status,
+      });
+    }
+
+    await q(
+      `UPDATE smm_orders
+          SET admin_hidden_at = now(), updated_at = now()
+        WHERE id = $1 AND status = 'completed'`,
+      [id]
+    );
+    logAudit(
+      req.user.id,
+      "smm.order_hidden_admin",
+      `#${id} ${order.service_name}${order.user_id ? ` (user ${order.user_id})` : ""}`,
+      req.ip
+    );
+
+    res.json({ ok: true, hidden_id: id });
   })
 );
 
