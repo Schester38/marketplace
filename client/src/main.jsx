@@ -84,6 +84,23 @@ if (!pathname.startsWith("/admin")) {
   );
 }
 
+// Chunk de route qui échoue (déploiement en cours, ancien shell en cache,
+// coupure réseau) : Vite émet `vite:preloadError` et l'utilisateur restait sur
+// la page d'erreur. On recharge une fois (garde anti-boucle 10 s) pour
+// récupérer l'index et les chunks de la version active.
+window.addEventListener("vite:preloadError", () => {
+  try {
+    const K = "mboppi_chunk_reload_ts";
+    const last = Number(sessionStorage.getItem(K) || 0);
+    const now = Date.now();
+    if (now - last < 10000) return;
+    sessionStorage.setItem(K, String(now));
+  } catch {
+    /* stockage indisponible : recharger quand même */
+  }
+  window.location.reload();
+});
+
 try {
   let t = storage.getItem("theme");
   if (!t) t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";

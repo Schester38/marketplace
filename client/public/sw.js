@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v416';
+const CACHE_NAME = 'mboppi-v417';
 const APP_SHELL = ['/', '/offline.html', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/robots.txt', '/splash.js'];
 // Les diapositives, illustrations sociales et logos secondaires sont charges a la
 // demande : les precacher a chaque version augmentait l'egress des installations.
@@ -339,12 +339,26 @@ async function apiSwr(request) {
     new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
 }
 
+// Un asset /assets/* est forcement du JS ou du CSS : si le serveur renvoie du
+// text/html (route SPA utilisee comme repli quand un chunk n'existe plus), la
+// reponse ne doit JAMAIS etre mise en cache sous l'URL du chunk, sinon l'import
+// dynamique echoue definitivement ("Failed to fetch dynamically imported
+// module") jusqu'a la prochaine purge du cache.
+function isAssetContent(resp) {
+  const ct = (resp.headers.get('content-type') || '').toLowerCase();
+  return /javascript|ecmascript|text\/css/.test(ct);
+}
+
 async function assetCacheFirst(request) {
   const cached = await caches.match(request);
-  if (cached) return cached;
+  if (cached && isAssetContent(cached)) return cached;
+  if (cached) {
+    // Entree empoisonnee par un deploiement precedent : la retirer.
+    caches.open(CACHE_NAME).then((cache) => cache.delete(request)).catch(() => {});
+  }
   try {
     const resp = await fetch(request);
-    if (resp.ok) {
+    if (resp.ok && isAssetContent(resp)) {
       const clone = resp.clone();
       caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
     }
