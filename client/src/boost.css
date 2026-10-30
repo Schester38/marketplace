@@ -35,6 +35,7 @@
       radial-gradient(820px 420px at 100% 0%, rgba(14, 165, 233, 0.09), transparent 55%),
       var(--boost-bg);
     font-family: Inter, "Segoe UI", Arial, sans-serif;
+    overflow-x: hidden;
   }
 
   [data-theme="dark"] .boost-page {
@@ -49,6 +50,8 @@
 @layer components {
   .boost-shell {
     @apply tw-mx-auto tw-w-full tw-max-w-[1240px] tw-px-4 tw-py-6 sm:tw-px-6 lg:tw-px-8 lg:tw-py-10;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .boost-hero {
@@ -240,7 +243,7 @@
   }
 
   .boost-dropdown-value {
-    @apply tw-min-w-0 tw-flex-1 tw-truncate;
+    @apply tw-min-w-0 tw-flex-1;
   }
 
   .boost-dropdown-placeholder {
@@ -1400,6 +1403,22 @@
     background-position: 0 50%;
   }
 }
+
+  @media (max-width: 639px) {
+    .boost-orb-a {
+      width: 14rem;
+      height: 14rem;
+      top: -4rem;
+      right: -4rem;
+    }
+    .boost-orb-b {
+      width: 12rem;
+      height: 12rem;
+      bottom: -6rem;
+      left: 10%;
+    }
+  }
+
 
 @keyframes boost-fade-up {
   from {
