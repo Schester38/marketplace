@@ -57,6 +57,8 @@
   .boost-hero {
     @apply tw-relative tw-overflow-hidden tw-rounded-[32px] tw-bg-[#07101f] tw-text-white;
     box-shadow: 0 30px 80px -40px rgba(8, 18, 37, 0.9);
+    overflow-x: hidden;
+    max-width: 100%;
   }
 
   .boost-hero-grid {
@@ -111,6 +113,8 @@
 
   .boost-lead {
     @apply tw-mt-5 tw-max-w-2xl tw-text-[15px] tw-leading-7 tw-text-slate-300 sm:tw-text-base;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .boost-chip {
