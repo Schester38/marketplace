@@ -2937,12 +2937,15 @@ textarea {
   align-items: center;
   justify-content: center;
   padding: 16px;
+  overflow: auto;
 }
 .ikeepay-modal {
   position: relative;
   width: 100%;
   max-width: 450px;
   height: 88vh;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
 }
 .ikeepay-close {
   position: absolute;
@@ -3005,6 +3008,8 @@ textarea {
 @media (min-width: 768px) {
   .ikeepay-modal {
     height: 85vh;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
     padding: 1rem;
   }
   .ikeepay-iframe {
