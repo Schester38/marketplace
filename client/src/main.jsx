@@ -6,6 +6,7 @@ import App, { AuthProvider } from "./App.jsx";
 import { LangProvider } from "./i18n.jsx";
 import { StoreProvider } from "./store.jsx";
 import { BASE_URL } from "./config.js";
+import pkg from "../package.json";
 import "./styles.css";
 import "./boost.css";
 
@@ -199,7 +200,7 @@ if (!redirectingToCanonicalHost && "serviceWorker" in navigator) {
   if (import.meta.env.PROD) {
     window.addEventListener("load", () => {
       navigator.serviceWorker
-        .register("/sw.js")
+        .register(`/sw.js?v=${pkg.version}`, { scope: "/", updateViaCache: "none" })
         .then((reg) => {
           registered = true;
           registration = reg;
