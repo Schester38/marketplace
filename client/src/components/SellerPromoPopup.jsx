@@ -1,11 +1,12 @@
 ﻿import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 
 export default function SellerPromoPopup() {
   const { user } = useAuth();
   const { t } = useLang();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -21,7 +22,7 @@ export default function SellerPromoPopup() {
       clearTimeout(first);
       clearInterval(interval);
     };
-  }, [user]);
+  }, [user, location.pathname]);
 
   if (!open) return null;
 
