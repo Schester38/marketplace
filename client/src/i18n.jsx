@@ -6712,6 +6712,84 @@ const MBOPPIBOOST_AR = {
 
 
 
+const MBOPPIBOOST_TERMS_EN = {
+  "Conditions d'utilisation — MboppiBoost": "Terms of Use — MboppiBoost",
+  "Conditions d'utilisation": "Terms of Use",
+  "Conditions générales d'utilisation du service MboppiBoost.": "General terms of use of the MboppiBoost service.",
+  "Dernière mise à jour :": "Last updated:",
+  "1. Informations générales": "1. General Information",
+  "En passant une commande sur MboppiBoost, vous acceptez automatiquement les conditions ci-dessous, que vous les ayez lues ou non. Nous nous réservons le droit de modifier ces conditions sans préavis. Nous vous recommandons de consulter cette section régulièrement pour rester informé des règles en vigueur.": "By placing an order on MboppiBoost, you automatically agree to the terms below, whether or not you have read them. We reserve the right to modify these terms without prior notice. Check this section regularly to stay informed.",
+  "Vous vous engagez à utiliser MboppiBoost conformément aux conditions d'utilisation des plateformes sociales pour lesquelles les services sont commandés (YouTube, Instagram, TikTok, Telegram, etc.). Nous ne sommes pas responsables des conséquences liées au non-respect des règles de ces plateformes.": "You agree to use MboppiBoost per the terms of the social platforms for which services are ordered (YouTube, Instagram, TikTok, Telegram, etc.). We are not responsible for consequences of violating those rules.",
+  "Les prix des services sont susceptibles de changer sans préavis. Les tarifs actuels sont toujours disponibles sur le site. Nous visons à respecter les délais de livraison indiqués ; toutefois, des retards peuvent survenir en raison de la charge du système, des mises à jour des plateformes ou d'autres problèmes techniques. Dans ce cas, nous ferons tout notre possible pour compléter la commande le plus rapidement possible.": "Service prices may change without notice. Current rates are always on the site. We aim to meet delivery times; delays may occur due to system load, platform updates or technical issues. We will complete orders as quickly as possible.",
+  "2. Exonération de responsabilité": "2. Disclaimer of Liability",
+  "MboppiBoost n'est pas responsable des pertes encourues du fait de l'utilisation de nos services. Nous ne garantissons pas la protection contre les suspensions de compte, la suppression de contenu ou d'autres sanctions imposées par les plateformes sociales. Le client est seul responsable du respect de leurs règles. Nous n'avons aucun contrôle sur les changements d'algorithme ou les défaillances techniques des plateformes sociales susceptibles d'affecter l'exécution des services commandés.": "MboppiBoost is not liable for losses from using our services. We do not guarantee protection against account suspensions, content removal or other penalties. The client alone must comply with platform rules. We have no control over algorithm changes or technical failures affecting service execution.",
+  "3. Engagements": "3. Commitments",
+  "En cas de retard ou de difficulté technique, nous nous efforçons de compléter la commande. Si un service n'est pas livré dans le délai prévu, vous pouvez contacter le support et nous évaluerons la possibilité d'une compensation. Les remboursements sont régis par notre politique de remboursement. La confidentialité est régie par notre politique de confidentialité.": "In case of delay or technical difficulty, we strive to complete the order. If a service is not delivered on time, contact support; we will evaluate compensation. Refunds follow our refund policy. Privacy follows our privacy policy.",
+  "4. Services": "4. Services",
+  "MboppiBoost propose des services promotionnels pour diverses plateformes sociales, notamment Telegram, YouTube, Instagram, TikTok et d'autres, afin d'augmenter la visibilité et l'engagement du contenu.": "MboppiBoost provides promotional services for social platforms (Telegram, YouTube, Instagram, TikTok, etc.) to boost content visibility and engagement.",
+  "Il est interdit d'utiliser MboppiBoost pour publier ou promouvoir du contenu qui viole les règles des plateformes sociales (contenu explicite, biens interdits, matériaux liés à la violence, etc.).": "It is prohibited to use MboppiBoost to publish or promote content violating social platforms' rules (explicit content, prohibited goods, violence-related material, etc.).",
+  "Nous ne garantissons pas que 100 % des comptes engagés via nos services disposent d'une photo de profil, d'une description complète ou de contenu publié, bien que nous nous efforcions de maintenir la plus haute qualité possible.": "We do not guarantee that 100% of accounts engaged have a profile picture, full description or published content, although we strive for the highest quality.",
+  "5. Remboursements et annulations": "5. Refunds and Cancellations",
+  "Les commandes payées et transmises au fournisseur ne peuvent plus être annulées. En cas de non-livraison dans le délai prévu, contactez le support pour évaluation d'une compensation. Les remboursements, lorsqu'ils sont accordés, sont crédités sur votre portefeuille MboppiBoost.": "Orders paid and forwarded to the provider can no longer be cancelled. If not delivered on time, contact support for compensation review. Refunds, when granted, are credited to your MboppiBoost wallet.",
+  "6. Contact": "6. Contact",
+  "Pour toute question relative à ces conditions, contactez-nous via la page Contact ou par WhatsApp.": "For any question about these terms, contact us via the Contact page or WhatsApp.",
+  "Contact": "Contact",
+  "Retour à MboppiBoost": "Back to MboppiBoost",
+};
+
+const MBOPPIBOOST_TERMS_ES = {
+  "Conditions d'utilisation — MboppiBoost": "Condiciones de uso — MboppiBoost",
+  "Conditions d'utilisation": "Condiciones de uso",
+  "Conditions générales d'utilisation du service MboppiBoost.": "Condiciones generales de uso del servicio MboppiBoost.",
+  "Dernière mise à jour :": "Última actualización:",
+  "1. Informations générales": "1. Información general",
+  "En passant une commande sur MboppiBoost, vous acceptez automatiquement les conditions ci-dessous, que vous les ayez lues ou non. Nous nous réservons le droit de modifier ces conditions sans préavis. Nous vous recommandons de consulter cette section régulièrement pour rester informé des règles en vigueur.": "Al realizar un pedido en MboppiBoost, aceptas automáticamente las condiciones siguientes, las hayas leído o no. Nos reservamos el derecho de modificarlas sin previo aviso. Consulta esta sección regularmente para mantenerte informado.",
+  "Vous vous engagez à utiliser MboppiBoost conformément aux conditions d'utilisation des plateformes sociales pour lesquelles les services sont commandés (YouTube, Instagram, TikTok, Telegram, etc.). Nous ne sommes pas responsables des conséquences liées au non-respect des règles de ces plateformes.": "Te comprometes a usar MboppiBoost conforme a las condiciones de las plataformas sociales para las que se piden los servicios (YouTube, Instagram, TikTok, Telegram, etc.). No somos responsables de las consecuencias del incumplimiento.",
+  "Les prix des services sont susceptibles de changer sans préavis. Les tarifs actuels sont toujours disponibles sur le site. Nous visons à respecter les délais de livraison indiqués ; toutefois, des retards peuvent survenir en raison de la charge du système, des mises à jour des plateformes ou d'autres problèmes techniques. Dans ce cas, nous ferons tout notre possible pour compléter la commande le plus rapidement possible.": "Los precios pueden cambiar sin aviso. Las tarifas actuales siempre están en el sitio. Buscamos cumplir los plazos; pueden producirse retrasos por carga del sistema, actualizaciones o problemas técnicos. Haremos todo lo posible para completar el pedido rápidamente.",
+  "2. Exonération de responsabilité": "2. Exención de responsabilidad",
+  "MboppiBoost n'est pas responsable des pertes encourues du fait de l'utilisation de nos services. Nous ne garantissons pas la protection contre les suspensions de compte, la suppression de contenu ou d'autres sanctions imposées par les plateformes sociales. Le client est seul responsable du respect de leurs règles. Nous n'avons aucun contrôle sur les changements d'algorithme ou les défaillances techniques des plateformes sociales susceptibles d'affecter l'exécution des services commandés.": "MboppiBoost no es responsable de las pérdidas derivadas del uso de nuestros servicios. No garantizamos protección contra suspensiones, eliminación de contenido u otras sanciones. El cliente solo debe cumplir las reglas. No controlamos cambios de algoritmo ni fallos técnicos que afecten la ejecución.",
+  "3. Engagements": "3. Compromisos",
+  "En cas de retard ou de difficulté technique, nous nous efforçons de compléter la commande. Si un service n'est pas livré dans le délai prévu, vous pouvez contacter le support et nous évaluerons la possibilité d'une compensation. Les remboursements sont régis par notre politique de remboursement. La confidentialité est régie par notre politique de confidentialité.": "En caso de retraso o dificultad técnica, nos esforzamos por completar el pedido. Si no se entrega a tiempo, contacta con soporte; evaluaremos una compensación. Los reembolsos siguen nuestra política de reembolso. La privacidad sigue nuestra política de privacidad.",
+  "4. Services": "4. Servicios",
+  "MboppiBoost propose des services promotionnels pour diverses plateformes sociales, notamment Telegram, YouTube, Instagram, TikTok et d'autres, afin d'augmenter la visibilité et l'engagement du contenu.": "MboppiBoost ofrece servicios promocionales para plataformas sociales (Telegram, YouTube, Instagram, TikTok, etc.) para aumentar la visibilidad y el engagement.",
+  "Il est interdit d'utiliser MboppiBoost pour publier ou promouvoir du contenu qui viole les règles des plateformes sociales (contenu explicite, biens interdits, matériaux liés à la violence, etc.).": "Está prohibido usar MboppiBoost para publicar o promover contenido que viole las reglas de las plataformas sociales (contenido explícito, bienes prohibidos, material de violencia, etc.).",
+  "Nous ne garantissons pas que 100 % des comptes engagés via nos services disposent d'une photo de profil, d'une description complète ou de contenu publié, bien que nous nous efforcions de maintenir la plus haute qualité possible.": "No garantizamos que el 100% de las cuentas tengan foto de perfil, descripción completa o contenido publicado, aunque buscamos la mayor calidad.",
+  "5. Remboursements et annulations": "5. Reembolsos y cancelaciones",
+  "Les commandes payées et transmises au fournisseur ne peuvent plus être annulées. En cas de non-livraison dans le délai prévu, contactez le support pour évaluation d'une compensation. Les remboursements, lorsqu'ils sont accordés, sont crédités sur votre portefeuille MboppiBoost.": "Los pedidos pagados y enviados al proveedor ya no pueden cancelarse. Si no se entrega a tiempo, contacta con soporte para evaluar una compensación. Los reembolsos se acreditan en tu billetera MboppiBoost.",
+  "6. Contact": "6. Contacto",
+  "Pour toute question relative à ces conditions, contactez-nous via la page Contact ou par WhatsApp.": "Para cualquier pregunta sobre estas condiciones, contáctanos por la página de Contacto o WhatsApp.",
+  "Contact": "Contacto",
+  "Retour à MboppiBoost": "Volver a MboppiBoost",
+};
+
+const MBOPPIBOOST_TERMS_AR = {
+  "Conditions d'utilisation — MboppiBoost": "شروط الاستخدام — MboppiBoost",
+  "Conditions d'utilisation": "شروط الاستخدام",
+  "Conditions générales d'utilisation du service MboppiBoost.": "الشروط العامة لاستخدام خدمة MboppiBoost.",
+  "Dernière mise à jour :": "آخر تحديث:",
+  "1. Informations générales": "1. معلومات عامة",
+  "En passant une commande sur MboppiBoost, vous acceptez automatiquement les conditions ci-dessous, que vous les ayez lues ou non. Nous nous réservons le droit de modifier ces conditions sans préavis. Nous vous recommandons de consulter cette section régulièrement pour rester informé des règles en vigueur.": "بإجراء طلب على MboppiBoost، فإنك توافق تلقائياً على الشروط أدناه. نحتفظ بالحق في تعديلها دون إشعار. راجع هذا القسم بانتظام للبقاء على اطلاع.",
+  "Vous vous engagez à utiliser MboppiBoost conformément aux conditions d'utilisation des plateformes sociales pour lesquelles les services sont commandés (YouTube, Instagram, TikTok, Telegram, etc.). Nous ne sommes pas responsables des conséquences liées au non-respect des règles de ces plateformes.": "تتعهد باستخدام MboppiBoost وفقاً لشروط المنصات الاجتماعية (YouTube، Instagram، TikTok، Telegram، إلخ). لسنا مسؤولين عن عواقب المخالفة.",
+  "Les prix des services sont susceptibles de changer sans préavis. Les tarifs actuels sont toujours disponibles sur le site. Nous visons à respecter les délais de livraison indiqués ; toutefois, des retards peuvent survenir en raison de la charge du système, des mises à jour des plateformes ou d'autres problèmes techniques. Dans ce cas, nous ferons tout notre possible pour compléter la commande le plus rapidement possible.": "قد تتغير الأسعار دون إشعار. التعرفة الحالية متاحة دائماً. نهدف للالتزام بالمواعيد؛ قد تحدث تأخيرات. سنفعل كل ما في وسعنا لإكمال الطلب سريعاً.",
+  "2. Exonération de responsabilité": "2. إخلاء المسؤولية",
+  "MboppiBoost n'est pas responsable des pertes encourues du fait de l'utilisation de nos services. Nous ne garantissons pas la protection contre les suspensions de compte, la suppression de contenu ou d'autres sanctions imposées par les plateformes sociales. Le client est seul responsable du respect de leurs règles. Nous n'avons aucun contrôle sur les changements d'algorithme ou les défaillances techniques des plateformes sociales susceptibles d'affecter l'exécution des services commandés.": "MboppiBoost غير مسؤول عن الخسائر. لا نضمن الحماية من التعليق أو الحذف أو العقوبات. العميل مسؤول عن الامتثال. لا سيطرة لنا على تغييرات الخوارزميات أو الأعطال.",
+  "3. Engagements": "3. الالتزامات",
+  "En cas de retard ou de difficulté technique, nous nous efforçons de compléter la commande. Si un service n'est pas livré dans le délai prévu, vous pouvez contacter le support et nous évaluerons la possibilité d'une compensation. Les remboursements sont régis par notre politique de remboursement. La confidentialité est régie par notre politique de confidentialité.": "في حالة التأخير أو الصعوبة، نسعى لإكمال الطلب. إذا لم يُسلَّم في الوقت، اتصل بالدعم لتقييم تعويض. المبالغ المستردة تحكمها سياسة الاسترداد. الخصوصية تحكمها سياسة الخصوصية.",
+  "4. Services": "4. الخدمات",
+  "MboppiBoost propose des services promotionnels pour diverses plateformes sociales, notamment Telegram, YouTube, Instagram, TikTok et d'autres, afin d'augmenter la visibilité et l'engagement du contenu.": "يقدم MboppiBoost خدمات ترويجية لمنصات اجتماعية (Telegram، YouTube، Instagram، TikTok، إلخ) لزيادة الظهور والتفاعل.",
+  "Il est interdit d'utiliser MboppiBoost pour publier ou promouvoir du contenu qui viole les règles des plateformes sociales (contenu explicite, biens interdits, matériaux liés à la violence, etc.).": "يُحظر استخدام MboppiBoost لنشر أو الترويج لمحتوى يخالف قواعد المنصات (محتوى صريح، بضائع محظورة، مواد عنف، إلخ).",
+  "Nous ne garantissons pas que 100 % des comptes engagés via nos services disposent d'une photo de profil, d'une description complète ou de contenu publié, bien que nous nous efforcions de maintenir la plus haute qualité possible.": "لا نضمن أن 100% من الحسابات تملك صورة ملف أو وصفاً كاملاً أو محتوى، على الرغم من سعينا للجودة.",
+  "5. Remboursements et annulations": "5. المبالغ المستردة والإلغاء",
+  "Les commandes payées et transmises au fournisseur ne peuvent plus être annulées. En cas de non-livraison dans le délai prévu, contactez le support pour évaluation d'une compensation. Les remboursements, lorsqu'ils sont accordés, sont crédités sur votre portefeuille MboppiBoost.": "الطلبات المدفوعة والمُرسلة لا يمكن إلغاؤها. إذا لم تُسلَّم في الوقت، اتصل بالدعم لتقييم تعويض. المبالغ المستردة تُضاف إلى محفظتك MboppiBoost.",
+  "6. Contact": "6. الاتصال",
+  "Pour toute question relative à ces conditions, contactez-nous via la page Contact ou par WhatsApp.": "لأي سؤال، اتصل بنا عبر صفحة الاتصال أو WhatsApp.",
+  "Contact": "الاتصال",
+  "Retour à MboppiBoost": "العودة إلى MboppiBoost",
+};
+
+
+
+
 const FORMATIONS_EN = {
   "Formations — MboppiShop": "Training — MboppiShop",
   "Découvrez des formations pratiques en ligne sur MboppiShop.": "Discover practical online training on MboppiShop.",
@@ -6753,9 +6831,9 @@ const FORMATIONS_AR = {
 
 export const I18N = {
   fr: {},
-  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN, ...FORMATIONS_EN },
-  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR, ...FORMATIONS_AR },
-  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES, ...FORMATIONS_ES },
+  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN, ...FORMATIONS_EN, ...MBOPPIBOOST_TERMS_EN },
+  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR, ...FORMATIONS_AR, ...MBOPPIBOOST_TERMS_AR },
+  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES, ...FORMATIONS_ES, ...MBOPPIBOOST_TERMS_ES },
 };
 
 function tr(str, vars, lang) {

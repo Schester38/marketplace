@@ -101,6 +101,7 @@ const MboppiBoostOrder = lazyRetry(() => import("./pages/MboppiBoostOrder.jsx"))
 const MboppiBoostOrders = lazyRetry(() => import("./pages/MboppiBoostOrders.jsx"));
 const MboppiBoostTrack = lazyRetry(() => import("./pages/MboppiBoostTrack.jsx"));
 const MboppiBoostWallet = lazyRetry(() => import("./pages/MboppiBoostWallet.jsx"));
+const MboppiBoostTerms = lazyRetry(() => import("./pages/MboppiBoostTerms.jsx"));
 const Cgv = lazyRetry(() => import("./pages/Cgv.jsx"));
 const Cgu = lazyRetry(() => import("./pages/Cgu.jsx"));
 const Faq = lazyRetry(() => import("./pages/Faq.jsx"));
@@ -696,6 +697,7 @@ export default function App() {
             <Route path="/mboppi-boost/suivi/:id" element={<MboppiBoostTrack />} />
             <Route path="/mboppi-boost/suivi" element={<MboppiBoostTrack />} />
             <Route path="/mboppi-boost/portefeuille" element={<MboppiBoostWallet />} />
+            <Route path="/mboppi-boost/conditions" element={<MboppiBoostTerms />} />
             <Route path="/smm" element={<Navigate to="/mboppi-boost" replace />} />
             <Route path="/panier" element={<Cart />} />
             <Route
