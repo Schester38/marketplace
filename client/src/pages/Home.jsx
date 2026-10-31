@@ -748,8 +748,8 @@ export default function Home() {
                 desc: t(
                   "Formations pratiques en présentiel et en ligne : commerce digital, vente en ligne, réseaux sociaux, création de contenu et entrepreneuriat. Pour débutants comme pour pros."
                 ),
-                cta: t("Demander le programme"),
-                href: "https://wa.me/237699486146?text=Bonjour%2C%20je%20souhaite%20des%20informations%20sur%20vos%20formations.",
+                cta: t("Voir les formations"),
+                to: "/formations",
               },
               {
                 icon: "📈",
@@ -758,7 +758,7 @@ export default function Home() {
                   "Stratégies marketing sur les réseaux sociaux : campagnes ciblées, publicités sponsorisées, optimisation de vos pages et suivi des résultats pour maximiser votre visibilité."
                 ),
                 cta: t("Lancer une campagne"),
-                href: "https://wa.me/237699486146?text=Bonjour%2C%20je%20souhaite%20lancer%20une%20campagne%20SMM.",
+                to: "/mboppi-boost",
               },
               {
                 icon: "📱",
@@ -803,14 +803,20 @@ export default function Home() {
                 </div>
                 <h3 className="home-service-title">{s.title}</h3>
                 <p className="home-service-desc">{s.desc}</p>
-                <a
-                  className="btn btn-outline home-service-cta"
-                  href={s.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {s.cta} →
-                </a>
+                {s.to ? (
+                  <Link className="btn btn-outline home-service-cta" to={s.to}>
+                    {s.cta} →
+                  </Link>
+                ) : (
+                  <a
+                    className="btn btn-outline home-service-cta"
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {s.cta} →
+                  </a>
+                )}
               </div>
             ))}
           </div>

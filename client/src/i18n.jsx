@@ -6722,6 +6722,7 @@ const FORMATIONS_EN = {
   "Mes formations": "My training",
   "Chargement…": "Loading…",
   "Aucune formation disponible pour le moment.": "No training available at the moment.",
+  "Voir les formations": "View training",
 };
 
 const FORMATIONS_ES = {
@@ -6734,6 +6735,7 @@ const FORMATIONS_ES = {
   "Mes formations": "Mis formaciones",
   "Chargement…": "Cargando…",
   "Aucune formation disponible pour le moment.": "No hay formaciones disponibles por el momento.",
+  "Voir les formations": "Ver formaciones",
 };
 
 const FORMATIONS_AR = {
@@ -6746,6 +6748,7 @@ const FORMATIONS_AR = {
   "Mes formations": "دوراتي التدريبية",
   "Chargement…": "جارٍ التحميل…",
   "Aucune formation disponible pour le moment.": "لا توجد دورات تدريبية متاحة حالياً.",
+  "Voir les formations": "عرض الدورات التدريبية",
 };
 
 export const I18N = {
