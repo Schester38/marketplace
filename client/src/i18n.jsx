@@ -6714,6 +6714,31 @@ const MBOPPIBOOST_AR = {
 
 };
 
+const HERO_EXTRA_EN = {
+  "Développez vos compétences avec nos formations": "Develop your skills with our training",
+  "Des formations pratiques en ligne pour booster votre activité et vos connaissances.": "Practical online training to boost your activity and knowledge.",
+  "Formations MboppiShop": "MboppiShop Training",
+  "Développez votre boutique avec MboppiBoost": "Grow your shop with MboppiBoost",
+  "Services de marketing digital pour faire décoller votre présence en ligne.": "Digital marketing services to boost your online presence.",
+  "Découvrir MboppiBoost": "Discover MboppiBoost",
+};
+const HERO_EXTRA_ES = {
+  "Développez vos compétences avec nos formations": "Desarrolla tus habilidades con nuestras formaciones",
+  "Des formations pratiques en ligne pour booster votre activité et vos connaissances.": "Formaciones prácticas en línea para impulsar tu actividad y tus conocimientos.",
+  "Formations MboppiShop": "Formaciones MboppiShop",
+  "Développez votre boutique avec MboppiBoost": "Desarrolla tu tienda con MboppiBoost",
+  "Services de marketing digital pour faire décoller votre présence en ligne.": "Servicios de marketing digital para impulsar tu presencia en línea.",
+  "Découvrir MboppiBoost": "Descubrir MboppiBoost",
+};
+const HERO_EXTRA_AR = {
+  "Développez vos compétences avec nos formations": "طوّر مهاراتك مع دوراتنا التدريبية",
+  "Des formations pratiques en ligne pour booster votre activité et vos connaissances.": "دورات تدريبية عملية عبر الإنترنت لتعزيز نشاطك ومعرفتك.",
+  "Formations MboppiShop": "دورات MboppiShop",
+  "Développez votre boutique avec MboppiBoost": "طوّر متجرك مع MboppiBoost",
+  "Services de marketing digital pour faire décoller votre présence en ligne.": "خدمات تسويق رقمي لتعزيز حضورك عبر الإنترنت.",
+  "Découvrir MboppiBoost": "اكتشف MboppiBoost",
+};
+
 const SERVICES_LOGICIELS_EN = {
   "Services — MboppiShop": "Services — MboppiShop",
   "Logiciels — MboppiShop": "Software — MboppiShop",
@@ -6955,9 +6980,9 @@ const FORMATIONS_AR = {
 
 export const I18N = {
   fr: {},
-  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN, ...FORMATIONS_EN, ...MBOPPIBOOST_TERMS_EN, ...REMBOURSEMENT_EN, ...SERVICES_LOGICIELS_EN },
-  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR, ...FORMATIONS_AR, ...MBOPPIBOOST_TERMS_AR, ...REMBOURSEMENT_AR, ...SERVICES_LOGICIELS_AR },
-  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES, ...FORMATIONS_ES, ...MBOPPIBOOST_TERMS_ES, ...REMBOURSEMENT_ES, ...SERVICES_LOGICIELS_ES },
+  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN, ...FORMATIONS_EN, ...MBOPPIBOOST_TERMS_EN, ...REMBOURSEMENT_EN, ...SERVICES_LOGICIELS_EN, ...HERO_EXTRA_EN },
+  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR, ...FORMATIONS_AR, ...MBOPPIBOOST_TERMS_AR, ...REMBOURSEMENT_AR, ...SERVICES_LOGICIELS_AR, ...HERO_EXTRA_AR },
+  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES, ...FORMATIONS_ES, ...MBOPPIBOOST_TERMS_ES, ...REMBOURSEMENT_ES, ...SERVICES_LOGICIELS_ES, ...HERO_EXTRA_ES },
 };
 
 function tr(str, vars, lang) {

@@ -59,21 +59,39 @@ export default function HeroCarousel({ onExplore }) {
       alt: t("Gagnez de l'argent depuis votre téléphone"),
     },
     {
+      id: "formations",
+      cls: "hc-blue",
+      kicker: t("FORMATIONS"),
+      title: t("Développez vos compétences avec nos formations"),
+      text: t("Des formations pratiques en ligne pour booster votre activité et vos connaissances."),
+      cta: t("Voir les formations"),
+      to: "/formations",
+      img: "/diapo/MboppiShop_Formations.webp",
+      alt: t("Formations MboppiShop"),
+    },
+    {
+      id: "mboppiboost",
+      cls: "hc-orange",
+      kicker: t("MBOPPIBOOST"),
+      title: t("Développez votre boutique avec MboppiBoost"),
+      text: t("Services de marketing digital pour faire décoller votre présence en ligne."),
+      cta: t("Découvrir MboppiBoost"),
+      to: "/mboppi-boost",
+      img: "/diapo/MboppiShop_MboppiBoost.webp",
+      alt: t("MboppiBoost"),
+    },
+    {
       id: "shop",
       cls: "hc-navy",
       kicker: t("MBOPPISHOP"),
       title: t("Votre boutique en ligne, simple et optimisée"),
-      text: t(
-        "Une vitrine moderne et rapide pour vos produits, pensée pour les achats sur mobile."
-      ),
+      text: t("Une vitrine moderne et rapide pour vos produits, pensée pour les achats sur mobile."),
       cta: t("Créer ma boutique"),
       to: "/register",
       img: "/diapo/MboppiShop_Shopify_optimise.webp",
       alt: t("MboppiShop : votre boutique optimisée"),
     },
   ];
-
-  const count = slides.length;
   const rtlMult = (() => {
     try {
       return document.documentElement.getAttribute("dir") === "rtl" ? -1 : 1;
