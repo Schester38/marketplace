@@ -92,6 +92,7 @@ export default function HeroCarousel({ onExplore }) {
       alt: t("MboppiShop : votre boutique optimisée"),
     },
   ];
+  const count = slides.length;
   const rtlMult = (() => {
     try {
       return document.documentElement.getAttribute("dir") === "rtl" ? -1 : 1;
