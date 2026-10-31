@@ -29,7 +29,7 @@ export default function SellerPromoPopup() {
       setOpen(false);
       return;
     }
-    if (user && (user.role === "seller" || user.role === "shop" || user.role === "creator")) {
+    if (user && (user.role === "seller" || user.role === "shop" || user.role === "creator" || user.role === "admin")) {
       setOpen(false);
       return;
     }
