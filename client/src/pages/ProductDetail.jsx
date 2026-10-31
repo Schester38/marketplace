@@ -438,7 +438,7 @@ export default function ProductDetail() {
   };
 
   return (
-    <main className="container pd-page">
+    <main className="container pd-page tw-py-6">
       <Seo
         title={`${product.name} — MboppiShop`}
         description={t("Découvrez « {name} » à {price} {symbol} chez {shop} sur MboppiShop.", {
@@ -449,12 +449,12 @@ export default function ProductDetail() {
         })}
         ogImage={absoluteProductImage(firstProductImage(product))}
       />
-      <Link to="/" className="btn btn-outline" style={{ marginBottom: 16 }}>
+      <Link to="/" className="btn btn-outline tw-shadow-sm tw-rounded-xl tw-mb-4" style={{ marginBottom: 16 }}>
         ← {t("Retour aux produits")}
       </Link>
 
       {sellerCode && (
-        <div className="seller-cta card">
+        <div className="seller-cta card tw-rounded-2xl tw-shadow-md tw-border-l-4 tw-border-l-emerald-500">
           <div>
             <strong>
               <Logo className="logo-inline" />{" "}
@@ -475,7 +475,7 @@ export default function ProductDetail() {
 
       <div className="pd-layout">
         {/* Galerie façon Amazon : vignettes verticales (desktop), swipe + points (mobile) */}
-        <div className="pd-gallery">
+        <div className="pd-gallery tw-rounded-2xl tw-overflow-hidden tw-shadow-md">
           {photos.length > 1 && photoShown && (
             <div className="pd-thumbs" aria-label={t("Photos du produit")}>
               {photos.map((photo, i) => (
@@ -664,7 +664,7 @@ export default function ProductDetail() {
         </div>
 
         {/* Bloc d'achat collant sur desktop (sticky) */}
-        <aside className="pd-buybox" aria-label={t("Achat")}>
+        <aside className="pd-buybox tw-shadow-lg tw-rounded-2xl tw-border tw-border-slate-200 dark:tw-border-slate-700" aria-label={t("Achat")}>
           <div className="pd-buybox-inner">
             <div className="offer-prices">
               {hasPromo && (
