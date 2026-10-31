@@ -392,6 +392,7 @@ export default function CreatorDashboard() {
           <Link to="/creator/paiements" className="btn btn-outline">
             💳 {t("Mes moyens de paiement")}
           </Link>
+<div className="tw-flex tw-gap-2 tw-flex-wrap">
           <button
             className="btn btn-primary"
             onClick={() => {
@@ -405,6 +406,18 @@ export default function CreatorDashboard() {
           >
             {showForm ? t("Annuler") : t("+ Publier une création")}
           </button>
+          <button
+            className="btn btn-outline"
+            onClick={() => {
+              setForm({ ...EMPTY_FORM, category: "Éducation & Formation" });
+              setEditingId(null);
+              setEditingDigital(null);
+              setShowForm(true);
+            }}
+          >
+            {t("📚 Publier une formation")}
+          </button>
+        </div>
         </div>
       </section>
 

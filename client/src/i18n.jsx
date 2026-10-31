@@ -1391,6 +1391,7 @@ const EN = {
   "Publiez vos créations : elles rejoignent la catégorie Arts & Artisanat du marché.":
     "Publish your creations: they join the Arts & Crafts category of the marketplace.",
   "+ Publier une création": "+ Publish a creation",
+  "📚 Publier une formation": "📚 Publish a training",
   "Nouvelle création": "New creation",
   "Modifier la création": "Edit the creation",
   "Nom de la création *": "Creation name *",
@@ -3078,6 +3079,7 @@ const AR = {
   "Publiez vos créations : elles rejoignent la catégorie Arts & Artisanat du marché.":
     "انشر إبداعاتك: تنضم إلى فئة الفنون والحرف اليدوية في السوق.",
   "+ Publier une création": "+ نشر إبداع",
+  "📚 Publier une formation": "📚 نشر دورة تدريبية",
   "Nouvelle création": "إبداع جديد",
   "Modifier la création": "تعديل الإبداع",
   "Nom de la création *": "اسم الإبداع *",
@@ -4711,6 +4713,7 @@ const ES = {
   "Publiez vos créations : elles rejoignent la catégorie Arts & Artisanat du marché.":
     "Publica tus creaciones: entran en la categoría Arte y Artesanía del mercado.",
   "+ Publier une création": "+ Publicar una creación",
+  "📚 Publier une formation": "📚 Publicar una formación",
   "Nouvelle création": "Nueva creación",
   "Modifier la création": "Modificar la creación",
   "Nom de la création *": "Nombre de la creación *",
