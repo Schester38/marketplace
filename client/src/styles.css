@@ -9367,23 +9367,28 @@ a.step {
   display: none;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
+  width: 30px;
+  height: 30px;
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
   border-radius: 8px;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   cursor: pointer;
-  margin: 0 4px;
-  transition: background 0.15s ease;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
+.cat-scroll-left { left: 4px; }
+.cat-scroll-right { right: 4px; }
 .cat-scroll-btn:hover { background: var(--card-hover); }
 @media (max-width: 768px) {
   .cat-scroll-btn { display: inline-flex; }
-  .cat-bar-inner { flex-wrap: nowrap; }
+  .cat-bar-inner { position: relative; padding-inline: 38px; }
+  .cat-links { flex: 1 1 100%; }
 }
 
 .cat-links > * {
