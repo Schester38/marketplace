@@ -119,6 +119,7 @@ const CookiesBanner = lazyRetry(() => import("./components/CookiesBanner.jsx"));
 import OfflinePage from "./pages/OfflinePage.jsx";
 import AdminMessagePopup from "./components/AdminMessagePopup.jsx";
 import FlashPromoPopup from "./components/FlashPromoPopup.jsx";
+import SellerPromoPopup from "./components/SellerPromoPopup.jsx";
 import NotificationPrompt from "./components/NotificationPrompt.jsx";
 import InstallAppPrompt from "./components/InstallAppPrompt.jsx";
 import LiteBanner from "./components/LiteBanner.jsx";
@@ -688,6 +689,7 @@ export default function App() {
       />
       <AdminMessagePopup />
       <FlashPromoPopup />
+      <SellerPromoPopup />
       {WELCOME_PATHS.includes(location.pathname) && <WelcomeBanner />}
       <ErrorBoundary t={t}>
         <Suspense fallback={<LoadingScreen />}>
