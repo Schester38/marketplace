@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
+import { useLang } from "../i18n.jsx";
 
 const MONEY = (n) =>
   new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(Number(n) || 0) + " FCFA";
@@ -329,6 +330,7 @@ function BoostSelect({
 export default function MboppiBoost() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLang();
   const configRef = useRef(null);
   const [categories, setCategories] = useState(null);
   const [services, setServices] = useState(null);
@@ -657,7 +659,7 @@ export default function MboppiBoost() {
 
   return (
     <main className="boost-page">
-      <Seo title="MboppiBoost — Commandes de services digitaux" description="MboppiBoost : sélectionnez un service de marketing digital, configurez votre besoin et consultez le montant estimé avant validation." />
+      <Seo title={t("MboppiBoost — Commandes de services digitaux")} description={t("MboppiBoost : sélectionnez un service de marketing digital, configurez votre besoin et consultez le montant estimé avant validation.")} />
 
       <div className="boost-shell">
         <section className="boost-hero boost-fade-up">
@@ -671,12 +673,11 @@ export default function MboppiBoost() {
                 MboppiBoost
               </span>
               <h1 className="boost-title">
-                Faites décoller <span className="boost-title-accent">votre présence digitale.</span>
+                {t("Faites décoller")} <span className="boost-title-accent">{t("votre présence digitale.")}</span>
               </h1>
               <p className="boost-lead">
-                Des services de croissance pour Instagram, TikTok, YouTube et bien plus.
-                Choisissez votre offre, configurez votre commande et payez en ligne en toute
-                sécurité.
+                {t("Des services de croissance pour Instagram, TikTok, YouTube et bien plus.")}{" "}
+                {t("Choisissez votre offre, configurez votre commande et payez en ligne en toute sécurité.")}
               </p>
               <div className="tw-mt-6 tw-flex tw-flex-wrap tw-gap-2">
                 <span className="boost-chip">📸 Instagram</span>
@@ -686,34 +687,34 @@ export default function MboppiBoost() {
               </div>
               <div className="tw-mt-8 tw-flex tw-flex-col tw-gap-3 sm:tw-flex-row">
                 <button type="button" onClick={scrollToConfig} className="boost-btn boost-btn-light">
-                  Configurer ma commande
+                  {t("Configurer ma commande")}
                   <IconArrowRight />
                 </button>
                 <Link to="/mboppi-boost/portefeuille" className="boost-btn boost-btn-ghost">
-                  Mon portefeuille
+                  {t("Mon portefeuille")}
                 </Link>
                 <Link to="/mboppi-boost/mes-commandes" className="boost-btn boost-btn-ghost">
-                  Suivre une commande
+                  {t("Suivre une commande")}
                 </Link>
               </div>
               <div className="tw-mt-7 tw-flex tw-flex-wrap tw-gap-x-5 tw-gap-y-3">
-                <span className="boost-hero-note"><IconCheck className="tw-h-3.5 tw-w-3.5 tw-text-emerald-300" /> Paiement sécurisé</span>
-                <span className="boost-hero-note"><IconCheck className="tw-h-3.5 tw-w-3.5 tw-text-emerald-300" /> Suivi en temps réel</span>
-                <span className="boost-hero-note"><IconCheck className="tw-h-3.5 tw-w-3.5 tw-text-emerald-300" /> Support dédié</span>
+                <span className="boost-hero-note"><IconCheck className="tw-h-3.5 tw-w-3.5 tw-text-emerald-300" /> {t("Paiement sécurisé")}</span>
+                <span className="boost-hero-note"><IconCheck className="tw-h-3.5 tw-w-3.5 tw-text-emerald-300" /> {t("Suivi en temps réel")}</span>
+                <span className="boost-hero-note"><IconCheck className="tw-h-3.5 tw-w-3.5 tw-text-emerald-300" /> {t("Support dédié")}</span>
               </div>
             </div>
 
             <div className="boost-glass">
               <div className="tw-flex tw-items-start tw-justify-between tw-gap-3">
                 <div>
-                  <p className="boost-stat-label">Aperçu de la commande</p>
-                  <p className="tw-mt-1 tw-text-sm tw-font-semibold tw-text-slate-200">Votre sélection</p>
+                  <p className="boost-stat-label">{t("Aperçu de la commande")}</p>
+                  <p className="tw-mt-1 tw-text-sm tw-font-semibold tw-text-slate-200">{t("Votre sélection")}</p>
                 </div>
-                <span className="boost-glass-badge">En ligne</span>
+                <span className="boost-glass-badge">{t("En ligne")}</span>
               </div>
               <div className="tw-mt-5 tw-space-y-2.5">
                 <div className="boost-stat">
-                  <span className="boost-stat-label">Services disponibles</span>
+                  <span className="boost-stat-label">{t("Services disponibles")}</span>
                   <span className="boost-stat-value">{displayTotal}</span>
                 </div>
                 <div className="boost-stat">
@@ -987,9 +988,9 @@ export default function MboppiBoost() {
               <div className="boost-empty">
                 <span className="boost-empty-icon" aria-hidden="true">🔎</span>
                 <p className="boost-empty-title">
-                  {servicesLoading ? "Chargement des services…" : "Aucun service ne correspond à votre recherche."}
+                  {servicesLoading ? t("Chargement des services…") : t("Aucun service ne correspond à votre recherche.")}
                 </p>
-                <p className="boost-hint">Essayez un autre mot-clé ou réinitialisez les filtres.</p>
+                <p className="boost-hint">{t("Essayez un autre mot-clé ou réinitialisez les filtres.")}</p>
                 <button type="button" onClick={resetFilters} className="boost-btn boost-btn-secondary tw-mt-4">
                   Effacer les filtres
                 </button>
@@ -1145,29 +1146,29 @@ export default function MboppiBoost() {
 
             <div className="tw-p-6">
               <div className="boost-summary-row">
-                <span>Service</span>
+                <span>{t("Service")}</span>
                 <strong>{selected?.name || "—"}</strong>
               </div>
               <div className="boost-summary-row">
-                <span>Plateforme</span>
+                <span>{t("Plateforme")}</span>
                 <strong>{selected?.platformLabel || "—"}</strong>
               </div>
               <div className="boost-summary-row">
-                <span>Tarif unitaire</span>
+                <span>{t("Tarif unitaire")}</span>
                 <strong>{selected ? `${MONEY(selected.unit)} / ${selected.unitLabel}` : "—"}</strong>
               </div>
               <div className="boost-summary-row">
-                <span>Quantité</span>
+                <span>{t("Quantité")}</span>
                 <strong>{quantity}</strong>
               </div>
               <div className="boost-summary-row">
-                <span>Cible</span>
-                <strong title={target.trim() || undefined}>{target.trim() || "À renseigner"}</strong>
+                <span>{t("Cible")}</span>
+                <strong title={target.trim() || undefined}>{target.trim() || t("À renseigner")}</strong>
               </div>
 
               <div className="boost-summary-total">
                 <div>
-                  <p className="boost-summary-kicker tw-text-slate-400">Total estimé</p>
+                  <p className="boost-summary-kicker tw-text-slate-400">{t("Total estimé")}</p>
                   <p className="boost-total">{MONEY(orderTotal)}</p>
                 </div>
                 <span className="boost-total-note">
@@ -1181,24 +1182,22 @@ export default function MboppiBoost() {
                 disabled={loading || servicesLoading || !selected}
                 className="boost-btn boost-btn-primary boost-btn-block tw-mt-5"
               >
-                Continuer la commande
+                {t("Continuer la commande")}
                 <IconArrowRight />
               </button>
 
               <p className="boost-hint tw-mt-3">
-                <strong className="boost-strong">Paiement et suivi :</strong> vous serez redirigé vers
-                la page de commande pour confirmer vos coordonnées, payer en ligne via iKeePay (ou
-                déclarer un paiement manuel) et suivre son traitement.
+                <strong className="boost-strong">{t("Paiement et suivi :")}</strong> {t("vous serez redirigé vers la page de commande pour confirmer vos coordonnées, payer en ligne via iKeePay (ou déclarer un paiement manuel) et suivre son traitement.")}
               </p>
 
               <Link to="/mboppi-boost/mes-commandes" className="boost-link tw-mt-4">
-                Suivre une commande existante
+                {t("Suivre une commande existante")}
                 <IconArrowRight className="tw-h-3.5 tw-w-3.5" />
               </Link>
 
               <div className="boost-summary-secure">
                 <IconShield className="tw-h-4 tw-w-4" />
-                Paiement protégé · iKeePay
+                {t("Paiement protégé · iKeePay")}
               </div>
 
               {result && (
