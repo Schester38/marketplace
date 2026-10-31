@@ -1305,6 +1305,14 @@ export default function Navbar({ onLogout }) {
       {/* Category bar - Line 2 : barre statique cliquable + méga-menu + liens rapides */}
       <nav className="cat-bar" aria-label={t("Catégories")} role="navigation">
         <div className="cat-bar-inner">
+          <button
+            type="button"
+            className="cat-scroll-btn cat-scroll-left"
+            aria-label={t("Défiler à gauche")}
+            onClick={() => catLinksRef.current?.scrollBy({ left: -200, behavior: "smooth" })}
+          >
+            ‹
+          </button>
           <div className="cat-links" ref={catLinksRef} aria-label={t("Navigation")}>
             <Link to="/?noprod=1" onClick={close} className={`cat-link ${location.pathname === "/" ? "cat-active" : ""}`}>
               <span className="cat-icon" aria-hidden="true">
@@ -1330,7 +1338,23 @@ export default function Navbar({ onLogout }) {
               </span>
               <span className="cat-label">MboppiBoost</span>
             </Link>
+            <Link to="/services" onClick={close} className={`cat-link ${location.pathname === "/services" ? "cat-active" : ""}`}>
+              <span className="cat-icon" aria-hidden="true">🛠️</span>
+              <span className="cat-label">{t("Services")}</span>
+            </Link>
+            <Link to="/logiciels" onClick={close} className={`cat-link ${location.pathname === "/logiciels" ? "cat-active" : ""}`}>
+              <span className="cat-icon" aria-hidden="true">💻</span>
+              <span className="cat-label">{t("Logiciels")}</span>
+            </Link>
           </div>
+          <button
+            type="button"
+            className="cat-scroll-btn cat-scroll-right"
+            aria-label={t("Défiler à droite")}
+            onClick={() => catLinksRef.current?.scrollBy({ left: 200, behavior: "smooth" })}
+          >
+            ›
+          </button>
           <div className="cat-quick" aria-label={t("Liens rapides")}>
             <Link to="/vendre" onClick={close} className="quick-link quick-accent">
               <IconStore size={14} />

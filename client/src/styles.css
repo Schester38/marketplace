@@ -9363,6 +9363,29 @@ a.step {
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x proximity;
 }
+.cat-scroll-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  margin: 0 4px;
+  transition: background 0.15s ease;
+}
+.cat-scroll-btn:hover { background: var(--card-hover); }
+@media (max-width: 768px) {
+  .cat-scroll-btn { display: inline-flex; }
+  .cat-bar-inner { flex-wrap: nowrap; }
+}
+
 .cat-links > * {
   scroll-snap-align: start;
 }
