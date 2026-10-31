@@ -1,5 +1,5 @@
-const CACHE_NAME = 'mboppi-v449';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/robots.txt', '/splash.js'];
+const CACHE_NAME = 'mboppi-v450';
+const APP_SHELL = ['/', '/offline.html', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/robots.txt', '/splash.js'];
 // Les diapositives, illustrations sociales et logos secondaires sont charges a la
 // demande : les precacher a chaque version augmentait l'egress des installations.
 
@@ -16,7 +16,7 @@ const API_SWR = [
   '/api/shop/',
   '/api/reviews/product/',
 ];
-const API_TIMEOUT = 6000;
+const OFFLINE_HTML = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Hors connexion — MboppiShop</title><script src="https://cdn.tailwindcss.com"></script><style>body{font-family:Inter,"Segoe UI",Arial,sans-serif;}</style></head><body class="min-h-screen text-[#eef4ff] flex items-center justify-center px-4 py-6 overflow-x-hidden" style="background:radial-gradient(1000px 460px at 8% -10%,rgba(37,99,235,0.22),transparent 58%),radial-gradient(820px 420px at 100% 0%,rgba(14,165,233,0.16),transparent 55%),#070d18;"><main class="w-full max-w-md"><section class="rounded-3xl border p-5 sm:p-6 text-center shadow-2xl" style="background:#0e1728;border-color:#1e2d47;box-shadow:0 18px 50px -30px rgba(0,0,0,0.75);"><p class="text-[10px] font-extrabold uppercase tracking-[0.2em]" style="color:#7dd3fc;">MboppiShop</p><div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-3xl shadow-lg shadow-blue-900/30">📡</div><h1 class="text-2xl font-black tracking-tight" style="color:#eef4ff;">Pas de connexion internet</h1><p class="mt-3 text-base leading-relaxed" style="color:#94a3b8;">Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.</p><div class="mt-6"><button onclick="window.location.reload()" class="w-full inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold text-white transition duration-200 bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 shadow-lg shadow-blue-900/30 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/25">🔄 Réessayer</button></div><div class="mt-6 border-t pt-4" style="border-color:#1e2d47;"><p class="text-xs tracking-wide" style="color:#64748b;">MboppiShop — votre marché en ligne</p></div></section></main></body></html>`;
 const API_FRESH_MS = 60 * 1000;
 const API_REVALIDATIONS = new Map();
 
@@ -390,7 +390,7 @@ async function navSwr(request) {
     if (cached && /text\/html/i.test(cached.headers.get('content-type') || '')) return cached;
     const offline = await caches.match('/offline.html');
     if (offline) return offline;
-    return new Response('Ressource indisponible hors connexion', { status: 504, statusText: 'Gateway Timeout' });
+    return new Response(OFFLINE_HTML, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
   }
 }
 
