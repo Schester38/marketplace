@@ -32,8 +32,8 @@ export default function SellerPromoPopup() {
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
       onClick={() => setOpen(false)}
     >
-      <div
-        className="relative max-w-md w-full animate-[promoFloat_3s_ease-in-out_infinite] "
+<div
+        className="relative mx-auto w-full max-w-[92vw] sm:max-w-md animate-[promoFloat_3s_ease-in-out_infinite]"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -46,15 +46,15 @@ export default function SellerPromoPopup() {
         </button>
         <Link to="/register?role=seller" onClick={() => setOpen(false)} className="block">
           <div className="relative overflow-hidden rounded-3xl shadow-2xl ring-4 ring-amber-400/60 animate-[promoGlow_2s_ease-in-out_infinite]">
-            <img
+<img
               src="/affiche-vendeur.webp"
               alt={t("Devenez vendeur sur MboppiShop")}
-              className="block w-full h-auto"
+              className="block w-full h-auto max-h-[70vh] object-contain"
               loading="eager"
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
-              {[...Array(12)].map((_, i) => (
+              {[...Array(6)].map((_, i) => (
                 <span
                   key={i}
                   className="absolute h-2 w-2 rounded-full bg-amber-300 animate-[sparkle_3s_linear_infinite]"
