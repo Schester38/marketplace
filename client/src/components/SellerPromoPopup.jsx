@@ -1,83 +1,137 @@
-import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+﻿import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
 
 export default function SellerPromoPopup() {
   const { user } = useAuth();
   const { t } = useLang();
-  const location = useLocation();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    // Ne pas afficher pour un utilisateur qui a déjà un compte vendeur.
     if (user && (user.role === "seller" || user.role === "shop" || user.role === "creator")) {
       return;
     }
-    // Une fois par session navigateur.
     try {
       if (sessionStorage.getItem("mboppi_seller_promo_seen")) return;
     } catch {}
     const timer = setTimeout(() => {
       setOpen(true);
       try { sessionStorage.setItem("mboppi_seller_promo_seen", "1"); } catch {}
-    }, 1800);
+    }, 1200);
     return () => clearTimeout(timer);
   }, [user]);
 
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-      onClick={() => setOpen(false)}
-    >
-<div
-        className="relative mx-auto w-full max-w-[92vw] sm:max-w-md animate-[promoFloat_3s_ease-in-out_infinite]"
-        onClick={(e) => e.stopPropagation()}
+    <>
+      <div
+        onClick={() => setOpen(false)}
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 2147483647,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "rgba(0,0,0,0.78)",
+          padding: "16px",
+        }}
       >
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="absolute -top-3 -right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-700 shadow-lg ring-1 ring-slate-200 transition hover:bg-slate-100"
-          aria-label={t("Fermer")}
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: "relative",
+            width: "100%",
+            maxWidth: "300px",
+            animation: "promoFloat 2.5s ease-in-out infinite",
+          }}
         >
-          ✕
-        </button>
-        <Link to="/register?role=seller" onClick={() => setOpen(false)} className="block">
-          <div className="relative overflow-hidden rounded-3xl shadow-2xl ring-4 ring-amber-400/60 animate-[promoGlow_2s_ease-in-out_infinite]">
-<img
-              src="/affiche-vendeur.webp"
-              alt={t("Devenez vendeur sur MboppiShop")}
-              className="block w-full h-auto max-h-[70vh] object-contain"
-              loading="eager"
-            />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-            <div className="pointer-events-none absolute inset-0 overflow-hidden">
-              {[...Array(6)].map((_, i) => (
-                <span
-                  key={i}
-                  className="absolute h-2 w-2 rounded-full bg-amber-300 animate-[sparkle_3s_linear_infinite]"
-                  style={{
-                    left: `${(i * 37) % 100}%`,
-                    top: `${(i * 53) % 100}%`,
-                    animationDelay: `${i * 0.25}s`,
-                    opacity: 0.8,
-                  }}
-                />
-              ))}
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label={t("Fermer")}
+            style={{
+              position: "absolute",
+              top: "-14px",
+              right: "-14px",
+              zIndex: 2,
+              width: "36px",
+              height: "36px",
+              borderRadius: "50%",
+              border: "none",
+              background: "#ffffff",
+              color: "#334155",
+              fontSize: "18px",
+              fontWeight: "bold",
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+            }}
+          >
+            ✕
+          </button>
+          <Link to="/register?role=seller" onClick={() => setOpen(false)} style={{ display: "block", textDecoration: "none" }}>
+            <div
+              style={{
+                position: "relative",
+                overflow: "hidden",
+                borderRadius: "18px",
+                boxShadow: "0 0 40px rgba(251,191,36,0.7), 0 20px 60px rgba(0,0,0,0.5)",
+                animation: "promoGlow 2s ease-in-out infinite",
+              }}
+            >
+              <img
+                src="/affiche-vendeur.webp"
+                alt={t("Devenez vendeur sur MboppiShop")}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  height: "auto",
+                  maxHeight: "55vh",
+                  objectFit: "contain",
+                }}
+                loading="eager"
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: "linear-gradient(to top, rgba(0,0,0,0.55), transparent 60%)",
+                  pointerEvents: "none",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: "14px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  background: "#fbbf24",
+                  color: "#1e293b",
+                  padding: "8px 20px",
+                  borderRadius: "999px",
+                  fontWeight: "800",
+                  fontSize: "13px",
+                  boxShadow: "0 6px 16px rgba(0,0,0,0.35)",
+                  animation: "pulse 1.6s ease-in-out infinite",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {t("Devenir vendeur")} →
+              </div>
             </div>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-amber-400 px-6 py-2 text-sm font-extrabold text-slate-900 shadow-lg animate-[pulse_1.6s_ease-in-out_infinite]">
-              {t("Devenir vendeur")} →
-            </div>
-          </div>
-        </Link>
+          </Link>
+        </div>
       </div>
       <style>{`
-        @keyframes promoFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-        @keyframes promoGlow { 0%,100% { box-shadow: 0 0 20px rgba(251,191,36,0.4); } 50% { box-shadow: 0 0 40px rgba(251,191,36,0.8); } }
-        @keyframes sparkle { 0% { transform: scale(0) translateY(0); opacity:0; } 50% { transform: scale(1) translateY(-20px); opacity:1; } 100% { transform: scale(0) translateY(-40px); opacity:0; } }
+        @keyframes promoFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+        @keyframes promoGlow { 0%,100% { box-shadow: 0 0 24px rgba(251,191,36,0.5), 0 20px 60px rgba(0,0,0,0.5); } 50% { box-shadow: 0 0 50px rgba(251,191,36,0.9), 0 20px 60px rgba(0,0,0,0.5); } }
+        @keyframes pulse { 0%,100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.08); } }
       `}</style>
-    </div>
+    </>
   );
 }
