@@ -9,21 +9,29 @@
     body { font-family: system-ui, -apple-system, sans-serif; }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100 flex items-center justify-center px-6">
-  <div class="max-w-md w-full text-center space-y-6">
-    <div class="text-7xl">📡</div>
-    <h1 class="text-3xl font-extrabold tracking-tight">Pas de connexion internet</h1>
-    <p class="text-slate-400 text-base leading-relaxed">
+<body class="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-slate-100 flex items-center justify-center px-6 relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-sky-500/20 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl"></div>
+  </div>
+  <div class="relative z-10 max-w-md w-full text-center">
+    <div class="mb-6 inline-flex items-center justify-center w-28 h-28 rounded-full bg-white/5 backdrop-blur border border-white/10 shadow-2xl">
+      <span class="text-6xl drop-shadow-lg">📡</span>
+    </div>
+    <h1 class="text-4xl font-extrabold tracking-tight mb-4 bg-gradient-to-r from-white to-sky-200 bg-clip-text text-transparent">
+      Pas de connexion internet
+    </h1>
+    <p class="text-slate-300 text-lg leading-relaxed mb-8">
       Vous êtes actuellement hors ligne. Vérifiez votre connexion puis réessayez.
     </p>
     <button
       onclick="window.location.reload()"
-      class="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-sky-500 hover:bg-sky-400 active:bg-sky-600 text-white font-semibold text-base transition-all duration-200 shadow-lg shadow-sky-500/30 hover:shadow-sky-400/40 hover:scale-105"
+      class="inline-flex items-center justify-center gap-3 px-10 py-4 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-400 hover:to-indigo-400 text-white font-bold text-lg transition-all duration-300 shadow-2xl shadow-sky-500/40 hover:shadow-sky-400/60 hover:scale-105 border border-white/20"
     >
       🔄 Réessayer
     </button>
-    <div class="pt-8 border-t border-slate-700/50">
-      <p class="text-slate-500 text-sm">
+    <div class="mt-10 pt-8 border-t border-white/10">
+      <p class="text-slate-500 text-sm tracking-wide">
         MboppiShop — votre marché en ligne
       </p>
     </div>
