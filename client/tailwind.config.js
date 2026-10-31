@@ -7,7 +7,6 @@ export default {
     "./src/pages/MboppiBoostTrack.jsx",
     "./src/pages/MboppiBoostWallet.jsx",
     "./src/pages/BoostAdmin.jsx",
-    "./src/components/IkeepayCheckout.jsx",
   ],
   prefix: "tw-",
   corePlugins: {
