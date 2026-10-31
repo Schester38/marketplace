@@ -49,36 +49,36 @@ function FormationsPage() {
 
   return (
     <>
-      <Seo title="Formations — MboppiShop" description="Découvrez des formations pratiques en ligne sur MboppiShop." />
+      <Seo title={t("Formations — MboppiShop")} description={t("Découvrez des formations pratiques en ligne sur MboppiShop.")} />
       <main className="boost-page">
         <div className="boost-shell">
           <section style={{ padding: "40px 0 20px", textAlign: "center" }}>
-            <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0 }}>Apprenez aujourd'hui. Construisez votre avenir.</h1>
+            <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0 }}>{t("Apprenez aujourd'hui. Construisez votre avenir.")}</h1>
             <p style={{ marginTop: 12, fontSize: 16, color: "var(--text-muted,#666)", maxWidth: 720, margin: "12px auto 0" }}>
-              Découvrez des formations pratiques en ligne, développez vos compétences et apprenez auprès de formateurs passionnés.
+              {t("Découvrez des formations pratiques en ligne, développez vos compétences et apprenez auprès de formateurs passionnés.")}
             </p>
             <div style={{ marginTop: 20, display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
               <input
                 className="boost-input"
-                placeholder="Rechercher une formation…"
+                placeholder={t("Rechercher une formation…")}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 style={{ maxWidth: 360 }}
               />
               <Link to="/devenir-formateur" className="boost-btn boost-btn-secondary">
-                Devenir formateur
+                {t("Devenir formateur")}
               </Link>
               <Link to="/mes-formations" className="boost-btn boost-btn-secondary">
-                Mes formations
+                {t("Mes formations")}
               </Link>
             </div>
           </section>
 
           <section style={{ marginTop: 24 }}>
-            {loading && <p className="hint">Chargement…</p>}
+            {loading && <p className="hint">{t("Chargement…")}</p>}
             {error && <p className="error-msg">{error}</p>}
             {!loading && !error && filtered.length === 0 && (
-              <p className="hint">Aucune formation disponible pour le moment.</p>
+              <p className="hint">{t("Aucune formation disponible pour le moment.")}</p>
             )}
             <div className="tw-grid tw-gap-4 sm:tw-grid-cols-2 lg:tw-grid-cols-3" style={{ marginTop: 16 }}>
               {filtered.map((p) => (

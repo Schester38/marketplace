@@ -6711,11 +6711,48 @@ const MBOPPIBOOST_AR = {
 
 
 
+
+const FORMATIONS_EN = {
+  "Formations — MboppiShop": "Training — MboppiShop",
+  "Découvrez des formations pratiques en ligne sur MboppiShop.": "Discover practical online training on MboppiShop.",
+  "Apprenez aujourd'hui. Construisez votre avenir.": "Learn today. Build your future.",
+  "Découvrez des formations pratiques en ligne, développez vos compétences et apprenez auprès de formateurs passionnés.": "Discover practical online training, develop your skills and learn from passionate trainers.",
+  "Rechercher une formation…": "Search for training…",
+  "Devenir formateur": "Become a trainer",
+  "Mes formations": "My training",
+  "Chargement…": "Loading…",
+  "Aucune formation disponible pour le moment.": "No training available at the moment.",
+};
+
+const FORMATIONS_ES = {
+  "Formations — MboppiShop": "Formaciones — MboppiShop",
+  "Découvrez des formations pratiques en ligne sur MboppiShop.": "Descubre formaciones prácticas en línea en MboppiShop.",
+  "Apprenez aujourd'hui. Construisez votre avenir.": "Aprende hoy. Construye tu futuro.",
+  "Découvrez des formations pratiques en ligne, développez vos compétences et apprenez auprès de formateurs passionnés.": "Descubre formaciones prácticas en línea, desarrolla tus habilidades y aprende con formadores apasionados.",
+  "Rechercher une formation…": "Buscar una formación…",
+  "Devenir formateur": "Convertirse en formador",
+  "Mes formations": "Mis formaciones",
+  "Chargement…": "Cargando…",
+  "Aucune formation disponible pour le moment.": "No hay formaciones disponibles por el momento.",
+};
+
+const FORMATIONS_AR = {
+  "Formations — MboppiShop": "الدورات التدريبية — MboppiShop",
+  "Découvrez des formations pratiques en ligne sur MboppiShop.": "اكتشف دورات تدريبية عملية عبر الإنترنت على MboppiShop.",
+  "Apprenez aujourd'hui. Construisez votre avenir.": "تعلم اليوم. ابنِ مستقبلك.",
+  "Découvrez des formations pratiques en ligne, développez vos compétences et apprenez auprès de formateurs passionnés.": "اكتشف دورات تدريبية عملية عبر الإنترنت، طوّر مهاراتك وتعلم من مدربين شغوفين.",
+  "Rechercher une formation…": "ابحث عن دورة تدريبية…",
+  "Devenir formateur": "أصبح مدرباً",
+  "Mes formations": "دوراتي التدريبية",
+  "Chargement…": "جارٍ التحميل…",
+  "Aucune formation disponible pour le moment.": "لا توجد دورات تدريبية متاحة حالياً.",
+};
+
 export const I18N = {
   fr: {},
-  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN },
-  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR },
-  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES },
+  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN, ...FORMATIONS_EN },
+  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR, ...FORMATIONS_AR },
+  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES, ...FORMATIONS_ES },
 };
 
 function tr(str, vars, lang) {
