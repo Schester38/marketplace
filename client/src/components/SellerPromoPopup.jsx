@@ -10,16 +10,17 @@ export default function SellerPromoPopup() {
 
   useEffect(() => {
     if (user && (user.role === "seller" || user.role === "shop" || user.role === "creator")) {
+      setOpen(false);
       return;
     }
-    try {
-      if (sessionStorage.getItem("mboppi_seller_promo_seen")) return;
-    } catch {}
-    const timer = setTimeout(() => {
+    let first = setTimeout(() => setOpen(true), 5000);
+    let interval = setInterval(() => {
       setOpen(true);
-      try { sessionStorage.setItem("mboppi_seller_promo_seen", "1"); } catch {}
-    }, 1200);
-    return () => clearTimeout(timer);
+    }, 120000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(interval);
+    };
   }, [user]);
 
   if (!open) return null;
