@@ -68,6 +68,7 @@ export default function CreatorDashboard() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [isFormation, setIsFormation] = useState(false);
   // Fichier digital existant de la création en cours d'édition.
   const [editingDigital, setEditingDigital] = useState(null);
   const [error, setError] = useState("");
@@ -273,6 +274,7 @@ export default function CreatorDashboard() {
       setEditingDigital(null);
       setPhotoRemoved(false);
       setShowForm(false);
+      setIsFormation(false);
       load();
     } catch (err) {
       setError(err.message);
@@ -334,6 +336,7 @@ export default function CreatorDashboard() {
     // Afficher le formulaire sans attendre le fetch de détail : le clic doit
     // toujours produire un retour visible, même sur une connexion lente.
     setShowForm(true);
+    setIsFormation(p.category === "Éducation & Formation");
 
     try {
       const detail = await api.getProduct(p.id);
@@ -400,6 +403,9 @@ export default function CreatorDashboard() {
                 setForm(EMPTY_FORM);
                 setEditingId(null);
                 setEditingDigital(null);
+                setIsFormation(false);
+              } else {
+                setIsFormation(false);
               }
               setShowForm(!showForm);
             }}
@@ -412,6 +418,7 @@ export default function CreatorDashboard() {
               setForm({ ...EMPTY_FORM, category: "Éducation & Formation" });
               setEditingId(null);
               setEditingDigital(null);
+              setIsFormation(true);
               setShowForm(true);
             }}
           >
@@ -434,7 +441,7 @@ export default function CreatorDashboard() {
 
       {showForm && (
         <div className="card form-card" ref={formRef}>
-          <h2>{editingId ? t("Modifier la création") : t("Nouvelle création")}</h2>
+          <h2>{editingId ? t("Modifier la création") : isFormation ? t("Nouvelle formation") : t("Nouvelle création")}</h2>
           <div className="photo-tip">
             <strong>{t("📸 Astuce : des photos de qualité pour vos produits")}</strong>
             <p>
