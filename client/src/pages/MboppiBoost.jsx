@@ -91,6 +91,29 @@ const PLATFORM_ACCENTS = {
   other: "tw-from-violet-500 tw-to-indigo-600",
 };
 
+const detectPlatformFromTarget = (value) => {
+  if (!value) return null;
+  const v = String(value).toLowerCase();
+  if (/instagram|instagr\.am/.test(v)) return "instagram";
+  if (/tiktok/.test(v)) return "tiktok";
+  if (/youtube|youtu\.be/.test(v)) return "youtube";
+  if (/telegram|t\.me/.test(v)) return "telegram";
+  if (/facebook|fb\.com|fb\.me/.test(v)) return "facebook";
+  if (/twitter|x\.com/.test(v)) return "twitter";
+  if (/spotify/.test(v)) return "spotify";
+  if (/soundcloud/.test(v)) return "soundcloud";
+  if (/twitch/.test(v)) return "twitch";
+  if (/shopee/.test(v)) return "shopee";
+  if (/linkedin/.test(v)) return "linkedin";
+  if (/reddit/.test(v)) return "reddit";
+  if (/discord/.test(v)) return "discord";
+  if (/threads/.test(v)) return "threads";
+  if (/bluesky|bsky\.app/.test(v)) return "bluesky";
+  if (/snapchat/.test(v)) return "snapchat";
+  if (/pinterest/.test(v)) return "pinterest";
+  return null;
+};
+
 const PAGE_SIZE = 24;
 
 const S = (id, cid, icon, name, desc, price, min) => ({
@@ -355,6 +378,15 @@ export default function MboppiBoost() {
   const [selectedId, setSelectedId] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [target, setTarget] = useState("");
+  const detectedPlatform = useMemo(() => detectPlatformFromTarget(target), [target]);
+  useEffect(() => {
+    if (!detectedPlatform) return;
+    if (platformFilter !== detectedPlatform) {
+      setPlatformFilter(detectedPlatform);
+      setCategoryFilter("all");
+      setPage(1);
+    }
+  }, [detectedPlatform]);
   const [details, setDetails] = useState("");
   const [email, setEmail] = useState(() => user?.email || "");
   const [phone, setPhone] = useState(() => user?.phone || "");
@@ -770,48 +802,7 @@ export default function MboppiBoost() {
           <div className="tw-mt-6 tw-grid tw-grid-cols-1 tw-gap-6 lg:tw-grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)] lg:tw-items-start">
             <div className="tw-min-w-0 tw-space-y-5">
               <div className="boost-card boost-card-pad">
-            <div className="tw-grid tw-gap-4 lg:tw-grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-              <div>
-                <label htmlFor="boost-search" className="boost-label">Rechercher un service</label>
-                <div className="tw-relative">
-                  <span className="boost-search-icon">
-                    <IconSearch />
-                  </span>
-                  <input
-                    id="boost-search"
-                    type="search"
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    placeholder="Ex. followers, vues, likes, abonnés..."
-                    className="boost-input boost-input-search"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="boost-category" className="boost-label tw-hidden sm:tw-flex">Catégorie</label>
-                <label htmlFor="boost-category-mobile" className="boost-label sm:tw-hidden">Catégorie</label>
-                <select
-                  id="boost-category"
-                  aria-label="Catégorie"
-                  value={categoryFilter}
-                  onChange={(e) => onCategoryChange(e.target.value)}
-                  className="boost-input boost-select tw-hidden sm:tw-block"
-                >
-                  {catOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-                <div className="sm:tw-hidden">
-                  <BoostSelect
-                    id="boost-category-mobile"
-                    value={categoryFilter}
-                    options={catOptions}
-                    onChange={onCategoryChange}
-                    ariaLabel="Catégorie"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="tw-mt-4">
+            <div className="tw-mt-2">
               <div className="tw-flex tw-items-center tw-justify-between tw-gap-3">
                 <span className="boost-label tw-mb-0">Plateformes</span>
                 {activeFilterCount > 0 && (
@@ -833,6 +824,29 @@ export default function MboppiBoost() {
                     {o.label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="tw-mt-4">
+              <label htmlFor="boost-category" className="boost-label tw-hidden sm:tw-flex">Catégorie</label>
+              <label htmlFor="boost-category-mobile" className="boost-label sm:tw-hidden">Catégorie</label>
+              <select
+                id="boost-category"
+                aria-label="Catégorie"
+                value={categoryFilter}
+                onChange={(e) => onCategoryChange(e.target.value)}
+                className="boost-input boost-select tw-hidden sm:tw-block"
+              >
+                {catOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <div className="sm:tw-hidden">
+                <BoostSelect
+                  id="boost-category-mobile"
+                  value={categoryFilter}
+                  options={catOptions}
+                  onChange={onCategoryChange}
+                  ariaLabel="Catégorie"
+                />
               </div>
             </div>
 
@@ -1091,6 +1105,11 @@ export default function MboppiBoost() {
                   className="boost-input"
                 />
                 <p className="boost-hint">Lien de votre profil, page ou publication.</p>
+                {detectedPlatform && (
+                  <p className="boost-hint">
+                    Plateforme détectée : {PLATFORM_EMOJI[detectedPlatform]} {PLATFORM_LABELS[detectedPlatform]} — les services correspondants sont affichés.
+                  </p>
+                )}
               </div>
               <div>
                 <label htmlFor="boost-phone" className="boost-label">Téléphone</label>
