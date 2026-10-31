@@ -110,6 +110,7 @@ export default function IkeepayCheckout({ checkoutUrl, onSuccess, onClose }) {
           title="iKeePay"
           src={checkoutUrl}
           allowTransparency="true"
+          scrolling="auto"
           className={`ikeepay-iframe ${status === "ready" ? "is-ready" : "is-loading"}`}
           onLoad={handleIframeLoad}
         />
