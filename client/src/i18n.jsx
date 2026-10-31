@@ -6711,9 +6711,81 @@ const MBOPPIBOOST_AR = {
   "Continuer la commande": "متابعة الطلب",
   "Paiement et suivi :": "الدفع والتتبع:",
   "vous serez redirigé vers la page de commande pour confirmer vos coordonnées, payer en ligne via iKeePay (ou déclarer un paiement manuel) et suivre son traitement.": "سيتم توجيهك إلى صفحة الطلب لتأكيد بياناتك، والدفع عبر الإنترنت عبر iKeePay (أو إعلان دفع يدوي) ومتابعة معالجته.",
-  "Suivre une commande existante": "تتبع طلب موجود",
-  "Paiement protégé · iKeePay": "دفع محمي · iKeePay",
+
 };
+
+const SERVICES_LOGICIELS_EN = {
+  "Services — MboppiShop": "Services — MboppiShop",
+  "Logiciels — MboppiShop": "Software — MboppiShop",
+  "Services professionnels à venir sur MboppiShop.": "Professional services coming soon on MboppiShop.",
+  "Logiciels et applications à venir sur MboppiShop.": "Software and applications coming soon on MboppiShop.",
+  "Des services pensés pour vous faire grandir.": "Services designed to help you grow.",
+  "Découvrez bientôt une sélection de services professionnels pour accompagner votre activité et développer votre présence digitale.": "Soon discover a selection of professional services to support your business and grow your digital presence.",
+  "Services professionnels": "Professional services",
+  "Une sélection de prestations pour accompagner votre activité.": "A selection of services to support your business.",
+  "Croissance digitale": "Digital growth",
+  "Stratégies, campagnes et accompagnement pour développer votre présence en ligne.": "Strategies, campaigns and support to grow your online presence.",
+  "Un accompagnement personnalisé, étape par étape, pour réussir vos projets.": "Personalized support, step by step, to succeed in your projects.",
+  "Bientôt disponible": "Coming soon",
+  "Fonctionnalité bientôt disponible": "Feature coming soon",
+  "Des logiciels pour booster votre productivité.": "Software to boost your productivity.",
+  "Découvrez bientôt des applications et outils numériques pour faciliter votre travail et votre quotidien.": "Soon discover applications and digital tools to make your work and daily life easier.",
+  "Outils & applications": "Tools & applications",
+  "Des logiciels et applications pour simplifier votre quotidien professionnel.": "Software and applications to simplify your professional daily life.",
+  "Automatisation": "Automation",
+  "Automatisez vos tâches répétitives et gagnez du temps.": "Automate your repetitive tasks and save time.",
+  "Sécurité & données": "Security & data",
+  "Protégez vos données et vos transactions en toute confiance.": "Protect your data and transactions with confidence.",
+};
+
+const SERVICES_LOGICIELS_ES = {
+  "Services — MboppiShop": "Servicios — MboppiShop",
+  "Logiciels — MboppiShop": "Software — MboppiShop",
+  "Services professionnels à venir sur MboppiShop.": "Servicios profesionales próximamente en MboppiShop.",
+  "Logiciels et applications à venir sur MboppiShop.": "Software y aplicaciones próximamente en MboppiShop.",
+  "Des services pensés pour vous faire grandir.": "Servicios pensados para ayudarte a crecer.",
+  "Découvrez bientôt une sélection de services professionnels pour accompagner votre activité et développer votre présence digitale.": "Pronto descubre una selección de servicios profesionales para acompañar tu actividad y desarrollar tu presencia digital.",
+  "Services professionnels": "Servicios profesionales",
+  "Une sélection de prestations pour accompagner votre activité.": "Una selección de prestaciones para acompañar tu actividad.",
+  "Croissance digitale": "Crecimiento digital",
+  "Stratégies, campagnes et accompagnement pour développer votre présence en ligne.": "Estrategias, campañas y acompañamiento para desarrollar tu presencia en línea.",
+  "Un accompagnement personnalisé, étape par étape, pour réussir vos projets.": "Acompañamiento personalizado, paso a paso, para tener éxito en tus proyectos.",
+  "Bientôt disponible": "Próximamente",
+  "Fonctionnalité bientôt disponible": "Función próximamente disponible",
+  "Des logiciels pour booster votre productivité.": "Software para impulsar tu productividad.",
+  "Découvrez bientôt des applications et outils numériques pour faciliter votre travail et votre quotidien.": "Pronto descubre aplicaciones y herramientas digitales para facilitar tu trabajo y tu día a día.",
+  "Outils & applications": "Herramientas y aplicaciones",
+  "Des logiciels et applications pour simplifier votre quotidien professionnel.": "Software y aplicaciones para simplificar tu vida profesional.",
+  "Automatisation": "Automatización",
+  "Automatisez vos tâches répétitives et gagnez du temps.": "Automatiza tus tareas repetitivas y ahorra tiempo.",
+  "Sécurité & données": "Seguridad y datos",
+  "Protégez vos données et vos transactions en toute confiance.": "Protege tus datos y transacciones con confianza.",
+};
+
+const SERVICES_LOGICIELS_AR = {
+  "Services — MboppiShop": "الخدمات — MboppiShop",
+  "Logiciels — MboppiShop": "البرمجيات — MboppiShop",
+  "Services professionnels à venir sur MboppiShop.": "خدمات احترافية قريباً على MboppiShop.",
+  "Logiciels et applications à venir sur MboppiShop.": "برمجيات وتطبيقات قريباً على MboppiShop.",
+  "Des services pensés pour vous faire grandir.": "خدمات مصممة لمساعدتك على النمو.",
+  "Découvrez bientôt une sélection de services professionnels pour accompagner votre activité et développer votre présence digitale.": "اكتشف قريباً مجموعة من الخدمات الاحترافية لمرافقة نشاطك وتطوير حضورك الرقمي.",
+  "Services professionnels": "خدمات احترافية",
+  "Une sélection de prestations pour accompagner votre activité.": "مجموعة من Prestations لمرافقة نشاطك.",
+  "Croissance digitale": "نمو رقمي",
+  "Stratégies, campagnes et accompagnement pour développer votre présence en ligne.": "استراتيجيات، حملات ومرافقة لتطوير حضورك عبر الإنترنت.",
+  "Un accompagnement personnalisé, étape par étape, pour réussir vos projets.": "مرافقة مخصصة، خطوة بخطوة، لإنجاح مشاريعك.",
+  "Bientôt disponible": "قريباً",
+  "Fonctionnalité bientôt disponible": "ميزة قريباً",
+  "Des logiciels pour booster votre productivité.": "برمجيات لتعزيز إنتاجيتك.",
+  "Découvrez bientôt des applications et outils numériques pour faciliter votre travail et votre quotidien.": "اكتشف قريباً تطبيقات وأدوات رقمية لتسهيل عملك ويومك.",
+  "Outils & applications": "أدوات وتطبيقات",
+  "Des logiciels et applications pour simplifier votre quotidien professionnel.": "برمجيات وتطبيقات لتبسيط حياتك المهنية.",
+  "Automatisation": "أتمتة",
+  "Automatisez vos tâches répétitives et gagnez du temps.": "أتمتة مهامك المتكررة ووفر الوقت.",
+  "Sécurité & données": "الأمان والبيانات",
+  "Protégez vos données et vos transactions en toute confiance.": "احمِ بياناتك ومعاملاتك بثقة.",
+};
+
 
 
 
@@ -6883,9 +6955,9 @@ const FORMATIONS_AR = {
 
 export const I18N = {
   fr: {},
-  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN, ...FORMATIONS_EN, ...MBOPPIBOOST_TERMS_EN, ...REMBOURSEMENT_EN },
-  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR, ...FORMATIONS_AR, ...MBOPPIBOOST_TERMS_AR, ...REMBOURSEMENT_AR },
-  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES, ...FORMATIONS_ES, ...MBOPPIBOOST_TERMS_ES, ...REMBOURSEMENT_ES },
+  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN, ...FORMATIONS_EN, ...MBOPPIBOOST_TERMS_EN, ...REMBOURSEMENT_EN, ...SERVICES_LOGICIELS_EN },
+  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR, ...FORMATIONS_AR, ...MBOPPIBOOST_TERMS_AR, ...REMBOURSEMENT_AR, ...SERVICES_LOGICIELS_AR },
+  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES, ...FORMATIONS_ES, ...MBOPPIBOOST_TERMS_ES, ...REMBOURSEMENT_ES, ...SERVICES_LOGICIELS_ES },
 };
 
 function tr(str, vars, lang) {

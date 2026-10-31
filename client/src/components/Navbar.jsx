@@ -1110,6 +1110,14 @@ export default function Navbar({ onLogout }) {
         </span>
         <span className="dl-label">MboppiBoost</span>
       </Link>
+      <Link to="/services" onClick={close} className={`drawer-link ${location.pathname === "/services" ? "cat-active" : ""}`}>
+        <span className="dl-icon">🛠️</span>
+        <span className="dl-label">{t("Services")}</span>
+      </Link>
+      <Link to="/logiciels" onClick={close} className={`drawer-link ${location.pathname === "/logiciels" ? "cat-active" : ""}`}>
+        <span className="dl-icon">💻</span>
+        <span className="dl-label">{t("Logiciels")}</span>
+      </Link>
       <Link
         to="/mboppi-boost/portefeuille"
         onClick={close}
