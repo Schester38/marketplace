@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { getSetting } from "../services/ikeepay.js";
 import { timingSafeEqual } from "node:crypto";
 import { q, withTransaction } from "../db.js";
 import { authRequired, authOptional, MEMBERSHIP_FEES } from "../auth.js";
@@ -19,6 +20,16 @@ import {
 } from "../services/ikeepay.js";
 
 const router = Router();
+
+// ─── Statut du popup « Devenez vendeur » (lecture publique) ─────────────────
+router.get("/seller-promo-popup", async (req, res) => {
+  try {
+    const v = await getSetting("seller_promo_popup_enabled", "true");
+    res.json({ enabled: v !== "false" });
+  } catch {
+    res.json({ enabled: true });
+  }
+});
 const webhookRouter = Router();
 
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);

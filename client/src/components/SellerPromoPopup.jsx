@@ -2,14 +2,33 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
+import { api } from "../api.js";
 
 export default function SellerPromoPopup() {
   const { user } = useAuth();
   const { t } = useLang();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [enabled, setEnabled] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+    api
+      .sellerPromoPopupStatus()
+      .then((d) => {
+        if (!cancelled) setEnabled(d?.enabled !== false);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) {
+      setOpen(false);
+      return;
+    }
     if (user && (user.role === "seller" || user.role === "shop" || user.role === "creator")) {
       setOpen(false);
       return;
@@ -22,9 +41,9 @@ export default function SellerPromoPopup() {
       clearTimeout(first);
       clearInterval(interval);
     };
-  }, [user, location.pathname]);
+  }, [user, location.pathname, enabled]);
 
-  if (!open) return null;
+  if (!enabled || !open) return null;
 
   return (
     <>

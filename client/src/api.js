@@ -471,11 +471,15 @@ export const api = {
     request("/activation-withdrawals", { method: "POST", body: JSON.stringify(payload) }),
   // Paiements en ligne (iKeePay — PAYIN uniquement : adhésion + don)
   paymentSettings: () => request("/payments/settings", { cache: "default", skipAuth: true }),
+  sellerPromoPopupStatus: () => request("/payments/seller-promo-popup", { cache: "default", skipAuth: true }),
   membershipStatus: () => request("/payments/membership-status"),
   membershipPayin: () => request("/payments/membership-payin", { method: "POST" }),
   donationPayin: (payload) =>
     request("/payments/donation-payin", { method: "POST", body: JSON.stringify(payload) }),
   adminPaymentSettings: () => adminRequest("/admin/settings/payments"),
+  adminSellerPromoPopupStatus: () => adminRequest("/admin/settings/seller-promo-popup"),
+  adminUpdateSellerPromoPopup: (enabled) =>
+    adminRequest("/admin/settings/seller-promo-popup", { method: "POST", body: JSON.stringify({ enabled }) }),
   adminWhatsAppSettings: () => adminRequest("/admin/settings/whatsapp"),
   adminUpdateWhatsAppSettings: (payload) =>
     adminRequest("/admin/settings/whatsapp", { method: "POST", body: JSON.stringify(payload) }),

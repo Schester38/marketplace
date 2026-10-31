@@ -404,6 +404,8 @@ export default function Admin() {
   });
   const [waBotBusy, setWaBotBusy] = useState(false);
   const [waBotMsg, setWaBotMsg] = useState("");
+  const [sellerPromoPopupEnabled, setSellerPromoPopupEnabled] = useState(true);
+  const [sellerPromoPopupBusy, setSellerPromoPopupBusy] = useState(false);
   const [payPublicKey, setPayPublicKey] = useState("");
   const [paySecretKey, setPaySecretKey] = useState("");
   const [payments, setPayments] = useState(null);
@@ -537,6 +539,12 @@ export default function Admin() {
             fallback: d?.fallback || "",
             system_prompt: d?.system_prompt || "",
           }));
+        })
+        .catch(() => {});
+      api
+        .adminSellerPromoPopupStatus()
+        .then((d) => {
+          setSellerPromoPopupEnabled(d?.enabled !== false);
         })
         .catch(() => {});
       api
@@ -2637,6 +2645,39 @@ export default function Admin() {
         ) : (
           <p className="hint">{t("Chargement du stockage…")}</p>
         )}
+      </div>
+
+      {/* Popup « Devenez vendeur » : activation/désactivation par l'admin */}
+      <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+        <h2 style={{ marginTop: 0, fontSize: "1.15rem" }}>
+          📣 {t("Popup « Devenez vendeur »")}
+        </h2>
+        <p className="hint" style={{ marginBottom: 12 }}>
+          {t("Affiche l'overlay promotionnel « Devenez vendeur » aux visiteurs non connectés.")}
+        </p>
+        <button
+          type="button"
+          className={sellerPromoPopupEnabled ? "btn btn-primary btn-small" : "btn btn-outline btn-small"}
+          disabled={sellerPromoPopupBusy}
+          onClick={async () => {
+            setSellerPromoPopupBusy(true);
+            try {
+              const next = !sellerPromoPopupEnabled;
+              const d = await api.adminUpdateSellerPromoPopup(next);
+              setSellerPromoPopupEnabled(d?.enabled !== false);
+            } catch (e) {
+              alert(e?.message || "Erreur");
+            } finally {
+              setSellerPromoPopupBusy(false);
+            }
+          }}
+        >
+          {sellerPromoPopupBusy
+            ? "…"
+            : sellerPromoPopupEnabled
+            ? "✅ " + t("Popup activé — cliquer pour désactiver")
+            : "⛔ " + t("Popup désactivé — cliquer pour activer")}
+        </button>
       </div>
 
       {/* Robot WhatsApp : assistant IA connecté au numéro Cloud API */}

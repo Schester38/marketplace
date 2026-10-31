@@ -19,6 +19,7 @@ import {
   getPublicPaymentSettings,
   getWebhookSecret,
   purgePendingPayments,
+  getSetting,
 } from "../services/ikeepay.js";
 import { getMembershipGate, setMembershipGate } from "../services/membershipGate.js";
 import {
@@ -1873,6 +1874,20 @@ router.post("/settings/whatsapp-bot", ah(async (req, res) => {
   });
   await logAudit(req.user.id, "admin.whatsapp_bot_settings", `enabled=${Boolean(b.enabled)}`, req.ip);
   res.json({ ok: true, ...(await getBotSettings()) });
+}));
+
+// ─── Popup « Devenez vendeur » ─────────────────────────────────────────────
+// Permet à l'admin d'activer/désactiver l'overlay popup « Devenez vendeur ».
+router.get("/settings/seller-promo-popup", ah(async (req, res) => {
+  const v = await getSetting("seller_promo_popup_enabled", "true");
+  res.json({ enabled: v !== "false" });
+}));
+
+router.post("/settings/seller-promo-popup", ah(async (req, res) => {
+  const enabled = Boolean(req.body?.enabled);
+  await setSetting("seller_promo_popup_enabled", enabled ? "true" : "false");
+  await logAudit(req.user.id, "admin.seller_promo_popup", `enabled=${enabled}`, req.ip);
+  res.json({ ok: true, enabled });
 }));
 
 // Test d'envoi : verifie la configuration sans attendre une vraie demande.
