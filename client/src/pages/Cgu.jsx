@@ -137,6 +137,17 @@ export default function Cgu() {
           </Link>
         </div>
         <div className="card">
+          <h2>{t("Politique de remboursement")}</h2>
+          <p>
+            {t(
+              "Les remboursements sont régis par notre politique de remboursement, consultable sur la page dédiée."
+            )}
+          </p>
+          <Link to="/remboursement" className="btn btn-outline">
+            {t("Politique de remboursement")}
+          </Link>
+        </div>
+        <div className="card">
           <h2>{t("13. Acceptation des conditions")}</h2>
           <p>
             {t(

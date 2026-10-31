@@ -11,6 +11,7 @@ MboppiShop est une marketplace pour le Cameroun et l'Afrique. Elle met en relati
 - **Livreur** : utilise le code de la boutique, saisit les frais de livraison et confirme la remise avec le code client.
 - **Administrateur** : consulte les statistiques, utilisateurs, ventes, messages, journaux et sauvegardes.
 - **Promotions éclair** : une promotion par semaine et par boutique, pendant 24 heures maximum. Le produit est masqué des catalogues et sa commission vendeur devient 0 %.
+- **Pages légales** : Conditions générales d'utilisation (`/cgu`), Conditions générales de vente (`/cgv`), Mentions légales (`/mentions-legales`), Politique de confidentialité (`/donnees`), **Politique de remboursement** (`/remboursement`) et Conditions MboppiBoost (`/mboppi-boost/conditions`).
 - **SEO et partage** : pages publiques optimisées, sitemap, Open Graph, JSON-LD et liens de partage de produits, boutiques et offres.
 - **Produits digitaux** : un créateur publie des fichiers téléchargeables (20 Mo max par fichier, 2 produits par créateur) ; l'acheteur les télécharge depuis son espace après confirmation du paiement, sans livraison ni frais de livraison.
 

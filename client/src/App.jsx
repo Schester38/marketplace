@@ -102,6 +102,7 @@ const MboppiBoostOrders = lazyRetry(() => import("./pages/MboppiBoostOrders.jsx"
 const MboppiBoostTrack = lazyRetry(() => import("./pages/MboppiBoostTrack.jsx"));
 const MboppiBoostWallet = lazyRetry(() => import("./pages/MboppiBoostWallet.jsx"));
 const MboppiBoostTerms = lazyRetry(() => import("./pages/MboppiBoostTerms.jsx"));
+const Remboursement = lazyRetry(() => import("./pages/Remboursement.jsx"));
 const Cgv = lazyRetry(() => import("./pages/Cgv.jsx"));
 const Cgu = lazyRetry(() => import("./pages/Cgu.jsx"));
 const Faq = lazyRetry(() => import("./pages/Faq.jsx"));
@@ -840,6 +841,7 @@ export default function App() {
             <Route path="/cgu" element={<Cgu />} />
             <Route path="/faq" element={<Faq />} />
             <Route path="/mentions-legales" element={<MentionsLegales />} />
+            <Route path="/remboursement" element={<Remboursement />} />
             <Route path="/soutien" element={<Support />} />
             <Route path="/formations" element={<Formations />} />
             <Route path="/espace-formateur" element={<EspaceFormateur />} />

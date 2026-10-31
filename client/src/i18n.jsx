@@ -6712,6 +6712,49 @@ const MBOPPIBOOST_AR = {
 
 
 
+const REMBOURSEMENT_EN = {
+  "Politique de remboursement": "Refund Policy",
+  "Les remboursements sont régis par notre politique de remboursement.": "Refunds are governed by our refund policy.",
+  "Les conditions de remboursement pour les services MboppiBoost et les produits digitaux.": "Refund conditions for MboppiBoost services and digital products.",
+  "1. Services MboppiBoost (SMM)": "1. MboppiBoost Services (SMM)",
+  "2. Produits digitaux": "2. Digital Products",
+  "3. Adhésions": "3. Memberships",
+  "4. Dons": "4. Donations",
+  "5. Procédure de demande": "5. Request Procedure",
+  "Les frais d'adhésion (vendeur, boutique, créateur) ne sont pas remboursables une fois l'adhésion activée et la période de 30 jours commencée.": "Membership fees (seller, shop, creator) are non-refundable once the membership is activated and the 30-day period has started.",
+  "Les dons effectués via la page « Soutenir MboppiShop » sont volontaires et ne sont pas remboursables.": "Donations made via the 'Support MboppiShop' page are voluntary and non-refundable.",
+  "Pour toute demande de remboursement, contactez-nous via la page Contact ou WhatsApp avec votre référence de commande. Chaque demande est examinée au cas par cas. Le délai de traitement est de 7 jours ouvrables.": "For any refund request, contact us via the Contact page or WhatsApp with your order reference. Each request is reviewed case by case. Processing time is 7 business days.",
+};
+
+const REMBOURSEMENT_ES = {
+  "Politique de remboursement": "Política de reembolso",
+  "Les remboursements sont régis par notre politique de remboursement.": "Los reembolsos se rigen por nuestra política de reembolso.",
+  "Les conditions de remboursement pour les services MboppiBoost et les produits digitaux.": "Condiciones de reembolso para los servicios MboppiBoost y los productos digitales.",
+  "1. Services MboppiBoost (SMM)": "1. Servicios MboppiBoost (SMM)",
+  "2. Produits digitaux": "2. Productos digitales",
+  "3. Adhésions": "3. Membresías",
+  "4. Dons": "4. Donaciones",
+  "5. Procédure de demande": "5. Procedimiento de solicitud",
+  "Les frais d'adhésion (vendeur, boutique, créateur) ne sont pas remboursables une fois l'adhésion activée et la période de 30 jours commencée.": "Las cuotas de membresía (vendedor, tienda, creador) no son reembolsables una vez activada la membresía y comenzado el período de 30 días.",
+  "Les dons effectués via la page « Soutenir MboppiShop » sont volontaires et ne sont pas remboursables.": "Las donaciones realizadas a través de la página 'Apoyar MboppiShop' son voluntarias y no reembolsables.",
+  "Pour toute demande de remboursement, contactez-nous via la page Contact ou WhatsApp avec votre référence de commande. Chaque demande est examinée au cas par cas. Le délai de traitement est de 7 jours ouvrables.": "Para cualquier solicitud de reembolso, contáctanos por la página de Contacto o WhatsApp con tu referencia de pedido. Cada solicitud se revisa caso por caso. El tiempo de procesamiento es de 7 días hábiles.",
+};
+
+const REMBOURSEMENT_AR = {
+  "Politique de remboursement": "سياسة الاسترداد",
+  "Les remboursements sont régis par notre politique de remboursement.": "الاستردادات تحكمها سياسة الاسترداد الخاصة بنا.",
+  "Les conditions de remboursement pour les services MboppiBoost et les produits digitaux.": "شروط الاسترداد لخدمات MboppiBoost والمنتجات الرقمية.",
+  "1. Services MboppiBoost (SMM)": "1. خدمات MboppiBoost (SMM)",
+  "2. Produits digitaux": "2. المنتجات الرقمية",
+  "3. Adhésions": "3. الاشتراكات",
+  "4. Dons": "4. التبرعات",
+  "5. Procédure de demande": "5. إجراء الطلب",
+  "Les frais d'adhésion (vendeur, boutique, créateur) ne sont pas remboursables une fois l'adhésion activée et la période de 30 jours commencée.": "رسوم الاشتراك (بائع، متجر، منشئ) غير قابلة للاسترداد بمجرد تفعيل الاشتراك وبدء فترة 30 يوماً.",
+  "Les dons effectués via la page « Soutenir MboppiShop » sont volontaires et ne sont pas remboursables.": "التبرعات المقدمة عبر صفحة 'دعم MboppiShop' طوعية وغير قابلة للاسترداد.",
+  "Pour toute demande de remboursement, contactez-nous via la page Contact ou WhatsApp avec votre référence de commande. Chaque demande est examinée au cas par cas. Le délai de traitement est de 7 jours ouvrables.": "لأي طلب استرداد، اتصل بنا عبر صفحة الاتصال أو WhatsApp مع مرجع طلبك. تُراجع كل طلب على حدة. مدة المعالجة 7 أيام عمل.",
+};
+
+
 const MBOPPIBOOST_TERMS_EN = {
   "Conditions d'utilisation — MboppiBoost": "Terms of Use — MboppiBoost",
   "Conditions d'utilisation": "Terms of Use",
@@ -6735,6 +6778,7 @@ const MBOPPIBOOST_TERMS_EN = {
   "Pour toute question relative à ces conditions, contactez-nous via la page Contact ou par WhatsApp.": "For any question about these terms, contact us via the Contact page or WhatsApp.",
   "Contact": "Contact",
   "Retour à MboppiBoost": "Back to MboppiBoost",
+  "Les remboursements sont régis par notre politique de remboursement, consultable sur la page dédiée.": "Refunds are governed by our refund policy, available on the dedicated page.",
 };
 
 const MBOPPIBOOST_TERMS_ES = {
@@ -6760,6 +6804,7 @@ const MBOPPIBOOST_TERMS_ES = {
   "Pour toute question relative à ces conditions, contactez-nous via la page Contact ou par WhatsApp.": "Para cualquier pregunta sobre estas condiciones, contáctanos por la página de Contacto o WhatsApp.",
   "Contact": "Contacto",
   "Retour à MboppiBoost": "Volver a MboppiBoost",
+  "Les remboursements sont régis par notre politique de remboursement, consultable sur la page dédiée.": "Los reembolsos se rigen por nuestra política de reembolso, disponible en la página dedicada.",
 };
 
 const MBOPPIBOOST_TERMS_AR = {
@@ -6785,6 +6830,7 @@ const MBOPPIBOOST_TERMS_AR = {
   "Pour toute question relative à ces conditions, contactez-nous via la page Contact ou par WhatsApp.": "لأي سؤال، اتصل بنا عبر صفحة الاتصال أو WhatsApp.",
   "Contact": "الاتصال",
   "Retour à MboppiBoost": "العودة إلى MboppiBoost",
+  "Les remboursements sont régis par notre politique de remboursement, consultable sur la page dédiée.": "الاستردادات تحكمها سياسة الاسترداد الخاصة بنا، متاحة على الصفحة المخصصة.",
 };
 
 
@@ -6831,9 +6877,9 @@ const FORMATIONS_AR = {
 
 export const I18N = {
   fr: {},
-  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN, ...FORMATIONS_EN, ...MBOPPIBOOST_TERMS_EN },
-  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR, ...FORMATIONS_AR, ...MBOPPIBOOST_TERMS_AR },
-  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES, ...FORMATIONS_ES, ...MBOPPIBOOST_TERMS_ES },
+  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN, ...FORMATIONS_EN, ...MBOPPIBOOST_TERMS_EN, ...REMBOURSEMENT_EN },
+  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR, ...FORMATIONS_AR, ...MBOPPIBOOST_TERMS_AR, ...REMBOURSEMENT_AR },
+  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES, ...FORMATIONS_ES, ...MBOPPIBOOST_TERMS_ES, ...REMBOURSEMENT_ES },
 };
 
 function tr(str, vars, lang) {

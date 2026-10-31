@@ -61,6 +61,13 @@ export default function MentionsLegales() {
           </p>
         </div>
         <div className="card">
+          <h2>{t("Politique de remboursement")}</h2>
+          <p>{t("Les remboursements sont régis par notre politique de remboursement.")}</p>
+          <Link to="/remboursement" className="btn btn-outline">
+            {t("Politique de remboursement")}
+          </Link>
+        </div>
+        <div className="card">
           <h2>{t("Contact")}</h2>
           <p>{t("Vous pouvez nous joindre via la page Contact ou WhatsApp.")}</p>
           <Link to="/contact" className="btn btn-outline">

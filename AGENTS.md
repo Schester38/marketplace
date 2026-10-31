@@ -161,6 +161,7 @@ Un produit digital peut être de type **`youtube`** (`products.digital_kind`) au
 - **Paiement** : **manuel uniquement** ; plus de payin/webhook iKeePay ; `paySaleAutomatically()` = no-op de compatibilité.
 - **Retraits/annulation** : `DELETE /api/sales/:id` (seller), `DELETE /api/sales/:id/referral` (parrain), `DELETE /api/sales/:id/delivered` (boutique/livreur) → `hidden_for`, bloqués si commissions impayées. `POST /api/sales/:id/cancel` (code client) restaure le stock. `PATCH /api/sales/:id/status` (shop) : `confirmed` = `shop_confirmed_at` seul (statut reste pending) ; `cancelled` libère le stock.
 - **Facture PDF** : `client/src/components/Invoice.jsx` (jspdf 4.2.1 dynamique), boutons Shop/Seller/Livreur.
+- **Pages légales** : `/cgu`, `/cgv`, `/mentions-legales`, `/donnees`, `/remboursement` (politique de remboursement), `/mboppi-boost/conditions` (conditions MboppiBoost). Toutes traduites (fr/en/es/ar).
 
 ## Tableaux principaux (`server/db.js` `initDb`)
 
