@@ -1277,7 +1277,7 @@ export default function Navbar({ onLogout }) {
     <header className="navbar" role="banner">
       {/* Top bar - Line 1 */}
       <div className="navbar-top">
-        <Link to="/" className="brand" onClick={close} aria-label="MboppiShop - Accueil">
+        <Link to="/?noprod=1" className="brand" onClick={close} aria-label="MboppiShop - Accueil">
           <img src="/navbar-logo.png" alt="MboppiShop" className="brand-logo" />
           <span>MboppiShop</span>
         </Link>

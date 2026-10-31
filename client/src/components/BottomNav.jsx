@@ -44,7 +44,8 @@ export default function BottomNav() {
 
   // Icône de base + variante « active » (remplie) pour un retour visuel clair.
   const item = (to, label, IconBase, IconActive, count) => {
-    const active = path === to;
+    const toPath = to.split("?")[0];
+    const active = path === toPath;
     return (
       <Link
         to={to}
@@ -67,7 +68,7 @@ export default function BottomNav() {
 
   return (
     <nav className="bottom-nav" aria-label={t("Menu principal")}>
-      {item("/", t("Accueil"), IconHome, null, 0)}
+      {item("/?noprod=1", t("Accueil"), IconHome, null, 0)}
       <button
         className={path === "/" ? "active" : ""}
         onClick={goSearch}
