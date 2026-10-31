@@ -6,7 +6,7 @@ import { useLang } from "../i18n.jsx";
 export default function About() {
   const { t } = useLang();
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("À propos de MboppiShop") + " — MboppiShop"}
         description={t(

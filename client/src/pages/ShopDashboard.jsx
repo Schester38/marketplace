@@ -569,7 +569,7 @@ export default function ShopDashboard() {
   const activeSales = (sales || []).filter((s) => s.status !== "delivered");
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Ma boutique") + " — MboppiShop"}
         description={t("Gérez vos produits et suivez vos ventes.")}

@@ -63,7 +63,7 @@ export default function OfferDetail() {
 
   if (error) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <p className="error">{error}</p>
         <Link to="/vitrine-offre" className="btn btn-outline">
           {t("← Retour à la vitrine")}
@@ -74,7 +74,7 @@ export default function OfferDetail() {
 
   if (!offer) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <div className="card page-center">
           <div className="skeleton-block" style={{ height: 260 }}></div>
         </div>
@@ -91,7 +91,7 @@ export default function OfferDetail() {
   const savings = offerSavings(offer);
 
   return (
-    <main className="container narrow">
+    <main className="container boost-page narrow">
       <Seo
         title={offer ? `${offer.name} — MboppiShop` : `${t("Offre")} — MboppiShop`}
         description={

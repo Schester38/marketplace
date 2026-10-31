@@ -18,7 +18,7 @@ export default function NotFound() {
   }, []);
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Page introuvable") + " — MboppiShop"}
         description={t("Page introuvable")}

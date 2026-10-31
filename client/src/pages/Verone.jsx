@@ -156,7 +156,7 @@ export default function Verone() {
   };
 
   return (
-    <main className="container narrow">
+    <main className="container boost-page narrow">
       <Seo title="Verone — MboppiShop" description={t("Gestion des offres")} />
       <section className="dash-header">
         <div>

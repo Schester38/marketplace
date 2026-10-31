@@ -467,7 +467,7 @@ export default function MyAccount() {
   };
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Mon compte") + " — MboppiShop"}
         description={

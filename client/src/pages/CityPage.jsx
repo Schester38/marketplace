@@ -36,7 +36,7 @@ export default function CityPage() {
   }, [slug]);
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Acheter à {city} — Boutiques et produits | MboppiShop", { city })}
         description={t(

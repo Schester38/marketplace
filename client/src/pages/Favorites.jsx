@@ -35,7 +35,7 @@ export default function Favorites() {
 
   if (error) {
     return (
-      <main className="container">
+      <main className="container boost-page">
         <Seo title={t("Mes favoris") + " — MboppiShop"} noindex />
         <h1 className="section-title">❤️ {t("Mes favoris")}</h1>
         <div className="card page-center">
@@ -49,7 +49,7 @@ export default function Favorites() {
   }
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo title={t("Mes favoris") + " — MboppiShop"} noindex />
       <h1 className="section-title">❤️ {t("Mes favoris")}</h1>
       {loading ? (

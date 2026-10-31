@@ -5,7 +5,7 @@ import { useLang } from "../i18n.jsx";
 export default function MentionsLegales() {
   const { t } = useLang();
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo title={t("Mentions légales") + " — MboppiShop"} description={t("Mentions légales")} />
       <section className="hero vitrine-hero">
         <span className="hero-badge">⚖️ {t("Mentions légales")}</span>

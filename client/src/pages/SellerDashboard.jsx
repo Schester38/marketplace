@@ -467,7 +467,7 @@ export default function SellerDashboard() {
   };
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Mon espace vendeur") + " — MboppiShop"}
         description={t("Vendez les produits des boutiques et gagnez des commissions.")}

@@ -87,7 +87,7 @@ export default function AuthGoogle() {
   }, [params, login, navigate, chooseRoles, chooseToken]);
 
   return (
-    <main className="container narrow">
+    <main className="container boost-page narrow">
       <Seo
         title={t("Connexion en cours…") + " — MboppiShop"}
         description={t("Connexion en cours…")}

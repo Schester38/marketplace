@@ -31,7 +31,7 @@ export default function LivreurInscription() {
   const isConnectedOther = user && !isShop;
 
   return (
-    <main className="container narrow">
+    <main className="container boost-page narrow">
       <Seo title={t("Espace livreur") + " — MboppiShop"} noindex />
       <div className="card form-card" style={{ padding: 20 }}>
         {/* Bandeau d'obligation : message frappant demandé. */}

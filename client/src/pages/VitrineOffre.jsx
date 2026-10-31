@@ -112,7 +112,7 @@ export default function VitrineOffre() {
   };
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Vitrine d'offre") + " — MboppiShop"}
         description={t("Découvrez les meilleures offres du moment.")}

@@ -6,7 +6,7 @@ import { useLang } from "../i18n.jsx";
 export default function Remboursement() {
   const { t } = useLang();
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo title={t("Politique de remboursement") + " — MboppiShop"} description={t("Politique de remboursement")} />
       <section className="hero vitrine-hero">
         <span className="hero-badge">💰 {t("Politique de remboursement")}</span>

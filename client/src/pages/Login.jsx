@@ -118,7 +118,7 @@ export default function Login() {
   };
 
   return (
-    <main className="container narrow">
+    <main className="container boost-page narrow">
       <Seo title={t("Connexion") + " — MboppiShop"} description={t("Connexion à MboppiShop")} noindex />
       <div className="card form-card">
         <div className="auth-brand">

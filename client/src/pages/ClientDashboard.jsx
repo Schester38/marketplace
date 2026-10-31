@@ -88,7 +88,7 @@ export default function ClientDashboard() {
   }, []);
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Mon espace client") + " — MboppiShop"}
         description={t("Découvrez les produits et offres des boutiques.")}

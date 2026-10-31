@@ -271,7 +271,7 @@ export default function ProductDetail() {
 
   if (error) {
     return (
-      <main className="container pd-page">
+      <main className="container boost-page pd-page">
         <p className="error">{error}</p>
         <Link to="/" className="btn btn-outline">
           ← {t("Retour aux produits")}
@@ -282,7 +282,7 @@ export default function ProductDetail() {
 
   if (!product || Number(product.id) !== Number(id)) {
     return (
-      <main className="container pd-page">
+      <main className="container boost-page pd-page">
         <div className="card page-center">
           <div className="skeleton-block" style={{ height: 260 }}></div>
         </div>
@@ -438,7 +438,7 @@ export default function ProductDetail() {
   };
 
   return (
-    <main className="container pd-page tw-py-6">
+    <main className="container boost-page pd-page tw-py-6">
       <Seo
         title={`${product.name} — MboppiShop`}
         description={t("Découvrez « {name} » à {price} {symbol} chez {shop} sur MboppiShop.", {

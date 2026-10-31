@@ -1266,7 +1266,7 @@ export default function Admin() {
 
   if (gate) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <Seo title={t("Administration") + " — MboppiShop"} description={t("Administration")} noindex />
         <section className="dash-header">
           <div>
@@ -1297,7 +1297,7 @@ export default function Admin() {
   }
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo title={t("Administration") + " — MboppiShop"} description={t("Administration")} noindex />
       <section className="dash-header">
         <div>

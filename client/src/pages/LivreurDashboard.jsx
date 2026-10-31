@@ -274,7 +274,7 @@ export default function LivreurDashboard() {
   const statsSymbol = countrySymbol(shopCountry);
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Livraison") + " — MboppiShop"}
         description={t("Livrez les articles commandés et confirmez l'achat.")}

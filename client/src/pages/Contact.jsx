@@ -24,7 +24,7 @@ export default function Contact() {
   };
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Contact") + " — MboppiShop"}
         description={t(

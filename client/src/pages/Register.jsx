@@ -108,7 +108,7 @@ export default function Register() {
 
   if (sent) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <Seo title={t("Vérifiez votre email") + " — MboppiShop"} noindex />
         <div className="card form-card" style={{ textAlign: "center" }}>
           <div className="auth-brand">📬</div>
@@ -136,7 +136,7 @@ export default function Register() {
   }
 
   return (
-    <main className="container narrow">
+    <main className="container boost-page narrow">
       <Seo
         title={t("Créer un compte") + " — MboppiShop"}
         description={

@@ -49,7 +49,7 @@ export default function LivreursList() {
   };
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Contacter un livreur") + " — MboppiShop"}
         description={t(

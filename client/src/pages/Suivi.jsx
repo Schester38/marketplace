@@ -197,7 +197,7 @@ export default function Suivi() {
   // --- fin suivi GPS ---
 
   return (
-    <main className="container narrow">
+    <main className="container boost-page narrow">
       <Seo
         title={t("Suivi de commande") + " — MboppiShop"}
         description={t("Suivez l'état de votre commande MboppiShop en temps réel.")}

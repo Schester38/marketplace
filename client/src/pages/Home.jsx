@@ -697,7 +697,7 @@ export default function Home() {
   };
 
   return (
-    <main className="container home-page">
+    <main className="container boost-page home-page">
       <Seo
         title="MboppiShop — Boutiques, vendeurs et offres du moment"
         description="Le marché de votre quartier en ligne : produits des boutiques, créations des créateurs, vente avec commissions, commande avec livraison."

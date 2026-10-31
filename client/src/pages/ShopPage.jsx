@@ -34,7 +34,7 @@ export default function ShopPage() {
 
   if (error) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <p className="error">{error}</p>
         <Link to="/" className="btn btn-outline">
           ← {t("Retour aux produits")}
@@ -45,7 +45,7 @@ export default function ShopPage() {
 
   if (!shop) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <div className="card page-center">
           <div className="skeleton-block" style={{ height: 140 }}></div>
         </div>
@@ -56,7 +56,7 @@ export default function ShopPage() {
   const phone = shop.phone;
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={`${shop.name} — MboppiShop`}
         description={`${shop.name}${shop.location ? " — " + shop.location : ""} sur MboppiShop.`}

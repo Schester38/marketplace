@@ -5,7 +5,7 @@ import { useLang } from "../i18n.jsx";
 export default function Cgv() {
   const { t } = useLang();
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Conditions générales de vente") + " — MboppiShop"}
         description={t("Conditions générales de vente")}

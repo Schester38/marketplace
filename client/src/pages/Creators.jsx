@@ -30,7 +30,7 @@ export default function Creators() {
   useRefreshOnFocus(load);
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Créateurs de MboppiShop")}
         description={t("Découvrez les créateurs de MboppiShop et leurs créations artisanales.")}

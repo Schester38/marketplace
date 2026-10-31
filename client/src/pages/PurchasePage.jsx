@@ -207,7 +207,7 @@ export default function PurchasePage() {
 
   if (notFound) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <div className="card page-center">
           <p className="empty">{t("Produit non trouvé")}</p>
           <Link to="/" className="btn btn-primary">
@@ -220,7 +220,7 @@ export default function PurchasePage() {
 
   if (!product) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <div className="card page-center">
           <div className="skeleton-block" style={{ height: 220 }}></div>
         </div>
@@ -234,7 +234,7 @@ export default function PurchasePage() {
   const displayPrice = flash ? Number(flash.price) : Number(product.price);
 
   return (
-    <main className="container narrow">
+    <main className="container boost-page narrow">
       <Seo
         title={`${t("Acheter")} — ${product.name} — MboppiShop`}
         description={t("Confirmez votre commande avec le code du vendeur.")}

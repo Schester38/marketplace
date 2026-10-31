@@ -5,7 +5,7 @@ import { useLang } from "../i18n.jsx";
 export default function Privacy() {
   const { t } = useLang();
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Données & confidentialité") + " — MboppiShop"}
         description={t("Quelles données collectons-nous ?")}

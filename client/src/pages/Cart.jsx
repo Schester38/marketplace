@@ -213,7 +213,7 @@ export default function Cart() {
 
   if (sales && sales.length > 0) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <Seo title={t("Commande enregistrée") + " — MboppiShop"} noindex />
         <div className="card form-card success-card">
           <div className="auth-brand">✅</div>
@@ -315,7 +315,7 @@ export default function Cart() {
   }
 
   return (
-    <main className="container narrow">
+    <main className="container boost-page narrow">
       <Seo title={t("Mon panier") + " — MboppiShop"} noindex />
       <h1 className="section-title">{t("🛒 Mon panier")}</h1>
 

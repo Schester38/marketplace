@@ -97,7 +97,7 @@ export default function Faq() {
   const { t } = useLang();
   const [open, setOpen] = useState(0);
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo title={t("FAQ") + " — MboppiShop"} description={t("Questions fréquentes")} />
       <section className="hero vitrine-hero">
         <span className="hero-badge">❓ {t("FAQ")}</span>

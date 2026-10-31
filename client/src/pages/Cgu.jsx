@@ -5,7 +5,7 @@ import { useLang } from "../i18n.jsx";
 export default function Cgu() {
   const { t } = useLang();
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Conditions générales d'utilisation") + " — MboppiShop"}
         description={t("Conditions générales d'utilisation")}

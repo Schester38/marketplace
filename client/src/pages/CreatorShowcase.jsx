@@ -34,7 +34,7 @@ export default function CreatorShowcase() {
 
   if (error) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <p className="error">{error}</p>
         <Link to="/createurs" className="btn btn-outline">
           ← {t("Créateurs")}
@@ -45,7 +45,7 @@ export default function CreatorShowcase() {
 
   if (!creator) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <div className="card page-center">
           <div className="skeleton-block" style={{ height: 140 }}></div>
         </div>
@@ -56,7 +56,7 @@ export default function CreatorShowcase() {
   const phone = creator.phone;
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={`${creator.name} — ${t("Créations sur MboppiShop")}`}
         description={`${creator.name}${creator.location ? " — " + creator.location : ""} | ${t("Vitrine de créations sur MboppiShop.")}`}

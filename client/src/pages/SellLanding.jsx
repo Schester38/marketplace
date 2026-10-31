@@ -11,7 +11,7 @@ import SellContent from "../components/SellContent.jsx";
  */
 export default function SellLanding() {
   return (
-    <main className="container sell-landing">
+    <main className="container boost-page sell-landing">
       <Seo
         title={`${"Vendez partout où vous voulez, gardez 100 % de vos ventes."} — MboppiShop`}
         description="0 % de frais de service. Générez votre code vendeur, partagez les liens à vos contacts et encaissez vos commissions sur chaque vente — par téléphone ou WhatsApp."

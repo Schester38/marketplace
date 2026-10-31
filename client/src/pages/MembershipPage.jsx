@@ -121,7 +121,7 @@ export default function MembershipPage() {
   // Accès gratuit actif pour ce rôle → pas de paywall : simple information.
   if (gateFree) {
     return (
-      <main className="container narrow">
+      <main className="container boost-page narrow">
         <Seo
           title={t("Adhésion MboppiShop") + " — MboppiShop"}
           description={t("Payez votre adhésion MboppiShop et accédez à votre espace professionnel.")}
@@ -147,7 +147,7 @@ export default function MembershipPage() {
   }
 
   return (
-    <main className="container narrow">
+    <main className="container boost-page narrow">
       <Seo
         title={t("Adhésion MboppiShop") + " — MboppiShop"}
         description={t("Payez votre adhésion MboppiShop et accédez à votre espace professionnel.")}

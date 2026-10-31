@@ -209,7 +209,7 @@ export default function Support() {
   ];
 
   return (
-    <main className="container">
+    <main className="container boost-page">
       <Seo
         title={t("Je soutiens MboppiShop") + " — MboppiShop"}
         description={t(
