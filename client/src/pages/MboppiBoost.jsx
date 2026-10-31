@@ -1209,6 +1209,11 @@ export default function MboppiBoost() {
           </aside>
           </div>
         </section>
+        <div className="boost-shell tw-mt-6 tw-text-center">
+          <Link to="/mboppi-boost/conditions" className="boost-link">
+            {t("Conditions d'utilisation")} →
+          </Link>
+        </div>
       </div>
     </main>
   );
