@@ -12424,3 +12424,91 @@ a.step {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+/* Founder biography section */
+.founder-bio-section { padding: 2.5rem 0; }
+.founder-bio-name {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.25rem;
+  background: linear-gradient(135deg, #b8860b, #d4af37, #f5d76e, #d4af37);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.founder-bio-role {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #b8860b;
+  margin: 0 0 1.5rem;
+}
+.founder-bio {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) 1fr;
+  gap: 2.5rem;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2.5rem;
+  box-shadow: 0 12px 40px rgba(184, 134, 11, 0.12);
+}
+.founder-bio-photo-wrap { display: flex; justify-content: center; }
+.founder-bio-photo-ring {
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  padding: 8px;
+  background: linear-gradient(135deg, #d4af37, #f5d76e, #b8860b, #d4af37);
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.25), 0 12px 30px rgba(184, 134, 11, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.founder-bio-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: #f5f5f5;
+}
+.founder-bio-text p {
+  line-height: 1.75;
+  color: var(--text-secondary);
+  margin: 0 0 1rem;
+  font-size: 1.02rem;
+}
+.founder-bio-text p:first-child { color: var(--text); }
+.founder-bio-quote {
+  margin: 1.25rem 0 0;
+  padding: 1.25rem 1.5rem;
+  border-left: 4px solid #d4af37;
+  background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.02));
+  border-radius: 0 12px 12px 0;
+}
+.founder-bio-motto {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #b8860b;
+  margin: 0 0 0.25rem;
+}
+.founder-bio-brand {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 0.25rem;
+}
+.founder-bio-tagline {
+  font-style: italic;
+  color: var(--text-secondary);
+  margin: 0;
+}
+@media (max-width: 768px) {
+  .founder-bio { grid-template-columns: 1fr; padding: 1.75rem; gap: 1.75rem; }
+  .founder-bio-photo-ring { width: 200px; height: 200px; }
+  .founder-bio-name { font-size: 1.7rem; }
+}
+

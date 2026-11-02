@@ -2,6 +2,7 @@ import { useState } from "react";
 import Seo from "../components/Seo.jsx";
 import { WHATSAPP_NUMBER, whatsappLink } from "../config.js";
 import { useLang } from "../i18n.jsx";
+import FounderBio from "../components/FounderBio.jsx";
 
 const PHONE = "237672886348";
 
@@ -118,6 +119,7 @@ export default function Contact() {
           </form>
         </div>
       </div>
+      <FounderBio />
     </main>
   );
 }

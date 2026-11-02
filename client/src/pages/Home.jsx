@@ -11,6 +11,7 @@ import Logo from "../components/Logo.jsx";
 import HeroCarousel from "../components/HeroCarousel.jsx";
 import CategoryGrid from "../components/CategoryGrid.jsx";
 import TrustBadges from "../components/TrustBadges.jsx";
+import FounderBio from "../components/FounderBio.jsx";
 import Reveal from "../components/Reveal.jsx";
 // import SocialProof from "../components/SocialProof.jsx"; // réactiver avec la section (voir plus bas)
 import { useLang } from "../i18n.jsx";
@@ -937,6 +938,8 @@ export default function Home() {
                   </div>
                 </div>
               </section>
+
+              <FounderBio />
 
               <section className="section cta-section">
                 <h2>{t("Prêt à rejoindre l'aventure ?")}</h2>
