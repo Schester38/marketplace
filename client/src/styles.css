@@ -12512,3 +12512,41 @@ a.step {
   .founder-bio-name { font-size: 1.7rem; }
 }
 
+/* Founder bio collapse */
+.founder-bio-text-wrap { display: flex; flex-direction: column; }
+.founder-bio-text.collapsed {
+  max-height: 230px;
+  overflow: hidden;
+  position: relative;
+}
+.founder-bio-text.collapsed::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 60px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0), var(--card));
+  pointer-events: none;
+}
+[data-theme="dark"] .founder-bio-text.collapsed::after {
+  background: linear-gradient(to bottom, rgba(26,34,44,0), var(--card));
+}
+.founder-bio-text.expanded { max-height: none; }
+.founder-bio-toggle {
+  align-self: flex-start;
+  margin-top: 0.75rem;
+  background: transparent;
+  border: 1px solid #d4af37;
+  color: #b8860b;
+  padding: 0.45rem 1.1rem;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.founder-bio-toggle:hover {
+  background: #d4af37;
+  color: #fff;
+}
+

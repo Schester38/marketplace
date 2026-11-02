@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useLang } from "../i18n.jsx";
 
 const BIO = `Ndjoum Jean Arthur est un entrepreneur et visionnaire passionné par l'innovation, le commerce et la transformation digitale. Convaincu que le numérique représente une formidable opportunité de développement économique, il s'est donné pour ambition de faciliter les échanges commerciaux et de créer de nouvelles opportunités d'affaires grâce à la technologie.
@@ -17,6 +18,7 @@ Le commerce autrement. Les opportunités pour tous.`;
 
 export default function FounderBio() {
   const { t } = useLang();
+  const [expanded, setExpanded] = useState(false);
   return (
     <section className="section founder-bio-section" aria-labelledby="founder-bio-title">
       <div className="section-head">
@@ -36,24 +38,34 @@ export default function FounderBio() {
             />
           </div>
         </div>
-        <div className="founder-bio-text">
-          {BIO.split("\n\n").map((para, i) => {
-            if (para.includes("ACHETEZ • VENDEZ • GAGNEZ")) {
-              return (
-                <div key={i}>
-                  <p>Sa devise entrepreneuriale résume parfaitement cette vision :</p>
-                  <blockquote className="founder-bio-quote">
-                    <p className="founder-bio-motto">ACHETEZ • VENDEZ • GAGNEZ</p>
-                    <p className="founder-bio-brand">MboppiShop</p>
-                    <p className="founder-bio-tagline">
-                      Le commerce autrement. Les opportunités pour tous.
-                    </p>
-                  </blockquote>
-                </div>
-              );
-            }
-            return <p key={i}>{para}</p>;
-          })}
+        <div className="founder-bio-text-wrap">
+          <div className={`founder-bio-text ${expanded ? "expanded" : "collapsed"}`}>
+            {BIO.split("\n\n").map((para, i) => {
+              if (para.includes("ACHETEZ • VENDEZ • GAGNEZ")) {
+                return (
+                  <div key={i}>
+                    <p>Sa devise entrepreneuriale résume parfaitement cette vision :</p>
+                    <blockquote className="founder-bio-quote">
+                      <p className="founder-bio-motto">ACHETEZ • VENDEZ • GAGNEZ</p>
+                      <p className="founder-bio-brand">MboppiShop</p>
+                      <p className="founder-bio-tagline">
+                        Le commerce autrement. Les opportunités pour tous.
+                      </p>
+                    </blockquote>
+                  </div>
+                );
+              }
+              return <p key={i}>{para}</p>;
+            })}
+          </div>
+          <button
+            type="button"
+            className="founder-bio-toggle"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+          >
+            {expanded ? "Voir moins ↑" : "Voir la suite ↓"}
+          </button>
         </div>
       </div>
     </section>
