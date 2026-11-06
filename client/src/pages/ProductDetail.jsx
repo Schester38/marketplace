@@ -23,6 +23,9 @@ import {
   IconShieldCheck,
   IconPackage,
   IconLayers,
+  IconClock,
+  IconLock,
+  IconPhone,
 } from "../components/icons.jsx";
 
 /** URL absolue pour les métadonnées sociales et le partage d'une image produit. */
@@ -33,6 +36,49 @@ function absoluteProductImage(image) {
   } catch {
     return null;
   }
+}
+
+/** Compte à rebours des offres éclair (mise à jour chaque seconde). */
+function FlashCountdown({ endsAt }) {
+  const { t } = useLang();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const end = new Date(endsAt).getTime();
+  if (!end || Number.isNaN(end)) return null;
+  const left = Math.max(0, end - now);
+  if (left <= 0) {
+    return <p className="pd-countdown pd-countdown-ended">⏱ {t("Cette offre est terminée")}</p>;
+  }
+  const totalSec = Math.floor(left / 1000);
+  const days = Math.floor(totalSec / 86400);
+  const hours = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  const units = [
+    ...(days > 0 ? [{ value: pad(days), unit: t("j") }] : []),
+    { value: pad(hours), unit: t("h") },
+    { value: pad(minutes), unit: t("min") },
+    { value: pad(seconds), unit: t("s") },
+  ];
+  return (
+    <div className="pd-countdown" role="timer" aria-label={t("L'offre se termine dans")}>
+      <span className="pd-countdown-label">
+        <IconClock size={15} /> {t("L'offre se termine dans")}
+      </span>
+      <span className="pd-countdown-units">
+        {units.map((u, i) => (
+          <span className="pd-countdown-box" key={`${u.unit}-${i}`}>
+            <strong>{u.value}</strong>
+            <small>{u.unit}</small>
+          </span>
+        ))}
+      </span>
+    </div>
+  );
 }
 
 export default function ProductDetail() {
@@ -324,7 +370,9 @@ export default function ProductDetail() {
                   : b
               );
             } catch (e) {
-              setDBuy((b) => (b && b.saleId === saleId ? { ...b, stage: "ready", err: e.message } : b));
+              setDBuy((b) =>
+                b && b.saleId === saleId ? { ...b, stage: "ready", err: e.message } : b
+              );
             }
           } else {
             setDBuy((b) => (b && b.saleId === saleId ? { ...b, stage: "ready", err: "" } : b));
@@ -424,6 +472,28 @@ export default function ProductDetail() {
         : Number(product.old_price)
   );
   const hasPromo = oldPrice > 0 && oldPrice > displayPrice;
+  const promoPct = hasPromo ? Math.round((1 - displayPrice / oldPrice) * 100) : 0;
+  const isCreator = product.shop_role === "creator" || product.is_digital === true;
+
+  const scrollToReviews = () => {
+    const el = document.getElementById("avis");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const addToCartNow = () => {
+    addToCart(product, qty);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  };
+
+  const buyNow = () => {
+    if (sellerCode) {
+      navigate(`/acheter/${product.id}?code=${sellerCode}`);
+      return;
+    }
+    addToCart(product, qty);
+    navigate("/panier");
+  };
 
   const removeProduct = async () => {
     if (!window.confirm(t("Retirer « {name} » définitivement ?", { name: product.name }))) return;
@@ -438,7 +508,7 @@ export default function ProductDetail() {
   };
 
   return (
-    <main className="container boost-page pd-page tw-py-6">
+    <main className="container boost-page pd-page pd-funnel">
       <Seo
         title={`${product.name} — MboppiShop`}
         description={t("Découvrez « {name} » à {price} {symbol} chez {shop} sur MboppiShop.", {
@@ -449,12 +519,33 @@ export default function ProductDetail() {
         })}
         ogImage={absoluteProductImage(firstProductImage(product))}
       />
-      <Link to="/" className="btn btn-outline tw-shadow-sm tw-rounded-xl tw-mb-4" style={{ marginBottom: 16 }}>
-        ← {t("Retour aux produits")}
-      </Link>
+
+      <div className="pd-funnel-top">
+        <nav className="pd-breadcrumb" aria-label={t("Fil d'Ariane")}>
+          <Link to="/">{t("Accueil")}</Link>
+          {product.category && (
+            <>
+              <span aria-hidden="true">/</span>
+              <Link
+                to={`/?type=${product.is_digital ? "digital" : "physical"}&cat=${encodeURIComponent(product.category)}`}
+              >
+                {categoryEmoji(product.category)} {t(product.category)}
+              </Link>
+            </>
+          )}
+          <span aria-hidden="true">/</span>
+          <span className="pd-breadcrumb-current" aria-current="page">
+            {product.name}
+          </span>
+        </nav>
+        <span className="pd-secure-pill">
+          <IconLock size={14} />{" "}
+          {product.is_digital ? t("Paiement en ligne sécurisé") : t("Achat sécurisé")}
+        </span>
+      </div>
 
       {sellerCode && (
-        <div className="seller-cta card tw-rounded-2xl tw-shadow-md tw-border-l-4 tw-border-l-emerald-500">
+        <div className="seller-cta card pd-seller-banner">
           <div>
             <strong>
               <Logo className="logo-inline" />{" "}
@@ -473,157 +564,200 @@ export default function ProductDetail() {
         </div>
       )}
 
-      <div className="pd-layout">
-        {/* Galerie façon Amazon : vignettes verticales (desktop), swipe + points (mobile) */}
-        <div className="pd-gallery tw-rounded-2xl tw-overflow-hidden tw-shadow-md">
-          {photos.length > 1 && photoShown && (
-            <div className="pd-thumbs" aria-label={t("Photos du produit")}>
-              {photos.map((photo, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className={`pd-thumb ${i === lightboxIndex ? "active" : ""}`}
-                  onClick={() => setLightboxIndex(i)}
-                  aria-label={`${t("Photo")} ${i + 1}`}
-                  aria-current={i === lightboxIndex}
-                >
-                  <img src={thumbPhotos[i] || photo} alt="" loading="lazy" decoding="async" />
-                </button>
-              ))}
+      <section className="pd-hero">
+        <div className="pd-hero-media">
+          {(flash || hasPromo || product.is_digital) && (
+            <div className="pd-media-badges">
+              {flash && (
+                <span className="pd-media-badge pd-media-flash">⚡ -{flash.discount_percent}%</span>
+              )}
+              {hasPromo && !flash && (
+                <span className="pd-media-badge pd-media-flash">-{promoPct}%</span>
+              )}
+              {product.is_digital && (
+                <span className="pd-media-badge pd-media-digital">📁 {t("Produit digital")}</span>
+              )}
             </div>
           )}
-          <div
-            ref={pdMainRef}
-            className={`pd-main${photos.length > 0 && photoShown ? " zoomable" : ""}`}
-            onClick={() => photos.length > 0 && photoShown && setLightbox(true)}
-            onMouseMove={photos.length > 0 && photoShown ? onPdMouseMove : undefined}
-            onTouchStart={onPdTouchStart}
-            onTouchEnd={onPdTouchEnd}
-          >
-            {photos.length > 0 ? (
-              photoShown ? (
-                <div
-                  className="pd-track"
-                  style={{ transform: `translateX(${pdRtl * -lightboxIndex * 100}%)` }}
-                >
-                  {photos.map((photo, i) => (
-                    <div className="pd-slide" key={i}>
-                      <img
-                        src={photo}
-                        alt={i === lightboxIndex ? product.name : ""}
-                        loading={i === 0 ? "eager" : "lazy"}
-                        decoding="async"
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className="btn btn-primary lite-photo-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPhotoShown(true);
-                  }}
-                >
-                  🖼️ {t("Charger la photo")}
-                </button>
-              )
-            ) : (
-              <span className="pd-empty">
-                <IconPackage size={44} />
-              </span>
-            )}
+          {/* Galerie façon Amazon : vignettes verticales (desktop), swipe + points (mobile) */}
+          <div className="pd-gallery">
             {photos.length > 1 && photoShown && (
-              <>
-                <span className="offer-photo-count">
-                  {t("{n} photos — cliquez pour agrandir", { n: photos.length })}
-                </span>
-                <div className="pd-dots" aria-hidden="true">
-                  {photos.map((_, i) => (
-                    <span key={i} className={`pd-dot ${i === lightboxIndex ? "active" : ""}`} />
-                  ))}
-                </div>
-              </>
+              <div className="pd-thumbs" aria-label={t("Photos du produit")}>
+                {photos.map((photo, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`pd-thumb ${i === lightboxIndex ? "active" : ""}`}
+                    onClick={() => setLightboxIndex(i)}
+                    aria-label={`${t("Photo")} ${i + 1}`}
+                    aria-current={i === lightboxIndex}
+                  >
+                    <img src={thumbPhotos[i] || photo} alt="" loading="lazy" decoding="async" />
+                  </button>
+                ))}
+              </div>
             )}
+            <div
+              ref={pdMainRef}
+              className={`pd-main${photos.length > 0 && photoShown ? " zoomable" : ""}`}
+              onClick={() => photos.length > 0 && photoShown && setLightbox(true)}
+              onMouseMove={photos.length > 0 && photoShown ? onPdMouseMove : undefined}
+              onTouchStart={onPdTouchStart}
+              onTouchEnd={onPdTouchEnd}
+            >
+              {photos.length > 0 ? (
+                photoShown ? (
+                  <div
+                    className="pd-track"
+                    style={{ transform: `translateX(${pdRtl * -lightboxIndex * 100}%)` }}
+                  >
+                    {photos.map((photo, i) => (
+                      <div className="pd-slide" key={i}>
+                        <img
+                          src={photo}
+                          alt={i === lightboxIndex ? product.name : ""}
+                          loading={i === 0 ? "eager" : "lazy"}
+                          decoding="async"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-primary lite-photo-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPhotoShown(true);
+                    }}
+                  >
+                    🖼️ {t("Charger la photo")}
+                  </button>
+                )
+              ) : (
+                <span className="pd-empty">
+                  <IconPackage size={44} />
+                </span>
+              )}
+              {photos.length > 1 && photoShown && (
+                <>
+                  <span className="offer-photo-count">
+                    {t("{n} photos — cliquez pour agrandir", { n: photos.length })}
+                  </span>
+                  <div className="pd-dots" aria-hidden="true">
+                    {photos.map((_, i) => (
+                      <span key={i} className={`pd-dot ${i === lightboxIndex ? "active" : ""}`} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="pd-info offer-body">
-          <div className="offer-tags">
+        <div className="pd-hero-content">
+          <div className="pd-eyebrow">
             {product.category && (
-              <span className="badge badge-cat">
+              <Link
+                to={`/?type=${product.is_digital ? "digital" : "physical"}&cat=${encodeURIComponent(product.category)}`}
+                className="pd-cat-pill"
+              >
                 {categoryEmoji(product.category)} {t(product.category)}
-              </span>
+              </Link>
             )}
-            {/* Produit DIGITAL : le client reçoit un fichier à télécharger
-                (URL signée du bucket privé) après confirmation du paiement. */}
+            {/* Produit DIGITAL : fichier privé ou vidéo protégée, accessible
+                après confirmation du paiement. */}
             {product.is_digital && (
               <span
-                className="badge badge-warn"
+                className="pd-type-pill"
                 title={t("Fichier à télécharger après confirmation du paiement")}
               >
                 📁 {t("Produit digital")}
               </span>
             )}
+            {Number(product.sold) > 0 && (
+              <span className="pd-type-pill pd-type-sold">
+                🔥 {t("{n} vendus", { n: product.sold })}
+              </span>
+            )}
           </div>
-          <h2>{product.name}</h2>
-          {product.review_count > 0 && (
-            <p className="product-rating">
-              <span className="stars stars-16">{"★".repeat(Math.round(product.rating_avg))}</span>
-              <strong>{product.rating_avg} / 5</strong>
-              <span className="hint"> ({t("{n} avis", { n: product.review_count })})</span>
-            </p>
-          )}
+
+          <h1 className="pd-title">{product.name}</h1>
+
+          <div className="pd-rating-line">
+            {product.review_count > 0 ? (
+              <>
+                <span className="stars stars-16" aria-hidden="true">
+                  {"★".repeat(Math.round(product.rating_avg))}
+                </span>
+                <strong>{Number(product.rating_avg).toFixed(1)}/5</strong>
+                <button type="button" className="pd-rating-link" onClick={scrollToReviews}>
+                  {t("{n} avis", { n: product.review_count })}
+                </button>
+              </>
+            ) : (
+              <span className="pd-no-rating">{t("Soyez le premier à laisser un avis")}</span>
+            )}
+          </div>
+
           {product.review_count > 0 && (
             <ReviewQuote productId={product.id} count={product.review_count} />
           )}
-          <p className="product-shop">
+
+          {product.description && <p className="pd-lead">{product.description}</p>}
+
+          <div className="pd-seller-line">
             <Link
-              to={
-                // Produit DIGITAL → toujours la vitrine du CRÉATEUR.
-                product.shop_role === "creator" || product.is_digital === true
-                  ? `/createur/${product.shop_id}`
-                  : `/boutique/${product.shop_id}`
-              }
-              className="shop-name-text"
+              to={isCreator ? `/createur/${product.shop_id}` : `/boutique/${product.shop_id}`}
+              className="pd-seller-avatar"
+              aria-label={product.shop_name}
             >
-              {product.shop_avatar && (
+              {product.shop_avatar ? (
                 <img
-                  className="card-shop-avatar"
                   src={proxyPhotoUrl(product.shop_avatar)}
                   alt=""
                   loading="lazy"
                   decoding="async"
                 />
-              )}
-              {product.shop_role === "creator" || product.is_digital === true
-                ? t("Créateur : {shop}", { shop: product.shop_name })
-                : t("Boutique : {shop}", { shop: product.shop_name })}
-              {product.shop_verified && (
-                <span
-                  className="badge badge-verified"
-                  title={
-                    product.shop_role === "creator" || product.is_digital === true
-                      ? t("Compte vérifié")
-                      : t("Boutique vérifiée")
-                  }
-                >
-                  ✓{" "}
-                  {product.shop_role === "creator" || product.is_digital === true
-                    ? t("Vérifié")
-                    : t("Vérifiée")}
+              ) : (
+                <span>
+                  {String(product.shop_name || "M")
+                    .charAt(0)
+                    .toUpperCase()}
                 </span>
               )}
             </Link>
-            {product.shop_location ? (
-              <span className="shop-loc"> · 📍 {product.shop_location}</span>
-            ) : null}
-          </p>
-          {/* Produit DIGITAL : le créateur (ou la boutique) est mis en avant avec
-              ses coordonnées directes — téléphone et WhatsApp cliquables. */}
+            <div className="pd-seller-meta">
+              <span className="pd-seller-label">{isCreator ? t("Créateur") : t("Boutique")}</span>
+              <Link
+                to={isCreator ? `/createur/${product.shop_id}` : `/boutique/${product.shop_id}`}
+                className="pd-seller-name"
+              >
+                {product.shop_name}
+                {product.shop_verified && (
+                  <span
+                    className="badge badge-verified"
+                    title={isCreator ? t("Compte vérifié") : t("Boutique vérifiée")}
+                  >
+                    ✓ {isCreator ? t("Vérifié") : t("Vérifiée")}
+                  </span>
+                )}
+              </Link>
+              {product.shop_location && (
+                <span className="pd-seller-loc">📍 {product.shop_location}</span>
+              )}
+            </div>
+            <Link
+              to={isCreator ? `/createur/${product.shop_id}` : `/boutique/${product.shop_id}`}
+              className="pd-seller-link"
+            >
+              {isCreator ? t("Voir le créateur") : t("Voir la boutique")} →
+            </Link>
+          </div>
+
+          {/* Produit DIGITAL : coordonnées directes du créateur. */}
           {product.is_digital && (product.shop_phone || product.contact) && (
-            <p className="product-shop product-creator-contact">
+            <div className="pd-contact-row">
               {product.shop_phone && (
                 <a className="meta-chip" href={`tel:${product.shop_phone}`}>
                   📞 {product.shop_phone}
@@ -647,228 +781,532 @@ export default function ProductDetail() {
               {product.contact && !product.shop_phone && (
                 <span className="meta-chip">📞 {product.contact}</span>
               )}
+            </div>
+          )}
+
+          {product.warranty && (
+            <p className="pd-warranty-note">
+              🛡️ {t("Garantie : {warranty}", { warranty: product.warranty })}
             </p>
           )}
-          {product.description && <p>{product.description}</p>}
-          <div className="product-meta">
-            {Number(product.sold) > 0 && (
-              <span className="meta-chip">🔥 {t("{n} vendus", { n: product.sold })}</span>
-            )}
-            {product.warranty && (
-              <span className="meta-chip">
-                🛡️ {t("Garantie : {warranty}", { warranty: product.warranty })}
-              </span>
-            )}
-            {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
+
+          {/* Bloc d'achat principal */}
+          <aside className="pd-offer-card" id="achat" aria-label={t("Achat")}>
+            <div className="pd-offer-card-inner">
+              <div className="pd-offer-head">
+                <div className="pd-price-block">
+                  <span className="pd-price-label">{t("Prix")}</span>
+                  <div className="pd-price-line">
+                    {hasPromo && (
+                      <span className="pd-old-price">
+                        {formatMoney(oldPrice)} {symbol}
+                      </span>
+                    )}
+                    <span className={`pd-price ${flash ? "price-flash" : ""}`}>
+                      {formatMoney(displayPrice)} <small>{symbol}</small>
+                    </span>
+                    {hasPromo && <span className="pd-discount">-{promoPct}%</span>}
+                  </div>
+                  <PriceEquivalent
+                    amount={displayPrice}
+                    fromCode={product.currency || product.shop_country}
+                    className="price-conv price-conv-lg"
+                  />
+                </div>
+                {hasPromo && (
+                  <span className="pd-save-pill">
+                    {t("Économisez {amount} {symbol}", {
+                      amount: formatMoney(oldPrice - displayPrice),
+                      symbol,
+                    })}
+                  </span>
+                )}
+              </div>
+
+              {flash && (
+                <>
+                  <FlashCountdown endsAt={flash.ends_at} />
+                  <p className="pd-flash-note">
+                    ⚡ {t("Offre éclair")} — {t("{n}% de réduction", { n: flash.discount_percent })}
+                  </p>
+                </>
+              )}
+
+              <p
+                className={`pd-stock ${
+                  product.is_digital || inStock > 5 ? "" : inStock > 0 ? "low" : "out"
+                }`}
+              >
+                <span className="pd-stock-dot" aria-hidden="true" />
+                {product.is_digital
+                  ? t("Disponibilité : illimitée")
+                  : inStock > 0
+                    ? inStock <= 5
+                      ? t("Plus que {n} en stock", { n: inStock })
+                      : t("En stock — {n} disponibles", { n: inStock })
+                    : t("Rupture de stock")}
+              </p>
+
+              <ul className="pd-assurance">
+                {product.is_digital ? (
+                  <>
+                    <li>
+                      <IconPackage size={15} /> {t("Téléchargement immédiat après paiement")}
+                    </li>
+                    <li>
+                      <IconShieldCheck size={15} /> {t("Satisfaction garantie")}
+                    </li>
+                  </>
+                ) : (
+                  <>
+                    <li>
+                      <IconTruck size={15} />{" "}
+                      {deliveryFee > 0
+                        ? t("Livraison {price} {symbol}", {
+                            price: formatMoney(deliveryFee),
+                            symbol,
+                          })
+                        : t("Livraison gratuite")}
+                    </li>
+                    <li>
+                      <IconBanknote size={15} /> {t("Paiement à la livraison")}
+                    </li>
+                    <li>
+                      <IconShieldCheck size={15} /> {t("Satisfaction garantie")}
+                    </li>
+                  </>
+                )}
+              </ul>
+
+              {product.is_digital && isPrivilegedDigital && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-block pd-cta-main"
+                    onClick={directDigitalAccess}
+                    disabled={directBusy}
+                  >
+                    {directBusy
+                      ? `⏳ ${t("Préparation…")}`
+                      : product.digital_kind === "youtube"
+                        ? `▶ ${t("Regarder la vidéo")}`
+                        : `⬇️ ${t("Télécharger")}`}
+                  </button>
+                  {directVideoSrc && (
+                    <div className="protected-video-frame" style={{ marginTop: 12 }}>
+                      <iframe
+                        src={directVideoSrc}
+                        title={product.name}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        referrerPolicy="strict-origin-when-cross-origin"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {product.is_digital && !isPrivilegedDigital && (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-block pd-cta-main"
+                    onClick={startDigitalBuy}
+                    disabled={Boolean(dBuy)}
+                  >
+                    {product.digital_kind === "youtube"
+                      ? `▶ ${t("Regarder la vidéo")}`
+                      : `⬇️ ${t("Télécharger")}`}{" "}
+                    — {formatMoney(displayPrice)} {symbol}
+                  </button>
+                  <p className="pd-cta-note">
+                    🔒 {t("Paiement sécurisé, accès immédiat après confirmation.")}
+                  </p>
+                  {/* Moyens de paiement acceptés (iKeePay) : bandeau défilant. */}
+                  <PaymentMethodsStrip />
+                </>
+              )}
+
+              {!product.is_digital && inStock > 0 && !isOwner && (
+                <>
+                  <div className="pd-qty-row">
+                    <span className="pd-qty-label">{t("Quantité")}</span>
+                    <div className="qty-stepper">
+                      <button
+                        type="button"
+                        onClick={() => setQty((q) => Math.max(1, q - 1))}
+                        aria-label="-"
+                      >
+                        −
+                      </button>
+                      <span>{qty}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setQty((q) => Math.min(Number(product.quantity) || 99, q + 1))
+                        }
+                        aria-label="+"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-block pd-cta-main"
+                    onClick={buyNow}
+                  >
+                    ⚡ {t("Acheter maintenant")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-block pd-cta-secondary"
+                    onClick={addToCartNow}
+                  >
+                    {added ? `✓ ${t("Ajouté au panier")}` : `🛒 ${t("Ajouter au panier")}`}
+                  </button>
+                </>
+              )}
+
+              <div className="detail-actions">
+                <button
+                  type="button"
+                  className={`btn btn-outline ${isFav(product.id) ? "fav-on" : ""}`}
+                  onClick={() => {
+                    if (!user) {
+                      navigate("/login", { state: { from: location.pathname } });
+                      return;
+                    }
+                    toggleFav(product.id);
+                  }}
+                >
+                  {isFav(product.id)
+                    ? "❤️ " + t("Retirer des favoris")
+                    : "🤍 " + t("Ajouter aux favoris")}
+                </button>
+                {(!isOwner || !product.is_digital) && (
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={async () => {
+                      const url = `${BASE_URL}/produit/${product.id}`;
+                      const text = t("Découvrez « {name} » à {price} {symbol} sur MboppiShop.", {
+                        name: product.name,
+                        price: formatMoney(displayPrice),
+                        symbol,
+                      });
+                      try {
+                        if (navigator.share) {
+                          await nativeShareWithImage({
+                            title: product.name,
+                            text,
+                            url,
+                            imageUrl: absoluteProductImage(firstProductImage(product)),
+                          });
+                        } else {
+                          await navigator.clipboard.writeText(url);
+                          setShared(true);
+                          setTimeout(() => setShared(false), 2000);
+                        }
+                      } catch {
+                        /* annulé par l'utilisateur */
+                      }
+                    }}
+                  >
+                    {shared ? t("Lien copié !") : "🔗 " + t("Partager")}
+                  </button>
+                )}
+              </div>
+
+              {isOwner && (
+                <button
+                  className="btn btn-danger btn-block"
+                  onClick={removeProduct}
+                  disabled={deleting}
+                >
+                  {deleting ? t("Retrait…") : t("Rétirer ce produit")}
+                </button>
+              )}
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section className="pd-trust-strip" aria-label={t("Nos engagements")}>
+        <div className="pd-trust-item">
+          <span className="pd-trust-icon">
+            {product.is_digital ? <IconLock size={18} /> : <IconBanknote size={18} />}
+          </span>
+          <div>
+            <strong>
+              {product.is_digital ? t("Paiement sécurisé") : t("Paiement à la livraison")}
+            </strong>
+            <span>
+              {product.is_digital
+                ? t("Transaction chiffrée et vérifiée")
+                : t("Réglez à la réception")}
+            </span>
           </div>
         </div>
+        <div className="pd-trust-item">
+          <span className="pd-trust-icon">
+            {product.is_digital ? <IconPackage size={18} /> : <IconTruck size={18} />}
+          </span>
+          <div>
+            <strong>
+              {product.is_digital
+                ? t("Accès immédiat")
+                : deliveryFee > 0
+                  ? t("Livraison {price} {symbol}", {
+                      price: formatMoney(deliveryFee),
+                      symbol,
+                    })
+                  : t("Livraison offerte")}
+            </strong>
+            <span>
+              {product.is_digital ? t("Dès confirmation du paiement") : t("Suivi de commande")}
+            </span>
+          </div>
+        </div>
+        <div className="pd-trust-item">
+          <span className="pd-trust-icon">
+            <IconShieldCheck size={18} />
+          </span>
+          <div>
+            <strong>{t("Satisfaction garantie")}</strong>
+            <span>{t("Achat en toute confiance")}</span>
+          </div>
+        </div>
+        <div className="pd-trust-item">
+          <span className="pd-trust-icon">
+            <IconPhone size={18} />
+          </span>
+          <div>
+            <strong>{t("Assistance MboppiShop")}</strong>
+            <span>{t("Un interlocuteur à votre écoute")}</span>
+          </div>
+        </div>
+      </section>
 
-        {/* Bloc d'achat collant sur desktop (sticky) */}
-        <aside className="pd-buybox tw-shadow-lg tw-rounded-2xl tw-border tw-border-slate-200 dark:tw-border-slate-700" aria-label={t("Achat")}>
-          <div className="pd-buybox-inner">
-            <div className="offer-prices">
-              {hasPromo && (
-                <span className="old-price">
-                  {formatMoney(oldPrice)} {symbol}
+      <section className="pd-details-grid">
+        <div className="pd-main-col">
+          <article className="pd-panel">
+            <span className="pd-panel-kicker">{t("À propos")}</span>
+            <h2>{t("Description du produit")}</h2>
+            <p className="pd-description">
+              {product.description || t("Aucune description fournie pour ce produit.")}
+            </p>
+            <div className="product-meta">
+              {Number(product.sold) > 0 && (
+                <span className="meta-chip">🔥 {t("{n} vendus", { n: product.sold })}</span>
+              )}
+              {product.warranty && (
+                <span className="meta-chip">
+                  🛡️ {t("Garantie : {warranty}", { warranty: product.warranty })}
                 </span>
               )}
-              <span className={`promo-price ${flash ? "price-flash" : ""}`}>
-                {formatMoney(displayPrice)} {symbol}
-              </span>
-              <PriceEquivalent
-                amount={displayPrice}
-                fromCode={product.currency || product.shop_country}
-                className="price-conv price-conv-lg"
-              />
+              {product.contact && <span className="meta-chip">📞 {product.contact}</span>}
             </div>
-            {flash && (
-              <p className="flash-detail-hint">
-                ⚡ {t("Offre éclair")} — {t("{n}% de réduction", { n: flash.discount_percent })} ·{" "}
-                {t("se termine le {date}", { date: new Date(flash.ends_at).toLocaleString() })}
-              </p>
-            )}
-            <p className={`offer-qty ${inStock > 0 ? "" : "out"}`}>
-              {product.is_digital
-                ? t("Disponibilité : illimitée")
-                : inStock > 0
-                  ? t("Disponibilité : {n} en stock", { n: inStock })
-                  : t("Rupture de stock")}
-            </p>
+          </article>
 
-            <ul className="pd-assurance">
-              {product.is_digital ? (
-                <>
-                  <li>
-                    <IconPackage size={15} /> {t("Téléchargement immédiat après paiement")}
-                  </li>
-                  <li>
-                    <IconShieldCheck size={15} /> {t("Satisfaction garantie")}
-                  </li>
-                </>
-              ) : (
-                <>
-                  <li>
-                    <IconTruck size={15} />{" "}
-                    {deliveryFee > 0
-                      ? t("Livraison {price} {symbol}", { price: formatMoney(deliveryFee), symbol })
-                      : t("Livraison gratuite")}
-                  </li>
-                  <li>
-                    <IconBanknote size={15} /> {t("Paiement à la livraison")}
-                  </li>
-                  <li>
-                    <IconShieldCheck size={15} /> {t("Satisfaction garantie")}
-                  </li>
-                </>
-              )}
-            </ul>
-
-            {product.is_digital && isPrivilegedDigital && (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-cart btn-block"
-                  onClick={directDigitalAccess}
-                  disabled={directBusy}
-                >
-                  {directBusy
-                    ? `⏳ ${t("Préparation…")}`
-                    : product.digital_kind === "youtube"
-                      ? `▶ ${t("Regarder la vidéo")}`
-                      : `⬇️ ${t("Télécharger")}`}
-                </button>
-                {directVideoSrc && (
-                  <div className="protected-video-frame" style={{ marginTop: 12 }}>
-                    <iframe
-                      src={directVideoSrc}
-                      title={product.name}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                      referrerPolicy="strict-origin-when-cross-origin"
-                    />
-                  </div>
-                )}
-              </>
-            )}
-
-            {product.is_digital && !isPrivilegedDigital && (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-cart btn-block"
-                  onClick={startDigitalBuy}
-                  disabled={Boolean(dBuy)}
-                >
-                  ⬇️ {t("Télécharger")} — {formatMoney(displayPrice)} {symbol}
-                </button>
-                {/* Moyens de paiement acceptés (iKeePay) : bandeau défilant. */}
-                <PaymentMethodsStrip />
-              </>
-            )}
-
-            {!product.is_digital && inStock > 0 && !isOwner && (
-              <div className="buy-row">
-                <div className="qty-stepper">
-                  <button
-                    type="button"
-                    onClick={() => setQty((q) => Math.max(1, q - 1))}
-                    aria-label="-"
-                  >
-                    −
-                  </button>
-                  <span>{qty}</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setQty((q) =>
-                        Math.min(product.is_digital ? 9999 : Number(product.quantity) || 99, q + 1)
-                      )
-                    }
-                    aria-label="+"
-                  >
-                    +
-                  </button>
+          <article className="pd-panel">
+            <h2>{t("Détails du produit")}</h2>
+            <dl className="pd-specs">
+              {product.category && (
+                <div className="pd-spec">
+                  <dt>{t("Catégorie")}</dt>
+                  <dd>
+                    {categoryEmoji(product.category)} {t(product.category)}
+                  </dd>
                 </div>
-                <button
-                  className="btn btn-cart"
-                  onClick={() => {
-                    addToCart(product, qty);
-                    setAdded(true);
-                    setTimeout(() => setAdded(false), 1500);
-                  }}
-                >
-                  {added ? t("Ajouté au panier ✓") : `${t("Ajouter au panier")}`}
-                </button>
-              </div>
-            )}
-
-            <div className="detail-actions">
-              <button
-                type="button"
-                className={`btn btn-outline ${isFav(product.id) ? "fav-on" : ""}`}
-                onClick={() => {
-                  if (!user) {
-                    navigate("/login", { state: { from: location.pathname } });
-                    return;
-                  }
-                  toggleFav(product.id);
-                }}
-              >
-                {isFav(product.id)
-                  ? "❤️ " + t("Retirer des favoris")
-                  : "🤍 " + t("Ajouter aux favoris")}
-              </button>
-              {(!isOwner || !product.is_digital) && (
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={async () => {
-                    const url = `${BASE_URL}/produit/${product.id}`;
-                    const text = t("Découvrez « {name} » à {price} {symbol} sur MboppiShop.", {
-                      name: product.name,
-                      price: formatMoney(displayPrice),
-                      symbol,
-                    });
-                    try {
-                      if (navigator.share) {
-                        await nativeShareWithImage({
-                          title: product.name,
-                          text,
-                          url,
-                          imageUrl: absoluteProductImage(firstProductImage(product)),
-                        });
-                      } else {
-                        await navigator.clipboard.writeText(url);
-                        setShared(true);
-                        setTimeout(() => setShared(false), 2000);
-                      }
-                    } catch {
-                      /* annulé par l'utilisateur */
-                    }
-                  }}
-                >
-                  {shared ? t("Lien copié !") : "🔗 " + t("Partager")}
-                </button>
               )}
-            </div>
+              <div className="pd-spec">
+                <dt>{t("Type")}</dt>
+                <dd>
+                  {product.is_digital
+                    ? t("Produit digital — accès immédiat")
+                    : t("Produit physique")}
+                </dd>
+              </div>
+              <div className="pd-spec">
+                <dt>{t("Disponibilité")}</dt>
+                <dd>
+                  {product.is_digital
+                    ? t("Illimitée")
+                    : inStock > 0
+                      ? t("{n} en stock", { n: inStock })
+                      : t("Rupture de stock")}
+                </dd>
+              </div>
+              <div className="pd-spec">
+                <dt>{isCreator ? t("Créateur") : t("Boutique")}</dt>
+                <dd>{product.shop_name}</dd>
+              </div>
+              <div className="pd-spec">
+                <dt>{t("Référence")}</dt>
+                <dd>#{product.id}</dd>
+              </div>
+              {product.warranty && (
+                <div className="pd-spec">
+                  <dt>{t("Garantie")}</dt>
+                  <dd>{product.warranty}</dd>
+                </div>
+              )}
+              <div className="pd-spec">
+                <dt>{t("Livraison")}</dt>
+                <dd>
+                  {product.is_digital
+                    ? t("Téléchargement ou accès en ligne")
+                    : deliveryFee > 0
+                      ? t("Livraison {price} {symbol} — confirmée avec la boutique.", {
+                          price: formatMoney(deliveryFee),
+                          symbol,
+                        })
+                      : t("Livraison offerte — confirmée avec la boutique.")}
+                </dd>
+              </div>
+              <div className="pd-spec">
+                <dt>{t("Paiement")}</dt>
+                <dd>
+                  {product.is_digital
+                    ? t("En ligne sécurisé (iKeePay)")
+                    : t("À la livraison (espèces ou Mobile Money)")}
+                </dd>
+              </div>
+            </dl>
+          </article>
 
-            {isOwner && (
-              <button
-                className="btn btn-danger btn-block"
-                onClick={removeProduct}
-                disabled={deleting}
+          <article className="pd-panel pd-faq">
+            <h2>{t("Questions fréquentes")}</h2>
+            <details>
+              <summary>
+                {product.is_digital
+                  ? t("Comment vais-je recevoir mon produit ?")
+                  : t("Comment vais-je recevoir ma commande ?")}
+              </summary>
+              <p>
+                {product.is_digital
+                  ? t(
+                      "Le fichier ou la vidéo protégée s'ouvre immédiatement après la confirmation du paiement. Vous le retrouvez aussi dans votre espace client et sur la page de suivi."
+                    )
+                  : t(
+                      "La boutique prépare votre commande et le livreur vous contacte. Les frais de livraison sont confirmés directement avec la boutique."
+                    )}
+              </p>
+            </details>
+            <details>
+              <summary>{t("Quels moyens de paiement sont acceptés ?")}</summary>
+              <p>
+                {product.is_digital
+                  ? t(
+                      "Carte bancaire (Visa / Mastercard), USDT et Mobile Money via iKeePay — transaction chiffrée et vérifiée."
+                    )
+                  : t("Le paiement se fait à la livraison, en espèces ou par Mobile Money.")}
+              </p>
+            </details>
+            <details>
+              <summary>{t("Puis-je être remboursé ?")}</summary>
+              <p>
+                {t("Nos conditions de remboursement sont détaillées dans notre")}{" "}
+                <Link to="/remboursement">{t("politique de remboursement")}</Link>.
+              </p>
+            </details>
+            <details>
+              <summary>{t("Besoin d'aide ?")}</summary>
+              <p>
+                {t(
+                  "Notre équipe et le vendeur restent disponibles pour répondre à vos questions avant et après votre achat."
+                )}
+              </p>
+            </details>
+          </article>
+        </div>
+
+        <aside className="pd-side-col">
+          <div className="pd-side-card">
+            <span className="pd-panel-kicker">{isCreator ? t("Créateur") : t("Boutique")}</span>
+            <div className="pd-side-shop">
+              <Link
+                to={isCreator ? `/createur/${product.shop_id}` : `/boutique/${product.shop_id}`}
+                className="pd-seller-avatar"
+                aria-label={product.shop_name}
               >
-                {deleting ? t("Retrait…") : t("Rétirer ce produit")}
-              </button>
+                {product.shop_avatar ? (
+                  <img
+                    src={proxyPhotoUrl(product.shop_avatar)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <span>
+                    {String(product.shop_name || "M")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </span>
+                )}
+              </Link>
+              <div>
+                <Link
+                  to={isCreator ? `/createur/${product.shop_id}` : `/boutique/${product.shop_id}`}
+                  className="pd-seller-name"
+                >
+                  {product.shop_name}
+                  {product.shop_verified && (
+                    <span className="badge badge-verified">✓ {t("Vérifié")}</span>
+                  )}
+                </Link>
+                {product.shop_location && (
+                  <span className="pd-seller-loc">📍 {product.shop_location}</span>
+                )}
+              </div>
+            </div>
+            <Link
+              className="btn btn-primary btn-block"
+              to={isCreator ? `/createur/${product.shop_id}` : `/boutique/${product.shop_id}`}
+            >
+              {isCreator ? t("Voir le créateur") : t("Voir la boutique")}
+            </Link>
+            {product.is_digital && product.shop_phone && (
+              <a
+                className="btn btn-outline btn-block"
+                href={waLink(
+                  product.shop_phone,
+                  t("Bonjour, je suis intéressé par « {name} » sur MboppiShop.", {
+                    name: product.name,
+                  })
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                💬 {t("Contacter sur WhatsApp")}
+              </a>
             )}
           </div>
-        </aside>
-      </div>
 
-      <Reviews product={product} />
+          <div className="pd-side-card pd-side-trust">
+            <span className="pd-side-trust-icon">
+              <IconShieldCheck size={22} />
+            </span>
+            <h3>{t("Achetez en toute confiance")}</h3>
+            <ul>
+              <li>
+                ✓{" "}
+                {product.is_digital ? t("Accès livré immédiatement") : t("Paiement à la livraison")}
+              </li>
+              <li>✓ {t("Vendeur vérifié par MboppiShop")}</li>
+              <li>✓ {t("Assistance disponible en cas de besoin")}</li>
+            </ul>
+          </div>
+        </aside>
+      </section>
+
+      <section id="avis" className="pd-reviews">
+        <Reviews product={product} />
+      </section>
 
       {related.length > 0 && (
-        <section>
+        <section className="pd-related">
           <h2 className="section-title">
             <IconLayers size={18} style={{ verticalAlign: "-3px", marginRight: 6 }} />
             {t("Produits similaires")}
@@ -879,6 +1317,48 @@ export default function ProductDetail() {
             ))}
           </div>
         </section>
+      )}
+
+      {!isOwner && (product.is_digital || inStock > 0) && (
+        <div className="pd-sticky-buy" role="region" aria-label={t("Achat rapide")}>
+          <div className="pd-sticky-price">
+            <strong>
+              {formatMoney(displayPrice)} <small>{symbol}</small>
+            </strong>
+            {hasPromo && (
+              <span>
+                {formatMoney(oldPrice)} {symbol}
+              </span>
+            )}
+          </div>
+          {product.is_digital ? (
+            isPrivilegedDigital ? (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={directDigitalAccess}
+                disabled={directBusy}
+              >
+                {product.digital_kind === "youtube"
+                  ? `▶ ${t("Regarder")}`
+                  : `⬇️ ${t("Télécharger")}`}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={startDigitalBuy}
+                disabled={Boolean(dBuy)}
+              >
+                ⬇️ {t("Télécharger")}
+              </button>
+            )
+          ) : (
+            <button type="button" className="btn btn-primary" onClick={buyNow}>
+              ⚡ {t("Acheter maintenant")}
+            </button>
+          )}
+        </div>
       )}
 
       {lightbox && (
