@@ -106,6 +106,15 @@ export default function ProductDetail() {
   const [added, setAdded] = useState(false);
   const [shared, setShared] = useState(false);
   const [related, setRelated] = useState([]);
+  const [viewsCount, setViewsCount] = useState(0);
+  const [showStickyBuy, setShowStickyBuy] = useState(false);
+  const [bundle, setBundle] = useState([]);
+  const [bundlePicked, setBundlePicked] = useState([]);
+  const [bundleAdded, setBundleAdded] = useState(false);
+  const [alertEmail, setAlertEmail] = useState("");
+  const [alertState, setAlertState] = useState("idle");
+  const [alertError, setAlertError] = useState("");
+  const offerCardRef = useRef(null);
   // Achat en ligne d'un produit digital (iKeePay) : tunnel de paiement →
   // attente de confirmation webhook → téléchargement UNIQUE → félicitations →
   // retour automatique à la vitrine (fermeture de la modale).
@@ -127,6 +136,10 @@ export default function ProductDetail() {
     setProduct(null);
     setError("");
     setRelated([]);
+    setBundle([]);
+    setBundlePicked([]);
+    setAlertState("idle");
+    setAlertError("");
     setLightboxIndex(0);
     api
       .getProduct(id)
@@ -167,6 +180,9 @@ export default function ProductDetail() {
           sessionStore.setItem(key, "1");
         } catch {}
         api.trackViews([{ type: "product", id: Number(id) }]).catch(() => {});
+        api
+          .trackFunnel("product_view", { product_id: Number(id), path: `/produit/${id}` })
+          .catch(() => {});
       })
       .catch((e) => setError(e.message));
   }, [id]);
@@ -182,7 +198,42 @@ export default function ProductDetail() {
 
   const productId = product && product.id;
   const productCategory = product && product.category;
+  const productShopId = product && product.shop_id;
+  const productIsDigital = product ? product.is_digital === true : false;
   const flashPromoEndsAt = product && product.flash_promo && product.flash_promo.ends_at;
+
+  // Preuve sociale : vues de la fiche sur les 7 derniers jours.
+  useEffect(() => {
+    let mounted = true;
+    setViewsCount(0);
+    api
+      .productViews(id)
+      .then((d) => {
+        if (mounted) setViewsCount(Math.max(0, Number(d.views) || 0));
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [id]);
+
+  // Pré-remplit l'alerte de retour en stock avec l'e-mail du compte connecté.
+  useEffect(() => {
+    if (user?.email) setAlertEmail((current) => current || user.email);
+  }, [user]);
+
+  // Barre d'achat de secours sur desktop : elle apparaît quand la buybox
+  // principale est passée au-dessus de l'écran (sur mobile elle est déjà fixe).
+  useEffect(() => {
+    setShowStickyBuy(false);
+    const el = offerCardRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([entry]) => {
+      setShowStickyBuy(!entry.isIntersecting && entry.boundingClientRect.bottom <= 0);
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [productId]);
 
   useEffect(() => {
     if (!product || !productCategory) return;
@@ -199,23 +250,54 @@ export default function ProductDetail() {
     };
   }, [productId, productCategory, product]);
 
-  // Données structurées schema.org (Rich Results Google : prix, note, stock)
+  // « Souvent achetés ensemble » : les autres produits disponibles de la même
+  // boutique (jamais une autre famille digital/physique).
+  useEffect(() => {
+    setBundle([]);
+    setBundlePicked([]);
+    if (!productShopId) return;
+    let mounted = true;
+    api
+      .listProducts({
+        shop: productShopId,
+        type: productIsDigital ? "digital" : "physical",
+        limit: 8,
+      })
+      .then((d) => {
+        if (!mounted) return;
+        const items = (Array.isArray(d.products) ? d.products : [])
+          .filter((p) => Number(p.id) !== Number(productId))
+          .slice(0, 3);
+        setBundle(items);
+        setBundlePicked(items.map((p) => Number(p.id)));
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [productId, productShopId, productIsDigital]);
+
+  // Données structurées schema.org (Rich Results Google : produit, fil
+  // d'Ariane et FAQ — cette dernière reprend exactement les questions visibles).
   useEffect(() => {
     if (!product) return;
     const inStock = product.is_digital ? true : Number(product.quantity || 0) > 0;
     const fp = product.flash_promo || null;
     const fPrice = fp ? Number(fp.price) : Number(product.price);
-    const jsonLd = {
-      "@context": "https://schema.org",
+    const pdUrl = `${BASE_URL}/produit/${product.id}`;
+
+    const productSchema = {
       "@type": "Product",
       name: product.name,
       image: absoluteProductImage(firstProductImage(product)),
       description: product.description || product.name,
       sku: String(product.id),
+      category: product.category || undefined,
       brand: { "@type": "Brand", name: product.shop_name },
+      url: pdUrl,
       offers: {
         "@type": "Offer",
-        url: `${BASE_URL}/produit/${product.id}`,
+        url: pdUrl,
         price: Number(fPrice).toFixed(2),
         priceCurrency: (product.currency || "XAF").toUpperCase(),
         availability: inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
@@ -233,6 +315,73 @@ export default function ProductDetail() {
           }
         : {}),
     };
+
+    const crumbs = [
+      { "@type": "ListItem", position: 1, name: t("Accueil"), item: `${BASE_URL}/` },
+    ];
+    if (product.category) {
+      crumbs.push({
+        "@type": "ListItem",
+        position: 2,
+        name: t(product.category),
+        item: `${BASE_URL}/?type=${product.is_digital ? "digital" : "physical"}&cat=${encodeURIComponent(product.category)}`,
+      });
+    }
+    crumbs.push({
+      "@type": "ListItem",
+      position: crumbs.length + 1,
+      name: product.name,
+      item: pdUrl,
+    });
+
+    const faq = [
+      {
+        q: product.is_digital
+          ? t("Comment vais-je recevoir mon produit ?")
+          : t("Comment vais-je recevoir ma commande ?"),
+        a: product.is_digital
+          ? t(
+              "Le fichier ou la vidéo protégée s'ouvre immédiatement après la confirmation du paiement. Vous le retrouvez aussi dans votre espace client et sur la page de suivi."
+            )
+          : t(
+              "La boutique prépare votre commande et le livreur vous contacte. Les frais de livraison sont confirmés directement avec la boutique."
+            ),
+      },
+      {
+        q: t("Quels moyens de paiement sont acceptés ?"),
+        a: product.is_digital
+          ? t(
+              "Carte bancaire (Visa / Mastercard), USDT et Mobile Money via iKeePay — transaction chiffrée et vérifiée."
+            )
+          : t("Le paiement se fait à la livraison, en espèces ou par Mobile Money."),
+      },
+      {
+        q: t("Puis-je être remboursé ?"),
+        a: `${t("Nos conditions de remboursement sont détaillées dans notre")} ${t("politique de remboursement")}.`,
+      },
+      {
+        q: t("Besoin d'aide ?"),
+        a: t(
+          "Notre équipe et le vendeur restent disponibles pour répondre à vos questions avant et après votre achat."
+        ),
+      },
+    ];
+
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@graph": [
+        productSchema,
+        { "@type": "BreadcrumbList", itemListElement: crumbs },
+        {
+          "@type": "FAQPage",
+          mainEntity: faq.map((item) => ({
+            "@type": "Question",
+            name: item.q,
+            acceptedAnswer: { "@type": "Answer", text: item.a },
+          })),
+        },
+      ],
+    };
     const el = document.createElement("script");
     el.type = "application/ld+json";
     el.text = JSON.stringify(jsonLd);
@@ -240,7 +389,7 @@ export default function ProductDetail() {
     if (prev) prev.remove();
     document.head.appendChild(el);
     return () => el.remove();
-  }, [productId, flashPromoEndsAt, product]);
+  }, [productId, flashPromoEndsAt, product, t]);
 
   const photos = product ? product.photos || [] : [];
   // Zoom (lightbox) : version « large » si disponible, sinon repli medium.
@@ -344,6 +493,14 @@ export default function ProductDetail() {
   const inStock = product.is_digital ? 9999 : Number(product.quantity || 0);
   const flash = product.flash_promo || null;
   const displayPrice = flash ? Number(flash.price) : Number(product.price);
+  const trackFunnel = (event) => {
+    api
+      .trackFunnel(event, {
+        product_id: Number(product.id),
+        path: `/produit/${product.id}`,
+      })
+      .catch(() => {});
+  };
 
   // ---------------- ACHAT DIGITAL EN LIGNE (iKeePay) ----------------
   // (hooks déplacés AVANT les retours anticipés — voir plus haut.)
@@ -387,6 +544,7 @@ export default function ProductDetail() {
   };
 
   const startDigitalBuy = async () => {
+    trackFunnel("begin_checkout");
     setDBuy({ stage: "creating" });
     try {
       const d = await api.digitalPayin({ product_id: product.id });
@@ -474,6 +632,10 @@ export default function ProductDetail() {
   const hasPromo = oldPrice > 0 && oldPrice > displayPrice;
   const promoPct = hasPromo ? Math.round((1 - displayPrice / oldPrice) * 100) : 0;
   const isCreator = product.shop_role === "creator" || product.is_digital === true;
+  const productUrl = `${BASE_URL}/produit/${product.id}`;
+  const waMessage = `${t("Bonjour, je suis intéressé par « {name} » sur MboppiShop.", {
+    name: product.name,
+  })}\n${productUrl}`;
 
   const scrollToReviews = () => {
     const el = document.getElementById("avis");
@@ -482,11 +644,13 @@ export default function ProductDetail() {
 
   const addToCartNow = () => {
     addToCart(product, qty);
+    trackFunnel("add_to_cart");
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
 
   const buyNow = () => {
+    trackFunnel("begin_checkout");
     if (sellerCode) {
       navigate(`/acheter/${product.id}?code=${sellerCode}`);
       return;
@@ -494,6 +658,46 @@ export default function ProductDetail() {
     addToCart(product, qty);
     navigate("/panier");
   };
+
+  const toggleBundle = (id) => {
+    setBundlePicked((list) =>
+      list.includes(id) ? list.filter((value) => value !== id) : [...list, id]
+    );
+  };
+
+  const addBundleToCart = () => {
+    addToCart(product, qty);
+    bundle
+      .filter((p) => bundlePicked.includes(Number(p.id)))
+      .forEach((p) => addToCart(p, 1));
+    trackFunnel("bundle_add");
+    setBundleAdded(true);
+    setTimeout(() => setBundleAdded(false), 1600);
+  };
+
+  const submitStockAlert = async (event) => {
+    event.preventDefault();
+    const email = alertEmail.trim();
+    if (!email) return;
+    setAlertState("loading");
+    setAlertError("");
+    try {
+      await api.stockAlert(product.id, email);
+      setAlertState("done");
+      trackFunnel("stock_alert");
+    } catch (err) {
+      setAlertState("error");
+      setAlertError(err.message || t("Une erreur est survenue."));
+    }
+  };
+
+  const selectedBundle = bundle.filter((p) => bundlePicked.includes(Number(p.id)));
+  const bundleTotal =
+    displayPrice * qty +
+    selectedBundle.reduce(
+      (sum, p) => sum + Number((p.flash_promo ? p.flash_promo.price : p.price) || 0),
+      0
+    );
 
   const removeProduct = async () => {
     if (!window.confirm(t("Retirer « {name} » définitivement ?", { name: product.name }))) return;
@@ -680,6 +884,11 @@ export default function ProductDetail() {
                 🔥 {t("{n} vendus", { n: product.sold })}
               </span>
             )}
+            {viewsCount >= 5 && (
+              <span className="pd-type-pill pd-type-views">
+                👀 {t("{n} vues cette semaine", { n: viewsCount })}
+              </span>
+            )}
           </div>
 
           <h1 className="pd-title">{product.name}</h1>
@@ -766,12 +975,7 @@ export default function ProductDetail() {
               {product.shop_phone && (
                 <a
                   className="meta-chip"
-                  href={waLink(
-                    product.shop_phone,
-                    t("Bonjour, je suis intéressé par « {name} » sur MboppiShop.", {
-                      name: product.name,
-                    })
-                  )}
+                  href={waLink(product.shop_phone, waMessage)}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -791,7 +995,7 @@ export default function ProductDetail() {
           )}
 
           {/* Bloc d'achat principal */}
-          <aside className="pd-offer-card" id="achat" aria-label={t("Achat")}>
+          <aside className="pd-offer-card" id="achat" aria-label={t("Achat")} ref={offerCardRef}>
             <div className="pd-offer-card-inner">
               <div className="pd-offer-head">
                 <div className="pd-price-block">
@@ -965,7 +1169,56 @@ export default function ProductDetail() {
                   >
                     {added ? `✓ ${t("Ajouté au panier")}` : `🛒 ${t("Ajouter au panier")}`}
                   </button>
+                  <p className="pd-cta-note">
+                    🔍 {t("Vérifiez le produit avant de payer.")}
+                  </p>
+                  {/* Produit physique : paiement à la livraison (espèces ou
+                      Mobile Money), pas de carte bancaire. */}
+                  <PaymentMethodsStrip mode="delivery" />
                 </>
+              )}
+
+              {!product.is_digital && inStock <= 0 && !isOwner && (
+                <div className="pd-stock-alert">
+                  <p className="pd-stock-alert-title">
+                    🔔 {t("Prévenez-moi du retour en stock")}
+                  </p>
+                  <p className="pd-stock-alert-hint">
+                    {t(
+                      "Laissez votre e-mail : nous vous préviendrons dès que ce produit sera de nouveau disponible."
+                    )}
+                  </p>
+                  {alertState === "done" ? (
+                    <p className="pd-stock-alert-success">
+                      ✓ {t("Alerte enregistrée")}
+                    </p>
+                  ) : (
+                    <form onSubmit={submitStockAlert}>
+                      <input
+                        type="email"
+                        value={alertEmail}
+                        onChange={(e) => setAlertEmail(e.target.value)}
+                        placeholder={t("Votre adresse e-mail")}
+                        aria-label={t("Votre adresse e-mail")}
+                        required
+                        maxLength={200}
+                        autoComplete="email"
+                      />
+                      <button
+                        type="submit"
+                        className="btn btn-primary btn-block"
+                        disabled={alertState === "loading"}
+                      >
+                        {alertState === "loading"
+                          ? `⏳ ${t("Enregistrement…")}`
+                          : `🔔 ${t("M'avertir")}`}
+                      </button>
+                      {alertState === "error" && alertError && (
+                        <p className="pd-stock-alert-error">{alertError}</p>
+                      )}
+                    </form>
+                  )}
+                </div>
               )}
 
               <div className="detail-actions">
@@ -1270,12 +1523,7 @@ export default function ProductDetail() {
             {product.is_digital && product.shop_phone && (
               <a
                 className="btn btn-outline btn-block"
-                href={waLink(
-                  product.shop_phone,
-                  t("Bonjour, je suis intéressé par « {name} » sur MboppiShop.", {
-                    name: product.name,
-                  })
-                )}
+                href={waLink(product.shop_phone, waMessage)}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -1305,6 +1553,104 @@ export default function ProductDetail() {
         <Reviews product={product} />
       </section>
 
+      {bundle.length > 0 && !isOwner && (
+        <section className="pd-bundle">
+          <h2 className="section-title">
+            🧩 {t("Souvent achetés ensemble")}
+          </h2>
+          <div className="pd-bundle-row">
+            <div className="pd-bundle-item is-current">
+              <span className="pd-bundle-thumb">
+                {firstProductImage(product) ? (
+                  <img
+                    src={proxyPhotoUrl(firstProductImage(product))}
+                    alt={product.name}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <span className="pd-bundle-fallback" aria-hidden="true">
+                    📦
+                  </span>
+                )}
+              </span>
+              <span className="pd-bundle-info">
+                <strong>{product.name}</strong>
+                <span>
+                  {formatMoney(displayPrice)} {symbol} × {qty}
+                </span>
+              </span>
+              <span className="pd-bundle-check" aria-hidden="true">
+                ✓
+              </span>
+            </div>
+            {bundle.map((p) => {
+              const picked = bundlePicked.includes(Number(p.id));
+              const bundlePhoto = proxyPhotoUrl(firstProductImage(p));
+              const itemPrice = Number(
+                (p.flash_promo ? p.flash_promo.price : p.price) || 0
+              );
+              return (
+                <React.Fragment key={p.id}>
+                  <span className="pd-bundle-plus" aria-hidden="true">
+                    +
+                  </span>
+                  <label className={`pd-bundle-item${picked ? " is-picked" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={picked}
+                      onChange={() => toggleBundle(Number(p.id))}
+                    />
+                    <span className="pd-bundle-thumb">
+                      {bundlePhoto ? (
+                        <img
+                          src={bundlePhoto}
+                          alt={p.name}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      ) : (
+                        <span className="pd-bundle-fallback" aria-hidden="true">
+                          📦
+                        </span>
+                      )}
+                    </span>
+                    <span className="pd-bundle-info">
+                      <strong>{p.name}</strong>
+                      <span>
+                        {formatMoney(itemPrice)} {countrySymbol(p.shop_country)}
+                      </span>
+                    </span>
+                    <span className="pd-bundle-check" aria-hidden="true">
+                      {picked ? "✓" : "+"}
+                    </span>
+                  </label>
+                </React.Fragment>
+              );
+            })}
+          </div>
+          <div className="pd-bundle-footer">
+            <div className="pd-bundle-total">
+              <span>{t("Total sélection")}</span>
+              <strong>
+                {formatMoney(bundleTotal)} {symbol}
+              </strong>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={addBundleToCart}
+              disabled={!selectedBundle.length}
+            >
+              🛒{" "}
+              {bundleAdded
+                ? t("Sélection ajoutée")
+                : t("Ajouter la sélection au panier")}
+            </button>
+          </div>
+        </section>
+      )}
+
       {related.length > 0 && (
         <section className="pd-related">
           <h2 className="section-title">
@@ -1320,7 +1666,11 @@ export default function ProductDetail() {
       )}
 
       {!isOwner && (product.is_digital || inStock > 0) && (
-        <div className="pd-sticky-buy" role="region" aria-label={t("Achat rapide")}>
+        <div
+          className={`pd-sticky-buy${showStickyBuy ? " is-visible" : ""}`}
+          role="region"
+          aria-label={t("Achat rapide")}
+        >
           <div className="pd-sticky-price">
             <strong>
               {formatMoney(displayPrice)} <small>{symbol}</small>

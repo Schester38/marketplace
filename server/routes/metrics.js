@@ -84,6 +84,55 @@ router.post("/views", ah(async (req, res) => {
   res.json({ ok: true, counted });
 }));
 
+// Compteur public de vues d'une fiche (preuve sociale) : cumul des 7 derniers
+// jours, lecture seule, aucune donnée personnelle. Cache CDN court pour ne pas
+// interroger la base à chaque affichage de la fiche produit.
+router.get("/views", ah(async (req, res) => {
+  const type = req.query.type === "offer" ? "offer" : "product";
+  const id = Number(req.query.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Requête invalide" });
+  res.set("Cache-Control", "public, s-maxage=300, max-age=60, stale-while-revalidate=120");
+  try {
+    const rows = await q(
+      `SELECT COALESCE(SUM(count), 0)::int AS views
+         FROM item_views
+        WHERE item_type = $1 AND item_id = $2 AND seen_on >= CURRENT_DATE - 6`,
+      [type, id]
+    );
+    res.json({ views: Number(rows[0]?.views) || 0 });
+  } catch (err) {
+    console.error("[metrics/views] compteur indisponible :", err.message);
+    res.set("Cache-Control", "no-store");
+    res.json({ views: 0 });
+  }
+}));
+
+// Entonnoir d'achat (fiche produit) : vue → panier → commande. Les événements
+// sont volontairement stockés dans client_logs (déjà purgé/consultable côté
+// admin) sous la forme `funnel:<event>:<product_id>`.
+const FUNNEL_EVENTS = new Set([
+  "product_view",
+  "add_to_cart",
+  "begin_checkout",
+  "bundle_add",
+  "stock_alert",
+]);
+
+router.post("/funnel", ah(async (req, res) => {
+  if (isBotRequest(req)) return res.json({ ok: true, ignored: "bot" });
+  const event = String(req.body?.event || "").trim();
+  if (!FUNNEL_EVENTS.has(event)) {
+    return res.status(400).json({ error: "Événement inconnu" });
+  }
+  const productId = Number(req.body?.product_id);
+  const path = String(req.body?.path || "").slice(0, MAX_PATH);
+  await q(`INSERT INTO client_logs (message, url) VALUES ($1, $2)`, [
+    `funnel:${event}${Number.isInteger(productId) && productId > 0 ? `:${productId}` : ""}`,
+    path || "/",
+  ]);
+  res.json({ ok: true });
+}));
+
 router.post("/visit", ah(async (req, res) => {
   // Bots ignorés (réponses identiques).
   if (isBotRequest(req)) return res.json({ ok: true, ignored: "bot" });

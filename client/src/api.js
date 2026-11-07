@@ -191,6 +191,11 @@ export const api = {
     return request("/shop" + (qs ? `?${qs}` : ""));
   },
   getProduct: (id, options = {}) => request(`/products/${id}`, options),
+  stockAlert: (id, email) =>
+    request(`/products/${id}/stock-alert`, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
   myProducts: () => request("/products/mine"),
   createProduct: (payload) =>
     request("/products", { method: "POST", body: JSON.stringify(payload) }),
@@ -432,15 +437,25 @@ export const api = {
     return request("/metrics/trending" + (qs ? `?${qs}` : ""), options);
   },
   publicStats: () => request("/metrics/public"),
+  productViews: (id, type = "product") =>
+    request(`/metrics/views?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}`),
   createDonation: (payload) =>
     request("/donations", { method: "POST", body: JSON.stringify(payload) }),
   trackViews: (items) =>
-    request("/views", {
+    request("/metrics/views", {
       method: "POST",
       headers: {
         "X-Visitor-Id": storage.getItem("mboppi_visitor_id") || "",
       },
       body: JSON.stringify({ items }),
+    }),
+  trackFunnel: (event, data = {}) =>
+    request("/metrics/funnel", {
+      method: "POST",
+      headers: {
+        "X-Visitor-Id": storage.getItem("mboppi_visitor_id") || "",
+      },
+      body: JSON.stringify({ event, ...data }),
     }),
   // Suivi GPS temps réel d'une livraison
   livreurPosition: (id, payload) =>

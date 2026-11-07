@@ -101,16 +101,26 @@ const AirtelMoney = () => (
   </Badge>
 );
 
-export default function PaymentMethodsStrip() {
+const Cash = () => {
   const { t } = useLang();
+  return (
+    <Badge bg="#15803d">
+      <span style={{ fontSize: 11 }}>💵 {t("Espèces")}</span>
+    </Badge>
+  );
+};
+
+export default function PaymentMethodsStrip({ mode = "online" }) {
+  const { t } = useLang();
+  const delivery = mode === "delivery";
   // Bandeau DÉFILANT (de la droite vers la gauche, une seule ligne) : la piste
   // contient DEUX fois la série de badges — quand la moitié gauche sort de
   // l'écran, la seconde moitié est déjà entrée (boucle sans à-coup).
   const badges = () => (
     <>
-      <Visa />
-      <Mastercard />
-      <Usdt />
+      {delivery ? <Cash /> : <Visa />}
+      {!delivery && <Mastercard />}
+      {!delivery && <Usdt />}
       <MtnMomo />
       <OrangeMoney />
       <MoovMoney />
@@ -121,7 +131,11 @@ export default function PaymentMethodsStrip() {
   );
   return (
     <div className="pay-strip" role="note">
-      <div className="pay-strip-title">🔐 {t("Paiements acceptés — sécurisés par iKeepay")}</div>
+      <div className="pay-strip-title">
+        {delivery
+          ? `💵 ${t("Paiements acceptés à la livraison")}`
+          : `🔐 ${t("Paiements acceptés — sécurisés par iKeepay")}`}
+      </div>
       <div className="pay-strip-marquee">
         <div className="pay-strip-track">
           {badges()}
@@ -131,9 +145,11 @@ export default function PaymentMethodsStrip() {
         </div>
       </div>
       <p className="pay-strip-hint">
-        {t(
-          "Carte bancaire (Visa / Mastercard), USDT et Mobile Money — transaction chiffrée et vérifiée."
-        )}
+        {delivery
+          ? t("Espèces ou Mobile Money à la réception. Vérifiez le produit avant de payer.")
+          : t(
+              "Carte bancaire (Visa / Mastercard), USDT et Mobile Money — transaction chiffrée et vérifiée."
+            )}
       </p>
     </div>
   );

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { q } from "../db.js";
-import { authRequired, roleRequired } from "../auth.js";
+import { authRequired, authOptional, roleRequired } from "../auth.js";
 import {
   listPhotos,
   mediumPhotos,
@@ -18,11 +18,61 @@ import {
 import { broadcastNotification } from "../services/notifications.js";
 import { getSetting, setSetting } from "../services/ikeepay.js";
 import { sendPushToAll } from "../push.js";
+import { sendMail } from "../mailer.js";
+import { SITE_URL } from "../urls.js";
 import { createProductSchema, productListQuerySchema, citiesQuerySchema } from "../validators.js";
 import { validate, validateQuery } from "../middlewares/validate.js";
 
 const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Prévient les personnes inscrites à l'alerte quand un produit physique
+// repasse de « rupture » à « disponible ». Best-effort : un échec d'envoi ne
+// bloque jamais l'enregistrement de la modification.
+async function notifyStockAlerts(product) {
+  const rows = await q(
+    `SELECT id, email FROM stock_alerts
+      WHERE product_id = $1 AND notified_at IS NULL
+      ORDER BY id
+      LIMIT 200`,
+    [product.id]
+  );
+  if (!rows.length) return;
+  const url = `${SITE_URL}/produit/${product.id}`;
+  const safeName = escapeHtml(product.name);
+  await Promise.all(
+    rows.map(async (row) => {
+      try {
+        const result = await sendMail({
+          to: row.email,
+          subject: `${product.name} est de nouveau en stock — MboppiShop`,
+          text:
+            `Bonne nouvelle ! « ${product.name} » est de nouveau disponible sur MboppiShop.\n\n` +
+            `Commandez ici : ${url}\n\n` +
+            "Vous recevez cet e-mail car vous avez demandé à être prévenu du retour en stock.",
+          html:
+            `<p>Bonne nouvelle ! <strong>${safeName}</strong> est de nouveau disponible sur MboppiShop.</p>` +
+            `<p><a href="${url}">Commander maintenant</a></p>` +
+            '<p style="color:#666;font-size:12px">Vous recevez cet e-mail car vous avez demandé à être prévenu du retour en stock.</p>',
+        });
+        if (!result?.simulated) {
+          await q("UPDATE stock_alerts SET notified_at = now() WHERE id = $1", [row.id]);
+        }
+      } catch (err) {
+        console.error("[stock-alert] envoi échoué :", err.message);
+      }
+    })
+  );
+}
 
 // ─── Contenus PROTÉGÉS (vidéos YouTube non répertoriées) ────────────────────
 // Un produit digital de type "youtube" n'a AUCUN fichier : la vidéo est
@@ -902,6 +952,40 @@ router.post("/:id/duplicate", authRequired, roleRequired(...OWNER_ROLES), async 
   res.status(201).json({ product: newProduct });
 });
 
+// Alerte retour en stock (public) : le visiteur laisse son e-mail sur un
+// produit physique épuisé. Aucun doublon pour un même couple produit/e-mail.
+router.post(
+  "/:id/stock-alert",
+  authOptional,
+  ah(async (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Produit invalide." });
+    }
+    const email = String(req.body?.email || req.user?.email || "")
+      .trim()
+      .toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 200) {
+      return res.status(400).json({ error: "Adresse e-mail invalide." });
+    }
+    const product = (
+      await q("SELECT id, is_digital, quantity FROM products WHERE id = $1", [id])
+    )[0];
+    if (!product) return res.status(404).json({ error: "Produit introuvable." });
+    if (product.is_digital || Number(product.quantity) > 0) {
+      return res.status(409).json({ error: "Ce produit est déjà disponible." });
+    }
+    await q(
+      `INSERT INTO stock_alerts (product_id, email, user_id)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (product_id, email)
+       DO UPDATE SET user_id = COALESCE(EXCLUDED.user_id, stock_alerts.user_id)`,
+      [id, email, req.user?.id || null]
+    );
+    res.json({ ok: true });
+  })
+);
+
 router.put(
   "/:id",
   authRequired,
@@ -1167,6 +1251,18 @@ router.put(
     const updatedProduct = productRow(
       (await q(SELECT_PRODUCT + " WHERE p.id = $1", [updated[0].id]))[0]
     );
+    // Retour en stock : la quantité vient de repasser de 0 à > 0 sur un
+    // produit physique → prévenir les inscrits (envoi non bloquant).
+    if (
+      !product.is_digital &&
+      !isDigitalAfter &&
+      Number(product.quantity || 0) <= 0 &&
+      Number(quantity || 0) > 0
+    ) {
+      notifyStockAlerts(updatedProduct).catch((err) =>
+        console.error("[stock-alert] notification échouée :", err.message)
+      );
+    }
     // Ancien fichier digital remplacé : supprimé seulement s'il n'est plus
     // référencé par un autre produit (déduplication par contenu).
     if (

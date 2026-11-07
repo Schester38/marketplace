@@ -9,7 +9,7 @@ const { Pool } = pg;
 // Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-10-31-mboppi-boost-order-history-v1";
+const DB_INIT_VERSION = "2026-11-06-stock-alerts-v1";
 const DB_INIT_LOCK = "mboppi-db-init-v1";
 let initDbPromise = null;
 
@@ -1123,6 +1123,24 @@ async function runInitDb() {
   } catch (err) {
     console.warn("[db] amorçage MboppiBoost :", err.message);
   }
+
+  // Alertes de retour en stock : un visiteur peut laisser son e-mail sur un
+  // produit physique épuisé ; il est prévenu par e-mail dès que la quantité
+  // repasse au-dessus de zéro (voir products.js PUT /:id).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS stock_alerts (
+      id BIGSERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      email TEXT NOT NULL,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      notified_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_stock_alerts_product_email
+      ON stock_alerts(product_id, email);
+    CREATE INDEX IF NOT EXISTS idx_stock_alerts_pending
+      ON stock_alerts(product_id) WHERE notified_at IS NULL;
+  `);
 }
 
 // Lance le schÃ©ma une seule fois par version sur une base partagÃ©e. Le

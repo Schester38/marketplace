@@ -6799,6 +6799,7 @@ const PD_FUNNEL_EN = {
   "Disponibilité": "Availability",
   "Illimitée": "Unlimited",
   "{n} en stock": "{n} in stock",
+  "{n} vues cette semaine": "{n} views this week",
   "Référence": "Reference",
   "Garantie": "Warranty",
   "Livraison": "Delivery",
@@ -6839,6 +6840,23 @@ const PD_FUNNEL_EN = {
   "Votre fichier a été téléchargé sur votre appareil.": "Your file has been downloaded to your device.",
   "Retour au produit": "Back to product",
   "Une erreur est survenue.": "An error occurred.",
+  "Paiements acceptés à la livraison": "Payments accepted on delivery",
+  "Espèces ou Mobile Money à la réception. Vérifiez le produit avant de payer.":
+    "Cash or Mobile Money on delivery. Check the product before paying.",
+  "Vérifiez le produit avant de payer.": "Check the product before paying.",
+  "Espèces": "Cash",
+  "Souvent achetés ensemble": "Frequently bought together",
+  "Ce produit": "This product",
+  "Total sélection": "Selected total",
+  "Ajouter la sélection au panier": "Add selection to cart",
+  "Sélection ajoutée": "Selection added",
+  "Prévenez-moi du retour en stock": "Notify me when back in stock",
+  "Laissez votre e-mail : nous vous préviendrons dès que ce produit sera de nouveau disponible.":
+    "Leave your email: we'll let you know as soon as this product is available again.",
+  "Votre adresse e-mail": "Your email address",
+  "M'avertir": "Notify me",
+  "Alerte enregistrée": "Alert saved",
+  "Enregistrement…": "Saving…",
 };
 
 const PD_FUNNEL_ES = {
@@ -6901,6 +6919,7 @@ const PD_FUNNEL_ES = {
   "Disponibilité": "Disponibilidad",
   "Illimitée": "Ilimitada",
   "{n} en stock": "{n} en stock",
+  "{n} vues cette semaine": "{n} visitas esta semana",
   "Référence": "Referencia",
   "Garantie": "Garantía",
   "Livraison": "Entrega",
@@ -6941,6 +6960,23 @@ const PD_FUNNEL_ES = {
   "Votre fichier a été téléchargé sur votre appareil.": "Tu archivo se ha descargado en tu dispositivo.",
   "Retour au produit": "Volver al producto",
   "Une erreur est survenue.": "Se ha producido un error.",
+  "Paiements acceptés à la livraison": "Pagos aceptados contra entrega",
+  "Espèces ou Mobile Money à la réception. Vérifiez le produit avant de payer.":
+    "Efectivo o Mobile Money al recibir. Revisa el producto antes de pagar.",
+  "Vérifiez le produit avant de payer.": "Revisa el producto antes de pagar.",
+  "Espèces": "Efectivo",
+  "Souvent achetés ensemble": "Comprados juntos con frecuencia",
+  "Ce produit": "Este producto",
+  "Total sélection": "Total seleccionado",
+  "Ajouter la sélection au panier": "Añadir la selección al carrito",
+  "Sélection ajoutée": "Selección añadida",
+  "Prévenez-moi du retour en stock": "Avísame cuando vuelva a estar disponible",
+  "Laissez votre e-mail : nous vous préviendrons dès que ce produit sera de nouveau disponible.":
+    "Déjanos tu correo: te avisaremos en cuanto este producto vuelva a estar disponible.",
+  "Votre adresse e-mail": "Tu correo electrónico",
+  "M'avertir": "Avísame",
+  "Alerte enregistrée": "Alerta registrada",
+  "Enregistrement…": "Registrando…",
 };
 
 const PD_FUNNEL_AR = {
@@ -7003,6 +7039,7 @@ const PD_FUNNEL_AR = {
   "Disponibilité": "التوفر",
   "Illimitée": "غير محدود",
   "{n} en stock": "{n} في المخزون",
+  "{n} vues cette semaine": "{n} مشاهدة هذا الأسبوع",
   "Référence": "المرجع",
   "Garantie": "الضمان",
   "Livraison": "التوصيل",
@@ -7043,6 +7080,23 @@ const PD_FUNNEL_AR = {
   "Votre fichier a été téléchargé sur votre appareil.": "تم تنزيل ملفك على جهازك.",
   "Retour au produit": "العودة إلى المنتج",
   "Une erreur est survenue.": "حدث خطأ.",
+  "Paiements acceptés à la livraison": "الدفع المقبول عند التسليم",
+  "Espèces ou Mobile Money à la réception. Vérifiez le produit avant de payer.":
+    "نقدًا أو عبر Mobile Money عند الاستلام. تحقق من المنتج قبل الدفع.",
+  "Vérifiez le produit avant de payer.": "تحقق من المنتج قبل الدفع.",
+  "Espèces": "نقدًا",
+  "Souvent achetés ensemble": "غالبًا ما تُشترى معًا",
+  "Ce produit": "هذا المنتج",
+  "Total sélection": "إجمالي المحدد",
+  "Ajouter la sélection au panier": "أضف المحدد إلى السلة",
+  "Sélection ajoutée": "تمت إضافة المحدد",
+  "Prévenez-moi du retour en stock": "أبلغني عند توفر المنتج",
+  "Laissez votre e-mail : nous vous préviendrons dès que ce produit sera de nouveau disponible.":
+    "اترك بريدك الإلكتروني: سنبلغك فور توفر هذا المنتج مجددًا.",
+  "Votre adresse e-mail": "بريدك الإلكتروني",
+  "M'avertir": "أبلغني",
+  "Alerte enregistrée": "تم تسجيل التنبيه",
+  "Enregistrement…": "جارٍ التسجيل…",
 };
 
 const SERVICES_LOGICIELS_EN = {
