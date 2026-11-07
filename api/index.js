@@ -15,7 +15,11 @@ function startDbInit() {
   if (dbInitStarted) return;
   dbInitStarted = true;
   initDb().catch((err) => {
-    console.error('Database initialization failed:', err);
+    // DB_INIT_BUSY : une autre instance migre deja la base ; on retentera a la
+    // requete suivante sans polluer les logs d'une erreur attendue.
+    if (err.code !== 'DB_INIT_BUSY') {
+      console.error('Database initialization failed:', err);
+    }
     dbInitStarted = false;
   });
 }

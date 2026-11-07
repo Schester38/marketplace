@@ -1,4 +1,5 @@
 ﻿import pg from "pg";
+import { randomUUID } from "node:crypto";
 import { SMM_CATEGORIES, SMM_SERVICES } from "./services/smmCatalog.js";
 
 const { Pool } = pg;
@@ -10,7 +11,6 @@ const { Pool } = pg;
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
 const DB_INIT_VERSION = "2026-11-06-stock-alerts-v1";
-const DB_INIT_LOCK = "mboppi-db-init-v1";
 let initDbPromise = null;
 
 const LOCAL_DEFAULT = "postgres://postgres:postgres@localhost:5432/marketplace";
@@ -1143,21 +1143,32 @@ async function runInitDb() {
   `);
 }
 
-// Lance le schÃ©ma une seule fois par version sur une base partagÃ©e. Le
-// marqueur est posÃ© seulement aprÃ¨s la rÃ©ussite complÃ¨te des migrations.
-// Une autre instance qui frappe pendant l'initialisation peut lire un ancien
-// marqueur et dÃ©marrer la mÃªme course : le verrou advisory PostgreSQL Ã©vite ce
-// doublon sans conserver d'Ã©tat en mÃ©moire entre fonctions Vercel.
+// Lance le schema une seule fois par version sur une base partagee. Le
+// marqueur est pose seulement apres la reussite complete des migrations.
+// Une autre instance qui frappe pendant l'initialisation ne doit pas rejouer
+// les migrations : un verrou atomique en base (avec expiration) serialise les
+// executions sans conserver d'etat en memoire entre fonctions Vercel.
 export async function initDb() {
   if (initDbPromise) return initDbPromise;
   initDbPromise = (async () => {
     const client = await getPool().connect();
+    const lockToken = randomUUID();
+    let ownsLock = false;
     try {
-      // Attendre le propriÃ©taire Ã©ventuel du verrou est volontaire : une autre
-      // instance doit lire le marqueur aprÃ¨s la premiÃ¨re, au lieu de believing
-      // que l'initialisation est terminÃ©e. Le verrou est de session et libÃ©rÃ©
-      // dans le finally, mÃªme en cas d'erreur de migration.
-      await client.query("SELECT pg_advisory_lock(hashtext($1))", [DB_INIT_LOCK]);
+      // Marker et verrou vivent en base : etat partage entre toutes les
+      // instances, sans dependre de la duree de vie d'une connexion.
+      // Verrou en base plutot qu'un pg_advisory_lock de session : la production
+      // passe par le pooler Supabase en mode transaction, qui peut conserver le
+      // verrou sur une connexion reutilisee et bloquer les deploiements.
+      await client
+        .query(
+          `CREATE TABLE IF NOT EXISTS platform_settings (
+             key TEXT PRIMARY KEY,
+             value TEXT NOT NULL DEFAULT '',
+             updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+           )`
+        )
+        .catch(() => {});
 
       let marker = null;
       try {
@@ -1171,6 +1182,39 @@ export async function initDb() {
       }
       if (marker === DB_INIT_VERSION) return;
 
+      // Verrou atomique avec expiration (10 min) : une instance interrompue ne
+      // bloque pas indefiniment les suivantes.
+      try {
+        const claim = await client.query(
+          `INSERT INTO platform_settings (key, value, updated_at)
+           VALUES ('db_init_lock', $1, now())
+           ON CONFLICT (key) DO UPDATE
+             SET value = EXCLUDED.value, updated_at = now()
+             WHERE COALESCE(platform_settings.updated_at, to_timestamp(0)) < now() - interval '10 minutes'
+           RETURNING key`,
+          [lockToken]
+        );
+        ownsLock = claim.rowCount > 0;
+      } catch (err) {
+        if (err.code !== "42P01") throw err;
+        ownsLock = true;
+      }
+      if (!ownsLock) {
+        const busy = new Error("Initialisation de la base deja en cours");
+        busy.code = "DB_INIT_BUSY";
+        throw busy;
+      }
+
+      // Une autre instance a pu terminer entre la lecture et la prise du verrou.
+      try {
+        marker = (
+          await client.query("SELECT value FROM platform_settings WHERE key = $1", [
+            "db_init_version",
+          ])
+        ).rows?.[0]?.value;
+      } catch {}
+      if (marker === DB_INIT_VERSION) return;
+
       await runInitDb();
       await client.query(
         `INSERT INTO platform_settings (key, value, updated_at)
@@ -1179,7 +1223,13 @@ export async function initDb() {
         [DB_INIT_VERSION]
       );
     } finally {
-      await client.query("SELECT pg_advisory_unlock(hashtext($1))", [DB_INIT_LOCK]).catch(() => {});
+      if (ownsLock) {
+        await client
+          .query("DELETE FROM platform_settings WHERE key = 'db_init_lock' AND value = $1", [
+            lockToken,
+          ])
+          .catch(() => {});
+      }
       client.release();
     }
   })().catch((err) => {
