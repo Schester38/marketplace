@@ -23,6 +23,7 @@ import {
   IconStarFilled,
   IconUsers,
   IconWhatsApp,
+  IconZoomIn,
 } from "../components/icons.jsx";
 
 function truncate(text, max) {
@@ -50,6 +51,7 @@ function FormationDetail() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState("");
   const [reload, setReload] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +76,24 @@ function FormationDetail() {
       cancelled = true;
     };
   }, [id, reload, t]);
+
+  useEffect(() => {
+    setLightboxOpen(false);
+  }, [id]);
+
+  useEffect(() => {
+    if (!lightboxOpen) return undefined;
+    const onKey = (event) => {
+      if (event.key === "Escape") setLightboxOpen(false);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [lightboxOpen]);
 
   const objectives = useMemo(() => sentences(product?.description).slice(0, 4), [product]);
 
@@ -216,12 +236,33 @@ function FormationDetail() {
 
             <div className="formation-detail-grid">
               <div className="formation-detail-main">
-                <div className="formation-detail-media">
+                <div
+                  className={`formation-detail-media${photo ? " is-zoomable" : ""}`}
+                  onClick={photo ? () => setLightboxOpen(true) : undefined}
+                  onKeyDown={
+                    photo
+                      ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setLightboxOpen(true);
+                          }
+                        }
+                      : undefined
+                  }
+                  role={photo ? "button" : undefined}
+                  tabIndex={photo ? 0 : undefined}
+                  aria-label={photo ? t("Agrandir l'image") : undefined}
+                >
                   {photo ? (
                     <img src={photo} alt={product.name} />
                   ) : (
                     <span className="formation-detail-media-fallback">
                       {isVideo ? <IconEye size={52} /> : <IconBook size={52} />}
+                    </span>
+                  )}
+                  {photo && (
+                    <span className="formation-detail-zoom-hint" aria-hidden="true">
+                      <IconZoomIn size={16} />
                     </span>
                   )}
                   <span className="formation-detail-badge">{t("Formation digitale")}</span>
@@ -462,6 +503,34 @@ function FormationDetail() {
           product={product}
           onClose={closeCheckout}
         />
+
+        {lightboxOpen && photo && (
+          <div
+            className="lightbox formation-lightbox"
+            role="dialog"
+            aria-modal="true"
+            aria-label={product.name}
+            onClick={() => setLightboxOpen(false)}
+          >
+            <button
+              type="button"
+              className="lightbox-close"
+              onClick={(event) => {
+                event.stopPropagation();
+                setLightboxOpen(false);
+              }}
+              aria-label={t("Fermer")}
+            >
+              ✕
+            </button>
+            <img
+              className="lightbox-img"
+              src={photo}
+              alt={product.name}
+              onClick={(event) => event.stopPropagation()}
+            />
+          </div>
+        )}
       </main>
     </>
   );
