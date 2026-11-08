@@ -311,6 +311,86 @@ router.get(["/produit/:id", "/acheter/:id"], async (req, res) => {
   }
 });
 
+// /formations/:id — aperçu de partage d'une formation (produit digital) :
+// même logique que /produit/:id mais canonical sur le parcours formations.
+router.get("/formations/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return res.status(404).type("html").send(notFoundHtml);
+    const [p] = await q(
+      `SELECT p.name, p.description, p.price, p.currency, p.image, p.photos,
+              u.name AS shop_name, u.verified AS shop_verified,
+              fp.promo_price AS flash_price
+       FROM products p JOIN users u ON u.id = p.shop_id
+       LEFT JOIN flash_promotions fp ON fp.product_id = p.id AND fp.ends_at > now()
+       WHERE p.id = $1`,
+      [id]
+    );
+    if (!p) return res.status(404).type("html").send(notFoundHtml);
+    const images = parsePhotos(p.photos, p.image);
+    const absImage = absImageOf(images[0] || "", originOf(req));
+    const description = (p.description || "")
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 155);
+    const title = `${p.name} — Formation en ligne | MboppiShop`;
+    const canonical = `${originOf(req)}/formations/${id}`;
+    const descText =
+      description || `${p.name}, une formation en ligne disponible sur MboppiShop.`;
+    const price = p.flash_price != null ? Number(p.flash_price) : Number(p.price || 0);
+
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: p.name,
+      image: absImage,
+      description: descText,
+      url: canonical,
+      offers: {
+        "@type": "Offer",
+        price: String(price),
+        priceCurrency: (p.currency || "XAF").toUpperCase(),
+        availability: "https://schema.org/InStock",
+        url: canonical,
+      },
+      seller: p.shop_name ? { "@type": "Organization", name: p.shop_name } : undefined,
+    };
+    if (p.shop_verified) jsonLd.brand = { "@type": "Brand", name: p.shop_name };
+
+    let html = await loadIndexHtml();
+    html = injectHead(html, {
+      title,
+      description: descText,
+      canonical,
+      ogImage: absImage,
+      ogType: "product",
+    });
+    html = injectJsonLd(html, jsonLd);
+    if (!html) {
+      return res
+        .status(200)
+        .type("html")
+        .send(
+          `<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${escapeHtml(
+            title
+          )}</title><meta name="description" content="${escapeHtml(
+            descText
+          )}"/><link rel="canonical" href="${canonical}"/><script type="application/ld+json">${JSON.stringify(
+            jsonLd
+          )}</script></head><body><h1>${escapeHtml(title)}</h1><p>${escapeHtml(
+            descText
+          )}</p><p><a href="${canonical}">Voir la formation</a></p></body></html>`
+        );
+    }
+    sendHtml(res, html);
+  } catch {
+    const html = await loadIndexHtml();
+    if (html) return sendHtml(res, html);
+    res.status(500).send("Erreur serveur");
+  }
+});
+
 router.get("/boutique/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);

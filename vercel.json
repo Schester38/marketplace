@@ -33,6 +33,8 @@
     { "src": "/createur/(\\d+)", "dest": "/api/index" },
     { "src": "/ville/([^/]+)", "dest": "/api/index" },
     { "src": "/offre/(\\d+)", "dest": "/api/index" },
+    { "src": "/formations", "dest": "/api/index" },
+    { "src": "/formations/(\\d+)", "dest": "/api/index" },
     { "src": "/sitemap\\.xml", "dest": "/api/index" },
     { "src": "/robots\\.txt", "dest": "/api/index" },
     { "src": "/", "dest": "/api/index" },

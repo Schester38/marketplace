@@ -9,6 +9,7 @@ import { BASE_URL } from "./config.js";
 import pkg from "../package.json";
 import "./styles.css";
 import "./boost.css";
+import "./formations.css";
 
 import * as Sentry from "@sentry/react";
 

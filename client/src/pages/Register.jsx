@@ -31,7 +31,9 @@ export default function Register() {
           ? "seller"
           : roleParam === "livreur"
             ? "livreur"
-            : "seller",
+            : roleParam === "creator"
+              ? "creator"
+              : "seller",
     country: "",
     operator: "",
     phone: "",
