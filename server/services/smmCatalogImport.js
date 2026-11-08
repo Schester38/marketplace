@@ -245,8 +245,11 @@ export async function importProviderCatalog(items, options = {}) {
        FROM tmp_smm_items t
        JOIN smm_provider_mappings m
          ON m.provider_id = $1 AND m.external_service_id = t.external_service_id
+       JOIN smm_services s
+         ON s.id = m.smm_service_id
+        AND (s.provider_key IS NULL OR s.provider_key = $2)
        ORDER BY t.external_service_id, m.id`,
-      [providerId]
+      [providerId, providerKey]
     );
 
     await tx.query(
@@ -255,6 +258,7 @@ export async function importProviderCatalog(items, options = {}) {
        FROM tmp_smm_items t
        JOIN smm_services s
          ON s.category_id = t.category_id AND lower(s.name) = lower(t.name)
+        AND (s.provider_key IS NULL OR s.provider_key = $2)
        WHERE NOT EXISTS (
            SELECT 1 FROM tmp_smm_resolved r WHERE r.external_service_id = t.external_service_id
          )
@@ -263,7 +267,7 @@ export async function importProviderCatalog(items, options = {}) {
            WHERE m.provider_id = $1 AND m.smm_service_id = s.id
          )
        ORDER BY s.id, t.external_service_id`,
-      [providerId]
+      [providerId, providerKey]
     );
 
     await tx.query(
@@ -271,10 +275,10 @@ export async function importProviderCatalog(items, options = {}) {
          INSERT INTO smm_services
            (category_id, name, short_description, description, price, currency, billing_unit,
             status, is_automated, is_consulting, is_campaign, external_service_id,
-            delivery_days, conditions, limits, platform, sort_order, created_at, updated_at)
+            delivery_days, conditions, limits, platform, provider_key, sort_order, created_at, updated_at)
          SELECT t.category_id, t.name, t.short_description, NULL, t.price, 'XAF', '1000',
                 t.status, TRUE, FALSE, FALSE, t.external_service_id,
-                NULL, NULL, t.limits, t.platform, 0, now(), now()
+                NULL, NULL, t.limits, t.platform, $1, 0, now(), now()
          FROM tmp_smm_items t
          WHERE NOT EXISTS (
            SELECT 1 FROM tmp_smm_resolved r WHERE r.external_service_id = t.external_service_id
@@ -282,7 +286,8 @@ export async function importProviderCatalog(items, options = {}) {
          RETURNING id, external_service_id
        )
        INSERT INTO tmp_smm_resolved (external_service_id, service_id, created)
-       SELECT external_service_id, id, TRUE FROM inserted`
+       SELECT external_service_id, id, TRUE FROM inserted`,
+      [providerKey]
     );
 
     await tx.query(
@@ -298,10 +303,12 @@ export async function importProviderCatalog(items, options = {}) {
            external_service_id = t.external_service_id,
            limits = t.limits,
            platform = t.platform,
+           provider_key = $1,
            updated_at = now()
        FROM tmp_smm_resolved r
        JOIN tmp_smm_items t ON t.external_service_id = r.external_service_id
-       WHERE s.id = r.service_id`
+       WHERE s.id = r.service_id`,
+      [providerKey]
     );
 
     await tx.query(

@@ -405,7 +405,7 @@ export default function MboppiBoost() {
       .then((resp) => {
         if (cancelled) return;
         const cats = resp.categories || [];
-        setCategories(cats.length ? cats : null);
+        setCategories(cats);
       })
       .catch((err) => {
         console.error("[MboppiBoost] Erreur récupération catégories :", err?.message);
@@ -481,7 +481,7 @@ export default function MboppiBoost() {
   }, []);
 
   const platformOptions = useMemo(() => {
-    const source = categories && categories.length ? categories : fallbackCategorySource;
+    const source = categories === null ? fallbackCategorySource : categories;
     const keys = [...new Set(source.map((category) => category.platform).filter(Boolean))];
     const order = Object.keys(PLATFORM_LABELS);
     keys.sort((a, b) => order.indexOf(a) - order.indexOf(b));
@@ -491,7 +491,7 @@ export default function MboppiBoost() {
   }, [categories, fallbackCategorySource]);
 
   const catOptions = useMemo(() => {
-    const source = categories && categories.length ? categories : fallbackCategorySource;
+    const source = categories === null ? fallbackCategorySource : categories;
     const list = source.filter(
       (category) => platformFilter === "all" || category.platform === platformFilter
     );
@@ -574,7 +574,7 @@ export default function MboppiBoost() {
     ? Math.max(1, Math.ceil(fallbackFiltered.length / PAGE_SIZE))
     : catalogTotalPages;
   const catalogCategoryCount =
-    (categories && categories.length) || fallbackCategorySource.length;
+    categories === null ? fallbackCategorySource.length : categories.length;
 
   useEffect(() => {
     if (page > displayTotalPages) setPage(displayTotalPages);

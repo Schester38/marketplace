@@ -10,7 +10,7 @@ const { Pool } = pg;
 // Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-11-06-stock-alerts-v1";
+const DB_INIT_VERSION = "2026-11-08-boost-provider-catalog-v1";
 let initDbPromise = null;
 
 const LOCAL_DEFAULT = "postgres://postgres:postgres@localhost:5432/marketplace";
@@ -908,9 +908,11 @@ async function runInitDb() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     ALTER TABLE smm_services ADD COLUMN IF NOT EXISTS platform TEXT;
+    ALTER TABLE smm_services ADD COLUMN IF NOT EXISTS provider_key TEXT;
     CREATE INDEX IF NOT EXISTS idx_smm_services_category ON smm_services(category_id);
     CREATE INDEX IF NOT EXISTS idx_smm_services_status ON smm_services(status);
     CREATE INDEX IF NOT EXISTS idx_smm_services_platform ON smm_services(platform);
+    CREATE INDEX IF NOT EXISTS idx_smm_services_provider ON smm_services(provider_key, status);
     CREATE INDEX IF NOT EXISTS idx_smm_services_public ON smm_services(status, platform, category_id);
     UPDATE smm_services s
     SET platform = c.slug
@@ -1011,6 +1013,17 @@ async function runInitDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_smm_provider_mappings_provider ON smm_provider_mappings(provider_id);
     CREATE INDEX IF NOT EXISTS idx_smm_provider_mappings_service ON smm_provider_mappings(smm_service_id);
+
+    UPDATE smm_services s
+    SET provider_key = src.provider_key
+    FROM (
+      SELECT DISTINCT ON (m.smm_service_id) m.smm_service_id, p.provider_key
+      FROM smm_provider_mappings m
+      JOIN smm_providers p ON p.id = m.provider_id
+      ORDER BY m.smm_service_id, m.id DESC
+    ) src
+    WHERE s.id = src.smm_service_id
+      AND s.provider_key IS NULL;
 
     -- Portefeuille MboppiBoost (solde en USD, distinct du wallet vendeur)
     CREATE TABLE IF NOT EXISTS boost_wallets (

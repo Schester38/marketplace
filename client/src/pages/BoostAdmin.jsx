@@ -1234,6 +1234,9 @@ export default function BoostAdmin() {
           <p className="hint">
             {t(
               "Le prix de vente = taux fournisseur (USD / 1000) × taux XAF × marge. Les services sont créés ou mis à jour, puis associés au fournisseur."
+            )}{" "}
+            {t(
+              "Seuls les services du fournisseur choisi sont publiés sur la page MboppiBoost."
             )}
           </p>
           <div className="form-row">

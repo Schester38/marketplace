@@ -70,6 +70,25 @@ async function readSmmSettings() {
   return settings;
 }
 
+/**
+ * Clé du fournisseur SMM choisi d'après les réglages, ou null si aucun
+ * fournisseur n'est sélectionné. Fonction pure (testable sans base de données).
+ */
+export function providerKeyFromSettings(settings = {}) {
+  const key = String(settings["smm_provider_key"] || "").trim();
+  return key && key !== "none" ? key : null;
+}
+
+/** Clé du fournisseur SMM choisi, ou null (base indisponible incluse). */
+export async function getSelectedProviderKey() {
+  try {
+    return providerKeyFromSettings(await readSmmSettings());
+  } catch (err) {
+    console.error("[smmProvider] Erreur lecture fournisseur sélectionné :", err.message);
+    return null;
+  }
+}
+
 /* ========================================================================
    2. Mode "sans fournisseur"
    ======================================================================== */

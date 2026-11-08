@@ -253,7 +253,8 @@ export async function cleanupSmmOrders({ olderThanHours = 48, dryRun = false, li
  */
 export async function dispatchSmmOrder(orderId) {
   const rows = await q(
-    `SELECT o.*, s.external_service_id AS service_external_id
+    `SELECT o.*, s.external_service_id AS service_external_id,
+            s.provider_key AS service_provider_key
      FROM smm_orders o
      JOIN smm_services s ON s.id = o.service_id
      WHERE o.id = $1`,
@@ -279,12 +280,20 @@ export async function dispatchSmmOrder(orderId) {
     return { ok: false, error: "Le paiement de cette commande n'est pas confirmé." };
   }
 
-  const { provider, adapter } = await getActiveProviderConfig();
+  const active = await getActiveProviderConfig();
+  const providerKey = order.service_provider_key || order.provider_key || active.provider;
+  const resolved =
+    providerKey && providerKey === active.provider
+      ? active
+      : providerKey
+        ? await getProviderConfig(providerKey)
+        : active;
+  const { provider, adapter } = resolved;
   if (!provider || !adapter || adapter instanceof NoProviderAdapter) {
     return { ok: false, error: "Aucun fournisseur SMM configuré. La commande reste payée et sera traitée manuellement." };
   }
 
-  // Correspondance du service chez le fournisseur ACTIF uniquement. Le champ
+  // Correspondance du service chez le fournisseur de la commande. Le champ
   // smm_services.external_service_id n'est qu'un repli pour les services
   // historiques qui n'ont encore aucune correspondance fournisseur.
   const mappings = await q(

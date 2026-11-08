@@ -20,6 +20,7 @@ import {
 } from "../validators.js";
 import {
   getActiveProviderConfig,
+  getSelectedProviderKey,
   logSmmCall,
   generateIdempotencyKey,
   NoProviderAdapter,
@@ -183,13 +184,17 @@ function fallbackServicesPage({ categoryId, platform, search, minPrice, maxPrice
   };
 }
 
-function publicServiceWhere({ categoryId, platform, search, minPrice, maxPrice }) {
+function publicServiceWhere({ categoryId, platform, search, minPrice, maxPrice }, providerKey = null) {
   const where = [
     "s.status = 'active'",
     "c.is_active = TRUE",
     `s.price <= ${SMM_MAX_PUBLIC_PRICE_XAF}`,
   ];
   const params = [];
+  if (providerKey) {
+    params.push(providerKey);
+    where.push(`s.provider_key = $${params.length}`);
+  }
   if (categoryId) {
     params.push(categoryId);
     where.push(`s.category_id = $${params.length}`);
@@ -224,6 +229,7 @@ function publicServiceWhere({ categoryId, platform, search, minPrice, maxPrice }
 router.get(
   "/categories",
   ah(async (req, res) => {
+    const providerKey = await getSelectedProviderKey();
     try {
       const rows = await q(
         `SELECT c.id, c.name, c.slug, c.description, c.icon, c.sort_order, c.is_active, c.created_at,
@@ -233,11 +239,15 @@ router.get(
          JOIN smm_services s ON s.category_id = c.id
            AND s.status = 'active'
            AND s.price <= ${SMM_MAX_PUBLIC_PRICE_XAF}
+           ${providerKey ? "AND s.provider_key = $1" : ""}
          WHERE c.is_active = TRUE
          GROUP BY c.id
-         ORDER BY c.sort_order ASC, c.name ASC`
+         ORDER BY c.sort_order ASC, c.name ASC`,
+        providerKey ? [providerKey] : []
       );
-      if (!rows.length) return res.json({ categories: fallbackCategories() });
+      if (!rows.length) {
+        return res.json({ categories: providerKey ? [] : fallbackCategories() });
+      }
       res.json({
         categories: rows.map((category) => ({
           ...category,
@@ -245,7 +255,7 @@ router.get(
         })),
       });
     } catch (selectErr) {
-      res.json({ categories: fallbackCategories() });
+      res.json({ categories: providerKey ? [] : fallbackCategories() });
     }
   })
 );
@@ -267,7 +277,8 @@ router.get(
     const minPrice = Number.isFinite(minPriceRaw) && minPriceRaw >= 0 ? minPriceRaw : undefined;
     const maxPrice = Number.isFinite(maxPriceRaw) && maxPriceRaw >= 0 ? maxPriceRaw : undefined;
     const filters = { categoryId, platform, search, minPrice, maxPrice, page, limit };
-    const { where, params } = publicServiceWhere(filters);
+    const providerKey = await getSelectedProviderKey();
+    const { where, params } = publicServiceWhere(filters, providerKey);
 
     try {
       const countRows = await q(
@@ -279,6 +290,12 @@ router.get(
       );
       const total = Number(countRows[0]?.total) || 0;
       if (!total) {
+        if (providerKey) {
+          return res.json({
+            services: [],
+            pagination: { page: 1, limit, total: 0, total_pages: 1 },
+          });
+        }
         const anyRows = await q(
           `SELECT EXISTS(
              SELECT 1 FROM smm_services s
@@ -331,6 +348,12 @@ router.get(
         pagination: { page: safePage, limit, total, total_pages: totalPages },
       });
     } catch (dbErr) {
+      if (providerKey) {
+        return res.json({
+          services: [],
+          pagination: { page: 1, limit, total: 0, total_pages: 1 },
+        });
+      }
       res.json(fallbackServicesPage(filters));
     }
   })
@@ -344,6 +367,7 @@ router.get(
     if (!Number.isFinite(id)) {
       return res.status(400).json({ error: "ID de service invalide" });
     }
+    const providerKey = await getSelectedProviderKey();
     let service;
     try {
       const rows = await q(
@@ -353,24 +377,26 @@ router.get(
          WHERE s.id = $1
            AND s.status = 'active'
            AND c.is_active = TRUE
-           AND s.price <= ${SMM_MAX_PUBLIC_PRICE_XAF}`,
-        [id]
+           AND s.price <= ${SMM_MAX_PUBLIC_PRICE_XAF}
+           ${providerKey ? "AND s.provider_key = $2" : ""}`,
+        providerKey ? [id, providerKey] : [id]
       );
       if (rows.length) {
         service = rows[0];
       }
     } catch (dbErr) {
-      // Base de données indisponible : chercher dans les services par défaut
-      service = DEFAULT_SERVICES.find((s) => s.id === id);
-      if (service) {
-        const category = DEFAULT_CATEGORIES.find((c) => c.id === service.category_id);
-        return res.json({
-          service: decorateSmmService({
-            ...service,
-            category_name: category?.name || "",
-            category_slug: category?.slug || "",
-          }),
-        });
+      if (!providerKey) {
+        service = DEFAULT_SERVICES.find((s) => s.id === id);
+        if (service) {
+          const category = DEFAULT_CATEGORIES.find((c) => c.id === service.category_id);
+          return res.json({
+            service: decorateSmmService({
+              ...service,
+              category_name: category?.name || "",
+              category_slug: category?.slug || "",
+            }),
+          });
+        }
       }
     }
     if (!service) {
@@ -662,6 +688,7 @@ router.post(
     const { service_id, quantity, client_info, payment_method, idempotency_key } = req.body;
     const userId = req.user.id;
     const info = client_info && typeof client_info === "object" ? { ...client_info } : {};
+    const providerKey = await getSelectedProviderKey();
 
     let svc = null;
     let dbFailed = false;
@@ -674,8 +701,9 @@ router.post(
          WHERE s.id = $1
            AND s.status = 'active'
            AND c.is_active = TRUE
-           AND s.price <= ${SMM_MAX_PUBLIC_PRICE_XAF}`,
-        [service_id]
+           AND s.price <= ${SMM_MAX_PUBLIC_PRICE_XAF}
+           ${providerKey ? "AND s.provider_key = $2" : ""}`,
+        providerKey ? [service_id, providerKey] : [service_id]
       );
       if (serviceRows.length) {
         svc = serviceRows[0];
@@ -684,7 +712,7 @@ router.post(
       dbFailed = true;
     }
     if (!svc) {
-      if (dbFailed) svc = DEFAULT_SERVICES.find((s) => s.id === service_id);
+      if (dbFailed && !providerKey) svc = DEFAULT_SERVICES.find((s) => s.id === service_id);
       if (!svc) {
         return res.status(404).json({ error: "Service introuvable ou inactif" });
       }
@@ -1296,7 +1324,7 @@ router.get(
       `SELECT s.id, s.category_id, c.name AS category_name, c.slug AS category_slug,
               s.name, s.short_description, s.price, s.currency, s.billing_unit,
               s.status, s.is_automated, s.is_consulting, s.is_campaign,
-              s.delivery_days, s.sort_order, s.created_at, s.updated_at
+              s.delivery_days, s.sort_order, s.provider_key, s.created_at, s.updated_at
        FROM smm_services s
        JOIN smm_categories c ON c.id = s.category_id
        ORDER BY c.sort_order ASC, c.name ASC, s.sort_order ASC, s.name ASC`
@@ -1316,20 +1344,22 @@ router.post(
       billing_unit, status, is_automated, is_consulting, is_campaign,
       external_service_id, delivery_days, conditions, limits, sort_order,
     } = req.body;
+    const providerKey = await getSelectedProviderKey();
     try {
       const created = (await q(
         `INSERT INTO smm_services
           (category_id, name, description, short_description, price, currency,
            billing_unit, status, is_automated, is_consulting, is_campaign,
            external_service_id, delivery_days, conditions, limits, sort_order,
-           created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, now(), now())
+           provider_key, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, now(), now())
          RETURNING id`,
         [
           category_id, name, description || null, short_description || null,
           price, currency, billing_unit, status, is_automated, is_consulting,
           is_campaign, external_service_id || null, delivery_days || null,
           conditions || null, JSON.stringify(limits || {}), sort_order,
+          providerKey,
         ]
       ))[0];
 logAudit(req.user.id, "smm.service_created", `#${created.id} ${name || ""}`, req.ip);
