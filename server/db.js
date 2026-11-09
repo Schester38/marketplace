@@ -10,7 +10,7 @@ const { Pool } = pg;
 // Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-11-08-boost-provider-catalog-v1";
+const DB_INIT_VERSION = "2026-11-09-formation-modules-v1";
 let initDbPromise = null;
 
 const LOCAL_DEFAULT = "postgres://postgres:postgres@localhost:5432/marketplace";
@@ -482,6 +482,7 @@ async function runInitDb() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_kind TEXT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS youtube_id TEXT;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS access_days INTEGER;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS modules JSONB NOT NULL DEFAULT '[]'::jsonb;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS access_revoked BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS access_revoked_at TIMESTAMPTZ;
     -- Prolongation d'accÃ¨s PAR ACHETEUR : jours ajoutÃ©s Ã  la durÃ©e du produit

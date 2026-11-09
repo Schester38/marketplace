@@ -22,6 +22,7 @@ import { sendMail } from "../mailer.js";
 import { SITE_URL } from "../urls.js";
 import { createProductSchema, productListQuerySchema, citiesQuerySchema } from "../validators.js";
 import { validate, validateQuery } from "../middlewares/validate.js";
+import { askAI } from "./chat.js";
 
 const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -113,6 +114,58 @@ function parseProtectedPayload(digital_kind, youtube_url, access_days) {
     return { error: "Lien YouTube invalide. Collez l'adresse de la vidéo (youtube.com/watch…, youtu.be/…) ou son identifiant à 11 caractères." };
   }
   return { kind, youtubeId: id, accessDays: days };
+}
+
+const MAX_FORMATION_MODULES = 30;
+
+function cleanModuleText(value, max) {
+  return String(value ?? "").trim().slice(0, max);
+}
+
+/** Normalise les modules reçus du client (tableau ordonné de fiches). */
+function parseModulesPayload(raw) {
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, MAX_FORMATION_MODULES)
+    .map((m) => ({
+      title: cleanModuleText(m?.title, 200),
+      subtitle: cleanModuleText(m?.subtitle, 200),
+      description: cleanModuleText(m?.description, 600),
+      duration: cleanModuleText(m?.duration, 40),
+    }))
+    .filter((m) => m.title || m.subtitle || m.description || m.duration);
+}
+
+/** Extrait un tableau de modules d'une réponse IA (JSON, clôtures Markdown tolérées). */
+function parseAiModules(reply) {
+  const text = String(reply || "").trim();
+  if (!text) return [];
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const body = fenced ? fenced[1].trim() : text;
+  let data = null;
+  try {
+    data = JSON.parse(body);
+  } catch {
+    const start = body.indexOf("[");
+    const end = body.lastIndexOf("]");
+    if (start >= 0 && end > start) {
+      try {
+        data = JSON.parse(body.slice(start, end + 1));
+      } catch {}
+    }
+    if (!data) {
+      const startObj = body.indexOf("{");
+      const endObj = body.lastIndexOf("}");
+      if (startObj >= 0 && endObj > startObj) {
+        try {
+          data = JSON.parse(body.slice(startObj, endObj + 1));
+        } catch {}
+      }
+    }
+  }
+  const list = Array.isArray(data) ? data : Array.isArray(data?.modules) ? data.modules : [];
+  return parseModulesPayload(list);
 }
 
 const OWNER_ROLES = ["shop", "creator"];
@@ -342,11 +395,15 @@ function productRow(p, mode = "list", { ownerView = false } = {}) {
     // publique ou en cache CDN : la vidéo n'est déverrouillée qu'après
     // vérification du droit d'accès (GET /api/digital/:saleId/video).
     youtube_id,
+    modules,
     ...rest
   } = p;
   const price = Number(p.price);
   return {
     ...rest,
+    ...(mode === "detail" || ownerView
+      ? { modules: Array.isArray(modules) ? modules : [] }
+      : {}),
     ...(ownerView && youtube_id ? { youtube_id } : {}),
     photos,
     image,
@@ -632,6 +689,78 @@ router.get("/mine", authRequired, roleRequired(...OWNER_ROLES), ah(async (req, r
   res.json({ products });
 }));
 
+// Génération IA des modules d'une formation (nom + description + catégorie).
+// L'IA ne publie rien : elle renvoie une proposition que le créateur relit,
+// modifie ou supprime dans le formulaire avant l'enregistrement du produit.
+router.post(
+  "/modules/generate",
+  authRequired,
+  roleRequired(...OWNER_ROLES),
+  ah(async (req, res) => {
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({
+        error:
+          "L'assistant IA n'est pas configuré sur cette installation (GEMINI_API_KEY absente).",
+        code: "AI_NOT_CONFIGURED",
+      });
+    }
+    const name = String(req.body?.name || "").trim().slice(0, 200);
+    const description = String(req.body?.description || "").trim().slice(0, 2000);
+    const category = String(req.body?.category || "Digital").trim().slice(0, 100);
+    const digitalKind = req.body?.digital_kind === "youtube" ? "youtube" : "file";
+    if (name.length < 3) {
+      return res.status(400).json({ error: "Renseignez d'abord le nom de la formation." });
+    }
+    const message = [
+      `Formation : ${name}`,
+      `Catégorie : ${category}`,
+      `Format : ${digitalKind === "youtube" ? "vidéo" : "fichier / ebook"}`,
+      description ? `Description : ${description}` : "",
+      "",
+      "Propose 4 à 8 modules pédagogiques progressifs adaptés à ce contenu.",
+      "Réponds UNIQUEMENT par un tableau JSON valide, sans texte autour, au format :",
+      '[{"title":"Titre court","subtitle":"Sous-titre","description":"Ce que le module apporte en 1 à 2 phrases.","duration":"45 min"}]',
+      "Les titres font moins de 80 caractères, les descriptions moins de 220 caractères.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    let reply = "";
+    try {
+      reply = await askAI(
+        message,
+        [],
+        "Tu es un expert en ingénierie pédagogique. Tu structures des formations claires, concrètes et progressives.",
+        "fr",
+        {
+          maxInputChars: 6000,
+          maxOutputTokens: 1800,
+          includeCatalog: false,
+          models: [
+            "gemini-3.5-flash-lite",
+            process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
+          ].filter((m, i, a) => a.indexOf(m) === i),
+          perModelMs: 6000,
+          totalBudgetMs: 12000,
+        }
+      );
+    } catch (err) {
+      const e = new Error("L'assistant IA est momentanément indisponible. Réessayez.");
+      e.statusCode = 502;
+      throw e;
+    }
+    const modules = parseAiModules(reply);
+    if (!modules.length) {
+      return res.status(502).json({
+        error:
+          "L'IA n'a pas renvoyé de modules exploitables. Réessayez avec un nom ou une description plus précise.",
+        code: "AI_INVALID_RESPONSE",
+      });
+    }
+    res.json({ modules });
+  })
+);
+
 router.get("/cities", validateQuery(citiesQuerySchema), ah(async (req, res) => {
   const { q: search } = req.query;
   const rows = await q(
@@ -777,8 +906,8 @@ router.post(
     const created = await q(
       `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency,
         is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit,
-        digital_kind, youtube_id, access_days)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING id`,
+        digital_kind, youtube_id, access_days, modules)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING id`,
       [
         req.user.id,
         String(name).trim(),
@@ -812,6 +941,7 @@ router.post(
         wantsDigital && protectedPayload && protectedPayload.accessDays !== null
           ? protectedPayload.accessDays
           : null,
+        JSON.stringify(parseModulesPayload(req.body.modules) || []),
       ]
     );
     const product = productRow((await q(SELECT_PRODUCT + " WHERE p.id = $1", [created[0].id]))[0]);
@@ -916,8 +1046,8 @@ router.post("/:id/duplicate", authRequired, roleRequired(...OWNER_ROLES), async 
   const created = await q(
     `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency,
        is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit,
-       digital_kind, youtube_id, access_days)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING id`,
+       digital_kind, youtube_id, access_days, modules)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING id`,
     [
       product.shop_id,
       `${String(product.name).trim()} (copie)`,
@@ -946,6 +1076,7 @@ router.post("/:id/duplicate", authRequired, roleRequired(...OWNER_ROLES), async 
       product.access_days === null || product.access_days === undefined
         ? null
         : Number(product.access_days) || null,
+      JSON.stringify(Array.isArray(product.modules) ? product.modules : []),
     ]
   );
   const newProduct = productRow((await q(SELECT_PRODUCT + " WHERE p.id = $1", [created[0].id]))[0]);
@@ -1213,6 +1344,14 @@ router.put(
     const currencyCode = validCurrency(currency)
       ? String(currency).trim().toUpperCase()
       : product.currency || defaultCurrencyFor(req.user.country);
+    // Modules : non fournis → conservés (comme la photo), sinon remplacés.
+    const modulesAfter = parseModulesPayload(req.body.modules);
+    const modulesValue =
+      modulesAfter === undefined
+        ? Array.isArray(product.modules)
+          ? product.modules
+          : []
+        : modulesAfter;
     const updated = await q(
       `UPDATE products SET
        name = $1, description = $2, price = $3, old_price = $4, commission_percent = $5,
@@ -1220,8 +1359,9 @@ router.put(
        contact = $11, quantity = $12, currency = $13,
        is_digital = $14, digital_path = $15, digital_name = $16, digital_mime = $17,
        digital_size = $18, digital_download_limit = $19,
-       digital_kind = $20, youtube_id = $21, access_days = $22
-     WHERE id = $23 RETURNING id`,
+       digital_kind = $20, youtube_id = $21, access_days = $22,
+       modules = $23
+     WHERE id = $24 RETURNING id`,
       [
         String(name).trim(),
         description ? String(description).trim() : null,
@@ -1245,6 +1385,7 @@ router.put(
         isDigitalAfter ? kindAfter : null,
         isDigitalAfter && kindAfter === "youtube" ? youtubeIdAfter : null,
         isDigitalAfter ? accessDaysAfter : null,
+        JSON.stringify(modulesValue),
         product.id,
       ]
     );

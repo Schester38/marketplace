@@ -22,6 +22,13 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Mot de passe requis"),
 });
 
+const formationModuleSchema = z.object({
+  title: z.string().max(200).optional().nullable(),
+  subtitle: z.string().max(200).optional().nullable(),
+  description: z.string().max(600).optional().nullable(),
+  duration: z.string().max(40).optional().nullable(),
+});
+
 export const createProductSchema = z.object({
   name: nameSchema,
   description: z.string().max(2000).optional(),
@@ -69,6 +76,8 @@ export const createProductSchema = z.object({
   digital_kind: z.enum(["file", "youtube"]).optional().nullable(),
   youtube_url: z.string().max(300).optional().nullable(),
   access_days: z.coerce.number().int().min(1).max(3650).optional().nullable(),
+  // Modules d'une formation : tableau ordonné de fiches pédagogiques.
+  modules: z.array(formationModuleSchema).max(30).optional(),
 });
 
 export const createSaleSchema = z.object({

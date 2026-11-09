@@ -148,6 +148,9 @@ app.use("/api/purchases", limiter(10 * 60 * 1000, 30));
 app.use("/api/orders", limiter(10 * 60 * 1000, 30));
 app.use("/api/reviews", limiter(10 * 60 * 1000, 15));
 app.use("/api/chat", limiter(15 * 60 * 1000, 30));
+// Génération IA des modules de formation : chaque appel consomme un crédit
+// Gemini — quota modéré (l'authentification créateur est vérifiée dans la route).
+app.use("/api/products/modules/generate", limiter(10 * 60 * 1000, 15));
 app.use("/api/sales/livreur", limiter(5 * 60 * 1000, 60));
 // Produits digitaux : quota volontairement serré (le code de confirmation d'un
 // achat invité sert de preuve — on borne les tentatives par IP).

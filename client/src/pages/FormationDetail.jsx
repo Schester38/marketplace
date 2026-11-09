@@ -40,6 +40,19 @@ function sentences(text) {
     .filter((part) => part.length >= 28 && part.length <= 190);
 }
 
+function formationModules(product) {
+  const raw = product?.modules;
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((m) => ({
+      title: String(m?.title || "").trim(),
+      subtitle: String(m?.subtitle || "").trim(),
+      description: String(m?.description || "").trim(),
+      duration: String(m?.duration || "").trim(),
+    }))
+    .filter((m) => m.title || m.subtitle || m.description);
+}
+
 function FormationDetail() {
   const { id } = useParams();
   const { t } = useLang();
@@ -96,6 +109,7 @@ function FormationDetail() {
   }, [lightboxOpen]);
 
   const objectives = useMemo(() => sentences(product?.description).slice(0, 4), [product]);
+  const modules = useMemo(() => formationModules(product), [product]);
 
   const flash = product?.flash_promo || null;
   const displayPrice = Number(flash ? flash.price : product?.price || 0);
@@ -380,7 +394,34 @@ function FormationDetail() {
         </section>
 
         <div className="formations-shell">
-          {objectives.length > 0 && (
+          {modules.length > 0 ? (
+            <section className="formation-section">
+              <h2>{t("Ce que vous allez apprendre")}</h2>
+              <div className="formation-modules">
+                {modules.map((module, index) => (
+                  <article className="formation-module" key={`${index}-${module.title}`}>
+                    <span className="formation-module-index">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <div className="formation-module-body">
+                      <div className="formation-module-top">
+                        <h3>{module.title || t("Module {n}", { n: index + 1 })}</h3>
+                        {module.duration && (
+                          <span className="formation-module-duration">{module.duration}</span>
+                        )}
+                      </div>
+                      {module.subtitle && (
+                        <p className="formation-module-sub">{module.subtitle}</p>
+                      )}
+                      {module.description && (
+                        <p className="formation-module-desc">{module.description}</p>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : objectives.length > 0 ? (
             <section className="formation-section">
               <h2>{t("Ce que vous allez apprendre")}</h2>
               <div className="formation-objectives">
@@ -392,7 +433,7 @@ function FormationDetail() {
                 ))}
               </div>
             </section>
-          )}
+          ) : null}
 
           <section className="formation-section formation-about">
             <div>

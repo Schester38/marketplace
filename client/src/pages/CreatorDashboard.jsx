@@ -46,6 +46,7 @@ const EMPTY_FORM = {
   digital_kind: "file",
   youtube_url: "",
   access_days: "",
+  modules: [],
 };
 const MAX_PHOTOS = 1;
 
@@ -74,6 +75,7 @@ export default function CreatorDashboard() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [picking, setPicking] = useState(false);
+  const [modulesLoading, setModulesLoading] = useState(false);
   // Suppression VOLONTAIRE de la photo en cours d'édition (bouton ✕) : seule
   // cette intention est transmise au serveur (`remove_photos`). Sans elle, une
   // modification du produit ne peut plus effacer la photo existante.
@@ -94,6 +96,70 @@ export default function CreatorDashboard() {
       : "custom";
   const symbol = countrySymbol(user?.country);
   const prefix = countryPhone(user?.country);
+  const moduleList = Array.isArray(form.modules) ? form.modules : [];
+  const showModuleEditor = isFormation || form.category === "Éducation & Formation";
+
+  const addModule = () =>
+    setForm((f) => {
+      const list = Array.isArray(f.modules) ? f.modules : [];
+      if (list.length >= 30) return f;
+      return {
+        ...f,
+        modules: [...list, { title: "", subtitle: "", description: "", duration: "" }],
+      };
+    });
+
+  const updateModule = (index, patch) =>
+    setForm((f) => ({
+      ...f,
+      modules: (Array.isArray(f.modules) ? f.modules : []).map((m, i) =>
+        i === index ? { ...m, ...patch } : m
+      ),
+    }));
+
+  const removeModule = (index) =>
+    setForm((f) => ({
+      ...f,
+      modules: (Array.isArray(f.modules) ? f.modules : []).filter((_, i) => i !== index),
+    }));
+
+  const moveModule = (index, delta) =>
+    setForm((f) => {
+      const list = [...(Array.isArray(f.modules) ? f.modules : [])];
+      const target = index + delta;
+      if (target < 0 || target >= list.length) return f;
+      [list[index], list[target]] = [list[target], list[index]];
+      return { ...f, modules: list };
+    });
+
+  const generateModules = async () => {
+    setError("");
+    setSuccess("");
+    if (String(form.name || "").trim().length < 3) {
+      setError(t("Renseignez d'abord le nom de la formation."));
+      return;
+    }
+    setModulesLoading(true);
+    try {
+      const d = await api.generateProductModules({
+        name: form.name,
+        description: form.description,
+        category: form.category,
+        digital_kind: form.digital_kind,
+      });
+      const list = Array.isArray(d.modules) ? d.modules : [];
+      if (!list.length) {
+        setError(t("L'IA n'a proposé aucun module. Réessayez."));
+        return;
+      }
+      setForm((f) => ({ ...f, modules: list }));
+      setSuccess(t("Modules générés : relisez et ajustez avant de publier."));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setModulesLoading(false);
+    }
+  };
 
   const openProof = async (s) => {
     setError("");
@@ -260,6 +326,15 @@ export default function CreatorDashboard() {
       // Suppression explicite de la photo (bouton ✕) : sans ce drapeau, le
       // serveur CONSERVE la photo existante quand aucune nouvelle n'est envoyée.
       remove_photos: photoRemoved,
+      // Modules pédagogiques : vides pour une création hors formation.
+      modules: moduleList
+        .map((m) => ({
+          title: String(m.title || "").trim(),
+          subtitle: String(m.subtitle || "").trim(),
+          description: String(m.description || "").trim(),
+          duration: String(m.duration || "").trim(),
+        }))
+        .filter((m) => m.title || m.subtitle || m.description || m.duration),
     };
     try {
       if (editingId) {
@@ -321,6 +396,7 @@ export default function CreatorDashboard() {
       youtube_url: p.youtube_id ? `https://www.youtube.com/watch?v=${p.youtube_id}` : "",
       access_days:
         p.access_days !== null && p.access_days !== undefined ? String(p.access_days) : "",
+      modules: Array.isArray(p.modules) ? p.modules : [],
     });
     setEditingDigital(
       p.is_digital === true
@@ -341,6 +417,9 @@ export default function CreatorDashboard() {
     try {
       const detail = await api.getProduct(p.id);
       const dp = detail.product || {};
+      if (Array.isArray(dp.modules)) {
+        setForm((current) => ({ ...current, modules: dp.modules }));
+      }
       const mediums = Array.isArray(dp.photos) ? dp.photos : [];
       if (mediums.length) {
         const thumbs =
@@ -627,6 +706,110 @@ export default function CreatorDashboard() {
                 </option>
               ))}
             </select>
+
+            {showModuleEditor && (
+              <div className="creator-modules">
+                <div className="creator-modules-head">
+                  <div>
+                    <label>{t("Modules de la formation")}</label>
+                    <p className="hint creator-modules-hint">
+                      {t(
+                        "Présentez le contenu module par module : ils s'affichent dans « Ce que vous allez apprendre »."
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={generateModules}
+                    disabled={modulesLoading}
+                  >
+                    {modulesLoading ? t("Génération…") : t("✨ Générer avec l'IA")}
+                  </button>
+                </div>
+                {moduleList.length === 0 ? (
+                  <p className="hint creator-modules-hint">
+                    {t("Aucun module pour le moment : ajoutez-les ou laissez l'IA les proposer.")}
+                  </p>
+                ) : (
+                  <div className="creator-module-list">
+                    {moduleList.map((m, i) => (
+                      <div className="creator-module" key={i}>
+                        <div className="creator-module-head">
+                          <strong>{t("Module {n}", { n: i + 1 })}</strong>
+                          <div className="creator-module-actions">
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              onClick={() => moveModule(i, -1)}
+                              disabled={i === 0}
+                              title={t("Monter")}
+                            >
+                              ↑
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              onClick={() => moveModule(i, 1)}
+                              disabled={i === moduleList.length - 1}
+                              title={t("Descendre")}
+                            >
+                              ↓
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm"
+                              onClick={() => removeModule(i)}
+                              title={t("Supprimer ce module")}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </div>
+                        <div className="row2">
+                          <div>
+                            <label>{t("Titre du module")}</label>
+                            <input
+                              className="input"
+                              value={m.title || ""}
+                              onChange={(e) => updateModule(i, { title: e.target.value })}
+                              placeholder={t("ex : Les fondamentaux")}
+                            />
+                          </div>
+                          <div>
+                            <label>{t("Durée (ex : 45 min)")}</label>
+                            <input
+                              className="input"
+                              value={m.duration || ""}
+                              onChange={(e) => updateModule(i, { duration: e.target.value })}
+                              placeholder={t("ex : 45 min")}
+                            />
+                          </div>
+                        </div>
+                        <label>{t("Sous-titre")}</label>
+                        <input
+                          className="input"
+                          value={m.subtitle || ""}
+                          onChange={(e) => updateModule(i, { subtitle: e.target.value })}
+                          placeholder={t("ex : Comprendre les bases")}
+                        />
+                        <label>{t("Description du module")}</label>
+                        <textarea
+                          className="input"
+                          rows="2"
+                          value={m.description || ""}
+                          onChange={(e) => updateModule(i, { description: e.target.value })}
+                          placeholder={t("Ce que ce module apporte…")}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button type="button" className="btn btn-outline" onClick={addModule}>
+                  {t("+ Ajouter un module")}
+                </button>
+              </div>
+            )}
 
             <div className="row2">
               <div>

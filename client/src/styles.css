@@ -2115,6 +2115,80 @@ textarea {
   gap: 12px;
 }
 
+.creator-modules {
+  margin: 14px 0 4px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--soft);
+}
+
+.creator-modules-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.creator-modules-head label {
+  margin: 0;
+}
+
+.creator-modules-hint {
+  margin: 2px 0 0;
+}
+
+.creator-module-list {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.creator-module {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+
+.creator-module-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.creator-module-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.creator-module .input {
+  margin-bottom: 10px;
+}
+
+.creator-module .row2 {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .creator-modules-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .creator-modules-head .btn {
+    width: 100%;
+  }
+
+  .creator-module .row2 {
+    grid-template-columns: 1fr;
+  }
+}
+
 .stats {
   margin-top: 32px;
   overflow-x: auto;

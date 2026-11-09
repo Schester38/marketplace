@@ -203,6 +203,8 @@ export const api = {
     request(`/products/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   deleteProduct: (id) => request(`/products/${id}`, { method: "DELETE" }),
   duplicateProduct: (id) => request(`/products/${id}/duplicate`, { method: "POST" }),
+  generateProductModules: (payload) =>
+    request("/products/modules/generate", { method: "POST", body: JSON.stringify(payload) }),
   recentSales: () => request("/sales/recent"),
   createSale: (payload) => request("/sales", { method: "POST", body: JSON.stringify(payload) }),
   mySales: () => request("/sales/my"),
