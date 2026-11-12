@@ -32,6 +32,7 @@ function useCountdown(deadline) {
   }, []);
   const remaining = Math.max(0, Math.ceil((deadline - now) / 1000));
   return {
+    remaining,
     expired: remaining <= 0,
     hours: Math.floor(remaining / 3600),
     minutes: Math.floor((remaining % 3600) / 60),
@@ -169,6 +170,11 @@ export default function FormationFunnel() {
   const progress = Math.min(
     100,
     Math.round((funnel.seats_taken / Math.max(1, funnel.seats_total)) * 100)
+  );
+  const totalSeconds = Math.max(60, (Number(funnel.countdown_minutes) || 90) * 60);
+  const timeProgress = Math.min(
+    100,
+    Math.max(0, (1 - countdown.remaining / totalSeconds) * 100)
   );
   const oldPrice =
     funnel.old_price && Number(funnel.old_price) > Number(funnel.price) ? funnel.old_price : null;
@@ -765,8 +771,8 @@ export default function FormationFunnel() {
                   </div>
                   <div className="tw-mt-2 tw-h-1.5 tw-overflow-hidden tw-rounded-full tw-bg-white/10">
                     <div
-                      className="tw-h-full tw-rounded-full tw-bg-gradient-to-r tw-from-amber-400 tw-to-rose-500"
-                      style={{ width: `${Math.max(4, 100 - progress)}%` }}
+                      className="tw-h-full tw-rounded-full tw-bg-gradient-to-r tw-from-amber-400 tw-to-rose-500 tw-transition-all tw-duration-1000 tw-ease-linear"
+                      style={{ width: `${Math.max(2, timeProgress).toFixed(2)}%` }}
                     />
                   </div>
                 </div>
