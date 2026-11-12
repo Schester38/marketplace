@@ -419,6 +419,9 @@ export default function Admin() {
   const [formationReceiptQuery, setFormationReceiptQuery] = useState("");
   const [formationReceipts, setFormationReceipts] = useState(null);
   const [formationReceiptsBusy, setFormationReceiptsBusy] = useState(false);
+  // Performance des tunnels de vente (/f/:id) sur 30 jours : vues, formulaires,
+  // partages, paiements créés et ventes payées.
+  const [funnelStats, setFunnelStats] = useState(null);
   const [migrateBusy, setMigrateBusy] = useState(false);
   const [migrateReport, setMigrateReport] = useState(null);
   const [prodSearch, setProdSearch] = useState("");
@@ -586,6 +589,10 @@ export default function Admin() {
           });
         })
         .catch(() => setWebhookHealth(null));
+      api
+        .adminFunnelStats()
+        .then((d) => setFunnelStats(d))
+        .catch(() => setFunnelStats(null));
     },
     [t]
   );
@@ -2945,6 +2952,66 @@ export default function Admin() {
                     <td><strong>{Number(s.total_price).toLocaleString("fr-FR")} F</strong></td>
                     <td style={{ fontSize: 12 }}><code>{s.external_reference || "—"}</code></td>
                     <td style={{ fontSize: 12 }}>{s.paid_online_at ? new Date(s.paid_online_at).toLocaleString("fr-FR") : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Performance du tunnel de vente (/f/:id) — 30 jours ===== */}
+      {adminTab === "payments" && funnelStats?.products?.length > 0 && (
+        <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+          <h2 className="section-title" style={{ marginTop: 0 }}>
+            📈 {t("Tunnel de vente — performance ({days} jours)", {
+              days: funnelStats.days || 30,
+            })}
+          </h2>
+          <p className="muted-line" style={{ marginTop: 0 }}>
+            {t(
+              "Vues, ouvertures du formulaire, partages et ventes payées. La conversion compare les ventes payées aux vues de la page de vente."
+            )}
+          </p>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t("Formation")}</th>
+                  <th>{t("Vues")}</th>
+                  <th>{t("Formulaires")}</th>
+                  <th>{t("Partages")}</th>
+                  <th>{t("Paiements créés")}</th>
+                  <th>{t("Ventes payées")}</th>
+                  <th>{t("Conversion")}</th>
+                  <th>{t("Chiffre d'affaires")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {funnelStats.products.map((p) => (
+                  <tr key={p.id}>
+                    <td style={{ fontSize: 13 }}>
+                      <Link to={`/f/${p.id}`} target="_blank" rel="noopener noreferrer">
+                        {p.name}
+                      </Link>
+                      <div className="muted-line" style={{ fontSize: 11 }}>
+                        {Number(p.price || 0).toLocaleString("fr-FR")} {p.currency || "XAF"}
+                        {p.seats_total ? ` · ${p.seats_total} ${t("places")}` : ""}
+                      </div>
+                    </td>
+                    <td>{Number(p.views || 0).toLocaleString("fr-FR")}</td>
+                    <td>{Number(p.form_opens || 0).toLocaleString("fr-FR")}</td>
+                    <td>{Number(p.shares || 0).toLocaleString("fr-FR")}</td>
+                    <td>{Number(p.payins_created || 0).toLocaleString("fr-FR")}</td>
+                    <td>
+                      <strong>{Number(p.paid || 0).toLocaleString("fr-FR")}</strong>
+                    </td>
+                    <td>{p.conversion == null ? "—" : `${p.conversion} %`}</td>
+                    <td style={{ fontSize: 13 }}>
+                      <strong>
+                        {Number(p.revenue || 0).toLocaleString("fr-FR")} {p.currency || "XAF"}
+                      </strong>
+                    </td>
                   </tr>
                 ))}
               </tbody>

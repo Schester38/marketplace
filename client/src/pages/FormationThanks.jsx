@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import { downloadFunnelReceipt } from "../funnelReceipt.js";
+import { markFunnelSalePaid, rememberFunnelSale } from "../funnelSales.js";
 import { useLang } from "../i18n.jsx";
 
 function money(value, currency = "XAF") {
@@ -34,6 +35,7 @@ export default function FormationThanks() {
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
+  const paidTrackedRef = useRef(false);
 
   const loadReceipt = useCallback(async () => {
     if (!saleId) {
@@ -47,6 +49,26 @@ export default function FormationThanks() {
       setDownloaded(Boolean(data.receipt.receipt_downloaded_at && data.receipt.group_url));
       setStatus("ready");
       setError("");
+      rememberFunnelSale({
+        saleId,
+        code,
+        receiptCode: data.receipt.receipt_code,
+        productId: data.receipt.product?.id,
+        name: data.receipt.product?.name,
+        price: data.receipt.amount,
+        currency: data.receipt.currency,
+        paid: Boolean(data.receipt.paid_at),
+      });
+      if (data.receipt.paid_at) markFunnelSalePaid(saleId);
+      if (data.receipt.paid_at && !paidTrackedRef.current) {
+        paidTrackedRef.current = true;
+        api
+          .trackFunnel("funnel_paid", {
+            product_id: data.receipt.product?.id,
+            path: `/f/${data.receipt.product?.id}/merci`,
+          })
+          .catch(() => {});
+      }
     } catch (err) {
       if (err?.status === 409) {
         setStatus("pending");
@@ -304,6 +326,12 @@ export default function FormationThanks() {
                 className="tw-rounded-xl tw-border tw-border-white/15 tw-px-4 tw-py-2 tw-font-semibold tw-text-white/60"
               >
                 {t("Retour à l'accueil")}
+              </Link>
+              <Link
+                to="/mes-recus"
+                className="tw-rounded-xl tw-border tw-border-white/15 tw-px-4 tw-py-2 tw-font-semibold tw-text-white/60"
+              >
+                🧾 {t("Retrouver mon reçu")}
               </Link>
               <Link
                 to="/contact"

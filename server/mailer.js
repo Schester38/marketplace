@@ -228,6 +228,120 @@ export async function sendOrderDeliveredEmail({
   await sendMail({ to: dest, bcc: TRUSTPILOT_INVITE_EMAIL || undefined, subject, text, html });
 }
 
+/**
+ * E-mail de reçu envoyé à l'ACHETEUR d'un tunnel de vente (/f/:id) dès que le
+ * paiement en ligne est confirmé. Il contient le code de reçu, le code de
+ * confirmation et le lien direct vers la page du reçu (téléchargement PDF +
+ * déblocage du groupe privé). Aucun lien de groupe n'est inclus ici : il ne
+ * s'affiche qu'après le téléchargement du reçu. Non bloquant pour l'appelant.
+ */
+export async function sendFunnelReceiptEmail({
+  to,
+  buyerName,
+  productName,
+  amount,
+  currency = "XAF",
+  saleId,
+  code,
+  receiptCode,
+  productId,
+  shopName,
+}) {
+  const dest = String(to || "").trim();
+  if (!mailConfigured() || !dest.includes("@")) return;
+  const safeBuyer = String(buyerName || "cher client").replace(/[<>&]/g, "");
+  const safeProduct = esc(productName || "votre formation");
+  const safeShop = esc(shopName || "MboppiShop");
+  const receiptUrl = `${SITE_URL}/f/${Number(productId)}/merci?sale=${Number(saleId)}&code=${encodeURIComponent(code || "")}`;
+  const findUrl = `${SITE_URL}/mes-recus`;
+  const subject = `Votre reçu — ${productName || "formation"} 🧾`;
+  const text = [
+    `Bonjour ${buyerName || "cher client"},`,
+    "",
+    `Votre paiement pour « ${productName || "votre formation"} » est confirmé. Merci pour votre confiance !`,
+    amount ? `Montant : ${amount} ${currency}` : "",
+    receiptCode ? `Code du reçu : ${receiptCode}` : "",
+    code ? `Code de confirmation : ${code}` : "",
+    "",
+    "Téléchargez votre reçu PDF et rejoignez le groupe privé :",
+    receiptUrl,
+    "",
+    "Vous avez perdu ce lien ? Retrouvez tous vos reçus avec votre code :",
+    findUrl,
+    "",
+    `Formation proposée par ${shopName || "MboppiShop"}.`,
+    "L'équipe MboppiShop",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e2e8f0;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:26px 28px;text-align:center;">
+              <img src="${SITE_URL}/navbar-logo.png" alt="MboppiShop" width="56" height="56" style="border-radius:12px;background:#fff;display:block;margin:0 auto 10px;"/>
+              <div style="color:#fff;font-size:22px;font-weight:800;">MboppiShop</div>
+              <div style="color:#e0e7ff;font-size:13px;">Le marché de votre quartier en ligne</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 28px;">
+              <h1 style="margin:0 0 12px;font-size:19px;color:#0f172a;">Votre reçu est prêt 🧾</h1>
+              <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#334155;">
+                Bonjour ${safeBuyer}, votre paiement pour <strong>${safeProduct}</strong> est confirmé.
+                Merci d'avoir rejoint cette formation !
+              </p>
+              ${
+                amount
+                  ? `<p style="margin:0 0 8px;font-size:14px;color:#334155;"><strong>Montant :</strong> ${esc(
+                      amount
+                    )} ${esc(currency)}</p>`
+                  : ""
+              }
+              ${
+                receiptCode
+                  ? `<p style="margin:0 0 8px;font-size:14px;color:#334155;"><strong>Code du reçu :</strong> <span style="font-family:monospace;font-size:16px;color:#4f46e5;font-weight:700;">${esc(
+                      receiptCode
+                    )}</span></p>`
+                  : ""
+              }
+              ${
+                code
+                  ? `<p style="margin:0 0 18px;font-size:14px;color:#334155;"><strong>Code de confirmation :</strong> <span style="font-family:monospace;font-weight:700;">${esc(
+                      code
+                    )}</span></p>`
+                  : ""
+              }
+              <p style="text-align:center;margin:22px 0;">
+                <a href="${receiptUrl}" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#f97316);color:#111827;text-decoration:none;font-size:15px;font-weight:800;padding:14px 30px;border-radius:10px;">Télécharger mon reçu</a>
+              </p>
+              <p style="margin:0 0 10px;font-size:13px;line-height:1.6;color:#64748b;">
+                Après le téléchargement du PDF, le bouton d'accès au groupe WhatsApp privé se débloque sur la page du reçu.
+              </p>
+              <p style="margin:0 0 18px;font-size:13px;line-height:1.6;color:#64748b;">
+                Vous avez perdu le lien ? Ouvrez <a href="${findUrl}" style="color:#4f46e5;font-weight:600;">« Retrouver mon reçu »</a> et saisissez votre code.
+              </p>
+              <p style="margin:0;font-size:12px;color:#94a3b8;">Formation proposée par ${safeShop}.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px 28px;background:#f8fafc;font-size:11px;color:#94a3b8;text-align:center;">
+              © ${new Date().getFullYear()} MboppiShop · ${SITE_URL.replace(/^https?:\/\//, "")}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+  await sendMail({ to: dest, subject, text, html });
+}
+
 export function verificationEmailHtml({ name, link }) {
   const safeName = String(name || "").replace(/[<>&]/g, "");
   return `<!DOCTYPE html>

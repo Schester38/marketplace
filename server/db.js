@@ -10,7 +10,7 @@ const { Pool } = pg;
 // Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-11-12-formation-funnel-v1";
+const DB_INIT_VERSION = "2026-11-13-formation-funnel-v2";
 let initDbPromise = null;
 
 const LOCAL_DEFAULT = "postgres://postgres:postgres@localhost:5432/marketplace";
@@ -498,6 +498,12 @@ async function runInitDb() {
     ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_seats_total INTEGER NOT NULL DEFAULT 30;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_countdown_minutes INTEGER NOT NULL DEFAULT 90;
     ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_group_url TEXT;
+    -- Preuve sociale et présentation du formateur (facultatifs, édités par le
+    -- propriétaire du tunnel) : témoignages (nom, rôle, texte, capture
+    -- optionnelle), vidéo teaser YouTube et biographie du formateur.
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_testimonials JSONB NOT NULL DEFAULT '[]'::jsonb;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_teaser_url TEXT;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_trainer_bio TEXT;
     -- ReÃ§u de paiement : code alphanumÃ©rique unique (recherche admin) + suivi
     -- du tÃ©lÃ©chargement (le bouton Â« Rejoindre le Groupe Â» ne s'active qu'aprÃ¨s).
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_first_name TEXT;

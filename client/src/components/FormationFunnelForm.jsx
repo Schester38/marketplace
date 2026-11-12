@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../App.jsx";
 import { useLang } from "../i18n.jsx";
+import { markFunnelSalePaid, rememberFunnelSale } from "../funnelSales.js";
 import IkeepayCheckout from "./IkeepayCheckout.jsx";
 
 const inputClass =
@@ -38,6 +39,7 @@ export default function FormationFunnelForm({ funnel, onClose }) {
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("form"); // form | checkout | waiting | timeout
   const [order, setOrder] = useState(null);
+  const paidTrackedRef = useRef(false);
 
   const update = (key) => (event) =>
     setForm((current) => ({ ...current, [key]: event.target.value }));
@@ -55,6 +57,16 @@ export default function FormationFunnelForm({ funnel, onClose }) {
     try {
       const data = await api.funnelStatus(order.saleId, order.code);
       if (data?.paid) {
+        markFunnelSalePaid(order.saleId);
+        if (!paidTrackedRef.current) {
+          paidTrackedRef.current = true;
+          api
+            .trackFunnel("funnel_paid", {
+              product_id: funnel.product_id,
+              path: `/f/${funnel.product_id}`,
+            })
+            .catch(() => {});
+        }
         navigate(
           `/f/${funnel.product_id}/merci?sale=${order.saleId}&code=${encodeURIComponent(order.code)}`
         );
@@ -126,6 +138,23 @@ export default function FormationFunnelForm({ funnel, onClose }) {
         checkoutUrl: data.checkout_url,
         receiptCode: data.receipt_code,
       });
+      rememberFunnelSale({
+        saleId: data.sale_id,
+        code: data.confirm_code,
+        receiptCode: data.receipt_code,
+        productId: funnel.product_id,
+        name: funnel.name,
+        price: funnel.price,
+        currency: funnel.currency,
+        image: funnel.image || funnel.gallery?.[0] || "",
+        paid: false,
+      });
+      api
+        .trackFunnel("funnel_payin_created", {
+          product_id: funnel.product_id,
+          path: `/f/${funnel.product_id}`,
+        })
+        .catch(() => {});
       setStage("checkout");
     } catch (err) {
       setError(
@@ -177,6 +206,11 @@ export default function FormationFunnelForm({ funnel, onClose }) {
               <p className="tw-mt-3 tw-text-xs tw-text-white/35">
                 {t("Référence : {ref}", { ref: order?.receiptCode || order?.code || "—" })}
               </p>
+              <p className="tw-mt-1 tw-text-[11px] tw-text-white/40">
+                {t("Votre reçu sera aussi envoyé à {email}.", {
+                  email: form.buyer_email || t("votre adresse e-mail"),
+                })}
+              </p>
             </>
           ) : (
             <>
@@ -200,6 +234,13 @@ export default function FormationFunnelForm({ funnel, onClose }) {
               className="tw-rounded-xl tw-bg-white tw-px-4 tw-py-2.5 tw-text-sm tw-font-bold tw-text-slate-900"
             >
               {t("Vérifier à nouveau")}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/mes-recus")}
+              className="tw-rounded-xl tw-border tw-border-white/15 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-text-white/70 hover:tw-bg-white/10"
+            >
+              🧾 {t("Retrouver mon reçu")}
             </button>
             <button
               type="button"

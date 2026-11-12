@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
-import { BASE_URL } from "../config.js";
+import { BASE_URL, waLink } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import Seo from "../components/Seo.jsx";
 import FormationFunnelForm from "../components/FormationFunnelForm.jsx";
@@ -100,6 +100,7 @@ export default function FormationFunnel() {
   const [showForm, setShowForm] = useState(false);
   const [lightbox, setLightbox] = useState(null);
   const [shareMsg, setShareMsg] = useState("");
+  const viewTrackedRef = useRef("");
 
   useEffect(() => {
     let alive = true;
@@ -123,6 +124,19 @@ export default function FormationFunnel() {
     [funnel, id]
   );
   const countdown = useCountdown(deadline);
+
+  useEffect(() => {
+    if (!funnel?.product_id) return;
+    const key = String(funnel.product_id);
+    if (viewTrackedRef.current === key) return;
+    viewTrackedRef.current = key;
+    api
+      .trackFunnel("funnel_view", {
+        product_id: funnel.product_id,
+        path: `/f/${funnel.product_id}`,
+      })
+      .catch(() => {});
+  }, [funnel]);
 
   useEffect(() => {
     if (!lightbox) return undefined;
@@ -161,11 +175,33 @@ export default function FormationFunnel() {
   const discount = oldPrice
     ? Math.round((1 - Number(funnel.price) / Number(funnel.old_price)) * 100)
     : null;
+  const gallery = Array.from(new Set((funnel.gallery || []).filter(Boolean))).slice(0, 9);
+  const testimonials = Array.isArray(funnel.testimonials) ? funnel.testimonials : [];
+  const whatsapp = funnel.shop?.phone
+    ? waLink(
+        funnel.shop.phone,
+        `Bonjour, je souhaite des informations sur « ${funnel.name} » (MboppiShop).`
+      )
+    : "";
 
   const openForm = () => {
     if (soldOut) return;
+    api
+      .trackFunnel("funnel_form_open", {
+        product_id: funnel.product_id,
+        path: `/f/${funnel.product_id}`,
+      })
+      .catch(() => {});
     setShowForm(true);
   };
+
+  const trackShare = () =>
+    api
+      .trackFunnel("funnel_share", {
+        product_id: funnel.product_id,
+        path: `/f/${funnel.product_id}`,
+      })
+      .catch(() => {});
 
   const shareUrl = `${BASE_URL}/f/${funnel.product_id}`;
   const shareOffer = async () => {
@@ -177,6 +213,7 @@ export default function FormationFunnel() {
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share(payload);
+        trackShare();
         return;
       } catch (err) {
         if (err?.name === "AbortError") return;
@@ -184,6 +221,7 @@ export default function FormationFunnel() {
     }
     try {
       await navigator.clipboard.writeText(shareUrl);
+      trackShare();
       setShareMsg(t("Lien copié — partagez-le avec un ami."));
     } catch {
       window.prompt(t("Copiez ce lien :"), shareUrl);
@@ -291,6 +329,28 @@ export default function FormationFunnel() {
               </div>
             </div>
 
+            {/* Teaser vidéo (YouTube non répertoriée) */}
+            {funnel.teaser_embed && (
+              <section className="tw-mt-10">
+                <h2 className="tw-flex tw-items-center tw-gap-2 tw-text-xl tw-font-bold md:tw-text-2xl">
+                  🎬 {t("Découvrez la formation en vidéo")}
+                </h2>
+                <div className="tw-mt-4 tw-overflow-hidden tw-rounded-2xl tw-border tw-border-white/10 tw-bg-black tw-shadow-xl">
+                  <div className="tw-relative tw-aspect-video">
+                    <iframe
+                      src={funnel.teaser_embed}
+                      title={funnel.name}
+                      className="tw-absolute tw-inset-0 tw-h-full tw-w-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                      referrerPolicy="strict-origin-when-cross-origin"
+                      loading="lazy"
+                    />
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* Modules */}
             {funnel.modules.length > 0 && (
               <section className="tw-mt-10">
@@ -382,6 +442,126 @@ export default function FormationFunnel() {
               </section>
             )}
 
+            {/* Galerie */}
+            {gallery.length > 0 && (
+              <section className="tw-mt-10">
+                <h2 className="tw-flex tw-items-center tw-gap-2 tw-text-xl tw-font-bold md:tw-text-2xl">
+                  🖼️ {t("Aperçu en images")}
+                </h2>
+                <div className="tw-mt-4 tw-grid tw-grid-cols-2 tw-gap-2.5 sm:tw-grid-cols-3">
+                  {gallery.map((src, index) => (
+                    <button
+                      key={`${src.slice(-40)}-${index}`}
+                      type="button"
+                      onClick={() => openLightbox(src, `${funnel.name} — ${index + 1}`)}
+                      aria-label={t("Agrandir l'image")}
+                      className="tw-group tw-relative tw-aspect-square tw-overflow-hidden tw-rounded-xl tw-border tw-border-white/10 tw-bg-white/5"
+                    >
+                      <img
+                        src={src}
+                        alt={`${funnel.name} ${index + 1}`}
+                        loading="lazy"
+                        className="tw-h-full tw-w-full tw-object-cover tw-transition tw-duration-300 group-hover:tw-scale-105"
+                      />
+                      <span className="tw-pointer-events-none tw-absolute tw-inset-0 tw-flex tw-items-center tw-justify-center tw-bg-black/0 tw-text-2xl tw-opacity-0 tw-transition group-hover:tw-bg-black/35 group-hover:tw-opacity-100">
+                        🔍
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Témoignages */}
+            {testimonials.length > 0 && (
+              <section className="tw-mt-10">
+                <h2 className="tw-flex tw-items-center tw-gap-2 tw-text-xl tw-font-bold md:tw-text-2xl">
+                  💬 {t("Ils ont déjà rejoint la formation")}
+                </h2>
+                <div className="tw-mt-4 tw-grid tw-gap-3 sm:tw-grid-cols-2">
+                  {testimonials.map((item, index) => (
+                    <figure
+                      key={`${item.name}-${index}`}
+                      className="tw-flex tw-flex-col tw-rounded-2xl tw-border tw-border-white/10 tw-bg-white/[0.04] tw-p-4"
+                    >
+                      <div className="tw-flex tw-items-center tw-gap-3">
+                        {item.image ? (
+                          <button
+                            type="button"
+                            onClick={() => openLightbox(item.image, item.name)}
+                            aria-label={t("Agrandir l'image")}
+                            className="tw-h-11 tw-w-11 tw-shrink-0 tw-cursor-zoom-in tw-overflow-hidden tw-rounded-full"
+                          >
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              loading="lazy"
+                              className="tw-h-full tw-w-full tw-object-cover"
+                            />
+                          </button>
+                        ) : (
+                          <span className="tw-flex tw-h-11 tw-w-11 tw-shrink-0 tw-items-center tw-justify-center tw-rounded-full tw-bg-blue-500/20 tw-text-sm tw-font-black tw-text-blue-300">
+                            {String(item.name || "?").slice(0, 1).toUpperCase()}
+                          </span>
+                        )}
+                        <figcaption className="tw-min-w-0">
+                          <p className="tw-truncate tw-text-sm tw-font-bold">{item.name}</p>
+                          {item.role && (
+                            <p className="tw-truncate tw-text-[11px] tw-text-white/45">{item.role}</p>
+                          )}
+                        </figcaption>
+                      </div>
+                      <blockquote className="tw-mt-3 tw-text-sm tw-leading-relaxed tw-text-white/70">
+                        “{item.text}”
+                      </blockquote>
+                      <div className="tw-mt-3 tw-text-xs tw-text-amber-300">★★★★★</div>
+                    </figure>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Formateur */}
+            {funnel.trainer_bio && (
+              <section className="tw-mt-10">
+                <h2 className="tw-flex tw-items-center tw-gap-2 tw-text-xl tw-font-bold md:tw-text-2xl">
+                  👤 {t("Votre formateur")}
+                </h2>
+                <div className="tw-mt-4 tw-flex tw-flex-col tw-gap-4 tw-rounded-2xl tw-border tw-border-white/10 tw-bg-white/[0.04] tw-p-4 sm:tw-flex-row sm:tw-items-start">
+                  {funnel.shop?.avatar ? (
+                    <img
+                      src={funnel.shop.avatar}
+                      alt={funnel.shop?.name || ""}
+                      className="tw-h-16 tw-w-16 tw-shrink-0 tw-rounded-2xl tw-object-cover"
+                    />
+                  ) : (
+                    <span className="tw-flex tw-h-16 tw-w-16 tw-shrink-0 tw-items-center tw-justify-center tw-rounded-2xl tw-bg-gradient-to-br tw-from-blue-600 tw-to-indigo-800 tw-text-2xl tw-font-black">
+                      {String(funnel.shop?.name || "M").slice(0, 1).toUpperCase()}
+                    </span>
+                  )}
+                  <div className="tw-min-w-0">
+                    <p className="tw-text-base tw-font-bold">{funnel.shop?.name}</p>
+                    {funnel.shop?.city && (
+                      <p className="tw-text-xs tw-text-white/45">{funnel.shop.city}</p>
+                    )}
+                    <p className="tw-mt-2 tw-whitespace-pre-line tw-text-sm tw-leading-relaxed tw-text-white/65">
+                      {funnel.trainer_bio}
+                    </p>
+                    {whatsapp && (
+                      <a
+                        href={whatsapp}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="tw-mt-3 tw-inline-flex tw-items-center tw-gap-2 tw-rounded-xl tw-bg-[#25D366]/15 tw-px-3.5 tw-py-2 tw-text-xs tw-font-bold tw-text-[#4ade80]"
+                      >
+                        💬 {t("Contacter le formateur")}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+
             <div className="tw-mt-10 tw-grid tw-gap-3 sm:tw-grid-cols-3">
               {[
                 { icon: "⚡", title: t("Accès immédiat"), text: t("Le groupe privé est accessible après paiement.") },
@@ -398,6 +578,124 @@ export default function FormationFunnel() {
                 </div>
               ))}
             </div>
+
+            {/* Questions fréquentes */}
+            <section className="tw-mt-10">
+              <h2 className="tw-flex tw-items-center tw-gap-2 tw-text-xl tw-font-bold md:tw-text-2xl">
+                ❓ {t("Questions fréquentes")}
+              </h2>
+              <div className="tw-mt-4 tw-space-y-2.5">
+                {[
+                  {
+                    q: t("Quand vais-je recevoir mon accès ?"),
+                    a: t(
+                      "Dès que iKeePay confirme le paiement, votre reçu officiel est disponible et téléchargeable. Après le téléchargement du PDF, le bouton du groupe WhatsApp privé se débloque immédiatement."
+                    ),
+                  },
+                  {
+                    q: t("Le paiement est-il sécurisé ?"),
+                    a: t(
+                      "Oui. Le paiement est traité par iKeePay (transaction chiffrée). MboppiShop ne conserve aucune donnée bancaire : seuls le reçu et le code de confirmation sont enregistrés."
+                    ),
+                  },
+                  {
+                    q: t("Puis-je payer par Mobile Money ?"),
+                    a: t(
+                      "Oui, iKeePay accepte Mobile Money et carte bancaire selon votre pays. Le Montant affiché est celui de la formation, sans frais supplémentaires de notre côté."
+                    ),
+                  },
+                  {
+                    q: t("J'ai perdu mon reçu, que faire ?"),
+                    a: t(
+                      "Utilisez la page « Retrouver mon reçu » et saisissez le code MBP-… reçu par e-mail. Le même code figure sur le PDF téléchargé."
+                    ),
+                  },
+                  {
+                    q: t("Quelle est la politique de remboursement ?"),
+                    a: t(
+                      "Les conditions s'appliquent à la confirmation du paiement et à l'accès au contenu privé. Consultez la page Remboursement et les CGV avant l'achat."
+                    ),
+                  },
+                ].map((item) => (
+                  <details
+                    key={item.q}
+                    className="tw-group tw-rounded-2xl tw-border tw-border-white/10 tw-bg-white/[0.03] tw-p-4"
+                  >
+                    <summary className="tw-flex tw-cursor-pointer tw-list-none tw-items-center tw-justify-between tw-gap-3 tw-text-sm tw-font-semibold tw-text-white/85">
+                      {item.q}
+                      <span className="tw-shrink-0 tw-text-white/35 tw-transition group-open:tw-rotate-180">
+                        ⌄
+                      </span>
+                    </summary>
+                    <p className="tw-mt-2 tw-text-sm tw-leading-relaxed tw-text-white/55">{item.a}</p>
+                  </details>
+                ))}
+              </div>
+              <p className="tw-mt-3 tw-text-xs tw-text-white/40">
+                {t("Une autre question ?")}{" "}
+                {whatsapp ? (
+                  <a
+                    href={whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tw-font-semibold tw-text-emerald-300 tw-underline"
+                  >
+                    {t("Écrivez-nous sur WhatsApp")}
+                  </a>
+                ) : (
+                  <Link to="/contact" className="tw-font-semibold tw-text-white/70 tw-underline">
+                    {t("Contactez-nous")}
+                  </Link>
+                )}
+                {" · "}
+                <Link to="/mes-recus" className="tw-font-semibold tw-text-white/70 tw-underline">
+                  {t("Retrouver mon reçu")}
+                </Link>
+              </p>
+            </section>
+
+            {/* Garantie / accès */}
+            <section className="tw-mt-8 tw-rounded-2xl tw-border tw-border-emerald-400/25 tw-bg-gradient-to-br tw-from-emerald-400/10 tw-to-transparent tw-p-5">
+              <h2 className="tw-flex tw-items-center tw-gap-2 tw-text-lg tw-font-black">
+                🛡️ {t("Accès garanti")}
+              </h2>
+              <p className="tw-mt-2 tw-text-sm tw-leading-relaxed tw-text-white/65">
+                {t(
+                  "Le reçu officiel et le code de confirmation prouvent votre achat à tout moment. En cas de difficulté d'accès, l'équipe MboppiShop vous accompagne jusqu'à l'entrée dans le groupe privé."
+                )}
+              </p>
+              <div className="tw-mt-3 tw-flex tw-flex-wrap tw-gap-2 tw-text-xs">
+                <Link
+                  to="/remboursement"
+                  className="tw-rounded-xl tw-border tw-border-white/15 tw-px-3.5 tw-py-2 tw-font-semibold tw-text-white/70 hover:tw-bg-white/10"
+                >
+                  {t("Politique de remboursement")}
+                </Link>
+                <Link
+                  to="/cgv"
+                  className="tw-rounded-xl tw-border tw-border-white/15 tw-px-3.5 tw-py-2 tw-font-semibold tw-text-white/70 hover:tw-bg-white/10"
+                >
+                  {t("Conditions de vente")}
+                </Link>
+                {whatsapp && (
+                  <a
+                    href={whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tw-rounded-xl tw-bg-[#25D366]/15 tw-px-3.5 tw-py-2 tw-font-semibold tw-text-[#4ade80]"
+                  >
+                    💬 {t("Assistance WhatsApp")}
+                  </a>
+                )}
+              </div>
+            </section>
+
+            <p className="tw-mt-6 tw-text-center tw-text-xs tw-text-white/45">
+              {t("Déjà acheté ?")}{" "}
+              <Link to="/mes-recus" className="tw-font-bold tw-text-white/75 tw-underline">
+                🧾 {t("Retrouver mon reçu")}
+              </Link>
+            </p>
           </div>
 
           {/* Carte d'achat */}
@@ -490,6 +788,17 @@ export default function FormationFunnel() {
                   🔗 {t("Partager l'offre")}
                 </button>
 
+                {whatsapp && (
+                  <a
+                    href={whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tw-mt-3 tw-flex tw-w-full tw-items-center tw-justify-center tw-gap-2 tw-rounded-2xl tw-border tw-border-[#25D366]/30 tw-bg-[#25D366]/10 tw-px-5 tw-py-3 tw-text-sm tw-font-bold tw-text-[#4ade80] tw-transition hover:tw-bg-[#25D366]/20"
+                  >
+                    💬 {t("Poser une question sur WhatsApp")}
+                  </a>
+                )}
+
                 <div className="tw-mt-3 tw-space-y-1.5 tw-text-center tw-text-[11px] tw-text-white/45">
                   <p>🔐 {t("Paiement sécurisé par iKeePay (Mobile Money, carte)")}</p>
                   <p>🧾 {t("Reçu PDF + accès au groupe privé immédiatement après paiement")}</p>
@@ -522,9 +831,9 @@ export default function FormationFunnel() {
             </div>
 
             <p className="tw-mt-3 tw-text-center tw-text-[11px] tw-text-white/35">
-              {t("Des questions ?")}{" "}
-              <Link to="/contact" className="tw-text-white/60 tw-underline">
-                {t("Contactez-nous")}
+              {t("Déjà acheté ?")}{" "}
+              <Link to="/mes-recus" className="tw-text-white/60 tw-underline">
+                🧾 {t("Retrouver mon reçu")}
               </Link>
             </p>
           </aside>
@@ -553,7 +862,46 @@ export default function FormationFunnel() {
         </div>
       </main>
 
-      <footer className="tw-border-t tw-border-white/10 tw-py-6 tw-text-center tw-text-[11px] tw-text-white/35">
+      {/* CTA fixe mobile : prix + réservation toujours visibles */}
+      {!showForm && !lightbox && (
+        <div className="tw-fixed tw-inset-x-0 tw-bottom-0 tw-z-40 tw-border-t tw-border-white/10 tw-bg-[#0b1220]/95 tw-px-3 tw-py-2.5 tw-backdrop-blur-md lg:tw-hidden">
+          <div className="tw-flex tw-items-center tw-gap-2.5">
+            <div className="tw-min-w-0 tw-flex-1">
+              <p className="tw-text-[10px] tw-font-semibold tw-uppercase tw-tracking-wider tw-text-white/40">
+                {t("Prix de la formation")}
+              </p>
+              <p className="tw-flex tw-flex-wrap tw-items-baseline tw-gap-1.5">
+                <span className="tw-text-lg tw-font-black tw-leading-none">
+                  {money(funnel.price, funnel.currency)}
+                </span>
+                {oldPrice && (
+                  <span className="tw-text-[11px] tw-text-white/35 tw-line-through">
+                    {money(oldPrice, funnel.currency)}
+                  </span>
+                )}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={shareOffer}
+              aria-label={t("Partager l'offre")}
+              className="tw-flex tw-h-11 tw-w-11 tw-shrink-0 tw-items-center tw-justify-center tw-rounded-xl tw-border tw-border-white/15 tw-bg-white/5 tw-text-base"
+            >
+              🔗
+            </button>
+            <button
+              type="button"
+              onClick={openForm}
+              disabled={soldOut}
+              className="tw-shrink-0 tw-rounded-xl tw-bg-gradient-to-r tw-from-amber-400 tw-via-orange-500 tw-to-rose-500 tw-px-4 tw-py-3 tw-text-sm tw-font-black tw-text-slate-950 disabled:tw-opacity-50"
+            >
+              {soldOut ? t("Complet") : `🔒 ${t("Réserver")}`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <footer className="tw-border-t tw-border-white/10 tw-pb-24 tw-pt-6 tw-text-center tw-text-[11px] tw-text-white/35 lg:tw-pb-6">
         © {new Date().getFullYear()} MboppiShop — {t("Tous droits réservés.")}
       </footer>
 

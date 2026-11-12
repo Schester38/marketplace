@@ -116,6 +116,13 @@ const FUNNEL_EVENTS = new Set([
   "begin_checkout",
   "bundle_add",
   "stock_alert",
+  // Tunnel de vente « formation flash » (/f/:id) : vue de la page, ouverture
+  // du formulaire, partage, paiement en ligne créé puis confirmé.
+  "funnel_view",
+  "funnel_form_open",
+  "funnel_share",
+  "funnel_payin_created",
+  "funnel_paid",
 ]);
 
 router.post("/funnel", ah(async (req, res) => {

@@ -15,7 +15,7 @@ import { reconcileDigitalSale } from "../services/ikeepay.js";
 import { proxyPhotoUrl } from "../photoProxy.js";
 import { fullPhotos } from "../photo.js";
 import { SITE_URL } from "../urls.js";
-import { DEFAULT_FUNNEL_GROUP_URL } from "./products.js";
+import { DEFAULT_FUNNEL_GROUP_URL, parseYoutubeId } from "./products.js";
 
 const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -114,6 +114,45 @@ function receiptPayload(sale, receiptCode) {
     site_url: SITE_URL,
   };
 }
+
+// ─── Retrouver un reçu par son code (acheteur invité) ──────────────────────
+// Le code MBP-… figure dans l'e-mail de reçu et sur le PDF : il sert de preuve
+// d'accès minimale quand l'acheteur a perdu son lien. La réponse ne contient
+// aucune donnée personnelle — uniquement de quoi rouvrir la page du reçu.
+router.get(
+  "/find",
+  ah(async (req, res) => {
+    res.set("Cache-Control", "no-store");
+    let code = String(req.query.receipt || req.query.code || "")
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, "");
+    if (code && !code.includes("-")) code = `MBP-${code}`;
+    if (!/^MBP-[A-Z0-9]{6,12}$/.test(code)) {
+      return res.status(400).json({ error: "Code de reçu invalide." });
+    }
+    const sale = (
+      await q(
+        `SELECT s.id, s.product_id, s.confirm_code, s.receipt_code,
+                s.paid_online_at, s.shop_confirmed_at, s.delivered_at,
+                p.name AS product_name
+           FROM sales s
+           JOIN products p ON p.id = s.product_id
+          WHERE s.receipt_code = $1`,
+        [code]
+      )
+    )[0];
+    if (!sale) return res.status(404).json({ error: "Aucun reçu ne correspond à ce code." });
+    res.json({
+      sale_id: Number(sale.id),
+      product_id: Number(sale.product_id),
+      product_name: sale.product_name,
+      confirm_code: sale.confirm_code,
+      receipt_code: sale.receipt_code,
+      paid: Boolean(sale.paid_online_at || sale.shop_confirmed_at || sale.delivered_at),
+    });
+  })
+);
 
 // ─── Reçu (authentifié par le code de confirmation) ────────────────────────
 router.get(
@@ -216,7 +255,8 @@ router.get(
       await q(
         `SELECT p.id, p.name, p.description, p.price, p.old_price, p.currency,
                 p.image, p.photos, p.modules, p.funnel_enabled, p.funnel_headline,
-                p.funnel_bonuses, p.funnel_seats_total, p.funnel_countdown_minutes,
+                p.funnel_bonuses, p.funnel_testimonials, p.funnel_teaser_url,
+                p.funnel_trainer_bio, p.funnel_seats_total, p.funnel_countdown_minutes,
                 u.name AS shop_name, u.phone AS shop_phone, u.city AS shop_city,
                 u.avatar AS shop_avatar, u.verified AS shop_verified
            FROM products p
@@ -249,6 +289,16 @@ router.get(
         image: proxyPhotoUrl(b?.image) || null,
       })
     );
+    const testimonials = (Array.isArray(product.funnel_testimonials)
+      ? product.funnel_testimonials
+      : []
+    ).map((item) => ({
+      name: item?.name || "",
+      role: item?.role || "",
+      text: item?.text || "",
+      image: proxyPhotoUrl(item?.image) || null,
+    }));
+    const teaserId = parseYoutubeId(product.funnel_teaser_url);
     res.json({
       funnel: {
         product_id: Number(product.id),
@@ -265,6 +315,11 @@ router.get(
         gallery,
         modules: Array.isArray(product.modules) ? product.modules : [],
         bonuses,
+        testimonials,
+        teaser_embed: teaserId
+          ? `https://www.youtube-nocookie.com/embed/${teaserId}?rel=0&modestbranding=1`
+          : null,
+        trainer_bio: product.funnel_trainer_bio || "",
         seats_total: seatsTotal,
         seats_taken: seatsTaken,
         seats_left: Math.max(0, seatsTotal - seatsTaken),

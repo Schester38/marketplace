@@ -1668,6 +1668,85 @@ router.get(
   })
 );
 
+// Performance du tunnel de vente (/f/:id) sur les N derniers jours : vues,
+// ouvertures du formulaire, partages, paiements créés (journal client_logs)
+// et ventes réellement payées + chiffre d'affaires (table sales).
+router.get(
+  "/funnel-stats",
+  ah(async (req, res) => {
+    const days = Math.min(90, Math.max(1, Number(req.query.days) || 30));
+    const products = await q(
+      `SELECT id, name, price, currency, funnel_seats_total
+         FROM products
+        WHERE funnel_enabled = TRUE
+        ORDER BY id DESC`
+    );
+    const ids = products.map((p) => Number(p.id)).filter((id) => id > 0);
+    const [logs, sales] = await Promise.all([
+      q(
+        `SELECT message, COUNT(*)::int AS n
+           FROM client_logs
+          WHERE message LIKE 'funnel:%'
+            AND created_at >= now() - ($1::int * interval '1 day')
+          GROUP BY message`,
+        [days]
+      ),
+      ids.length
+        ? q(
+            `SELECT product_id, COUNT(*)::int AS paid,
+                    COALESCE(SUM(total_price), 0) AS revenue
+               FROM sales
+              WHERE product_id = ANY($1::int[])
+                AND status <> 'cancelled'
+                AND (paid_online_at IS NOT NULL OR shop_confirmed_at IS NOT NULL OR delivered_at IS NOT NULL)
+                AND created_at >= now() - ($2::int * interval '1 day')
+              GROUP BY product_id`,
+            [ids, days]
+          )
+        : [],
+    ]);
+    const metricsByProduct = new Map();
+    for (const row of logs) {
+      const match = /^funnel:([a-z_]+):(\d+)$/.exec(String(row.message || ""));
+      if (!match) continue;
+      const productId = Number(match[2]);
+      const key = match[1];
+      if (!metricsByProduct.has(productId)) metricsByProduct.set(productId, {});
+      const metrics = metricsByProduct.get(productId);
+      metrics[key] = (metrics[key] || 0) + Number(row.n || 0);
+    }
+    const salesByProduct = new Map(
+      sales.map((row) => [
+        Number(row.product_id),
+        { paid: Number(row.paid || 0), revenue: Number(row.revenue || 0) },
+      ])
+    );
+    res.json({
+      days,
+      products: products.map((p) => {
+        const metrics = metricsByProduct.get(Number(p.id)) || {};
+        const sale = salesByProduct.get(Number(p.id)) || { paid: 0, revenue: 0 };
+        const views = Number(metrics.funnel_view || 0);
+        return {
+          id: Number(p.id),
+          name: p.name,
+          price: Number(p.price),
+          currency: p.currency || "XAF",
+          seats_total: Number(p.funnel_seats_total) || 30,
+          views,
+          form_opens: Number(metrics.funnel_form_open || 0),
+          shares: Number(metrics.funnel_share || 0),
+          payins_created: Number(metrics.funnel_payin_created || 0),
+          paid_events: Number(metrics.funnel_paid || 0),
+          paid: sale.paid,
+          revenue: sale.revenue,
+          conversion: views > 0 ? Math.round((sale.paid / views) * 1000) / 10 : null,
+        };
+      }),
+    });
+  })
+);
+
 // Retraits des gains en ligne (créateur + vendeur) : même principe que les
 // retraits d'activation — paiement manuel (espèces / Mobile Money).
 router.get(

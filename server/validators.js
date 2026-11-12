@@ -38,10 +38,22 @@ const funnelBonusSchema = z.object({
   image: z.string().max(4400000).optional().nullable(),
 });
 
+// Témoignage d'acheteur : nom, rôle/contexte, texte et capture optionnelle
+// (image data-URI téléversée par le serveur ou URL existante).
+const funnelTestimonialSchema = z.object({
+  name: z.string().max(80).optional().nullable(),
+  role: z.string().max(80).optional().nullable(),
+  text: z.string().max(400).optional().nullable(),
+  image: z.string().max(4400000).optional().nullable(),
+});
+
 const funnelSchema = z.object({
   enabled: z.boolean().optional(),
   headline: z.string().max(200).optional().nullable(),
   bonuses: z.array(funnelBonusSchema).max(6).optional(),
+  testimonials: z.array(funnelTestimonialSchema).max(6).optional(),
+  teaser_url: z.string().max(300).optional().nullable(),
+  trainer_bio: z.string().max(600).optional().nullable(),
   seats_total: z.coerce.number().int().min(1).max(1000).optional(),
   countdown_minutes: z.coerce.number().int().min(5).max(1440).optional(),
   group_url: z.string().max(300).optional().nullable(),

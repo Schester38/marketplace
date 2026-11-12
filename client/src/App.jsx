@@ -117,6 +117,7 @@ const MesFormations = lazyRetry(() => import("./pages/MesFormations.jsx"));
 const DevenirFormateur = lazyRetry(() => import("./pages/DevenirFormateur.jsx"));
 const FormationFunnel = lazyRetry(() => import("./pages/FormationFunnel.jsx"));
 const FormationThanks = lazyRetry(() => import("./pages/FormationThanks.jsx"));
+const FunnelReceipts = lazyRetry(() => import("./pages/FunnelReceipts.jsx"));
 const CookiesBanner = lazyRetry(() => import("./components/CookiesBanner.jsx"));
 import OfflinePage from "./pages/OfflinePage.jsx";
 import AdminMessagePopup from "./components/AdminMessagePopup.jsx";
@@ -741,6 +742,7 @@ export default function App() {
             <Route path="/acheter/:id" element={<PurchasePage />} />
             <Route path="/f/:id" element={<FormationFunnel />} />
             <Route path="/f/:id/merci" element={<FormationThanks />} />
+            <Route path="/mes-recus" element={<FunnelReceipts />} />
             <Route
               path="/adhesion"
               element={

@@ -57,6 +57,9 @@ const EMPTY_FORM = {
     countdown_minutes: "90",
     group_url: "https://chat.whatsapp.com/IkP0cv2vjybDwOgmYYUmJv",
     bonuses: [],
+    testimonials: [],
+    teaser_url: "",
+    trainer_bio: "",
   },
 };
 const MAX_PHOTOS = 1;
@@ -124,6 +127,9 @@ export default function CreatorDashboard() {
     }));
 
   const funnelBonuses = Array.isArray(funnelForm.bonuses) ? funnelForm.bonuses : [];
+  const funnelTestimonials = Array.isArray(funnelForm.testimonials)
+    ? funnelForm.testimonials
+    : [];
 
   const addFunnelBonus = () =>
     setForm((f) => {
@@ -164,6 +170,52 @@ export default function CreatorDashboard() {
     try {
       const { entry } = await smartProcessImageFile(file);
       updateFunnelBonus(index, { image: entry.thumb });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const addFunnelTestimonial = () =>
+    setForm((f) => {
+      const funnel = { ...EMPTY_FORM.funnel, ...(f.funnel || {}) };
+      const testimonials = Array.isArray(funnel.testimonials) ? funnel.testimonials : [];
+      if (testimonials.length >= 6) return f;
+      return {
+        ...f,
+        funnel: {
+          ...funnel,
+          testimonials: [...testimonials, { name: "", role: "", text: "", image: "" }],
+        },
+      };
+    });
+
+  const updateFunnelTestimonial = (index, patch) =>
+    setForm((f) => {
+      const funnel = { ...EMPTY_FORM.funnel, ...(f.funnel || {}) };
+      const testimonials = (Array.isArray(funnel.testimonials)
+        ? funnel.testimonials
+        : []
+      ).map((item, i) => (i === index ? { ...item, ...patch } : item));
+      return { ...f, funnel: { ...funnel, testimonials } };
+    });
+
+  const removeFunnelTestimonial = (index) =>
+    setForm((f) => {
+      const funnel = { ...EMPTY_FORM.funnel, ...(f.funnel || {}) };
+      const testimonials = (Array.isArray(funnel.testimonials)
+        ? funnel.testimonials
+        : []
+      ).filter((_, i) => i !== index);
+      return { ...f, funnel: { ...funnel, testimonials } };
+    });
+
+  const addFunnelTestimonialImage = async (index, files) => {
+    const file = Array.from(files || [])[0];
+    if (!file) return;
+    setError("");
+    try {
+      const { entry } = await smartProcessImageFile(file);
+      updateFunnelTestimonial(index, { image: entry.thumb });
     } catch (err) {
       setError(err.message);
     }
@@ -427,6 +479,16 @@ export default function CreatorDashboard() {
                   image: String(b.image || ""),
                 }))
                 .filter((b) => b.title || b.description || b.image),
+              testimonials: funnelTestimonials
+                .map((item) => ({
+                  name: String(item.name || "").trim(),
+                  role: String(item.role || "").trim(),
+                  text: String(item.text || "").trim(),
+                  image: String(item.image || ""),
+                }))
+                .filter((item) => item.name || item.text || item.image),
+              teaser_url: String(funnelForm.teaser_url || "").trim(),
+              trainer_bio: String(funnelForm.trainer_bio || "").trim(),
               seats_total: Number(funnelForm.seats_total || 30),
               countdown_minutes: Number(funnelForm.countdown_minutes || 90),
               group_url: String(funnelForm.group_url || "").trim(),
@@ -509,6 +571,17 @@ export default function CreatorDashboard() {
                 description: b.description || "",
                 image: b.image || "",
               })),
+              testimonials: (Array.isArray(p.funnel.testimonials)
+                ? p.funnel.testimonials
+                : []
+              ).map((item) => ({
+                name: item.name || "",
+                role: item.role || "",
+                text: item.text || "",
+                image: item.image || "",
+              })),
+              teaser_url: p.funnel.teaser_url || "",
+              trainer_bio: p.funnel.trainer_bio || "",
             }
           : EMPTY_FORM.funnel,
     });
@@ -872,6 +945,38 @@ export default function CreatorDashboard() {
                       )}
                     </p>
 
+                    <label>{t("Vidéo de présentation (YouTube, facultatif)")}</label>
+                    <input
+                      className="input"
+                      type="url"
+                      maxLength={300}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      value={funnelForm.teaser_url || ""}
+                      onChange={(e) => setFunnel({ teaser_url: e.target.value })}
+                    />
+                    <p className="hint">
+                      {t(
+                        "Vidéo « Non répertoriée » : elle est lue dans un lecteur intégré (youtube-nocookie), sans lien public. Laissez vide pour masquer la section."
+                      )}
+                    </p>
+
+                    <label>{t("Présentation du formateur (facultatif)")}</label>
+                    <textarea
+                      className="input"
+                      rows="3"
+                      maxLength={600}
+                      placeholder={t(
+                        "Quelques lignes sur votre parcours, votre expérience et votre méthode…"
+                      )}
+                      value={funnelForm.trainer_bio || ""}
+                      onChange={(e) => setFunnel({ trainer_bio: e.target.value })}
+                    />
+                    <p className="hint">
+                      {t(
+                        "Affichée sur la page de vente avec votre nom, votre ville et votre photo de profil."
+                      )}
+                    </p>
+
                     <div className="creator-modules-head funnel-bonuses-head">
                       <div>
                         <label>{t("Bonus de l'offre")}</label>
@@ -949,6 +1054,106 @@ export default function CreatorDashboard() {
                                     type="button"
                                     className="photo-remove"
                                     onClick={() => updateFunnelBonus(i, { image: "" })}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="creator-modules-head funnel-bonuses-head">
+                      <div>
+                        <label>{t("Témoignages d'acheteurs")}</label>
+                        <p className="hint creator-modules-hint">
+                          {t("Jusqu'à 6 témoignages : nom, rôle, message et photo (facultative).")}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={addFunnelTestimonial}
+                        disabled={funnelTestimonials.length >= 6}
+                      >
+                        + {t("Ajouter un témoignage")}
+                      </button>
+                    </div>
+
+                    {funnelTestimonials.length === 0 ? (
+                      <p className="hint creator-modules-hint">
+                        {t("Aucun témoignage pour le moment.")}
+                      </p>
+                    ) : (
+                      <div className="creator-module-list">
+                        {funnelTestimonials.map((item, i) => (
+                          <div className="creator-module" key={i}>
+                            <div className="creator-module-head">
+                              <strong>{t("Témoignage {n}", { n: i + 1 })}</strong>
+                              <button
+                                type="button"
+                                className="btn btn-outline btn-sm"
+                                onClick={() => removeFunnelTestimonial(i)}
+                                title={t("Supprimer ce témoignage")}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <div className="row2">
+                              <div>
+                                <label>{t("Nom affiché")}</label>
+                                <input
+                                  className="input"
+                                  maxLength={80}
+                                  value={item.name || ""}
+                                  onChange={(e) =>
+                                    updateFunnelTestimonial(i, { name: e.target.value })
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <label>{t("Rôle / ville (facultatif)")}</label>
+                                <input
+                                  className="input"
+                                  maxLength={80}
+                                  placeholder={t("ex : Entrepreneure, Douala")}
+                                  value={item.role || ""}
+                                  onChange={(e) =>
+                                    updateFunnelTestimonial(i, { role: e.target.value })
+                                  }
+                                />
+                              </div>
+                            </div>
+                            <label>{t("Témoignage")}</label>
+                            <textarea
+                              className="input"
+                              rows="2"
+                              maxLength={400}
+                              value={item.text || ""}
+                              onChange={(e) =>
+                                updateFunnelTestimonial(i, { text: e.target.value })
+                              }
+                            />
+                            <label>{t("Photo (facultatif)")}</label>
+                            <input
+                              className="input"
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                addFunnelTestimonialImage(i, e.target.files);
+                                e.target.value = "";
+                              }}
+                            />
+                            {item.image ? (
+                              <div className="photo-previews">
+                                <div className="photo-thumb">
+                                  <img src={item.image} alt={item.name || t("Témoignage")} />
+                                  <button
+                                    type="button"
+                                    className="photo-remove"
+                                    onClick={() => updateFunnelTestimonial(i, { image: "" })}
                                   >
                                     ✕
                                   </button>

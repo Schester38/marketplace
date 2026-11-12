@@ -30,6 +30,7 @@ import {
 } from "./boostWallet.js";
 import { notifyAdmins } from "./adminNotify.js";
 import { sendPush } from "../push.js";
+import { sendFunnelReceiptEmail } from "../mailer.js";
 
 const IKEEPAY_CHECKOUT_URL = "https://ikeepay.com/checkout/v1/inline";
 export const PAYMENT_MODE_MANUAL = "manual";
@@ -415,8 +416,9 @@ export async function settleDigitalSale(saleId) {
   const sale = (
     await q(
       `SELECT s.id, s.total_price, s.commission, s.referral_commission,
-              s.seller_id, s.referred_by, s.buyer_name, s.confirm_code,
-              p.name AS product_name, p.shop_id,
+              s.seller_id, s.referred_by, s.buyer_name, s.buyer_first_name,
+              s.buyer_last_name, s.buyer_email, s.confirm_code, s.receipt_code,
+              s.product_id, p.name AS product_name, p.shop_id, p.funnel_enabled,
               u.name AS owner_name, u.role AS owner_role
          FROM sales s
          JOIN products p ON p.id = s.product_id
@@ -494,6 +496,31 @@ export async function settleDigitalSale(saleId) {
     body: `${sale.product_name} — ${total} XAF (iKeePay)${sale.buyer_name ? `, client : ${sale.buyer_name}` : ""}.`,
     amount: total,
   });
+
+  // Reçu officiel du tunnel de vente : envoyé à l'acheteur dès la confirmation
+  // du paiement (code MBP + lien direct + page « Retrouver mon reçu »). Borné
+  // dans le temps pour ne jamais retarder le webhook iKeePay.
+  if (sale.funnel_enabled === true && sale.buyer_email) {
+    const buyerName =
+      [sale.buyer_first_name, sale.buyer_last_name].filter(Boolean).join(" ").trim() ||
+      sale.buyer_name ||
+      "";
+    await Promise.race([
+      sendFunnelReceiptEmail({
+        to: sale.buyer_email,
+        buyerName,
+        productName: sale.product_name,
+        amount: total,
+        currency: "XAF",
+        saleId: sale.id,
+        code: sale.confirm_code,
+        receiptCode: sale.receipt_code,
+        productId: sale.product_id,
+        shopName: sale.owner_name,
+      }).catch(() => {}),
+      new Promise((resolve) => setTimeout(resolve, 2500)),
+    ]);
+  }
   return true;
 }
 

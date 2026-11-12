@@ -620,8 +620,13 @@ router.get("/sitemap.xml", async (req, res) => {
       ["/donnees", "monthly", "0.5"],
       ["/verone", "yearly", "0.4"],
     ];
-    const [products, users, offers] = await Promise.all([
-      q("SELECT id, created_at FROM products WHERE quantity > 0 ORDER BY created_at DESC"),
+    const [products, funnelProducts, users, offers] = await Promise.all([
+      // Les produits dont le tunnel de vente est actif sont exposés via leur
+      // landing /f/:id (et non /produit/:id) pour éviter deux URL concurrentes.
+      q(
+        "SELECT id, created_at FROM products WHERE quantity > 0 AND funnel_enabled = FALSE ORDER BY created_at DESC"
+      ),
+      q("SELECT id, created_at FROM products WHERE funnel_enabled = TRUE ORDER BY created_at DESC"),
       q("SELECT id, role FROM users WHERE role IN ('shop', 'creator') ORDER BY id DESC"),
       q("SELECT id, created_at FROM offers WHERE quantity > 0 ORDER BY id DESC"),
     ]);
@@ -642,6 +647,12 @@ router.get("/sitemap.xml", async (req, res) => {
         loc: `${BASE_URL}/produit/${p.id}`,
         freq: "weekly",
         prio: "0.8",
+        lastmod: p.created_at,
+      })),
+      ...funnelProducts.map((p) => ({
+        loc: `${BASE_URL}/f/${p.id}`,
+        freq: "daily",
+        prio: "0.9",
         lastmod: p.created_at,
       })),
       ...users.map((s) => ({

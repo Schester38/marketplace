@@ -336,8 +336,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify(code ? { code } : {}),
     }),
+  // « Retrouver mon reçu » : un code MBP-… suffit (aucune donnée personnelle
+  // renvoyée, uniquement de quoi rouvrir la page du reçu).
+  funnelFind: (receiptCode) =>
+    request(`/formation-funnel/find?receipt=${encodeURIComponent(receiptCode || "")}`),
   adminFormationReceipts: (q) =>
     adminRequest(`/admin/formation-receipts?q=${encodeURIComponent(q || "")}`),
+  adminFunnelStats: (days = 30) =>
+    adminRequest(`/admin/funnel-stats?days=${encodeURIComponent(days)}`),
   // Gains en ligne (créateur / vendeur) + demande de retrait (min 5 000 XAF).
   onlineEarningsMe: () => request("/online-earnings/me"),
   onlineWithdraw: (amount) =>

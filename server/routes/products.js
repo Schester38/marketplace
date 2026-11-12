@@ -146,6 +146,7 @@ export const DEFAULT_FUNNEL_GROUP_URL =
   "https://chat.whatsapp.com/IkP0cv2vjybDwOgmYYUmJv";
 const FUNNEL_GROUP_RE = /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9?=&_%.-]{6,240}$/;
 const MAX_FUNNEL_BONUSES = 6;
+const MAX_FUNNEL_TESTIMONIALS = 6;
 
 export function canManageFunnel(user) {
   const email = String(user?.email || "").trim().toLowerCase();
@@ -156,6 +157,23 @@ function normalizeFunnelGroupUrl(raw) {
   const value = String(raw ?? "").trim();
   if (!value) return DEFAULT_FUNNEL_GROUP_URL;
   return FUNNEL_GROUP_RE.test(value) ? value.slice(0, 300) : DEFAULT_FUNNEL_GROUP_URL;
+}
+
+/**
+ * Visuel du tunnel (bonus ou témoignage) : data-URI téléversée dans le bucket
+ * public, URL http(s) proxée, ou null. Le proxy évite d'exposer directement
+ * l'origine Supabase côté navigateur.
+ */
+async function funnelImageUrl(rawImage, folder) {
+  const value = String(rawImage || "").trim();
+  if (!value) return null;
+  const stored = unproxyPhotoUrl(value);
+  if (/^https?:\/\//i.test(stored)) return proxyPhotoUrl(stored);
+  if (value.startsWith("data:image/")) {
+    const uploaded = await storePhotos([{ thumb: value }], folder);
+    return proxyPhotoUrl(uploaded[0]?.thumb || "");
+  }
+  return null;
 }
 
 /**
@@ -177,29 +195,39 @@ async function parseFunnelPayload(raw, user, folder) {
   }
   const bonuses = [];
   const list = Array.isArray(raw.bonuses) ? raw.bonuses.slice(0, MAX_FUNNEL_BONUSES) : [];
+  const testimonials = [];
+  const testimonialList = Array.isArray(raw.testimonials)
+    ? raw.testimonials.slice(0, MAX_FUNNEL_TESTIMONIALS)
+    : [];
   try {
     for (const bonus of list) {
       const title = cleanModuleText(bonus?.title, 160);
       const description = cleanModuleText(bonus?.description, 600);
-      const rawImage = String(bonus?.image || "").trim();
-      let image = null;
-      if (rawImage) {
-        const stored = unproxyPhotoUrl(rawImage);
-        if (/^https?:\/\//i.test(stored)) {
-          image = proxyPhotoUrl(stored);
-        } else if (rawImage.startsWith("data:image/")) {
-          const uploaded = await storePhotos([{ thumb: rawImage }], folder);
-          image = proxyPhotoUrl(uploaded[0]?.thumb || "");
-        }
-      }
+      const image = await funnelImageUrl(bonus?.image, folder);
       if (title || description || image) bonuses.push({ title, description, image });
     }
+    for (const testimonial of testimonialList) {
+      const name = cleanModuleText(testimonial?.name, 80);
+      const role = cleanModuleText(testimonial?.role, 80);
+      const text = cleanModuleText(testimonial?.text, 400);
+      const image = await funnelImageUrl(testimonial?.image, folder);
+      if (name || role || text || image) testimonials.push({ name, role, text, image });
+    }
   } catch (err) {
-    console.error("[funnel] upload visuel bonus échoué :", err.message);
+    console.error("[funnel] upload visuel tunnel échoué :", err.message);
     return {
-      error: "Le stockage des visuels bonus est indisponible. Réessayez plus tard.",
+      error: "Le stockage des visuels du tunnel est indisponible. Réessayez plus tard.",
       statusCode: 503,
       code: "FUNNEL_STORAGE_UNAVAILABLE",
+    };
+  }
+  const rawTeaser = String(raw.teaser_url || "").trim();
+  const teaserId = parseYoutubeId(rawTeaser);
+  if (rawTeaser && !teaserId) {
+    return {
+      error: "Lien YouTube du teaser invalide. Collez l'adresse de la vidéo (youtube.com/watch…, youtu.be/…) ou son identifiant à 11 caractères.",
+      statusCode: 400,
+      code: "FUNNEL_TEASER_INVALID",
     };
   }
   const seats = Number(raw.seats_total);
@@ -208,6 +236,9 @@ async function parseFunnelPayload(raw, user, folder) {
     enabled: true,
     headline: cleanModuleText(raw.headline, 200),
     bonuses,
+    testimonials,
+    teaser_url: teaserId ? `https://www.youtube.com/watch?v=${teaserId}` : null,
+    trainer_bio: cleanModuleText(raw.trainer_bio, 600),
     seats_total: Number.isInteger(seats) && seats >= 1 && seats <= 1000 ? seats : 30,
     countdown_minutes:
       Number.isInteger(minutes) && minutes >= 5 && minutes <= 1440 ? minutes : 90,
@@ -482,6 +513,9 @@ function productRow(p, mode = "list", { ownerView = false } = {}) {
     funnel_seats_total,
     funnel_countdown_minutes,
     funnel_group_url,
+    funnel_testimonials,
+    funnel_teaser_url,
+    funnel_trainer_bio,
     ...rest
   } = p;
   const price = Number(p.price);
@@ -498,6 +532,15 @@ function productRow(p, mode = "list", { ownerView = false } = {}) {
               ...b,
               image: proxyPhotoUrl(b?.image),
             })),
+            testimonials: (Array.isArray(funnel_testimonials)
+              ? funnel_testimonials
+              : []
+            ).map((item) => ({
+              ...item,
+              image: proxyPhotoUrl(item?.image),
+            })),
+            teaser_url: funnel_teaser_url || null,
+            trainer_bio: funnel_trainer_bio || null,
             seats_total: Number(funnel_seats_total) || 30,
             countdown_minutes: Number(funnel_countdown_minutes) || 90,
             ...(ownerView ? { group_url: funnel_group_url || null } : {}),
@@ -1023,8 +1066,9 @@ router.post(
       `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency,
         is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit,
         digital_kind, youtube_id, access_days, modules,
-        funnel_enabled, funnel_headline, funnel_bonuses, funnel_seats_total, funnel_countdown_minutes, funnel_group_url)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30) RETURNING id`,
+        funnel_enabled, funnel_headline, funnel_bonuses, funnel_seats_total, funnel_countdown_minutes, funnel_group_url,
+        funnel_testimonials, funnel_teaser_url, funnel_trainer_bio)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33) RETURNING id`,
       [
         req.user.id,
         String(name).trim(),
@@ -1069,6 +1113,9 @@ router.post(
         funnelEnabled ? funnelParsed.seats_total : 30,
         funnelEnabled ? funnelParsed.countdown_minutes : 90,
         funnelEnabled ? funnelParsed.group_url : null,
+        JSON.stringify(funnelEnabled ? funnelParsed.testimonials : []),
+        funnelEnabled ? funnelParsed.teaser_url : null,
+        funnelEnabled ? funnelParsed.trainer_bio || null : null,
       ]
     );
     const product = productRow((await q(SELECT_PRODUCT + " WHERE p.id = $1", [created[0].id]))[0]);
@@ -1511,8 +1558,11 @@ router.put(
        funnel_bonuses = COALESCE($26::jsonb, funnel_bonuses),
        funnel_seats_total = COALESCE($27, funnel_seats_total),
        funnel_countdown_minutes = COALESCE($28, funnel_countdown_minutes),
-       funnel_group_url = COALESCE($29, funnel_group_url)
-     WHERE id = $30 RETURNING id`,
+       funnel_group_url = COALESCE($29, funnel_group_url),
+       funnel_testimonials = CASE WHEN $30 THEN $31::jsonb ELSE funnel_testimonials END,
+       funnel_teaser_url = CASE WHEN $30 THEN NULLIF($32, '') ELSE funnel_teaser_url END,
+       funnel_trainer_bio = CASE WHEN $30 THEN NULLIF($33, '') ELSE funnel_trainer_bio END
+     WHERE id = $34 RETURNING id`,
       [
         String(name).trim(),
         description ? String(description).trim() : null,
@@ -1543,6 +1593,10 @@ router.put(
         funnelParsed?.enabled === true ? funnelParsed.seats_total : null,
         funnelParsed?.enabled === true ? funnelParsed.countdown_minutes : null,
         funnelParsed?.enabled === true ? funnelParsed.group_url : null,
+        funnelParsed?.enabled === true,
+        JSON.stringify(funnelParsed?.enabled === true ? funnelParsed.testimonials : []),
+        funnelParsed?.enabled === true ? funnelParsed.teaser_url || "" : "",
+        funnelParsed?.enabled === true ? funnelParsed.trainer_bio || "" : "",
         product.id,
       ]
     );
