@@ -224,9 +224,9 @@ export default function FormationFunnel() {
                 </div>
                 <div className="tw-min-w-[180px] tw-flex-1">
                   <div className="tw-flex tw-items-baseline tw-justify-between tw-text-xs tw-text-white/60">
-                    <span>{t("Places restantes")}</span>
+                    <span>{t("Places occupées")}</span>
                     <span className="tw-font-bold tw-text-amber-300">
-                      {funnel.seats_left}/{funnel.seats_total}
+                      {funnel.seats_taken}/{funnel.seats_total}
                     </span>
                   </div>
                   <div className="tw-mt-1.5 tw-h-2.5 tw-overflow-hidden tw-rounded-full tw-bg-white/10">

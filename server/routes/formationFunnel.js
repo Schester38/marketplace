@@ -233,7 +233,14 @@ router.get(
       [productId]
     );
     const seatsTotal = Math.max(1, Number(product.funnel_seats_total) || 30);
-    const seatsTaken = Math.max(0, Number(count?.n || 0));
+    const seatsTakenReal = Math.max(0, Number(count?.n || 0));
+    // Vitrine commerciale : afficher au moins 90 % des places occupées
+    // (ex. 30 places → 27/30). Le compteur réel reste prioritaire s'il est
+    // supérieur, et on garde toujours au moins une place pour total > 1.
+    const seatsTaken =
+      seatsTotal > 1
+        ? Math.min(seatsTotal - 1, Math.max(seatsTakenReal, Math.round(seatsTotal * 0.9)))
+        : seatsTakenReal;
     const gallery = fullPhotos(product.photos).map((u) => proxyPhotoUrl(u));
     const bonuses = (Array.isArray(product.funnel_bonuses) ? product.funnel_bonuses : []).map(
       (b) => ({
