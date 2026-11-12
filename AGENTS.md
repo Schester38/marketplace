@@ -6,7 +6,7 @@ Contexte de travail pour toute session IA sur ce dépôt. Lire ce fichier avant 
 
 Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiques, vendeurs indépendants, créateurs, livreurs, commandes par téléphone/WhatsApp et paiement mobile.
 
-- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.57.240`.
+- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.57.241`.
 - **Serveur** : Express 4 (`server/`, port 4000), PostgreSQL via Supabase (`server/db.js` : `DATABASE_URL_POOLED`, fallback `DATABASE_URL`, `ssl rejectUnauthorized: false` ; exports `q()`, `withTransaction()`, `initDb()`).
 - **Finance** : `server/services/payouts.js` — `computeRedistribution`, `normalizeWalletPrimary`, seuils de commission. Il n'existe **pas** de `server/finance.js`.
 - **Déploiement** : Vercel, entrée serverless `api/index.js` → `server/app.js` + `initDb()`. `vercel.json` route `/api/*`, `/produit/:id`, `/boutique/:id`, `/createur/:id`, `/ville/:x`, `/offre/:id`, `/sitemap.xml`, `/` vers l'API, le reste vers le SPA.
@@ -213,7 +213,9 @@ Pilotés par l'environnement : `client/src/config.js` (`BASE_URL` ← `VITE_SITE
 Restent en dur **volontairement** : `.github/workflows/keepalive.yml` (ping sur l'alias `vercel.app`, toujours valide). Le lien Trustpilot du footer (`Footer.jsx`) pointe depuis 1.57.93 vers le **profil revendiqué du nouveau domaine** (`https://fr.trustpilot.com/review/mboppishop.com`).
 
 ## Historique récent des modifications
-(Changelog partiel — version courante **1.57.240** / cache PWA **mboppi-v472**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+(Changelog partiel — version courante **1.57.241** / cache PWA **mboppi-v473**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+
+- **1.57.241** : **tunnel formation — expiration en rouge clignotant, images agrandissables et partage de l'offre** — le compte à rebours (badge supérieur, boîtes Heures/Minutes/Secondes, minuteur de la carte d'achat) passe en rouge avec l'animation CSS `funnel-expiry-blink` (1,1 s, désactivée sous `prefers-reduced-motion`). Le visuel principal et les images des bonus sont cliquables : lightbox plein écran (`object-contain`, fermeture ✕ / clic sur le fond / Échap) pour voir l'image entière. Nouveau bouton **« 🔗 Partager l'offre »** (bandeau supérieur + carte d'achat) : `navigator.share` si disponible, sinon copie du lien canonique `${BASE_URL}/f/:id` avec toast de confirmation (repli `prompt` si le presse-papiers est indisponible). Validé : ESLint 0 erreur, build Vite ✓. Cache PWA v473.
 
 - **1.57.240** : **tunnel formation — compteur de places commercial (90 % occupées)** — `GET /api/formation-funnel/:id` renvoie `seats_taken = max(ventes payées réelles, round(seats_total × 0,9))`, plafonné à `seats_total − 1` (une place reste disponible) ; ex. 30 places → **27/30**. La landing (`FormationFunnel.jsx`) affiche désormais « Places occupées » avec `seats_taken/seats_total`, la barre de progression à 90 % et « Il ne reste que N place(s) » restent cohérents. Validé : `node --check` ✓, ESLint 0 erreur, build Vite ✓. Cache PWA v472.
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
+import { BASE_URL } from "../config.js";
 import { useLang } from "../i18n.jsx";
 import Seo from "../components/Seo.jsx";
 import FormationFunnelForm from "../components/FormationFunnelForm.jsx";
@@ -58,7 +59,7 @@ function CountdownBoxes({ countdown, compact = false }) {
             }`}
           >
             <span
-              className={`tw-font-black tw-tabular-nums tw-leading-none tw-text-white ${
+              className={`funnel-expiry-blink tw-font-black tw-tabular-nums tw-leading-none tw-text-rose-400 ${
                 compact ? "tw-text-lg" : "tw-text-3xl"
               }`}
             >
@@ -97,6 +98,8 @@ export default function FormationFunnel() {
   const [funnel, setFunnel] = useState(null);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
+  const [shareMsg, setShareMsg] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -120,6 +123,15 @@ export default function FormationFunnel() {
     [funnel, id]
   );
   const countdown = useCountdown(deadline);
+
+  useEffect(() => {
+    if (!lightbox) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") setLightbox(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox]);
 
   if (error) {
     return (
@@ -155,6 +167,32 @@ export default function FormationFunnel() {
     setShowForm(true);
   };
 
+  const shareUrl = `${BASE_URL}/f/${funnel.product_id}`;
+  const shareOffer = async () => {
+    const payload = {
+      title: funnel.name,
+      text: funnel.headline || t("Découvrez cette formation sur MboppiShop."),
+      url: shareUrl,
+    };
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share(payload);
+        return;
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareMsg(t("Lien copié — partagez-le avec un ami."));
+    } catch {
+      window.prompt(t("Copiez ce lien :"), shareUrl);
+      return;
+    }
+    window.setTimeout(() => setShareMsg(""), 2600);
+  };
+  const openLightbox = (src, alt) => setLightbox({ src, alt });
+
   return (
     <div className="tw-min-h-screen tw-bg-[#050914] tw-font-sans tw-text-white">
       <Seo
@@ -175,8 +213,17 @@ export default function FormationFunnel() {
               </span>
             )}
           </span>
-          <span className="tw-flex tw-items-center tw-gap-1.5 tw-rounded-full tw-bg-emerald-400/10 tw-px-2.5 tw-py-1 tw-text-emerald-300">
-            🔒 {t("Paiement sécurisé iKeePay")}
+          <span className="tw-flex tw-flex-wrap tw-items-center tw-gap-2">
+            <span className="tw-flex tw-items-center tw-gap-1.5 tw-rounded-full tw-bg-emerald-400/10 tw-px-2.5 tw-py-1 tw-text-emerald-300">
+              🔒 {t("Paiement sécurisé iKeePay")}
+            </span>
+            <button
+              type="button"
+              onClick={shareOffer}
+              className="tw-flex tw-items-center tw-gap-1.5 tw-rounded-full tw-border tw-border-white/15 tw-bg-white/5 tw-px-2.5 tw-py-1 tw-font-semibold tw-text-white tw-transition hover:tw-bg-white/10"
+            >
+              🔗 {t("Partager l'offre")}
+            </button>
           </span>
         </div>
       </div>
@@ -190,7 +237,7 @@ export default function FormationFunnel() {
               {!countdown.expired && (
                 <span className="tw-hidden tw-items-center tw-gap-1 sm:tw-inline-flex">
                   • {t("se termine dans")}
-                  <span className="tw-tabular-nums">
+                  <span className="funnel-expiry-blink tw-font-black tw-tabular-nums tw-text-rose-400">
                     {pad(countdown.hours)}:{pad(countdown.minutes)}:{pad(countdown.seconds)}
                   </span>
                 </span>
@@ -300,12 +347,19 @@ export default function FormationFunnel() {
                       className="tw-overflow-hidden tw-rounded-2xl tw-border tw-border-amber-400/20 tw-bg-gradient-to-b tw-from-amber-400/10 tw-to-white/[0.02]"
                     >
                       {bonus.image ? (
-                        <img
-                          src={bonus.image}
-                          alt={bonus.title || `Bonus ${index + 1}`}
-                          loading="lazy"
-                          className="tw-h-40 tw-w-full tw-object-cover"
-                        />
+                        <button
+                          type="button"
+                          onClick={() => openLightbox(bonus.image, bonus.title || `Bonus ${index + 1}`)}
+                          aria-label={t("Agrandir l'image")}
+                          className="tw-block tw-w-full tw-cursor-zoom-in"
+                        >
+                          <img
+                            src={bonus.image}
+                            alt={bonus.title || `Bonus ${index + 1}`}
+                            loading="lazy"
+                            className="tw-h-40 tw-w-full tw-object-cover"
+                          />
+                        </button>
                       ) : (
                         <div className="tw-flex tw-h-24 tw-items-center tw-justify-center tw-bg-amber-400/10 tw-text-3xl">
                           🎁
@@ -351,25 +405,37 @@ export default function FormationFunnel() {
             <div className="tw-overflow-hidden tw-rounded-3xl tw-border tw-border-white/10 tw-bg-[#0b1220] tw-shadow-2xl tw-shadow-blue-950/40">
               <div className="tw-relative">
                 {funnel.image ? (
-                  <img
-                    src={funnel.image}
-                    alt={funnel.name}
-                    className="tw-h-56 tw-w-full tw-object-cover"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => openLightbox(funnel.image, funnel.name)}
+                    aria-label={t("Agrandir l'image")}
+                    className="tw-block tw-w-full tw-cursor-zoom-in"
+                  >
+                    <img
+                      src={funnel.image}
+                      alt={funnel.name}
+                      className="tw-h-56 tw-w-full tw-object-cover"
+                    />
+                  </button>
                 ) : (
                   <div className="tw-flex tw-h-56 tw-items-center tw-justify-center tw-bg-gradient-to-br tw-from-blue-700 tw-to-indigo-900 tw-text-6xl">
                     🎓
                   </div>
                 )}
-                <div className="tw-absolute tw-inset-0 tw-bg-gradient-to-t tw-from-[#0b1220] tw-via-transparent tw-to-transparent" />
+                <div className="tw-pointer-events-none tw-absolute tw-inset-0 tw-bg-gradient-to-t tw-from-[#0b1220] tw-via-transparent tw-to-transparent" />
                 {discount ? (
-                  <span className="tw-absolute tw-left-3 tw-top-3 tw-rounded-full tw-bg-rose-500 tw-px-3 tw-py-1 tw-text-xs tw-font-black tw-text-white">
+                  <span className="tw-pointer-events-none tw-absolute tw-left-3 tw-top-3 tw-rounded-full tw-bg-rose-500 tw-px-3 tw-py-1 tw-text-xs tw-font-black tw-text-white">
                     -{discount}%
                   </span>
                 ) : null}
-                <span className="tw-absolute tw-right-3 tw-top-3 tw-rounded-full tw-bg-black/60 tw-px-3 tw-py-1 tw-text-[10px] tw-font-bold tw-uppercase tw-tracking-wider tw-text-amber-300 tw-backdrop-blur">
+                <span className="tw-pointer-events-none tw-absolute tw-right-3 tw-top-3 tw-rounded-full tw-bg-black/60 tw-px-3 tw-py-1 tw-text-[10px] tw-font-bold tw-uppercase tw-tracking-wider tw-text-amber-300 tw-backdrop-blur">
                   ⏳ {t("Offre limitée")}
                 </span>
+                {funnel.image && (
+                  <span className="tw-pointer-events-none tw-absolute tw-bottom-3 tw-left-3 tw-rounded-full tw-bg-black/60 tw-px-2.5 tw-py-1 tw-text-[10px] tw-font-semibold tw-text-white/80 tw-backdrop-blur">
+                    🔍 {t("Cliquez pour agrandir")}
+                  </span>
+                )}
               </div>
 
               <div className="tw-p-5">
@@ -393,7 +459,7 @@ export default function FormationFunnel() {
                 <div className="tw-mt-4 tw-rounded-xl tw-bg-white/[0.05] tw-p-3">
                   <div className="tw-flex tw-items-center tw-justify-between tw-text-xs tw-text-white/60">
                     <span>{t("Cette offre se termine dans")}</span>
-                    <span className="tw-font-bold tw-text-amber-300">
+                    <span className="funnel-expiry-blink tw-font-black tw-tabular-nums tw-text-rose-400">
                       {countdown.expired
                         ? "00:00:00"
                         : `${pad(countdown.hours)}:${pad(countdown.minutes)}:${pad(countdown.seconds)}`}
@@ -414,6 +480,14 @@ export default function FormationFunnel() {
                   className="tw-mt-5 tw-w-full tw-rounded-2xl tw-bg-gradient-to-r tw-from-amber-400 tw-via-orange-500 tw-to-rose-500 tw-px-5 tw-py-4 tw-text-base tw-font-black tw-text-slate-950 tw-shadow-lg tw-shadow-orange-500/25 tw-transition hover:tw-brightness-110 active:tw-scale-[0.99] disabled:tw-cursor-not-allowed disabled:tw-opacity-50"
                 >
                   {soldOut ? t("Complet") : `🔒 ${t("Réserver ma place")} — ${money(funnel.price, funnel.currency)}`}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={shareOffer}
+                  className="tw-mt-3 tw-w-full tw-rounded-2xl tw-border tw-border-white/15 tw-bg-white/5 tw-px-5 tw-py-3 tw-text-sm tw-font-bold tw-text-white tw-transition hover:tw-bg-white/10 active:tw-scale-[0.99]"
+                >
+                  🔗 {t("Partager l'offre")}
                 </button>
 
                 <div className="tw-mt-3 tw-space-y-1.5 tw-text-center tw-text-[11px] tw-text-white/45">
@@ -482,6 +556,37 @@ export default function FormationFunnel() {
       <footer className="tw-border-t tw-border-white/10 tw-py-6 tw-text-center tw-text-[11px] tw-text-white/35">
         © {new Date().getFullYear()} MboppiShop — {t("Tous droits réservés.")}
       </footer>
+
+      {shareMsg && (
+        <div className="tw-fixed tw-bottom-5 tw-left-1/2 tw-z-[120] tw--translate-x-1/2 tw-rounded-full tw-bg-emerald-500 tw-px-5 tw-py-2.5 tw-text-sm tw-font-bold tw-text-white tw-shadow-xl">
+          {shareMsg}
+        </div>
+      )}
+
+      {lightbox && (
+        <div
+          className="tw-fixed tw-inset-0 tw-z-[110] tw-flex tw-items-center tw-justify-center tw-bg-black/95 tw-p-3 tw-backdrop-blur-sm md:tw-p-6"
+          onClick={() => setLightbox(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("Aperçu de l'image")}
+        >
+          <button
+            type="button"
+            onClick={() => setLightbox(null)}
+            aria-label={t("Fermer")}
+            className="tw-absolute tw-right-4 tw-top-4 tw-z-10 tw-flex tw-h-10 tw-w-10 tw-items-center tw-justify-center tw-rounded-full tw-bg-white/10 tw-text-xl tw-font-bold tw-text-white tw-transition hover:tw-bg-white/20"
+          >
+            ✕
+          </button>
+          <img
+            src={lightbox.src}
+            alt={lightbox.alt || ""}
+            onClick={(e) => e.stopPropagation()}
+            className="tw-max-h-[88vh] tw-max-w-full tw-rounded-xl tw-object-contain tw-shadow-2xl"
+          />
+        </div>
+      )}
 
       {showForm && (
         <FormationFunnelForm funnel={funnel} onClose={() => setShowForm(false)} />

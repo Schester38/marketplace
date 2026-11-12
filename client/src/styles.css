@@ -2194,6 +2194,32 @@ textarea {
   margin-top: 8px;
 }
 
+/* Temps d'expiration du tunnel : rouge + clignotant (accessibilité respectée). */
+@keyframes funnel-expiry-blink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  95% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.funnel-expiry-blink {
+  animation: funnel-expiry-blink 1.1s steps(1, end) infinite;
+  text-shadow: 0 0 12px rgba(244, 63, 94, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .funnel-expiry-blink {
+    animation: none;
+  }
+}
+
 @media (max-width: 640px) {
   .creator-modules-head {
     flex-direction: column;
