@@ -33,10 +33,10 @@ export default function SellerPromoPopup() {
       setOpen(false);
       return;
     }
-    let first = setTimeout(() => setOpen(true), 5000);
+    let first = setTimeout(() => setOpen(true), 30000);
     let interval = setInterval(() => {
       setOpen(true);
-    }, 120000);
+    }, 300000);
     return () => {
       clearTimeout(first);
       clearInterval(interval);
