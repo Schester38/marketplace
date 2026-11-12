@@ -10,7 +10,7 @@ const { Pool } = pg;
 // Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-11-09-formation-modules-v1";
+const DB_INIT_VERSION = "2026-11-12-formation-funnel-v1";
 let initDbPromise = null;
 
 const LOCAL_DEFAULT = "postgres://postgres:postgres@localhost:5432/marketplace";
@@ -488,6 +488,25 @@ async function runInitDb() {
     -- Prolongation d'accÃ¨s PAR ACHETEUR : jours ajoutÃ©s Ã  la durÃ©e du produit
     -- (access_days) sans modifier la fiche produit ni les autres acheteurs.
     ALTER TABLE sales ADD COLUMN IF NOT EXISTS access_days_extra INTEGER NOT NULL DEFAULT 0;
+    -- TUNNEL DE VENTE (formation flash) : configuration Ã©ditoriale d'une page
+    -- de vente dÃ©diÃ©e (/f/:id). RÃ©servÃ© Ã  un compte prÃ©cis cÃ´tÃ© serveur.
+    -- funnel_group_url n'est JAMAIS exposÃ©e publiquement : elle n'est remise
+    -- qu'Ã  l'acheteur aprÃ¨s paiement, via la route du reÃ§u.
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_headline TEXT;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_bonuses JSONB NOT NULL DEFAULT '[]'::jsonb;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_seats_total INTEGER NOT NULL DEFAULT 30;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_countdown_minutes INTEGER NOT NULL DEFAULT 90;
+    ALTER TABLE products ADD COLUMN IF NOT EXISTS funnel_group_url TEXT;
+    -- ReÃ§u de paiement : code alphanumÃ©rique unique (recherche admin) + suivi
+    -- du tÃ©lÃ©chargement (le bouton Â« Rejoindre le Groupe Â» ne s'active qu'aprÃ¨s).
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_first_name TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_last_name TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS buyer_reason TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS receipt_code TEXT;
+    ALTER TABLE sales ADD COLUMN IF NOT EXISTS receipt_downloaded_at TIMESTAMPTZ;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_receipt_code ON sales(receipt_code)
+      WHERE receipt_code IS NOT NULL;
     -- Journal enrichi : action = 'download' (historique, dÃ©faut) ou 'video'
     -- (visionnage d'une vidÃ©o protÃ©gÃ©e). Les visionnages ne consomment PAS le
     -- quota de tÃ©lÃ©chargements (usedDownloads ne compte que 'download').

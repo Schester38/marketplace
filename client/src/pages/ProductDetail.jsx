@@ -202,6 +202,14 @@ export default function ProductDetail() {
   const productIsDigital = product ? product.is_digital === true : false;
   const flashPromoEndsAt = product && product.flash_promo && product.flash_promo.ends_at;
 
+  // Produit du TUNNEL DE VENTE : la fiche classique redirige vers la page de
+  // vente dédiée (/f/:id) — un seul parcours d'achat, prix et bonus maîtrisés.
+  useEffect(() => {
+    if (product?.funnel_enabled) {
+      navigate(`/f/${product.id}`, { replace: true });
+    }
+  }, [product, navigate]);
+
   // Preuve sociale : vues de la fiche sur les 7 derniers jours.
   useEffect(() => {
     let mounted = true;

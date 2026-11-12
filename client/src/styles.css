@@ -2174,6 +2174,26 @@ textarea {
   margin-bottom: 0;
 }
 
+/* Tunnel de vente (réservé au compte propriétaire) */
+.funnel-editor .funnel-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.funnel-editor .funnel-toggle input {
+  width: auto;
+  margin: 0;
+}
+
+.funnel-editor .funnel-bonuses-head {
+  margin-top: 16px;
+}
+
+.funnel-editor .photo-previews {
+  margin-top: 8px;
+}
+
 @media (max-width: 640px) {
   .creator-modules-head {
     flex-direction: column;

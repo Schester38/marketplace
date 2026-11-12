@@ -7,6 +7,9 @@ export default {
     "./src/pages/MboppiBoostTrack.jsx",
     "./src/pages/MboppiBoostWallet.jsx",
     "./src/pages/BoostAdmin.jsx",
+    "./src/pages/FormationFunnel.jsx",
+    "./src/pages/FormationThanks.jsx",
+    "./src/components/FormationFunnelForm.jsx",
   ],
   prefix: "tw-",
   corePlugins: {

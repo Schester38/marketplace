@@ -300,6 +300,16 @@ function randomConfirmCode() {
   return code;
 }
 
+// Code de reçu du tunnel de vente : lisible au téléphone, sans ambiguïté
+// (I/L/O/0/1 exclus), recherchable par l'admin. Unicité garantie en base.
+function randomReceiptCode() {
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += CONFIRM_CHARS[Math.floor(Math.random() * CONFIRM_CHARS.length)];
+  }
+  return `MBP-${code}`;
+}
+
 router.post(
   "/digital-payin",
   authOptional,
@@ -311,9 +321,31 @@ router.post(
     if (!product) return res.status(404).json({ error: "Produit introuvable" });
     // Produit digital = fichier téléchargeable (digital_path) OU vidéo protégée
     // (digital_kind='youtube' + youtube_id, aucun fichier dans le Storage).
+    // Un produit du TUNNEL DE VENTE (/f/:id) est aussi un produit digital même
+    // sans fichier : l'accès à la formation passe par le groupe privé du reçu.
     const isProtectedVideo = product.digital_kind === "youtube" && Boolean(product.youtube_id);
-    if (!product.is_digital || (!product.digital_path && !isProtectedVideo))
+    const isFunnel = product.funnel_enabled === true;
+    const hasContent = Boolean(product.digital_path) || isProtectedVideo || isFunnel;
+    if ((!product.is_digital && !isFunnel) || !hasContent)
       return res.status(400).json({ error: "Ce produit n'est pas un produit digital" });
+
+    // Formulaire acheteur du tunnel : identité complète obligatoire (le reçu
+    // officiel et l'accès au groupe privé en dépendent).
+    const funnelFirstName = String(req.body?.buyer_first_name || "").trim().slice(0, 100);
+    const funnelLastName = String(req.body?.buyer_last_name || "").trim().slice(0, 100);
+    const funnelCity = String(req.body?.buyer_city || "").trim().slice(0, 120);
+    const funnelReason = String(req.body?.buyer_reason || "").trim().slice(0, 600);
+    if (isFunnel) {
+      if (!funnelFirstName || !funnelLastName)
+        return res.status(400).json({ error: "Prénom et nom requis." });
+      if (!funnelCity) return res.status(400).json({ error: "Ville requise." });
+      const digits = String(req.body?.buyer_phone || "").replace(/\D/g, "");
+      if (digits.length < 6)
+        return res.status(400).json({ error: "Numéro WhatsApp invalide." });
+      const mail = String(req.body?.buyer_email || req.user?.email || "").trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail))
+        return res.status(400).json({ error: "Adresse e-mail invalide." });
+    }
 
     const { publicKey } = await getIkeepayKeys();
     if (!publicKey) {
@@ -361,8 +393,9 @@ router.post(
       if (referredBy) referralCommission = Math.round(((price * 2) / 100) * 100) / 100;
     }
 
-    const name =
-      String(req.body?.buyer_name || "").trim() || (buyer ? buyer.name : "Client digital");
+    const name = isFunnel
+      ? `${funnelFirstName} ${funnelLastName}`.trim()
+      : String(req.body?.buyer_name || "").trim() || (buyer ? buyer.name : "Client digital");
     const phone = String(req.body?.buyer_phone || "").trim();
     // E-mail (facultatif) : compte connecté ou saisi à l'achat — reçu + avis.
     const rawEmail =
@@ -387,12 +420,34 @@ router.post(
         err.statusCode = 503;
         throw err;
       }
+      // Reçu officiel du tunnel : code unique remis à l'acheteur et utilisé
+      // par l'admin pour retrouver la vente.
+      let receiptCode = null;
+      if (isFunnel) {
+        for (let attempt = 0; attempt < 10; attempt++) {
+          const candidate = randomReceiptCode();
+          const taken = (
+            await tx.query("SELECT id FROM sales WHERE receipt_code = $1 FOR SHARE", [candidate])
+          )[0];
+          if (!taken) {
+            receiptCode = candidate;
+            break;
+          }
+        }
+        if (!receiptCode) {
+          const err = new Error("Impossible de générer le code du reçu");
+          err.statusCode = 503;
+          throw err;
+        }
+      }
       const sale = (
         await tx.query(
           `INSERT INTO sales (product_id, seller_id, quantity, total_price, commission, status,
              purchase_price, currency, buyer_id, buyer_code, buyer_name, buyer_phone, buyer_email,
-             confirm_code, referral_commission, referred_by, payment_method, stock_reserved)
-           VALUES ($1, $2, 1, $3, $4, 'pending', $3, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'automatic', FALSE)
+             confirm_code, referral_commission, referred_by, payment_method, stock_reserved,
+             buyer_first_name, buyer_last_name, buyer_city, buyer_reason, receipt_code)
+           VALUES ($1, $2, 1, $3, $4, 'pending', $3, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'automatic', FALSE,
+             $14, $15, $16, $17, $18)
            RETURNING id`,
           [
             product.id,
@@ -408,6 +463,11 @@ router.post(
             confirmCode,
             referralCommission,
             referredBy,
+            isFunnel ? funnelFirstName : null,
+            isFunnel ? funnelLastName : null,
+            isFunnel ? funnelCity : null,
+            isFunnel ? funnelReason || null : null,
+            receiptCode,
           ]
         )
       )[0];
@@ -420,7 +480,7 @@ router.post(
       // jamais effectué, vente abandonnée) ne doit pas faire sonner de cloche
       // « nouvelle vente ». Le créateur et le vendeur sont notifiés dans
       // reconcileDigitalSale(), uniquement quand iKeePay confirme le paiement.
-      return { id: sale.id, confirmCode };
+      return { id: sale.id, confirmCode, receiptCode };
     });
 
     const checkout = addPublicKey(
@@ -428,7 +488,7 @@ router.post(
         amount: price,
         currency: "XAF",
         orderId: externalRef,
-        email: String(buyer?.email || req.body?.email || ""),
+        email: String(email || buyer?.email || req.body?.email || ""),
       }),
       publicKey
     );
@@ -440,6 +500,7 @@ router.post(
       currency: "XAF",
       checkout_url: checkout,
       confirm_code: created.confirmCode,
+      receipt_code: created.receiptCode,
     });
   })
 );

@@ -319,6 +319,25 @@ export const api = {
   // Sondage pendant l'attente du paiement en ligne (toutes les 4 s côté appelant).
   digitalWaitOnline: (saleId, code) =>
     request(`/digital/${saleId}/wait-online${code ? `?code=${encodeURIComponent(code)}` : ""}`),
+  // Tunnel de vente « formation flash » (/f/:id) : page publique curatée,
+  // statut de paiement, reçu (code de confirmation requis) et déblocage du
+  // groupe WhatsApp après téléchargement du reçu.
+  funnelGet: (productId) => request(`/formation-funnel/${productId}`),
+  funnelStatus: (saleId, code) =>
+    request(
+      `/formation-funnel/status/${saleId}${code ? `?code=${encodeURIComponent(code)}` : ""}`
+    ),
+  funnelReceipt: (saleId, code) =>
+    request(
+      `/formation-funnel/receipt/${saleId}${code ? `?code=${encodeURIComponent(code)}` : ""}`
+    ),
+  funnelReceiptDownloaded: (saleId, code) =>
+    request(`/formation-funnel/receipt/${saleId}/downloaded`, {
+      method: "POST",
+      body: JSON.stringify(code ? { code } : {}),
+    }),
+  adminFormationReceipts: (q) =>
+    adminRequest(`/admin/formation-receipts?q=${encodeURIComponent(q || "")}`),
   // Gains en ligne (créateur / vendeur) + demande de retrait (min 5 000 XAF).
   onlineEarningsMe: () => request("/online-earnings/me"),
   onlineWithdraw: (amount) =>

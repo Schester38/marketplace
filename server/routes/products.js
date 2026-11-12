@@ -8,7 +8,7 @@ import {
   normalizeUploadPhotos,
   photoEntries,
 } from "../photo.js";
-import { proxyPhotoUrl } from "../photoProxy.js";
+import { proxyPhotoUrl, unproxyPhotoUrl } from "../photoProxy.js";
 import { defaultCurrencyFor, validCurrency } from "../currency.js";
 import {
   storePhotos,
@@ -135,6 +135,84 @@ function parseModulesPayload(raw) {
       duration: cleanModuleText(m?.duration, 40),
     }))
     .filter((m) => m.title || m.subtitle || m.description || m.duration);
+}
+
+// ─── TUNNEL DE VENTE (formation flash, /f/:id) ─────────────────────────────
+// Réservé à un compte précis : lui seul peut activer/modifier le tunnel.
+// Le lien du groupe WhatsApp privé n'est JAMAIS exposé par productRow ni par
+// une route publique : il n'est remis qu'à l'acheteur payé, via le reçu.
+export const FUNNEL_OWNER_EMAILS = ["bestrong9124@gmail.com"];
+export const DEFAULT_FUNNEL_GROUP_URL =
+  "https://chat.whatsapp.com/IkP0cv2vjybDwOgmYYUmJv";
+const FUNNEL_GROUP_RE = /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9?=&_%.-]{6,240}$/;
+const MAX_FUNNEL_BONUSES = 6;
+
+export function canManageFunnel(user) {
+  const email = String(user?.email || "").trim().toLowerCase();
+  return FUNNEL_OWNER_EMAILS.includes(email);
+}
+
+function normalizeFunnelGroupUrl(raw) {
+  const value = String(raw ?? "").trim();
+  if (!value) return DEFAULT_FUNNEL_GROUP_URL;
+  return FUNNEL_GROUP_RE.test(value) ? value.slice(0, 300) : DEFAULT_FUNNEL_GROUP_URL;
+}
+
+/**
+ * Valide et prépare la configuration du tunnel.
+ * Retourne `undefined` (champ absent → ne rien modifier), `{ enabled:false }`
+ * (désactivation) ou la configuration normalisée. Une erreur est retournée
+ * sous la forme `{ error, statusCode, code }` (jamais levée : les routes
+ * POST/PUT ne sont pas enveloppées par `ah`).
+ */
+async function parseFunnelPayload(raw, user, folder) {
+  if (raw === undefined) return undefined;
+  if (!raw || typeof raw !== "object" || raw.enabled !== true) return { enabled: false };
+  if (!canManageFunnel(user)) {
+    return {
+      error: "Le tunnel de vente est réservé au compte propriétaire.",
+      statusCode: 403,
+      code: "FUNNEL_FORBIDDEN",
+    };
+  }
+  const bonuses = [];
+  const list = Array.isArray(raw.bonuses) ? raw.bonuses.slice(0, MAX_FUNNEL_BONUSES) : [];
+  try {
+    for (const bonus of list) {
+      const title = cleanModuleText(bonus?.title, 160);
+      const description = cleanModuleText(bonus?.description, 600);
+      const rawImage = String(bonus?.image || "").trim();
+      let image = null;
+      if (rawImage) {
+        const stored = unproxyPhotoUrl(rawImage);
+        if (/^https?:\/\//i.test(stored)) {
+          image = proxyPhotoUrl(stored);
+        } else if (rawImage.startsWith("data:image/")) {
+          const uploaded = await storePhotos([{ thumb: rawImage }], folder);
+          image = proxyPhotoUrl(uploaded[0]?.thumb || "");
+        }
+      }
+      if (title || description || image) bonuses.push({ title, description, image });
+    }
+  } catch (err) {
+    console.error("[funnel] upload visuel bonus échoué :", err.message);
+    return {
+      error: "Le stockage des visuels bonus est indisponible. Réessayez plus tard.",
+      statusCode: 503,
+      code: "FUNNEL_STORAGE_UNAVAILABLE",
+    };
+  }
+  const seats = Number(raw.seats_total);
+  const minutes = Number(raw.countdown_minutes);
+  return {
+    enabled: true,
+    headline: cleanModuleText(raw.headline, 200),
+    bonuses,
+    seats_total: Number.isInteger(seats) && seats >= 1 && seats <= 1000 ? seats : 30,
+    countdown_minutes:
+      Number.isInteger(minutes) && minutes >= 5 && minutes <= 1440 ? minutes : 90,
+    group_url: normalizeFunnelGroupUrl(raw.group_url),
+  };
 }
 
 /** Extrait un tableau de modules d'une réponse IA (JSON, clôtures Markdown tolérées). */
@@ -396,11 +474,36 @@ function productRow(p, mode = "list", { ownerView = false } = {}) {
     // vérification du droit d'accès (GET /api/digital/:saleId/video).
     youtube_id,
     modules,
+    // Colonnes du tunnel de vente : jamais renvoyées brutes (le lien du groupe
+    // privé fuiterait). Un objet `funnel` curaté est reconstruit ci-dessous.
+    funnel_enabled,
+    funnel_headline,
+    funnel_bonuses,
+    funnel_seats_total,
+    funnel_countdown_minutes,
+    funnel_group_url,
     ...rest
   } = p;
   const price = Number(p.price);
+  const funnelActive = funnel_enabled === true;
   return {
     ...rest,
+    funnel_enabled: funnelActive,
+    ...(funnelActive
+      ? {
+          funnel: {
+            enabled: true,
+            headline: funnel_headline || null,
+            bonuses: (Array.isArray(funnel_bonuses) ? funnel_bonuses : []).map((b) => ({
+              ...b,
+              image: proxyPhotoUrl(b?.image),
+            })),
+            seats_total: Number(funnel_seats_total) || 30,
+            countdown_minutes: Number(funnel_countdown_minutes) || 90,
+            ...(ownerView ? { group_url: funnel_group_url || null } : {}),
+          },
+        }
+      : {}),
     ...(mode === "detail" || ownerView
       ? { modules: Array.isArray(modules) ? modules : [] }
       : {}),
@@ -841,7 +944,20 @@ router.post(
     );
     if (protectedPayload?.error) return res.status(400).json({ error: protectedPayload.error });
     const isYoutubeKind = protectedPayload?.kind === "youtube";
-    const wantsDigital = Boolean(parsedDigital) || isYoutubeKind;
+    // Tunnel de vente DÉDIÉ : un produit funnel est digital même sans fichier
+    // (l'accès à la formation passe par le groupe privé remis dans le reçu).
+    const funnelParsed = await parseFunnelPayload(
+      req.body.funnel,
+      req.user,
+      `products/${req.user.id}`
+    );
+    if (funnelParsed?.error) {
+      return res
+        .status(funnelParsed.statusCode || 400)
+        .json({ error: funnelParsed.error, code: funnelParsed.code });
+    }
+    const funnelEnabled = funnelParsed?.enabled === true;
+    const wantsDigital = Boolean(parsedDigital) || isYoutubeKind || funnelEnabled;
     // RÈGLE MÉTIER MboppiShop — qui publie quoi :
     //   • CRÉATEUR → uniquement des produits DIGITAUX (fichier téléchargeable) ;
     //   • BOUTIQUE → uniquement des produits PHYSIQUES ;
@@ -906,8 +1022,9 @@ router.post(
     const created = await q(
       `INSERT INTO products (shop_id, name, description, price, old_price, commission_percent, image, photos, category, warranty, delivery_fee, contact, quantity, currency,
         is_digital, digital_path, digital_name, digital_mime, digital_size, digital_download_limit,
-        digital_kind, youtube_id, access_days, modules)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24) RETURNING id`,
+        digital_kind, youtube_id, access_days, modules,
+        funnel_enabled, funnel_headline, funnel_bonuses, funnel_seats_total, funnel_countdown_minutes, funnel_group_url)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30) RETURNING id`,
       [
         req.user.id,
         String(name).trim(),
@@ -929,9 +1046,13 @@ router.post(
         wantsDigital
           ? isYoutubeKind
             ? String(digital?.name || "").trim().slice(0, 160) || "Vidéo YouTube"
-            : parsedDigital.name
+            : parsedDigital?.name || "Formation"
           : null,
-        wantsDigital ? (isYoutubeKind ? "video/youtube" : parsedDigital.mime) : null,
+        wantsDigital
+          ? isYoutubeKind
+            ? "video/youtube"
+            : parsedDigital?.mime || "application/octet-stream"
+          : null,
         wantsDigital ? (isYoutubeKind ? 0 : digitalSize) : null,
         downloadLimit,
         // Contenu protégé : type, ID de la vidéo YouTube (jamais exposé
@@ -942,6 +1063,12 @@ router.post(
           ? protectedPayload.accessDays
           : null,
         JSON.stringify(parseModulesPayload(req.body.modules) || []),
+        funnelEnabled,
+        funnelEnabled ? funnelParsed.headline || null : null,
+        JSON.stringify(funnelEnabled ? funnelParsed.bonuses : []),
+        funnelEnabled ? funnelParsed.seats_total : 30,
+        funnelEnabled ? funnelParsed.countdown_minutes : 90,
+        funnelEnabled ? funnelParsed.group_url : null,
       ]
     );
     const product = productRow((await q(SELECT_PRODUCT + " WHERE p.id = $1", [created[0].id]))[0]);
@@ -1155,6 +1282,21 @@ router.put(
     // galerie vide conserve la photo déjà enregistrée (voir plus bas).
     const removePhotos = remove_photos === true;
 
+    // --- Tunnel de vente (formation flash) -----------------------------------
+    // `undefined` = champ absent → configuration existante conservée.
+    const funnelParsed = await parseFunnelPayload(
+      req.body.funnel,
+      req.user,
+      `products/${req.user.id}`
+    );
+    if (funnelParsed?.error) {
+      return res
+        .status(funnelParsed.statusCode || 400)
+        .json({ error: funnelParsed.error, code: funnelParsed.code });
+    }
+    const funnelEnabledAfter =
+      funnelParsed === undefined ? product.funnel_enabled === true : funnelParsed.enabled === true;
+
     // --- Contenu PROTÉGÉ (vidéo YouTube / durée d'accès) ---------------------
     // Le TYPE de contenu est figé à la création : basculer fichier ↔ YouTube
     // couperait l'accès des acheteurs déjà servis → refusé (supprimez et
@@ -1247,11 +1389,13 @@ router.put(
     // Valeurs finales : le fichier existant est CONSERVÉ si aucun changement
     // n'est demandé (sinon l'édition d'un simple titre effacerait le fichier).
     const hasNewFile = Boolean(newDigitalPath);
-    const isDigitalAfter = hasNewFile
+    const isDigitalAfter = funnelEnabledAfter
       ? true
-      : removeDigital && product.is_digital
-        ? false
-        : product.is_digital === true;
+      : hasNewFile
+        ? true
+        : removeDigital && product.is_digital
+          ? false
+          : product.is_digital === true;
     // RÈGLE MÉTIER — le type FINAL du produit doit correspondre au rôle :
     //   • boutique → physique ; • créateur → digital.
     // Un créateur qui détient encore un ancien produit physique peut le
@@ -1302,8 +1446,9 @@ router.put(
           ? 0
           : null;
     // Garde-fou : un produit digital doit TOUJOURS avoir une source de contenu
-    // (fichier Storage pour « file », identifiant pour « youtube »).
-    if (isDigitalAfter && kindAfter === "file" && !digitalPathAfter) {
+    // (fichier Storage pour « file », identifiant pour « youtube ») — SAUF un
+    // produit funnel dont l'accès passe par le groupe privé remis dans le reçu.
+    if (isDigitalAfter && kindAfter === "file" && !digitalPathAfter && !funnelEnabledAfter) {
       return res.status(400).json({
         error: "Choisissez le fichier que le client téléchargera pour ce produit digital.",
       });
@@ -1360,8 +1505,14 @@ router.put(
        is_digital = $14, digital_path = $15, digital_name = $16, digital_mime = $17,
        digital_size = $18, digital_download_limit = $19,
        digital_kind = $20, youtube_id = $21, access_days = $22,
-       modules = $23
-     WHERE id = $24 RETURNING id`,
+       modules = $23,
+       funnel_enabled = $24,
+       funnel_headline = COALESCE($25, funnel_headline),
+       funnel_bonuses = COALESCE($26::jsonb, funnel_bonuses),
+       funnel_seats_total = COALESCE($27, funnel_seats_total),
+       funnel_countdown_minutes = COALESCE($28, funnel_countdown_minutes),
+       funnel_group_url = COALESCE($29, funnel_group_url)
+     WHERE id = $30 RETURNING id`,
       [
         String(name).trim(),
         description ? String(description).trim() : null,
@@ -1386,6 +1537,12 @@ router.put(
         isDigitalAfter && kindAfter === "youtube" ? youtubeIdAfter : null,
         isDigitalAfter ? accessDaysAfter : null,
         JSON.stringify(modulesValue),
+        funnelEnabledAfter,
+        funnelParsed?.enabled === true ? funnelParsed.headline || null : null,
+        funnelParsed?.enabled === true ? JSON.stringify(funnelParsed.bonuses) : null,
+        funnelParsed?.enabled === true ? funnelParsed.seats_total : null,
+        funnelParsed?.enabled === true ? funnelParsed.countdown_minutes : null,
+        funnelParsed?.enabled === true ? funnelParsed.group_url : null,
         product.id,
       ]
     );

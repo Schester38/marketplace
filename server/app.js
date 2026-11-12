@@ -39,6 +39,7 @@ import photoProxyRouter from "./routes/photoProxy.js";
 import geoRoutes from "./routes/geo.js";
 import usersRoutes from "./routes/users.js";
 import digitalRoutes from "./routes/digital.js";
+import formationFunnelRoutes from "./routes/formationFunnel.js";
 import generatorRoutes from "./routes/generator.js";
 import studioRoutes from "./routes/studio.js";
 import familicashRoutes from "./routes/familicash.js";
@@ -209,6 +210,7 @@ app.use("/api/donations", donationsRoutes);
 app.use("/api/activation-withdrawals", activationWithdrawalRoutes);
 app.use("/api/online-earnings", onlineEarningsRoutes);
 app.use("/api/digital", digitalRoutes);
+app.use("/api/formation-funnel", limiter(60 * 1000, 120), formationFunnelRoutes);
 // Générateur de documents (ebooks/PDF) : module admin isolé. Autosave
 // débouncé côté client → quota large ; lecture GET non bloquante.
 app.use("/api/generator", limiter(60 * 1000, 120), generatorRoutes);

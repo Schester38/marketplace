@@ -65,7 +65,10 @@ export default function ProductCard({
   const sold = Number(product.sold || 0);
   const flash = product.flash_promo || null;
   const commission = Number(flash ? flash.commission : product.commission || 0);
-const cardLink = linkTo || `/produit/${product.id}`;
+  // Un produit du TUNNEL DE VENTE pointe vers sa page de vente dédiée
+  // (/f/:id) — le parcours commercial est distinct de la fiche /produit.
+  const isFunnelProduct = product.funnel_enabled === true;
+  const cardLink = linkTo || (isFunnelProduct ? `/f/${product.id}` : `/produit/${product.id}`);
   const flashOld = flash ? Number(product.price) : null;
   const oldPrice = Number(
     flashOld ??
@@ -122,7 +125,9 @@ const cardLink = linkTo || `/produit/${product.id}`;
           className="share-btn"
           href={waLink(
             "",
-            `${product.name} — ${displayPrice} ${symbol} sur MboppiShop → ${BASE_URL}/produit/${product.id}`
+            `${product.name} — ${displayPrice} ${symbol} sur MboppiShop → ${BASE_URL}${
+              isFunnelProduct ? `/f/${product.id}` : `/produit/${product.id}`
+            }`
           )}
           target="_blank"
           rel="noopener noreferrer"
@@ -252,7 +257,11 @@ const cardLink = linkTo || `/produit/${product.id}`;
         )}
       </Link>
       <div className="card-actions">
-        {action ? (
+        {isFunnelProduct && !action ? (
+          <Link to={`/f/${product.id}`} className="btn btn-primary btn-block">
+            🔥 {t("Voir l'offre")}
+          </Link>
+        ) : action ? (
           <>
             <button
               type="button"

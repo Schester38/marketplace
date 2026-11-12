@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api.js";
 import { formatBytes } from "../imageKit.js";
 import { useLang } from "../i18n.jsx";
@@ -98,6 +99,22 @@ export default function DigitalDownload({ sale, code, compact = false, label }) 
   };
 
   if (!sale?.is_digital) return null;
+  // Produit du TUNNEL DE VENTE : aucun fichier — l'acheteur retrouve son reçu
+  // (donc le lien du groupe privé, débloqué après téléchargement du PDF).
+  if (sale.funnel_enabled) {
+    return (
+      <div className="digital-download" style={{ marginTop: 8 }}>
+        <Link
+          to={`/f/${sale.product_id}/merci?sale=${sale.id}&code=${encodeURIComponent(
+            sale.confirm_code || code || ""
+          )}`}
+          className={`btn btn-primary${compact ? " btn-small" : ""}`}
+        >
+          🧾 {label || t("Mon reçu et le groupe privé")}
+        </Link>
+      </div>
+    );
+  }
   // Vidéo PROTÉGÉE (YouTube non répertoriée) : lecture après validation
   // serveur — pas de fichier à télécharger (composant dédié).
   if (sale.digital_kind === "youtube") {

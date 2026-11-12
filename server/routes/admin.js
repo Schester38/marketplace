@@ -1611,6 +1611,63 @@ router.get(
   })
 );
 
+// Recherche d'un REÇU du tunnel de vente (code MBP-…, nom, e-mail, téléphone,
+// code de confirmation ou numéro de vente) — utilisé par l'admin pour vérifier
+// qu'un acheteur a bien payé et a téléchargé son reçu.
+router.get(
+  "/formation-receipts",
+  ah(async (req, res) => {
+    const raw = String(req.query.q || "").trim().slice(0, 120);
+    if (!raw) return res.json({ receipts: [] });
+    const like = `%${raw}%`;
+    const numeric = /^\d{1,12}$/.test(raw) ? Number(raw) : null;
+    const rows = await q(
+      `SELECT s.id, s.receipt_code, s.confirm_code, s.total_price, s.currency,
+              s.buyer_name, s.buyer_first_name, s.buyer_last_name, s.buyer_email,
+              s.buyer_phone, s.buyer_city, s.buyer_reason,
+              s.paid_online_at, s.shop_confirmed_at, s.delivered_at,
+              s.receipt_downloaded_at, s.created_at,
+              p.id AS product_id, p.name AS product_name,
+              u.name AS shop_name
+         FROM sales s
+         JOIN products p ON p.id = s.product_id
+         LEFT JOIN users u ON u.id = p.shop_id
+        WHERE s.receipt_code IS NOT NULL
+          AND (s.receipt_code ILIKE $1 OR s.confirm_code ILIKE $1
+               OR s.buyer_name ILIKE $1 OR s.buyer_email ILIKE $1
+               OR s.buyer_phone ILIKE $1
+               OR ($2::int IS NOT NULL AND s.id = $2))
+        ORDER BY s.created_at DESC
+        LIMIT 100`,
+      [like, numeric]
+    );
+    res.json({
+      receipts: rows.map((r) => ({
+        sale_id: Number(r.id),
+        receipt_code: r.receipt_code,
+        confirm_code: r.confirm_code,
+        amount: Number(r.total_price),
+        currency: r.currency,
+        product_id: Number(r.product_id),
+        product_name: r.product_name,
+        shop_name: r.shop_name || "MboppiShop",
+        buyer: {
+          name: r.buyer_name,
+          first_name: r.buyer_first_name,
+          last_name: r.buyer_last_name,
+          email: r.buyer_email,
+          phone: r.buyer_phone,
+          city: r.buyer_city,
+          reason: r.buyer_reason,
+        },
+        paid_at: r.paid_online_at || r.shop_confirmed_at || r.delivered_at || null,
+        created_at: r.created_at,
+        receipt_downloaded_at: r.receipt_downloaded_at || null,
+      })),
+    });
+  })
+);
+
 // Retraits des gains en ligne (créateur + vendeur) : même principe que les
 // retraits d'activation — paiement manuel (espèces / Mobile Money).
 router.get(

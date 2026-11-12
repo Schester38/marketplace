@@ -47,6 +47,17 @@ const EMPTY_FORM = {
   youtube_url: "",
   access_days: "",
   modules: [],
+  // TUNNEL DE VENTE (/f/:id) — réservé au compte propriétaire (le serveur
+  // vérifie aussi l'e-mail). `group_url` n'est jamais public : il n'est remis
+  // qu'à l'acheteur après paiement ET téléchargement du reçu.
+  funnel: {
+    enabled: false,
+    headline: "",
+    seats_total: "30",
+    countdown_minutes: "90",
+    group_url: "https://chat.whatsapp.com/IkP0cv2vjybDwOgmYYUmJv",
+    bonuses: [],
+  },
 };
 const MAX_PHOTOS = 1;
 
@@ -97,7 +108,66 @@ export default function CreatorDashboard() {
   const symbol = countrySymbol(user?.country);
   const prefix = countryPhone(user?.country);
   const moduleList = Array.isArray(form.modules) ? form.modules : [];
-  const showModuleEditor = isFormation || form.category === "Éducation & Formation";
+  // Tunnel de vente : interface réservée au compte propriétaire (garde serveur
+  // identique — 403 FUNNEL_FORBIDDEN pour tout autre compte).
+  const canUseFunnel =
+    String(user?.email || "").trim().toLowerCase() === "bestrong9124@gmail.com";
+  const funnelForm = form.funnel || EMPTY_FORM.funnel;
+  const funnelEnabled = canUseFunnel && funnelForm.enabled === true;
+  const showModuleEditor =
+    isFormation || form.category === "Éducation & Formation" || funnelEnabled;
+
+  const setFunnel = (patch) =>
+    setForm((f) => ({
+      ...f,
+      funnel: { ...EMPTY_FORM.funnel, ...(f.funnel || {}), ...patch },
+    }));
+
+  const funnelBonuses = Array.isArray(funnelForm.bonuses) ? funnelForm.bonuses : [];
+
+  const addFunnelBonus = () =>
+    setForm((f) => {
+      const funnel = { ...EMPTY_FORM.funnel, ...(f.funnel || {}) };
+      const bonuses = Array.isArray(funnel.bonuses) ? funnel.bonuses : [];
+      if (bonuses.length >= 6) return f;
+      return {
+        ...f,
+        funnel: {
+          ...funnel,
+          bonuses: [...bonuses, { title: "", description: "", image: "" }],
+        },
+      };
+    });
+
+  const updateFunnelBonus = (index, patch) =>
+    setForm((f) => {
+      const funnel = { ...EMPTY_FORM.funnel, ...(f.funnel || {}) };
+      const bonuses = (Array.isArray(funnel.bonuses) ? funnel.bonuses : []).map((b, i) =>
+        i === index ? { ...b, ...patch } : b
+      );
+      return { ...f, funnel: { ...funnel, bonuses } };
+    });
+
+  const removeFunnelBonus = (index) =>
+    setForm((f) => {
+      const funnel = { ...EMPTY_FORM.funnel, ...(f.funnel || {}) };
+      const bonuses = (Array.isArray(funnel.bonuses) ? funnel.bonuses : []).filter(
+        (_, i) => i !== index
+      );
+      return { ...f, funnel: { ...funnel, bonuses } };
+    });
+
+  const addFunnelBonusImage = async (index, files) => {
+    const file = Array.from(files || [])[0];
+    if (!file) return;
+    setError("");
+    try {
+      const { entry } = await smartProcessImageFile(file);
+      updateFunnelBonus(index, { image: entry.thumb });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   const addModule = () =>
     setForm((f) => {
@@ -264,6 +334,9 @@ export default function CreatorDashboard() {
     const wantsDigital = Boolean(form.digital?.enabled);
     const isYoutube = form.digital_kind === "youtube";
     const hasNewDigitalFile = Boolean(form.digital?.key);
+    // Tunnel de vente actif : le contenu (fichier/vidéo) devient FACULTATIF —
+    // l'offre vend l'accès au groupe privé et les visuels bonus, pas un fichier.
+    const funnelActive = canUseFunnel && form.funnel?.enabled === true;
     // Type de contenu déjà enregistré pour la création en cours d'édition :
     // « youtube » (vidéo protégée) ou « file » (fichier téléchargeable).
     const editingKind = editingDigital?.kind || (editingDigital?.name ? "file" : null);
@@ -279,23 +352,28 @@ export default function CreatorDashboard() {
       return;
     }
     // Fichier : obligatoire à la création, et obligatoire aussi quand une
-    // ancienne vidéo YouTube est convertie en fichier téléchargeable.
-    if (!isYoutube && wantsDigital && !hasNewDigitalFile && !keepsFile) {
+    // ancienne vidéo YouTube est convertie en fichier téléchargeable — sauf
+    // pour un tunnel de vente (le produit peut vendre l'accès + les bonus).
+    if (!isYoutube && wantsDigital && !hasNewDigitalFile && !keepsFile && !funnelActive) {
       setError(t("Choisissez le fichier que le client téléchargera pour ce produit digital."));
       return;
     }
-    const digitalPayload = wantsDigital
-      ? hasNewDigitalFile
-        ? {
-            name: form.digital.name,
-            mime: form.digital.mime,
-            size: form.digital.size,
-            key: form.digital.key,
-          }
-        : undefined
-      : editingDigital
-        ? { remove: true }
-        : undefined;
+    // Tunnel actif : on ne touche JAMAIS au contenu existant (pas de
+    // `remove:true` pour un produit sans fichier déjà vendu).
+    const digitalPayload = funnelActive
+      ? undefined
+      : wantsDigital
+        ? hasNewDigitalFile
+          ? {
+              name: form.digital.name,
+              mime: form.digital.mime,
+              size: form.digital.size,
+              key: form.digital.key,
+            }
+          : undefined
+        : editingDigital
+          ? { remove: true }
+          : undefined;
     const payload = {
       ...form,
       price: priceNum !== null ? priceNum : oldNum,
@@ -335,6 +413,26 @@ export default function CreatorDashboard() {
           duration: String(m.duration || "").trim(),
         }))
         .filter((m) => m.title || m.subtitle || m.description || m.duration),
+      // Configuration du tunnel : `undefined` pour un compte non autorisé
+      // (le serveur ignore le champ), `{ enabled:false }` pour le désactiver.
+      funnel: canUseFunnel
+        ? funnelActive
+          ? {
+              enabled: true,
+              headline: String(funnelForm.headline || "").trim(),
+              bonuses: funnelBonuses
+                .map((b) => ({
+                  title: String(b.title || "").trim(),
+                  description: String(b.description || "").trim(),
+                  image: String(b.image || ""),
+                }))
+                .filter((b) => b.title || b.description || b.image),
+              seats_total: Number(funnelForm.seats_total || 30),
+              countdown_minutes: Number(funnelForm.countdown_minutes || 90),
+              group_url: String(funnelForm.group_url || "").trim(),
+            }
+          : { enabled: false }
+        : undefined,
     };
     try {
       if (editingId) {
@@ -397,6 +495,22 @@ export default function CreatorDashboard() {
       access_days:
         p.access_days !== null && p.access_days !== undefined ? String(p.access_days) : "",
       modules: Array.isArray(p.modules) ? p.modules : [],
+      funnel:
+        canUseFunnel && p.funnel
+          ? {
+              enabled: p.funnel.enabled !== false,
+              headline: p.funnel.headline || "",
+              seats_total: String(p.funnel.seats_total ?? 30),
+              countdown_minutes: String(p.funnel.countdown_minutes ?? 90),
+              group_url:
+                p.funnel.group_url || EMPTY_FORM.funnel.group_url,
+              bonuses: (Array.isArray(p.funnel.bonuses) ? p.funnel.bonuses : []).map((b) => ({
+                title: b.title || "",
+                description: b.description || "",
+                image: b.image || "",
+              })),
+            }
+          : EMPTY_FORM.funnel,
     });
     setEditingDigital(
       p.is_digital === true
@@ -672,11 +786,182 @@ export default function CreatorDashboard() {
               </>
             ) : (
               <DigitalProductPicker
-                required
+                required={!funnelEnabled}
                 value={form.digital}
                 existing={editingDigital}
                 onChange={(digital) => setForm((f) => ({ ...f, digital }))}
               />
+            )}
+            {canUseFunnel && (
+              <div className="creator-modules funnel-editor">
+                <div className="creator-modules-head">
+                  <div>
+                    <label className="terms-check funnel-toggle">
+                      <input
+                        type="checkbox"
+                        checked={funnelEnabled}
+                        onChange={(e) => setFunnel({ enabled: e.target.checked })}
+                      />
+                      <span>🔥 {t("Activer le tunnel de vente (/f/:id)")}</span>
+                    </label>
+                    <p className="hint creator-modules-hint">
+                      {t(
+                        "Page de vente professionnelle : accroche, places limitées, compte à rebours, modules, bonus avec visuels et groupe WhatsApp privé. Le fichier ou la vidéo devient facultatif."
+                      )}
+                    </p>
+                  </div>
+                  {editingId && funnelEnabled ? (
+                    <a
+                      className="btn btn-outline"
+                      href={`/f/${editingId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      🔗 {t("Ouvrir le tunnel")}
+                    </a>
+                  ) : null}
+                </div>
+
+                {funnelEnabled && (
+                  <>
+                    <label>{t("Accroche de la page de vente")}</label>
+                    <input
+                      className="input"
+                      maxLength={200}
+                      placeholder={t("ex : Transformez votre budget en liberté en 7 jours")}
+                      value={funnelForm.headline || ""}
+                      onChange={(e) => setFunnel({ headline: e.target.value })}
+                    />
+
+                    <div className="row2">
+                      <div>
+                        <label>{t("Places disponibles")}</label>
+                        <input
+                          className="input"
+                          type="number"
+                          min="1"
+                          max="1000"
+                          value={funnelForm.seats_total}
+                          onChange={(e) => setFunnel({ seats_total: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label>{t("Compte à rebours (minutes)")}</label>
+                        <input
+                          className="input"
+                          type="number"
+                          min="5"
+                          max="1440"
+                          value={funnelForm.countdown_minutes}
+                          onChange={(e) => setFunnel({ countdown_minutes: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <label>{t("Lien du groupe WhatsApp privé")}</label>
+                    <input
+                      className="input"
+                      type="url"
+                      placeholder="https://chat.whatsapp.com/..."
+                      value={funnelForm.group_url || ""}
+                      onChange={(e) => setFunnel({ group_url: e.target.value })}
+                    />
+                    <p className="hint">
+                      {t(
+                        "Ce lien n'est JAMAIS visible publiquement : il n'est débloqué qu'après le téléchargement du reçu par l'acheteur."
+                      )}
+                    </p>
+
+                    <div className="creator-modules-head funnel-bonuses-head">
+                      <div>
+                        <label>{t("Bonus de l'offre")}</label>
+                        <p className="hint creator-modules-hint">
+                          {t("Jusqu'à 6 bonus : titre, description et visuel.")}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={addFunnelBonus}
+                        disabled={funnelBonuses.length >= 6}
+                      >
+                        + {t("Ajouter un bonus")}
+                      </button>
+                    </div>
+
+                    {funnelBonuses.length === 0 ? (
+                      <p className="hint creator-modules-hint">
+                        {t("Aucun bonus pour le moment.")}
+                      </p>
+                    ) : (
+                      <div className="creator-module-list">
+                        {funnelBonuses.map((b, i) => (
+                          <div className="creator-module" key={i}>
+                            <div className="creator-module-head">
+                              <strong>{t("Bonus {n}", { n: i + 1 })}</strong>
+                              <button
+                                type="button"
+                                className="btn btn-outline btn-sm"
+                                onClick={() => removeFunnelBonus(i)}
+                                title={t("Supprimer ce bonus")}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <div className="row2">
+                              <div>
+                                <label>{t("Titre")}</label>
+                                <input
+                                  className="input"
+                                  maxLength={160}
+                                  value={b.title || ""}
+                                  onChange={(e) => updateFunnelBonus(i, { title: e.target.value })}
+                                />
+                              </div>
+                              <div>
+                                <label>{t("Visuel")}</label>
+                                <input
+                                  className="input"
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    addFunnelBonusImage(i, e.target.files);
+                                    e.target.value = "";
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            <label>{t("Description")}</label>
+                            <textarea
+                              className="input"
+                              rows="2"
+                              maxLength={600}
+                              value={b.description || ""}
+                              onChange={(e) =>
+                                updateFunnelBonus(i, { description: e.target.value })
+                              }
+                            />
+                            {b.image ? (
+                              <div className="photo-previews">
+                                <div className="photo-thumb">
+                                  <img src={b.image} alt={b.title || t("Visuel bonus")} />
+                                  <button
+                                    type="button"
+                                    className="photo-remove"
+                                    onClick={() => updateFunnelBonus(i, { image: "" })}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             )}
             <label>{t("Nom de la création *")}</label>
             <input
@@ -922,6 +1207,18 @@ export default function CreatorDashboard() {
                 onAction={(selected) => editProduct(selected || p)}
                 secondaryAction={t("Rétirer")}
                 onSecondaryAction={() => removeProduct(p)}
+                extraAction={
+                  canUseFunnel && p.funnel_enabled
+                    ? {
+                        label: `🔥 ${t("Ouvrir le tunnel")}`,
+                        onClick: (e) => {
+                          e?.preventDefault?.();
+                          e?.stopPropagation?.();
+                          window.open(`/f/${p.id}`, "_blank", "noopener");
+                        },
+                      }
+                    : null
+                }
               />
             ))}
           </div>

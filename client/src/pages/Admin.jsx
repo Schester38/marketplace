@@ -414,6 +414,11 @@ export default function Admin() {
   // (créateur / vendeur) — visibles dans l'onglet 💰 Paiements, tous modes.
   const [digitalPayments, setDigitalPayments] = useState(null);
   const [onlineWithdrawals, setOnlineWithdrawals] = useState(null);
+  // Recherche des reçus du tunnel de vente (code alphanumérique, code de
+  // confirmation, acheteur ou n° de vente) — tool de vérification admin.
+  const [formationReceiptQuery, setFormationReceiptQuery] = useState("");
+  const [formationReceipts, setFormationReceipts] = useState(null);
+  const [formationReceiptsBusy, setFormationReceiptsBusy] = useState(false);
   const [migrateBusy, setMigrateBusy] = useState(false);
   const [migrateReport, setMigrateReport] = useState(null);
   const [prodSearch, setProdSearch] = useState("");
@@ -791,6 +796,23 @@ export default function Admin() {
     );
   };
 
+
+  // Recherche des reçus du tunnel de vente : code alphanumérique MBP-…,
+  // code de confirmation, nom/e-mail/téléphone de l'acheteur ou n° de vente.
+  const searchFormationReceipts = async (e) => {
+    e.preventDefault();
+    setError("");
+    setFormationReceiptsBusy(true);
+    try {
+      const d = await api.adminFormationReceipts(formationReceiptQuery.trim());
+      setFormationReceipts(Array.isArray(d.receipts) ? d.receipts : []);
+    } catch (err) {
+      setFormationReceipts([]);
+      setError(err.message);
+    } finally {
+      setFormationReceiptsBusy(false);
+    }
+  };
 
   const searchReferrals = async (e) => {
     e.preventDefault();
@@ -2928,6 +2950,104 @@ export default function Admin() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* ===== Reçus du tunnel de vente (/f/:id) : vérification admin ===== */}
+      {adminTab === "payments" && (
+        <div className="card" style={{ marginBottom: 20, padding: 18 }}>
+          <h2 className="section-title" style={{ marginTop: 0 }}>
+            🧾 {t("Reçus Formation (tunnel de vente)")}
+          </h2>
+          <p className="muted-line" style={{ marginTop: 0 }}>
+            {t(
+              "Recherchez un reçu par code (MBP-…), code de confirmation, nom, e-mail ou téléphone de l'acheteur, ou numéro de vente."
+            )}
+          </p>
+          <form
+            onSubmit={searchFormationReceipts}
+            style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}
+          >
+            <input
+              className="input"
+              style={{ flex: "1 1 260px", minWidth: 0 }}
+              placeholder={t("MBP-XXXXXXXX, nom, e-mail, téléphone, n° de vente…")}
+              value={formationReceiptQuery}
+              onChange={(e) => setFormationReceiptQuery(e.target.value)}
+            />
+            <button className="btn btn-primary" type="submit" disabled={formationReceiptsBusy}>
+              {formationReceiptsBusy ? t("Recherche…") : `🔎 ${t("Rechercher")}`}
+            </button>
+          </form>
+          {formationReceipts === null ? (
+            <p className="muted-line">
+              {t("Saisissez un code de reçu ou les informations de l'acheteur.")}
+            </p>
+          ) : formationReceipts.length === 0 ? (
+            <p className="muted-line">{t("Aucun reçu trouvé.")}</p>
+          ) : (
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>{t("Code du reçu")}</th>
+                    <th>{t("Acheteur")}</th>
+                    <th>{t("Formation")}</th>
+                    <th>{t("Montant")}</th>
+                    <th>{t("Paiement")}</th>
+                    <th>{t("Reçu téléchargé")}</th>
+                    <th>{t("Vente")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formationReceipts.map((r) => (
+                    <tr key={r.sale_id}>
+                      <td>
+                        <code>{r.receipt_code || "—"}</code>
+                        {r.confirm_code ? (
+                          <div className="muted-line" style={{ fontSize: 11 }}>
+                            {t("Confirmation : {code}", { code: r.confirm_code })}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td style={{ fontSize: 13 }}>
+                        {r.buyer?.name || "—"}
+                        <div className="muted-line" style={{ fontSize: 11 }}>
+                          {[r.buyer?.email, r.buyer?.phone, r.buyer?.city]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </div>
+                      </td>
+                      <td style={{ fontSize: 13 }}>
+                        {r.product_name || "—"}
+                        <div className="muted-line" style={{ fontSize: 11 }}>
+                          {r.shop_name || ""}
+                        </div>
+                      </td>
+                      <td>
+                        <strong>
+                          {Number(r.amount || 0).toLocaleString("fr-FR")} {r.currency || "XAF"}
+                        </strong>
+                      </td>
+                      <td style={{ fontSize: 12 }}>
+                        {r.paid_at ? new Date(r.paid_at).toLocaleString("fr-FR") : "—"}
+                      </td>
+                      <td style={{ fontSize: 12 }}>
+                        {r.receipt_downloaded_at
+                          ? new Date(r.receipt_downloaded_at).toLocaleString("fr-FR")
+                          : `⏳ ${t("Non téléchargé")}`}
+                      </td>
+                      <td style={{ fontSize: 12 }}>
+                        <Link to={`/suivi/${r.sale_id}?code=${encodeURIComponent(r.confirm_code || "")}`}>
+                          #{r.sale_id}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

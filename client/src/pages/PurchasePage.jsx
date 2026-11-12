@@ -59,6 +59,11 @@ export default function PurchasePage() {
     api
       .getProduct(id)
       .then((d) => {
+        // Produit du tunnel de vente : parcours d'achat dédié (/f/:id).
+        if (d.product?.funnel_enabled) {
+          navigate(`/f/${d.product.id}`, { replace: true });
+          return;
+        }
         setProduct(d.product);
         if (d.product && d.product.shop_id) {
           api

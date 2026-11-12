@@ -29,6 +29,24 @@ const formationModuleSchema = z.object({
   duration: z.string().max(40).optional().nullable(),
 });
 
+// Bonus d'un tunnel de vente (formation flash) : texte + visuel optionnel.
+// `image` accepte une data-URI (nouveau visuel, téléversé par le serveur) ou
+// une URL existante (visuel déjà stocké, conservé tel quel).
+const funnelBonusSchema = z.object({
+  title: z.string().max(160).optional().nullable(),
+  description: z.string().max(600).optional().nullable(),
+  image: z.string().max(4400000).optional().nullable(),
+});
+
+const funnelSchema = z.object({
+  enabled: z.boolean().optional(),
+  headline: z.string().max(200).optional().nullable(),
+  bonuses: z.array(funnelBonusSchema).max(6).optional(),
+  seats_total: z.coerce.number().int().min(1).max(1000).optional(),
+  countdown_minutes: z.coerce.number().int().min(5).max(1440).optional(),
+  group_url: z.string().max(300).optional().nullable(),
+});
+
 export const createProductSchema = z.object({
   name: nameSchema,
   description: z.string().max(2000).optional(),
@@ -78,6 +96,8 @@ export const createProductSchema = z.object({
   access_days: z.coerce.number().int().min(1).max(3650).optional().nullable(),
   // Modules d'une formation : tableau ordonné de fiches pédagogiques.
   modules: z.array(formationModuleSchema).max(30).optional(),
+  // Tunnel de vente dédié (/f/:id) — réservé au compte propriétaire du tunnel.
+  funnel: funnelSchema.optional().nullable(),
 });
 
 export const createSaleSchema = z.object({
