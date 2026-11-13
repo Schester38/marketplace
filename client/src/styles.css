@@ -14212,48 +14212,6 @@ a.step {
 [data-theme="dark"] .freelance-page .fr-badge-dla { background: #064e3b; color: #6ee7b7; }
 
 @media print {
-  body:has(.freelance-page) * { visibility: hidden; }
-  body:has(.freelance-page) .freelance-page,
-  body:has(.freelance-page) .freelance-page * { visibility: visible; }
-  body:has(.freelance-page) .freelance-page {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    padding: 0;
-    background: #fff;
-  }
-  .freelance-page { --fr-bg: #fff; --fr-surface: #fff; --fr-text: #1e293b; --fr-muted: #64748b; }
-  .freelance-page .fr-header {
-    background: #0f4c81 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-  .freelance-page .fr-header-actions,
-  .freelance-page .fr-tabs,
-  .freelance-page .fr-filters-bar,
-  .freelance-page .fr-actions-cell,
-  .freelance-page .fr-btn-copy,
-  .freelance-page .fr-customizer { display: none !important; }
-  .freelance-page .fr-tab-panel { display: block !important; margin-bottom: 24px; }
-  .freelance-page .fr-table-wrap,
-  .freelance-page .fr-script-sector-card { box-shadow: none; border: 1px solid #cbd5e1; }
-  .freelance-page .fr-table { font-size: 9px; }
-  .freelance-page .fr-table th,
-  .freelance-page .fr-table td { padding: 5px 6px; }
-  .freelance-page .fr-script-sector-card { break-inside: avoid; }
-}
-
-/* Espace FREELANCE — impression de la nouvelle interface (Tailwind) */
-@media print {
-  .freelance-page .fr-no-print { display: none !important; }
-  .freelance-page .fr-print-card {
-    break-inside: avoid;
-    box-shadow: none !important;
-    border: 1px solid #cbd5e1 !important;
-  }
-  .freelance-page table { font-size: 9px !important; }
-  .freelance-page th,
-  .freelance-page td { padding: 5px 6px !important; }
+  .freelance-page { display: none !important; }
 }
 

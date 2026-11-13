@@ -218,9 +218,11 @@ app.use("/api/generator", limiter(60 * 1000, 120), generatorRoutes);
 // MboppiStudio (outils créatifs IA de l'admin) : chaque appel consomme un
 // crédit Gemini — quota modéré, portée admin vérifiée dans le routeur.
 app.use("/api/studio", limiter(60 * 1000, 30), studioRoutes);
-// Espace Freelance (prospection B2B) : génération IA de scripts réservée au
-// compte propriétaire — quota serré car chaque appel consomme un crédit Gemini.
-app.use("/api/freelance", limiter(60 * 1000, 20), freelanceRoutes);
+// Espace Freelance : la recherche paginée peut produire plusieurs requêtes ;
+// les appels IA gardent un quota séparé car ils consomment des crédits Gemini.
+app.use("/api/freelance/scripts", limiter(60 * 1000, 20));
+app.use("/api/freelance/translate", limiter(60 * 1000, 20));
+app.use("/api/freelance", limiter(60 * 1000, 120), freelanceRoutes);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/geo", limiter(60 * 1000, 30), geoRoutes);
 app.use("/api/logs", limiter(60 * 1000, 8));

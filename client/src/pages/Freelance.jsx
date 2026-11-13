@@ -1,13 +1,11 @@
 // Espace FREELANCE — prospection publicitaire Yaoundé & Douala.
 // Page dédiée ouverte depuis « 🎨 Mon espace créateur », réservée au compte
-// bestrong9124@gmail.com (garde dans App.jsx). Les données (blocs 1 à 5) se
-// trouvent dans client/src/freelanceData.js.
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+// propriétaire (garde dans App.jsx). L'annuaire est servi par l'API.
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
-// freelanceData.js est chargé dynamiquement ci-dessous (évite le 504 sur le chunk trop volumineux)
 
 const EMPTY_PERSONALIZATION = {
   name: "",
@@ -18,8 +16,24 @@ const EMPTY_PERSONALIZATION = {
   skills: "",
 };
 const PROFILE_KEY = "mboppi_freelance_profile";
+const COMPANY_STATUS_KEY = "mboppi_freelance_company_status_v2";
+const COMPANY_LISTS_KEY = "mboppi_freelance_company_lists_v2";
+const BULK_DRAFT_KEY = "mboppi_freelance_bulk_draft_v2";
 const PAGE_SIZE = 10;
 const CHANNELS = ["whatsapp", "sms", "email"];
+const STATUS_OPTIONS = [
+  { id: "pending", label: "À contacter" },
+  { id: "contacted", label: "Contacté" },
+  { id: "follow_up", label: "Relance prévue" },
+  { id: "converted", label: "Converti" },
+  { id: "not_interested", label: "Sans suite" },
+];
+const BULK_EMAIL_TEMPLATES = [
+  { id: "custom", label: "Personnalisé" },
+  { id: "intro", label: "Présentation de mon offre" },
+  { id: "meeting", label: "Demande de rendez-vous" },
+  { id: "follow_up", label: "Relance professionnelle" },
+];
 const CHANNEL_LABELS = {
   whatsapp: "WhatsApp",
   sms: "SMS",
@@ -31,7 +45,6 @@ const TONES = [
   { id: "direct", label: "Direct", hint: "Droit au but" },
   { id: "expert", label: "Expert", hint: "Conseil et autorité" },
 ];
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const ICONS = {
   search: "M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z",
@@ -40,8 +53,6 @@ const ICONS = {
   chat:
     "M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z",
   doc: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8",
-  print:
-    "M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z",
   filter: "M22 3H2l8 9.46V19l4 2v-8.54L22 3z",
   arrow: "M5 12h14M13 6l6 6-6 6",
   mail: "M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zM22 6l-10 7L2 6",
@@ -70,9 +81,9 @@ const FEATURES = [
     text: "Des messages de prospection adaptés à chaque secteur, avec les relances.",
   },
   {
-    icon: "print",
-    title: "Mode terrain",
-    text: "Imprimez ou exportez votre liste et vos scripts en PDF pour prospecter hors ligne.",
+    icon: "doc",
+    title: "Suivi des prospects",
+    text: "Enregistrez vos listes et suivez l’avancement de chaque prise de contact.",
   },
 ];
 
@@ -94,53 +105,11 @@ const STEPS = [
   },
 ];
 
-function mobileDigits(mobileStr) {
-  if (!mobileStr) return "";
-  const first = String(mobileStr).split("/")[0].replace(/\D/g, "");
-  return first.length >= 9 ? first : "";
-}
-
-function firstWaLink(mobileStr) {
-  const digits = mobileDigits(mobileStr);
-  return digits ? "https://wa.me/" + digits : "";
-}
-
-function firstEmail(emailStr) {
-  if (!emailStr) return "";
-  return String(emailStr).split("/")[0].trim();
-}
-
-function validEmail(emailStr) {
-  const first = firstEmail(emailStr);
-  return EMAIL_RE.test(first) ? first : "";
-}
-
-function waHref(mobileStr, message) {
-  const digits = mobileDigits(mobileStr);
-  if (!digits) return "";
-  return `https://wa.me/${digits}?text=${encodeURIComponent(message || "")}`;
-}
-
-function smsHref(mobileStr, message) {
-  const digits = mobileDigits(mobileStr);
-  if (!digits) return "";
-  return `sms:${digits}?body=${encodeURIComponent(message || "")}`;
-}
-
-function mailHref(emailStr, subject, message) {
-  const email = validEmail(emailStr);
-  if (!email) return "";
-  return `mailto:${email}?subject=${encodeURIComponent(subject || "")}&body=${encodeURIComponent(
-    message || ""
-  )}`;
-}
-
 function availableChannels(company) {
-  const mobile = mobileDigits(company?.[5]);
   return {
-    whatsapp: Boolean(mobile),
-    sms: Boolean(mobile),
-    email: Boolean(validEmail(company?.[7])),
+    whatsapp: Boolean(company?.[9]),
+    sms: Boolean(company?.[9]),
+    email: Boolean(company?.[10]),
   };
 }
 
@@ -162,6 +131,91 @@ function loadProfile() {
   } catch {
     return EMPTY_PERSONALIZATION;
   }
+}
+
+function loadStoredValue(key, fallback, validate) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return validate(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function companyKey(company) {
+  return String(Array.isArray(company) ? company[8] ?? "" : "");
+}
+
+function makeBulkEmailDraft(templateId, info) {
+  const signature = [
+    info.name,
+    info.agency ? `Responsable de ${info.agency}` : "",
+    info.phone ? `Téléphone / WhatsApp : ${info.phone}` : "",
+    info.email,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const offer = info.offer ? `Mon offre : ${info.offer}` : "";
+  const skills = info.skills ? `Compétences : ${info.skills}` : "";
+
+  if (templateId === "meeting") {
+    return {
+      subject: `Échange autour de ${info.offer || "votre présence digitale"}`,
+      body: [
+        "Bonjour,",
+        "",
+        "Je vous contacte pour vous présenter une offre qui pourrait répondre aux besoins de votre entreprise.",
+        offer,
+        skills,
+        "",
+        "Seriez-vous disponible pour un échange de 15 minutes cette semaine ?",
+        "",
+        "Bien cordialement,",
+        signature,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    };
+  }
+
+  if (templateId === "follow_up") {
+    return {
+      subject: `Suite à ma proposition${info.agency ? ` — ${info.agency}` : ""}`,
+      body: [
+        "Bonjour,",
+        "",
+        "Je me permets de revenir vers vous au sujet de ma proposition. Je reste disponible pour en discuter et répondre à vos questions.",
+        offer,
+        "",
+        "Un court échange vous conviendrait-il cette semaine ?",
+        "",
+        "Bien cordialement,",
+        signature,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    };
+  }
+
+  return {
+    subject: `Proposition de collaboration${info.agency ? ` — ${info.agency}` : ""}`,
+    body: [
+      "Bonjour,",
+      "",
+      `Je me présente, ${info.name || ""}${info.agency ? `, de ${info.agency}` : ""}.`,
+      offer,
+      skills,
+      "",
+      "Je serais ravi d'échanger avec vous pour voir comment cette proposition pourrait répondre à vos besoins.",
+      "",
+      "Cordialement,",
+      signature,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  };
 }
 
 function personalize(text, info) {
@@ -230,9 +284,55 @@ export default function Freelance() {
   const [translating, setTranslating] = useState(false);
   const [translateError, setTranslateError] = useState("");
   const [selectedCompanies, setSelectedCompanies] = useState(new Set());
+  const [companyStatus, setCompanyStatus] = useState(() =>
+    loadStoredValue(
+      COMPANY_STATUS_KEY,
+      {},
+      (value) => value && typeof value === "object" && !Array.isArray(value)
+    )
+  );
+  const [savedLists, setSavedLists] = useState(() =>
+    loadStoredValue(
+      COMPANY_LISTS_KEY,
+      [],
+      (value) =>
+        Array.isArray(value) &&
+        value.every(
+          (list) =>
+            list &&
+            typeof list.id === "string" &&
+            typeof list.name === "string" &&
+            Array.isArray(list.companies) &&
+            list.companies.every((key) => typeof key === "string")
+        )
+    )
+  );
+  const [listName, setListName] = useState("");
+  const [activeListId, setActiveListId] = useState("");
+  const [bulkDraft, setBulkDraft] = useState(() =>
+    loadStoredValue(
+      BULK_DRAFT_KEY,
+      { subject: "", body: "", companyIds: [], recipientCount: 0 },
+      (value) =>
+        value &&
+        typeof value === "object" &&
+        typeof value.subject === "string" &&
+        typeof value.body === "string" &&
+        Array.isArray(value.companyIds) &&
+        value.companyIds.every((id) => typeof id === "string" && /^\d+$/.test(id)) &&
+        Number.isInteger(value.recipientCount) &&
+        value.recipientCount >= 0
+    )
+  );
+  const [bulkTemplate, setBulkTemplate] = useState("custom");
+  const [bulkDraftOpen, setBulkDraftOpen] = useState(false);
   const [data, setData] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState(null);
+  const [directoryRefresh, setDirectoryRefresh] = useState(0);
+  const [openingContact, setOpeningContact] = useState("");
+  const [legacyStorageError, setLegacyStorageError] = useState(false);
+  const directoryRequest = useRef(0);
 
   const showToast = (message) => {
     setToast(message);
@@ -240,65 +340,123 @@ export default function Freelance() {
     toastTimer.current = setTimeout(() => setToast(""), 2200);
   };
 
-  const toggleCompanySelection = (index) => {
+  const toggleCompanySelection = (key) => {
     setSelectedCompanies((prev) => {
       const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   };
 
-  const selectedCompanyEmails = () => {
-    const emails = [];
-    selectedCompanies.forEach((index) => {
-      const company = data?.COMPANIES[index];
-      if (!company) return;
-      const email = String(company[7] || "").trim();
-      if (email && EMAIL_RE.test(email)) emails.push(email);
-    });
-    return emails;
-  };
-
-  const sendBulkEmail = () => {
-    const emails = selectedCompanyEmails();
-    if (emails.length === 0) {
-      showToast(
-        "Aucune adresse e-mail valide parmi les entreprises sélectionnées."
-      );
+  const saveSelectedList = () => {
+    const name = listName.trim();
+    if (!name) {
+      showToast("Donnez un nom à cette liste.");
       return;
     }
+    if (selectedCompanies.size === 0) {
+      showToast("Sélectionnez au moins une entreprise.");
+      return;
+    }
+    const list = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      companies: Array.from(selectedCompanies),
+    };
+    setSavedLists((previous) => [...previous, list]);
+    setActiveListId(list.id);
+    setListName("");
+    showToast(`Liste « ${name} » enregistrée.`);
+  };
 
-    const subject = `Proposition commerciale — ${info.name || "Un partenaire"}${
-      info.agency ? ` · ${info.agency}` : ""
-    }`;
+  const loadSelectedList = () => {
+    const list = savedLists.find((item) => item.id === activeListId);
+    if (!list) return;
+    const companyTotal = Number(data?.stats?.total) || 0;
+    const selected = list.companies.filter((key) => {
+      if (!/^\d+$/.test(key)) return false;
+      const id = Number(key);
+      return Number.isInteger(id) && id >= 0 && id < companyTotal;
+    });
+    setSelectedCompanies(new Set(selected));
+    setTab("directory");
+    showToast(`${selected.length} entreprise(s) chargée(s) depuis « ${list.name} ».`);
+  };
 
-    const lines = [
-      "Bonjour,",
-      "",
-      `Je me présente, ${info.name || ""}${
-        info.agency ? `, responsable de ${info.agency}` : ""
-      }.`,
-      info.offer ? `Je vous propose : ${info.offer}.` : "",
-      info.skills ? `Mes compétences : ${info.skills}.` : "",
-      info.phone
-        ? `Vous pouvez me joindre au ${info.phone} ou par e-mail à ${info.email || ""}.`
-        : "",
-      "",
-      "Je serais ravi d'échanger avec vous sur la manière dont mon offre peut répondre à vos besoins.",
-      "",
-      "Cordialement,",
-      `${info.name || ""}${info.agency ? ` — ${info.agency}` : ""}`,
-    ];
+  const deleteSelectedList = () => {
+    const list = savedLists.find((item) => item.id === activeListId);
+    if (!list) return;
+    setSavedLists((previous) => previous.filter((item) => item.id !== list.id));
+    setActiveListId("");
+    showToast(`Liste « ${list.name} » supprimée.`);
+  };
 
-    const body = lines.filter(Boolean).join("\n");
+  const prepareBulkEmail = async () => {
+    const companyIds = Array.from(selectedCompanies);
+    if (companyIds.length === 0) {
+      showToast("Sélectionnez au moins une entreprise.");
+      return;
+    }
+    try {
+      const result = await api.freelanceBulkEmailCount({ company_ids: companyIds });
+      if (!result.recipient_count) {
+        showToast("Aucune adresse e-mail valide parmi les entreprises sélectionnées.");
+        return;
+      }
+      const suggested = makeBulkEmailDraft("intro", info);
+      const draft =
+        bulkTemplate === "custom"
+          ? {
+              subject: bulkDraft.subject || suggested.subject,
+              body: bulkDraft.body || suggested.body,
+            }
+          : makeBulkEmailDraft(bulkTemplate, info);
+      setBulkDraft({
+        ...draft,
+        companyIds,
+        recipientCount: result.recipient_count,
+      });
+      setBulkDraftOpen(true);
+      showToast(`Brouillon préparé pour ${result.recipient_count} destinataire(s).`);
+    } catch (error) {
+      showToast(error?.message || "Impossible de préparer le brouillon.");
+    }
+  };
 
-    window.location.href =
-      `mailto:${emails.join(",")}?subject=${encodeURIComponent(
-        subject
-      )}&body=${encodeURIComponent(body)}`;
+  const applyBulkTemplate = (templateId) => {
+    setBulkTemplate(templateId);
+    if (templateId === "custom") return;
+    setBulkDraft((previous) => ({
+      ...makeBulkEmailDraft(templateId, info),
+      companyIds: previous.companyIds,
+      recipientCount: previous.recipientCount,
+    }));
+  };
 
-    showToast(`${emails.length} entreprise(s) ajoutée(s) au message.`);
+  const openBulkEmail = async () => {
+    if (bulkDraft.companyIds.length === 0) {
+      showToast("Aucun destinataire dans le brouillon.");
+      return;
+    }
+    const popup = window.open("about:blank", "_blank");
+    if (!popup) {
+      showToast("Autorisez les fenêtres contextuelles pour ouvrir votre application e-mail.");
+      return;
+    }
+    popup.opener = null;
+    try {
+      const result = await api.freelanceBulkEmail({
+        company_ids: bulkDraft.companyIds,
+        subject: bulkDraft.subject,
+        message: bulkDraft.body,
+      });
+      popup.location.href = result.href;
+      showToast("Brouillon ouvert dans votre application e-mail.");
+    } catch (error) {
+      popup.close();
+      showToast(error?.message || "Impossible d'ouvrir le brouillon.");
+    }
   };
 
   const copyText = async (text) => {
@@ -327,31 +485,42 @@ export default function Freelance() {
     }
   }, [info]);
 
-  // Chargement dynamique de freelanceData.js (séparé du bundle principal)
   useEffect(() => {
-    let cancelled = false;
-    setDataLoading(true);
-    setDataError(null);
-    import("../freelanceData.js")
-      .then((mod) => {
-        if (!cancelled) {
-          setData({
-            SECTORS: mod.SECTORS,
-            COMPANIES: mod.COMPANIES,
-            SCRIPTS_DATA: mod.SCRIPTS_DATA,
-          });
-          setDataLoading(false);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setDataError(err);
-          setDataLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
+    try {
+      localStorage.setItem(COMPANY_STATUS_KEY, JSON.stringify(companyStatus));
+    } catch {
+      // Le suivi reste disponible en mémoire si le stockage local est indisponible.
+    }
+  }, [companyStatus]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COMPANY_LISTS_KEY, JSON.stringify(savedLists));
+    } catch {
+      // Les listes restent disponibles en mémoire si le stockage local est indisponible.
+    }
+  }, [savedLists]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(BULK_DRAFT_KEY, JSON.stringify(bulkDraft));
+    } catch {
+      // Le brouillon reste disponible en mémoire si le stockage local est indisponible.
+    }
+  }, [bulkDraft]);
+
+  useEffect(() => {
+    try {
+      for (const key of [
+        "mboppi_freelance_company_status",
+        "mboppi_freelance_company_lists",
+        "mboppi_freelance_bulk_draft",
+      ]) {
+        localStorage.removeItem(key);
+      }
+    } catch {
+      setLegacyStorageError(true);
+    }
   }, []);
 
   const closeContact = useCallback(() => {
@@ -409,6 +578,31 @@ export default function Freelance() {
     copyText(drafts[channel]?.[field] || "");
   };
 
+  const openCompanyContact = async (channel, draft) => {
+    if (!contactCompany || openingContact) return;
+    const popup = window.open("about:blank", "_blank");
+    if (!popup) {
+      showToast("Autorisez les fenêtres contextuelles pour ouvrir le contact.");
+      return;
+    }
+    popup.opener = null;
+    setOpeningContact(channel);
+    try {
+      const result = await api.freelanceContactLink({
+        company_id: contactCompany[8],
+        channel,
+        subject: draft.subject || "",
+        message: draft.message || "",
+      });
+      popup.location.href = result.href;
+    } catch (error) {
+      popup.close();
+      showToast(error?.message || "Impossible d'ouvrir le moyen de contact.");
+    } finally {
+      setOpeningContact("");
+    }
+  };
+
   const generateScripts = async () => {
     if (!contactCompany || generating) return;
     setGenError("");
@@ -429,16 +623,7 @@ export default function Freelance() {
     setGenerating(true);
     try {
       const data = await api.freelanceScripts({
-        company: {
-          name: contactCompany[2],
-          city: contactCompany[0],
-          sector: data?.SECTORS[contactCompany[1]] || "",
-          offer: contactCompany[3],
-          location: contactCompany[4],
-          mobile: contactCompany[5],
-          fixed: contactCompany[6],
-          email: contactCompany[7],
-        },
+        company_id: contactCompany[8],
         researcher: {
           name: info.name,
           agency: info.agency,
@@ -500,43 +685,54 @@ export default function Freelance() {
 
 
 
-  const stats = useMemo(
-    () => ({
-      total: data?.COMPANIES?.length ?? 0,
-      yaounde: data?.COMPANIES?.filter((c) => c[0] === "Yaoundé").length ?? 0,
-      douala: data?.COMPANIES?.filter((c) => c[0] === "Douala").length ?? 0,
-      whatsapp: data?.COMPANIES?.filter((c) => String(c[5] || "").trim() !== "").length ?? 0,
-    }),
-    []
-  );
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return data?.COMPANIES?.filter((c) => {
-      if (city && c[0] !== city) return false;
-      if (sector && String(c[1]) !== sector) return false;
-      if (channel === "mobile" && !String(c[5] || "").trim()) return false;
-      if (channel === "fixe" && String(c[5] || "").trim()) return false;
-      if (q) {
-        const hay = [c[0], data?.SECTORS[c[1]], c[2], c[3], c[4], c[5], c[6], c[7]]
-          .join(" ")
-          .toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [search, city, sector, channel]);
-
-  // La liste ne s'affiche qu'après une recherche ciblée (texte ou filtre),
-  // 10 résultats maximum à la fois.
   const hasQuery = Boolean(search.trim() || city || sector || channel);
-  const visible = hasQuery ? filtered.slice(0, page * PAGE_SIZE) : [];
+  const stats = data?.stats || { total: 0, yaounde: 0, douala: 0, whatsapp: 0 };
+  const filtered = data?.companies || [];
+  const visible = hasQuery ? filtered : [];
   const activeFilters =
     [city, sector, channel].filter(Boolean).length + (search.trim() ? 1 : 0);
 
   useEffect(() => {
     setPage(1);
   }, [search, city, sector, channel]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const requestId = ++directoryRequest.current;
+    const timer = setTimeout(async () => {
+      setDataLoading(true);
+      setDataError(null);
+      if (page === 1) {
+        setData((previous) =>
+          previous ? { ...previous, companies: [], total: 0, has_more: false } : previous
+        );
+      }
+      try {
+        const result = await api.freelanceDirectory({
+          q: search.trim(),
+          city,
+          sector,
+          channel,
+          page,
+          limit: PAGE_SIZE,
+        });
+        if (cancelled || requestId !== directoryRequest.current) return;
+        setData((previous) => ({
+          ...result,
+          companies:
+            page === 1 ? result.companies : [...(previous?.companies || []), ...result.companies],
+        }));
+      } catch (error) {
+        if (!cancelled && requestId === directoryRequest.current) setDataError(error);
+      } finally {
+        if (!cancelled && requestId === directoryRequest.current) setDataLoading(false);
+      }
+    }, search.trim() ? 600 : 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [search, city, sector, channel, page, directoryRefresh]);
 
   const scrollToWorkspace = () => {
     document.getElementById("annuaire")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -588,8 +784,7 @@ export default function Freelance() {
     },
   ];
 
-  // États de chargement / erreur pendant le fetch de freelanceData.js
-  if (dataLoading) {
+  if (!data && dataLoading) {
     return (
       <main className="freelance-page tw-min-h-screen tw-bg-fr-bg tw-font-sans tw-text-fr-text tw-flex tw-items-center tw-justify-center tw-h-screen">
         <div className="tw-text-center">
@@ -600,7 +795,7 @@ export default function Freelance() {
     );
   }
 
-  if (dataError) {
+  if (!data && dataError) {
     return (
       <main className="freelance-page tw-min-h-screen tw-bg-fr-bg tw-font-sans tw-text-fr-text tw-flex tw-items-center tw-justify-center tw-h-screen">
         <div className="tw-text-center">
@@ -610,7 +805,7 @@ export default function Freelance() {
             onClick={() => {
               setDataLoading(true);
               setDataError(null);
-              window.location.reload();
+              setDirectoryRefresh((value) => value + 1);
             }}
             className="tw-mt-4 tw-inline-flex tw-items-center tw-gap-2 tw-rounded-xl tw-border tw-border-fr-border tw-bg-fr-surface tw-px-4 tw-py-2 tw-text-sm tw-font-semibold tw-text-fr-text tw-transition hover:tw-border-fr-primary"
           >
@@ -641,13 +836,6 @@ export default function Freelance() {
             >
               <span aria-hidden="true">←</span> Mon espace créateur
             </Link>
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-full tw-border tw-border-white/15 tw-bg-white/5 tw-px-3.5 tw-py-2 tw-text-xs tw-font-semibold tw-text-slate-200 tw-transition hover:tw-bg-white/10"
-            >
-              <Icon path={ICONS.print} className="tw-h-4 tw-w-4" /> Imprimer / PDF
-            </button>
           </div>
 
           <div className="tw-mt-8 tw-grid tw-gap-8 lg:tw-grid-cols-[1.4fr_1fr] lg:tw-items-center">
@@ -699,7 +887,7 @@ export default function Freelance() {
                   Aperçu de l&apos;annuaire
                 </p>
                 <div className="tw-mt-4 tw-space-y-2.5">
-                  {data?.COMPANIES?.slice(0, 3).map((c) => (
+                  {data?.preview?.map((c) => (
                     <div
                       key={`${c[2]}-${c[4]}`}
                       className="tw-flex tw-items-center tw-justify-between tw-gap-3 tw-rounded-xl tw-border tw-border-white/10 tw-bg-white/5 tw-px-3 tw-py-2.5"
@@ -819,6 +1007,12 @@ export default function Freelance() {
         id="annuaire"
         className="tw-mx-auto tw-mt-8 tw-max-w-[1380px] tw-scroll-mt-4 tw-px-5 sm:tw-px-8"
       >
+        {legacyStorageError ? (
+          <p className="tw-mb-3 tw-rounded-xl tw-border tw-border-amber-300 tw-bg-amber-50 tw-p-3 tw-text-xs tw-text-amber-800">
+            Les anciennes données locales n&apos;ont pas pu être effacées. Vérifiez les
+            autorisations de stockage de votre navigateur avant de continuer.
+          </p>
+        ) : null}
         <div className="fr-no-print tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-3">
           <div className="tw-inline-flex tw-flex-wrap tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-p-1 tw-shadow-sm">
             <button
@@ -847,7 +1041,7 @@ export default function Freelance() {
           <p className="tw-text-xs tw-text-fr-muted">
             {tab === "directory"
               ? hasQuery
-                ? `${filtered.length} résultat(s)`
+                ? `${data?.total ?? 0} résultat(s)`
                 : `${stats.total} entreprises disponibles`
               : `${data?.SCRIPTS_DATA?.length ?? 0} secteurs couverts`}
           </p>
@@ -912,9 +1106,185 @@ export default function Freelance() {
                 <option value="">Tous les canaux</option>
                 <option value="mobile">Avec WhatsApp / SMS (6xx)</option>
                 <option value="fixe">Fixe uniquement (Appel)</option>
+                <option value="email">Avec e-mail</option>
               </select>
             </div>
           </div>
+
+          {savedLists.length > 0 ? (
+            <div className="fr-no-print tw-mt-3 tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-p-3 tw-shadow-sm">
+              <span className="tw-text-xs tw-font-bold">Mes listes</span>
+              <select
+                className="tw-min-w-[180px] tw-flex-1 tw-rounded-xl tw-border tw-border-fr-border tw-bg-fr-surface tw-px-3 tw-py-2 tw-text-sm tw-text-fr-text"
+                value={activeListId}
+                onChange={(event) => setActiveListId(event.target.value)}
+                aria-label="Choisir une liste enregistrée"
+              >
+                <option value="">Choisir une liste…</option>
+                {savedLists.map((list) => (
+                  <option key={list.id} value={list.id}>
+                    {list.name} ({list.companies.length})
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className={secondaryBtnClass}
+                onClick={loadSelectedList}
+                disabled={!activeListId}
+              >
+                Charger la liste
+              </button>
+              <button
+                type="button"
+                className={secondaryBtnClass}
+                onClick={deleteSelectedList}
+                disabled={!activeListId}
+              >
+                Supprimer
+              </button>
+            </div>
+          ) : null}
+
+          {selectedCompanies.size > 0 ? (
+            <div className="fr-no-print tw-mt-3 tw-space-y-3 tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-p-3 tw-shadow-sm">
+              <div className="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-3">
+                <span className="tw-text-xs tw-font-bold">
+                  {selectedCompanies.size} entreprise(s) sélectionnée(s)
+                </span>
+                <div className="tw-flex tw-flex-wrap tw-gap-2">
+                  <button
+                    type="button"
+                    className={secondaryBtnClass}
+                    onClick={() => setSelectedCompanies(new Set())}
+                  >
+                    Tout désélectionner
+                  </button>
+                  <button
+                    type="button"
+                    className={primaryBtnClass}
+                    onClick={prepareBulkEmail}
+                  >
+                    <Icon path={ICONS.mail} className="tw-h-3.5 tw-w-3.5" />
+                    Préparer un e-mail
+                  </button>
+                </div>
+              </div>
+              <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-2">
+                <input
+                  className="tw-min-w-[180px] tw-flex-1 tw-rounded-xl tw-border tw-border-fr-border tw-bg-fr-surface tw-px-3 tw-py-2 tw-text-sm tw-text-fr-text"
+                  value={listName}
+                  onChange={(event) => setListName(event.target.value)}
+                  placeholder="Nom de la liste à enregistrer"
+                  maxLength={80}
+                  aria-label="Nom de la nouvelle liste"
+                />
+                <button type="button" className={secondaryBtnClass} onClick={saveSelectedList}>
+                  Enregistrer la sélection
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {bulkDraftOpen ? (
+            <section className="fr-no-print tw-mt-3 tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-p-4 tw-shadow-sm sm:tw-p-5">
+              <div className="tw-flex tw-flex-wrap tw-items-start tw-justify-between tw-gap-3">
+                <div>
+                  <h3 className="tw-text-sm tw-font-bold">Brouillon d’e-mail groupé</h3>
+                  <p className="tw-mt-1 tw-text-xs tw-text-fr-muted">
+                    Brouillon enregistré automatiquement sur cet appareil. Les destinataires
+                    seront ajoutés en copie cachée.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={secondaryBtnClass}
+                  onClick={() => setBulkDraftOpen(false)}
+                >
+                  Fermer
+                </button>
+              </div>
+              <div className="tw-mt-3 tw-grid tw-gap-3 sm:tw-grid-cols-2">
+                <label className="tw-block">
+                  <span className="tw-text-xs tw-font-semibold">Modèle d’e-mail</span>
+                  <select
+                    className={inputClass + " tw-mt-1"}
+                    value={bulkTemplate}
+                    onChange={(event) => applyBulkTemplate(event.target.value)}
+                  >
+                    {BULK_EMAIL_TEMPLATES.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="tw-flex tw-items-end tw-text-xs tw-text-fr-muted">
+                  {bulkDraft.recipientCount} destinataire(s) · brouillon sauvegardé
+                </div>
+              </div>
+              <label className="tw-mt-3 tw-block">
+                <span className="tw-text-xs tw-font-semibold">Objet</span>
+                <input
+                  className={inputClass + " tw-mt-1"}
+                  value={bulkDraft.subject}
+                  onChange={(event) =>
+                    setBulkDraft((previous) => ({ ...previous, subject: event.target.value }))
+                  }
+                  maxLength={180}
+                />
+              </label>
+              <label className="tw-mt-3 tw-block">
+                <span className="tw-text-xs tw-font-semibold">Message</span>
+                <textarea
+                  className={inputClass + " tw-mt-1 tw-min-h-[180px] tw-resize-y tw-leading-relaxed"}
+                  value={bulkDraft.body}
+                  onChange={(event) =>
+                    setBulkDraft((previous) => ({ ...previous, body: event.target.value }))
+                  }
+                  maxLength={10000}
+                />
+              </label>
+              <div className="tw-mt-3 tw-flex tw-flex-wrap tw-justify-end tw-gap-2">
+                <button
+                  type="button"
+                  className={secondaryBtnClass}
+                  onClick={() => {
+                    setBulkDraft({
+                      subject: "",
+                      body: "",
+                      companyIds: [],
+                      recipientCount: 0,
+                    });
+                    setBulkDraftOpen(false);
+                  }}
+                >
+                  Effacer le brouillon
+                </button>
+                <button
+                  type="button"
+                  className={primaryBtnClass}
+                  onClick={openBulkEmail}
+                  disabled={!bulkDraft.subject.trim() || !bulkDraft.body.trim()}
+                >
+                  Ouvrir dans mon application e-mail
+                </button>
+              </div>
+            </section>
+          ) : bulkDraft.subject || bulkDraft.body ? (
+            <div className="fr-no-print tw-mt-3 tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-3 tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-p-3 tw-shadow-sm">
+              <span className="tw-text-xs tw-text-fr-muted">
+                Un brouillon d’e-mail est enregistré sur cet appareil.
+              </span>
+              <button
+                type="button"
+                className={secondaryBtnClass}
+                onClick={() => setBulkDraftOpen(true)}
+              >
+                Reprendre le brouillon
+              </button>
+            </div>
+          ) : null}
 
           {!hasQuery ? (
             <div className="tw-mt-4 tw-rounded-2xl tw-border tw-border-dashed tw-border-fr-border tw-bg-fr-surface tw-px-5 tw-py-10 tw-text-center tw-shadow-sm">
@@ -942,14 +1312,29 @@ export default function Freelance() {
               </div>
             </div>
           ) : (
-            <div className="fr-print-card tw-mt-4 tw-overflow-hidden tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-shadow-sm">
+            <div className="tw-mt-4 tw-overflow-hidden tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-shadow-sm">
               <div className="fr-no-print tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-2 tw-border-b tw-border-fr-border tw-bg-fr-soft tw-px-4 tw-py-3">
                 <p className="tw-text-xs tw-font-semibold tw-text-fr-text">
-                  {visible.length} affichée(s) sur {filtered.length} résultat(s)
+                  {visible.length} affichée(s) sur {data?.total ?? 0} résultat(s)
                 </p>
-                <p className="tw-text-xs tw-text-fr-muted">10 résultats maximum par affichage</p>
+                <p className="tw-text-xs tw-text-fr-muted">10 résultats par page</p>
               </div>
-              {filtered.length === 0 ? (
+              {dataLoading ? (
+                <div className="tw-px-5 tw-py-10 tw-text-center tw-text-sm tw-text-fr-muted">
+                  Recherche en cours…
+                </div>
+              ) : dataError ? (
+                <div className="tw-px-5 tw-py-10 tw-text-center tw-text-sm tw-text-red-600">
+                  <p>{dataError.message || "Impossible de charger les résultats."}</p>
+                  <button
+                    type="button"
+                    className={secondaryBtnClass + " tw-mt-3"}
+                    onClick={() => setDirectoryRefresh((value) => value + 1)}
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              ) : filtered.length === 0 ? (
                 <div className="tw-px-5 tw-py-10 tw-text-center tw-text-sm tw-text-fr-muted">
                   Aucune entreprise trouvée (vérifiez vos filtres).
                 </div>
@@ -983,6 +1368,9 @@ export default function Freelance() {
                           <th className="tw-whitespace-nowrap tw-border-b tw-border-fr-border tw-bg-fr-soft tw-px-3 tw-py-3 tw-text-[11px] tw-font-bold tw-uppercase tw-tracking-wide tw-text-fr-muted">
                             E-mail
                           </th>
+                          <th className="tw-whitespace-nowrap tw-border-b tw-border-fr-border tw-bg-fr-soft tw-px-3 tw-py-3 tw-text-[11px] tw-font-bold tw-uppercase tw-tracking-wide tw-text-fr-muted">
+                            Suivi
+                          </th>
                           <th className="fr-no-print tw-whitespace-nowrap tw-border-b tw-border-fr-border tw-bg-fr-soft tw-px-3 tw-py-3 tw-text-[11px] tw-font-bold tw-uppercase tw-tracking-wide tw-text-fr-muted">
                             Actions
                           </th>
@@ -990,18 +1378,17 @@ export default function Freelance() {
                       </thead>
                       <tbody>
                         {visible.map((c, idx) => {
-                          const waUrl = firstWaLink(c[5]);
-                          const mail = firstEmail(c[7]);
+                          const key = companyKey(c);
                           return (
                             <tr
-                              key={`${c[2]}-${c[4]}-${idx}`}
+                              key={key || `${c[2]}-${c[4]}-${idx}`}
                               className="tw-transition hover:tw-bg-fr-soft"
                             >
                               <td className="tw-border-b tw-border-fr-border tw-px-3 tw-py-3 tw-align-top tw-w-6 fr-no-print">
                                 <input
                                   type="checkbox"
-                                  checked={selectedCompanies.has(idx)}
-                                  onChange={() => toggleCompanySelection(idx)}
+                                  checked={selectedCompanies.has(key)}
+                                  onChange={() => toggleCompanySelection(key)}
                                   className="tw-rounded tw-border-fr-border tw-text-fr-primary tw-focus:ring-fr-primary"
                                 />
                               </td>
@@ -1033,13 +1420,32 @@ export default function Freelance() {
                                 {c[4]}
                               </td>
                               <td className="tw-border-b tw-border-fr-border tw-px-3 tw-py-3 tw-align-top tw-text-xs">
-                                {c[5] ? c[5] : <span className="tw-text-fr-muted">—</span>}
+                                {c[5] || <span className="tw-text-fr-muted">—</span>}
                               </td>
                               <td className="tw-border-b tw-border-fr-border tw-px-3 tw-py-3 tw-align-top tw-text-xs">
-                                {c[6] ? c[6] : <span className="tw-text-fr-muted">—</span>}
+                                {c[6] || <span className="tw-text-fr-muted">—</span>}
                               </td>
                               <td className="tw-border-b tw-border-fr-border tw-px-3 tw-py-3 tw-align-top tw-text-xs">
-                                {c[7] ? c[7] : <span className="tw-text-fr-muted">—</span>}
+                                {c[7] || <span className="tw-text-fr-muted">—</span>}
+                              </td>
+                              <td className="tw-border-b tw-border-fr-border tw-px-3 tw-py-3 tw-align-top">
+                                <select
+                                  value={companyStatus[key] || "pending"}
+                                  onChange={(event) =>
+                                    setCompanyStatus((previous) => ({
+                                      ...previous,
+                                      [key]: event.target.value,
+                                    }))
+                                  }
+                                  className="tw-rounded tw-border tw-border-fr-border tw-bg-fr-surface tw-px-2 tw-py-1 tw-text-[10px] tw-text-fr-text"
+                                  aria-label={`Statut de ${c[2]}`}
+                                >
+                                  {STATUS_OPTIONS.map((status) => (
+                                    <option key={status.id} value={status.id}>
+                                      {status.label}
+                                    </option>
+                                  ))}
+                                </select>
                               </td>
                               <td className="fr-no-print tw-border-b tw-border-fr-border tw-px-3 tw-py-3 tw-align-top">
                                 <div className="tw-flex tw-flex-wrap tw-gap-1.5">
@@ -1059,45 +1465,22 @@ export default function Freelance() {
                       </tbody>
                     </table>
                   </div>
-                  {visible.length < filtered.length ? (
+                  {data?.has_more ? (
                     <div className="fr-no-print tw-flex tw-flex-wrap tw-items-center tw-justify-center tw-gap-3 tw-border-t tw-border-fr-border tw-p-4">
                       <button
                         type="button"
                         className={primaryBtnClass}
                         onClick={() => setPage((p) => p + 1)}
+                        disabled={dataLoading}
                       >
-                        Afficher les {Math.min(PAGE_SIZE, filtered.length - visible.length)}{" "}
+                        Afficher les {Math.min(PAGE_SIZE, Math.max(0, (data?.total ?? 0) - visible.length))}{" "}
                         suivantes
                       </button>
                       <span className="tw-text-xs tw-text-fr-muted">
-                        {filtered.length - visible.length} résultat(s) restant(s)
+                        {(data?.total ?? 0) - visible.length} résultat(s) restant(s)
                       </span>
                     </div>
                   ) : null}
-                  {selectedCompanies.size > 0 && (
-                    <div className="fr-no-print tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-3 tw-border-t tw-border-fr-border tw-bg-fr-surface tw-px-4 tw-py-3 tw-mt-3 tw-rounded-b-2xl">
-                      <span className="tw-text-xs tw-font-bold tw-text-fr-text">
-                        {selectedCompanies.size} entreprise(s) sélectionnée(s)
-                      </span>
-                      <div className="tw-flex tw-gap-2">
-                        <button
-                          type="button"
-                          className={secondaryBtnClass}
-                          onClick={() => setSelectedCompanies(new Set())}
-                        >
-                          Tout désélectionner
-                        </button>
-                        <button
-                          type="button"
-                          className={primaryBtnClass}
-                          onClick={sendBulkEmail}
-                        >
-                          <Icon path={ICONS.mail} className="tw-h-3.5 tw-w-3.5 tw-mr-1" />
-                          Contacter par e-mail
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </>
               )}
             </div>
@@ -1168,7 +1551,7 @@ export default function Freelance() {
             {data?.SCRIPTS_DATA?.map((script) => (
               <article
                 key={script.title}
-                className="fr-print-card tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-p-4 tw-shadow-sm sm:tw-p-5"
+                className="tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-p-4 tw-shadow-sm sm:tw-p-5"
               >
                 <div className="tw-flex tw-flex-wrap tw-items-start tw-justify-between tw-gap-2">
                   <div>
@@ -1497,19 +1880,8 @@ export default function Freelance() {
 
                   {CHANNELS.filter((item) => drafts[item]).map((item) => {
                     const draft = drafts[item];
-                    const href =
-                      item === "whatsapp"
-                        ? waHref(contactCompany[5], draft.message)
-                        : item === "sms"
-                          ? smsHref(contactCompany[5], draft.message)
-                          : mailHref(contactCompany[7], draft.subject, draft.message);
-                    const mobile = mobileDigits(contactCompany[5]);
                     const destination =
-                      item === "email"
-                        ? validEmail(contactCompany[7])
-                        : mobile
-                          ? `+${mobile}`
-                          : "—";
+                      item === "email" ? contactCompany[7] || "—" : contactCompany[5] || "—";
                     const sendLabel =
                       item === "whatsapp"
                         ? "Contacter par WhatsApp"
@@ -1559,16 +1931,16 @@ export default function Freelance() {
                               <Icon path={ICONS.copy} className="tw-h-3 w-3" />
                               Copier
                             </button>
-                            {href ? (
-                              <a
+                            {companyChannels?.[item] ? (
+                              <button
+                                type="button"
                                 className={`tw-inline-flex tw-items-center tw-gap-1.5 tw-rounded-lg tw-px-2.5 tw-py-1.5 tw-text-[11px] tw-font-semibold tw-text-white tw-transition ${sendColor}`}
-                                href={href}
-                                target={item === "email" ? undefined : "_blank"}
-                                rel="noopener noreferrer"
+                                onClick={() => openCompanyContact(item, draft)}
+                                disabled={Boolean(openingContact)}
                               >
                                 <Icon path={ICONS.send} className="tw-h-3.5 tw-w-3.5" />
-                                {sendLabel}
-                              </a>
+                                {openingContact === item ? "Ouverture…" : sendLabel}
+                              </button>
                             ) : null}
                           </div>
                         </div>

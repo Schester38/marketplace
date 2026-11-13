@@ -1,4 +1,4 @@
-// Données de l'espace FREELANCE (prospection publicitaire — Yaoundé & Douala).
+// Données privées de l'espace FREELANCE (prospection — Yaoundé & Douala).
 // Ce module est le SEUL endroit où remplacer les blocs de données :
 //   • COMPANIES : collez les blocs 1 à 5 fournis par le compte ;
 //   • SECTORS   : libellés des 8 secteurs ;

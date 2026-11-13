@@ -619,10 +619,24 @@ export const api = {
   studioHooks: (payload) =>
     adminRequest("/studio/hooks", { method: "POST", body: JSON.stringify(payload) }),
   // Espace Freelance — génération IA de scripts de prospection par entreprise.
-  // `request()` (jeton utilisateur) conserve err.code (AI_NOT_CONFIGURED, etc.).
+  // L'annuaire et les coordonnées restent côté serveur ; le navigateur ne reçoit
+  // que des pages de résultats avec coordonnées masquées.
+  freelanceDirectory: (params = {}) => {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
+    }
+    return request(`/freelance/directory?${search.toString()}`);
+  },
   freelanceStatus: () => request("/freelance"),
   freelanceScripts: (payload) =>
     request("/freelance/scripts", { method: "POST", body: JSON.stringify(payload) }),
+  freelanceContactLink: (payload) =>
+    request("/freelance/contact-link", { method: "POST", body: JSON.stringify(payload) }),
+  freelanceBulkEmailCount: (payload) =>
+    request("/freelance/bulk-email/count", { method: "POST", body: JSON.stringify(payload) }),
+  freelanceBulkEmail: (payload) =>
+    request("/freelance/bulk-email", { method: "POST", body: JSON.stringify(payload) }),
   freelanceTranslate: (payload) =>
     request("/freelance/translate", { method: "POST", body: JSON.stringify(payload) }),
   // MboppiBoost — catalogue public et commandes de services SMM.

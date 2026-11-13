@@ -6,6 +6,9 @@
 //
 // Endpoints (préfixe /api/freelance) :
 //   GET  /        → état du module (IA configurée ?, canaux, tons)
+//   GET  /directory → recherche paginée, coordonnées masquées
+//   POST /contact-link → lien d'un seul contact après action explicite
+//   POST /bulk-email → brouillon ciblé par identifiants (adresses dans mailto)
 //   POST /scripts → génère message + relance pour chaque canal demandé
 //
 // L'IA reçoit uniquement les données de l'entreprise et du chercheur, renvoie
@@ -15,6 +18,7 @@ import { Router } from "express";
 import { authRequired } from "../auth.js";
 import { logAudit } from "../security.js";
 import { askAI } from "./chat.js";
+import { COMPANIES, SECTORS, SCRIPTS_DATA } from "../data/freelanceData.js";
 
 const router = Router();
 
@@ -74,6 +78,74 @@ function firstMobile(value) {
 function firstEmail(value) {
   const first = String(value || "").split("/")[0].trim();
   return EMAIL_RE.test(first) ? first : "";
+}
+
+function maskPhone(value) {
+  if (!value) return "";
+  return String(value)
+    .split("/")
+    .map((part) => {
+      const prefixMatch = part.match(/^\s*(\+\d{1,3})/);
+      const prefixDigits = prefixMatch ? prefixMatch[1].replace(/\D/g, "").length : 2;
+      const totalDigits = (part.match(/\d/g) || []).length;
+      if (totalDigits <= prefixDigits + 2) return part.replace(/\d/g, "•");
+      let digitIndex = 0;
+      return part.replace(/\d/g, (digit) => {
+        const current = digitIndex++;
+        const isCountryCode = Boolean(prefixMatch && current < prefixDigits);
+        const isVisibleLocalPrefix = !prefixMatch && current < prefixDigits;
+        const isVisibleSuffix = current >= totalDigits - 2;
+        return isCountryCode || isVisibleLocalPrefix || isVisibleSuffix ? digit : "•";
+      });
+    })
+    .join(" / ");
+}
+
+function maskEmail(value) {
+  if (!value) return "";
+  return String(value)
+    .split("/")
+    .map((part) => {
+      const email = part.trim();
+      const separator = email.indexOf("@");
+      if (separator <= 0 || separator === email.length - 1) return "•••";
+      const local = email.slice(0, separator);
+      const domain = email.slice(separator + 1);
+      const dot = domain.lastIndexOf(".");
+      const domainName = dot > 0 ? domain.slice(0, dot) : domain;
+      const suffix = dot > 0 ? domain.slice(dot) : "";
+      const maskedLocal =
+        local.length <= 2 ? `${local[0]}•••` : `${local.slice(0, 2)}•••${local.slice(-1)}`;
+      const maskedDomain = domainName ? `${domainName[0]}•••` : "•••";
+      return `${maskedLocal}@${maskedDomain}${suffix}`;
+    })
+    .join(" / ");
+}
+
+function companyIndex(value) {
+  if (
+    (typeof value !== "number" || !Number.isInteger(value)) &&
+    (typeof value !== "string" || !/^(0|[1-9]\d*)$/.test(value))
+  ) {
+    return null;
+  }
+  const index = Number(value);
+  return Number.isInteger(index) && index >= 0 && index < COMPANIES.length ? index : null;
+}
+
+function companyIdsFromBody(value) {
+  if (!Array.isArray(value) || value.length === 0 || value.length > COMPANIES.length) {
+    throw fail(422, "Sélection d'entreprises invalide.", "INVALID_COMPANIES");
+  }
+  const ids = value.map(companyIndex);
+  if (ids.some((id) => id === null)) {
+    throw fail(422, "Sélection d'entreprises invalide.", "INVALID_COMPANIES");
+  }
+  return [...new Set(ids)];
+}
+
+function emailRecipients(ids) {
+  return [...new Set(ids.map((id) => firstEmail(COMPANIES[id][7])).filter(Boolean))];
 }
 
 function fail(status, message, code) {
@@ -224,27 +296,192 @@ router.get("/", (req, res) => {
   });
 });
 
+router.get(
+  "/directory",
+  ah(async (req, res) => {
+    const query = cleanField(req.query.q, 120).toLowerCase();
+    const city = cleanField(req.query.city, 40);
+    const sector = cleanField(req.query.sector, 4);
+    const channel = cleanField(req.query.channel, 20).toLowerCase();
+    const page = req.query.page === undefined ? 1 : Number(req.query.page);
+    const limit = req.query.limit === undefined ? 10 : Number(req.query.limit);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 20) {
+      throw fail(422, "Taille de page invalide.", "INVALID_LIMIT");
+    }
+    const maxPage = Math.max(1, Math.ceil(COMPANIES.length / limit));
+    if (!Number.isInteger(page) || page < 1 || page > maxPage) {
+      throw fail(422, "Numéro de page invalide.", "INVALID_PAGE");
+    }
+    if (city && !["Yaoundé", "Douala"].includes(city)) {
+      throw fail(422, "Ville invalide.", "INVALID_CITY");
+    }
+    if (sector && !Object.prototype.hasOwnProperty.call(SECTORS, sector)) {
+      throw fail(422, "Secteur invalide.", "INVALID_SECTOR");
+    }
+    if (channel && !["mobile", "fixe", "email"].includes(channel)) {
+      throw fail(422, "Canal invalide.", "INVALID_CHANNEL");
+    }
+
+    const hasQuery = Boolean(query || city || sector || channel);
+    const matches = [];
+    if (hasQuery) {
+      COMPANIES.forEach((company, id) => {
+        if (city && company[0] !== city) return;
+        if (sector && String(company[1]) !== sector) return;
+        if (channel === "mobile" && !String(company[5] || "").trim()) return;
+        if (channel === "fixe" && String(company[5] || "").trim()) return;
+        if (channel === "email" && !firstEmail(company[7])) return;
+        if (query) {
+          const haystack = [
+            company[0],
+            SECTORS[company[1]],
+            company[2],
+            company[3],
+            company[4],
+            company[5],
+            company[6],
+            company[7],
+          ]
+            .join(" ")
+            .toLowerCase();
+          if (!haystack.includes(query)) return;
+        }
+        matches.push({ id, company });
+      });
+    }
+
+    const stats = {
+      total: COMPANIES.length,
+      yaounde: COMPANIES.filter((company) => company[0] === "Yaoundé").length,
+      douala: COMPANIES.filter((company) => company[0] === "Douala").length,
+      whatsapp: COMPANIES.filter((company) => String(company[5] || "").trim() !== "").length,
+    };
+    const preview = COMPANIES.slice(0, 3).map((company, id) => [
+      company[0],
+      company[1],
+      company[2],
+      company[3],
+      company[4],
+      "",
+      "",
+      "",
+      String(id),
+      false,
+      false,
+    ]);
+    const start = (page - 1) * limit;
+    const companies = matches.slice(start, start + limit).map(({ id, company }) => [
+      company[0],
+      company[1],
+      company[2],
+      company[3],
+      company[4],
+      maskPhone(company[5]),
+      maskPhone(company[6]),
+      maskEmail(company[7]),
+      String(id),
+      Boolean(firstMobile(company[5])),
+      Boolean(firstEmail(company[7])),
+    ]);
+
+    res.json({
+      ok: true,
+      SECTORS,
+      SCRIPTS_DATA,
+      stats,
+      preview,
+      companies,
+      total: matches.length,
+      page,
+      limit,
+      has_more: start + companies.length < matches.length,
+    });
+  })
+);
+
+router.post(
+  "/contact-link",
+  ah(async (req, res) => {
+    const id = companyIndex(req.body?.company_id);
+    const channel = cleanField(req.body?.channel, 20).toLowerCase();
+    if (id === null || !CHANNEL_SET.has(channel)) {
+      throw fail(422, "Entreprise ou canal invalide.", "INVALID_CONTACT");
+    }
+    const company = COMPANIES[id];
+    const message = cleanText(req.body?.message, channel === "email" ? 5000 : 2500);
+    let href = "";
+    if (channel === "email") {
+      const email = firstEmail(company[7]);
+      if (!email) throw fail(422, "Aucune adresse e-mail disponible.", "CHANNEL_UNAVAILABLE");
+      const subject = cleanField(req.body?.subject, 180);
+      href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+    } else {
+      const mobile = firstMobile(company[5]);
+      if (!mobile) throw fail(422, "Aucun numéro mobile disponible.", "CHANNEL_UNAVAILABLE");
+      href =
+        channel === "whatsapp"
+          ? `https://wa.me/${mobile}?text=${encodeURIComponent(message)}`
+          : `sms:${mobile}?body=${encodeURIComponent(message)}`;
+    }
+    res.json({ ok: true, href });
+  })
+);
+
+router.post(
+  "/bulk-email/count",
+  ah(async (req, res) => {
+    const ids = companyIdsFromBody(req.body?.company_ids);
+    res.json({ ok: true, recipient_count: emailRecipients(ids).length });
+  })
+);
+
+router.post(
+  "/bulk-email",
+  ah(async (req, res) => {
+    const ids = companyIdsFromBody(req.body?.company_ids);
+    const recipients = emailRecipients(ids);
+    if (!recipients.length) {
+      throw fail(422, "Aucune adresse e-mail valide parmi les entreprises sélectionnées.", "NO_EMAILS");
+    }
+    const subject = cleanField(req.body?.subject, 180);
+    const message = cleanText(req.body?.message, 10000);
+    if (!subject || !message) {
+      throw fail(422, "L'objet et le message de l'e-mail sont obligatoires.", "INVALID_EMAIL_DRAFT");
+    }
+    const href = `mailto:?bcc=${encodeURIComponent(
+      recipients.join(",")
+    )}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+    if (href.length > 12000) {
+      throw fail(
+        413,
+        "Cette sélection est trop importante pour un seul brouillon e-mail. Réduisez la liste.",
+        "EMAIL_LINK_TOO_LONG"
+      );
+    }
+    logAudit(req.user.id, "freelance.bulk_email", { company_count: ids.length, recipient_count: recipients.length, ip: req.ip }, req.ip);
+    res.json({ ok: true, href, recipient_count: recipients.length });
+  })
+);
+
 router.post(
   "/scripts",
   ah(async (req, res) => {
     const body = req.body || {};
-    const companyRaw = body.company && typeof body.company === "object" ? body.company : {};
+    const companyId = companyIndex(body.company_id);
+    if (companyId === null) {
+      throw fail(422, "Sélectionnez une entreprise valide.", "INVALID_COMPANY");
+    }
+    const companyRaw = COMPANIES[companyId];
     const researcherRaw =
       body.researcher && typeof body.researcher === "object" ? body.researcher : {};
 
     const company = {
-      name: cleanField(companyRaw.name, 160),
-      city: cleanField(companyRaw.city, 60),
-      sector: cleanField(companyRaw.sector, 160),
-      offer: cleanField(companyRaw.offer, 400),
-      location: cleanField(companyRaw.location, 240),
-      mobile: cleanField(companyRaw.mobile, 240),
-      fixed: cleanField(companyRaw.fixed, 240),
-      email: cleanField(companyRaw.email, 240),
+      name: cleanField(companyRaw[2], 160),
+      city: cleanField(companyRaw[0], 60),
+      sector: cleanField(SECTORS[companyRaw[1]], 160),
+      offer: cleanField(companyRaw[3], 400),
+      location: cleanField(companyRaw[4], 240),
     };
-    if (company.name.length < 2) {
-      throw fail(422, "Sélectionnez une entreprise valide.", "INVALID_COMPANY");
-    }
 
     const researcher = {
       name: cleanField(researcherRaw.name, 120),
@@ -277,8 +514,8 @@ router.post(
       throw fail(422, "Choisissez au moins un moyen de contact.", "NO_CHANNEL");
     }
 
-    const mobileDigits = firstMobile(company.mobile);
-    const companyEmail = firstEmail(company.email);
+    const mobileDigits = firstMobile(companyRaw[5]);
+    const companyEmail = firstEmail(companyRaw[7]);
     if (channels.includes("whatsapp") && !mobileDigits) {
       throw fail(
         422,
