@@ -229,11 +229,73 @@ export default function Freelance() {
   const [targetLang, setTargetLang] = useState("fr");
   const [translating, setTranslating] = useState(false);
   const [translateError, setTranslateError] = useState("");
+  const [selectedCompanies, setSelectedCompanies] = useState(new Set());
 
   const showToast = (message) => {
     setToast(message);
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 2200);
+  };
+
+  const toggleCompanySelection = (index) => {
+    setSelectedCompanies((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const selectedCompanyEmails = () => {
+    const emails = [];
+    selectedCompanies.forEach((index) => {
+      const company = COMPANIES[index];
+      if (!company) return;
+      const email = String(company[7] || "").trim();
+      if (email && EMAIL_RE.test(email)) emails.push(email);
+    });
+    return emails;
+  };
+
+  const sendBulkEmail = () => {
+    const emails = selectedCompanyEmails();
+    if (emails.length === 0) {
+      showToast(
+        "Aucune adresse e-mail valide parmi les entreprises sélectionnées."
+      );
+      return;
+    }
+
+    const subject = `Proposition commerciale — ${info.name || "Un partenaire"}${
+      info.agency ? ` · ${info.agency}` : ""
+    }`;
+
+    const lines = [
+      "Bonjour,",
+      "",
+      `Je me présente, ${info.name || ""}${
+        info.agency ? `, responsable de ${info.agency}` : ""
+      }.`,
+      info.offer ? `Je vous propose : ${info.offer}.` : "",
+      info.skills ? `Mes compétences : ${info.skills}.` : "",
+      info.phone
+        ? `Vous pouvez me joindre au ${info.phone} ou par e-mail à ${info.email || ""}.`
+        : "",
+      "",
+      "Je serais ravi d'échanger avec vous sur la manière dont mon offre peut répondre à vos besoins.",
+      "",
+      "Cordialement,",
+      `${info.name || ""}${info.agency ? ` — ${info.agency}` : ""}`,
+    ];
+
+    const body = lines.filter(Boolean).join("\n");
+
+    window.location.href =
+      `mailto:${emails.join(",")}?subject=${encodeURIComponent(
+        subject
+      )}&body=${encodeURIComponent(body)}`;
+
+    showToast(`${emails.length} entreprise(s) ajoutée(s) au message.`);
   };
 
   const copyText = async (text) => {
@@ -872,6 +934,14 @@ export default function Freelance() {
                               key={`${c[2]}-${c[4]}-${idx}`}
                               className="tw-transition hover:tw-bg-fr-soft"
                             >
+                              <td className="tw-border-b tw-border-fr-border tw-px-3 tw-py-3 tw-align-top tw-w-6 fr-no-print">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedCompanies.has(idx)}
+                                  onChange={() => toggleCompanySelection(idx)}
+                                  className="tw-rounded tw-border-fr-border tw-text-fr-primary tw-focus:ring-fr-primary"
+                                />
+                              </td>
                               <td className="tw-border-b tw-border-fr-border tw-px-3 tw-py-3 tw-align-top tw-text-fr-muted">
                                 {idx + 1}
                               </td>
@@ -941,6 +1011,30 @@ export default function Freelance() {
                       </span>
                     </div>
                   ) : null}
+                  {selectedCompanies.size > 0 && (
+                    <div className="fr-no-print tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-3 tw-border-t tw-border-fr-border tw-bg-fr-surface tw-px-4 tw-py-3 tw-mt-3 tw-rounded-b-2xl">
+                      <span className="tw-text-xs tw-font-bold tw-text-fr-text">
+                        {selectedCompanies.size} entreprise(s) sélectionnée(s)
+                      </span>
+                      <div className="tw-flex tw-gap-2">
+                        <button
+                          type="button"
+                          className={secondaryBtnClass}
+                          onClick={() => setSelectedCompanies(new Set())}
+                        >
+                          Tout désélectionner
+                        </button>
+                        <button
+                          type="button"
+                          className={primaryBtnClass}
+                          onClick={sendBulkEmail}
+                        >
+                          <Icon path={ICONS.mail} className="tw-h-3.5 tw-w-3.5 tw-mr-1" />
+                          Contacter par e-mail
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
