@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
-import { SECTORS, COMPANIES, SCRIPTS_DATA } from "../freelanceData.js";
+// freelanceData.js est chargé dynamiquement ci-dessous (évite le 504 sur le chunk trop volumineux)
 
 const EMPTY_PERSONALIZATION = {
   name: "",
@@ -230,6 +230,9 @@ export default function Freelance() {
   const [translating, setTranslating] = useState(false);
   const [translateError, setTranslateError] = useState("");
   const [selectedCompanies, setSelectedCompanies] = useState(new Set());
+  const [data, setData] = useState(null);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState(null);
 
   const showToast = (message) => {
     setToast(message);
@@ -249,7 +252,7 @@ export default function Freelance() {
   const selectedCompanyEmails = () => {
     const emails = [];
     selectedCompanies.forEach((index) => {
-      const company = COMPANIES[index];
+      const company = data?.COMPANIES[index];
       if (!company) return;
       const email = String(company[7] || "").trim();
       if (email && EMAIL_RE.test(email)) emails.push(email);
@@ -323,6 +326,33 @@ export default function Freelance() {
       // stockage local indisponible : le profil reste en mémoire
     }
   }, [info]);
+
+  // Chargement dynamique de freelanceData.js (séparé du bundle principal)
+  useEffect(() => {
+    let cancelled = false;
+    setDataLoading(true);
+    setDataError(null);
+    import("../freelanceData.js")
+      .then((mod) => {
+        if (!cancelled) {
+          setData({
+            SECTORS: mod.SECTORS,
+            COMPANIES: mod.COMPANIES,
+            SCRIPTS_DATA: mod.SCRIPTS_DATA,
+          });
+          setDataLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setDataError(err);
+          setDataLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const closeContact = useCallback(() => {
     setContactCompany(null);
@@ -402,7 +432,7 @@ export default function Freelance() {
         company: {
           name: contactCompany[2],
           city: contactCompany[0],
-          sector: SECTORS[contactCompany[1]] || "",
+          sector: data?.SECTORS[contactCompany[1]] || "",
           offer: contactCompany[3],
           location: contactCompany[4],
           mobile: contactCompany[5],
@@ -472,23 +502,23 @@ export default function Freelance() {
 
   const stats = useMemo(
     () => ({
-      total: COMPANIES.length,
-      yaounde: COMPANIES.filter((c) => c[0] === "Yaoundé").length,
-      douala: COMPANIES.filter((c) => c[0] === "Douala").length,
-      whatsapp: COMPANIES.filter((c) => String(c[5] || "").trim() !== "").length,
+      total: data?.COMPANIES?.length ?? 0,
+      yaounde: data?.COMPANIES?.filter((c) => c[0] === "Yaoundé").length ?? 0,
+      douala: data?.COMPANIES?.filter((c) => c[0] === "Douala").length ?? 0,
+      whatsapp: data?.COMPANIES?.filter((c) => String(c[5] || "").trim() !== "").length ?? 0,
     }),
     []
   );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return COMPANIES.filter((c) => {
+    return data?.COMPANIES?.filter((c) => {
       if (city && c[0] !== city) return false;
       if (sector && String(c[1]) !== sector) return false;
       if (channel === "mobile" && !String(c[5] || "").trim()) return false;
       if (channel === "fixe" && String(c[5] || "").trim()) return false;
       if (q) {
-        const hay = [c[0], SECTORS[c[1]], c[2], c[3], c[4], c[5], c[6], c[7]]
+        const hay = [c[0], data?.SECTORS[c[1]], c[2], c[3], c[4], c[5], c[6], c[7]]
           .join(" ")
           .toLowerCase();
         if (!hay.includes(q)) return false;
@@ -558,6 +588,39 @@ export default function Freelance() {
     },
   ];
 
+  // États de chargement / erreur pendant le fetch de freelanceData.js
+  if (dataLoading) {
+    return (
+      <main className="freelance-page tw-min-h-screen tw-bg-fr-bg tw-font-sans tw-text-fr-text tw-flex tw-items-center tw-justify-center tw-h-screen">
+        <div className="tw-text-center">
+          <div className="tw-inline-block tw-rounded-full tw-border-4 tw-border-fr-primary tw-border-t-transparent tw-rounded-full tw-h-12 tw-w-12 tw-animate-spin tw-mb-4" />
+          <p className="tw-text-fr-text tw-font-medium">Chargement de l'annuaire…</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (dataError) {
+    return (
+      <main className="freelance-page tw-min-h-screen tw-bg-fr-bg tw-font-sans tw-text-fr-text tw-flex tw-items-center tw-justify-center tw-h-screen">
+        <div className="tw-text-center">
+          <p className="tw-text-amber-500 tw-font-medium">Erreur de chargement des données.</p>
+          <button
+            type="button"
+            onClick={() => {
+              setDataLoading(true);
+              setDataError(null);
+              window.location.reload();
+            }}
+            className="tw-mt-4 tw-inline-flex tw-items-center tw-gap-2 tw-rounded-xl tw-border tw-border-fr-border tw-bg-fr-surface tw-px-4 tw-py-2 tw-text-sm tw-font-semibold tw-text-fr-text tw-transition hover:tw-border-fr-primary"
+          >
+            Réessayer
+          </button>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="freelance-page tw-min-h-screen tw-bg-fr-bg tw-font-sans tw-text-fr-text">
       <Seo
@@ -621,7 +684,7 @@ export default function Freelance() {
                   <strong className="tw-text-white">{stats.total}</strong> entreprises
                 </span>
                 <span>
-                  <strong className="tw-text-white">{Object.keys(SECTORS).length}</strong> secteurs
+                  <strong className="tw-text-white">{data?.SECTORS ? Object.keys(data.SECTORS).length : 0}</strong> secteurs
                   d&apos;activité
                 </span>
                 <span>
@@ -636,7 +699,7 @@ export default function Freelance() {
                   Aperçu de l&apos;annuaire
                 </p>
                 <div className="tw-mt-4 tw-space-y-2.5">
-                  {COMPANIES.slice(0, 3).map((c) => (
+                  {data?.COMPANIES?.slice(0, 3).map((c) => (
                     <div
                       key={`${c[2]}-${c[4]}`}
                       className="tw-flex tw-items-center tw-justify-between tw-gap-3 tw-rounded-xl tw-border tw-border-white/10 tw-bg-white/5 tw-px-3 tw-py-2.5"
@@ -786,7 +849,7 @@ export default function Freelance() {
               ? hasQuery
                 ? `${filtered.length} résultat(s)`
                 : `${stats.total} entreprises disponibles`
-              : `${SCRIPTS_DATA.length} secteurs couverts`}
+              : `${data?.SCRIPTS_DATA?.length ?? 0} secteurs couverts`}
           </p>
         </div>
 
@@ -835,7 +898,7 @@ export default function Freelance() {
                 onChange={(e) => setSector(e.target.value)}
               >
                 <option value="">Tous les secteurs (1 à 8)</option>
-                {Object.entries(SECTORS).map(([id, label]) => (
+                {(data?.SECTORS ? Object.entries(data.SECTORS) : []).map(([id, label]) => (
                   <option key={id} value={id}>
                     {label}
                   </option>
@@ -1102,7 +1165,7 @@ export default function Freelance() {
           </div>
 
           <div className="tw-mt-4 tw-space-y-4">
-            {SCRIPTS_DATA.map((script) => (
+            {data?.SCRIPTS_DATA?.map((script) => (
               <article
                 key={script.title}
                 className="fr-print-card tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-p-4 tw-shadow-sm sm:tw-p-5"
@@ -1164,7 +1227,7 @@ export default function Freelance() {
             <div className="tw-flex tw-items-start tw-justify-between tw-gap-3 tw-border-b tw-border-fr-border tw-bg-fr-soft tw-px-4 tw-py-3.5 sm:tw-px-5">
               <div className="tw-min-w-0">
                 <p className="tw-text-[10px] tw-font-bold tw-uppercase tw-tracking-[0.14em] tw-text-fr-primary">
-                  {SECTORS[contactCompany[1]] || "Prospection"} · {contactCompany[0]}
+                  {data?.SECTORS[contactCompany[1]] || "Prospection"} · {contactCompany[0]}
                 </p>
                 <h2
                   id="fr-contact-title"
