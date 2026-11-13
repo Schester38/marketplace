@@ -618,6 +618,11 @@ export const api = {
   studioStatus: () => adminRequest("/studio"),
   studioHooks: (payload) =>
     adminRequest("/studio/hooks", { method: "POST", body: JSON.stringify(payload) }),
+  // Espace Freelance — génération IA de scripts de prospection par entreprise.
+  // `request()` (jeton utilisateur) conserve err.code (AI_NOT_CONFIGURED, etc.).
+  freelanceStatus: () => request("/freelance"),
+  freelanceScripts: (payload) =>
+    request("/freelance/scripts", { method: "POST", body: JSON.stringify(payload) }),
   // MboppiBoost — catalogue public et commandes de services SMM.
   smmCategories: () => request("/smm/categories"),
   smmServices: (params = {}) => {

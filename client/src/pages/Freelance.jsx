@@ -2,13 +2,35 @@
 // Page dédiée ouverte depuis « 🎨 Mon espace créateur », réservée au compte
 // bestrong9124@gmail.com (garde dans App.jsx). Les données (blocs 1 à 5) se
 // trouvent dans client/src/freelanceData.js.
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
+import { api } from "../api.js";
 import { SECTORS, COMPANIES, SCRIPTS_DATA } from "../freelanceData.js";
 
-const EMPTY_PERSONALIZATION = { name: "", agency: "", phone: "", email: "" };
+const EMPTY_PERSONALIZATION = {
+  name: "",
+  agency: "",
+  phone: "",
+  email: "",
+  offer: "",
+  skills: "",
+};
+const PROFILE_KEY = "mboppi_freelance_profile";
 const PAGE_SIZE = 10;
+const CHANNELS = ["whatsapp", "sms", "email"];
+const CHANNEL_LABELS = {
+  whatsapp: "WhatsApp",
+  sms: "SMS",
+  email: "E-mail",
+};
+const TONES = [
+  { id: "professionnel", label: "Professionnel", hint: "Sobre et crédible" },
+  { id: "chaleureux", label: "Chaleureux", hint: "Humain et accessible" },
+  { id: "direct", label: "Direct", hint: "Droit au but" },
+  { id: "expert", label: "Expert", hint: "Conseil et autorité" },
+];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const ICONS = {
   search: "M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z",
@@ -21,6 +43,13 @@ const ICONS = {
     "M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z",
   filter: "M22 3H2l8 9.46V19l4 2v-8.54L22 3z",
   arrow: "M5 12h14M13 6l6 6-6 6",
+  mail: "M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zM22 6l-10 7L2 6",
+  close: "M18 6L6 18M6 6l12 12",
+  copy: "M9 9h10a1 1 0 011 1v10a1 1 0 01-1 1H9a1 1 0 01-1-1V10a1 1 0 011-1zM5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1",
+  sparkles:
+    "M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z",
+  refresh: "M21 12a9 9 0 11-2.64-6.36M21 3v6h-6",
+  send: "M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z",
 };
 
 const FEATURES = [
@@ -64,15 +93,74 @@ const STEPS = [
   },
 ];
 
-function firstWaLink(mobileStr) {
+function mobileDigits(mobileStr) {
   if (!mobileStr) return "";
   const first = String(mobileStr).split("/")[0].replace(/\D/g, "");
-  return first.length >= 9 ? "https://wa.me/" + first : "";
+  return first.length >= 9 ? first : "";
+}
+
+function firstWaLink(mobileStr) {
+  const digits = mobileDigits(mobileStr);
+  return digits ? "https://wa.me/" + digits : "";
 }
 
 function firstEmail(emailStr) {
   if (!emailStr) return "";
   return String(emailStr).split("/")[0].trim();
+}
+
+function validEmail(emailStr) {
+  const first = firstEmail(emailStr);
+  return EMAIL_RE.test(first) ? first : "";
+}
+
+function waHref(mobileStr, message) {
+  const digits = mobileDigits(mobileStr);
+  if (!digits) return "";
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message || "")}`;
+}
+
+function smsHref(mobileStr, message) {
+  const digits = mobileDigits(mobileStr);
+  if (!digits) return "";
+  return `sms:${digits}?body=${encodeURIComponent(message || "")}`;
+}
+
+function mailHref(emailStr, subject, message) {
+  const email = validEmail(emailStr);
+  if (!email) return "";
+  return `mailto:${email}?subject=${encodeURIComponent(subject || "")}&body=${encodeURIComponent(
+    message || ""
+  )}`;
+}
+
+function availableChannels(company) {
+  const mobile = mobileDigits(company?.[5]);
+  return {
+    whatsapp: Boolean(mobile),
+    sms: Boolean(mobile),
+    email: Boolean(validEmail(company?.[7])),
+  };
+}
+
+function loadProfile() {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    if (!raw) return EMPTY_PERSONALIZATION;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return EMPTY_PERSONALIZATION;
+    return {
+      ...EMPTY_PERSONALIZATION,
+      name: String(parsed.name || ""),
+      agency: String(parsed.agency || ""),
+      phone: String(parsed.phone || ""),
+      email: String(parsed.email || ""),
+      offer: String(parsed.offer || ""),
+      skills: String(parsed.skills || ""),
+    };
+  } catch {
+    return EMPTY_PERSONALIZATION;
+  }
 }
 
 function personalize(text, info) {
@@ -112,6 +200,10 @@ const primaryBtnClass =
   "tw-inline-flex tw-items-center tw-justify-center tw-gap-2 tw-rounded-xl tw-bg-fr-primary tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-text-fr-on-primary tw-shadow-sm tw-transition hover:tw-bg-fr-primary-dark focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-fr-primary";
 const chipClass =
   "tw-rounded-full tw-border tw-border-fr-border tw-bg-fr-soft tw-px-3.5 tw-py-2 tw-text-xs tw-font-semibold tw-text-fr-text tw-transition hover:tw-border-fr-primary hover:tw-text-fr-primary";
+const secondaryBtnClass =
+  "tw-inline-flex tw-items-center tw-justify-center tw-gap-2 tw-rounded-xl tw-border tw-border-fr-border tw-bg-fr-surface tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-text-fr-text tw-transition hover:tw-border-fr-primary hover:tw-text-fr-primary";
+const miniBtnClass =
+  "tw-inline-flex tw-items-center tw-gap-1 tw-rounded-lg tw-border tw-border-fr-border tw-bg-fr-surface tw-px-2 tw-py-1 tw-text-[10px] tw-font-semibold tw-text-fr-text tw-transition hover:tw-border-fr-primary hover:tw-text-fr-primary";
 
 export default function Freelance() {
   const [tab, setTab] = useState("directory");
@@ -120,9 +212,18 @@ export default function Freelance() {
   const [sector, setSector] = useState("");
   const [channel, setChannel] = useState("");
   const [page, setPage] = useState(1);
-  const [info, setInfo] = useState(EMPTY_PERSONALIZATION);
+  const [info, setInfo] = useState(loadProfile);
   const [toast, setToast] = useState("");
   const toastTimer = useRef(null);
+  const [contactCompany, setContactCompany] = useState(null);
+  const [contactView, setContactView] = useState("form");
+  const [channels, setChannels] = useState({ whatsapp: false, sms: false, email: false });
+  const [tone, setTone] = useState("professionnel");
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState("");
+  const [generated, setGenerated] = useState(null);
+  const [drafts, setDrafts] = useState({});
+  const [aiStatus, setAiStatus] = useState(null);
 
   const showToast = (message) => {
     setToast(message);
@@ -145,6 +246,129 @@ export default function Freelance() {
       showToast("Copié dans le presse-papiers !");
     } catch {
       showToast("Impossible de copier automatiquement.");
+    }
+  };
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(info));
+    } catch {
+      // stockage local indisponible : le profil reste en mémoire
+    }
+  }, [info]);
+
+  const closeContact = useCallback(() => {
+    setContactCompany(null);
+    setContactView("form");
+    setGenerating(false);
+    setGenError("");
+    setGenerated(null);
+    setDrafts({});
+  }, []);
+
+  useEffect(() => {
+    if (!contactCompany) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") closeContact();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [contactCompany, closeContact]);
+
+  const openContact = (company) => {
+    setContactCompany(company);
+    setContactView("form");
+    setGenerating(false);
+    setGenError("");
+    setGenerated(null);
+    setDrafts({});
+    const availability = availableChannels(company);
+    setChannels({
+      whatsapp: availability.whatsapp,
+      sms: false,
+      email: availability.email,
+    });
+    if (!aiStatus) {
+      api
+        .freelanceStatus()
+        .then((data) => setAiStatus(data))
+        .catch(() => setAiStatus({ ai_configured: null }));
+    }
+  };
+
+  const updateDraft = (channel, field, value) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [channel]: { ...(prev[channel] || {}), [field]: value },
+    }));
+  };
+
+  const copyDraft = (channel, field) => {
+    copyText(drafts[channel]?.[field] || "");
+  };
+
+  const generateScripts = async () => {
+    if (!contactCompany || generating) return;
+    setGenError("");
+    if (info.name.trim().length < 2) {
+      setGenError("Indiquez votre nom (2 caractères minimum).");
+      return;
+    }
+    if (info.offer.trim().length < 10) {
+      setGenError("Décrivez votre offre en quelques mots (10 caractères minimum).");
+      return;
+    }
+    const availability = availableChannels(contactCompany);
+    const chosen = CHANNELS.filter((channel) => channels[channel] && availability[channel]);
+    if (!chosen.length) {
+      setGenError("Choisissez au moins un moyen de contact disponible pour cette entreprise.");
+      return;
+    }
+    setGenerating(true);
+    try {
+      const data = await api.freelanceScripts({
+        company: {
+          name: contactCompany[2],
+          city: contactCompany[0],
+          sector: SECTORS[contactCompany[1]] || "",
+          offer: contactCompany[3],
+          location: contactCompany[4],
+          mobile: contactCompany[5],
+          fixed: contactCompany[6],
+          email: contactCompany[7],
+        },
+        researcher: {
+          name: info.name,
+          agency: info.agency,
+          phone: info.phone,
+          email: info.email,
+          offer: info.offer,
+          skills: info.skills,
+        },
+        channels: chosen,
+        tone,
+      });
+      const nextDrafts = {};
+      for (const channel of chosen) {
+        const script = data.scripts?.[channel];
+        if (script) nextDrafts[channel] = { ...script };
+      }
+      setGenerated(data);
+      setDrafts(nextDrafts);
+      setContactView("results");
+    } catch (err) {
+      setGenError(
+        err.code === "AI_NOT_CONFIGURED"
+          ? "L'IA n'est pas configurée sur cette installation. Contactez l'administrateur."
+          : err.message || "La génération a échoué. Réessayez dans un instant."
+      );
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -206,6 +430,8 @@ export default function Freelance() {
     setSector("");
     setChannel("");
   };
+
+  const companyChannels = contactCompany ? availableChannels(contactCompany) : null;
 
   const statCards = [
     {
@@ -648,6 +874,14 @@ export default function Freelance() {
                               </td>
                               <td className="fr-no-print tw-border-b tw-border-fr-border tw-px-3 tw-py-3 tw-align-top">
                                 <div className="tw-flex tw-flex-wrap tw-gap-1.5">
+                                  <button
+                                    type="button"
+                                    className="tw-inline-flex tw-items-center tw-gap-1 tw-rounded-lg tw-bg-fr-primary tw-px-2.5 tw-py-1.5 tw-text-[11px] tw-font-semibold tw-text-fr-on-primary tw-transition hover:tw-bg-fr-primary-dark"
+                                    onClick={() => openContact(c)}
+                                  >
+                                    <Icon path={ICONS.sparkles} className="tw-h-3.5 tw-w-3.5" />
+                                    Contacter
+                                  </button>
                                   {waUrl ? (
                                     <a
                                       className="tw-inline-flex tw-items-center tw-rounded-lg tw-bg-emerald-500/15 tw-px-2.5 tw-py-1.5 tw-text-[11px] tw-font-semibold tw-text-emerald-600 tw-transition hover:tw-bg-emerald-500/25"
@@ -703,7 +937,7 @@ export default function Freelance() {
             </h2>
             <p className="tw-mt-1 tw-text-xs tw-text-fr-muted">
               Vos informations sont injectées automatiquement dans chaque message (WhatsApp, SMS,
-              e-mail).
+              e-mail) et servent à l&apos;IA pour générer des scripts personnalisés.
             </p>
             <div className="tw-mt-4 tw-grid tw-gap-3 sm:tw-grid-cols-2 xl:tw-grid-cols-4">
               <input
@@ -733,6 +967,24 @@ export default function Freelance() {
                 placeholder="Votre e-mail"
                 value={info.email}
                 onChange={(e) => setInfo((v) => ({ ...v, email: e.target.value }))}
+              />
+            </div>
+            <div className="tw-mt-3 tw-grid tw-gap-3 sm:tw-grid-cols-2">
+              <textarea
+                className={inputClass + " tw-min-h-[76px] tw-resize-y tw-leading-relaxed"}
+                rows={2}
+                placeholder="Votre offre (ex : création de sites web, publicité en ligne...)"
+                value={info.offer}
+                onChange={(e) => setInfo((v) => ({ ...v, offer: e.target.value }))}
+                maxLength={1500}
+              />
+              <textarea
+                className={inputClass + " tw-min-h-[76px] tw-resize-y tw-leading-relaxed"}
+                rows={2}
+                placeholder="Vos compétences (ex : design, rédaction, SEO...)"
+                value={info.skills}
+                onChange={(e) => setInfo((v) => ({ ...v, skills: e.target.value }))}
+                maxLength={1500}
               />
             </div>
           </div>
@@ -784,8 +1036,537 @@ export default function Freelance() {
         </div>
       </section>
 
+      {/* MODALE DE CONTACT — génération IA des scripts par canal */}
+      {contactCompany ? (
+        <div
+          className="fr-no-print tw-fixed tw-inset-0 tw-z-[1300] tw-flex tw-items-end tw-justify-center tw-bg-slate-950/60 tw-backdrop-blur-sm sm:tw-items-center sm:tw-p-6"
+          onClick={closeContact}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fr-contact-title"
+            className="tw-flex tw-max-h-[94vh] tw-w-full tw-flex-col tw-overflow-hidden tw-rounded-t-3xl tw-border tw-border-fr-border tw-bg-fr-surface tw-shadow-2xl sm:tw-max-h-[90vh] sm:tw-max-w-3xl sm:tw-rounded-3xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="tw-flex tw-items-start tw-justify-between tw-gap-3 tw-border-b tw-border-fr-border tw-bg-fr-soft tw-px-4 tw-py-3.5 sm:tw-px-5">
+              <div className="tw-min-w-0">
+                <p className="tw-text-[10px] tw-font-bold tw-uppercase tw-tracking-[0.14em] tw-text-fr-primary">
+                  {SECTORS[contactCompany[1]] || "Prospection"} · {contactCompany[0]}
+                </p>
+                <h2
+                  id="fr-contact-title"
+                  className="tw-mt-0.5 tw-truncate tw-text-base tw-font-bold sm:tw-text-lg"
+                >
+                  {contactCompany[2]}
+                </h2>
+                <p className="tw-mt-0.5 tw-truncate tw-text-xs tw-text-fr-muted">
+                  {contactCompany[4]} · {contactCompany[3]}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeContact}
+                className="tw-inline-flex tw-h-9 tw-w-9 tw-shrink-0 tw-items-center tw-justify-center tw-rounded-xl tw-border tw-border-fr-border tw-bg-fr-surface tw-text-fr-muted tw-transition hover:tw-text-fr-text"
+                aria-label="Fermer"
+              >
+                <Icon path={ICONS.close} className="tw-h-4 tw-w-4" />
+              </button>
+            </div>
+
+            <div className="tw-min-h-0 tw-flex-1 tw-overflow-y-auto tw-px-4 tw-py-4 sm:tw-px-5 sm:tw-py-5">
+              {contactView === "form" ? (
+                <div className="tw-space-y-5">
+                  <div className="tw-rounded-xl tw-border tw-border-fr-border tw-bg-fr-soft tw-p-3.5">
+                    <p className="tw-text-xs tw-font-semibold tw-text-fr-text">
+                      {contactCompany[3]}
+                    </p>
+                    <div className="tw-mt-2 tw-grid tw-gap-1.5 tw-text-[11px] tw-text-fr-muted sm:tw-grid-cols-2">
+                      <span className="tw-flex tw-items-center tw-gap-1.5">
+                        <Icon path={ICONS.phone} className="tw-h-3.5 tw-w-3.5" />
+                        {contactCompany[5] || contactCompany[6] || "—"}
+                      </span>
+                      <span className="tw-flex tw-items-center tw-gap-1.5 tw-truncate">
+                        <Icon path={ICONS.mail} className="tw-h-3.5 tw-w-3.5" />
+                        <span className="tw-truncate">{contactCompany[7] || "—"}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="tw-text-sm tw-font-bold">Vos informations</h3>
+                    <p className="tw-mt-0.5 tw-text-xs tw-text-fr-muted">
+                      Mémorisées sur cet appareil et réutilisées pour tous vos scripts.
+                    </p>
+                    <div className="tw-mt-3 tw-grid tw-gap-3 sm:tw-grid-cols-2">
+                      <label className="tw-block">
+                        <span className="tw-text-xs tw-font-semibold">Votre nom *</span>
+                        <input
+                          className={inputClass + " tw-mt-1"}
+                          type="text"
+                          value={info.name}
+                          onChange={(event) =>
+                            setInfo((v) => ({ ...v, name: event.target.value }))
+                          }
+                          placeholder="Prénom et nom"
+                          maxLength={120}
+                        />
+                      </label>
+                      <label className="tw-block">
+                        <span className="tw-text-xs tw-font-semibold">Votre structure</span>
+                        <input
+                          className={inputClass + " tw-mt-1"}
+                          type="text"
+                          value={info.agency}
+                          onChange={(event) =>
+                            setInfo((v) => ({ ...v, agency: event.target.value }))
+                          }
+                          placeholder="Agence ou activité"
+                          maxLength={160}
+                        />
+                      </label>
+                      <label className="tw-block">
+                        <span className="tw-text-xs tw-font-semibold">Téléphone / WhatsApp</span>
+                        <input
+                          className={inputClass + " tw-mt-1"}
+                          type="tel"
+                          value={info.phone}
+                          onChange={(event) =>
+                            setInfo((v) => ({ ...v, phone: event.target.value }))
+                          }
+                          placeholder="+237 6xx xx xx xx"
+                          maxLength={60}
+                        />
+                      </label>
+                      <label className="tw-block">
+                        <span className="tw-text-xs tw-font-semibold">E-mail</span>
+                        <input
+                          className={inputClass + " tw-mt-1"}
+                          type="email"
+                          value={info.email}
+                          onChange={(event) =>
+                            setInfo((v) => ({ ...v, email: event.target.value }))
+                          }
+                          placeholder="vous@exemple.com"
+                          maxLength={180}
+                        />
+                      </label>
+                    </div>
+                    <div className="tw-mt-3 tw-grid tw-gap-3">
+                      <label className="tw-block">
+                        <span className="tw-text-xs tw-font-semibold">Votre offre *</span>
+                        <textarea
+                          className={inputClass + " tw-mt-1 tw-min-h-[76px] tw-resize-y tw-leading-relaxed"}
+                          rows={2}
+                          value={info.offer}
+                          onChange={(event) =>
+                            setInfo((v) => ({ ...v, offer: event.target.value }))
+                          }
+                          placeholder="Ex : création de sites web, publicité en ligne et gestion de la présence digitale."
+                          maxLength={1500}
+                        />
+                      </label>
+                      <label className="tw-block">
+                        <span className="tw-text-xs tw-font-semibold">Vos compétences</span>
+                        <textarea
+                          className={inputClass + " tw-mt-1 tw-min-h-[76px] tw-resize-y tw-leading-relaxed"}
+                          rows={2}
+                          value={info.skills}
+                          onChange={(event) =>
+                            setInfo((v) => ({ ...v, skills: event.target.value }))
+                          }
+                          placeholder="Ex : design, rédaction, SEO, community management."
+                          maxLength={1500}
+                        />
+                      </label>
+                    </div>
+                    <p className="tw-mt-2 tw-text-[10px] tw-text-fr-muted">
+                      * Champs obligatoires. L&apos;offre sert à l&apos;IA pour personnaliser
+                      l&apos;angle de prospection.
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-2">
+                      <h3 className="tw-text-sm tw-font-bold">Moyens de contact</h3>
+                      <span className="tw-text-[11px] tw-text-fr-muted">
+                        {CHANNELS.filter((item) => channels[item]).length} sélectionné(s)
+                      </span>
+                    </div>
+                    <div className="tw-mt-2 tw-grid tw-gap-2 sm:tw-grid-cols-3">
+                      {CHANNELS.map((item) => {
+                        const available = Boolean(companyChannels?.[item]);
+                        const active = Boolean(channels[item]);
+                        return (
+                          <button
+                            key={item}
+                            type="button"
+                            aria-pressed={active}
+                            disabled={!available}
+                            onClick={() =>
+                              setChannels((prev) => ({ ...prev, [item]: !prev[item] }))
+                            }
+                            className={`tw-flex tw-items-center tw-gap-2 tw-rounded-xl tw-border tw-px-3 tw-py-2.5 tw-text-left tw-transition ${
+                              !available
+                                ? "tw-cursor-not-allowed tw-border-fr-border tw-bg-fr-soft tw-text-fr-muted tw-opacity-60"
+                                : active
+                                  ? "tw-border-fr-primary tw-bg-fr-soft-2 tw-text-fr-text tw-ring-2 tw-ring-fr-primary"
+                                  : "tw-border-fr-border tw-bg-fr-surface tw-text-fr-text hover:tw-border-fr-primary"
+                            }`}
+                          >
+                            <span
+                              className={`tw-flex tw-h-8 tw-w-8 tw-shrink-0 tw-items-center tw-justify-center tw-rounded-lg ${
+                                active
+                                  ? "tw-bg-fr-primary tw-text-fr-on-primary"
+                                  : "tw-bg-fr-soft-2 tw-text-fr-primary"
+                              }`}
+                            >
+                              <Icon
+                                path={
+                                  item === "email"
+                                    ? ICONS.mail
+                                    : item === "sms"
+                                      ? ICONS.phone
+                                      : ICONS.chat
+                                }
+                                className="tw-h-4 tw-w-4"
+                              />
+                            </span>
+                            <span className="tw-min-w-0">
+                              <span className="tw-block tw-text-xs tw-font-bold">
+                                {CHANNEL_LABELS[item]}
+                              </span>
+                              <span className="tw-block tw-text-[10px] tw-text-fr-muted">
+                                {available
+                                  ? active
+                                    ? "Sélectionné"
+                                    : "Disponible"
+                                  : "Indisponible"}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="tw-text-sm tw-font-bold">Ton du message</h3>
+                    <div className="tw-mt-2 tw-flex tw-flex-wrap tw-gap-2">
+                      {TONES.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          aria-pressed={tone === item.id}
+                          onClick={() => setTone(item.id)}
+                          title={item.hint}
+                          className={`tw-rounded-full tw-border tw-px-3.5 tw-py-2 tw-text-xs tw-font-semibold tw-transition ${
+                            tone === item.id
+                              ? "tw-border-fr-primary tw-bg-fr-primary tw-text-fr-on-primary"
+                              : "tw-border-fr-border tw-bg-fr-soft tw-text-fr-text hover:tw-border-fr-primary hover:tw-text-fr-primary"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {aiStatus?.ai_configured === false ? (
+                    <div className="tw-rounded-xl tw-border tw-border-amber-300 tw-bg-amber-50 tw-px-3 tw-py-2.5 tw-text-xs tw-text-amber-800">
+                      L&apos;IA n&apos;est pas configurée sur cette installation. La génération
+                      sera indisponible.
+                    </div>
+                  ) : null}
+
+                  {genError ? (
+                    <div className="tw-rounded-xl tw-border tw-border-red-300 tw-bg-red-50 tw-px-3 tw-py-2.5 tw-text-xs tw-font-medium tw-text-red-700">
+                      {genError}
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="tw-space-y-4">
+                  <div className="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-2">
+                    <div>
+                      <h3 className="tw-text-sm tw-font-bold">Scripts prêts à l&apos;envoi</h3>
+                      <p className="tw-mt-0.5 tw-text-xs tw-text-fr-muted">
+                        Vérifiez, modifiez puis envoyez directement depuis votre application.
+                      </p>
+                    </div>
+                    <span className="tw-rounded-full tw-bg-fr-soft-2 tw-px-2.5 tw-py-1 tw-text-[10px] tw-font-bold tw-uppercase tw-tracking-wide tw-text-fr-muted">
+                      {Object.keys(drafts).length} canal(aux)
+                    </span>
+                  </div>
+
+                  {generated?.analysis ? (
+                    <div className="tw-rounded-xl tw-border tw-border-fr-border tw-bg-fr-soft tw-p-3.5">
+                      <p className="tw-text-[10px] tw-font-bold tw-uppercase tw-tracking-[0.12em] tw-text-fr-primary">
+                        Analyse de l&apos;IA
+                      </p>
+                      <p className="tw-mt-1.5 tw-text-xs tw-leading-relaxed tw-text-fr-text">
+                        {generated.analysis.summary}
+                      </p>
+                      <p className="tw-mt-1.5 tw-text-xs tw-leading-relaxed tw-text-fr-muted">
+                        <strong className="tw-text-fr-text">Angle :</strong>{" "}
+                        {generated.analysis.angle}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {Object.keys(drafts).length === 0 ? (
+                    <p className="tw-rounded-xl tw-border tw-border-dashed tw-border-fr-border tw-bg-fr-soft tw-px-3 tw-py-6 tw-text-center tw-text-xs tw-text-fr-muted">
+                      Aucun script généré. Revenez au formulaire puis relancez la génération.
+                    </p>
+                  ) : null}
+
+                  {CHANNELS.filter((item) => drafts[item]).map((item) => {
+                    const draft = drafts[item];
+                    const href =
+                      item === "whatsapp"
+                        ? waHref(contactCompany[5], draft.message)
+                        : item === "sms"
+                          ? smsHref(contactCompany[5], draft.message)
+                          : mailHref(contactCompany[7], draft.subject, draft.message);
+                    const mobile = mobileDigits(contactCompany[5]);
+                    const destination =
+                      item === "email"
+                        ? validEmail(contactCompany[7])
+                        : mobile
+                          ? `+${mobile}`
+                          : "—";
+                    const sendLabel =
+                      item === "whatsapp"
+                        ? "Contacter par WhatsApp"
+                        : item === "sms"
+                          ? "Envoyer le SMS"
+                          : "Contacter par e-mail";
+                    const sendColor =
+                      item === "whatsapp"
+                        ? "tw-bg-emerald-500 hover:tw-bg-emerald-600"
+                        : item === "sms"
+                          ? "tw-bg-sky-500 hover:tw-bg-sky-600"
+                          : "tw-bg-fr-primary hover:tw-bg-fr-primary-dark";
+                    return (
+                      <article
+                        key={item}
+                        className="tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-p-3.5 tw-shadow-sm"
+                      >
+                        <div className="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-2">
+                          <div className="tw-flex tw-min-w-0 tw-items-center tw-gap-2.5">
+                            <span className="tw-flex tw-h-9 tw-w-9 tw-shrink-0 tw-items-center tw-justify-center tw-rounded-xl tw-bg-fr-soft-2 tw-text-fr-primary">
+                              <Icon
+                                path={
+                                  item === "email"
+                                    ? ICONS.mail
+                                    : item === "sms"
+                                      ? ICONS.phone
+                                      : ICONS.chat
+                                }
+                                className="tw-h-4 tw-w-4"
+                              />
+                            </span>
+                            <div className="tw-min-w-0">
+                              <h3 className="tw-text-sm tw-font-bold">
+                                {CHANNEL_LABELS[item]}
+                              </h3>
+                              <p className="tw-truncate tw-text-[10px] tw-text-fr-muted">
+                                {destination}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="tw-flex tw-flex-wrap tw-gap-1.5">
+                            <button
+                              type="button"
+                              className={miniBtnClass}
+                              onClick={() => copyDraft(item, "message")}
+                            >
+                              <Icon path={ICONS.copy} className="tw-h-3 w-3" />
+                              Copier
+                            </button>
+                            {href ? (
+                              <a
+                                className={`tw-inline-flex tw-items-center tw-gap-1.5 tw-rounded-lg tw-px-2.5 tw-py-1.5 tw-text-[11px] tw-font-semibold tw-text-white tw-transition ${sendColor}`}
+                                href={href}
+                                target={item === "email" ? undefined : "_blank"}
+                                rel="noopener noreferrer"
+                              >
+                                <Icon path={ICONS.send} className="tw-h-3.5 tw-w-3.5" />
+                                {sendLabel}
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        {item === "email" ? (
+                          <label className="tw-mt-3 tw-block">
+                            <span className="tw-text-xs tw-font-semibold">Objet</span>
+                            <input
+                              className={inputClass + " tw-mt-1"}
+                              type="text"
+                              value={draft.subject || ""}
+                              onChange={(event) =>
+                                updateDraft(item, "subject", event.target.value)
+                              }
+                              maxLength={180}
+                            />
+                          </label>
+                        ) : null}
+
+                        <label className="tw-mt-3 tw-block">
+                          <span className="tw-flex tw-items-center tw-justify-between tw-gap-2">
+                            <span className="tw-text-xs tw-font-semibold">Message</span>
+                            <span className="tw-text-[10px] tw-text-fr-muted">
+                              {String(draft.message || "").length} caractères
+                            </span>
+                          </span>
+                          <textarea
+                            className={
+                              inputClass + " tw-mt-1 tw-min-h-[150px] tw-resize-y tw-leading-relaxed"
+                            }
+                            value={draft.message || ""}
+                            onChange={(event) =>
+                              updateDraft(item, "message", event.target.value)
+                            }
+                          />
+                        </label>
+
+                        <div className="tw-mt-3">
+                          <div className="tw-flex tw-items-center tw-justify-between tw-gap-2">
+                            <span className="tw-text-xs tw-font-semibold">
+                              Relance (J+3 / J+7)
+                            </span>
+                            <button
+                              type="button"
+                              className={miniBtnClass}
+                              onClick={() => copyDraft(item, "follow_up")}
+                            >
+                              <Icon path={ICONS.copy} className="tw-h-3 w-3" />
+                              Copier
+                            </button>
+                          </div>
+                          <textarea
+                            className={
+                              inputClass + " tw-mt-1 tw-min-h-[92px] tw-resize-y tw-leading-relaxed"
+                            }
+                            value={draft.follow_up || ""}
+                            onChange={(event) =>
+                              updateDraft(item, "follow_up", event.target.value)
+                            }
+                          />
+                        </div>
+                      </article>
+                    );
+                  })}
+
+                  {generated?.tips?.length ? (
+                    <div className="tw-rounded-xl tw-border tw-border-fr-border tw-bg-fr-soft tw-p-3.5">
+                      <p className="tw-text-[10px] tw-font-bold tw-uppercase tw-tracking-[0.12em] tw-text-fr-primary">
+                        Conseils de prospection
+                      </p>
+                      <ul className="tw-mt-2 tw-space-y-1.5">
+                        {generated.tips.map((tip) => (
+                          <li
+                            key={tip}
+                            className="tw-flex tw-gap-2 tw-text-xs tw-leading-relaxed tw-text-fr-text"
+                          >
+                            <span className="tw-text-fr-primary" aria-hidden="true">
+                              •
+                            </span>
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {genError ? (
+                    <div className="tw-rounded-xl tw-border tw-border-red-300 tw-bg-red-50 tw-px-3 tw-py-2.5 tw-text-xs tw-font-medium tw-text-red-700">
+                      {genError}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+
+            <div className="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-2 tw-border-t tw-border-fr-border tw-bg-fr-soft tw-px-4 tw-py-3 sm:tw-px-5">
+              {contactView === "form" ? (
+                <>
+                  <span
+                    className={`tw-inline-flex tw-items-center tw-gap-1.5 tw-text-[11px] tw-font-semibold ${
+                      aiStatus?.ai_configured === false
+                        ? "tw-text-amber-600"
+                        : "tw-text-emerald-600"
+                    }`}
+                  >
+                    <span
+                      className={`tw-h-1.5 tw-w-1.5 tw-rounded-full ${
+                        aiStatus?.ai_configured === false
+                          ? "tw-bg-amber-500"
+                          : "tw-bg-emerald-500"
+                      }`}
+                    />
+                    {aiStatus?.ai_configured === false
+                      ? "IA non configurée"
+                      : aiStatus?.ai_configured
+                        ? "IA active"
+                        : "IA en attente"}
+                  </span>
+                  <div className="tw-flex tw-flex-wrap tw-gap-2">
+                    <button type="button" className={secondaryBtnClass} onClick={closeContact}>
+                      Annuler
+                    </button>
+                    <button
+                      type="button"
+                      className={
+                        primaryBtnClass +
+                        " disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+                      }
+                      onClick={generateScripts}
+                      disabled={generating || aiStatus?.ai_configured === false}
+                    >
+                      <Icon path={ICONS.sparkles} className="tw-h-4 tw-w-4" />
+                      {generating ? "Génération en cours…" : "Générer le script et la relance"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="tw-flex tw-flex-wrap tw-gap-2">
+                    <button
+                      type="button"
+                      className={secondaryBtnClass}
+                      onClick={() => setContactView("form")}
+                    >
+                      Modifier les canaux
+                    </button>
+                    <button
+                      type="button"
+                      className={secondaryBtnClass + " disabled:tw-opacity-60"}
+                      onClick={generateScripts}
+                      disabled={generating}
+                    >
+                      <Icon
+                        path={ICONS.refresh}
+                        className={
+                          generating ? "tw-h-4 tw-w-4 tw-animate-spin" : "tw-h-4 tw-w-4"
+                        }
+                      />
+                      {generating ? "Génération…" : "Régénérer"}
+                    </button>
+                  </div>
+                  <button type="button" className={primaryBtnClass} onClick={closeContact}>
+                    Terminé
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div
-        className={`tw-fixed tw-bottom-6 tw-left-1/2 tw-z-[999] -tw-translate-x-1/2 tw-rounded-full tw-bg-slate-900 tw-px-5 tw-py-3 tw-text-sm tw-font-semibold tw-text-white tw-shadow-xl tw-transition-all tw-duration-300 ${
+        className={`tw-fixed tw-bottom-6 tw-left-1/2 tw-z-[1400] -tw-translate-x-1/2 tw-rounded-full tw-bg-slate-900 tw-px-5 tw-py-3 tw-text-sm tw-font-semibold tw-text-white tw-shadow-xl tw-transition-all tw-duration-300 ${
           toast ? "tw-translate-y-0 tw-opacity-100" : "tw-pointer-events-none tw-translate-y-3 tw-opacity-0"
         }`}
         role="status"
