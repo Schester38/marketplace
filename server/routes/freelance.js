@@ -367,4 +367,101 @@ router.post(
   })
 );
 
+// Langues supportées pour la traduction des scripts générés.
+const TRANSLATE_LANGS = {
+  fr: "français",
+  en: "anglais",
+  es: "espagnol",
+  ar: "arabe",
+};
+const TRANSLATE_LANG_SET = new Set(Object.keys(TRANSLATE_LANGS));
+
+function buildTranslatePrompt(scripts, targetLang) {
+  const langName = TRANSLATE_LANGS[targetLang];
+  return [
+    `Tu es un traducteur professionnel. Traduis les messages de prospection commerciale ci-dessous en ${langName}.`,
+    "Conserve le ton, le sens et la mise en forme (sauts de ligne, emojis, placeholders entre crochets comme [Entreprise], [Votre Prénom]).",
+    "Ne traduis pas les noms propres, les sigles, les numéros de téléphone ni les adresses e-mail.",
+    "Réponds uniquement par un objet JSON valide, sans texte avant ni après, avec la même structure que l'entrée :",
+    '{ "whatsapp": { "message": "...", "followup": "..." }, "sms": { "message": "...", "followup": "..." }, "email": { "subject": "...", "message": "...", "followup": "..." } }',
+    "N'inclus que les canaux présents dans l'entrée.",
+    "",
+    "ENTRÉE :",
+    JSON.stringify(scripts),
+  ].join("\n");
+}
+
+const TRANSLATE_SYSTEM_PROMPT =
+  "Tu es un traducteur professionnel. Tu réponds uniquement par un objet JSON valide, sans texte avant ni après.";
+
+// POST /api/freelance/translate
+// Traduit les scripts déjà générés vers une langue cible.
+router.post(
+  "/translate",
+  authRequired,
+  ah(async (req, res) => {
+    const user = req.user || {};
+    const email = String(user.email || "").trim().toLowerCase();
+    if (!OWNER_EMAILS.has(email)) {
+      throw fail(403, "Accès réservé au compte propriétaire de l'espace freelance.", "FORBIDDEN");
+    }
+
+    const body = req.body || {};
+    const targetLang = String(body.target_lang || body.targetLang || "").trim().toLowerCase();
+    if (!TRANSLATE_LANG_SET.has(targetLang)) {
+      throw fail(422, "Langue cible invalide.", "INVALID_LANG");
+    }
+    if (targetLang === "fr") {
+      // Rien à traduire : on renvoie tel quel.
+      return res.json({ ok: true, scripts: body.scripts || {}, target_lang: targetLang, provider: "passthrough" });
+    }
+
+    const scripts = body.scripts && typeof body.scripts === "object" ? body.scripts : null;
+    if (!scripts || !Object.keys(scripts).length) {
+      throw fail(422, "Aucun script à traduire.", "NO_SCRIPTS");
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({
+        error: "L'IA n'est pas configurée sur cette installation (GEMINI_API_KEY absente).",
+        code: "AI_NOT_CONFIGURED",
+      });
+    }
+
+    const prompt = buildTranslatePrompt(scripts, targetLang);
+    const raw = await askAI(prompt, [], TRANSLATE_SYSTEM_PROMPT, "fr", {
+      includeCatalog: false,
+      models: AI_MODELS,
+      maxInputChars: 8000,
+      maxOutputTokens: 2000,
+      perModelMs: 7000,
+      totalBudgetMs: 12000,
+    });
+    const out = String(raw || "").trim();
+    if (!out) {
+      throw fail(502, "L'IA est momentanément indisponible. Réessayez dans un instant.", "AI_EMPTY");
+    }
+    const parsed = parseAIJson(out);
+    if (!parsed || typeof parsed !== "object") {
+      throw fail(502, "L'IA n'a pas renvoyé un résultat exploitable. Réessayez.", "AI_BAD_JSON");
+    }
+
+    // Normalisation : on ne garde que les canaux présents dans l'entrée, avec les champs attendus.
+    const normalized = {};
+    for (const ch of Object.keys(scripts)) {
+      const src = scripts[ch] || {};
+      const tr = parsed[ch] || {};
+      const entry = {};
+      if (src.subject !== undefined) entry.subject = cleanText(tr.subject ?? src.subject, 300);
+      if (src.message !== undefined) entry.message = cleanText(tr.message ?? src.message, 4000);
+      if (src.followup !== undefined) entry.followup = cleanText(tr.followup ?? src.followup, 4000);
+      normalized[ch] = entry;
+    }
+
+    logAudit(req.user.id, "freelance.translate", { target_lang: targetLang, channels: Object.keys(scripts), ip: req.ip }, req.ip);
+
+    res.json({ ok: true, scripts: normalized, target_lang: targetLang, provider: "gemini" });
+  })
+);
+
 export default router;

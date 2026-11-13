@@ -623,6 +623,8 @@ export const api = {
   freelanceStatus: () => request("/freelance"),
   freelanceScripts: (payload) =>
     request("/freelance/scripts", { method: "POST", body: JSON.stringify(payload) }),
+  freelanceTranslate: (payload) =>
+    request("/freelance/translate", { method: "POST", body: JSON.stringify(payload) }),
   // MboppiBoost — catalogue public et commandes de services SMM.
   smmCategories: () => request("/smm/categories"),
   smmServices: (params = {}) => {

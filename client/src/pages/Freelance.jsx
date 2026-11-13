@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { api } from "../api.js";
+import { useLang } from "../i18n.jsx";
 import { SECTORS, COMPANIES, SCRIPTS_DATA } from "../freelanceData.js";
 
 const EMPTY_PERSONALIZATION = {
@@ -206,6 +207,7 @@ const miniBtnClass =
   "tw-inline-flex tw-items-center tw-gap-1 tw-rounded-lg tw-border tw-border-fr-border tw-bg-fr-surface tw-px-2 tw-py-1 tw-text-[10px] tw-font-semibold tw-text-fr-text tw-transition hover:tw-border-fr-primary hover:tw-text-fr-primary";
 
 export default function Freelance() {
+  const { t } = useLang();
   const [tab, setTab] = useState("directory");
   const [search, setSearch] = useState("");
   const [city, setCity] = useState("");
@@ -224,6 +226,9 @@ export default function Freelance() {
   const [generated, setGenerated] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [aiStatus, setAiStatus] = useState(null);
+  const [targetLang, setTargetLang] = useState("fr");
+  const [translating, setTranslating] = useState(false);
+  const [translateError, setTranslateError] = useState("");
 
   const showToast = (message) => {
     setToast(message);
@@ -371,6 +376,37 @@ export default function Freelance() {
       setGenerating(false);
     }
   };
+  const translateScripts = async () => {
+    if (!generated || translating) return;
+    setTranslateError("");
+    if (targetLang === "fr") {
+      showToast("Les scripts sont déjà en français.");
+      return;
+    }
+    setTranslating(true);
+    try {
+      const data = await api.freelanceTranslate({
+        scripts: drafts,
+        target_lang: targetLang,
+      });
+      if (data?.scripts) {
+        const nextDrafts = {};
+        for (const channel of Object.keys(drafts)) {
+          if (data.scripts[channel]) nextDrafts[channel] = { ...data.scripts[channel] };
+          else nextDrafts[channel] = drafts[channel];
+        }
+        setDrafts(nextDrafts);
+        setGenerated((prev) => (prev ? { ...prev, translated: targetLang } : prev));
+        showToast("Scripts traduits avec succès.");
+      }
+    } catch (err) {
+      setTranslateError(err?.message || "La traduction a échoué. Réessayez.");
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+
 
   const stats = useMemo(
     () => ({
@@ -882,24 +918,6 @@ export default function Freelance() {
                                     <Icon path={ICONS.sparkles} className="tw-h-3.5 tw-w-3.5" />
                                     Contacter
                                   </button>
-                                  {waUrl ? (
-                                    <a
-                                      className="tw-inline-flex tw-items-center tw-rounded-lg tw-bg-emerald-500/15 tw-px-2.5 tw-py-1.5 tw-text-[11px] tw-font-semibold tw-text-emerald-600 tw-transition hover:tw-bg-emerald-500/25"
-                                      href={waUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                    >
-                                      WhatsApp
-                                    </a>
-                                  ) : null}
-                                  {mail ? (
-                                    <a
-                                      className="tw-inline-flex tw-items-center tw-rounded-lg tw-bg-sky-500/15 tw-px-2.5 tw-py-1.5 tw-text-[11px] tw-font-semibold tw-text-sky-600 tw-transition hover:tw-bg-sky-500/25"
-                                      href={`mailto:${mail}`}
-                                    >
-                                      E-mail
-                                    </a>
-                                  ) : null}
                                 </div>
                               </td>
                             </tr>
@@ -1531,8 +1549,32 @@ export default function Freelance() {
                   </div>
                 </>
               ) : (
-                <>
-                  <div className="tw-flex tw-flex-wrap tw-gap-2">
+                  <>
+                    <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-2 tw-rounded-lg tw-bg-fr-soft-2 tw-px-3 tw-py-2 tw-mb-3">
+                      <span className="tw-text-xs tw-font-semibold tw-text-fr-text">Traduire les scripts :</span>
+                      <select
+                        className="tw-rounded-lg tw-border tw-border-fr-border tw-bg-fr-surface tw-px-2 tw-py-1 tw-text-xs tw-text-fr-text"
+                        value={targetLang}
+                        onChange={(e) => setTargetLang(e.target.value)}
+                      >
+                        <option value="fr">Français</option>
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="ar">العربية</option>
+                      </select>
+                      <button
+                        type="button"
+                        className={secondaryBtnClass + " disabled:tw-opacity-60"}
+                        onClick={translateScripts}
+                        disabled={translating || targetLang === "fr"}
+                      >
+                        {translating ? "Traduction…" : "Traduire"}
+                      </button>
+                      {translateError ? (
+                        <span className="tw-text-xs tw-text-red-500">{translateError}</span>
+                      ) : null}
+                    </div>
+                    <div className="tw-flex tw-flex-wrap tw-gap-2">
                     <button
                       type="button"
                       className={secondaryBtnClass}
