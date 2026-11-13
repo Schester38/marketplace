@@ -10,13 +10,30 @@ export default {
     "./src/pages/FormationFunnel.jsx",
     "./src/pages/FormationThanks.jsx",
     "./src/components/FormationFunnelForm.jsx",
+    "./src/pages/Freelance.jsx",
   ],
   prefix: "tw-",
   corePlugins: {
     preflight: false,
   },
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        fr: {
+          bg: "var(--fr-bg)",
+          surface: "var(--fr-surface)",
+          primary: "var(--fr-primary)",
+          "primary-dark": "var(--fr-primary-dark)",
+          "on-primary": "var(--fr-on-primary)",
+          accent: "var(--fr-accent)",
+          text: "var(--fr-text)",
+          muted: "var(--fr-muted)",
+          border: "var(--fr-border)",
+          soft: "var(--fr-soft)",
+          "soft-2": "var(--fr-soft-2)",
+        },
+      },
+    },
   },
   plugins: [],
 };

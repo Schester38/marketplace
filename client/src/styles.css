@@ -13818,6 +13818,7 @@ a.step {
   --fr-surface: #ffffff;
   --fr-primary: #0f4c81;
   --fr-primary-dark: #093256;
+  --fr-on-primary: #ffffff;
   --fr-accent: #10b981;
   --fr-text: #1e293b;
   --fr-muted: #64748b;
@@ -14191,6 +14192,7 @@ a.step {
   --fr-surface: #1a222c;
   --fr-primary: #7dd3fc;
   --fr-primary-dark: #38bdf8;
+  --fr-on-primary: #062033;
   --fr-text: #e2e8f0;
   --fr-muted: #94a3b8;
   --fr-border: #2a3544;
@@ -14240,5 +14242,18 @@ a.step {
   .freelance-page .fr-table th,
   .freelance-page .fr-table td { padding: 5px 6px; }
   .freelance-page .fr-script-sector-card { break-inside: avoid; }
+}
+
+/* Espace FREELANCE — impression de la nouvelle interface (Tailwind) */
+@media print {
+  .freelance-page .fr-no-print { display: none !important; }
+  .freelance-page .fr-print-card {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+  .freelance-page table { font-size: 9px !important; }
+  .freelance-page th,
+  .freelance-page td { padding: 5px 6px !important; }
 }
 
