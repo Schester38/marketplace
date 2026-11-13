@@ -4,6 +4,19 @@ import { api } from "../api.js";
 import { useLang } from "../i18n.jsx";
 
 const MAX_CONTEXT = 12;
+const BUBBLE_MARGIN = 8;
+const DRAG_THRESHOLD = 6;
+
+function clampBubblePosition(el, left, top) {
+  const w = el?.offsetWidth || 58;
+  const h = el?.offsetHeight || 58;
+  const maxLeft = Math.max(BUBBLE_MARGIN, window.innerWidth - w - BUBBLE_MARGIN);
+  const maxTop = Math.max(BUBBLE_MARGIN, window.innerHeight - h - BUBBLE_MARGIN);
+  return {
+    left: Math.min(Math.max(left, BUBBLE_MARGIN), maxLeft),
+    top: Math.min(Math.max(top, BUBBLE_MARGIN), maxTop),
+  };
+}
 
 /**
  * Pages internes dont le chemin peut apparaître dans une réponse de Vérone
@@ -94,6 +107,10 @@ export default function ChatWidget() {
   const [unread, setUnread] = useState(0);
   const listRef = useRef(null);
   const openRef = useRef(false);
+  const bubbleRef = useRef(null);
+  const dragRef = useRef(null);
+  const suppressClickRef = useRef(false);
+  const [bubblePos, setBubblePos] = useState(null);
 
   const langKey = lang === "en" ? "en" : lang === "ar" ? "ar" : lang === "es" ? "es" : "fr";
 
@@ -149,6 +166,68 @@ export default function ChatWidget() {
     setOpen(next);
     openRef.current = next;
     if (next) setUnread(0);
+  };
+
+  const hasBubblePos = bubblePos !== null;
+
+  useEffect(() => {
+    if (!hasBubblePos) return;
+    const onResize = () => {
+      setBubblePos((p) => (p ? clampBubblePosition(bubbleRef.current, p.left, p.top) : p));
+    };
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, [hasBubblePos]);
+
+  const onBubblePointerDown = (e) => {
+    if (e.pointerType !== "touch" || !bubbleRef.current) return;
+    const rect = bubbleRef.current.getBoundingClientRect();
+    dragRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originLeft: rect.left,
+      originTop: rect.top,
+      moved: false,
+    };
+    suppressClickRef.current = false;
+    setBubblePos({ left: rect.left, top: rect.top });
+    if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onBubblePointerMove = (e) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (!drag.moved) {
+      if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+      drag.moved = true;
+    }
+    setBubblePos(clampBubblePosition(bubbleRef.current, drag.originLeft + dx, drag.originTop + dy));
+  };
+
+  const endBubbleDrag = (e) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    suppressClickRef.current = drag.moved;
+    dragRef.current = null;
+    if (e.currentTarget.hasPointerCapture && e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  const onBubbleClick = (e) => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      e.preventDefault();
+      return;
+    }
+    toggle();
   };
 
   const suggestions = [
@@ -237,9 +316,24 @@ export default function ChatWidget() {
       )}
 
       <button
+        ref={bubbleRef}
         type="button"
         className={`chat-bubble ${open ? "chat-bubble-open" : ""}`}
-        onClick={toggle}
+        style={
+          bubblePos
+            ? {
+                left: `${bubblePos.left}px`,
+                top: `${bubblePos.top}px`,
+                right: "auto",
+                bottom: "auto",
+              }
+            : undefined
+        }
+        onClick={onBubbleClick}
+        onPointerDown={onBubblePointerDown}
+        onPointerMove={onBubblePointerMove}
+        onPointerUp={endBubbleDrag}
+        onPointerCancel={endBubbleDrag}
         aria-label={t("Vérone · Assistante MboppiShop")}
       >
         {open ? "✕" : <img src="/assistant-avatar.webp" alt={t("Vérone · Assistante MboppiShop")} className="chat-bubble-logo" />}

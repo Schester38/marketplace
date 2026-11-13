@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/package.json",
   "name": "marketplace-client",
   "private": true,
-  "version": "1.57.244",
+  "version": "1.57.245",
   "type": "module",
   "scripts": {
     "dev": "vite",

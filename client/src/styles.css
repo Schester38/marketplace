@@ -6518,6 +6518,10 @@ a.step {
   align-items: center;
   justify-content: center;
   transition: transform 0.2s ease;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .chat-bubble:hover {
   transform: scale(1.06);
