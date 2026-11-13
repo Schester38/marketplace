@@ -2,7 +2,7 @@
 // Page dédiée ouverte depuis « 🎨 Mon espace créateur », réservée au compte
 // bestrong9124@gmail.com (garde dans App.jsx). Les données à remplacer
 // (blocs 1 à 5) se trouvent dans client/src/freelanceData.js.
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Seo from "../components/Seo.jsx";
 import { SECTORS, COMPANIES, SCRIPTS_DATA } from "../freelanceData.js";
@@ -28,6 +28,7 @@ function personalize(text, info) {
 }
 
 const EMPTY_PERSONALIZATION = { name: "", agency: "", phone: "", email: "" };
+const PAGE_SIZE = 10;
 
 export default function Freelance() {
   const [tab, setTab] = useState("directory");
@@ -35,6 +36,7 @@ export default function Freelance() {
   const [city, setCity] = useState("");
   const [sector, setSector] = useState("");
   const [channel, setChannel] = useState("");
+  const [page, setPage] = useState(1);
   const [info, setInfo] = useState(EMPTY_PERSONALIZATION);
   const [toast, setToast] = useState("");
   const toastTimer = useRef(null);
@@ -88,6 +90,15 @@ export default function Freelance() {
       }
       return true;
     });
+  }, [search, city, sector, channel]);
+
+  // La liste ne s'affiche qu'après une recherche ciblée (texte ou filtre),
+  // 10 résultats maximum à la fois.
+  const hasQuery = Boolean(search.trim() || city || sector || channel);
+  const visible = hasQuery ? filtered.slice(0, page * PAGE_SIZE) : [];
+
+  useEffect(() => {
+    setPage(1);
   }, [search, city, sector, channel]);
 
   return (
@@ -196,84 +207,112 @@ export default function Freelance() {
             </select>
           </div>
 
-          <div className="fr-table-wrap">
-            <div className="fr-results-info">
-              <span>
-                {filtered.length} entreprise(s) affichée(s) sur {COMPANIES.length}
-              </span>
-              <span className="fr-muted">
-                Astuce : cliquez sur WhatsApp ou E-mail pour contacter directement
-              </span>
-            </div>
-            <table className="fr-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Ville</th>
-                  <th>Secteur</th>
-                  <th>Entreprise &amp; Offre</th>
-                  <th>Localisation</th>
-                  <th>WhatsApp / SMS (6xx)</th>
-                  <th>Fixe</th>
-                  <th>E-mail</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((c, idx) => {
-                  const waUrl = firstWaLink(c[5]);
-                  const mail = firstEmail(c[7]);
-                  return (
-                    <tr key={`${c[2]}-${c[4]}-${idx}`}>
-                      <td>{idx + 1}</td>
-                      <td>
-                        <span className={`fr-badge ${c[0] === "Yaoundé" ? "fr-badge-yde" : "fr-badge-dla"}`}>
-                          {c[0]}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="fr-badge fr-badge-sec">S{c[1]}</span>
-                      </td>
-                      <td>
-                        <strong>{c[2]}</strong>
-                        <br />
-                        <span className="fr-muted">{c[3]}</span>
-                      </td>
-                      <td>{c[4]}</td>
-                      <td>{c[5] ? c[5] : <span className="fr-muted">—</span>}</td>
-                      <td>{c[6] ? c[6] : <span className="fr-muted">—</span>}</td>
-                      <td>{c[7] ? c[7] : <span className="fr-muted">—</span>}</td>
-                      <td>
-                        <div className="fr-actions-cell">
-                          {waUrl ? (
-                            <a
-                              className="fr-btn fr-btn-wa"
-                              href={waUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              WhatsApp
-                            </a>
-                          ) : null}
-                          {mail ? (
-                            <a className="fr-btn fr-btn-mail" href={`mailto:${mail}`}>
-                              E-mail
-                            </a>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {filtered.length === 0 ? (
-              <div className="fr-empty-banner">
-                Aucune entreprise trouvée (vérifiez vos filtres ou collez les blocs 1 à 5 dans{" "}
-                <code>client/src/freelanceData.js</code>).
+          {!hasQuery ? (
+            <div className="fr-table-wrap">
+              <div className="fr-empty-banner fr-search-prompt">
+                <strong>Recherche ciblée requise</strong>
+                <p>
+                  Saisissez un nom, un quartier, un téléphone… ou choisissez une ville, un secteur
+                  ou un canal pour afficher les entreprises (10 maximum à la fois).
+                </p>
               </div>
-            ) : null}
-          </div>
+            </div>
+          ) : (
+            <div className="fr-table-wrap">
+              <div className="fr-results-info">
+                <span>
+                  {visible.length} affichée(s) sur {filtered.length} résultat(s)
+                </span>
+                <span className="fr-muted">
+                  Astuce : cliquez sur WhatsApp ou E-mail pour contacter directement
+                </span>
+              </div>
+              {filtered.length === 0 ? (
+                <div className="fr-empty-banner">
+                  Aucune entreprise trouvée (vérifiez vos filtres).
+                </div>
+              ) : (
+                <>
+                  <table className="fr-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Ville</th>
+                        <th>Secteur</th>
+                        <th>Entreprise &amp; Offre</th>
+                        <th>Localisation</th>
+                        <th>WhatsApp / SMS (6xx)</th>
+                        <th>Fixe</th>
+                        <th>E-mail</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visible.map((c, idx) => {
+                        const waUrl = firstWaLink(c[5]);
+                        const mail = firstEmail(c[7]);
+                        return (
+                          <tr key={`${c[2]}-${c[4]}-${idx}`}>
+                            <td>{idx + 1}</td>
+                            <td>
+                              <span className={`fr-badge ${c[0] === "Yaoundé" ? "fr-badge-yde" : "fr-badge-dla"}`}>
+                                {c[0]}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="fr-badge fr-badge-sec">S{c[1]}</span>
+                            </td>
+                            <td>
+                              <strong>{c[2]}</strong>
+                              <br />
+                              <span className="fr-muted">{c[3]}</span>
+                            </td>
+                            <td>{c[4]}</td>
+                            <td>{c[5] ? c[5] : <span className="fr-muted">—</span>}</td>
+                            <td>{c[6] ? c[6] : <span className="fr-muted">—</span>}</td>
+                            <td>{c[7] ? c[7] : <span className="fr-muted">—</span>}</td>
+                            <td>
+                              <div className="fr-actions-cell">
+                                {waUrl ? (
+                                  <a
+                                    className="fr-btn fr-btn-wa"
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    WhatsApp
+                                  </a>
+                                ) : null}
+                                {mail ? (
+                                  <a className="fr-btn fr-btn-mail" href={`mailto:${mail}`}>
+                                    E-mail
+                                  </a>
+                                ) : null}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {visible.length < filtered.length ? (
+                    <div className="fr-load-more">
+                      <button
+                        type="button"
+                        className="fr-btn fr-btn-primary"
+                        onClick={() => setPage((p) => p + 1)}
+                      >
+                        Afficher les {Math.min(PAGE_SIZE, filtered.length - visible.length)} suivantes
+                      </button>
+                      <span className="fr-muted">
+                        {filtered.length - visible.length} résultat(s) restant(s)
+                      </span>
+                    </div>
+                  ) : null}
+                </>
+              )}
+            </div>
+          )}
         </section>
 
         <section className={`fr-tab-panel${tab === "scripts" ? " active" : ""}`}>
