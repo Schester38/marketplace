@@ -7176,6 +7176,18 @@ const SERVICES_LOGICIELS_AR = {
 
 
 
+const FREELANCE_EN = {
+  "Freelance": "Freelance",
+};
+
+const FREELANCE_ES = {
+  "Freelance": "Freelance",
+};
+
+const FREELANCE_AR = {
+  "Freelance": "العمل الحر",
+};
+
 const REMBOURSEMENT_EN = {
   "Politique de remboursement": "Refund Policy",
   "Les remboursements sont régis par notre politique de remboursement.": "Refunds are governed by our refund policy.",
@@ -7341,9 +7353,9 @@ const FORMATIONS_AR = {
 
 export const I18N = {
   fr: {},
-  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN, ...FORMATIONS_EN, ...MBOPPIBOOST_TERMS_EN, ...REMBOURSEMENT_EN, ...SERVICES_LOGICIELS_EN, ...HERO_EXTRA_EN, ...PD_FUNNEL_EN, ...FORMATIONS_PRO_EN },
-  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR, ...FORMATIONS_AR, ...MBOPPIBOOST_TERMS_AR, ...REMBOURSEMENT_AR, ...SERVICES_LOGICIELS_AR, ...HERO_EXTRA_AR, ...PD_FUNNEL_AR, ...FORMATIONS_PRO_AR },
-  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES, ...FORMATIONS_ES, ...MBOPPIBOOST_TERMS_ES, ...REMBOURSEMENT_ES, ...SERVICES_LOGICIELS_ES, ...HERO_EXTRA_ES, ...PD_FUNNEL_ES, ...FORMATIONS_PRO_ES },
+  en: { ...EN, ...RICH_EN, ...VIDEO_EN, ...GUEST_EN, ...GEN2_EN, ...GEN3_EN, ...GEN4_EN, ...GEN5_EN, ...GEN6_EN, ...MSTUDIO_EN, ...MBOPPIBOOST_EN, ...FORMATIONS_EN, ...MBOPPIBOOST_TERMS_EN, ...REMBOURSEMENT_EN, ...SERVICES_LOGICIELS_EN, ...HERO_EXTRA_EN, ...PD_FUNNEL_EN, ...FORMATIONS_PRO_EN, ...FREELANCE_EN },
+  ar: { ...AR, ...RICH_AR, ...VIDEO_AR, ...GUEST_AR, ...GEN2_AR, ...GEN3_AR, ...GEN4_AR, ...GEN5_AR, ...GEN6_AR, ...MSTUDIO_AR, ...MBOPPIBOOST_AR, ...FORMATIONS_AR, ...MBOPPIBOOST_TERMS_AR, ...REMBOURSEMENT_AR, ...SERVICES_LOGICIELS_AR, ...HERO_EXTRA_AR, ...PD_FUNNEL_AR, ...FORMATIONS_PRO_AR, ...FREELANCE_AR },
+  es: { ...ES, ...RICH_ES, ...VIDEO_ES, ...GUEST_ES, ...GEN2_ES, ...GEN3_ES, ...GEN4_ES, ...GEN5_ES, ...GEN6_ES, ...MSTUDIO_ES, ...MBOPPIBOOST_ES, ...FORMATIONS_ES, ...MBOPPIBOOST_TERMS_ES, ...REMBOURSEMENT_ES, ...SERVICES_LOGICIELS_ES, ...HERO_EXTRA_ES, ...PD_FUNNEL_ES, ...FORMATIONS_PRO_ES, ...FREELANCE_ES },
 };
 
 function tr(str, vars, lang) {

@@ -111,10 +111,12 @@ export default function CreatorDashboard() {
   const symbol = countrySymbol(user?.country);
   const prefix = countryPhone(user?.country);
   const moduleList = Array.isArray(form.modules) ? form.modules : [];
+  // Compte propriétaire du tunnel de vente et de l'espace Freelance.
+  const isBestrongAccount =
+    String(user?.email || "").trim().toLowerCase() === "bestrong9124@gmail.com";
   // Tunnel de vente : interface réservée au compte propriétaire (garde serveur
   // identique — 403 FUNNEL_FORBIDDEN pour tout autre compte).
-  const canUseFunnel =
-    String(user?.email || "").trim().toLowerCase() === "bestrong9124@gmail.com";
+  const canUseFunnel = isBestrongAccount;
   const funnelForm = form.funnel || EMPTY_FORM.funnel;
   const funnelEnabled = canUseFunnel && funnelForm.enabled === true;
   const showModuleEditor =
@@ -661,6 +663,11 @@ export default function CreatorDashboard() {
           <Link to="/creator/paiements" className="btn btn-outline">
             💳 {t("Mes moyens de paiement")}
           </Link>
+          {isBestrongAccount && (
+            <Link to="/freelance" className="btn btn-outline">
+              💼 {t("Freelance")}
+            </Link>
+          )}
 <div className="tw-flex tw-gap-2 tw-flex-wrap">
           <button
             className="btn btn-primary"

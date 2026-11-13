@@ -96,6 +96,7 @@ const Suivi = lazyRetry(() => import("./pages/Suivi.jsx"));
 const NotFound = lazyRetry(() => import("./pages/NotFound.jsx"));
 const Admin = lazyRetry(() => import("./pages/Admin.jsx"));
 const GeneratorPage = lazyRetry(() => import("./pages/GeneratorPage.jsx"));
+const Freelance = lazyRetry(() => import("./pages/Freelance.jsx"));
 const MboppiBoost = lazyRetry(() => import("./pages/MboppiBoost.jsx"));
 const Services = lazyRetry(() => import("./pages/Services.jsx"));
 const Logiciels = lazyRetry(() => import("./pages/Logiciels.jsx"));
@@ -489,6 +490,17 @@ function CreatorSpace({ children }) {
   return children;
 }
 
+// Espace FREELANCE : réservé au compte bestrong9124@gmail.com (même garde que
+// le tunnel de vente). Tout autre compte est renvoyé à l'accueil.
+function FreelanceSpace({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (String(user.email || "").trim().toLowerCase() !== "bestrong9124@gmail.com") {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
+
 function LivreurOnly({ children }) {
   const { user } = useAuth();
   if (!user || user.role !== "livreur") return <Navigate to="/livreur-inscription" replace />;
@@ -836,6 +848,14 @@ export default function App() {
                 <RoleOnly role="creator">
                   <CreatorPayments />
                 </RoleOnly>
+              }
+            />
+            <Route
+              path="/freelance"
+              element={
+                <FreelanceSpace>
+                  <Freelance />
+                </FreelanceSpace>
               }
             />
             <Route
