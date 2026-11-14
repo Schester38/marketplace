@@ -272,6 +272,8 @@ export default function Freelance() {
   const [toast, setToast] = useState("");
   const toastTimer = useRef(null);
   const [contactCompany, setContactCompany] = useState(null);
+  const [contactLaunched, setContactLaunched] = useState(null);
+  const [contactConfirmation, setContactConfirmation] = useState(null);
   const [contactView, setContactView] = useState("form");
   const [channels, setChannels] = useState({ whatsapp: false, sms: false, email: false });
   const [tone, setTone] = useState("professionnel");
@@ -333,6 +335,7 @@ export default function Freelance() {
   const [openingContact, setOpeningContact] = useState("");
   const [legacyStorageError, setLegacyStorageError] = useState(false);
   const directoryRequest = useRef(0);
+  const pendingContactReturn = useRef(null);
 
   const showToast = (message) => {
     setToast(message);
@@ -546,6 +549,32 @@ export default function Freelance() {
     };
   }, [contactCompany, closeContact]);
 
+  useEffect(() => {
+    const showReturnConfirmation = () => {
+      const pending = pendingContactReturn.current;
+      if (!pending || !pending.awaitingReturn || !pending.leftPage) return;
+      if (document.hidden || !document.hasFocus()) return;
+      pendingContactReturn.current = null;
+      setContactLaunched(null);
+      setContactConfirmation(pending);
+    };
+    const onBlur = () => {
+      if (pendingContactReturn.current) pendingContactReturn.current.leftPage = true;
+    };
+    const onVisibilityChange = () => {
+      if (document.hidden) onBlur();
+      else showReturnConfirmation();
+    };
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", showReturnConfirmation);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", showReturnConfirmation);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
+
   const openContact = (company) => {
     setContactCompany(company);
     setContactView("form");
@@ -580,8 +609,17 @@ export default function Freelance() {
 
   const openCompanyContact = async (channel, draft) => {
     if (!contactCompany || openingContact) return;
+    const pending = {
+      companyId: companyKey(contactCompany),
+      companyName: contactCompany[2],
+      channel,
+      awaitingReturn: false,
+      leftPage: false,
+    };
+    pendingContactReturn.current = pending;
     const popup = window.open("about:blank", "_blank");
     if (!popup) {
+      pendingContactReturn.current = null;
       showToast("Autorisez les fenêtres contextuelles pour ouvrir le contact.");
       return;
     }
@@ -594,13 +632,39 @@ export default function Freelance() {
         subject: draft.subject || "",
         message: draft.message || "",
       });
+      pending.awaitingReturn = true;
+      pending.leftPage = pending.leftPage || document.hidden || !document.hasFocus();
       popup.location.href = result.href;
+      setContactLaunched(pending);
+      showToast("À votre retour, confirmez si le message a bien été envoyé.");
     } catch (error) {
+      pendingContactReturn.current = null;
       popup.close();
       showToast(error?.message || "Impossible d'ouvrir le moyen de contact.");
     } finally {
       setOpeningContact("");
     }
+  };
+
+  const confirmContactSent = (sent) => {
+    const pending = contactConfirmation || contactLaunched;
+    pendingContactReturn.current = null;
+    setContactLaunched(null);
+    setContactConfirmation(null);
+    if (!pending || !sent) return;
+    setCompanyStatus((previous) => ({
+      ...previous,
+      [pending.companyId]: "contacted",
+    }));
+    showToast(`« ${pending.companyName} » marqué comme contacté.`);
+  };
+
+  const requestContactConfirmation = () => {
+    const pending = contactLaunched || pendingContactReturn.current;
+    if (!pending) return;
+    pendingContactReturn.current = null;
+    setContactLaunched(null);
+    setContactConfirmation(pending);
   };
 
   const generateScripts = async () => {
@@ -2131,6 +2195,64 @@ export default function Freelance() {
                   </button>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {contactLaunched && !contactConfirmation ? (
+        <div className="tw-fixed tw-bottom-4 tw-left-1/2 tw-z-[1400] tw-flex tw-w-[calc(100%-2rem)] tw-max-w-xl -tw-translate-x-1/2 tw-flex-wrap tw-items-center tw-justify-between tw-gap-3 tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-p-4 tw-shadow-2xl">
+          <p className="tw-text-sm tw-text-fr-text">
+            De retour ? Confirmez si vous avez envoyé le message à{" "}
+            <strong>{contactLaunched.companyName}</strong>.
+          </p>
+          <button
+            type="button"
+            className={primaryBtnClass}
+            onClick={requestContactConfirmation}
+          >
+            Confirmer
+          </button>
+        </div>
+      ) : null}
+
+      {contactConfirmation ? (
+        <div
+          className="tw-fixed tw-inset-0 tw-z-[1500] tw-flex tw-items-center tw-justify-center tw-bg-slate-950/60 tw-p-4"
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fr-contact-confirm-title"
+            className="tw-w-full tw-max-w-md tw-rounded-2xl tw-border tw-border-fr-border tw-bg-fr-surface tw-p-5 tw-shadow-2xl"
+          >
+            <h2 id="fr-contact-confirm-title" className="tw-text-base tw-font-bold">
+              Avez-vous envoyé le message ?
+            </h2>
+            <p className="tw-mt-2 tw-text-sm tw-leading-relaxed tw-text-fr-muted">
+              Après votre retour de {CHANNEL_LABELS[contactConfirmation.channel]},
+              indiquez si le message a bien été envoyé à{" "}
+              <strong className="tw-text-fr-text">
+                {contactConfirmation.companyName}
+              </strong>
+              .
+            </p>
+            <div className="tw-mt-5 tw-flex tw-flex-wrap tw-justify-end tw-gap-2">
+              <button
+                type="button"
+                className={secondaryBtnClass}
+                onClick={() => confirmContactSent(false)}
+              >
+                Non, pas envoyé
+              </button>
+              <button
+                type="button"
+                className={primaryBtnClass}
+                onClick={() => confirmContactSent(true)}
+              >
+                Oui, marquer « Contacté »
+              </button>
             </div>
           </div>
         </div>
