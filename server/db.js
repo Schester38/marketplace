@@ -10,7 +10,7 @@ const { Pool } = pg;
 // Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-11-13-formation-funnel-v2";
+const DB_INIT_VERSION = "2026-11-15-ads-studio-v1";
 let initDbPromise = null;
 
 const LOCAL_DEFAULT = "postgres://postgres:postgres@localhost:5432/marketplace";
@@ -192,6 +192,28 @@ async function runInitDb() {
       currency TEXT NOT NULL DEFAULT 'XAF',
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+
+    CREATE TABLE IF NOT EXISTS ads_studio_brand_profile (
+      id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+      profile JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS ads_studio_campaigns (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      source_type TEXT NOT NULL CHECK (source_type IN ('features', 'products', 'publications', 'roles')),
+      source_id TEXT NOT NULL,
+      source_snapshot JSONB NOT NULL,
+      brief JSONB NOT NULL DEFAULT '{}'::jsonb,
+      settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+      brand_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
+      ideas JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_ads_studio_campaigns_updated
+      ON ads_studio_campaigns(updated_at DESC, id DESC);
 
     CREATE TABLE IF NOT EXISTS orders (
       id SERIAL PRIMARY KEY,

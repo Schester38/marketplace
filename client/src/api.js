@@ -625,8 +625,22 @@ export const api = {
     }
     return adminRequest(`/ads-studio/catalog?${search.toString()}`);
   },
+  adsBrandProfile: () => adminRequest("/ads-studio/brand"),
+  saveAdsBrandProfile: (payload) =>
+    adminRequest("/ads-studio/brand", { method: "PUT", body: JSON.stringify(payload) }),
   adsGenerate: (payload) =>
     adminRequest("/ads-studio/generate", { method: "POST", body: JSON.stringify(payload) }),
+  adsCampaigns: () => adminRequest("/ads-studio/campaigns"),
+  adsCampaign: (id) => adminRequest(`/ads-studio/campaigns/${encodeURIComponent(id)}`),
+  saveAdsCampaign: (payload) =>
+    adminRequest("/ads-studio/campaigns", { method: "POST", body: JSON.stringify(payload) }),
+  updateAdsCampaign: (id, payload) =>
+    adminRequest(`/ads-studio/campaigns/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteAdsCampaign: (id) =>
+    adminRequest(`/ads-studio/campaigns/${encodeURIComponent(id)}`, { method: "DELETE" }),
   // Espace Freelance — génération IA de scripts de prospection par entreprise.
   // L'annuaire et les coordonnées restent côté serveur ; le navigateur ne reçoit
   // que des pages de résultats avec coordonnées masquées.

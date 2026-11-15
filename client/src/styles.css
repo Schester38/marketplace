@@ -13164,7 +13164,43 @@ a.step {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
 }
+.adstudio-brief-fields,
+.adstudio-brand-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+.adstudio-brief-fields .mstudio-textarea,
+.adstudio-brand-grid .mstudio-textarea,
+.adstudio-campaign-name .mstudio-textarea {
+  width: 100%;
+  margin-top: 0.3rem;
+}
 .adstudio-brief-label .mstudio-textarea { margin-top: 0.35rem; }
+.adstudio-brand { margin: 0.85rem 0; }
+.adstudio-brand > summary { cursor: pointer; list-style: none; }
+.adstudio-brand > summary::-webkit-details-marker { display: none; }
+.adstudio-inline-status {
+  margin-left: auto;
+  color: var(--ms-ink-dim);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+.adstudio-campaign-manager { margin: 0.85rem 0; }
+.adstudio-campaign-toolbar,
+.adstudio-saved-campaigns {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+.adstudio-campaign-name { flex: 1; min-width: 0; }
+.adstudio-campaign-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
 .adstudio-results { margin-top: 0.4rem; }
 .adstudio-results-head {
   display: flex;
@@ -13195,13 +13231,27 @@ a.step {
   gap: 0.8rem;
   margin-bottom: 0.7rem;
 }
-.adstudio-idea-head > div { display: flex; align-items: center; gap: 0.55rem; }
-.adstudio-idea-head h3 {
-  margin: 0;
-  color: var(--ms-ink);
-  font-size: 1rem;
-  overflow-wrap: anywhere;
+.adstudio-edit-field {
+  display: grid;
+  gap: 0.28rem;
+  margin-top: 0.72rem;
+  color: var(--ms-accent-3);
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
+.adstudio-edit-field .mstudio-textarea {
+  width: 100%;
+  min-height: 2.5rem;
+  color: var(--ms-ink);
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.5;
+  text-transform: none;
+}
+.adstudio-edit-field .adstudio-script-input { min-height: 8rem; }
 .adstudio-concept,
 .adstudio-idea section p,
 .adstudio-footer-copy p {
@@ -13240,8 +13290,57 @@ a.step {
   font-size: 0.76rem;
   line-height: 1.5;
 }
-.adstudio-scenes li > strong { color: var(--ms-accent-3); }
-.adstudio-scenes b { color: var(--ms-ink); }
+.adstudio-scenes li label {
+  display: grid;
+  gap: 0.2rem;
+  color: var(--ms-accent-3);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.adstudio-scenes li .mstudio-textarea {
+  width: 100%;
+  min-height: 2.2rem;
+  color: var(--ms-ink);
+  font-size: 0.76rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.45;
+  text-transform: none;
+}
+.adstudio-scenes li label:nth-child(3) .mstudio-textarea,
+.adstudio-scenes li label:nth-child(4) .mstudio-textarea { min-height: 3rem; }
+.adstudio-fact-warning {
+  margin: 0.65rem 0;
+  border: 1px solid var(--ms-warning, #d99a19);
+  border-radius: 9px;
+  background: var(--ms-panel-2);
+  padding: 0.65rem 0.75rem;
+  color: var(--ms-ink);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+.adstudio-claim-checks ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.adstudio-claim-checks li {
+  display: grid;
+  gap: 0.22rem;
+  border-left: 3px solid var(--ms-warn, #d99a19);
+  padding: 0.45rem 0.65rem;
+  color: var(--ms-ink);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+.adstudio-claim-checks li b { color: var(--ms-warn, #d99a19); }
+.adstudio-claim-checks li small { color: var(--ms-ink-dim); }
+.adstudio-claim-checks .adstudio-claim-reference { border-left-color: var(--ms-success); }
+.adstudio-claim-checks .adstudio-claim-reference b { color: var(--ms-success); }
 .adstudio-footer-copy {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -13253,9 +13352,13 @@ a.step {
 @media (max-width: 760px) {
   .adstudio-grid,
   .adstudio-controls,
+  .adstudio-brief-fields,
+  .adstudio-brand-grid,
   .adstudio-footer-copy { grid-template-columns: 1fr; }
   .adstudio-results-head,
   .adstudio-idea-head { flex-direction: column; }
+  .adstudio-campaign-toolbar,
+  .adstudio-saved-campaigns { align-items: stretch; flex-direction: column; }
 }
 
 
