@@ -528,10 +528,18 @@ export async function storePhotoStrings(photos, folder = "offers") {
 }
 
 const OBJECT_PREFIX = `${SUPABASE_URL}/storage/v1/object/${BUCKET}/`;
+const PUBLIC_OBJECT_PREFIX = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
 
 function storageKeyOf(value) {
-  if (typeof value !== "string" || !OBJECT_PREFIX || !value.startsWith(OBJECT_PREFIX)) return null;
-  return decodeURIComponent(value.slice(OBJECT_PREFIX.length));
+  if (typeof value !== "string" || !SUPABASE_URL) return null;
+  const prefixes = [PUBLIC_OBJECT_PREFIX, OBJECT_PREFIX];
+  const prefix = prefixes.find((candidate) => value.startsWith(candidate));
+  if (!prefix) return null;
+  try {
+    return decodeURIComponent(value.slice(prefix.length));
+  } catch {
+    return null;
+  }
 }
 
 // Extrait les clés Storage d'un photos JSON : [{thumb, medium, large, full}]
@@ -575,6 +583,7 @@ async function isKeyStillUsed(key, excludeProductId) {
      UNION ALL SELECT 1 FROM offers WHERE photos LIKE $2
      UNION ALL SELECT 1 FROM orders WHERE items::text LIKE $2
      UNION ALL SELECT 1 FROM users WHERE avatar LIKE $2
+     UNION ALL SELECT 1 FROM sales_funnels WHERE poster_url LIKE $2
      LIMIT 1`,
     [excludeProductId ?? -1, pat]
   );

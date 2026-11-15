@@ -56,6 +56,24 @@ export function normalizeFunnelContactUrl(value) {
   return text;
 }
 
+export function normalizeFunnelWhatsapp(value) {
+  const text = cleanFunnelText(value, 40);
+  if (!text) return null;
+  const internationalNumber = text.startsWith("+")
+    ? text.slice(1)
+    : text.startsWith("00")
+      ? text.slice(2)
+      : null;
+  if (!internationalNumber || !/^[\d()\s.-]+$/.test(internationalNumber)) {
+    invalid("Numéro WhatsApp invalide. Incluez l’indicatif du pays.");
+  }
+  const digits = internationalNumber.replace(/\D/g, "");
+  if (!/^[1-9]\d{7,14}$/.test(digits)) {
+    invalid("Numéro WhatsApp invalide. Incluez l’indicatif du pays.");
+  }
+  return digits;
+}
+
 export function normalizeFunnelProductIds(value) {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value) || value.length > 10) {

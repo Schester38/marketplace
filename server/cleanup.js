@@ -243,11 +243,12 @@ export async function purgePhotoOrphans({ dryRun = false, minAgeHours = 24, maxD
   const consolidation = await consolidatePhotoVariants({ dryRun, maxRows: 200 });
   const objects = await listBucketObjects(photoBucketName());
   if (!objects) return { erreur: "Stockage non configuré" };
-  const [products, offers, users, orders] = await Promise.all([
+  const [products, offers, users, orders, salesFunnels] = await Promise.all([
     q("SELECT photos, image FROM products"),
     q("SELECT photos FROM offers").catch(() => []),
     q("SELECT avatar FROM users WHERE avatar IS NOT NULL").catch(() => []),
     q("SELECT items FROM orders").catch(() => []),
+    q("SELECT poster_url FROM sales_funnels WHERE poster_url IS NOT NULL").catch(() => []),
   ]);
   const referenced = new Set();
   const add = (value) => {
@@ -261,6 +262,7 @@ export async function purgePhotoOrphans({ dryRun = false, minAgeHours = 24, maxD
   for (const row of offers) add(row.photos);
   for (const row of users) add(JSON.stringify([row.avatar]));
   for (const row of orders) add(JSON.stringify(row.items || []));
+  for (const row of salesFunnels) add(JSON.stringify([row.poster_url]));
 
   const cutoff = Date.now() - Math.max(1, minAgeHours) * 3600 * 1000;
   const orphans = objects.filter(

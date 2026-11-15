@@ -647,6 +647,38 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  generateGuestSalesFunnel: (payload) =>
+    request("/sales-funnels/guest/generate", {
+      method: "POST",
+      skipAuth: true,
+      body: JSON.stringify(payload),
+    }),
+  uploadSalesFunnelPoster: (image) =>
+    request("/sales-funnels/poster", {
+      method: "POST",
+      skipAuth: true,
+      body: JSON.stringify({ image }),
+    }),
+  guestSalesFunnel: (id, token) =>
+    request(`/sales-funnels/guest/${encodeURIComponent(id)}`, {
+      skipAuth: true,
+      cache: "no-store",
+      headers: { "X-Sales-Funnel-Token": token },
+    }),
+  saveGuestSalesFunnel: (id, token, payload) =>
+    request(`/sales-funnels/guest/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      skipAuth: true,
+      headers: { "X-Sales-Funnel-Token": token },
+      body: JSON.stringify(payload),
+    }),
+  publishGuestSalesFunnel: (id, token, payload) =>
+    request(`/sales-funnels/guest/${encodeURIComponent(id)}/publish`, {
+      method: "POST",
+      skipAuth: true,
+      headers: { "X-Sales-Funnel-Token": token },
+      body: JSON.stringify(payload),
+    }),
   saveSalesFunnel: (id, payload) =>
     request(`/sales-funnels/${encodeURIComponent(id)}`, {
       method: "PUT",
@@ -659,6 +691,12 @@ export const api = {
     }),
   salesFunnelMetrics: (id) =>
     request(`/sales-funnels/${encodeURIComponent(id)}/metrics`, { cache: "no-store" }),
+  guestSalesFunnelMetrics: (id, token) =>
+    request(`/sales-funnels/guest/${encodeURIComponent(id)}/metrics`, {
+      skipAuth: true,
+      cache: "no-store",
+      headers: { "X-Sales-Funnel-Token": token },
+    }),
   trackSalesFunnelEvent: (id, event, productId) =>
     request(
       `/sales-funnels/public/${encodeURIComponent(id)}/events`,

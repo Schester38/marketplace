@@ -5,8 +5,10 @@ import SalesFunnelPageView from "../components/SalesFunnelPageView.jsx";
 import { api } from "../api.js";
 import { BASE_URL } from "../config.js";
 import { useLang } from "../i18n.jsx";
+import { compressImage } from "../utils.js";
 import { SALES_FUNNEL_THEMES, getSalesFunnelPalette } from "../salesFunnelThemes.js";
 
+const GUEST_FUNNELS_KEY = "mboppi_guest_sales_funnels";
 const EMPTY_BRIEF = {
   business_name: "",
   offer: "",
@@ -19,6 +21,49 @@ const EMPTY_CONTENT = { title: "", subtitle: "", cta_label: "", sections: [] };
 const FIELD_CLASS =
   "sales-funnel-field tw-mt-1 tw-w-full tw-rounded-xl tw-px-3 tw-py-2.5 tw-text-sm focus:tw-outline-none focus:tw-ring-2";
 const CARD_CLASS = "sales-funnel-card tw-rounded-2xl tw-border tw-p-4";
+
+function readGuestFunnels() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(GUEST_FUNNELS_KEY) || "[]");
+    if (!Array.isArray(saved)) return [];
+    return saved
+      .filter((entry) => Number.isSafeInteger(Number(entry?.id)) && /^[A-Za-z0-9_-]{43}$/.test(entry?.token || "") && entry?.funnel)
+      .map((entry) => ({
+        ...entry.funnel,
+        id: Number(entry.id),
+        guest_access_token: entry.token,
+        is_guest: true,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function guestTokenFor(id) {
+  return readGuestFunnels().find((item) => item.id === Number(id))?.guest_access_token || "";
+}
+
+function rememberGuestFunnel(funnel) {
+  if (!funnel?.guest_access_token) return true;
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(GUEST_FUNNELS_KEY) || "[]");
+    const current = Array.isArray(saved) ? saved : [];
+    const entry = {
+      id: Number(funnel.id),
+      token: funnel.guest_access_token,
+      funnel: Object.fromEntries(
+        Object.entries(funnel).filter(([key]) => key !== "guest_access_token" && key !== "is_guest")
+      ),
+    };
+    window.localStorage.setItem(
+      GUEST_FUNNELS_KEY,
+      JSON.stringify([entry, ...current.filter((item) => Number(item?.id) !== entry.id)].slice(0, 20))
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 function makeSlug(value, id) {
   const slug = String(value || "")
@@ -82,16 +127,58 @@ function ProductPicker({ products, selected, onToggle, t, unavailable = false })
   );
 }
 
+function PosterUploader({ value, busy, onSelect, onRemove, t }) {
+  return (
+    <div className="tw-rounded-xl tw-border tw-border-dashed tw-border-slate-300 tw-p-3">
+      <p className="tw-text-sm tw-font-semibold tw-text-slate-700">{t("Affiche du produit ou du service")}</p>
+      <p className="tw-mt-1 tw-text-xs tw-text-slate-500">{t("Ajoutez une image qui sera affichée sur votre page de vente.")}</p>
+      {value && (
+        <img
+          src={value}
+          alt={t("Aperçu de l’affiche")}
+          className="tw-mt-3 tw-max-h-56 tw-w-full tw-rounded-xl tw-object-cover"
+        />
+      )}
+      <div className="tw-mt-3 tw-flex tw-flex-wrap tw-gap-2">
+        <label className="tw-inline-flex tw-cursor-pointer tw-items-center tw-rounded-lg tw-bg-slate-900 tw-px-3 tw-py-2 tw-text-sm tw-font-bold tw-text-white">
+          {busy ? t("Téléversement…") : t(value ? "Changer l’image" : "Ajouter une image")}
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            disabled={busy}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) onSelect(file);
+            }}
+            className="tw-sr-only"
+          />
+        </label>
+        {value && (
+          <button type="button" disabled={busy} onClick={onRemove} className="tw-rounded-lg tw-border tw-border-slate-300 tw-px-3 tw-py-2 tw-text-sm tw-font-semibold tw-text-slate-700 disabled:tw-opacity-50">
+            {t("Supprimer l’image")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SalesFunnelBuilder() {
   const { t } = useLang();
   const [funnels, setFunnels] = useState([]);
   const [products, setProducts] = useState([]);
   const [productAccessUnavailable, setProductAccessUnavailable] = useState(false);
   const [loadingFunnels, setLoadingFunnels] = useState(true);
+  const [guestMode, setGuestMode] = useState(false);
   const [current, setCurrent] = useState(null);
   const [brief, setBrief] = useState(EMPTY_BRIEF);
   const [content, setContent] = useState(EMPTY_CONTENT);
   const [contactUrl, setContactUrl] = useState("");
+  const [whatsappPhone, setWhatsappPhone] = useState("");
+  const [posterUrl, setPosterUrl] = useState("");
+  const [posterPreview, setPosterPreview] = useState("");
+  const [uploadingPoster, setUploadingPoster] = useState(false);
   const [theme, setTheme] = useState("ocean");
   const [productIds, setProductIds] = useState([]);
   const [slug, setSlug] = useState("");
@@ -111,25 +198,36 @@ export default function SalesFunnelBuilder() {
     let active = true;
     api.salesFunnelsMine()
       .then((data) => {
-        if (active) setFunnels(Array.isArray(data.funnels) ? data.funnels : []);
-      })
-      .catch(() => {
-        if (active) setError(t("Impossible de charger vos tunnels."));
-      })
-      .finally(() => {
-        if (active) setLoadingFunnels(false);
-      });
-    api.myProducts()
-      .then((data) => {
-        if (active) setProducts(Array.isArray(data.products) ? data.products : Array.isArray(data) ? data : []);
+        if (!active) return;
+        const accountFunnels = Array.isArray(data.funnels) ? data.funnels : [];
+        const guests = readGuestFunnels();
+        const accountIds = new Set(accountFunnels.map((item) => Number(item.id)));
+        setGuestMode(false);
+        setFunnels([...guests.filter((item) => !accountIds.has(Number(item.id))), ...accountFunnels]);
+        api.myProducts()
+          .then((productsData) => {
+            if (active) setProducts(Array.isArray(productsData.products) ? productsData.products : Array.isArray(productsData) ? productsData : []);
+          })
+          .catch((requestError) => {
+            if (!active) return;
+            if (requestError.status === 403) {
+              setProductAccessUnavailable(true);
+              return;
+            }
+            setError(t("Impossible de charger vos produits."));
+          });
       })
       .catch((requestError) => {
         if (!active) return;
-        if (requestError.status === 403) {
-          setProductAccessUnavailable(true);
-          return;
+        if (requestError.status === 401) {
+          setGuestMode(true);
+          setFunnels(readGuestFunnels());
+        } else {
+          setError(t("Impossible de charger vos tunnels."));
         }
-        setError(t("Impossible de charger vos produits."));
+      })
+      .finally(() => {
+        if (active) setLoadingFunnels(false);
       });
     return () => {
       active = false;
@@ -137,14 +235,21 @@ export default function SalesFunnelBuilder() {
   }, [t]);
 
   const selectFunnel = (funnel) => {
+    const savedFunnel = {
+      ...funnel,
+      guest_access_token: funnel.guest_access_token || guestTokenFor(funnel.id),
+    };
     setStep(1);
-    setCurrent(funnel);
-    setBrief({ ...EMPTY_BRIEF, ...(funnel.brief || {}) });
-    setContent({ ...EMPTY_CONTENT, ...(funnel.content || {}) });
-    setContactUrl(funnel.contact_url || "");
-    setTheme(funnel.theme || "ocean");
-    setProductIds((funnel.product_ids || []).map(Number));
-    setSlug(funnel.slug || makeSlug(funnel.content?.title || funnel.title, funnel.id));
+    setCurrent(savedFunnel);
+    setBrief({ ...EMPTY_BRIEF, ...(savedFunnel.brief || {}) });
+    setContent({ ...EMPTY_CONTENT, ...(savedFunnel.content || {}) });
+    setContactUrl(savedFunnel.contact_url || "");
+    setWhatsappPhone(savedFunnel.whatsapp_phone || "");
+    setPosterUrl(savedFunnel.poster_url || "");
+    setPosterPreview(savedFunnel.poster_url || "");
+    setTheme(savedFunnel.theme || "ocean");
+    setProductIds((savedFunnel.product_ids || []).map(Number));
+    setSlug(savedFunnel.slug || makeSlug(savedFunnel.content?.title || savedFunnel.title, savedFunnel.id));
     setError("");
     setNotice("");
     setQrDataUrl("");
@@ -157,6 +262,9 @@ export default function SalesFunnelBuilder() {
     setBrief(EMPTY_BRIEF);
     setContent(EMPTY_CONTENT);
     setContactUrl("");
+    setWhatsappPhone("");
+    setPosterUrl("");
+    setPosterPreview("");
     setTheme("ocean");
     setProductIds([]);
     setSlug("");
@@ -182,13 +290,60 @@ export default function SalesFunnelBuilder() {
   };
 
   const updateFunnelList = (funnel) => {
-    setCurrent(funnel);
-    setFunnels((items) => [funnel, ...items.filter((item) => item.id !== funnel.id)]);
-    setContent({ ...EMPTY_CONTENT, ...(funnel.content || {}) });
-    setBrief({ ...EMPTY_BRIEF, ...(funnel.brief || {}) });
-    setContactUrl(funnel.contact_url || "");
-    setTheme(funnel.theme || "ocean");
-    setProductIds((funnel.product_ids || []).map(Number));
+    const previous = funnels.find((item) => Number(item.id) === Number(funnel.id));
+    const accessToken =
+      funnel.guest_access_token ||
+      current?.guest_access_token ||
+      previous?.guest_access_token ||
+      guestTokenFor(funnel.id);
+    const nextFunnel = {
+      ...funnel,
+      ...(accessToken ? { guest_access_token: accessToken, is_guest: true } : {}),
+    };
+    const savedLocally = !accessToken || rememberGuestFunnel(nextFunnel);
+    if (!savedLocally) {
+      setNotice(t("Le navigateur n’a pas pu mémoriser l’accès à ce tunnel. Gardez cette page ouverte."));
+    }
+    setCurrent(nextFunnel);
+    setFunnels((items) => [nextFunnel, ...items.filter((item) => item.id !== nextFunnel.id)]);
+    setContent({ ...EMPTY_CONTENT, ...(nextFunnel.content || {}) });
+    setBrief({ ...EMPTY_BRIEF, ...(nextFunnel.brief || {}) });
+    setContactUrl(nextFunnel.contact_url || "");
+    setWhatsappPhone(nextFunnel.whatsapp_phone || "");
+    setPosterUrl(nextFunnel.poster_url || "");
+    setPosterPreview(nextFunnel.poster_url || "");
+    setTheme(nextFunnel.theme || "ocean");
+    setProductIds((nextFunnel.product_ids || []).map(Number));
+    return savedLocally;
+  };
+
+  const handlePosterFile = async (file) => {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError(t("Choisissez une image JPEG, PNG ou WebP."));
+      return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+      setError(t("L’image est trop volumineuse. Choisissez une image plus légère."));
+      return;
+    }
+    setError("");
+    setUploadingPoster(true);
+    try {
+      const image = await compressImage(file, 1600, 0.78);
+      if (image.length > 2_500_000) {
+        throw new Error("L’image est trop volumineuse. Choisissez une image plus légère.");
+      }
+      setPosterPreview(image);
+      const uploaded = await api.uploadSalesFunnelPoster(image);
+      setPosterUrl(uploaded.poster_url);
+      setPosterPreview(uploaded.poster_url);
+      setNotice(t("Affiche téléversée."));
+    } catch (requestError) {
+      setPosterPreview(posterUrl);
+      setError(t(requestError.message) || requestError.message);
+    } finally {
+      setUploadingPoster(false);
+    }
   };
 
   const handleGenerate = async (event) => {
@@ -206,15 +361,23 @@ export default function SalesFunnelBuilder() {
     setNotice("");
     setBusy("generate");
     try {
-      const data = await api.generateSalesFunnel({
+      const generate = guestMode ? api.generateGuestSalesFunnel : api.generateSalesFunnel;
+      const data = await generate({
         brief,
         theme,
         contact_url: contactUrl,
+        whatsapp_phone: whatsappPhone,
+        poster_url: posterUrl,
         product_ids: productIds,
       });
-      updateFunnelList(data.funnel);
-      setSlug(makeSlug(data.funnel.content?.title || data.funnel.title, data.funnel.id));
-      setNotice(t("Le tunnel a été généré. Vous pouvez maintenant modifier chaque texte."));
+      const funnel = data.access_token
+        ? { ...data.funnel, guest_access_token: data.access_token, is_guest: true }
+        : data.funnel;
+      const savedLocally = updateFunnelList(funnel);
+      setSlug(makeSlug(funnel.content?.title || funnel.title, funnel.id));
+      setNotice(savedLocally
+        ? t("Le tunnel a été généré. Vous pouvez maintenant modifier chaque texte.")
+        : t("Le navigateur n’a pas pu mémoriser l’accès à ce tunnel. Gardez cette page ouverte."));
     } catch (requestError) {
       setError(t(requestError.message) || requestError.message);
     } finally {
@@ -222,7 +385,15 @@ export default function SalesFunnelBuilder() {
     }
   };
 
-  const payload = () => ({ brief, content, theme, contact_url: contactUrl, product_ids: productIds });
+  const payload = () => ({
+    brief,
+    content,
+    theme,
+    contact_url: contactUrl,
+    whatsapp_phone: whatsappPhone,
+    poster_url: posterUrl,
+    product_ids: productIds,
+  });
 
   const handleSave = async () => {
     if (!current) return;
@@ -230,9 +401,13 @@ export default function SalesFunnelBuilder() {
     setNotice("");
     setBusy("save");
     try {
-      const data = await api.saveSalesFunnel(current.id, payload());
-      updateFunnelList(data.funnel);
-      setNotice(t("Brouillon enregistré."));
+      const data = current.guest_access_token
+        ? await api.saveGuestSalesFunnel(current.id, current.guest_access_token, payload())
+        : await api.saveSalesFunnel(current.id, payload());
+      const savedLocally = updateFunnelList(data.funnel);
+      setNotice(savedLocally
+        ? t("Brouillon enregistré.")
+        : t("Le navigateur n’a pas pu mémoriser l’accès à ce tunnel. Gardez cette page ouverte."));
     } catch (requestError) {
       setError(t(requestError.message) || requestError.message);
     } finally {
@@ -246,15 +421,22 @@ export default function SalesFunnelBuilder() {
     setNotice("");
     setBusy("publish");
     try {
-      const saved = await api.saveSalesFunnel(current.id, payload());
-      updateFunnelList(saved.funnel);
-      const result = await api.publishSalesFunnel(current.id, {
+      const saved = current.guest_access_token
+        ? await api.saveGuestSalesFunnel(current.id, current.guest_access_token, payload())
+        : await api.saveSalesFunnel(current.id, payload());
+      const saveStoredLocally = updateFunnelList(saved.funnel);
+      const publish = current.guest_access_token
+        ? api.publishGuestSalesFunnel
+        : api.publishSalesFunnel;
+      const result = await publish(current.id, ...(current.guest_access_token ? [current.guest_access_token] : []), {
         published: !current.is_published,
         slug: slug || makeSlug(content.title, current.id),
       });
-      updateFunnelList(result.funnel);
+      const publishStoredLocally = updateFunnelList(result.funnel);
       setSlug(result.funnel.slug || slug);
-      setNotice(t(result.funnel.is_published ? "Tunnel publié." : "Tunnel dépublié."));
+      setNotice(saveStoredLocally && publishStoredLocally
+        ? t(result.funnel.is_published ? "Tunnel publié." : "Tunnel dépublié.")
+        : t("Le navigateur n’a pas pu mémoriser l’accès à ce tunnel. Gardez cette page ouverte."));
     } catch (requestError) {
       setError(t(requestError.message) || requestError.message);
     } finally {
@@ -318,7 +500,10 @@ export default function SalesFunnelBuilder() {
     setLoadingMetrics(true);
     setMetrics(null);
     setMetricsError("");
-    api.salesFunnelMetrics(current.id)
+    const loadMetrics = current.guest_access_token
+      ? api.guestSalesFunnelMetrics(current.id, current.guest_access_token)
+      : api.salesFunnelMetrics(current.id);
+    loadMetrics
       .then((data) => {
         if (active) setMetrics(data);
       })
@@ -331,7 +516,7 @@ export default function SalesFunnelBuilder() {
     return () => {
       active = false;
     };
-  }, [current?.id, current?.is_published, t]);
+  }, [current?.id, current?.is_published, current?.guest_access_token, t]);
 
   const palette = getSalesFunnelPalette(theme);
   const previewFunnel = current
@@ -339,6 +524,8 @@ export default function SalesFunnelBuilder() {
         title: brief.business_name || current.title,
         content,
         contact_url: contactUrl,
+        whatsapp_phone: whatsappPhone,
+        poster_url: posterPreview || posterUrl,
         theme,
         products: products
           .filter((product) => productIds.includes(Number(product.id)))
@@ -370,6 +557,12 @@ export default function SalesFunnelBuilder() {
           >
             {error || notice}
           </div>
+        )}
+
+        {(guestMode || Boolean(current?.guest_access_token)) && (
+          <p className="tw-mb-5 tw-rounded-xl tw-border tw-border-amber-200 tw-bg-amber-50 tw-p-3 tw-text-sm tw-leading-6 tw-text-amber-900">
+            {t("Sans compte, le code d’accès à vos tunnels est conservé sur cet appareil. Ne videz pas les données du navigateur, sinon vous ne pourrez plus les modifier.")}
+          </p>
         )}
 
         <div className="tw-grid tw-items-start tw-gap-6 lg:tw-grid-cols-[280px_minmax(0,1fr)]">
@@ -502,16 +695,42 @@ export default function SalesFunnelBuilder() {
 
                 {step === 3 && (
                   <div className="tw-space-y-5">
+                    <PosterUploader
+                      value={posterPreview}
+                      busy={uploadingPoster}
+                      onSelect={handlePosterFile}
+                      onRemove={() => {
+                        setPosterUrl("");
+                        setPosterPreview("");
+                      }}
+                      t={t}
+                    />
                     <label className="tw-block tw-text-sm tw-font-semibold tw-text-slate-700">
                       {t("Lien de contact (WhatsApp, site, e-mail ou téléphone)")}
                       <input className={FIELD_CLASS} placeholder="https://wa.me/237..." value={contactUrl} onChange={(event) => setContactUrl(event.target.value)} />
                     </label>
+                    <label className="tw-block tw-text-sm tw-font-semibold tw-text-slate-700">
+                      {t("Numéro WhatsApp (indicatif pays inclus)")}
+                      <input
+                        className={FIELD_CLASS}
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        placeholder="+237 6XX XX XX XX"
+                        maxLength={40}
+                        value={whatsappPhone}
+                        onChange={(event) => setWhatsappPhone(event.target.value)}
+                      />
+                      <span className="tw-mt-1 tw-block tw-text-xs tw-font-normal tw-text-slate-500">
+                        {t("Saisissez le numéro avec l’indicatif du pays, par exemple +237 6XX XX XX XX. Le bouton ouvrira WhatsApp.")}
+                      </span>
+                    </label>
                     <div>
                       <h3 className="tw-text-sm tw-font-bold tw-text-slate-800">{t("Sélection des produits")}</h3>
                       <p className="tw-mt-1 tw-text-xs tw-text-slate-500">{t("Sélectionnez un ou plusieurs produits (10 maximum).")}</p>
-                      <ProductPicker products={products} selected={productIds} onToggle={toggleProduct} t={t} unavailable={productAccessUnavailable} />
+                      <ProductPicker products={products} selected={productIds} onToggle={toggleProduct} t={t} unavailable={guestMode || productAccessUnavailable} />
                     </div>
-                    <p className="tw-rounded-xl tw-bg-slate-50 tw-p-3 tw-text-xs tw-leading-5 tw-text-slate-600">{t("Vous pouvez générer un brouillon sans produit. Pour publier, ajoutez un produit ou un lien de contact.")}</p>
+                    <p className="tw-rounded-xl tw-bg-slate-50 tw-p-3 tw-text-xs tw-leading-5 tw-text-slate-600">{t("Vous pouvez publier sans produit Mboppi en ajoutant une affiche et un moyen de contact, comme votre numéro WhatsApp.")}</p>
                   </div>
                 )}
 
@@ -526,8 +745,8 @@ export default function SalesFunnelBuilder() {
                       {t("Continuer")} →
                     </button>
                   ) : (
-                    <button type="submit" disabled={busy !== ""} className="tw-ml-auto tw-w-full tw-rounded-xl tw-bg-emerald-700 tw-px-5 tw-py-3 tw-font-bold tw-text-white hover:tw-bg-emerald-800 disabled:tw-cursor-wait disabled:tw-opacity-60 sm:tw-w-auto">
-                      {busy === "generate" ? t("Génération…") : `✨ ${t("Générer mon tunnel")}`}
+                    <button type="submit" disabled={busy !== "" || uploadingPoster || loadingFunnels} className="tw-ml-auto tw-w-full tw-rounded-xl tw-bg-emerald-700 tw-px-5 tw-py-3 tw-font-bold tw-text-white hover:tw-bg-emerald-800 disabled:tw-cursor-wait disabled:tw-opacity-60 sm:tw-w-auto">
+                      {loadingFunnels ? t("Chargement…") : busy === "generate" ? t("Génération…") : `✨ ${t("Générer mon tunnel")}`}
                     </button>
                   )}
                 </div>
@@ -564,6 +783,32 @@ export default function SalesFunnelBuilder() {
                     {t("Lien de contact (WhatsApp, site, e-mail ou téléphone)")}
                     <input className={FIELD_CLASS} value={contactUrl} onChange={(event) => setContactUrl(event.target.value)} />
                   </label>
+                  <label className="tw-block tw-text-sm tw-font-semibold tw-text-slate-700">
+                    {t("Numéro WhatsApp (indicatif pays inclus)")}
+                    <input
+                      className={FIELD_CLASS}
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      placeholder="+237 6XX XX XX XX"
+                      maxLength={40}
+                      value={whatsappPhone}
+                      onChange={(event) => setWhatsappPhone(event.target.value)}
+                    />
+                    <span className="tw-mt-1 tw-block tw-text-xs tw-font-normal tw-text-slate-500">
+                      {t("Saisissez le numéro avec l’indicatif du pays, par exemple +237 6XX XX XX XX. Le bouton ouvrira WhatsApp.")}
+                    </span>
+                  </label>
+                  <PosterUploader
+                    value={posterPreview}
+                    busy={uploadingPoster}
+                    onSelect={handlePosterFile}
+                    onRemove={() => {
+                      setPosterUrl("");
+                      setPosterPreview("");
+                    }}
+                    t={t}
+                  />
                   <div>
                     <div className="tw-flex tw-items-center tw-justify-between tw-gap-3">
                       <h3 className="tw-font-bold tw-text-slate-900">{t("Sections de la page")}</h3>
@@ -590,7 +835,13 @@ export default function SalesFunnelBuilder() {
                   </div>
                   <div>
                     <h3 className="tw-font-bold tw-text-slate-900">{t("Vos produits")}</h3>
-                    <ProductPicker products={products} selected={productIds} onToggle={toggleProduct} t={t} unavailable={productAccessUnavailable} />
+                    <ProductPicker
+                      products={products}
+                      selected={productIds}
+                      onToggle={toggleProduct}
+                      t={t}
+                      unavailable={Boolean(current.guest_access_token) || productAccessUnavailable}
+                    />
                   </div>
                   <div className="tw-grid tw-gap-4 sm:tw-grid-cols-2">
                     <label className="tw-text-sm tw-font-semibold tw-text-slate-700">
@@ -607,10 +858,10 @@ export default function SalesFunnelBuilder() {
                     </div>
                   </div>
                   <div className="tw-flex tw-flex-wrap tw-gap-2">
-                    <button type="button" disabled={busy !== ""} onClick={handleSave} className="tw-rounded-xl tw-bg-slate-900 tw-px-4 tw-py-2.5 tw-text-sm tw-font-bold tw-text-white hover:tw-bg-slate-700 disabled:tw-opacity-50">
+                    <button type="button" disabled={busy !== "" || uploadingPoster} onClick={handleSave} className="tw-rounded-xl tw-bg-slate-900 tw-px-4 tw-py-2.5 tw-text-sm tw-font-bold tw-text-white hover:tw-bg-slate-700 disabled:tw-opacity-50">
                       {busy === "save" ? t("Enregistrement…") : t("Enregistrer les modifications")}
                     </button>
-                    <button type="button" disabled={busy !== ""} onClick={handlePublish} className="tw-rounded-xl tw-bg-emerald-700 tw-px-4 tw-py-2.5 tw-text-sm tw-font-bold tw-text-white hover:tw-bg-emerald-800 disabled:tw-opacity-50">
+                    <button type="button" disabled={busy !== "" || uploadingPoster} onClick={handlePublish} className="tw-rounded-xl tw-bg-emerald-700 tw-px-4 tw-py-2.5 tw-text-sm tw-font-bold tw-text-white hover:tw-bg-emerald-800 disabled:tw-opacity-50">
                       {busy === "publish" ? t("Enregistrement…") : t(current.is_published ? "Dépublier" : "Publier")}
                     </button>
                   </div>
@@ -648,7 +899,9 @@ export default function SalesFunnelBuilder() {
                       <button type="button" disabled={loadingMetrics} onClick={() => {
                         setLoadingMetrics(true);
                         setMetricsError("");
-                        api.salesFunnelMetrics(current.id)
+                        (current.guest_access_token
+                          ? api.guestSalesFunnelMetrics(current.id, current.guest_access_token)
+                          : api.salesFunnelMetrics(current.id))
                           .then(setMetrics)
                           .catch(() => setMetricsError(t("Impossible de charger les statistiques.")))
                           .finally(() => setLoadingMetrics(false));

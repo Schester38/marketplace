@@ -19,7 +19,13 @@ export default function SalesFunnelPageView({
   const { t } = useLang();
   const palette = getSalesFunnelPalette(funnel.theme);
   const { content = {}, products = [] } = funnel;
-  const actionUrl = funnel.contact_url || (products.length ? "#produits" : "");
+  const whatsappUrl = funnel.whatsapp_phone
+    ? `https://wa.me/${funnel.whatsapp_phone}?text=${encodeURIComponent(
+        `Bonjour, je suis intéressé(e) par ${content.title || funnel.title}.`
+      )}`
+    : "";
+  const actionUrl = whatsappUrl || funnel.contact_url || (products.length ? "#produits" : "");
+  const secondaryContactUrl = whatsappUrl && funnel.contact_url ? funnel.contact_url : "";
   const external = externalUrl(actionUrl);
 
   return (
@@ -27,37 +33,65 @@ export default function SalesFunnelPageView({
       <section className="tw-relative tw-overflow-hidden tw-px-5 tw-py-12 sm:tw-py-20">
         <div className="tw-absolute tw-inset-x-0 tw-top-0 tw-h-1" style={{ background: palette.accent }} />
         <div className="tw-pointer-events-none tw-absolute tw-right-[-8rem] tw-top-[-10rem] tw-h-80 tw-w-80 tw-rounded-full tw-opacity-10 tw-blur-3xl" style={{ background: palette.accent }} />
-        <div className="tw-relative tw-mx-auto tw-max-w-5xl">
-          <p className="tw-text-xs tw-font-bold tw-uppercase tw-tracking-[0.25em]" style={{ color: palette.accent }}>{funnel.title}</p>
-          <h1 className="tw-mt-5 tw-max-w-4xl tw-text-4xl tw-font-black tw-leading-tight sm:tw-text-6xl">{content.title}</h1>
-          {content.subtitle && <p className="tw-mt-6 tw-max-w-2xl tw-text-base tw-leading-7 sm:tw-text-xl sm:tw-leading-8" style={{ color: palette.muted }}>{content.subtitle}</p>}
-          <div className="tw-mt-8 tw-flex tw-flex-wrap tw-items-center tw-gap-3">
-            {actionUrl && (
-              preview ? (
-                <button type="button" className="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-xl tw-px-6 tw-py-3.5 tw-text-sm tw-font-black tw-text-white tw-shadow-lg" style={{ background: palette.button }}>
-                  {content.cta_label || t("Nous contacter")} <span aria-hidden="true">→</span>
+        <div className={`tw-relative tw-mx-auto tw-grid tw-max-w-5xl tw-items-center tw-gap-8 ${funnel.poster_url ? "md:tw-grid-cols-[minmax(0,1.1fr)_minmax(260px,0.9fr)]" : ""}`}>
+          <div>
+            <p className="tw-text-xs tw-font-bold tw-uppercase tw-tracking-[0.25em]" style={{ color: palette.accent }}>{funnel.title}</p>
+            <h1 className="tw-mt-5 tw-max-w-4xl tw-text-4xl tw-font-black tw-leading-tight sm:tw-text-6xl">{content.title}</h1>
+            {content.subtitle && <p className="tw-mt-6 tw-max-w-2xl tw-text-base tw-leading-7 sm:tw-text-xl sm:tw-leading-8" style={{ color: palette.muted }}>{content.subtitle}</p>}
+            <div className="tw-mt-8 tw-flex tw-flex-wrap tw-items-center tw-gap-3">
+              {actionUrl && (
+                preview ? (
+                  <button type="button" className="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-xl tw-px-6 tw-py-3.5 tw-text-sm tw-font-black tw-text-white tw-shadow-lg" style={{ background: palette.button }}>
+                    {content.cta_label || t("Nous contacter")} <span aria-hidden="true">→</span>
+                  </button>
+                ) : (
+                  <a
+                    href={actionUrl}
+                    target={external ? "_blank" : undefined}
+                    rel={external ? "noopener noreferrer" : undefined}
+                    onClick={() => {
+                      if (funnel.contact_url || funnel.whatsapp_phone) onEvent?.("contact");
+                    }}
+                    className="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-xl tw-px-6 tw-py-3.5 tw-text-sm tw-font-black tw-text-white tw-shadow-lg hover:tw-brightness-110"
+                    style={{ background: palette.button }}
+                  >
+                    {content.cta_label || t("Nous contacter")} <span aria-hidden="true">→</span>
+                  </a>
+                )
+              )}
+              {secondaryContactUrl && (
+                preview ? (
+                  <span className="tw-rounded-xl tw-border tw-px-4 tw-py-3 tw-text-sm tw-font-bold" style={{ borderColor: `${palette.accent}70`, color: palette.text }}>
+                    {t("Autre moyen de contact")}
+                  </span>
+                ) : (
+                  <a
+                    href={secondaryContactUrl}
+                    target={externalUrl(secondaryContactUrl) ? "_blank" : undefined}
+                    rel={externalUrl(secondaryContactUrl) ? "noopener noreferrer" : undefined}
+                    onClick={() => onEvent?.("contact")}
+                    className="tw-rounded-xl tw-border tw-px-4 tw-py-3 tw-text-sm tw-font-bold"
+                    style={{ borderColor: `${palette.accent}70`, color: palette.text }}
+                  >
+                    {t("Autre moyen de contact")}
+                  </a>
+                )
+              )}
+              {onShare && (
+                <button type="button" onClick={onShare} className="tw-rounded-xl tw-border tw-px-4 tw-py-3 tw-text-sm tw-font-bold" style={{ borderColor: `${palette.accent}70`, color: palette.text }}>
+                  {t("Partager")}
                 </button>
-              ) : (
-                <a
-                  href={actionUrl}
-                  target={external ? "_blank" : undefined}
-                  rel={external ? "noopener noreferrer" : undefined}
-                  onClick={() => {
-                    if (funnel.contact_url) onEvent?.("contact");
-                  }}
-                  className="tw-inline-flex tw-items-center tw-gap-2 tw-rounded-xl tw-px-6 tw-py-3.5 tw-text-sm tw-font-black tw-text-white tw-shadow-lg hover:tw-brightness-110"
-                  style={{ background: palette.button }}
-                >
-                  {content.cta_label || t("Nous contacter")} <span aria-hidden="true">→</span>
-                </a>
-              )
-            )}
-            {onShare && (
-              <button type="button" onClick={onShare} className="tw-rounded-xl tw-border tw-px-4 tw-py-3 tw-text-sm tw-font-bold" style={{ borderColor: `${palette.accent}70`, color: palette.text }}>
-                {t("Partager")}
-              </button>
-            )}
+              )}
+            </div>
           </div>
+          {funnel.poster_url && (
+            <img
+              src={funnel.poster_url}
+              alt={content.title || funnel.title}
+              className="tw-max-h-[480px] tw-w-full tw-rounded-3xl tw-object-cover tw-shadow-2xl"
+              loading={preview ? "eager" : "lazy"}
+            />
+          )}
         </div>
       </section>
 
@@ -113,25 +147,47 @@ export default function SalesFunnelPageView({
           </section>
         )}
 
-        {funnel.contact_url && (
+        {(funnel.contact_url || funnel.whatsapp_phone) && (
           <section className="tw-rounded-2xl tw-p-6 tw-text-center sm:tw-p-10" style={{ background: palette.surfaceAlt }}>
             <h2 className="tw-text-2xl tw-font-black">{content.cta_label || t("Nous contacter")}</h2>
-            {preview ? (
-              <span className="tw-mt-5 tw-inline-flex tw-rounded-xl tw-px-6 tw-py-3 tw-font-bold tw-text-white" style={{ background: palette.button }}>
-                {t("Nous contacter")} →
-              </span>
-            ) : (
-              <a
-                href={funnel.contact_url}
-                target={externalUrl(funnel.contact_url) ? "_blank" : undefined}
-                rel={externalUrl(funnel.contact_url) ? "noopener noreferrer" : undefined}
-                onClick={() => onEvent?.("contact")}
-                className="tw-mt-5 tw-inline-flex tw-rounded-xl tw-px-6 tw-py-3 tw-font-bold tw-text-white"
-                style={{ background: palette.button }}
-              >
-                {t("Nous contacter")} →
-              </a>
-            )}
+            <div className="tw-mt-5 tw-flex tw-flex-wrap tw-justify-center tw-gap-3">
+              {funnel.whatsapp_phone && (
+                preview ? (
+                  <span className="tw-inline-flex tw-rounded-xl tw-px-6 tw-py-3 tw-font-bold tw-text-white" style={{ background: palette.button }}>
+                    {t("Contacter sur WhatsApp")} →
+                  </span>
+                ) : (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => onEvent?.("contact")}
+                    className="tw-inline-flex tw-rounded-xl tw-px-6 tw-py-3 tw-font-bold tw-text-white"
+                    style={{ background: palette.button }}
+                  >
+                    {t("Contacter sur WhatsApp")} →
+                  </a>
+                )
+              )}
+              {funnel.contact_url && (
+                preview ? (
+                  <span className="tw-inline-flex tw-rounded-xl tw-border tw-px-6 tw-py-3 tw-font-bold" style={{ borderColor: `${palette.accent}70`, color: palette.text }}>
+                    {funnel.whatsapp_phone ? t("Autre moyen de contact") : t("Nous contacter")} →
+                  </span>
+                ) : (
+                  <a
+                    href={funnel.contact_url}
+                    target={externalUrl(funnel.contact_url) ? "_blank" : undefined}
+                    rel={externalUrl(funnel.contact_url) ? "noopener noreferrer" : undefined}
+                    onClick={() => onEvent?.("contact")}
+                    className="tw-inline-flex tw-rounded-xl tw-border tw-px-6 tw-py-3 tw-font-bold"
+                    style={{ borderColor: `${palette.accent}70`, color: palette.text }}
+                  >
+                    {funnel.whatsapp_phone ? t("Autre moyen de contact") : t("Nous contacter")} →
+                  </a>
+                )
+              )}
+            </div>
           </section>
         )}
       </div>

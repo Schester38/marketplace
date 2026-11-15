@@ -716,14 +716,7 @@ export default function App() {
             <Route path="/mboppi-boost" element={<MboppiBoost />} />
             <Route path="/services" element={<Services />} />
             <Route path="/logiciels" element={<Logiciels />} />
-            <Route
-              path="/tunnel/creer"
-              element={
-                <Protected>
-                  <SalesFunnelBuilder />
-                </Protected>
-              }
-            />
+            <Route path="/tunnel/creer" element={<SalesFunnelBuilder />} />
             <Route path="/tunnel/:slug" element={<SalesFunnelLanding />} />
             <Route path="/mboppi-boost/commander/:serviceId" element={<MboppiBoostOrder />} />
             <Route path="/mboppi-boost/mes-commandes" element={<MboppiBoostOrders />} />

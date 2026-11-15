@@ -5,6 +5,7 @@ import {
   normalizeFunnelContactUrl,
   normalizeFunnelContent,
   normalizeFunnelProductIds,
+  normalizeFunnelWhatsapp,
   normalizeSalesFunnelEvent,
   normalizeFunnelTheme,
   normalizeSalesFunnelSlug,
@@ -40,6 +41,21 @@ test("contact links allow https and safe app paths but reject executable schemes
     code: "INVALID_SALES_FUNNEL",
   });
   assert.throws(() => normalizeFunnelContactUrl("/\\example.com"), {
+    code: "INVALID_SALES_FUNNEL",
+  });
+});
+
+test("WhatsApp numbers are normalized to international digits", () => {
+  assert.equal(normalizeFunnelWhatsapp("+237 6 70 12 34 56"), "237670123456");
+  assert.equal(normalizeFunnelWhatsapp("00237670123456"), "237670123456");
+  assert.equal(normalizeFunnelWhatsapp(""), null);
+  assert.throws(() => normalizeFunnelWhatsapp("670 12 34 56"), {
+    code: "INVALID_SALES_FUNNEL",
+  });
+  assert.throws(() => normalizeFunnelWhatsapp("06 70 12 34 56"), {
+    code: "INVALID_SALES_FUNNEL",
+  });
+  assert.throws(() => normalizeFunnelWhatsapp("+237 6 70 ABC"), {
     code: "INVALID_SALES_FUNNEL",
   });
 });

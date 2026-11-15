@@ -228,6 +228,8 @@ app.use("/api/ads-studio", limiter(60 * 1000, 30), adsStudioRoutes);
 // publics sont davantage limités pour éviter les écritures analytics abusives.
 app.use("/api/sales-funnels/public/:id/events", limiter(60 * 1000, 30));
 app.use("/api/sales-funnels/generate", limiter(60 * 1000, 5));
+app.use("/api/sales-funnels/guest/generate", limiter(60 * 60 * 1000, 5));
+app.use("/api/sales-funnels/poster", limiter(60 * 60 * 1000, 15));
 app.use("/api/sales-funnels", limiter(60 * 1000, 60), salesFunnelRoutes);
 // Espace Freelance : la recherche paginée peut produire plusieurs requêtes ;
 // les appels IA gardent un quota séparé car ils consomment des crédits Gemini.

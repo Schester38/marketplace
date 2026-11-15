@@ -117,13 +117,16 @@ export function ensureSalesFunnelSchema() {
       .query(`
         CREATE TABLE IF NOT EXISTS sales_funnels (
           id BIGSERIAL PRIMARY KEY,
-          owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          edit_token_hash TEXT,
           title TEXT NOT NULL,
           slug TEXT UNIQUE,
           brief JSONB NOT NULL DEFAULT '{}'::jsonb,
           content JSONB NOT NULL DEFAULT '{}'::jsonb,
           product_ids INTEGER[] NOT NULL DEFAULT '{}',
           contact_url TEXT,
+          whatsapp_phone TEXT,
+          poster_url TEXT,
           theme TEXT NOT NULL DEFAULT 'ocean'
             CHECK (theme IN ('ocean', 'sunset', 'forest', 'night')),
           is_published BOOLEAN NOT NULL DEFAULT FALSE,
@@ -131,8 +134,14 @@ export function ensureSalesFunnelSchema() {
           created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
         );
+        ALTER TABLE sales_funnels ALTER COLUMN owner_id DROP NOT NULL;
+        ALTER TABLE sales_funnels ADD COLUMN IF NOT EXISTS edit_token_hash TEXT;
+        ALTER TABLE sales_funnels ADD COLUMN IF NOT EXISTS whatsapp_phone TEXT;
+        ALTER TABLE sales_funnels ADD COLUMN IF NOT EXISTS poster_url TEXT;
         CREATE INDEX IF NOT EXISTS idx_sales_funnels_owner_updated
           ON sales_funnels(owner_id, updated_at DESC, id DESC);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_funnels_guest_token
+          ON sales_funnels(edit_token_hash) WHERE edit_token_hash IS NOT NULL;
 
         CREATE TABLE IF NOT EXISTS sales_funnel_metrics (
           funnel_id BIGINT NOT NULL REFERENCES sales_funnels(id) ON DELETE CASCADE,
