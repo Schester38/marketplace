@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { q } from "../db.js";
+import { initDb, q } from "../db.js";
 import { authRequired } from "../auth.js";
 import { listPhotos } from "../photo.js";
 import { proxyPhotoUrl } from "../photoProxy.js";
@@ -16,7 +16,11 @@ import {
 } from "../services/salesFunnel.js";
 
 const router = Router();
-const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+const ah = (fn) => (req, res, next) =>
+  Promise.resolve()
+    .then(() => initDb())
+    .then(() => fn(req, res, next))
+    .catch(next);
 
 function fail(statusCode, message, code) {
   const error = new Error(message);
