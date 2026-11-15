@@ -618,6 +618,15 @@ export const api = {
   studioStatus: () => adminRequest("/studio"),
   studioHooks: (payload) =>
     adminRequest("/studio/hooks", { method: "POST", body: JSON.stringify(payload) }),
+  adsCatalog: (params = {}) => {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== "") search.set(key, String(value));
+    }
+    return adminRequest(`/ads-studio/catalog?${search.toString()}`);
+  },
+  adsGenerate: (payload) =>
+    adminRequest("/ads-studio/generate", { method: "POST", body: JSON.stringify(payload) }),
   // Espace Freelance — génération IA de scripts de prospection par entreprise.
   // L'annuaire et les coordonnées restent côté serveur ; le navigateur ne reçoit
   // que des pages de résultats avec coordonnées masquées.

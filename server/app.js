@@ -42,6 +42,7 @@ import digitalRoutes from "./routes/digital.js";
 import formationFunnelRoutes from "./routes/formationFunnel.js";
 import generatorRoutes from "./routes/generator.js";
 import studioRoutes from "./routes/studio.js";
+import adsStudioRoutes from "./routes/adsStudio.js";
 import freelanceRoutes from "./routes/freelance.js";
 import familicashRoutes from "./routes/familicash.js";
 import smmRoutes from "./routes/smm.js";
@@ -218,6 +219,9 @@ app.use("/api/generator", limiter(60 * 1000, 120), generatorRoutes);
 // MboppiStudio (outils créatifs IA de l'admin) : chaque appel consomme un
 // crédit Gemini — quota modéré, portée admin vérifiée dans le routeur.
 app.use("/api/studio", limiter(60 * 1000, 30), studioRoutes);
+app.use("/api/ads-studio/catalog", limiter(60 * 1000, 90));
+app.use("/api/ads-studio/generate", limiter(60 * 1000, 20));
+app.use("/api/ads-studio", limiter(60 * 1000, 30), adsStudioRoutes);
 // Espace Freelance : la recherche paginée peut produire plusieurs requêtes ;
 // les appels IA gardent un quota séparé car ils consomment des crédits Gemini.
 app.use("/api/freelance/scripts", limiter(60 * 1000, 20));

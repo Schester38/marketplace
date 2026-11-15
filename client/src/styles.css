@@ -13139,6 +13139,125 @@ a.step {
   margin: 0 auto; max-width: 52ch; font-size: 0.78rem; color: var(--ms-ink-dim); line-height: 1.55;
 }
 
+.adstudio-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+.adstudio-search-label,
+.adstudio-brief-label { margin-top: 0.9rem; }
+.adstudio-search { min-height: 0; margin-top: 0.35rem; }
+.adstudio-more { margin-top: 0.65rem; }
+.adstudio-source-description,
+.adstudio-hint {
+  margin: 0.7rem 0 0;
+  color: var(--ms-ink-dim);
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+.adstudio-hint {
+  border-left: 2px solid var(--ms-accent-3);
+  padding-left: 0.6rem;
+}
+.adstudio-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.adstudio-brief-label .mstudio-textarea { margin-top: 0.35rem; }
+.adstudio-results { margin-top: 0.4rem; }
+.adstudio-results-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.7rem;
+}
+.adstudio-results-head h2 {
+  margin: 0;
+  color: var(--ms-ink);
+  font-size: 1.1rem;
+}
+.adstudio-results-head p,
+.adstudio-copy-status {
+  margin: 0.25rem 0 0;
+  color: var(--ms-ink-dim);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+.adstudio-copy-status { color: var(--ms-success); }
+.adstudio-ideas { display: grid; grid-template-columns: 1fr; gap: 0.2rem; }
+.adstudio-idea { margin-bottom: 0.7rem; }
+.adstudio-idea-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.7rem;
+}
+.adstudio-idea-head > div { display: flex; align-items: center; gap: 0.55rem; }
+.adstudio-idea-head h3 {
+  margin: 0;
+  color: var(--ms-ink);
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+.adstudio-concept,
+.adstudio-idea section p,
+.adstudio-footer-copy p {
+  margin: 0.25rem 0 0;
+  color: var(--ms-ink-dim);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.adstudio-idea section { margin-top: 0.9rem; }
+.adstudio-idea section h4,
+.adstudio-footer-copy h4 {
+  margin: 0;
+  color: var(--ms-accent-3);
+  font-size: 0.67rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.adstudio-idea section .adstudio-script { color: var(--ms-ink); }
+.adstudio-scenes {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.adstudio-scenes li {
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid var(--ms-border);
+  border-radius: 10px;
+  background: var(--ms-panel-2);
+  padding: 0.65rem 0.75rem;
+  color: var(--ms-ink-dim);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+.adstudio-scenes li > strong { color: var(--ms-accent-3); }
+.adstudio-scenes b { color: var(--ms-ink); }
+.adstudio-footer-copy {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.9rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--ms-border);
+}
+@media (max-width: 760px) {
+  .adstudio-grid,
+  .adstudio-controls,
+  .adstudio-footer-copy { grid-template-columns: 1fr; }
+  .adstudio-results-head,
+  .adstudio-idea-head { flex-direction: column; }
+}
+
 
 /* ==========================================================================
    Page de téléchargement de l'application FamiliCash

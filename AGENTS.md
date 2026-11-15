@@ -213,7 +213,9 @@ Pilotés par l'environnement : `client/src/config.js` (`BASE_URL` ← `VITE_SITE
 Restent en dur **volontairement** : `.github/workflows/keepalive.yml` (ping sur l'alias `vercel.app`, toujours valide). Le lien Trustpilot du footer (`Footer.jsx`) pointe depuis 1.57.93 vers le **profil revendiqué du nouveau domaine** (`https://fr.trustpilot.com/review/mboppishop.com`).
 
 ## Historique récent des modifications
-(Changelog partiel — version courante **1.57.255** / cache PWA **mboppi-v487**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+(Changelog partiel — version courante **1.57.256** / cache PWA **mboppi-v488**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+
+- **1.57.256** : **Admin — Studio publicitaire IA** (`AdStudio.jsx`, `server/routes/adsStudio.js`) : génération de 2 à 4 idées avec scripts, storyboards, légendes et appels à l'action, selon le style, la plateforme, la durée et la langue ; résultats copiables, sans publication sociale. Le catalogue sert les produits et offres depuis la base, les rôles avec des comptes agrégés sans identité utilisateur et les fonctionnalités depuis `server/data/adCatalog.js`. Routes réservées à l'admin, clé IA côté serveur ; smoke test `scripts/ads-studio-smoke.mjs`. Cache PWA v488.
 
 - **1.57.255** : **Freelance — confirmation après le retour de l’application de contact** — après ouverture du lien WhatsApp, SMS ou e-mail, la page demande si le message a été envoyé lorsqu’elle reprend le focus. Une confirmation « Oui » marque l’entreprise « Contacté » ; « Non » laisse son statut inchangé. Un bouton de secours permet de confirmer manuellement si le navigateur ne détecte pas le retour. Cache PWA v487.
 

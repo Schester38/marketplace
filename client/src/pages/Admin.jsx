@@ -16,6 +16,7 @@ import PasswordInput from "../components/PasswordInput.jsx";
 import TrackMap from "../components/TrackMap.jsx";
 import GeneratorPanel from "./Generator.jsx";
 import MboppiStudio from "./MboppiStudio.jsx";
+import AdStudio from "./AdStudio.jsx";
 import BoostAdmin from "./BoostAdmin.jsx";
 
 const VISIT_RANGES = [
@@ -37,6 +38,7 @@ const ADMIN_TABS = [
   { id: "boost", emoji: "🚀", label: "MboppiBoost" },
   { id: "generator", emoji: "📚", label: "Générateur" },
   { id: "studio", emoji: "🎬", label: "MboppiStudio" },
+  { id: "ads", emoji: "📢", label: "Publicités" },
   { id: "system", emoji: "⚙️", label: "Système" },
 ];
 
@@ -3886,6 +3888,7 @@ export default function Admin() {
       {/* ═══ Onglet « MboppiStudio » : outils créatifs IA (hooks, tendances…) —
           les clés des fournisseurs restent côté serveur (/api/studio/*) ═══ */}
       {adminTab === "studio" && <MboppiStudio />}
+      {adminTab === "ads" && <AdStudio />}
 
     </main>
   );
