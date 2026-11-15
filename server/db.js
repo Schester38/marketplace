@@ -10,7 +10,7 @@ const { Pool } = pg;
 // Marqueur de schÃ©ma : Ã  incrÃ©menter Ã  CHAQUE changement de structure, sinon
 // initDb() (marqueur dÃ©jÃ  posÃ©) ne rejoue pas les migrations sur une base en
 // service. 2026-10-03 : table familicash_orders (licences de l'application).
-const DB_INIT_VERSION = "2026-11-15-sales-funnels-v2";
+const DB_INIT_VERSION = "2026-11-15-sales-funnels-v3";
 let initDbPromise = null;
 
 const LOCAL_DEFAULT = "postgres://postgres:postgres@localhost:5432/marketplace";
@@ -108,6 +108,51 @@ export async function q(text, params = []) {
   const p = getPool();
   const res = await p.query(text, params);
   return res.rows;
+}
+
+let salesFunnelSchemaPromise = null;
+export function ensureSalesFunnelSchema() {
+  if (!salesFunnelSchemaPromise) {
+    salesFunnelSchemaPromise = getPool()
+      .query(`
+        CREATE TABLE IF NOT EXISTS sales_funnels (
+          id BIGSERIAL PRIMARY KEY,
+          owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          slug TEXT UNIQUE,
+          brief JSONB NOT NULL DEFAULT '{}'::jsonb,
+          content JSONB NOT NULL DEFAULT '{}'::jsonb,
+          product_ids INTEGER[] NOT NULL DEFAULT '{}',
+          contact_url TEXT,
+          theme TEXT NOT NULL DEFAULT 'ocean'
+            CHECK (theme IN ('ocean', 'sunset', 'forest', 'night')),
+          is_published BOOLEAN NOT NULL DEFAULT FALSE,
+          published_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+        CREATE INDEX IF NOT EXISTS idx_sales_funnels_owner_updated
+          ON sales_funnels(owner_id, updated_at DESC, id DESC);
+
+        CREATE TABLE IF NOT EXISTS sales_funnel_metrics (
+          funnel_id BIGINT NOT NULL REFERENCES sales_funnels(id) ON DELETE CASCADE,
+          event_type TEXT NOT NULL CHECK (event_type IN ('view', 'contact', 'product')),
+          target_id INTEGER NOT NULL DEFAULT 0,
+          event_count BIGINT NOT NULL DEFAULT 0 CHECK (event_count >= 0),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+          PRIMARY KEY (funnel_id, event_type, target_id),
+          CHECK (
+            (event_type = 'product' AND target_id > 0) OR
+            (event_type <> 'product' AND target_id = 0)
+          )
+        );
+      `)
+      .catch((error) => {
+        salesFunnelSchemaPromise = null;
+        throw error;
+      });
+  }
+  return salesFunnelSchemaPromise;
 }
 
 export async function ensureColumn(table, column, definition) {
@@ -215,38 +260,6 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_ads_studio_campaigns_updated
       ON ads_studio_campaigns(updated_at DESC, id DESC);
 
-    CREATE TABLE IF NOT EXISTS sales_funnels (
-      id BIGSERIAL PRIMARY KEY,
-      owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      title TEXT NOT NULL,
-      slug TEXT UNIQUE,
-      brief JSONB NOT NULL DEFAULT '{}'::jsonb,
-      content JSONB NOT NULL DEFAULT '{}'::jsonb,
-      product_ids INTEGER[] NOT NULL DEFAULT '{}',
-      contact_url TEXT,
-      theme TEXT NOT NULL DEFAULT 'ocean'
-        CHECK (theme IN ('ocean', 'sunset', 'forest', 'night')),
-      is_published BOOLEAN NOT NULL DEFAULT FALSE,
-      published_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-    CREATE INDEX IF NOT EXISTS idx_sales_funnels_owner_updated
-      ON sales_funnels(owner_id, updated_at DESC, id DESC);
-
-    CREATE TABLE IF NOT EXISTS sales_funnel_metrics (
-      funnel_id BIGINT NOT NULL REFERENCES sales_funnels(id) ON DELETE CASCADE,
-      event_type TEXT NOT NULL CHECK (event_type IN ('view', 'contact', 'product')),
-      target_id INTEGER NOT NULL DEFAULT 0,
-      event_count BIGINT NOT NULL DEFAULT 0 CHECK (event_count >= 0),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      PRIMARY KEY (funnel_id, event_type, target_id),
-      CHECK (
-        (event_type = 'product' AND target_id > 0) OR
-        (event_type <> 'product' AND target_id = 0)
-      )
-    );
-
     CREATE TABLE IF NOT EXISTS orders (
       id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -292,6 +305,7 @@ async function runInitDb() {
     CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(status);
     CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
   `);
+  await ensureSalesFunnelSchema();
 
   await pool.query(`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT 'email';

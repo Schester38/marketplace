@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { initDb, q } from "../db.js";
+import { ensureSalesFunnelSchema, q } from "../db.js";
 import { authRequired } from "../auth.js";
 import { listPhotos } from "../photo.js";
 import { proxyPhotoUrl } from "../photoProxy.js";
@@ -18,7 +18,7 @@ import {
 const router = Router();
 const ah = (fn) => (req, res, next) =>
   Promise.resolve()
-    .then(() => initDb())
+    .then(() => ensureSalesFunnelSchema())
     .then(() => fn(req, res, next))
     .catch(next);
 

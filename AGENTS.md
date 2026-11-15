@@ -6,7 +6,7 @@ Contexte de travail pour toute session IA sur ce dépôt. Lire ce fichier avant 
 
 Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiques, vendeurs indépendants, créateurs, livreurs, commandes par téléphone/WhatsApp et paiement mobile.
 
-- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.57.261`.
+- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.57.262`.
 - **Serveur** : Express 4 (`server/`, port 4000), PostgreSQL via Supabase (`server/db.js` : `DATABASE_URL_POOLED`, fallback `DATABASE_URL`, `ssl rejectUnauthorized: false` ; exports `q()`, `withTransaction()`, `initDb()`).
 - **Finance** : `server/services/payouts.js` — `computeRedistribution`, `normalizeWalletPrimary`, seuils de commission. Il n'existe **pas** de `server/finance.js`.
 - **Déploiement** : Vercel, entrée serverless `api/index.js` → `server/app.js` + `initDb()`. `vercel.json` route `/api/*`, `/produit/:id`, `/boutique/:id`, `/createur/:id`, `/ville/:x`, `/offre/:id`, `/sitemap.xml`, `/` vers l'API, le reste vers le SPA.
@@ -213,7 +213,9 @@ Pilotés par l'environnement : `client/src/config.js` (`BASE_URL` ← `VITE_SITE
 Restent en dur **volontairement** : `.github/workflows/keepalive.yml` (ping sur l'alias `vercel.app`, toujours valide). Le lien Trustpilot du footer (`Footer.jsx`) pointe depuis 1.57.93 vers le **profil revendiqué du nouveau domaine** (`https://fr.trustpilot.com/review/mboppishop.com`).
 
 ## Historique récent des modifications
-(Changelog partiel — version courante **1.57.261** / cache PWA **mboppi-v493**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+(Changelog partiel — version courante **1.57.262** / cache PWA **mboppi-v494**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+
+- **1.57.262** : **Tunnel de Vente — migration des tables isolée** — création idempotente et mise en cache par instance des tables du tunnel, exécutée séparément du lot global de migrations. Les endpoints n'attendent plus une initialisation générale qui peut échouer sur une migration indépendante. Cache PWA v494.
 
 - **1.57.261** : **Tunnel de Vente — attendre la migration au démarrage** — les routes du tunnel attendent désormais `initDb()` avant leurs requêtes, évitant un 500 si la première invocation Vercel démarre le serveur et la migration en parallèle. Cache PWA v493.
 
