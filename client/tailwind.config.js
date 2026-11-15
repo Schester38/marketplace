@@ -11,6 +11,10 @@ export default {
     "./src/pages/FormationThanks.jsx",
     "./src/components/FormationFunnelForm.jsx",
     "./src/pages/Freelance.jsx",
+    "./src/pages/SalesFunnelBuilder.jsx",
+    "./src/pages/SalesFunnelLanding.jsx",
+    "./src/components/SalesFunnelPageView.jsx",
+    "./src/salesFunnelThemes.js",
   ],
   prefix: "tw-",
   corePlugins: {

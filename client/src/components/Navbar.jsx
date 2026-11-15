@@ -1118,6 +1118,10 @@ export default function Navbar({ onLogout }) {
         <span className="dl-icon">💻</span>
         <span className="dl-label">{t("Logiciels")}</span>
       </Link>
+      <Link to="/tunnel/creer" onClick={close} className={`drawer-link ${location.pathname.startsWith("/tunnel") ? "cat-active" : ""}`}>
+        <span className="dl-icon">🛍️</span>
+        <span className="dl-label">{t("Tunnel de Vente")}</span>
+      </Link>
       <Link
         to="/mboppi-boost/portefeuille"
         onClick={close}
@@ -1345,6 +1349,10 @@ export default function Navbar({ onLogout }) {
             <Link to="/logiciels" onClick={close} className={`cat-link ${location.pathname === "/logiciels" ? "cat-active" : ""}`}>
               <span className="cat-icon" aria-hidden="true">💻</span>
               <span className="cat-label">{t("Logiciels")}</span>
+            </Link>
+            <Link to="/tunnel/creer" onClick={close} className={`cat-link ${location.pathname.startsWith("/tunnel") ? "cat-active" : ""}`}>
+              <span className="cat-icon" aria-hidden="true">🛍️</span>
+              <span className="cat-label">{t("Tunnel de Vente")}</span>
             </Link>
           </div>
           <button

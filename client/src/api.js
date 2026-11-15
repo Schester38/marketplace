@@ -641,6 +641,40 @@ export const api = {
     }),
   deleteAdsCampaign: (id) =>
     adminRequest(`/ads-studio/campaigns/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  salesFunnelsMine: () => request("/sales-funnels/mine", { cache: "no-store" }),
+  generateSalesFunnel: (payload) =>
+    request("/sales-funnels/generate", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  saveSalesFunnel: (id, payload) =>
+    request(`/sales-funnels/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  publishSalesFunnel: (id, payload) =>
+    request(`/sales-funnels/${encodeURIComponent(id)}/publish`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  salesFunnelMetrics: (id) =>
+    request(`/sales-funnels/${encodeURIComponent(id)}/metrics`, { cache: "no-store" }),
+  trackSalesFunnelEvent: (id, event, productId) =>
+    request(
+      `/sales-funnels/public/${encodeURIComponent(id)}/events`,
+      {
+        method: "POST",
+        skipAuth: true,
+        keepalive: true,
+        body: JSON.stringify({ event, ...(productId ? { product_id: productId } : {}) }),
+      },
+      0
+    ),
+  publicSalesFunnel: (slug) =>
+    request(`/sales-funnels/public/${encodeURIComponent(slug)}`, {
+      skipAuth: true,
+      cache: "no-store",
+    }),
   // Espace Freelance — génération IA de scripts de prospection par entreprise.
   // L'annuaire et les coordonnées restent côté serveur ; le navigateur ne reçoit
   // que des pages de résultats avec coordonnées masquées.

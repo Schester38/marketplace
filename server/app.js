@@ -46,6 +46,7 @@ import adsStudioRoutes from "./routes/adsStudio.js";
 import freelanceRoutes from "./routes/freelance.js";
 import familicashRoutes from "./routes/familicash.js";
 import smmRoutes from "./routes/smm.js";
+import salesFunnelRoutes from "./routes/salesFunnels.js";
 import { authRequired } from "./auth.js";
 import { securityHeaders, originCheck, ALLOWED_ORIGINS } from "./security.js";
 import { isLegacyHost, canonicalUrl } from "./urls.js";
@@ -222,6 +223,12 @@ app.use("/api/studio", limiter(60 * 1000, 30), studioRoutes);
 app.use("/api/ads-studio/catalog", limiter(60 * 1000, 90));
 app.use("/api/ads-studio/generate", limiter(60 * 1000, 20));
 app.use("/api/ads-studio", limiter(60 * 1000, 30), adsStudioRoutes);
+// Chaque génération de tunnel consomme un appel IA ; le CRUD reste soumis au
+// limiteur API global, avec un quota distinct pour la génération. Les événements
+// publics sont davantage limités pour éviter les écritures analytics abusives.
+app.use("/api/sales-funnels/public/:id/events", limiter(60 * 1000, 30));
+app.use("/api/sales-funnels/generate", limiter(60 * 1000, 5));
+app.use("/api/sales-funnels", limiter(60 * 1000, 60), salesFunnelRoutes);
 // Espace Freelance : la recherche paginée peut produire plusieurs requêtes ;
 // les appels IA gardent un quota séparé car ils consomment des crédits Gemini.
 app.use("/api/freelance/scripts", limiter(60 * 1000, 20));

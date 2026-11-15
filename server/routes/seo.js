@@ -89,7 +89,10 @@ function injectHead(html, { title, description, canonical, ogImage, ogType = "we
 
 function injectJsonLd(html, jsonLd) {
   if (!html) return null;
-  const script = `<script type="application/ld+json" data-ssr="1">\n${JSON.stringify(jsonLd)}\n</script>`;
+  const payload = JSON.stringify(jsonLd).replace(/[<>&\u2028\u2029]/g, (char) =>
+    `\\u${char.charCodeAt(0).toString(16).padStart(4, "0")}`
+  );
+  const script = `<script type="application/ld+json" data-ssr="1">\n${payload}\n</script>`;
   return html.replace(/<\/head>/, () => `${script}\n</head>`);
 }
 
@@ -308,6 +311,81 @@ router.get(["/produit/:id", "/acheter/:id"], async (req, res) => {
     const html = await loadIndexHtml();
     if (html) return sendHtml(res, html);
     res.status(500).send("Erreur serveur");
+  }
+});
+
+router.get("/tunnel/:slug", async (req, res, next) => {
+  const slug = String(req.params.slug || "").toLowerCase();
+  if (slug === "creer") return next();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
+    return res.status(404).type("html").send(notFoundHtml);
+  }
+  try {
+    const [funnel] = await q(
+      `SELECT f.slug, f.title, f.content, p.image AS share_image, p.photos AS share_photos
+         FROM sales_funnels f
+         LEFT JOIN LATERAL (
+           SELECT p.image, p.photos
+             FROM products p
+            WHERE p.shop_id = f.owner_id
+              AND p.id = ANY(f.product_ids)
+              AND (p.quantity > 0 OR p.is_digital IS TRUE)
+              AND NOT EXISTS (
+                SELECT 1 FROM flash_promotions fp
+                 WHERE fp.product_id = p.id AND fp.ends_at > now()
+              )
+            ORDER BY array_position(f.product_ids, p.id)
+            LIMIT 1
+         ) p ON TRUE
+        WHERE f.slug = $1 AND f.is_published = TRUE`,
+      [slug]
+    );
+    if (!funnel) {
+      return res.status(404).type("html").send(
+        `<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><meta name="robots" content="noindex,nofollow"/><title>Tunnel introuvable | MboppiShop</title></head><body><h1>Tunnel introuvable</h1></body></html>`
+      );
+    }
+
+    const content = funnel.content || {};
+    const title = `${content.title || funnel.title} | MboppiShop`;
+    const description = String(content.subtitle || funnel.title)
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 180);
+    const canonical = `${originOf(req)}/tunnel/${funnel.slug}`;
+    const shareImage = absImageOf(
+      parsePhotos(funnel.share_photos, funnel.share_image)[0],
+      originOf(req)
+    );
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: content.title || funnel.title,
+      description,
+      url: canonical,
+      isPartOf: { "@type": "WebSite", name: "MboppiShop", url: BASE_URL },
+    };
+    const html = injectJsonLd(
+      injectHead(await loadIndexHtml(), {
+        title,
+        description,
+        canonical,
+        ogImage: shareImage,
+      }),
+      jsonLd
+    );
+    if (!html) {
+      return res
+        .status(200)
+        .type("html")
+        .send(
+          `<!doctype html><html lang="fr"><head><meta charset="UTF-8"/><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(description)}"/><link rel="canonical" href="${escapeHtml(canonical)}"/></head><body><h1>${escapeHtml(title)}</h1><p>${escapeHtml(description)}</p></body></html>`
+        );
+    }
+    sendHtml(res, html);
+  } catch (error) {
+    console.error("Sales funnel SEO error:", error);
+    res.status(500).type("html").send("Erreur serveur");
   }
 });
 
@@ -620,7 +698,7 @@ router.get("/sitemap.xml", async (req, res) => {
       ["/donnees", "monthly", "0.5"],
       ["/verone", "yearly", "0.4"],
     ];
-    const [products, funnelProducts, users, offers] = await Promise.all([
+    const [products, funnelProducts, users, offers, salesFunnels] = await Promise.all([
       // Les produits dont le tunnel de vente est actif sont exposés via leur
       // landing /f/:id (et non /produit/:id) pour éviter deux URL concurrentes.
       q(
@@ -629,6 +707,7 @@ router.get("/sitemap.xml", async (req, res) => {
       q("SELECT id, created_at FROM products WHERE funnel_enabled = TRUE ORDER BY created_at DESC"),
       q("SELECT id, role FROM users WHERE role IN ('shop', 'creator') ORDER BY id DESC"),
       q("SELECT id, created_at FROM offers WHERE quantity > 0 ORDER BY id DESC"),
+      q("SELECT slug, updated_at FROM sales_funnels WHERE is_published = TRUE ORDER BY updated_at DESC LIMIT 5000"),
     ]);
     const entries = [
       ...staticUrls.map(([loc, freq, prio]) => ({ loc: BASE_URL + loc, freq, prio })),
@@ -654,6 +733,12 @@ router.get("/sitemap.xml", async (req, res) => {
         freq: "daily",
         prio: "0.9",
         lastmod: p.created_at,
+      })),
+      ...salesFunnels.map((funnel) => ({
+        loc: `${BASE_URL}/tunnel/${funnel.slug}`,
+        freq: "weekly",
+        prio: "0.8",
+        lastmod: funnel.updated_at,
       })),
       ...users.map((s) => ({
         loc: s.role === "creator" ? `${BASE_URL}/createur/${s.id}` : `${BASE_URL}/boutique/${s.id}`,

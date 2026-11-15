@@ -100,6 +100,8 @@ const Freelance = lazyRetry(() => import("./pages/Freelance.jsx"));
 const MboppiBoost = lazyRetry(() => import("./pages/MboppiBoost.jsx"));
 const Services = lazyRetry(() => import("./pages/Services.jsx"));
 const Logiciels = lazyRetry(() => import("./pages/Logiciels.jsx"));
+const SalesFunnelBuilder = lazyRetry(() => import("./pages/SalesFunnelBuilder.jsx"));
+const SalesFunnelLanding = lazyRetry(() => import("./pages/SalesFunnelLanding.jsx"));
 const MboppiBoostOrder = lazyRetry(() => import("./pages/MboppiBoostOrder.jsx"));
 const MboppiBoostOrders = lazyRetry(() => import("./pages/MboppiBoostOrders.jsx"));
 const MboppiBoostTrack = lazyRetry(() => import("./pages/MboppiBoostTrack.jsx"));
@@ -714,6 +716,15 @@ export default function App() {
             <Route path="/mboppi-boost" element={<MboppiBoost />} />
             <Route path="/services" element={<Services />} />
             <Route path="/logiciels" element={<Logiciels />} />
+            <Route
+              path="/tunnel/creer"
+              element={
+                <Protected>
+                  <SalesFunnelBuilder />
+                </Protected>
+              }
+            />
+            <Route path="/tunnel/:slug" element={<SalesFunnelLanding />} />
             <Route path="/mboppi-boost/commander/:serviceId" element={<MboppiBoostOrder />} />
             <Route path="/mboppi-boost/mes-commandes" element={<MboppiBoostOrders />} />
             <Route path="/mboppi-boost/suivi/:id" element={<MboppiBoostTrack />} />

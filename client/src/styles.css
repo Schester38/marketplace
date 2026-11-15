@@ -14437,3 +14437,110 @@ a.step {
   .freelance-page { display: none !important; }
 }
 
+.sales-funnel-sticky-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sales-funnel-page {
+  color: var(--text);
+  background-color: var(--bg);
+  background-image: radial-gradient(ellipse at 12% 0, rgba(16, 185, 129, 0.08), transparent 42rem);
+}
+.sales-funnel-page.tw-bg-slate-50 {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 12% 0, rgba(16, 185, 129, 0.1), transparent 42rem),
+    linear-gradient(145deg, #f0faf5 0%, var(--bg) 44rem);
+}
+.sales-funnel-card {
+  color: var(--text);
+  background: var(--card);
+  border-color: var(--border);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+.sales-funnel-field {
+  border: 1px solid var(--border-strong);
+  background: var(--input-bg);
+  color: var(--text);
+  font: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.sales-funnel-field::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+.sales-funnel-page button:not([class*="tw-bg-"]) {
+  color: var(--text-secondary);
+  background-color: var(--card);
+}
+.sales-funnel-page .tw-bg-white {
+  background-color: var(--card);
+}
+.sales-funnel-page .tw-bg-slate-50 {
+  background-color: var(--soft);
+}
+.sales-funnel-page .tw-bg-slate-100 {
+  background-color: var(--soft-2);
+}
+.sales-funnel-page .tw-text-slate-900,
+.sales-funnel-page .tw-text-slate-800 {
+  color: var(--text);
+}
+.sales-funnel-page .tw-text-slate-700,
+.sales-funnel-page .tw-text-slate-600 {
+  color: var(--text-secondary);
+}
+.sales-funnel-page .tw-text-slate-500,
+.sales-funnel-page .tw-text-slate-400 {
+  color: var(--text-muted);
+}
+.sales-funnel-page .tw-border-slate-200 {
+  border-color: var(--border);
+}
+.sales-funnel-page .tw-border-slate-300 {
+  border-color: var(--border-strong);
+}
+[data-theme="dark"] .sales-funnel-page {
+  background-image:
+    radial-gradient(ellipse at 12% 0, rgba(16, 185, 129, 0.12), transparent 42rem),
+    linear-gradient(145deg, #11201d 0%, var(--bg) 44rem);
+}
+[data-theme="dark"] .sales-funnel-page.tw-bg-slate-50 {
+  background-image:
+    radial-gradient(ellipse at 12% 0, rgba(16, 185, 129, 0.12), transparent 42rem),
+    linear-gradient(145deg, #11201d 0%, var(--bg) 44rem);
+}
+[data-theme="dark"] .sales-funnel-card {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+}
+[data-theme="dark"] .sales-funnel-page .tw-bg-emerald-50 {
+  background-color: color-mix(in srgb, #10b981 16%, var(--card));
+}
+[data-theme="dark"] .sales-funnel-page .tw-text-emerald-900 {
+  color: #a7f3d0;
+}
+[data-theme="dark"] .sales-funnel-page .tw-border-emerald-200 {
+  border-color: #2b594b;
+}
+.sales-funnel-form-card {
+  padding-bottom: 20px;
+}
+@media (max-width: 768px) {
+  .sales-funnel-sticky-actions {
+    position: fixed;
+    z-index: 850;
+    right: 12px;
+    bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 10px);
+    left: 12px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--card);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  }
+  .sales-funnel-form-card {
+    padding-bottom: 92px;
+  }
+}
+
