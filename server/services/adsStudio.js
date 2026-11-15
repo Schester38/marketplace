@@ -61,6 +61,29 @@ export function normalizeCampaignBrief(value = {}) {
   };
 }
 
+export function roleItemsForCatalog(roleDefinitions, counts) {
+  const knownRoles = roleDefinitions || {};
+  const roleCounts = counts || {};
+  return [...new Set([...Object.keys(knownRoles), ...Object.keys(roleCounts)])].map((id) => {
+    const knownRole = knownRoles[id];
+    const name =
+      knownRole?.name ||
+      id
+        .split(/[_-]+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+    return {
+      id,
+      type: "role",
+      name,
+      description:
+        knownRole?.description || `Utilisateurs associés au rôle « ${name} » sur la plateforme.`,
+      user_count: Number(roleCounts[id]) || 0,
+    };
+  });
+}
+
 export function referenceFacts(source, brandProfile) {
   const facts = [];
   const add = (value, origin) => {
@@ -75,10 +98,18 @@ export function referenceFacts(source, brandProfile) {
   add(source.warranty, "catalogue");
   add(brandProfile.brand_name, "marque");
   add(brandProfile.tagline, "marque");
-  if (source.promo_price !== undefined && source.promo_price !== null && Number.isFinite(Number(source.promo_price))) {
+  if (
+    source.promo_price !== undefined &&
+    source.promo_price !== null &&
+    Number.isFinite(Number(source.promo_price))
+  ) {
     add(`Prix promotionnel : ${source.promo_price} ${source.currency || ""}`.trim(), "catalogue");
   }
-  if (source.original_price !== undefined && source.original_price !== null && Number.isFinite(Number(source.original_price))) {
+  if (
+    source.original_price !== undefined &&
+    source.original_price !== null &&
+    Number.isFinite(Number(source.original_price))
+  ) {
     add(`Prix initial : ${source.original_price} ${source.currency || ""}`.trim(), "catalogue");
   }
   for (const claim of brandProfile.approved_claims) add(claim, "marque");

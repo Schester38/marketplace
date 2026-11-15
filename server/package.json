@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node --watch --env-file-if-exists=.env index.js"
+    "start": "node ../scripts/generate-ad-route-catalog.mjs && node index.js",
+    "dev": "node ../scripts/generate-ad-route-catalog.mjs && node --watch --env-file-if-exists=.env index.js"
   },
   "dependencies": {
     "@sentry/node": "^10.70.0",

@@ -496,24 +496,22 @@ export default function AdStudio() {
             ))}
           </select>
 
-          {sourceType === "products" || sourceType === "publications" ? (
-            <label className="mstudio-label adstudio-search-label" htmlFor="adstudio-search">
-              {t("Rechercher dans le catalogue")}
-              <input
-                id="adstudio-search"
-                className="mstudio-textarea adstudio-search"
-                value={sourceQuery}
-                maxLength={120}
-                placeholder={t("Nom, catégorie ou description")}
-                onChange={(event) => {
-                  setSourceQuery(event.target.value);
-                  setPage(1);
-                  setSourceId("");
-                  setIdeas([]);
-                }}
-              />
-            </label>
-          ) : null}
+          <label className="mstudio-label adstudio-search-label" htmlFor="adstudio-search">
+            {t("Rechercher dans le catalogue")}
+            <input
+              id="adstudio-search"
+              className="mstudio-textarea adstudio-search"
+              value={sourceQuery}
+              maxLength={120}
+              placeholder={t("Nom, catégorie ou description")}
+              onChange={(event) => {
+                setSourceQuery(event.target.value);
+                setPage(1);
+                setSourceId("");
+                setIdeas([]);
+              }}
+            />
+          </label>
 
           <label className="mstudio-label" htmlFor="adstudio-source">
             {t("Élément")}

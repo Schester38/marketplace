@@ -3,25 +3,20 @@ import { q } from "../db.js";
 import { authRequired, roleRequired } from "../auth.js";
 import { logAudit } from "../security.js";
 import { askAI } from "./chat.js";
-import {
-  AD_FEATURES,
-  AD_LANGUAGES,
-  AD_PLATFORMS,
-  AD_ROLES,
-  AD_STYLES,
-} from "../data/adCatalog.js";
+import { AD_FEATURES, AD_LANGUAGES, AD_PLATFORMS, AD_ROLES, AD_STYLES } from "../data/adCatalog.js";
+import { AD_ROUTE_FEATURES } from "../data/adRoutes.generated.js";
 import {
   DEFAULT_AD_BRAND_PROFILE,
   normalizeBrandProfile,
   normalizeCampaignBrief,
   normalizeIdeas,
   referenceFacts,
+  roleItemsForCatalog,
 } from "../services/adsStudio.js";
 
 const router = Router();
 const ah = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 const SOURCE_TYPES = new Set(["features", "products", "publications", "roles"]);
-const ROLE_IDS = Object.keys(AD_ROLES);
 const AD_COUNTS = [2, 3, 4];
 const AD_DURATIONS = [15, 30, 45, 60];
 const AD_OBJECTIVES = new Set(["awareness", "engagement", "leads", "sales", "launch"]);
@@ -66,22 +61,17 @@ async function getRoleCounts() {
   return Object.fromEntries(rows.map((row) => [row.role, Number(row.user_count) || 0]));
 }
 
-function roleItems(counts) {
-  return ROLE_IDS.map((id) => ({
-    id,
-    type: "role",
-    name: AD_ROLES[id].name,
-    description: AD_ROLES[id].description,
-    user_count: counts[id] || 0,
-  }));
-}
-
 function featureItems(query) {
   const normalized = query.toLowerCase();
-  return AD_FEATURES.filter((feature) =>
-    !normalized ||
-    `${feature.name} ${feature.description} ${feature.audience}`.toLowerCase().includes(normalized)
-  ).map((feature) => ({ ...feature, type: "feature" }));
+  return [...AD_FEATURES, ...AD_ROUTE_FEATURES]
+    .filter(
+      (feature) =>
+        !normalized ||
+        `${feature.name} ${feature.description} ${feature.audience} ${feature.path || ""}`
+          .toLowerCase()
+          .includes(normalized)
+    )
+    .map((feature) => ({ ...feature, type: "feature" }));
 }
 
 async function getCatalog(req) {
@@ -97,8 +87,9 @@ async function getCatalog(req) {
     return { type, items: featureItems(query), page: 1, has_more: false };
   }
   if (type === "roles") {
-    const items = roleItems(await getRoleCounts()).filter((item) =>
-      !query || `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase())
+    const items = roleItemsForCatalog(AD_ROLES, await getRoleCounts()).filter(
+      (item) =>
+        !query || `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase())
     );
     return { type, items, page: 1, has_more: false };
   }
@@ -157,24 +148,24 @@ async function getCatalog(req) {
 
 async function getSource(type, id) {
   if (type === "features") {
-    const feature = AD_FEATURES.find((item) => item.id === id);
+    const feature = [...AD_FEATURES, ...AD_ROUTE_FEATURES].find((item) => item.id === id);
     if (!feature) throw fail(404, "Fonctionnalité introuvable.", "SOURCE_NOT_FOUND");
     return { ...feature, type: "feature" };
   }
   if (type === "roles") {
-    if (!ROLE_IDS.includes(id)) throw fail(404, "Rôle introuvable.", "SOURCE_NOT_FOUND");
     const counts = await getRoleCounts();
-    return { id, ...AD_ROLES[id], type: "role", user_count: counts[id] || 0 };
+    const role = roleItemsForCatalog(AD_ROLES, counts).find((item) => item.id === id);
+    if (!role) throw fail(404, "Rôle introuvable.", "SOURCE_NOT_FOUND");
+    return role;
   }
   if (!/^[1-9]\d{0,9}$/.test(id)) {
     throw fail(422, "Sélectionnez un élément valide.", "INVALID_SOURCE_ID");
   }
   const rows =
     type === "products"
-      ? await q(
-          "SELECT id, name, description, category, is_digital FROM products WHERE id = $1",
-          [Number(id)]
-        )
+      ? await q("SELECT id, name, description, category, is_digital FROM products WHERE id = $1", [
+          Number(id),
+        ])
       : await q(
           `SELECT id, name, category, description, warranty, original_price, promo_price, currency
            FROM offers WHERE id = $1`,
@@ -451,14 +442,20 @@ router.post(
     const duration = Number(body.duration);
     const count = Number(body.count);
     const format = cleanText(body.format || "vertical", 20);
-    const briefInput =
-      typeof body.brief === "string" ? { notes: body.brief } : body.brief || {};
+    const briefInput = typeof body.brief === "string" ? { notes: body.brief } : body.brief || {};
     const brief = validateCampaignBrief(briefInput);
 
     if (!SOURCE_TYPES.has(sourceType)) {
       throw fail(422, "Choisissez une source à promouvoir.", "INVALID_SOURCE_TYPE");
     }
-    const settings = normalizeGenerationSettings({ style, platform, language, duration, count, format });
+    const settings = normalizeGenerationSettings({
+      style,
+      platform,
+      language,
+      duration,
+      count,
+      format,
+    });
 
     const source = await getSource(sourceType, sourceId);
     const brandProfile = await loadBrandProfile();

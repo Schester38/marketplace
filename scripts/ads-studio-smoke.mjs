@@ -3,11 +3,9 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || "x".repeat(48);
 const express = (await import("express")).default;
 const adsStudioRoutes = (await import("../server/routes/adsStudio.js")).default;
 const { AD_FEATURES, AD_ROLES, AD_STYLES } = await import("../server/data/adCatalog.js");
-const {
-  normalizeBrandProfile,
-  normalizeIdeas,
-  referenceFacts,
-} = await import("../server/services/adsStudio.js");
+const { AD_ROUTE_FEATURES } = await import("../server/data/adRoutes.generated.js");
+const { normalizeBrandProfile, normalizeIdeas, referenceFacts, roleItemsForCatalog } =
+  await import("../server/services/adsStudio.js");
 
 const app = express();
 app.use(express.json());
@@ -54,11 +52,40 @@ const server = app.listen(0, async () => {
     const ids = AD_FEATURES.map((item) => item.id);
     return ids.length > 0 && new Set(ids).size === ids.length && ids.every(Boolean);
   });
+  await check("pages de l'application découvertes depuis les routes", async () => {
+    const ids = AD_ROUTE_FEATURES.map((item) => item.id);
+    return (
+      AD_ROUTE_FEATURES.length >= 60 &&
+      new Set(ids).size === ids.length &&
+      AD_ROUTE_FEATURES.every((item) => item.path && item.component && item.description) &&
+      AD_ROUTE_FEATURES.some(
+        (item) =>
+          item.path === "/freelance" &&
+          item.description.includes("Prospectez les bonnes entreprises")
+      )
+    );
+  });
   await check("rôles et styles publicitaires disponibles", async () => {
-    return ["shop", "seller", "creator", "client", "livreur"].every(
-      (role) => AD_ROLES[role]?.name && AD_ROLES[role]?.description
-    ) && ["ugc", "cinema", "presentation", "demonstration", "storytelling", "humor", "testimonial"].every(
-      (style) => Boolean(AD_STYLES[style])
+    return (
+      ["shop", "seller", "creator", "client", "livreur"].every(
+        (role) => AD_ROLES[role]?.name && AD_ROLES[role]?.description
+      ) &&
+      [
+        "ugc",
+        "cinema",
+        "presentation",
+        "demonstration",
+        "storytelling",
+        "humor",
+        "testimonial",
+      ].every((style) => Boolean(AD_STYLES[style]))
+    );
+  });
+  await check("rôles présents en base ajoutés même sans définition prédéfinie", async () => {
+    const roles = roleItemsForCatalog(AD_ROLES, { admin: 2, regional_partner: 3 });
+    return (
+      roles.some((role) => role.id === "admin" && role.user_count === 2) &&
+      roles.some((role) => role.id === "regional_partner" && role.name === "Regional Partner")
     );
   });
   await check("profil de marque borné et listes dédupliquées", async () => {

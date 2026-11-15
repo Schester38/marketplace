@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd client && npm install && npm run build",
+  "buildCommand": "node scripts/generate-ad-route-catalog.mjs && cd client && npm install && npm run build",
   "outputDirectory": "client/dist",
   "crons": [
     {
