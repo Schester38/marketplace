@@ -68,9 +68,8 @@ router.get(
   })
 );
 
-// Purge quotidienne Vercel : uniquement les objets de plus de 24 h non
-// rattachés. Les fichiers de produits, avatars, commandes et preuves de
-// paiement sont vérifiés en base avant toute suppression.
+// Purge hebdomadaire Vercel : les objets non rattachés depuis plus de 24 h
+// sont supprimés. Les fichiers référencés en base sont préservés.
 router.get(
   "/storage-cleanup",
   ah(async (req, res) => {

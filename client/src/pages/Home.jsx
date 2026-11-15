@@ -118,18 +118,14 @@ export default function Home() {
   const [localOnly, setLocalOnly] = useState(true);
 
   // Transition de catalogue centralisée : cet effet doit précéder les effets
-  // qui chargent le grand catalogue et les rails. Le changement vers
-  // « Produits digitaux » renouvelle ainsi sa clé Vercel AVANT que la requête
-  // principale ne soit relancée ; sinon elle part avec catalog_refresh=0 et
-  // reçoit une ancienne réponse vide. Après un rechargement direct sur
-  // ?type=digital, la valeur Date.now() initialisée plus haut joue le même rôle.
+  // qui chargent le grand catalogue et les rails. Une clé fraîche est réservée
+  // au seul réessai sans cache si le CDN renvoie un catalogue digital vide.
   // Bascule de volet : les boutons l'appliquent AVANT le rendu (la liste du bas
   // affiche immédiatement le cache de la famille choisie, sinon des squelettes)
   // et l'effet ci-dessous la rejoue quand le changement vient de l'URL.
   const applyTypeTransition = (nextType) => {
     if (nextType === "digital") {
-      // Monotone : même plusieurs changements dans la même milliseconde, chaque
-      // bascule digital→physique→digital obtient une URL Vercel différente.
+      // Monotone : un éventuel réessai sans cache aura toujours une URL unique.
       catalogRefreshRef.current = nextCatalogRefresh(catalogRefreshRef.current);
     }
     // Un réessai différé de l'ancienne famille est annulé : envoyé après la
@@ -288,12 +284,8 @@ export default function Home() {
     setBestSellers([]);
     setPopular([]);
     setNewArrivals([]);
-    // Les requêtes digitales ignorent explicitement les caches navigateur et
-    // PWA. Chaque rail alimente aussi le catalogue principal : si la requête
-    // complète est retardée, la section du bas peut immédiatement réutiliser
-    // les produits digitaux déjà affichés dans « Nouveautés ».
-    const railOptions = ptype === "digital" ? { cache: "no-store" } : {};
-    const railRefresh = ptype === "digital" ? { catalog_refresh: catalogRefreshRef.current } : {};
+    // Les rails digitaux utilisent le cache CDN court du serveur ; le service
+    // worker laisse lui aussi passer ces réponses vers le CDN.
     const acceptRail = (setter, data) => {
       if (!ok) return;
       const next = normalizeServerCatalog(ptype, data.products);
@@ -310,19 +302,19 @@ export default function Home() {
       }
     };
     api
-      .trending({ type: ptype, ...railRefresh }, railOptions)
+      .trending({ type: ptype })
       .then((d) => acceptRail(setTrending, d))
       .catch(() => {});
     api
-      .listProducts({ sort: "sales", type: ptype, ...railRefresh, limit: 10 }, railOptions)
+      .listProducts({ sort: "sales", type: ptype, limit: 10 })
       .then((d) => acceptRail(setBestSellers, d))
       .catch(() => {});
     api
-      .listProducts({ sort: "popular", type: ptype, ...railRefresh, limit: 10 }, railOptions)
+      .listProducts({ sort: "popular", type: ptype, limit: 10 })
       .then((d) => acceptRail(setPopular, d))
       .catch(() => {});
     api
-      .listProducts({ sort: "recent", type: ptype, ...railRefresh, limit: 10 }, railOptions)
+      .listProducts({ sort: "recent", type: ptype, limit: 10 })
       .then((d) => acceptRail(setNewArrivals, d))
       .catch(() => {});
 
@@ -435,9 +427,6 @@ export default function Home() {
         sort: sort || undefined,
         // Volet actif : produits physiques OU digitaux (jamais les deux).
         type: family,
-        // Une clé numérique unique évite qu'une réponse Vercel ancienne et vide
-        // soit confondue avec le catalogue digital actuel.
-        ...(family === "digital" ? { catalog_refresh: catalogRefreshRef.current } : {}),
         ...(scope && scope !== "product" ? { scope } : {}),
         ...(minPrice ? { min_price: Number(minPrice) } : {}),
         ...(maxPrice ? { max_price: Number(maxPrice) } : {}),
@@ -445,9 +434,8 @@ export default function Home() {
         limit: isBrowse ? BROWSE_PAGE_SIZE : PER_PAGE,
         offset: isBrowse ? page * BROWSE_PAGE_SIZE : offset,
       };
-      const fetchOptions = family === "digital" ? { cache: "no-store" } : {};
       api
-        .listProducts(query, fetchOptions)
+        .listProducts(query)
         .then((d) => {
           const unfiltered =
             !debouncedSearch && !category && !minPrice && !maxPrice && scope === "product";

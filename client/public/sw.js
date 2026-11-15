@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mboppi-v490';
+const CACHE_NAME = 'mboppi-v491';
 const APP_SHELL = ['/', '/offline.html', '/manifest.webmanifest', '/manifest-verone.webmanifest', '/manifest-livreur.webmanifest', '/manifest-admin.webmanifest', '/icon-192.png', '/icon-512.png', '/robots.txt', '/splash.js'];
 // Les diapositives, illustrations sociales et logos secondaires sont charges a la
 // demande : les precacher a chaque version augmentait l'egress des installations.
@@ -252,8 +252,9 @@ self.addEventListener('fetch', (event) => {
   // résultat réseau de cette requête explicitement fraîche.
   if (url.pathname.startsWith('/api/')) {
     const isFreshCatalog =
-      url.pathname === '/api/products' &&
-      (url.searchParams.get('type') === 'digital' || url.searchParams.has('catalog_refresh'));
+      (url.pathname === '/api/products' &&
+        (url.searchParams.get('type') === 'digital' || url.searchParams.has('catalog_refresh'))) ||
+      (url.pathname === '/api/metrics/trending' && url.searchParams.get('type') === 'digital');
     if (isApiSwr(url.pathname) && event.request.cache !== 'no-store' && !isFreshCatalog) {
       event.respondWith(apiSwr(event.request));
     } else {

@@ -428,7 +428,7 @@ export default function Admin() {
   const [migrateReport, setMigrateReport] = useState(null);
   const [prodSearch, setProdSearch] = useState("");
   // Refs synchrones des recherches en cours : le rechargement silencieux
-  // (30 s / retour sur l'onglet) lit ces refs pour ne PAS écraser les
+  // (120 s / retour sur l'onglet) lit ces refs pour ne PAS écraser les
   // résultats d'une recherche active.
   const searchRef = useRef("");
   const prodSearchRef = useRef("");
@@ -488,7 +488,7 @@ export default function Admin() {
         })
         .catch(onErr);
       // Ne pas écraser les résultats d'une recherche en cours lors des
-      // rechargements silencieux (30 s / retour sur l'onglet).
+      // rechargements silencieux (120 s / retour sur l'onglet).
       if (!searchRef.current.trim()) {
         api
           .adminUsers()
@@ -651,8 +651,7 @@ export default function Admin() {
     loadStorageInfo();
   }, [gate, adminTab, loadStorageInfo]);
 
-  // Temps réel : actualisation silencieuse des statistiques, transactions et
-  // visites toutes les 30 s, quel que soit le mode de paiement.
+  // Actualisation silencieuse toutes les 2 min tant que l'onglet est visible.
   useEffect(() => {
     if (gate) return undefined;
     const id = setInterval(() => {
@@ -663,7 +662,7 @@ export default function Admin() {
         .adminVisits(visitDays, visitCountry)
         .then((d) => setVisits(d.visits))
         .catch(() => {});
-    }, 30000);
+    }, 120000);
     return () => clearInterval(id);
   }, [gate, load, visitDays, visitCountry]);
 

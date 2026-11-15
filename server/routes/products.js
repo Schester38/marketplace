@@ -655,10 +655,14 @@ const CAP_SORTS = {
 };
 
 router.get("/", validateQuery(productListQuerySchema), ah(async (req, res) => {
-  // Le catalogue digital ne doit jamais être réutilisé depuis un ancien cache :
-  // ses réponses doivent refléter immédiatement toute publication récente.
+  // Le catalogue digital utilise un cache CDN court. Un réessai explicitement
+  // demandé avec catalog_refresh contourne ce cache pour réparer une réponse vide.
   if (req.query.type === "digital") {
-    res.set("Cache-Control", "private, no-store, max-age=0");
+    if (req.query.catalog_refresh !== undefined) {
+      res.set("Cache-Control", "private, no-store, max-age=0");
+    } else {
+      res.set("Cache-Control", "public, s-maxage=15, max-age=0, stale-while-revalidate=15");
+    }
   } else {
     cachePublic(res);
   }

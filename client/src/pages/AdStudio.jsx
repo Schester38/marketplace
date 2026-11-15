@@ -219,7 +219,9 @@ export default function AdStudio() {
           if (active && requestId === requestSequence.current) setLoadingCatalog(false);
         }
       },
-      sourceType === "products" || sourceType === "publications" ? 300 : 0
+      sourceType === "products" || sourceType === "publications" || sourceQuery.trim().length > 0
+        ? 300
+        : 0
     );
     return () => {
       active = false;
