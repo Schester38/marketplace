@@ -27,6 +27,10 @@ import {
   CAMPAIGN_EMAIL_CAP,
   dispatchCampaign,
   ensureScheduledCampaignsTable,
+  generateAiCampaign,
+  getAiCampaignSettings,
+  setAiCampaignSettings,
+  doualaMonday,
   getCronSecret,
   getDailyLimit,
   setDailyLimit,
@@ -507,7 +511,7 @@ router.get(
     await ensureScheduledCampaignsTable();
     const campaigns = await q(
       `SELECT sc.id, sc.title, sc.message, sc.url, sc.audience, sc.channels,
-              sc.send_date, sc.status, sc.result, sc.created_at, sc.sent_at,
+              sc.send_date, sc.status, sc.source, sc.result, sc.created_at, sc.sent_at,
               u.name AS created_by_name
        FROM scheduled_campaigns sc
        LEFT JOIN users u ON u.id = sc.created_by
@@ -531,6 +535,130 @@ router.get(
       today: todayDouala(),
       daily_limit: await getDailyLimit(),
     });
+  })
+);
+
+// ==================== CAMPAGNES IA AUTOMATIQUES ====================
+// Réglages : l'IA rédige le titre + le message et le cron les envoie.
+// N campagnes par semaine (1-7), réparties sur les jours de la semaine.
+
+router.get(
+  "/campaigns/ai",
+  ah(async (_req, res) => {
+    await ensureScheduledCampaignsTable();
+    const settings = await getAiCampaignSettings();
+    const today = todayDouala();
+    let generatedThisWeek = 0;
+    let lastGeneratedAt = null;
+    try {
+      const rows = await q(
+        `SELECT COUNT(*)::int AS n FROM scheduled_campaigns
+         WHERE source = 'ai'
+           AND (created_at AT TIME ZONE 'Africa/Douala')::date >= $1::date
+           AND (created_at AT TIME ZONE 'Africa/Douala')::date <= $2::date`,
+        [doualaMonday(today), today]
+      );
+      generatedThisWeek = rows[0]?.n || 0;
+      lastGeneratedAt = await getSetting("campaign_ai_last_generated_at");
+    } catch (err) {
+      console.error("[campaigns] état IA indisponible :", err.message);
+    }
+    res.json({
+      settings,
+      ai_configured: Boolean(process.env.GEMINI_API_KEY),
+      generated_this_week: generatedThisWeek,
+      last_generated_at: lastGeneratedAt,
+      today,
+    });
+  })
+);
+
+router.post(
+  "/campaigns/ai",
+  ah(async (req, res) => {
+    const settings = await setAiCampaignSettings(req.body || {});
+    await logAudit(
+      req.user.id,
+      "admin.campaign.ai_settings",
+      `Campagnes IA : ${settings.enabled ? "activées" : "désactivées"}, ${settings.per_week}/semaine, audience ${settings.audience}`,
+      req.ip
+    );
+    res.json({ ok: true, settings, ai_configured: Boolean(process.env.GEMINI_API_KEY) });
+  })
+);
+
+// Aperçu : génère un brouillon SANS l'enregistrer ni l'envoyer.
+router.post(
+  "/campaigns/ai/preview",
+  ah(async (_req, res) => {
+    const settings = await getAiCampaignSettings();
+    const draft = await generateAiCampaign(settings);
+    res.json({ ok: true, draft });
+  })
+);
+
+// Envoi immédiat : génère puis envoie tout de suite (bouton de test admin).
+router.post(
+  "/campaigns/ai/run",
+  ah(async (req, res) => {
+    await ensureScheduledCampaignsTable();
+    const settings = await getAiCampaignSettings();
+    const today = todayDouala();
+    const limit = await getDailyLimit();
+    const sentToday = await q(
+      `SELECT id FROM scheduled_campaigns
+       WHERE status = 'sent' AND (sent_at AT TIME ZONE 'Africa/Douala')::date = $1::date`,
+      [today]
+    );
+    if (sentToday.length >= limit) {
+      return res.status(400).json({ error: "Le quota de campagnes du jour est déjà atteint" });
+    }
+
+    let campaign = (
+      await q(`SELECT * FROM scheduled_campaigns WHERE source = 'ai' AND send_date = $1::date LIMIT 1`, [today])
+    )[0];
+    if (campaign?.status === "sent") {
+      return res.status(400).json({ error: "Une campagne IA a déjà été envoyée aujourd'hui" });
+    }
+    if (!campaign) {
+      const draft = await generateAiCampaign(settings);
+      campaign = (
+        await q(
+          `INSERT INTO scheduled_campaigns (title, message, url, audience, channels, send_date, source)
+           VALUES ($1, $2, $3, $4, $5, $6::date, 'ai')
+           ON CONFLICT DO NOTHING
+           RETURNING *`,
+          [draft.title, draft.message, draft.url, settings.audience, settings.channels, today]
+        )
+      )[0];
+      if (!campaign) {
+        return res.status(400).json({ error: "Une campagne IA existe déjà pour aujourd'hui" });
+      }
+      try {
+        await setSetting("campaign_ai_last_generated_at", new Date().toISOString());
+      } catch {
+        /* non bloquant */
+      }
+    }
+
+    const result = await dispatchCampaign({
+      title: campaign.title,
+      message: campaign.message,
+      url: campaign.url,
+      audience: campaign.audience,
+      channels: campaign.channels,
+    });
+    await q(`UPDATE scheduled_campaigns SET status = 'sent', sent_at = now(), result = $2 WHERE id = $1`, [
+      campaign.id,
+      JSON.stringify(result),
+    ]);
+    await logAudit(
+      req.user.id,
+      "admin.campaign.ai_run",
+      `Campagne IA « ${campaign.title} » envoyée immédiatement (push ${result.push_sent}, email ${result.email_sent})`,
+      req.ip
+    );
+    res.json({ ok: true, campaign: { id: campaign.id, title: campaign.title }, result });
   })
 );
 

@@ -198,7 +198,11 @@ export async function askAI(message, history = [], extraSystem = "", lang = "fr"
   const body = {
     systemInstruction: { parts: [{ text: baseSys }] },
     contents,
-    generationConfig: { temperature: 0.7, maxOutputTokens: maxOut },
+    generationConfig: {
+      temperature:
+        Number(opts.temperature) >= 0 && Number(opts.temperature) <= 2 ? Number(opts.temperature) : 0.7,
+      maxOutputTokens: maxOut,
+    },
   };
 
   const requestedModels = Array.isArray(opts.models)

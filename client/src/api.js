@@ -438,6 +438,11 @@ export const api = {
   adminCampaignSend: (payload) =>
     adminRequest("/admin/campaign/send", { method: "POST", body: JSON.stringify(payload) }),
   adminScheduledCampaigns: () => adminRequest("/admin/campaigns/scheduled"),
+  adminCampaignAiStatus: () => adminRequest("/admin/campaigns/ai"),
+  adminCampaignAiSave: (payload) =>
+    adminRequest("/admin/campaigns/ai", { method: "POST", body: JSON.stringify(payload) }),
+  adminCampaignAiPreview: () => adminRequest("/admin/campaigns/ai/preview", { method: "POST" }),
+  adminCampaignAiRun: () => adminRequest("/admin/campaigns/ai/run", { method: "POST" }),
   adminScheduleCampaign: (payload) =>
     adminRequest("/admin/campaigns/schedule", { method: "POST", body: JSON.stringify(payload) }),
   adminDeleteScheduledCampaign: (id) =>

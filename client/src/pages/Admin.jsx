@@ -265,6 +265,25 @@ export default function Admin() {
   const [schedMsg, setSchedMsg] = useState(null);
   const [cronTest, setCronTest] = useState(null);
   const [schedRecipients, setSchedRecipients] = useState(null);
+  const [aiSettings, setAiSettings] = useState(null);
+  const [aiStatus, setAiStatus] = useState(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMsg, setAiMsg] = useState(null);
+  const [aiDraft, setAiDraft] = useState(null);
+
+  const loadAiStatus = () =>
+    api
+      .adminCampaignAiStatus()
+      .then((d) => {
+        setAiSettings(d.settings);
+        setAiStatus(d);
+      })
+      .catch(() => {});
+
+  useEffect(() => {
+    if (gate) return;
+    loadAiStatus();
+  }, [gate]);
 
   useEffect(() => {
     if (gate) return;
@@ -365,6 +384,94 @@ export default function Admin() {
       setSchedBusy(false);
     }
   };
+  const toggleAiChannel = (channel) => {
+    setAiSettings((cur) => {
+      if (!cur) return cur;
+      const has = cur.channels.includes(channel);
+      const channels = has ? cur.channels.filter((c) => c !== channel) : [...cur.channels, channel];
+      if (!channels.length) return cur;
+      return { ...cur, channels };
+    });
+  };
+
+  const aiSettingsPayload = () =>
+    aiSettings
+      ? {
+          enabled: aiSettings.enabled,
+          per_week: aiSettings.per_week,
+          audience: aiSettings.audience,
+          channels: aiSettings.channels,
+          lang: aiSettings.lang,
+          notes: aiSettings.notes,
+        }
+      : null;
+
+  const saveAiSettings = async () => {
+    const payload = aiSettingsPayload();
+    if (!payload) return;
+    setAiBusy(true);
+    setAiMsg(null);
+    try {
+      const d = await api.adminCampaignAiSave(payload);
+      setAiSettings(d.settings);
+      setAiMsg({ ok: true, text: t("Réglages IA enregistrés.") });
+      loadAiStatus();
+    } catch (err) {
+      setAiMsg({ ok: false, text: err.message });
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const previewAiCampaign = async () => {
+    setAiBusy(true);
+    setAiMsg(null);
+    setAiDraft(null);
+    try {
+      const payload = aiSettingsPayload();
+      if (payload) await api.adminCampaignAiSave(payload);
+      const d = await api.adminCampaignAiPreview();
+      setAiDraft(d.draft);
+    } catch (err) {
+      setAiMsg({ ok: false, text: err.message });
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const runAiCampaign = async () => {
+    if (!window.confirm(t("Générer et envoyer MAINTENANT une campagne à l'audience choisie ?"))) return;
+    setAiBusy(true);
+    setAiMsg(null);
+    try {
+      const payload = aiSettingsPayload();
+      if (payload) await api.adminCampaignAiSave(payload);
+      const d = await api.adminCampaignAiRun();
+      setAiMsg({
+        ok: true,
+        text: t("Campagne IA envoyée : {push} push, {email} emails.", {
+          push: d.result?.push_sent || 0,
+          email: d.result?.email_sent || 0,
+        }),
+      });
+      loadAiStatus();
+      setSchedMsg({ ok: true, text: t("Campagne IA envoyée.") });
+    } catch (err) {
+      setAiMsg({ ok: false, text: err.message });
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const useAiDraft = () => {
+    if (!aiDraft) return;
+    setSchedTitle(aiDraft.title || "");
+    setSchedMessage(aiDraft.message || "");
+    setSchedUrl(aiDraft.url || "/");
+    setSchedDate(schedList?.today || "");
+    setAiMsg({ ok: true, text: t("Brouillon IA copié dans le formulaire.") });
+  };
+
   // --- fin campagnes programmées ---
 
   const [visitDays, setVisitDays] = useState(30);
@@ -2000,6 +2107,171 @@ export default function Admin() {
           {schedBusy ? "…" : `🗓️ ${t("Programmer la campagne")}`}
         </button>
 
+        <div style={{ marginTop: 16, borderTop: "1px solid var(--border, #e5e7eb)", paddingTop: 12 }}>
+          <strong>🤖 {t("Campagnes IA automatiques")}</strong>
+          <p className="hint" style={{ marginTop: 6 }}>
+            {t(
+              "L'IA rédige le titre et le message, puis le cron les envoie automatiquement. Par défaut : une campagne par jour (7 par semaine)."
+            )}
+          </p>
+          {aiStatus && !aiStatus.ai_configured && (
+            <p className="hint" style={{ color: "#b45309" }}>
+              ⚠️ {t("GEMINI_API_KEY manquante : la génération IA est indisponible.")}
+            </p>
+          )}
+          {aiSettings && (
+            <>
+              <label className="msg-radio" style={{ display: "block", marginBottom: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={!!aiSettings.enabled}
+                  onChange={(e) => setAiSettings({ ...aiSettings, enabled: e.target.checked })}
+                />{" "}
+                {t("Générer et envoyer automatiquement par IA")}
+              </label>
+              <div className="msg-target-row" style={{ alignItems: "center", marginBottom: 8 }}>
+                <span>📅 {t("Campagnes par semaine")} :</span>
+                <select
+                  className="input"
+                  value={aiSettings.per_week}
+                  onChange={(e) => setAiSettings({ ...aiSettings, per_week: Number(e.target.value) })}
+                  style={{ maxWidth: 90, padding: "4px 8px" }}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                <span className="hint">{t("7 = une par jour")}</span>
+              </div>
+              <div className="msg-target-row" style={{ alignItems: "center", marginBottom: 8 }}>
+                <span>🌍 {t("Langue")} :</span>
+                <select
+                  className="input"
+                  value={aiSettings.lang}
+                  onChange={(e) => setAiSettings({ ...aiSettings, lang: e.target.value })}
+                  style={{ maxWidth: 160, padding: "4px 8px" }}
+                >
+                  <option value="fr">Français</option>
+                  <option value="en">English</option>
+                  <option value="es">Español</option>
+                  <option value="ar">العربية</option>
+                </select>
+              </div>
+              <div className="msg-target-row" style={{ flexWrap: "wrap", marginBottom: 8 }}>
+                <span>🎯 {t("Audience")} :</span>
+                {[
+                  ["all", "Tous"],
+                  ["clients", "Clients"],
+                  ["sellers", "Vendeurs"],
+                  ["shops", "Boutiques"],
+                  ["livreurs", "Livreurs"],
+                  ["newsletter", "Abonnés newsletter"],
+                ].map(([val, label]) => (
+                  <label key={val} className="msg-radio">
+                    <input
+                      type="radio"
+                      name="ai-audience"
+                      checked={aiSettings.audience === val}
+                      onChange={() => setAiSettings({ ...aiSettings, audience: val })}
+                    />
+                    {t(label)}
+                  </label>
+                ))}
+              </div>
+              <div className="msg-target-row" style={{ marginBottom: 8 }}>
+                <label className="msg-radio">
+                  <input
+                    type="checkbox"
+                    checked={aiSettings.channels.includes("push")}
+                    onChange={() => toggleAiChannel("push")}
+                  />
+                  🔔 {t("Push")}
+                </label>
+                <label className="msg-radio">
+                  <input
+                    type="checkbox"
+                    checked={aiSettings.channels.includes("email")}
+                    onChange={() => toggleAiChannel("email")}
+                  />
+                  📧 {t("Email")}
+                </label>
+              </div>
+              <textarea
+                className="msg-textarea"
+                rows="2"
+                maxLength={500}
+                placeholder={t("Thèmes à privilégier (optionnel)…")}
+                value={aiSettings.notes}
+                onChange={(e) => setAiSettings({ ...aiSettings, notes: e.target.value })}
+              />
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-small"
+                  disabled={aiBusy}
+                  onClick={saveAiSettings}
+                >
+                  💾 {t("Enregistrer")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-small"
+                  disabled={aiBusy || !aiStatus?.ai_configured}
+                  onClick={previewAiCampaign}
+                >
+                  ✨ {t("Aperçu IA")}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-small"
+                  disabled={aiBusy || !aiStatus?.ai_configured}
+                  onClick={runAiCampaign}
+                >
+                  🚀 {t("Envoyer maintenant")}
+                </button>
+              </div>
+              {aiStatus && (
+                <p className="hint" style={{ marginTop: 6 }}>
+                  {t("Cette semaine")} : {aiStatus.generated_this_week || 0}/{aiSettings.per_week}
+                  {aiStatus.last_generated_at
+                    ? ` · ${t("Dernière génération")} : ${new Date(aiStatus.last_generated_at).toLocaleString()}`
+                    : ""}
+                </p>
+              )}
+              {aiMsg && (
+                <p className={aiMsg.ok ? "success" : "error"} style={{ marginTop: 6 }}>
+                  {aiMsg.ok ? "✅ " : "⚠️ "}
+                  {aiMsg.text}
+                </p>
+              )}
+              {aiDraft && (
+                <div
+                  style={{
+                    marginTop: 10,
+                    padding: "8px 10px",
+                    border: "1px solid var(--border, #e5e7eb)",
+                    borderRadius: 8,
+                  }}
+                >
+                  <strong>🤖 {aiDraft.title}</strong>
+                  <p className="hint" style={{ marginTop: 4 }}>
+                    {aiDraft.message}
+                  </p>
+                  <p className="hint">
+                    {aiDraft.url}
+                    {aiDraft.theme ? ` · ${aiDraft.theme}` : ""}
+                  </p>
+                  <button type="button" className="btn btn-outline btn-small" onClick={useAiDraft}>
+                    {t("Utiliser ce brouillon")}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
         {schedList && Array.isArray(schedList.campaigns) && schedList.campaigns.length > 0 && (
           <div style={{ marginTop: 16 }}>
             <strong>{t("File d'attente")}</strong>
@@ -2012,6 +2284,14 @@ export default function Admin() {
                     </td>
                     <td style={{ padding: "6px 4px" }}>
                       {c.title}
+                      {c.source === "ai" && (
+                        <span
+                          className="badge"
+                          style={{ marginLeft: 6, fontSize: 11, background: "#ede9fe", color: "#6d28d9" }}
+                        >
+                          🤖 {t("IA")}
+                        </span>
+                      )}
                       <span className="hint" style={{ display: "block" }}>
                         {c.audience} · {(c.channels || []).join(" + ")}
                         {c.status === "sent" && c.result
