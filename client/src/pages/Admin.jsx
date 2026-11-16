@@ -44,6 +44,22 @@ const ADMIN_TABS = [
 
 const ADMIN_TAB_IDS = ADMIN_TABS.map((tab) => tab.id);
 
+const AI_THEME_OPTIONS = [
+  { key: "digital", label: "Produits digitaux (ebooks, formations, vidéos)" },
+  { key: "physical", label: "Produits physiques et boutiques" },
+  { key: "formations", label: "Formations et apprentissage" },
+  { key: "creators", label: "Créateurs et contenus exclusifs" },
+  { key: "tracking", label: "Suivi de commande et livraison" },
+  { key: "community", label: "Communauté, aide et contact" },
+  { key: "support", label: "Soutenir MboppiShop" },
+  { key: "faq", label: "FAQ et découverte du site" },
+];
+
+function aiThemeLabel(themeKey, fallback) {
+  const option = AI_THEME_OPTIONS.find((opt) => opt.key === themeKey);
+  return option ? option.label : fallback || "";
+}
+
 function getMembershipCountdownState(expiresAt) {
   if (!expiresAt) {
     return { label: "—", tone: "neutral", daysLeft: null, blinking: false };
@@ -394,6 +410,17 @@ export default function Admin() {
     });
   };
 
+  const toggleAiTheme = (key) => {
+    setAiSettings((cur) => {
+      if (!cur) return cur;
+      const themes = Array.isArray(cur.themes) ? cur.themes : [];
+      return {
+        ...cur,
+        themes: themes.includes(key) ? themes.filter((k) => k !== key) : [...themes, key],
+      };
+    });
+  };
+
   const aiSettingsPayload = () =>
     aiSettings
       ? {
@@ -402,6 +429,7 @@ export default function Admin() {
           audience: aiSettings.audience,
           channels: aiSettings.channels,
           lang: aiSettings.lang,
+          themes: aiSettings.themes || [],
           notes: aiSettings.notes,
         }
       : null;
@@ -2108,7 +2136,15 @@ export default function Admin() {
         </button>
 
         <div style={{ marginTop: 16, borderTop: "1px solid var(--border, #e5e7eb)", paddingTop: 12 }}>
-          <strong>🤖 {t("Campagnes IA automatiques")}</strong>
+          <strong>
+            <img
+              src="/navbar-logo.png"
+              alt=""
+              className="logo-inline"
+              style={{ marginRight: 6, verticalAlign: "-3px" }}
+            />
+            {t("Campagnes IA automatiques")}
+          </strong>
           <p className="hint" style={{ marginTop: 6 }}>
             {t(
               "L'IA rédige le titre et le message, puis le cron les envoie automatiquement. Par défaut : une campagne par jour (7 par semaine)."
@@ -2198,11 +2234,31 @@ export default function Admin() {
                   📧 {t("Email")}
                 </label>
               </div>
+              <div style={{ marginBottom: 8 }}>
+                <div className="msg-target-row" style={{ flexWrap: "wrap", alignItems: "center" }}>
+                  <span>🎯 {t("Thèmes à privilégier (plusieurs choix possibles)")} :</span>
+                  {AI_THEME_OPTIONS.map((opt) => (
+                    <label key={opt.key} className="msg-radio">
+                      <input
+                        type="checkbox"
+                        checked={(aiSettings.themes || []).includes(opt.key)}
+                        onChange={() => toggleAiTheme(opt.key)}
+                      />
+                      {t(opt.label)}
+                    </label>
+                  ))}
+                </div>
+                <p className="hint">
+                  {t(
+                    "Cochez un ou plusieurs thèmes. L'IA en choisit un au hasard à chaque campagne ; aucun coché = tous les thèmes."
+                  )}
+                </p>
+              </div>
               <textarea
                 className="msg-textarea"
                 rows="2"
                 maxLength={500}
-                placeholder={t("Thèmes à privilégier (optionnel)…")}
+                placeholder={t("Consignes complémentaires (optionnel)…")}
                 value={aiSettings.notes}
                 onChange={(e) => setAiSettings({ ...aiSettings, notes: e.target.value })}
               />
@@ -2255,13 +2311,23 @@ export default function Admin() {
                     borderRadius: 8,
                   }}
                 >
-                  <strong>🤖 {aiDraft.title}</strong>
+                  <strong>
+                    <img
+                      src="/navbar-logo.png"
+                      alt=""
+                      className="logo-inline"
+                      style={{ marginRight: 6, verticalAlign: "-3px" }}
+                    />
+                    {aiDraft.title}
+                  </strong>
                   <p className="hint" style={{ marginTop: 4 }}>
                     {aiDraft.message}
                   </p>
                   <p className="hint">
                     {aiDraft.url}
-                    {aiDraft.theme ? ` · ${aiDraft.theme}` : ""}
+                    {aiDraft.theme
+                      ? ` · ${t(aiThemeLabel(aiDraft.theme_key, aiDraft.theme))}`
+                      : ""}
                   </p>
                   <button type="button" className="btn btn-outline btn-small" onClick={useAiDraft}>
                     {t("Utiliser ce brouillon")}
@@ -2285,12 +2351,13 @@ export default function Admin() {
                     <td style={{ padding: "6px 4px" }}>
                       {c.title}
                       {c.source === "ai" && (
-                        <span
-                          className="badge"
-                          style={{ marginLeft: 6, fontSize: 11, background: "#ede9fe", color: "#6d28d9" }}
-                        >
-                          🤖 {t("IA")}
-                        </span>
+                        <img
+                          src="/navbar-logo.png"
+                          alt={t("IA")}
+                          title={t("Campagne générée automatiquement par l'IA")}
+                          className="logo-inline"
+                          style={{ marginLeft: 6, verticalAlign: "-3px" }}
+                        />
                       )}
                       <span className="hint" style={{ display: "block" }}>
                         {c.audience} · {(c.channels || []).join(" + ")}

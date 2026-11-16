@@ -104,22 +104,62 @@ export const AI_CAMPAIGN_DEFAULTS = {
   audience: "all",
   channels: ["push", "email"],
   lang: "fr",
+  themes: [],
   notes: "",
 };
 
 const AI_LANGS = { fr: "français", en: "English", es: "español", ar: "العربية" };
 const AI_TONES = ["chaleureux", "direct", "enthousiaste", "informatif", "inspirant"];
 
-const AI_THEMES = [
-  { theme: "nouveaux produits digitaux (ebooks, formations, vidéos)", url: "/?type=digital" },
-  { theme: "produits physiques et boutiques partenaires", url: "/?type=physical" },
-  { theme: "formations et contenus pour apprendre", url: "/formations" },
-  { theme: "créateurs et leurs contenus exclusifs", url: "/createurs" },
-  { theme: "suivi de commande et livraison", url: "/suivi" },
-  { theme: "communauté, aide et contact", url: "/contact" },
-  { theme: "soutenir la plateforme", url: "/soutien" },
-  { theme: "questions fréquentes et découverte du site", url: "/faq" },
+export const AI_THEMES = [
+  {
+    key: "digital",
+    theme: "nouveaux produits digitaux (ebooks, formations, vidéos)",
+    url: "/?type=digital",
+  },
+  {
+    key: "physical",
+    theme: "produits physiques et boutiques partenaires",
+    url: "/?type=physical",
+  },
+  {
+    key: "formations",
+    theme: "formations et contenus pour apprendre",
+    url: "/formations",
+  },
+  {
+    key: "creators",
+    theme: "créateurs et leurs contenus exclusifs",
+    url: "/createurs",
+  },
+  {
+    key: "tracking",
+    theme: "suivi de commande et livraison",
+    url: "/suivi",
+  },
+  {
+    key: "community",
+    theme: "communauté, aide et contact",
+    url: "/contact",
+  },
+  {
+    key: "support",
+    theme: "soutenir la plateforme",
+    url: "/soutien",
+  },
+  {
+    key: "faq",
+    theme: "questions fréquentes et découverte du site",
+    url: "/faq",
+  },
 ];
+
+const AI_THEME_KEYS = AI_THEMES.map((t) => t.key);
+
+function normalizeAiThemes(list) {
+  if (!Array.isArray(list)) return [];
+  return [...new Set(list.map((k) => String(k)).filter((k) => AI_THEME_KEYS.includes(k)))];
+}
 
 const AI_ALLOWED_URLS = ["/", "/?type=digital", "/?type=physical", "/formations", "/createurs", "/suivi", "/contact", "/soutien", "/faq"];
 
@@ -154,6 +194,7 @@ export async function getAiCampaignSettings() {
     : AI_CAMPAIGN_DEFAULTS.channels.slice();
   if (!merged.channels.length) merged.channels = AI_CAMPAIGN_DEFAULTS.channels.slice();
   if (!Object.prototype.hasOwnProperty.call(AI_LANGS, merged.lang)) merged.lang = "fr";
+  merged.themes = normalizeAiThemes(merged.themes);
   merged.notes = String(merged.notes || "").slice(0, 500);
   return merged;
 }
@@ -173,6 +214,7 @@ export async function setAiCampaignSettings(input = {}) {
   if (input.lang !== undefined && Object.prototype.hasOwnProperty.call(AI_LANGS, input.lang)) {
     next.lang = String(input.lang);
   }
+  if (input.themes !== undefined) next.themes = normalizeAiThemes(input.themes);
   if (input.notes !== undefined) next.notes = String(input.notes || "").slice(0, 500);
   await setSetting(AI_SETTINGS_KEY, JSON.stringify(next));
   return next;
@@ -246,7 +288,10 @@ export async function generateAiCampaign(settings) {
     throw err;
   }
   const s = settings || (await getAiCampaignSettings());
-  const theme = AI_THEMES[Math.floor(Math.random() * AI_THEMES.length)];
+  const themePool = normalizeAiThemes(s.themes).length
+    ? AI_THEMES.filter((t) => s.themes.includes(t.key))
+    : AI_THEMES;
+  const theme = themePool[Math.floor(Math.random() * themePool.length)];
   const tone = AI_TONES[Math.floor(Math.random() * AI_TONES.length)];
   const langName = AI_LANGS[s.lang] || AI_LANGS.fr;
   const notes = s.notes ? `\nConsignes de l'administrateur : ${s.notes}` : "";
@@ -298,7 +343,14 @@ export async function generateAiCampaign(settings) {
     err.statusCode = 502;
     throw err;
   }
-  return { title, message, url: normalizeAiCampaignUrl(parsed.url, theme.url), theme: theme.theme, lang: s.lang };
+  return {
+    title,
+    message,
+    url: normalizeAiCampaignUrl(parsed.url, theme.url),
+    theme: theme.theme,
+    theme_key: theme.key,
+    lang: s.lang,
+  };
 }
 
 // Génère et met en file la campagne IA du jour si nécessaire. Ne lève jamais :

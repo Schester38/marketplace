@@ -6,7 +6,7 @@ Contexte de travail pour toute session IA sur ce dépôt. Lire ce fichier avant 
 
 Marketplace **Mboppi** (Cameroun et Afrique) : vente en ligne, boutiques physiques, vendeurs indépendants, créateurs, livreurs, commandes par téléphone/WhatsApp et paiement mobile.
 
-- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.57.262`.
+- **Client** : React 18 + Vite 5 (`client/`, dev 5173, proxy `/api` → `localhost:4000`), version `1.57.265`.
 - **Serveur** : Express 4 (`server/`, port 4000), PostgreSQL via Supabase (`server/db.js` : `DATABASE_URL_POOLED`, fallback `DATABASE_URL`, `ssl rejectUnauthorized: false` ; exports `q()`, `withTransaction()`, `initDb()`).
 - **Finance** : `server/services/payouts.js` — `computeRedistribution`, `normalizeWalletPrimary`, seuils de commission. Il n'existe **pas** de `server/finance.js`.
 - **Déploiement** : Vercel, entrée serverless `api/index.js` → `server/app.js` + `initDb()`. `vercel.json` route `/api/*`, `/produit/:id`, `/boutique/:id`, `/createur/:id`, `/ville/:x`, `/offre/:id`, `/sitemap.xml`, `/` vers l'API, le reste vers le SPA.
@@ -192,7 +192,7 @@ Créés par `initDb()` : `users`, `products`, `sales`, `offers`, `orders`, `push
 ## Conventions de dev (IMPORTANT)
 
 1. **Ne jamais committer sans demande explicite.** Quand le user demande « deployer » / « mettre en ligne » : bump + commit + push.
-2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.57.264 / mboppi-v496**.
+2. **Bump de version à chaque déploiement** : `client/package.json` + `client/package-lock.json` (lignes 3 **et** 9, ne pas toucher les entrées deps `loose-envify@1.8.3` / `update-browserslist-db@1.8.3`) + `package.json` racine. PWA : `client/public/sw.js` CACHE_NAME `mboppi-vXXX` incrémenté. État actuel : **1.57.265 / mboppi-v497**.
 3. **Build** : `npm run build` dans `client/` (le hash du JS local diffère de celui de Vercel pour des raisons d'environnement ; vérifier le déploiement via le CSS hash ou en cherchant une chaîne caractéristique du nouveau code dans le JS servi).
 4. **Vérifier le déploiement** : attendre ~75–90 s après push, puis `curl` sur `https://mboppi-mboppi.vercel.app/` (header `Accept: text/html` pour le HTML SEO) et chercher le hash CSS/JS du build local ; tester les API concernées.
 5. Commandes utiles : `node --check server/routes/*.js` pour la syntaxe serveur.
@@ -213,7 +213,9 @@ Pilotés par l'environnement : `client/src/config.js` (`BASE_URL` ← `VITE_SITE
 Restent en dur **volontairement** : `.github/workflows/keepalive.yml` (ping sur l'alias `vercel.app`, toujours valide). Le lien Trustpilot du footer (`Footer.jsx`) pointe depuis 1.57.93 vers le **profil revendiqué du nouveau domaine** (`https://fr.trustpilot.com/review/mboppishop.com`).
 
 ## Historique récent des modifications
-(Changelog partiel — version courante **1.57.264** / cache PWA **mboppi-v496**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+(Changelog partiel — version courante **1.57.265** / cache PWA **mboppi-v497**. Les entrées ci-dessous s'arrêtent à 1.52.2 ; les versions 1.57.x sont résumées en fin de liste.)
+
+- **1.57.265** : **Campagnes IA — logo du site et thèmes multiples** — le badge 🤖 de la file d'attente est remplacé par le **logo MboppiShop** (`/navbar-logo.png`, aussi en en-tête de section et dans l'aperçu du brouillon). « Thèmes à privilégier » devient une **sélection multiple** de 8 thèmes (produits digitaux, produits physiques, formations, créateurs, suivi/livraison, communauté/contact, soutien, FAQ) : l'IA en tire un au hasard à chaque campagne ; aucun coché = tous les thèmes. Les consignes libres restent possibles via « Consignes complémentaires ». Réglage persisté dans `campaign_ai_settings.themes`, validé côté serveur (`AI_THEMES`) et renvoyé par `GET /api/admin/campaigns/ai`. Validé : `node --check` serveur, build Vite ✓. Cache PWA v497.
 
 - **1.57.264** : **Campagnes IA automatiques (100 % auto)** — dans Admin → 📣 Communication → « Campagnes programmées », un bloc **🤖 Campagnes IA automatiques** active la génération par Gemini (`GEMINI_API_KEY`, même moteur que le chat) et l'envoi automatique : **N campagnes par semaine** (1 à 7, réparties régulièrement — 7 = une par jour), audience et canaux choisis (push/email), **langue** (fr/en/es/ar) et thèmes à privilégier optionnels. À chaque exécution du cron quotidien, si aucune campagne n'est déjà prévue/en retard pour aujourd'hui et si le quota hebdomadaire n'est pas atteint, le serveur demande un titre + message (JSON strict, URL interne limitée à une liste blanche, aucun prix/promo inventé), l'insère dans `scheduled_campaigns` avec `source='ai'` (index UNIQUE partiel : une seule campagne IA par jour) puis l'envoie immédiatement, sans validation. Boutons admin **✨ Aperçu IA** (brouillon sans envoi, réutilisable dans le formulaire) et **🚀 Envoyer maintenant** (envoi réel, confirmation), badge 🤖 IA dans la file d'attente, état « cette semaine : X/N » + dernière génération. Aucune génération si une campagne manuelle est déjà prévue aujourd'hui ni en cas de `GEMINI_API_KEY` absente (le cron continue d'envoyer les campagnes existantes). Endpoints : `GET/POST /api/admin/campaigns/ai`, `POST /api/admin/campaigns/ai/preview`, `POST /api/admin/campaigns/ai/run` ; `askAI` accepte désormais `opts.temperature` (0,95 pour varier les textes). Validé : `node --check` serveur, ESLint 0 erreur, build Vite ✓. Cache PWA v496.
 

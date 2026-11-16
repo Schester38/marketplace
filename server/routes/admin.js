@@ -25,6 +25,7 @@ import { getMembershipGate, setMembershipGate } from "../services/membershipGate
 import {
   CAMPAIGN_AUDIENCES,
   CAMPAIGN_EMAIL_CAP,
+  AI_THEMES,
   dispatchCampaign,
   ensureScheduledCampaignsTable,
   generateAiCampaign,
@@ -565,6 +566,7 @@ router.get(
     }
     res.json({
       settings,
+      themes: AI_THEMES.map(({ key, url }) => ({ key, url })),
       ai_configured: Boolean(process.env.GEMINI_API_KEY),
       generated_this_week: generatedThisWeek,
       last_generated_at: lastGeneratedAt,
